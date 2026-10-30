@@ -1,9 +1,10 @@
+import { stripCombiningMarks } from '../../../lib/text-fold';
 import { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import type { ObjectWorkspaceOrgOption } from '../../../services/object-workspace-parser';
 
 function normalize(value: string): string {
-  return value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return stripCombiningMarks(value.trim().toLowerCase());
 }
 
 interface OrgPickerProps {

@@ -1,6 +1,7 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 // Single source of truth for image processing (resize-down + EXIF/IPTC/XMP strip via sharp's
 // default re-encode — process-image.test.ts is the regression guard). We deliberately reuse
@@ -100,10 +101,7 @@ async function handlePostAuthenticated(
   // false OR probe error ⇒ 403 (fail-closed).
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
   const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-  const asCaller = createClient(url, anon, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const asCaller = createCallerClient(url, anon, jwt);
   const { data: canWrite, error: canWriteErr } = await asCaller
     .schema('api')
     .rpc('user_can_write_crm_actor', { p_actor_id: actorId });

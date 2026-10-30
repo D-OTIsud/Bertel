@@ -1,4 +1,6 @@
 'use client';
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Carte « Accès portail » de la fiche prestataire (18a/D1). Rail droit de CrmActorFiche,
 // juste sous la carte acteur, visible avec la permission dédiée : c'est par ici
@@ -55,7 +57,7 @@ export function CrmActorPortalAccess(props: PortalAccessProps) {
   const userId = useSessionStore((state) => state.userId);
   const orgId = useSessionStore((state) => state.orgId);
   const permission = useQuery({
-    queryKey: ['crm-actor-portal-permission', userId, orgId],
+    queryKey: crmQueryKeys.portalPermission(userId, orgId),
     queryFn: canManageActorPortalAccess,
     enabled: !!userId,
   });
@@ -78,12 +80,12 @@ function PortalAccessCard({
   const [chosenEmail, setChosenEmail] = useState<string | null>(null);
 
   const statusQuery = useQuery({
-    queryKey: ['crm-actor-portal-access', actorId],
+    queryKey: crmQueryKeys.portalAccess(actorId),
     queryFn: () => getPortalAccessStatus(actorId),
   });
 
   function refresh() {
-    void queryClient.invalidateQueries({ queryKey: ['crm-actor-portal-access', actorId] });
+    void queryClient.invalidateQueries({ queryKey: crmQueryKeys.portalAccess(actorId) });
   }
   /**
    * `doneLabel` décrit ce qui A ÉTÉ FAIT — il ne sert qu'au cas où la trace CRM manque. Le

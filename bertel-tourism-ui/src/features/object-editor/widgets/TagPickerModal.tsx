@@ -1,5 +1,12 @@
+import { stripCombiningMarks } from '../../../lib/text-fold';
 import { useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../../components/ui/dialog';
 import { Input } from '../primitives';
 import { tagChipStyle } from '../../../utils/explorer-card';
 import { createWorkspaceTag } from '../../../services/object-workspace';
@@ -23,7 +30,7 @@ const TAG_PALETTE = [
 ];
 
 function normalizeKey(value: string): string {
-  return value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return stripCombiningMarks(value.trim().toLowerCase());
 }
 
 function Swatches({ value, onChange }: { value: string; onChange: (color: string) => void }) {

@@ -1,10 +1,80 @@
 import {
+  isPlainRecord,
+  isRecord,
+  readArray,
   readCoercingString,
   readNullableString,
   readPermissiveBoolean,
+  readRecord,
+  readRecordArray,
+  readRecordOrNull,
   readStrictString,
+  readTrimmedString,
   readTrimmedStringList,
 } from './json-read';
+
+describe('JSON records and arrays', () => {
+  it('preserves plain objects and null-prototype records by identity', () => {
+    for (const value of [{}, { name: 'Réunion' }, Object.create(null)]) {
+      expect(isRecord(value)).toBe(true);
+      expect(isPlainRecord(value)).toBe(true);
+      expect(readRecord(value)).toBe(value);
+      expect(readRecordOrNull(value)).toBe(value);
+    }
+  });
+
+  it('keeps service-reader instances distinct from plain draft snapshots', () => {
+    class Snapshot { name = 'Réunion'; }
+    for (const value of [new Snapshot(), new Date(), new Map(), new String('text')]) {
+      expect(isRecord(value)).toBe(true);
+      expect(isPlainRecord(value)).toBe(false);
+      expect(readRecord(value)).toBe(value);
+      expect(readRecordOrNull(value)).toBe(value);
+    }
+  });
+
+  it.each([null, undefined, false, true, 0, NaN, '', 'text', [], ['text'], () => ({}), Symbol('x')])(
+    'rejects non-record %p without confusing the empty and nullable fallbacks', (value) => {
+      expect(isRecord(value)).toBe(false);
+      expect(isPlainRecord(value)).toBe(false);
+      expect(readRecord(value)).toEqual({});
+      expect(readRecord(value)).not.toBe(readRecord(value));
+      expect(readRecordOrNull(value)).toBeNull();
+    },
+  );
+
+  it('preserves raw arrays but filters record arrays without mutating their entries', () => {
+    const first = { id: 'first' };
+    const second = Object.create(null);
+    const instance = new Date();
+    const input = [first, null, [], 'text', second, instance, 0];
+    expect(readArray(input)).toBe(input);
+    expect(readRecordArray(input)).toEqual([first, second, instance]);
+    expect(readRecordArray(input)[0]).toBe(first);
+    expect(input).toHaveLength(7);
+    const sparse = new Array(3);
+    sparse[2] = first;
+    expect(readArray(sparse)).toBe(sparse);
+    expect(readRecordArray(sparse)).toEqual([first]);
+    expect(0 in sparse).toBe(false);
+  });
+
+  it.each([null, undefined, 'text', 1, { 0: {}, length: 1 }, new Set([{}])])(
+    'does not treat non-array %p as a list', (value) => {
+      expect(readArray(value)).toEqual([]);
+      expect(readRecordArray(value)).toEqual([]);
+    },
+  );
+
+  it('trims string inputs without widening the document-reader coercion rules', () => {
+    expect(readTrimmedString(' \t Réunion \n')).toBe('Réunion');
+    expect(readTrimmedString(' \t')).toBe('');
+    expect(readTrimmedString(12)).toBe('');
+    const toString = jest.fn(() => 'text');
+    expect(readTrimmedString({ toString })).toBe('');
+    expect(toString).not.toHaveBeenCalled();
+  });
+});
 
 describe('JSON primitive string readers', () => {
   it.each([

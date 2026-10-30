@@ -1,3 +1,4 @@
+import { isRecord } from '../../lib/json-read';
 /**
  * Projection d'AFFICHAGE des étapes RÉELLES d'un itinéraire pour le drawer public
  * (PLAN 4.6). Pure. Lit `itinerary_details.stages` (object_iti_stage : `name`,
@@ -36,10 +37,6 @@ function str(value: unknown): string {
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   return '';
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isFiniteCoord(value: unknown): value is number {

@@ -1,3 +1,4 @@
+import { stripCombiningMarks } from '../../../lib/text-fold';
 import { useState } from 'react';
 import { EditorModal, Field, Input, Select, Chip, ChipSet } from '../primitives';
 import { createMembershipCampaign, createMembershipTier } from '../../../services/object-workspace';
@@ -19,7 +20,7 @@ const STATUSES = [
 ];
 
 function normalize(value: string): string {
-  return value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return stripCombiningMarks(value.trim().toLowerCase());
 }
 
 type Dim = 'campaign' | 'tier';

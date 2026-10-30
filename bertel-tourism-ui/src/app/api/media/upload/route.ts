@@ -1,5 +1,6 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { handleMediaUpload, type StorageUploader } from './handle-upload';
 import { MediaProcessingError, MAX_INPUT_BYTES } from './process-image';
@@ -90,10 +91,7 @@ async function handleAuthenticatedUpload(
   // write-path invariant). Fail-closed on probe errors.
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
   const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-  const asCaller = createClient(url, anon, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const asCaller = createCallerClient(url, anon, jwt);
   const { data: canWrite, error: canWriteErr } = await asCaller
     .schema('api')
     .rpc('user_can_write_object_canonical', { p_object_id: objectId });

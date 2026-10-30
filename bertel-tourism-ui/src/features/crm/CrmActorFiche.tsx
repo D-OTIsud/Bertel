@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Fiche ACTEUR 360° (§61, design v2 + rectifs PO) — l'historique CRM complet d'une personne
 // ou organisation À TRAVERS tous ses contextes (établissements).
@@ -20,7 +22,19 @@
 
 import { useMemo, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, CalendarPlus, ChevronDown, ChevronLeft, Globe, Link2, MapPin, Mail, Pencil, Phone, Plus } from 'lucide-react';
+import {
+  Building2,
+  CalendarPlus,
+  ChevronDown,
+  ChevronLeft,
+  Globe,
+  Link2,
+  MapPin,
+  Mail,
+  Pencil,
+  Phone,
+  Plus,
+} from 'lucide-react';
 import {
   deleteCrmInteraction,
   linkActorToObject,
@@ -102,7 +116,7 @@ function CrmAssignObjectModal({
 
   // Datalist : tous les objets de l'annuaire CRM (dédupliqués), moins ceux déjà liés à l'acteur.
   // Clé partagée ['crm-directory'] (cache du shell / de l'annuaire) → pas de double fetch.
-  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
+  const directoryQuery = useQuery({ queryKey: crmQueryKeys.directory(), queryFn: () => listCrmDirectory() });
   const objectOptions = useMemo(() => {
     const byId = new Map<string, { objectId: string; objectName: string }>();
     for (const entry of directoryQuery.data ?? []) {
@@ -308,9 +322,9 @@ export function CrmActorFiche({
   backLabel?: string;
 }) {
   const queryClient = useQueryClient();
-  const actorQuery = useQuery({ queryKey: ['crm-actor', actorId], queryFn: () => listActorCrm(actorId) });
-  const supportQuery = useQuery({ queryKey: ['crm-actor-support', actorId], queryFn: () => listActorSupport(actorId) });
-  const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
+  const actorQuery = useQuery({ queryKey: crmQueryKeys.actor(actorId), queryFn: () => listActorCrm(actorId) });
+  const supportQuery = useQuery({ queryKey: crmQueryKeys.actorSupport(actorId), queryFn: () => listActorSupport(actorId) });
+  const topicsQuery = useQuery({ queryKey: crmQueryKeys.demandTopics, queryFn: listDemandTopics });
 
   // §19 — adresses des établissements rattachés, proposées en un clic dans l'éditeur d'identité.
   const addressObjects = (actorQuery.data?.objects ?? []).map((object) => ({
@@ -318,7 +332,7 @@ export function CrmActorFiche({
     objectName: object.objectName,
   }));
   const addressSuggestionsQuery = useQuery({
-    queryKey: ['crm-actor-object-addresses', actorId, addressObjects.map((object) => object.objectId).join(',')],
+    queryKey: crmQueryKeys.actorObjectAddresses(actorId, addressObjects.map((object) => object.objectId).join(',')),
     queryFn: () => listObjectAddresses(addressObjects),
     enabled: addressObjects.length > 0,
   });
@@ -383,7 +397,7 @@ export function CrmActorFiche({
   // Fil de discussion (§65/§66) : répondre + basculer le statut depuis la timeline de la fiche.
   // Une réponse hérite le contexte acteur/objet de la racine (ne PAS re-passer actorId/objectId) ;
   // le toggle de statut pose/efface resolved_at. Refetch list_actor_crm après écriture confirmée.
-  const refetchActor = () => queryClient.invalidateQueries({ queryKey: ['crm-actor', actorId] });
+  const refetchActor = () => queryClient.invalidateQueries({ queryKey: crmQueryKeys.actor(actorId) });
   const handleReply = async (rootId: string, body: string, sentimentCode?: string) => {
     await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
     await refetchActor();
@@ -686,7 +700,7 @@ export function CrmActorFiche({
           contexts={objects.map((object) => ({ objectId: object.objectId, objectName: object.objectName }))}
           topics={topicOptions}
           onClose={() => setModal(null)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-actor', actorId] })}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: crmQueryKeys.actor(actorId) })}
         />
       )}
       {modal === 'task' && canWrite && (
@@ -695,7 +709,7 @@ export function CrmActorFiche({
           picker="select"
           objectOptions={objects.map((object) => ({ objectId: object.objectId, objectName: object.objectName }))}
           onClose={() => setModal(null)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks })}
         />
       )}
       {taskFromInteraction && canWrite && (
@@ -705,7 +719,7 @@ export function CrmActorFiche({
           // pas d'actorId (délibéré — pas d'auto-lien vers la fiche où l'on est déjà).
           actorId={actorId}
           onClose={() => setTaskFromInteraction(null)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks })}
         />
       )}
       {modal === 'edit' && canWrite && (
@@ -717,8 +731,8 @@ export function CrmActorFiche({
           onSaved={() => {
             // La fiche ET l'annuaire (display_name) — le préfixe ['crm-directory'] couvre
             // aussi les clés filtrées de l'annuaire.
-            void queryClient.invalidateQueries({ queryKey: ['crm-actor', actorId] });
-            void queryClient.invalidateQueries({ queryKey: ['crm-directory'] });
+            void queryClient.invalidateQueries({ queryKey: crmQueryKeys.actor(actorId) });
+            void queryClient.invalidateQueries({ queryKey: crmQueryKeys.directory() });
           }}
         />
       )}
@@ -729,8 +743,8 @@ export function CrmActorFiche({
           onClose={() => setModal(null)}
           onLinked={() => {
             // Le nouvel établissement apparaît dans le rail (et l'annuaire le re-compte).
-            void queryClient.invalidateQueries({ queryKey: ['crm-actor', actorId] });
-            void queryClient.invalidateQueries({ queryKey: ['crm-directory'] });
+            void queryClient.invalidateQueries({ queryKey: crmQueryKeys.actor(actorId) });
+            void queryClient.invalidateQueries({ queryKey: crmQueryKeys.directory() });
           }}
         />
       )}

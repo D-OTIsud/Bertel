@@ -1,9 +1,12 @@
+import {
+  isRecord,
+  readRecord,
+  readArray as readList,
+  readRecordArray,
+  readCoercingString,
+} from '../../lib/json-read';
 import { resolveWebPlatform } from '../../lib/web-platform';
 import { buildContactHref } from '../../lib/contact-links';
-
-interface GenericRecord {
-  [key: string]: unknown;
-}
 
 type RelatedDirection = 'in' | 'out' | 'associated';
 
@@ -338,30 +341,12 @@ export interface ItinerarySummary {
   trackGeojson: ItineraryTrackGeoJson | null;
 }
 
-function isRecord(value: unknown): value is GenericRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function readRecord(value: unknown): Record<string, unknown> {
-  return isRecord(value) ? value : {};
-}
-
-function readList(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
 export function readArray(value: unknown): Array<Record<string, unknown>> {
-  return Array.isArray(value) ? (value.filter(isRecord) as Array<Record<string, unknown>>) : [];
+  return readRecordArray(value);
 }
 
 export function readString(value: unknown, fallback = ''): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  return fallback;
+  return readCoercingString(value, fallback);
 }
 
 export function readBoolean(value: unknown): boolean | null {

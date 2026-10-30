@@ -1,12 +1,9 @@
+import { isRecord } from '../lib/json-read';
 import type { WorkspaceModuleId } from './object-workspace';
 
 // A missing compliance summary is a display limitation, not a failed legal-record read.
 // Keep this precise exception shared with the loader; other legal failures still block saves.
 export const LEGAL_SUMMARY_UNAVAILABLE = 'Le resume de conformite n est pas completement expose pour ce profil.';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
 
 /** Client-side loss prevention, never an authorization or complete-read proof. */
 export function workspaceSaveBlockedReason(module: WorkspaceModuleId, value: unknown): string | null {

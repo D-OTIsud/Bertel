@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -50,7 +52,7 @@ export function CrmActorDocumentDropzone({
   const accessToken = useSupabaseAccessToken();
   const [isDragging, setIsDragging] = useState(false);
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['crm-actor-support', actorId] });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: crmQueryKeys.actorSupport(actorId) });
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!accessToken) throw new Error('Session expirée. Reconnectez-vous pour ajouter un document.');
@@ -144,15 +146,15 @@ export function CrmActorDocuments({
   const deleteFocus = useRef<{ opener: HTMLButtonElement; actorId: string; host: HTMLElement | null } | null>(null);
 
   const supportQuery = useQuery({
-    queryKey: ['crm-actor-support', actorId],
+    queryKey: crmQueryKeys.actorSupport(actorId),
     queryFn: () => listActorSupport(actorId),
   });
   const documentTypesQuery = useQuery({
-    queryKey: ['crm-object-document-types'],
+    queryKey: crmQueryKeys.objectDocumentTypes,
     queryFn: listObjectDocumentTypes,
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['crm-actor-support', actorId] });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: crmQueryKeys.actorSupport(actorId) });
 
   const deleteMutation = useMutation({
     mutationFn: async (input: { actorId: string; documentId: string; accessToken: string }) => {
@@ -160,7 +162,7 @@ export function CrmActorDocuments({
     },
     onSuccess: (_result, input) => {
       setDeletion((current) => current?.actorId === input.actorId && current.documentId === input.documentId ? null : current);
-      void queryClient.invalidateQueries({ queryKey: ['crm-actor-support', input.actorId] });
+      void queryClient.invalidateQueries({ queryKey: crmQueryKeys.actorSupport(input.actorId) });
     },
     onError: (error) => setDeleteError(errorMessage(error)),
     onSettled: () => { deleteInFlight.current = false; },

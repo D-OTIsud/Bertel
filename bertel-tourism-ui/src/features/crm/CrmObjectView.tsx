@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Vue ÉTABLISSEMENT / OBJET (§61, design v2 + rectif PO point 3) — le CONTEXTE de la
 // relation. Montre les acteurs liés (avec leur rôle, actor_object_role) et tout
@@ -46,10 +48,10 @@ export function CrmObjectView({
   hideOpenEditor?: boolean;
 }) {
   const queryClient = useQueryClient();
-  const objectQuery = useQuery({ queryKey: ['crm-object', objectId], queryFn: () => listObjectCrm(objectId) });
+  const objectQuery = useQuery({ queryKey: crmQueryKeys.object(objectId), queryFn: () => listObjectCrm(objectId) });
   // Cache partagé avec l'annuaire — sert uniquement à résoudre nom + type de l'objet.
-  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
-  const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
+  const directoryQuery = useQuery({ queryKey: crmQueryKeys.directory(), queryFn: () => listCrmDirectory() });
+  const topicsQuery = useQuery({ queryKey: crmQueryKeys.demandTopics, queryFn: listDemandTopics });
   const [composerOpen, setComposerOpen] = useState(false);
   // Demande depuis laquelle une tâche est en cours de création. Le modal est monté par la
   // VUE, jamais par la carte : crm-primitives est une primitive de présentation SANS accès
@@ -107,7 +109,7 @@ export function CrmObjectView({
 
   // Fil de discussion (§65/§66) : répondre + basculer le statut depuis l'historique de l'objet.
   // Refetch list_object_crm après écriture confirmée (même pattern que « Nouvelle interaction »).
-  const refetchObject = () => queryClient.invalidateQueries({ queryKey: ['crm-object', objectId] });
+  const refetchObject = () => queryClient.invalidateQueries({ queryKey: crmQueryKeys.object(objectId) });
   const handleReply = async (rootId: string, body: string, sentimentCode?: string) => {
     await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
     await refetchObject();
@@ -248,7 +250,7 @@ export function CrmObjectView({
           actorOptions={actors.map((actor) => ({ actorId: actor.actorId, displayName: actor.displayName }))}
           topics={topicsQuery.data ?? []}
           onClose={() => setComposerOpen(false)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-object', objectId] })}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: crmQueryKeys.object(objectId) })}
         />
       )}
 
@@ -258,7 +260,7 @@ export function CrmObjectView({
           onClose={() => setTaskFromInteraction(null)}
           // Une tâche n'est pas une interaction : cette vue ne l'affiche pas, on n'invalide
           // donc PAS son propre snapshot — seulement le kanban.
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks })}
         />
       )}
     </div>

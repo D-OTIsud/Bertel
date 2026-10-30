@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Tâches & relances (§61, rectif PO point 1) — tableau KANBAN 3 colonnes sur les
 // statuts RÉELS (todo / in_progress / done). La proximité d'échéance (ex-groupes
@@ -11,7 +13,13 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, GripVertical, Link2, Paperclip, Pencil, Plus, ShieldCheck } from 'lucide-react';
-import { listCrmAssignees, listCrmDirectory, listCrmTasks, saveCrmInteraction, saveCrmTask } from '../../services/crm';
+import {
+  listCrmAssignees,
+  listCrmDirectory,
+  listCrmTasks,
+  saveCrmInteraction,
+  saveCrmTask,
+} from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
 import { AgAv } from './crm-primitives';
@@ -62,11 +70,11 @@ export function CrmTaches({
   const router = useRouter();
   const queryClient = useQueryClient();
   const currentUserId = useSessionStore((state) => state.userId);
-  const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
+  const tasksQuery = useQuery({ queryKey: crmQueryKeys.tasks, queryFn: listCrmTasks });
   // Annuaire (cache partagé, NON filtré) — fournit la datalist établissements du formulaire.
-  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
+  const directoryQuery = useQuery({ queryKey: crmQueryKeys.directory(), queryFn: () => listCrmDirectory() });
   // Personnes assignables — alimente le filtre par personne (cache partagé avec les modals).
-  const assigneesQuery = useQuery({ queryKey: ['crm-assignees'], queryFn: listCrmAssignees });
+  const assigneesQuery = useQuery({ queryKey: crmQueryKeys.assignees, queryFn: listCrmAssignees });
 
   // 16w — défaut « mes tâches » : on filtre sur l'UUID de session, jamais sur un nom
   // affiché (deux personnes peuvent être homonymes, et un nom change). Sans identité de
@@ -108,7 +116,7 @@ export function CrmTaches({
   const moveMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: CrmTaskStatus }) => saveCrmTask({ id, status }),
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
+      void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks });
       // §66 — clôture suggérée : le move est persisté quoi qu'il arrive ; si la tâche passe en
       // « done » ET qu'elle est liée à une interaction encore OUVERTE, on ouvre le prompt
       // (DnD drop ET bouton « Avancer » passent tous deux par cette mutation).
@@ -131,10 +139,10 @@ export function CrmTaches({
   const closeInteractionMutation = useMutation({
     mutationFn: (interactionId: string) => saveCrmInteraction({ id: interactionId, status: 'resolved' }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
-      void queryClient.invalidateQueries({ queryKey: ['crm-actor'] });
-      void queryClient.invalidateQueries({ queryKey: ['crm-object'] });
-      void queryClient.invalidateQueries({ queryKey: ['crm-timeline'] });
+      void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks });
+      void queryClient.invalidateQueries({ queryKey: crmQueryKeys.actors });
+      void queryClient.invalidateQueries({ queryKey: crmQueryKeys.objects });
+      void queryClient.invalidateQueries({ queryKey: crmQueryKeys.timelines });
       setClosePrompt(null);
     },
   });
@@ -576,7 +584,7 @@ export function CrmTaches({
           picker="datalist"
           objectOptions={directoryObjects}
           onClose={() => setTaskModalOpen(false)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks })}
         />
       )}
 
@@ -588,7 +596,7 @@ export function CrmTaches({
           picker="datalist"
           objectOptions={[]}
           onClose={() => setEditTaskId(null)}
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks })}
         />
       )}
 

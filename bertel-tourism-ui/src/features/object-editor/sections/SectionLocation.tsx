@@ -1,3 +1,4 @@
+import { stripDiacritics } from '../../../lib/text-fold';
 import { useState } from 'react';
 import { useLocationReferenceOptionsQuery } from '../../../hooks/useExplorerQueries';
 import { Fs, Field, Input, ReferenceSelect } from '../primitives';
@@ -14,7 +15,7 @@ import { dismissPendingFieldChange, findPendingFieldChange } from '../widgets/pe
 
 /** Diacritic-insensitive fold for snapping a legacy free-text city to its ref_commune option. */
 function foldCommuneLabel(value: string): string {
-  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+  return stripDiacritics(value).toLowerCase().trim();
 }
 
 /** Section 02 — address, commune, GPS. object_zone (multi-commune) is edited on itinerary sections, not here. */

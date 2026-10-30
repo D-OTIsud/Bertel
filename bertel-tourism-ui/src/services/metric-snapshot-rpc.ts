@@ -17,35 +17,39 @@ interface MetricSnapshotRow {
   denominator: number | null;
 }
 
-/**
- * La RPC rend un tableau de lignes NU (colonne `bucket`), pas une enveloppe
- * `{ points: [...] }`. Le contrat client garde `bucket_date` (nom explicite) :
- * cet adaptateur est le seul endroit qui fait la conversion.
- */
-function toSeries(rows: MetricSnapshotRow[] | null): MetricSnapshotSeries {
-  if (!rows) return { points: [] };
+interface MetricSnapshotPayload {
+  points: MetricSnapshotRow[];
+  first_snapshot_date: string | null;
+  last_snapshot_date: string | null;
+}
+
+/** L'enveloppe ajoute les dates sources sans modifier l'ancienne RPC tabulaire. */
+function toSeries(data: MetricSnapshotPayload | null): MetricSnapshotSeries {
   return {
-    points: rows.map((row) => ({
+    points: (data?.points ?? []).map((row) => ({
       bucket_date: row.bucket,
       value: row.value,
       denominator: row.denominator,
     })),
+    firstSnapshotDate: data?.first_snapshot_date ?? null,
+    lastSnapshotDate: data?.last_snapshot_date ?? null,
   };
 }
 
 /**
  * Lit les relevés quotidiens du périmètre réel/test de l'utilisateur.
- * Les agrégats historiques non segmentés restent archivés hors de ces séries.
+ * Les archives de remplissage vérifiées sont réintégrées au réel. Les autres
+ * agrégats historiques non segmentés restent archivés hors de ces séries.
  *
  * En mode démo la série est VIDE, pas simulée : le principe « real DB data » veut
  * qu'un widget sans données affiche son état vide plutôt qu'une courbe inventée.
  */
 export async function getMetricSnapshotSeries(args: MetricSeriesArgs): Promise<MetricSnapshotSeries> {
   const { demoMode } = useSessionStore.getState();
-  if (demoMode) return { points: [] };
+  if (demoMode) return { points: [], firstSnapshotDate: null, lastSnapshotDate: null };
 
   const client = requireClient();
-  const { data, error } = await client.schema('api').rpc('get_metric_snapshot_series', {
+  const { data, error } = await client.schema('api').rpc('get_metric_snapshot_series_with_bounds', {
     p_metric_key: args.metricKey,
     p_scope: args.scope,
     p_scope_key: args.scopeKey ?? '',
@@ -55,5 +59,5 @@ export async function getMetricSnapshotSeries(args: MetricSeriesArgs): Promise<M
   });
 
   if (error) throw error;
-  return toSeries(data as MetricSnapshotRow[] | null);
+  return toSeries(data as MetricSnapshotPayload | null);
 }

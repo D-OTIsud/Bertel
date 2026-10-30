@@ -28,17 +28,15 @@ interface Props {
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
 
 /**
- * Profondeur d'historique réellement couverte, en JOURS entre `bucket_date` du premier point
- * et aujourd'hui — jamais le nombre de points. `grain: 'week'` ne rend qu'~11 points sur un
- * registre qui contient en réalité un relevé PAR JOUR (73 au 2026-08-30) : compter les points
- * annoncerait « 11 relevés d'historique » à côté d'un sous-titre qui dit lui-même « Relevé
- * quotidien depuis le 19 juin » — le widget se contredirait dans le même cadre.
+ * Durée réellement couverte entre le premier et le dernier relevé source.
+ * Les dates de buckets hebdomadaires et l'horloge du navigateur ne mesurent
+ * pas cette durée : un relevé du vendredi appartient au bucket du lundi.
  */
-function historyDepthDays(firstBucketDate: string): number {
-  const start = new Date(`${firstBucketDate}T00:00:00Z`).getTime();
-  const now = new Date();
-  const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.max(0, Math.round((todayUTC - start) / 86_400_000));
+function historyDepthDays(firstDate: string, lastDate: string): number | null {
+  const start = Date.parse(`${firstDate}T00:00:00Z`);
+  const end = Date.parse(`${lastDate}T00:00:00Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+  return Math.round((end - start) / 86_400_000);
 }
 
 /**
@@ -73,7 +71,9 @@ export function TimeseriesWidget({ eyebrow, title, subtitle, metrics, scope, ena
   const last = points[points.length - 1];
   const first = points[0];
   const delta = last && first ? last.value - first.value : 0;
-  const historyDays = first ? historyDepthDays(first.bucket_date) : null;
+  const historyDays = first && query.data?.firstSnapshotDate && query.data?.lastSnapshotDate
+    ? historyDepthDays(query.data.firstSnapshotDate, query.data.lastSnapshotDate)
+    : null;
 
   if (providerOnly) {
     return (
@@ -146,8 +146,9 @@ export function TimeseriesWidget({ eyebrow, title, subtitle, metrics, scope, ena
               {historyDays !== null && (
                 <span className="timeseries-note">
                   <Info aria-hidden="true" />
-                  {historyDays} jour{historyDays > 1 ? 's' : ''} d’historique — la comparaison année
-                  sur année s’activera en 2027.
+                  {historyDays === 0
+                    ? 'Premier relevé disponible — l’historique débute.'
+                    : `${historyDays} jour${historyDays > 1 ? 's' : ''} d’historique — la comparaison année sur année s’activera en 2027.`}
                 </span>
               )}
             </div>

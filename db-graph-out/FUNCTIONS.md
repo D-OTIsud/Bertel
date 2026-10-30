@@ -987,6 +987,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `TABLE(bucket date, value numeric, denominator integer)` — SECURITY DEFINER
 - reads `public.metric_snapshot` _(high)_
 
+## `api.get_metric_snapshot_series_with_bounds(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)`
+- returns: `jsonb`
+- reads `public.metric_snapshot` _(high)_
+
+> Realm-scoped metric series plus exact first/last source snapshot dates. Weekly buckets never define history duration; legacy tabular reader stays compatible.
+
 ## `api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)`
 - returns: `TABLE(yr integer, mon integer, value numeric)` — SECURITY DEFINER
 - reads `public.metric_snapshot` _(high)_

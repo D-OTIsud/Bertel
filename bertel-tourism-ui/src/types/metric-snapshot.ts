@@ -12,6 +12,9 @@ export interface MetricSnapshotPoint {
 
 export interface MetricSnapshotSeries {
   points: MetricSnapshotPoint[];
+  /** Dates des relevés quotidiens sources, indépendantes des buckets d'affichage. */
+  firstSnapshotDate: string | null;
+  lastSnapshotDate: string | null;
 }
 
 export interface MetricSeriesArgs {

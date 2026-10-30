@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Annuaire des ACTEURS (§61, design v2 + rectifs PO points 6+7) — l'entité CRM
 // principale. Les filtres UTILES (sujet normalisé / statut actif-traité / période)
@@ -54,7 +56,7 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   const [periodItem, setPeriodItem] = useState<PeriodItem>(PERIOD_DEFAULT);
   const [newActorOpen, setNewActorOpen] = useState(false);
 
-  const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
+  const topicsQuery = useQuery({ queryKey: crmQueryKeys.demandTopics, queryFn: listDemandTopics });
 
   // Borne `from` STABLE par sélection (minuit local, précision jour) : un Date.now() brut
   // par render changerait la queryKey en boucle et relancerait la requête. « Tout » = undefined.
@@ -80,7 +82,7 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   // Avec filtres : clé dédiée — les consommateurs partagés du shell (résolution de noms
   // de la vue établissement, datalists des tâches) restent sur la liste NON filtrée.
   const directoryQuery = useQuery({
-    queryKey: hasServerFilters ? ['crm-directory', filters] : ['crm-directory'],
+    queryKey: hasServerFilters ? crmQueryKeys.directory(filters) : crmQueryKeys.directory(),
     queryFn: () => listCrmDirectory(hasServerFilters ? filters : undefined),
     // Changer un filtre garde la liste précédente affichée pendant le fetch (pas de collapse).
     placeholderData: keepPreviousData,
@@ -90,7 +92,7 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   // Amorçage du modal « Nouvel acteur » : la liste CRM non filtrée donne des suggestions
   // immédiates. Elle n'est PAS exhaustive (un établissement sans acteur n'y figure pas) :
   // CrmActorNewModal la complète à la frappe via la recherche objet Bertel.
-  const baseDirectoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
+  const baseDirectoryQuery = useQuery({ queryKey: crmQueryKeys.directory(), queryFn: () => listCrmDirectory() });
   const newActorObjects = useMemo(() => {
     const byId = new Map<string, { objectId: string; objectName: string }>();
     for (const entry of baseDirectoryQuery.data ?? []) {
@@ -313,7 +315,7 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
           onCreated={(actorId) => {
             setNewActorOpen(false);
             // Préfixe ['crm-directory'] : couvre la clé de base ET les clés filtrées.
-            void queryClient.invalidateQueries({ queryKey: ['crm-directory'] });
+            void queryClient.invalidateQueries({ queryKey: crmQueryKeys.directory() });
             onOpenActor(actorId);
           }}
         />

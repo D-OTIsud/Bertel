@@ -1,3 +1,4 @@
+import { isPlainRecord as isRecord } from '../../lib/json-read';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import type { WorkspaceModuleId } from '../../services/object-workspace';
@@ -9,10 +10,6 @@ const LOCAL_DRAFT_SCHEMA = 1;
 const NO_EXCLUDED_MODULES: readonly WorkspaceModuleId[] = [];
 function localDraftKey(userId: string, objectId: string): string {
   return `object-editor-draft:${encodeURIComponent(userId)}:${encodeURIComponent(objectId)}`;
-}
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-    && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
 }
 
 function isModuleSnapshot(value: unknown, currentModules: ObjectWorkspaceModules): value is ObjectWorkspaceModules {

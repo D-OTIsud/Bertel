@@ -1,3 +1,4 @@
+import { stripCombiningMarks } from '../../../lib/text-fold';
 /**
  * Duplicate-name hint for the create dialog (§107): as the user types a name, we surface
  * existing fiches with a similar name + their type + location, so an accidental duplicate
@@ -14,9 +15,7 @@ export interface DuplicateMatch extends ObjectSearchResult {
 
 /** Accent-, case- and whitespace-insensitive normalisation for name comparison. */
 export function normalizeName(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  return stripCombiningMarks(value)
     .toLowerCase()
     .trim()
     .replace(/\s+/g, ' ');

@@ -1,5 +1,6 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { sendListEmail, MailNotConfiguredError } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
@@ -58,10 +59,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // 3. Client « en tant qu'appelant » — c'est CE client (JWT) qui autorise, pas la service key.
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
   const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-  const asCaller = createClient(url, anon, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const asCaller = createCallerClient(url, anon, jwt);
 
   // 4. get_list : auto-autorise (RAISE FORBIDDEN si l'appelant ne peut pas lire la liste).
   const { data: listData, error: listErr } = await asCaller.schema('api').rpc('get_list', { p_list_id: listId });

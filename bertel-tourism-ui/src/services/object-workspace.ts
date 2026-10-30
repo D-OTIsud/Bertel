@@ -1,8 +1,82 @@
+import {
+  toNullableText,
+  toNullableNumber,
+  toNullableInteger,
+  toRpcUuid,
+  isUuid,
+  normalizeOpeningWeekdayCode,
+  buildCodeIdMap,
+  ensureKnownCodes,
+  workspaceNameForSave,
+} from './object-workspace-payloads/input';
+import { buildCharacteristicsRpcPayload } from './object-workspace-payloads/characteristics';
+export {
+  ACCESSIBILITY_AMENITY_FAMILY,
+  filterEstablishmentAmenityGroups,
+  mergeEstablishmentAmenitySelection,
+  buildEstablishmentAmenityPayload,
+  buildCharacteristicsRpcPayload,
+} from './object-workspace-payloads/characteristics';
+import { buildOpeningsPayload } from './object-workspace-payloads/openings';
+export { buildOpeningsPayload } from './object-workspace-payloads/openings';
+import {
+  buildSustainabilityRpcPayload,
+  buildTagsRpcPayload,
+} from './object-workspace-payloads/sustainability';
+export {
+  buildSustainabilityRpcPayload,
+  buildTagsRpcPayload,
+} from './object-workspace-payloads/sustainability';
+import {
+  buildMeetingRoomSavePayload,
+  buildMeetingRoomEquipmentReconcile,
+  buildMeetingRoomDeletedIds,
+  buildRoomsRpcPayload,
+} from './object-workspace-payloads/rooms';
+export {
+  buildMeetingRoomSavePayload,
+  buildMeetingRoomEquipmentReconcile,
+  buildMeetingRoomDeletedIds,
+  buildRoomsRpcPayload,
+} from './object-workspace-payloads/rooms';
+import {
+  buildItineraryUpsertPayload,
+  buildItineraryStagesPayload,
+  buildItineraryInfoPayload,
+  buildItineraryAssociatedObjectsPayload,
+} from './object-workspace-payloads/itinerary';
+export {
+  buildItineraryUpsertPayload,
+  buildItineraryStagesPayload,
+  buildItineraryInfoPayload,
+  buildItineraryAssociatedObjectsPayload,
+} from './object-workspace-payloads/itinerary';
+import { buildRelationshipsRpcPayload } from './object-workspace-payloads/relationships';
+export {
+  buildRelationsPayload,
+  buildOrgLinksPayload,
+  buildActorLinksPayload,
+  buildRelationshipsRpcPayload,
+} from './object-workspace-payloads/relationships';
+import { buildZonesPayload, buildPlacesRpcPayload } from './object-workspace-payloads/places';
+export { buildZonesPayload, buildPlacesRpcPayload } from './object-workspace-payloads/places';
+import {
+  buildDescriptionPayload,
+  orgOverlayHasContent,
+  buildOrgDescriptionPayload,
+} from './object-workspace-payloads/descriptions';
+export {
+  buildDescriptionPayload,
+  orgOverlayHasContent,
+  buildOrgDescriptionPayload,
+} from './object-workspace-payloads/descriptions';
+
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import {
   readCoercingString as readString,
   readPermissiveBoolean as readBoolean,
   readTrimmedStringList as readStringList,
+  readRecord,
 } from '../lib/json-read';
 import { useSessionStore } from '../store/session-store';
 import type { ObjectDetail } from '../types/domain';
@@ -19,7 +93,6 @@ import {
   parseObjectWorkspace,
   parseWorkspacePlacesModule,
   parseWorkspaceOpeningPeriodRows,
-  projectWorkspaceOpeningSchedules,
   type ObjectWorkspaceContactItem,
   type ObjectWorkspaceContactsModule,
   type ObjectWorkspaceDescriptionScope,
@@ -38,11 +111,7 @@ import {
   type ObjectWorkspacePublicationModule,
   type ObjectWorkspacePublicationSelectionItem,
   type ObjectWorkspacePricingModule,
-  type ObjectWorkspacePlaceItem,
   type ObjectWorkspacePlacesModule,
-  type ObjectWorkspaceOpeningPeriod,
-  type ObjectWorkspaceOpeningSchedule,
-  type ObjectWorkspaceOpeningTimePeriod,
   type ObjectWorkspaceOpeningPeriodTypeOption,
   type ObjectWorkspaceOpeningsModule,
   type ObjectWorkspaceSyncIdentifiersModule,
@@ -56,7 +125,6 @@ import {
   type ObjectWorkspaceLegalRecord,
   type ObjectWorkspaceLegalTypeOption,
   type ObjectWorkspaceMeetingRoomsModule,
-  type ObjectWorkspaceMeetingRoomItem,
   type ObjectWorkspaceMenuItem,
   type ObjectWorkspaceMenusModule,
   type ObjectWorkspaceCuisineModule,
@@ -88,7 +156,12 @@ import {
 import { validateDiscountRowsForSave } from '../features/object-editor/sections/discount-row';
 import { listObjectCrm } from './crm';
 import { mapDatabaseError } from './api-error';
-import { assertWorkspaceSaveAvailable, knownWorkspaceIdsPresent, LEGAL_SUMMARY_UNAVAILABLE, workspaceReadRows } from './object-workspace-safety';
+import {
+  assertWorkspaceSaveAvailable,
+  knownWorkspaceIdsPresent,
+  LEGAL_SUMMARY_UNAVAILABLE,
+  workspaceReadRows,
+} from './object-workspace-safety';
 
 // Re-export normalizeTagColor so callers and tests that import from this entry point can reach it
 // without importing from object-workspace-parser directly.
@@ -173,71 +246,6 @@ function mapMutationError(error: unknown, fallback: string): Error {
   return mapDatabaseError(error, fallback);
 }
 
-function toNullableText(value: string): string | null {
-  const normalized = value.trim();
-  return normalized ? normalized : null;
-}
-
-function toNullableNumber(value: string): number | null {
-  const normalized = value.trim();
-  if (!normalized) {
-    return null;
-  }
-
-  const parsed = Number.parseFloat(normalized.replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function toNullableInteger(value: string): number | null {
-  const normalized = value.trim();
-  if (!normalized) {
-    return null;
-  }
-
-  const parsed = Number.parseInt(normalized, 10);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function toRpcUuid(value: string | null | undefined): string | null {
-  return value && isUuid(value) ? value : null;
-}
-
-const OPENING_WEEKDAY_ALIASES: Record<string, string> = {
-  lundi: 'monday',
-  lun: 'monday',
-  monday: 'monday',
-  mon: 'monday',
-  mardi: 'tuesday',
-  mar: 'tuesday',
-  tuesday: 'tuesday',
-  tue: 'tuesday',
-  mercredi: 'wednesday',
-  mer: 'wednesday',
-  wednesday: 'wednesday',
-  wed: 'wednesday',
-  jeudi: 'thursday',
-  jeu: 'thursday',
-  thursday: 'thursday',
-  thu: 'thursday',
-  vendredi: 'friday',
-  ven: 'friday',
-  friday: 'friday',
-  fri: 'friday',
-  samedi: 'saturday',
-  sam: 'saturday',
-  saturday: 'saturday',
-  sat: 'saturday',
-  dimanche: 'sunday',
-  dim: 'sunday',
-  sunday: 'sunday',
-  sun: 'sunday',
-};
-
-function normalizeOpeningWeekdayCode(value: string): string {
-  const normalized = value.trim().toLowerCase();
-  return OPENING_WEEKDAY_ALIASES[normalized] ?? normalized;
-}
-
 async function callObjectWorkspaceRpc(
   functionName: string,
   objectId: string,
@@ -300,10 +308,6 @@ export function createMembershipCampaign(objectId: string, name: string): Promis
 
 export function createMembershipTier(objectId: string, name: string): Promise<WorkspaceReferenceOption> {
   return createMembershipRef('create_membership_tier', objectId, name);
-}
-
-function readRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
 // P2.1 (§120) — résumé lisible d'une suggestion à partir des colonnes dérivées par
@@ -4784,58 +4788,6 @@ export function validateActivityModule(input: ObjectWorkspaceActivityModule): vo
   }
 }
 
-export const ACCESSIBILITY_AMENITY_FAMILY = 'accessibility';
-
-/** Establishment-level amenity groups for HEB (object/both scope, excluding accessibility). */
-export function filterEstablishmentAmenityGroups(groups: ObjectWorkspaceAmenityGroup[]): ObjectWorkspaceAmenityGroup[] {
-  return groups.filter((group) => group.familyCode !== ACCESSIBILITY_AMENITY_FAMILY);
-}
-
-/** Preserve amenity codes hidden from the establishment selector (PMR, etc.). */
-export function mergeEstablishmentAmenitySelection(
-  selectedCodes: string[],
-  visibleSelection: string[],
-  visibleOptionCodes: Set<string>,
-): string[] {
-  const hidden = selectedCodes.filter((code) => !visibleOptionCodes.has(code));
-  return Array.from(new Set([...hidden, ...visibleSelection]));
-}
-
-export function buildEstablishmentAmenityPayload(
-  characteristics: ObjectWorkspaceCharacteristicsModule,
-  visibleOptionCodes: Set<string>,
-  visibleSelectedCodes: string[],
-): Record<string, unknown> {
-  const merged = mergeEstablishmentAmenitySelection(
-    characteristics.selectedAmenityCodes,
-    visibleSelectedCodes,
-    visibleOptionCodes,
-  );
-  return buildCharacteristicsRpcPayload({ ...characteristics, selectedAmenityCodes: merged });
-}
-
-/** Pure builder for the api.save_object_commercial characteristics arm (P1.3 contributor fork
- *  reuses this so a proposal carries the exact RPC payload the moderator re-dispatches). */
-export function buildCharacteristicsRpcPayload(input: ObjectWorkspaceCharacteristicsModule): Record<string, unknown> {
-  return {
-    languages: input.selectedLanguages.map((item) => ({
-      language_id: toRpcUuid(item.languageId),
-      language_code: item.code || null,
-      level_id: toRpcUuid(item.levelId),
-      level_code: item.levelCode || null,
-    })),
-    payment_methods: Array.from(new Set(input.selectedPaymentCodes)).map((code) => ({
-      payment_method_code: code,
-    })),
-    environment_tags: Array.from(new Set(input.selectedEnvironmentCodes)).map((code) => ({
-      environment_tag_code: code,
-    })),
-    amenities: Array.from(new Set(input.selectedAmenityCodes)).map((code) => ({
-      amenity_code: code,
-    })),
-  };
-}
-
 export async function saveObjectWorkspaceCharacteristics(objectId: string, input: ObjectWorkspaceCharacteristicsModule): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -4971,116 +4923,6 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
   }, 'Impossible d enregistrer les tarifs.');
 }
 
-function openingProjectionKey(period: Pick<ObjectWorkspaceOpeningPeriod, 'weekdays' | 'closedDays' | 'weekdayNotes'>): string {
-  return JSON.stringify([
-    period.weekdays.map((day) => [normalizeOpeningWeekdayCode(day.code), day.slots.map((slot) => [slot.start, slot.end])])
-      .sort((left, right) => String(left[0]).localeCompare(String(right[0]))),
-    [...period.closedDays].sort(),
-    Object.entries(period.weekdayNotes ?? {}).sort(([left], [right]) => left.localeCompare(right)),
-  ]);
-}
-
-function openingTimePeriodKey(timePeriod: Pick<ObjectWorkspaceOpeningTimePeriod, 'closed' | 'note' | 'time_frames'>): string {
-  return JSON.stringify([timePeriod.closed, timePeriod.note || null, timePeriod.time_frames.map((frame) => [
-    frame.start_time?.slice(0, 5) ?? null, frame.end_time?.slice(0, 5) ?? null, frame.recurrence,
-  ])]);
-}
-
-function buildOpeningSchedules(period: ObjectWorkspaceOpeningPeriod): ObjectWorkspaceOpeningSchedule[] {
-  const source = period.schedules ?? [];
-  const projected = projectWorkspaceOpeningSchedules(source);
-  if (projected.editingUnavailableReason) {
-    if (openingProjectionKey(period) !== openingProjectionKey(projected)) {
-      throw new Error(projected.editingUnavailableReason);
-    }
-    // Saving another period must not flatten an untouched, more complex schedule.
-    return source;
-  }
-  const notes = { ...projected.weekdayNotes, ...period.weekdayNotes };
-  const groups = new Map<string, ObjectWorkspaceOpeningTimePeriod>();
-  const openCodes = new Set<string>();
-  const addDay = (code: string, closed: boolean, slots: ObjectWorkspaceOpeningPeriod['weekdays'][number]['slots']) => {
-    if (!code) return;
-    const timePeriod: ObjectWorkspaceOpeningTimePeriod = {
-      id: null, closed, note: notes[code] || null, weekdays: [{ weekday_code: code }],
-      time_frames: closed ? [] : slots.filter((slot) => slot.start || slot.end).map((slot) => ({
-        id: null, start_time: toNullableText(slot.start), end_time: toNullableText(slot.end), recurrence: null,
-      })),
-    };
-    const key = openingTimePeriodKey(timePeriod);
-    const group = groups.get(key);
-    if (group) group.weekdays.push({ weekday_code: code });
-    else groups.set(key, timePeriod);
-  };
-  for (const day of period.weekdays) {
-    if (!day.slots.length) continue;
-    const code = normalizeOpeningWeekdayCode(day.code);
-    if (openCodes.has(code)) throw new Error('Un jour apparaît plusieurs fois dans les horaires.');
-    openCodes.add(code);
-    addDay(code, false, day.slots);
-  }
-  // A source day that the user closes retains its note instead of silently disappearing.
-  const closedCodes = new Set([...period.closedDays, ...Object.keys(projected.weekdayNotes)].map(normalizeOpeningWeekdayCode));
-  for (const code of closedCodes) if (!openCodes.has(code)) addDay(code, true, []);
-  const originalTimePeriods = source[0]?.time_periods ?? [];
-  const timePeriods = Array.from(groups.values()).map((group) => {
-    const daysKey = (days: { weekday_code: string }[]) => days.map((day) => day.weekday_code).sort().join(',');
-    const unchanged = originalTimePeriods.find((original) => openingTimePeriodKey(original) === openingTimePeriodKey(group)
-      && daysKey(original.weekdays) === daysKey(group.weekdays));
-    return unchanged ? { ...unchanged, weekdays: [...unchanged.weekdays], time_frames: [...unchanged.time_frames] } : group;
-  });
-  if (period.schedules && source.length === 0 && timePeriods.length === 0) return [];
-  return [{
-    ...(source[0] ?? {
-      id: null, schedule_type_id: null, schedule_type_code: 'regular', name: 'Horaires', note: null,
-      name_i18n: null, note_i18n: null, extra: {},
-    }),
-    time_periods: timePeriods,
-  }];
-}
-
-export function buildOpeningsPayload(periods: ObjectWorkspaceOpeningPeriod[]) {
-  const output = periods.map((period, periodIndex) => {
-
-    // recurrence → RPC mapping:
-    //  - always: no dates, treated as all-year (date_start/date_end nulled)
-    //  - cyclic: keep dates, repeats every year (all_years true)
-    //  - fixed: keep dates, one-off span (all_years false)
-    const hasDates = period.recurrence !== 'always';
-    return {
-      id: toRpcUuid(period.recordId),
-      name: period.label === '' ? null : period.label,
-      source_period_id: period.sourcePeriodId ?? null,
-      name_i18n: period.nameI18n ?? null,
-      period_type_id: period.originalSeasonTypeCode === undefined || period.seasonTypeCode === period.originalSeasonTypeCode
-        ? toRpcUuid(period.periodTypeId) : null,
-      period_type_code: toNullableText(period.seasonTypeCode),
-      date_start: hasDates ? toNullableText(period.startDate) : null,
-      date_end: hasDates ? toNullableText(period.endDate) : null,
-      all_years: period.originalRecurrence === period.recurrence && period.originalAllYears !== undefined
-        ? period.originalAllYears : period.recurrence !== 'fixed',
-      is_closure: period.isClosure,
-      extra: {
-        ...period.extra,
-        workspace_order: period.order || String(periodIndex + 1),
-      },
-      schedules: buildOpeningSchedules(period),
-    };
-  });
-  const schedules = output.flatMap((period) => period.schedules);
-  const timePeriods = schedules.flatMap((schedule) => schedule.time_periods);
-  for (const ids of [output.map((period) => period.id), schedules.map((schedule) => schedule.id),
-    timePeriods.map((period) => period.id), timePeriods.flatMap((period) => period.time_frames.map((frame) => frame.id))]) {
-    const usedIds = new Set<string>();
-    for (const id of ids) {
-      if (!id) continue;
-      if (usedIds.has(id)) throw new Error('Un identifiant est utilisé plusieurs fois dans les horaires. Rechargez la fiche.');
-      usedIds.add(id);
-    }
-  }
-  return output;
-}
-
 export async function saveObjectWorkspaceOpenings(objectId: string, input: ObjectWorkspaceOpeningsModule): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -5094,23 +4936,6 @@ export async function saveObjectWorkspaceOpenings(objectId: string, input: Objec
     { periods: buildOpeningsPayload(input.periods) },
     'Impossible d enregistrer les horaires.',
   );
-}
-
-/** Pure builder for the api.save_object_workspace_sustainability payload (P1.3 contributor fork). */
-export function buildSustainabilityRpcPayload(input: ObjectWorkspaceSustainabilityModule): Record<string, unknown> {
-  return {
-    actions: input.categories.flatMap((category) =>
-      category.actions
-        .filter((action) => action.selected)
-        .map((action) => ({
-          action_id: toRpcUuid(action.id),
-          action_code: action.code,
-          category_code: category.code,
-          note: toNullableText(action.note),
-          document_id: toRpcUuid(action.documentId),
-        })),
-    ),
-  };
 }
 
 export async function saveObjectWorkspaceSustainability(
@@ -5128,19 +4953,6 @@ export async function saveObjectWorkspaceSustainability(
     buildSustainabilityRpcPayload(input),
     'Impossible d enregistrer la demarche durable.',
   );
-}
-
-/** Pure builder for the api.save_object_workspace_tags payload (P1.3 contributor fork).
- *  Per-object save persists ONLY which tags are displayed + their order (tag_link rows +
- *  position). Color is GLOBAL per tag (ref_tag.color) and is written by api.set_tag_color,
- *  not here. Label is read from ref_tag at load time (never persisted per-object). */
-export function buildTagsRpcPayload(input: ObjectWorkspaceTagsModule): Record<string, unknown> {
-  return {
-    tags: input.displayed.map((tag) => ({
-      tag_id: toRpcUuid(tag.tagId),
-      slug: tag.slug,
-    })),
-  };
 }
 
 export async function saveObjectWorkspaceTags(objectId: string, input: ObjectWorkspaceTagsModule): Promise<void> {
@@ -5228,119 +5040,6 @@ export async function setWorkspaceTagColor(
     throw mapMutationError(error, 'Impossible de changer la couleur du tag.');
   }
   return normalizeTagColor(readRecord(data).color, normalizedColor);
-}
-
-function buildCodeIdMap(rows: unknown[]): Map<string, string> {
-  return new Map(
-    rows.map((entry) => {
-      const row = readRecord(entry);
-      return [readString(row.code).toLowerCase(), readString(row.id)] as const;
-    }).filter(([code, id]) => Boolean(code && id)),
-  );
-}
-
-function ensureKnownCodes(codes: string[], idByCode: Map<string, string>, label: string): void {
-  const unknown = codes.find((code) => code && !idByCode.has(code.toLowerCase()));
-  if (unknown) {
-    throw new Error(`${label} inconnu: ${unknown}.`);
-  }
-}
-
-function workspaceNameForSave(name: string, rawName: string | null | undefined): string | null {
-  const normalized = toNullableText(name);
-  if (rawName === null && name.trim() === '') return null;
-  const normalizedRawName = rawName == null ? null : toNullableText(rawName);
-  if (rawName !== undefined && normalized === normalizedRawName) return rawName;
-  return normalized;
-}
-
-export function buildMeetingRoomSavePayload(
-  objectId: string,
-  item: ObjectWorkspaceMeetingRoomItem,
-): Record<string, unknown> {
-  const id = item.recordId ?? (item.uid && isUuid(item.uid) ? item.uid : null);
-  if (!id) throw new Error('Nouvelle salle MICE sans identifiant stable. Rechargez la fiche, puis recréez la salle.');
-  return {
-    id,
-    object_id: objectId,
-    name: workspaceNameForSave(item.name, item.rawName),
-    name_i18n: item.nameTranslations,
-    extra: item.extra ?? null,
-    area_m2: toNullableNumber(item.areaM2),
-    cap_theatre: toNullableInteger(item.capacityTheatre),
-    cap_u: toNullableInteger(item.capacityU),
-    cap_classroom: toNullableInteger(item.capacityClassroom),
-    cap_boardroom: toNullableInteger(item.capacityBoardroom),
-  };
-}
-
-export function buildMeetingRoomEquipmentReconcile(
-  roomId: string,
-  item: ObjectWorkspaceMeetingRoomItem,
-  equipmentIdByCode: Map<string, string>,
-): { upsertRows: Array<{ room_id: string; equipment_id: string; position: number | null; note: string | null }>; removedIds: string[] } {
-  const selectedIds = Array.from(new Set(item.equipmentCodes))
-    .map((code) => equipmentIdByCode.get(code.toLowerCase()) as string);
-  const selected = new Set(selectedIds);
-  const oldDetails = item.equipmentDetails ?? [];
-  const oldById = new Map(oldDetails.map((detail) => [detail.equipmentId, detail]));
-  return {
-    removedIds: oldDetails.map((detail) => detail.equipmentId).filter((id) => !selected.has(id)),
-    upsertRows: selectedIds.map((equipmentId, position) => {
-      const old = oldById.get(equipmentId);
-      return { room_id: roomId, equipment_id: equipmentId, position: old ? old.position : position + 1, note: old?.note ?? null };
-    }),
-  };
-}
-
-export function buildMeetingRoomDeletedIds(
-  knownRoomIds: string[],
-  items: ObjectWorkspaceMeetingRoomItem[],
-): string[] {
-  const currentIds = new Set(items.map((item) => item.recordId).filter((id): id is string => Boolean(id)));
-  return [...new Set(knownRoomIds)].filter((id) => !currentIds.has(id));
-}
-
-/** Pure payload for api.save_object_rooms — one atomic reconcile per save. */
-export function buildRoomsRpcPayload(input: ObjectWorkspaceRoomsModule): Record<string, unknown> {
-  const knownIds = new Set(input.knownRoomIds ?? input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id)));
-  const currentIds = input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id));
-  if (new Set(currentIds).size !== currentIds.length) throw new Error('Une même chambre apparaît plusieurs fois. Rechargez la fiche avant de sauvegarder.');
-  return {
-    write_contract: 'rooms-reconcile-v1',
-    deleted_ids: [...knownIds].filter((id) => !currentIds.includes(id)),
-    rooms: input.items.map((item) => ({
-      id: toRpcUuid(item.recordId),
-      code: item.code,
-      name: workspaceNameForSave(item.name, item.rawName) ?? '',
-      name_i18n: Object.keys(item.nameTranslations).length > 0 ? item.nameTranslations : null,
-      description: item.description || null,
-      description_i18n: Object.keys(item.descriptionTranslations).length > 0 ? item.descriptionTranslations : null,
-      extra: item.extra ?? null,
-      room_type_code: item.roomTypeCode || null,
-      view_type_code: item.viewTypeCode || null,
-      capacity_adults: toNullableInteger(item.capacityAdults),
-      capacity_children: toNullableInteger(item.capacityChildren),
-      capacity_total: toNullableInteger(item.capacityTotal),
-      size_sqm: toNullableNumber(item.sizeSqm),
-      bed_config: toNullableText(item.bedConfig),
-      bed_config_i18n: Object.keys(item.bedConfigTranslations).length > 0 ? item.bedConfigTranslations : null,
-      total_rooms: toNullableInteger(item.quantity),
-      floor_level: toNullableInteger(item.floorLevel),
-      base_price: toNullableNumber(item.basePrice),
-      currency: item.currency || null,
-      is_accessible: item.rawAccessible === null && !item.accessible ? null : item.accessible,
-      is_published: item.rawPublished === null && item.published ? null : item.published,
-      position: toNullableInteger(item.position),
-      amenity_codes: Array.from(new Set(item.amenityCodes)),
-      media_ids: Array.from(new Set(item.mediaIds.filter((id) => isUuid(id)))),
-      beds: item.beds.map((bed, bedIndex) => ({
-        bed_type_code: bed.bedTypeCode,
-        quantity: toNullableInteger(bed.quantity) ?? 1,
-        position: bed.position ?? bedIndex + 1,
-      })),
-    })),
-  };
 }
 
 export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWorkspaceRoomsModule): Promise<void> {
@@ -5764,117 +5463,6 @@ export async function saveObjectWorkspaceEvent(objectId: string, input: ObjectWo
   }
 }
 
-/**
- * Pure builder for the object_iti upsert row. Maps editor fields to the REAL columns after the
- * greenfield retype (migration_iti_duration_elevation.sql): durationMin -> duration_min (minutes),
- * elevationPositiveM -> elevation_gain, elevationNegativeM -> elevation_loss. The previous inline
- * payload wrote elevation_positive_m / elevation_negative_m, which do NOT exist in object_iti — so
- * every itinerary save silently failed. geom / cached_gpx are intentionally NOT written here: trace
- * geometry stays read-only until a write/validation contract exists.
- */
-export function buildItineraryUpsertPayload(objectId: string, input: ObjectWorkspaceItineraryModule) {
-  return {
-    object_id: objectId,
-    distance_km: toNullableNumber(input.distanceKm),
-    duration_min: toNullableInteger(input.durationMin),
-    difficulty_level: toNullableText(input.difficultyLevel),
-    elevation_gain: toNullableInteger(input.elevationPositiveM),
-    elevation_loss: toNullableInteger(input.elevationNegativeM),
-    is_loop: input.loop,
-    open_status: toNullableText(input.openStatus) ?? 'open',
-    status_note: toNullableText(input.statusNote),
-  };
-}
-
-/**
- * Pure builder for the `stages` payload of api.save_object_itinerary_nested (Phase 1). Maps the
- * editor's managed stage rows (BlockITI / SectionPlaces add/edit/remove) to the RPC shape:
- * recordId -> id (existing stage, preserved); new rows omit id so the RPC generates one.
- * Returns null when the itinerary module did NOT load (unavailableReason set) — the RPC replaces
- * all stages (delete + reinsert), so a partial/failed load must not clobber the object's existing
- * stages. An empty array is intentional (user removed every stage) and correctly clears them.
- */
-export function buildItineraryStagesPayload(
-  input: ObjectWorkspaceItineraryModule,
-): Array<{
-  id?: string;
-  name: string;
-  description: string;
-  position: string;
-  extra: Record<string, unknown>;
-  name_i18n: Record<string, string> | null;
-  description_i18n: Record<string, string> | null;
-  lng?: string;
-  lat?: string;
-  media: Array<{ media_id: string; position: number }>;
-}> | null {
-  if (input.unavailableReason != null) {
-    return null;
-  }
-  // §111 C: also carry kind (extra.kind), the GPS point (lng/lat), and the linked media so the
-  // RPC delete+reinsert preserves them — sending only name/description would wipe stage geom + photos.
-  return input.stages.map((stage) => ({
-    ...(stage.recordId ? { id: stage.recordId } : {}),
-    name: workspaceNameForSave(stage.name, stage.rawName) ?? '',
-    description: stage.description,
-    position: stage.position,
-    extra: { ...Object.fromEntries(Object.entries(stage.extra ?? {}).filter(([key]) => key !== 'kind')), ...(stage.kind ? { kind: stage.kind } : {}) },
-    name_i18n: stage.nameTranslations && Object.keys(stage.nameTranslations).length > 0 ? stage.nameTranslations : null,
-    description_i18n: stage.descriptionTranslations && Object.keys(stage.descriptionTranslations).length > 0 ? stage.descriptionTranslations : null,
-    ...(stage.lng && stage.lat ? { lng: stage.lng, lat: stage.lat } : {}),
-    media: stage.mediaIds.map((mediaId, mediaIndex) => ({ media_id: mediaId, position: mediaIndex })),
-  }));
-}
-
-/**
- * §111 Pure builder for the `info` payload of api.save_object_itinerary_nested (object_iti_info —
- * the §06 « Infos pratiques » block). Maps the editor fields to the RPC columns. Returns null when
- * the module did not load (unavailableReason) so a failed load cannot delete/clobber existing info.
- * Empty strings become NULL server-side (NULLIF in the RPC); the row is upserted, never partial.
- */
-export function buildItineraryInfoPayload(
-  input: ObjectWorkspaceItineraryModule,
-): {
-  access: string;
-  ambiance: string;
-  recommended_parking: string;
-  required_equipment: string;
-  info_places: string;
-  is_child_friendly: boolean;
-} | null {
-  if (input.unavailableReason != null) {
-    return null;
-  }
-  return {
-    access: input.access,
-    ambiance: input.ambiance,
-    recommended_parking: input.recommendedParking,
-    required_equipment: input.requiredEquipment,
-    info_places: input.infoPlaces,
-    is_child_friendly: input.childFriendly,
-    ...(input.infoTranslations ?? {}),
-  };
-}
-
-/**
- * §111 C3 Pure builder for the `associated_objects` payload of api.save_object_itinerary_nested
- * (object_iti_associated_object — objets liés). null when the module did not load (the RPC
- * delete+reinserts, so a failed load must not wipe existing links). An empty array intentionally
- * clears all links. role_id is the ref_iti_assoc_role UUID (from the loaded data or the role select).
- */
-export function buildItineraryAssociatedObjectsPayload(
-  input: ObjectWorkspaceItineraryModule,
-): Array<{ associated_object_id: string; role_id: string; note: string }> | null {
-  if (input.unavailableReason != null) {
-    return null;
-  }
-  return input.associatedObjects.map((entry) => ({
-    associated_object_id: entry.associatedObjectId,
-    role_id: entry.roleId,
-    note: entry.note,
-  }));
-}
-
 export async function saveObjectWorkspaceItinerary(objectId: string, input: ObjectWorkspaceItineraryModule): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -5974,10 +5562,6 @@ export async function saveObjectWorkspaceItineraryTrack(
     elevationLoss: toStr(result.elevation_loss),
     hasElevation: result.has_3d === true,
   };
-}
-
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
 }
 
 function parseLegalValueInput(value: string): unknown {
@@ -6102,114 +5686,6 @@ export async function saveObjectWorkspaceLegal(objectId: string, input: ObjectWo
   }
 }
 
-/**
- * Pure builder for the api.save_object_relations payload. Maps the editor's OUTGOING related-object
- * rows (direction !== 'in') to the RPC shape; INCOMING relations are owned by other objects and are
- * never written from here. The relation record id isn't tracked in the UI, so it's omitted and the
- * RPC regenerates it (it deletes every relation whose source is this object, then re-inserts the payload).
- */
-export function buildRelationsPayload(
-  input: ObjectWorkspaceRelationshipsModule,
-): Array<{ target_object_id: string; relation_type_code: string; distance_m: string; note: string; position: number }> {
-  return input.relatedObjects
-    .filter((item) => item.direction !== 'in')
-    .map((item, index) => ({
-      target_object_id: item.id,
-      relation_type_code: item.relationTypeCode,
-      distance_m: item.distanceM,
-      note: item.note,
-      position: index,
-    }));
-}
-
-/**
- * Pure builder for the org_links arm of api.save_object_relations. Returns null when the
- * org links could not be loaded reliably — the caller must then OMIT the key entirely so the
- * RPC's delete-all + re-insert branch never runs blind (anti-clobber, §28/§40 pattern).
- * `role_id` is sent alongside `role_code` (the RPC resolves role_id first, role_code as
- * fallback — airtight role resolution). The RPC raises on >1 primary, so only the first
- * primary survives here; when a dropped duplicate (same org, role) carried the primary flag,
- * the KEPT row is promoted instead so the flag is never silently lost.
- */
-export function buildOrgLinksPayload(
-  input: ObjectWorkspaceRelationshipsModule,
-): Array<{ org_object_id: string; role_id: string; role_code: string; is_primary: boolean; note: string }> | null {
-  if (input.organizationLinkWriteUnavailableReason) {
-    return null;
-  }
-  let primarySeen = false;
-  const kept = new Map<string, { org_object_id: string; role_id: string; role_code: string; is_primary: boolean; note: string }>();
-  for (const item of input.organizationLinks) {
-    if (!item.id || !item.roleCode) continue;
-    const key = `${item.id}:${item.roleCode.toLowerCase()}`;
-    const existing = kept.get(key);
-    if (existing) {
-      // Duplicate (org, role) pair: the row is dropped, but its primary flag must not be.
-      if (item.isPrimary && !primarySeen) {
-        existing.is_primary = true;
-        primarySeen = true;
-      }
-      continue;
-    }
-    const isPrimary = item.isPrimary && !primarySeen;
-    if (isPrimary) primarySeen = true;
-    kept.set(key, {
-      org_object_id: item.id,
-      role_id: item.roleId,
-      role_code: item.roleCode,
-      is_primary: isPrimary,
-      note: item.note,
-    });
-  }
-  return Array.from(kept.values());
-}
-
-/**
- * §48 — pure builder for the actors arm of api.save_object_relations (actor_object_role).
- * Mirrors buildOrgLinksPayload: returns null when the actor links could not be loaded
- * reliably — the caller must then OMIT the key entirely so the RPC's delete-all + re-insert
- * branch never runs blind (anti-clobber). `role_id` is sent alongside `role_code` (the RPC
- * resolves role_id first, role_code as fallback). The DB enforces ≤1 primary PER (object, role)
- * (uq_actor_object_role_primary), so first-primary-wins is tracked per role here; when a
- * dropped duplicate (same actor, role) carried the primary flag, the KEPT row is promoted.
- */
-export function buildActorLinksPayload(
-  input: ObjectWorkspaceRelationshipsModule,
-): Array<{ actor_id: string; role_id: string; role_code: string; is_primary: boolean; visibility: string; valid_from: string; valid_to: string; note: string }> | null {
-  if (input.actorWriteUnavailableReason) {
-    return null;
-  }
-  const primaryByRole = new Set<string>();
-  const kept = new Map<string, { actor_id: string; role_id: string; role_code: string; is_primary: boolean; visibility: string; valid_from: string; valid_to: string; note: string }>();
-  for (const item of input.actors) {
-    if (!item.id || !item.roleCode) continue;
-    const roleKey = item.roleCode.toLowerCase();
-    const key = `${item.id}:${roleKey}`;
-    const existing = kept.get(key);
-    if (existing) {
-      // Duplicate (actor, role) pair: the row is dropped, but its primary flag must not be.
-      if (item.isPrimary && !primaryByRole.has(roleKey)) {
-        existing.is_primary = true;
-        primaryByRole.add(roleKey);
-      }
-      continue;
-    }
-    const isPrimary = item.isPrimary && !primaryByRole.has(roleKey);
-    if (isPrimary) primaryByRole.add(roleKey);
-    kept.set(key, {
-      actor_id: item.id,
-      role_id: item.roleId,
-      role_code: item.roleCode,
-      is_primary: isPrimary,
-      visibility: item.visibility || 'public',
-      valid_from: item.validFrom,
-      valid_to: item.validTo,
-      note: item.note,
-    });
-  }
-  return Array.from(kept.values());
-}
-
 export interface ActorSearchResult {
   id: string;
   displayName: string;
@@ -6240,21 +5716,6 @@ export async function searchActors(query: string): Promise<ActorSearchResult[]> 
     gender: readString(row.gender),
     email: readString(row.email),
   }));
-}
-
-/** §48 — pure assembly of the api.save_object_relations payload. org_links / actors are
- *  each OMITTED (not sent) when their builder returns null (unreliable load — anti-clobber). */
-export function buildRelationshipsRpcPayload(input: ObjectWorkspaceRelationshipsModule): Record<string, unknown> {
-  const payload: Record<string, unknown> = { object_relations: buildRelationsPayload(input) };
-  const orgLinks = buildOrgLinksPayload(input);
-  if (orgLinks !== null) {
-    payload.org_links = orgLinks;
-  }
-  const actors = buildActorLinksPayload(input);
-  if (actors !== null) {
-    payload.actors = actors;
-  }
-  return payload;
 }
 
 export async function saveObjectWorkspaceRelationships(
@@ -6420,22 +5881,6 @@ export async function saveObjectWorkspaceMemberships(objectId: string, input: Ob
   }
 }
 
-/**
- * Pure (§41): the zones-only payload for `api.save_object_places` — selected INSEE commune
- * codes → ordered `{insee_commune, position}`. Dedupes; drops blanks.
- */
-export function buildZonesPayload(zoneCodes: string[]): { insee_commune: string; position: number }[] {
-  const seen = new Set<string>();
-  const rows: { insee_commune: string; position: number }[] = [];
-  for (const code of zoneCodes) {
-    const trimmed = code.trim();
-    if (!trimmed || seen.has(trimmed)) continue;
-    seen.add(trimmed);
-    rows.push({ insee_commune: trimmed, position: rows.length });
-  }
-  return rows;
-}
-
 /** The partner projection omits address columns, location IDs and secondary locations. */
 export async function getObjectWorkspacePlacesModule(
   objectId: string,
@@ -6496,94 +5941,6 @@ export async function getObjectWorkspacePlacesModule(
   } catch {
     return unavailable();
   }
-}
-
-function assertPlaceCoordsPaired(items: ObjectWorkspacePlaceItem[]): void {
-  for (const item of items) {
-    const hasLat = Boolean(item.location.latitude.trim());
-    const hasLng = Boolean(item.location.longitude.trim());
-    if (hasLat !== hasLng) {
-      throw new Error(`Coordonnées incomplètes pour le site « ${item.label || 'sans nom'} ».`);
-    }
-  }
-}
-
-/** Pure payload for api.save_object_places (secondary sites only — zones use buildZonesPayload). */
-export function buildPlacesRpcPayload(input: ObjectWorkspacePlacesModule): Record<string, unknown> {
-  assertPlaceCoordsPaired(input.items);
-  const stableId = (value: string | null): string => {
-    const id = toRpcUuid(value);
-    if (!id) throw new Error('Un site, une adresse ou une description n’a pas d’identifiant stable. Rechargez la fiche avant de sauvegarder.');
-    return id;
-  };
-  const currentIds = input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id));
-  if (new Set(currentIds).size !== currentIds.length) throw new Error('Un même site apparaît plusieurs fois. Rechargez la fiche avant de sauvegarder.');
-  return {
-    write_contract: 'places-reconcile-v1',
-    deleted_ids: [...new Set(input.knownPlaceIds ?? [])].filter((id) => !currentIds.includes(id)),
-    places: input.items.map((item, index) => {
-      const rawPlace = item.rawPlace ?? {};
-      const rawLocations = item.rawLocations ?? [];
-      const locationIndex = rawLocations.findIndex((row) => readString(row.id) === item.location.recordId);
-      const selectedLocationIndex = locationIndex >= 0
-        ? locationIndex
-        : Math.max(0, rawLocations.findIndex((row) => readBoolean(row.is_main_location ?? row.is_main)));
-      const locationPayload = (raw: Record<string, unknown>, position: number) => ({
-        ...raw,
-        id: stableId(readString(raw.id) || (position === selectedLocationIndex ? item.location.recordId : null)),
-        address1: position === selectedLocationIndex ? toNullableText(item.location.address1) : raw.address1 ?? null,
-        address1_suite: position === selectedLocationIndex ? toNullableText(item.location.address1Suite) : raw.address1_suite ?? null,
-        address2: position === selectedLocationIndex ? toNullableText(item.location.address2) : raw.address2 ?? null,
-        address3: position === selectedLocationIndex ? toNullableText(item.location.address3) : raw.address3 ?? null,
-        postcode: position === selectedLocationIndex ? toNullableText(item.location.postcode) : raw.postcode ?? null,
-        city: position === selectedLocationIndex ? toNullableText(item.location.city) : raw.city ?? null,
-        code_insee: position === selectedLocationIndex ? toNullableText(item.location.codeInsee) : raw.code_insee ?? null,
-        lieu_dit: position === selectedLocationIndex ? toNullableText(item.location.lieuDit) : raw.lieu_dit ?? null,
-        direction: position === selectedLocationIndex ? (item.location.direction || null) : raw.direction ?? null,
-        latitude: position === selectedLocationIndex ? toNullableNumber(item.location.latitude) : raw.latitude ?? null,
-        longitude: position === selectedLocationIndex ? toNullableNumber(item.location.longitude) : raw.longitude ?? null,
-        altitude_m: position === selectedLocationIndex
-          ? (item.location.altitude?.trim() ? toNullableInteger(item.location.altitude) : raw.altitude_m ?? null)
-          : raw.altitude_m ?? null,
-        is_main_location: raw.id ? (raw.is_main_location ?? raw.is_main ?? null) : position === selectedLocationIndex,
-        ...(raw.position == null ? {} : { position: raw.position }),
-      });
-      const locations = rawLocations.length > 0
-        ? rawLocations.map(locationPayload)
-        : [locationPayload(item.location.raw ?? {}, 0)];
-
-      const rawDescriptions = item.rawDescriptions ?? [];
-      const descriptionIndex = rawDescriptions.findIndex((row) => readString(row.id) === item.descriptionRecordId);
-      const selectedDescriptionIndex = descriptionIndex >= 0 ? descriptionIndex : 0;
-      const descriptionPayload = (raw: Record<string, unknown>, position: number) => {
-        if (position !== selectedDescriptionIndex) return raw;
-        const { extra, ...rawWithoutExtra } = raw;
-        return {
-          ...rawWithoutExtra,
-          ...(extra == null ? {} : { extra }),
-          id: stableId(readString(raw.id) || item.descriptionRecordId),
-          description: item.description.baseValue || null,
-          description_i18n: Object.keys(item.description.values).length > 0 ? item.description.values : (raw.description_i18n ?? null),
-          visibility: item.rawVisibility === null && !item.visibilityEdited && item.visibility === 'public' ? null : item.visibility,
-          ...(raw.position == null ? {} : { position: raw.position }),
-        };
-      };
-      const descriptions = rawDescriptions.length > 0
-        ? rawDescriptions.map(descriptionPayload)
-        : [descriptionPayload({}, 0)];
-
-      const { extra, ...rawPlaceWithoutExtra } = rawPlace;
-      return {
-        ...rawPlaceWithoutExtra,
-        id: stableId(item.recordId),
-        label: workspaceNameForSave(item.label, item.rawName),
-        position: Object.prototype.hasOwnProperty.call(rawPlace, 'position') ? rawPlace.position : item.position ?? index,
-        ...(extra == null ? {} : { extra }),
-        locations,
-        descriptions,
-      };
-    }),
-  };
 }
 
 export async function saveObjectWorkspacePlaces(objectId: string, input: ObjectWorkspacePlacesModule): Promise<void> {
@@ -6986,44 +6343,6 @@ export async function saveObjectWorkspaceContacts(objectId: string, input: Objec
       throw mapMutationError(error, 'Impossible de supprimer les réseaux / canaux retirés.');
     }
   }
-}
-
-/** Pure (exported for tests): the object/place description write payload. */
-export function buildDescriptionPayload(scope: ObjectWorkspaceDescriptionsModule['object']) {
-  return {
-    description: toNullableText(scope.description.baseValue),
-    description_i18n: Object.keys(scope.description.values).length > 0 ? scope.description.values : null,
-    description_chapo: toNullableText(scope.chapo.baseValue),
-    description_chapo_i18n: Object.keys(scope.chapo.values).length > 0 ? scope.chapo.values : null,
-    description_adapted: toNullableText(scope.adaptedDescription.baseValue),
-    description_adapted_i18n: Object.keys(scope.adaptedDescription.values).length > 0 ? scope.adaptedDescription.values : null,
-    description_mobile: toNullableText(scope.mobileDescription.baseValue),
-    description_mobile_i18n: Object.keys(scope.mobileDescription.values).length > 0 ? scope.mobileDescription.values : null,
-    description_edition: toNullableText(scope.editorialDescription.baseValue),
-    description_edition_i18n: Object.keys(scope.editorialDescription.values).length > 0 ? scope.editorialDescription.values : null,
-    // No 'public' default: a NULL-visibility row is extended-scope-only under the 8t
-    // read gate — blindly coercing it on save would widen it to anon once published.
-    // New rows still default to 'public' at the INSERT call sites.
-    visibility: toNullableText(scope.visibility),
-  };
-}
-
-/** Pure: TRUE if an org overlay scope carries any text or translation worth persisting. */
-export function orgOverlayHasContent(scope: ObjectWorkspaceDescriptionScope): boolean {
-  const fields = [scope.chapo, scope.description, scope.adaptedDescription];
-  return fields.some((f) => f.baseValue.trim() !== '' || Object.keys(f.values).length > 0);
-}
-
-/** Pure: the org-overlay write payload — the three enrichable fields only. */
-export function buildOrgDescriptionPayload(scope: ObjectWorkspaceDescriptionScope) {
-  return {
-    description: toNullableText(scope.description.baseValue),
-    description_i18n: Object.keys(scope.description.values).length > 0 ? scope.description.values : null,
-    description_chapo: toNullableText(scope.chapo.baseValue),
-    description_chapo_i18n: Object.keys(scope.chapo.values).length > 0 ? scope.chapo.values : null,
-    description_adapted: toNullableText(scope.adaptedDescription.baseValue),
-    description_adapted_i18n: Object.keys(scope.adaptedDescription.values).length > 0 ? scope.adaptedDescription.values : null,
-  };
 }
 
 async function upsertObjectDescription(

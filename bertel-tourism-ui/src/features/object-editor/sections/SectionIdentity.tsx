@@ -1,3 +1,4 @@
+import { stripDiacritics } from '../../../lib/text-fold';
 import { useEffect, useState } from 'react';
 import { Fs, Field, Input, Readout, EditorModal } from '../primitives';
 import type { SectionProps } from './section-types';
@@ -69,9 +70,7 @@ function buildTaxonomyAssignment(
 }
 
 function normalizeTaxonomyLabel(label: string): string {
-  return label
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
+  return stripDiacritics(label)
     .toLowerCase()
     .replace(/['’]/g, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
@@ -143,7 +142,7 @@ function TaxonomyCrumbs({ path }: { path: ObjectWorkspaceTaxonomyPathNode[] }) {
 
 /** Diacritic-insensitive lowercasing for search matching. */
 function foldText(value: string): string {
-  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+  return stripDiacritics(value).toLowerCase().trim();
 }
 
 /**

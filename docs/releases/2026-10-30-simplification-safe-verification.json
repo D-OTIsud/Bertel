@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-30",
+  "branch": "codex/simplification-safe-20261030",
+  "implementation_commit": "45634b2120b276084fb58eb0ba99afa01075c8eb",
+  "integration_base": "ee03acd289fe5ce4d3d4158e95ec3629454e707b",
+  "purpose": "Simplification interne en conservant les comportements, les donnees et les points d entree utilises par l application.",
+  "changes": {
+    "crm_key_sites_centralized": 59,
+    "accent_folding_sites_centralized": 12,
+    "caller_client_constructions_centralized": 14,
+    "workspace_file_sizes": [
+      {
+        "file": "bertel-tourism-ui/src/services/object-workspace.ts",
+        "before": 7134,
+        "after": 6453
+      },
+      {
+        "file": "bertel-tourism-ui/src/services/object-workspace-parser.ts",
+        "before": 3782,
+        "after": 2682
+      }
+    ]
+  },
+  "preservation": {
+    "deleted_files": [],
+    "public_exports": [
+      {
+        "file": "services/object-workspace.ts",
+        "before": 89,
+        "after": 89,
+        "missing": []
+      },
+      {
+        "file": "services/object-workspace-parser.ts",
+        "before": 124,
+        "after": 124,
+        "missing": []
+      },
+      {
+        "file": "features/object-drawer/utils.ts",
+        "before": 49,
+        "after": 49,
+        "missing": []
+      }
+    ],
+    "identical_type_declarations": 103,
+    "identical_moved_function_bodies": 37,
+    "preserved_test_and_storybook_assets": [
+      "features/object-editor/widgets/StageEditModal.tsx",
+      "features/portal/__fixtures__/portal-fixtures.ts"
+    ],
+    "schema_data_and_styles_unchanged": true
+  },
+  "coordination": {
+    "provider_correction_commit": "ee03acd",
+    "common_changed_files": [],
+    "excluded_surfaces": [
+      "Explorer filters",
+      "Dashboard and KPI services",
+      "SQL and migrations"
+    ]
+  },
+  "validation": {
+    "typecheck_after_integration": "passed",
+    "production_build_after_integration": "passed",
+    "full_unit_run": {
+      "base": "e267eb4",
+      "suites": 543,
+      "tests": 5503,
+      "failed": 0
+    },
+    "dashboard_integration_run": {
+      "base": "ee03acd",
+      "suites": 3,
+      "tests": 34,
+      "failed": 0
+    },
+    "browser_tests_run": false
+  },
+  "remaining_separate_work": [
+    "CSS or dead-code removals requiring confirmation of non-use",
+    "Modal unification and other UI changes",
+    "Product decisions from the audit",
+    "Remaining refactors in files reserved for concurrent work"
+  ]
+}

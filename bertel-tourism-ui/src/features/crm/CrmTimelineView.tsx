@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Timeline org-wide (§61 + rectifs PO points 6+7) — pagination keyset (before/before_id) via
 // api.list_crm_timeline, « Charger plus » sans collapse (placeholderData), erreurs de page 2
@@ -55,7 +57,7 @@ export function CrmTimelineView({
   const [statusItem, setStatusItem] = useState<StatusItem>(STATUS_DEFAULT);
   const [periodItem, setPeriodItem] = useState<PeriodItem>(PERIOD_DEFAULT);
 
-  const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
+  const topicsQuery = useQuery({ queryKey: crmQueryKeys.demandTopics, queryFn: listDemandTopics });
 
   const status = statusValueOf(statusItem);
   const from = useMemo(() => periodFromOf(periodItem), [periodItem]);
@@ -72,7 +74,7 @@ export function CrmTimelineView({
   const filtersKey = JSON.stringify(serverFilters);
 
   const timelineQuery = useQuery({
-    queryKey: ['crm-timeline', filtersKey, cursor?.beforeId ?? null],
+    queryKey: crmQueryKeys.timeline(filtersKey, cursor?.beforeId ?? null),
     queryFn: () =>
       listCrmTimeline({ ...serverFilters, ...(cursor ? { before: cursor.before, beforeId: cursor.beforeId } : {}) }),
     // « Charger plus »/changer un filtre change la queryKey : garder la page précédente
@@ -142,7 +144,7 @@ export function CrmTimelineView({
   // Une réponse hérite le contexte de la racine ; le toggle pose/efface resolved_at. On
   // invalide TOUTES les pages de timeline (préfixe ['crm-timeline'] : filtres + curseur) ;
   // les pages accumulées localement se reconstruisent au refetch.
-  const refetchTimeline = () => queryClient.invalidateQueries({ queryKey: ['crm-timeline'] });
+  const refetchTimeline = () => queryClient.invalidateQueries({ queryKey: crmQueryKeys.timelines });
   const handleReply = async (rootId: string, body: string, sentimentCode?: string) => {
     await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
     await refetchTimeline();
@@ -225,7 +227,7 @@ export function CrmTimelineView({
           interaction={taskFromInteraction}
           onClose={() => setTaskFromInteraction(null)}
           // Le kanban seul : une tâche n'apparaît pas dans la timeline des interactions.
-          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks })}
         />
       )}
     </div>

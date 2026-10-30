@@ -1,3 +1,4 @@
+import { readRecord } from '../lib/json-read';
 import type { Feature, FeatureCollection, Geometry, LineString, MultiLineString } from 'geojson';
 import { mockObjectDetails } from '../data/mock';
 import { getSupabaseClient } from '../lib/supabase';
@@ -26,10 +27,6 @@ export interface ItiTrack {
   /** Géométries linéaires du tracé (LineString/MultiLineString uniquement). */
   lines: Array<LineString | MultiLineString>;
   stages: ItiStagePoint[];
-}
-
-function readRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 /** Coordonnée numérique stricte — `Number(null)` vaut 0 : une étape sans geom pointerait sur (0,0). */

@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Modal « Nouvelle tâche » (§61 rectif PO point 3 + assignation PO point 4) — deux points
 // d'entrée. L'établissement se choisit dans un SearchSelect (picker maison : combobox +
@@ -114,7 +116,7 @@ export function CrmTaskModal({
   onSaved: () => void;
 }) {
   const currentUserId = useSessionStore((state) => state.userId);
-  const assigneesQuery = useQuery({ queryKey: ['crm-assignees'], queryFn: listCrmAssignees });
+  const assigneesQuery = useQuery({ queryKey: crmQueryKeys.assignees, queryFn: listCrmAssignees });
   const assignees = assigneesQuery.data ?? [];
 
   const [title, setTitle] = useState(task?.title ?? '');

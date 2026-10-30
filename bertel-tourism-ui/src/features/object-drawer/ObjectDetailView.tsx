@@ -1,4 +1,14 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { stripCombiningMarks } from '../../lib/text-fold';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   AlertTriangle,
   Archive,
@@ -2272,11 +2282,9 @@ interface OpeningWeekRow {
 }
 
 function normalizeOpeningText(value: string): string {
-  return value
+  return stripCombiningMarks(value
     .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .toLowerCase());
 }
 
 function normalizeWeekdayKey(value: string): OpeningWeekdayKey | null {
@@ -3563,10 +3571,8 @@ function ItineraryElevationProfileSection({ profiles }: { profiles: ItineraryPro
 
 /** Slug pour nom de fichier GPX : minuscules, accents retirés, non-alphanum → '-', repli « itineraire ». */
 function slugForFilename(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  const slug = stripCombiningMarks(value
+    .toLowerCase())
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return slug || 'itineraire';

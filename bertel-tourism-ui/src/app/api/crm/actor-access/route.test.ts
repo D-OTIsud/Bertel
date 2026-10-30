@@ -1,5 +1,9 @@
 /** @jest-environment node */
 import { POST } from './route';
+jest.mock('@/lib/mail.server', () => ({ sendMail: jest.fn(), MailNotConfiguredError: class MailNotConfiguredError extends Error {} }));
+jest.mock('@/lib/portal-office.server', () => ({ readPartnerInvitationContext: jest.fn() }));
+import { sendMail, MailNotConfiguredError } from '@/lib/mail.server';
+import { readPartnerInvitationContext } from '@/lib/portal-office.server';
 
 // Gabarit du dépôt pour une route service-role (§164 : src/app/api/admin/invite/route.test.ts) :
 // on mocke `@/lib/supabase-server` (le client service_role) ET `@supabase/supabase-js`
@@ -98,6 +102,8 @@ interface StubOptions {
   users?: StubUser[];
   newUserId?: string;
   inviteError?: { message: string } | null;
+  listError?: { message: string } | null;
+  missingLink?: boolean;
   upsertError?: { message: string } | null;
   /** Aucun kind `email` au référentiel (fail-closed de `actorEmailChannels`). */
   missingKind?: boolean;
@@ -137,12 +143,12 @@ function serverStub(options: StubOptions = {}) {
   const users = options.users ?? [];
   const fromCalls: FromCall[] = [];
 
-  const inviteUserByEmail = jest.fn().mockResolvedValue(
+  const generateLink = jest.fn().mockResolvedValue(
     options.inviteError
       ? { data: { user: null }, error: options.inviteError }
-      : { data: { user: { id: options.newUserId ?? 'new-user' } }, error: null },
+      : { data: { user: { id: options.newUserId ?? 'new-user' }, properties: { action_link: options.missingLink ? undefined : 'https://auth.example.test/verify?token=private&type=invite' } }, error: null },
   );
-  const listUsers = jest.fn().mockResolvedValue({ data: { users }, error: null });
+  const listUsers = jest.fn(async ({ page, perPage }: { page: number; perPage: number }) => ({ data: { users: users.slice((page - 1) * perPage, page * perPage) }, error: options.listError ?? null }));
   const deleteUser = jest.fn().mockResolvedValue({ error: null });
   const getUserById = jest.fn(async (id: string) => ({
     data: { user: users.find((user) => user.id === id) ?? null },
@@ -170,17 +176,18 @@ function serverStub(options: StubOptions = {}) {
   mockedServer.mockReturnValue({
     auth: {
       getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'agent-1' } }, error: null }),
-      admin: { inviteUserByEmail, listUsers, deleteUser, getUserById },
+      admin: { generateLink, listUsers, deleteUser, getUserById },
     },
     from,
   } as never);
 
-  return { inviteUserByEmail, listUsers, deleteUser, getUserById, upsert, from, fromCalls };
+  return { generateLink, listUsers, deleteUser, getUserById, upsert, from, fromCalls };
 }
 
 /** Aucune écriture de compte n'a eu lieu — l'assertion qui donne du mordant aux refus. */
 function expectNoAccountWrite(spies: ReturnType<typeof serverStub>) {
-  expect(spies.inviteUserByEmail).not.toHaveBeenCalled();
+  expect(spies.generateLink).not.toHaveBeenCalled();
+  expect(sendMail).not.toHaveBeenCalled();
   expect(spies.deleteUser).not.toHaveBeenCalled();
   expect(spies.upsert).not.toHaveBeenCalled();
 }
@@ -191,6 +198,11 @@ function callOn(spies: ReturnType<typeof serverStub>, table: string): FromCall |
 }
 
 beforeEach(() => {
+  jest.mocked(sendMail).mockReset().mockResolvedValue(undefined);
+  jest.mocked(readPartnerInvitationContext).mockReset().mockResolvedValue({
+    orgId: 'ORG-SUD',
+    email: { officeName: 'Office du Sud', officeLogoUrl: null, recipientName: 'Marie', ficheNames: ['Le Longanis'] },
+  });
   mockedServer.mockReset();
   mockedCreateClient.mockReset();
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://x.supabase.co';
@@ -376,9 +388,7 @@ describe('POST /api/crm/actor-access — invitation', () => {
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ userId: 'u-new', traced: true });
     // `?espace=1` : SANS lui, /set-password parle au partenaire comme au personnel de l'office.
-    expect(spies.inviteUserByEmail).toHaveBeenCalledWith('marie@basalte.re', {
-      redirectTo: 'https://bertel.otisud.re/set-password?espace=1',
-    });
+    expect(spies.generateLink).toHaveBeenCalledWith({ type: 'invite', email: 'marie@basalte.re', options: { redirectTo: 'https://bertel.otisud.re/set-password?espace=1' } });
     expect(spies.upsert).toHaveBeenCalledWith(
       { id: 'u-new', role: 'actor', actor_id: ACTOR },
       { onConflict: 'id' },
@@ -408,9 +418,7 @@ describe('POST /api/crm/actor-access — invitation', () => {
         { action: 'invite', actorId: ACTOR, email: 'marie@basalte.re' },
       ),
     );
-    expect(spies.inviteUserByEmail).toHaveBeenCalledWith('marie@basalte.re', {
-      redirectTo: 'https://bertel.otisud.re/set-password?espace=1',
-    });
+    expect(spies.generateLink).toHaveBeenCalledWith({ type: 'invite', email: 'marie@basalte.re', options: { redirectTo: 'https://bertel.otisud.re/set-password?espace=1' } });
   });
 
   it('sans configuration, l’origine vient de l’URL de la requête — toujours pas de l’en-tête Origin', async () => {
@@ -422,9 +430,7 @@ describe('POST /api/crm/actor-access — invitation', () => {
         { action: 'invite', actorId: ACTOR, email: 'marie@basalte.re' },
       ),
     );
-    expect(spies.inviteUserByEmail).toHaveBeenCalledWith('marie@basalte.re', {
-      redirectTo: 'https://app.test/set-password?espace=1',
-    });
+    expect(spies.generateLink).toHaveBeenCalledWith({ type: 'invite', email: 'marie@basalte.re', options: { redirectTo: 'https://app.test/set-password?espace=1' } });
   });
 
   it('422 quand l’e-mail n’est PAS un canal de CET acteur', async () => {
@@ -641,7 +647,8 @@ describe('POST /api/crm/actor-access — renvoi', () => {
     );
     expect(res.status).toBe(500);
     expect((await res.json()).error).toBe('resend_failed');
-    expect(spies.inviteUserByEmail).not.toHaveBeenCalled();
+    expect(spies.generateLink).not.toHaveBeenCalled();
+  expect(sendMail).not.toHaveBeenCalled();
   });
 
   it('409 already_active : un compte portail déjà connecté n’est ni supprimé ni ré-invité', async () => {
@@ -800,4 +807,57 @@ describe('POST /api/crm/actor-access — statut', () => {
     expect(res.status).toBe(200);
     expect((await res.json()).account.email).toBe('marie@basalte.re');
   });
+});
+test('l’invitation est envoyée après le profil, avec le lien généré et le SMTP de l’office', async () => {
+  const spies = serverStub({ channels: ['marie@basalte.re'] }); gate({ read: true, write: true });
+  const res = await POST(req({ authorization: 'Bearer agent' }, { action: 'invite', actorId: ACTOR, email: 'marie@basalte.re' }));
+  expect(res.status).toBe(201);
+  expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({ orgId: 'ORG-SUD', to: 'marie@basalte.re', subject: 'Le Longanis : mettez à jour votre fiche vous-même' }));
+  expect(jest.mocked(sendMail).mock.calls[0][0].html).toContain('token=private&amp;type=invite');
+  expect(spies.upsert.mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(sendMail).mock.invocationCallOrder[0]);
+});
+
+test('SMTP absent : refus avant la destruction de l’ancien compte lors d’un renvoi', async () => {
+  const spies = serverStub({ channels: ['marie@basalte.re'], linked: { id: 'portal-1', role: 'actor' },
+    users: [{ id: 'portal-1', email: 'marie@basalte.re', last_sign_in_at: null }] });
+  gate({ read: true, write: true });
+  jest.mocked(readPartnerInvitationContext).mockRejectedValue(new MailNotConfiguredError());
+  const res = await POST(req({ authorization: 'Bearer agent' }, { action: 'resend', actorId: ACTOR, email: 'marie@basalte.re' }));
+  expect(res.status).toBe(503); expectNoAccountWrite(spies);
+});
+
+test('un profil refusé n’envoie aucun e-mail', async () => {
+  serverStub({ channels: ['marie@basalte.re'], upsertError: { message: 'conflict' } }); gate({ read: true, write: true });
+  const res = await POST(req({ authorization: 'Bearer agent' }, { action: 'invite', actorId: ACTOR, email: 'marie@basalte.re' }));
+  expect(res.status).toBe(500); expect(sendMail).not.toHaveBeenCalled();
+});
+
+test('sans lien généré, le compte créé est annulé et rien n’est envoyé', async () => {
+  const spies = serverStub({ channels: ['marie@basalte.re'], missingLink: true }); gate({ read: true, write: true });
+  const res = await POST(req({ authorization: 'Bearer agent' }, { action: 'invite', actorId: ACTOR, email: 'marie@basalte.re' }));
+  expect(res.status).toBe(500); expect(sendMail).not.toHaveBeenCalled();
+  expect(spies.deleteUser).toHaveBeenCalledWith('new-user');
+});
+
+test('un échec SMTP annule uniquement le nouveau compte et ne prétend pas avoir envoyé', async () => {
+  const spies = serverStub({ channels: ['marie@basalte.re'] }); gate({ read: true, write: true });
+  jest.mocked(sendMail).mockRejectedValue(new Error('SMTP indisponible'));
+  const res = await POST(req({ authorization: 'Bearer agent' }, { action: 'invite', actorId: ACTOR, email: 'marie@basalte.re' }));
+  expect(res.status).toBe(502); expect(await res.json()).toMatchObject({ error: 'mail_failed' });
+  expect(spies.deleteUser).toHaveBeenCalledWith('new-user');
+});
+
+test('une erreur de lecture des comptes ne prouve jamais que l’adresse est libre', async () => {
+  const spies = serverStub({ channels: ['marie@basalte.re'], listError: { message: 'unavailable' } }); gate({ read: true, write: true });
+  const res = await POST(req({ authorization: 'Bearer agent' }, { action: 'invite', actorId: ACTOR, email: 'marie@basalte.re' }));
+  expect(res.status).toBe(500); expectNoAccountWrite(spies); expect(readPartnerInvitationContext).not.toHaveBeenCalled();
+});
+
+test('un compte interne au-delà des mille premiers reste protégé', async () => {
+  const users: StubUser[] = Array.from({ length: 1000 }, (_, index) => ({ id: 'staff-' + index, email: 'staff' + index + '@example.test', last_sign_in_at: '2026-10-30T08:00:00Z' }));
+  users.push({ id: 'staff-target', email: 'marie@basalte.re', last_sign_in_at: '2026-10-30T08:00:00Z' });
+  const spies = serverStub({ channels: ['marie@basalte.re'], users }); gate({ read: true, write: true });
+  const res = await POST(req({ authorization: 'Bearer agent' }, { action: 'invite', actorId: ACTOR, email: 'marie@basalte.re' }));
+  expect(res.status).toBe(409); expectNoAccountWrite(spies);
+  expect(spies.listUsers).toHaveBeenNthCalledWith(2, { page: 2, perPage: 1000 });
 });

@@ -635,6 +635,10 @@ ROLLBACK;
 \ir ../supabase/migrations/20261030133440_dashboard_realm_consistency.sql
 \ir tests/test_dashboard_realm.sql
 
+\echo '== verified completeness history and exact source dates =='
+\ir ../supabase/migrations/20261030141523_restore_verified_completeness_history.sql
+\ir tests/test_completeness_history.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -2,11 +2,11 @@
  "meta": {
   "table_count": 370,
   "view_count": 13,
-  "function_count": 501,
+  "function_count": 502,
   "policy_count": 577,
   "trigger_count": 565,
   "enum_count": 9,
-  "edge_count": 3898
+  "edge_count": 3899
  },
  "nodes": [
   {
@@ -53818,6 +53818,21 @@
    }
   },
   {
+   "id": "api.get_metric_snapshot_series_with_bounds(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)",
+   "kind": "function",
+   "label": "get_metric_snapshot_series_with_bounds",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Realm-scoped metric series plus exact first/last source snapshot dates. Weekly buckets never define history duration; legacy tabular reader stays compatible.",
+   "props": {
+    "signature": "get_metric_snapshot_series_with_bounds(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
    "id": "api.current_user_portal_object_ids()",
    "kind": "function",
    "label": "current_user_portal_object_ids",
@@ -101794,6 +101809,18 @@
   },
   {
    "source": "api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)",
+   "target": "public.metric_snapshot",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.metric_snapshot"
+    }
+   }
+  },
+  {
+   "source": "api.get_metric_snapshot_series_with_bounds(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)",
    "target": "public.metric_snapshot",
    "kind": "reads",
    "props": {

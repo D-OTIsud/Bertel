@@ -53,10 +53,14 @@ Les anciens relevés de `metric_snapshot` n’enregistrent pas ce découpage. Av
 toggle actif, leurs widgets indiquent l’indisponibilité de l’historique et ne
 chargent pas les courbes globales. Aucun historique antérieur n’est inventé.
 
-Sans le toggle, les courbes utilisent désormais les relevés explicitement marqués
-réels ou de test, collectés depuis le 30 octobre 2026. Les anciens agrégats restent
-archivés avec `is_test IS NULL` ; ils ne sont pas attribués arbitrairement à un
-périmètre. La capture quotidienne calcule les deux ensembles séparément.
+Sans le toggle, les courbes utilisent les relevés explicitement marqués réels ou
+de test. L'historique réel de remplissage est rétabli depuis le 19 juin 2026 après
+vérification de sa provenance ; les autres indicateurs et le test disposent des
+relevés séparés collectés depuis le 30 octobre. Les archives d'origine restent
+conservées avec `is_test IS NULL`. La capture quotidienne calcule les deux
+ensembles séparément. La durée affichée utilise les dates des relevés sources,
+indépendamment du regroupement hebdomadaire. Voir la
+[sélection et les contrôles](releases/2026-10-30-completeness-history.md).
 
 ## Livraison et vérification
 

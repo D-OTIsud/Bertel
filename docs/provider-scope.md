@@ -44,9 +44,19 @@ conservé si son acteur porte un lien actif vers un objet du périmètre. Si un 
 est renseigné, c’est cet objet qui décide : un acteur lié ailleurs ne suffit pas.
 Les tâches suivent leur objet. Les corpus réels et de test restent séparés.
 
+Depuis `20261030133440_dashboard_realm_consistency`, cette séparation vaut aussi
+pour les trois RPC d'activité sans filtre prestataires : les deux modes partent
+du même périmètre du compte. Voir la
+[correction et ses vérifications](releases/2026-10-30-dashboard-real-test.md).
+
 Les anciens relevés de `metric_snapshot` n’enregistrent pas ce découpage. Avec le
 toggle actif, leurs widgets indiquent l’indisponibilité de l’historique et ne
 chargent pas les courbes globales. Aucun historique antérieur n’est inventé.
+
+Sans le toggle, les courbes utilisent désormais les relevés explicitement marqués
+réels ou de test, collectés depuis le 30 octobre 2026. Les anciens agrégats restent
+archivés avec `is_test IS NULL` ; ils ne sont pas attribués arbitrairement à un
+périmètre. La capture quotidienne calcule les deux ensembles séparément.
 
 ## Livraison et vérification
 

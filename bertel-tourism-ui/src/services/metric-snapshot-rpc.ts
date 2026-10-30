@@ -34,7 +34,8 @@ function toSeries(rows: MetricSnapshotRow[] | null): MetricSnapshotSeries {
 }
 
 /**
- * Lit le registre metric_snapshot (relevé quotidien figé depuis le 19/06/2026).
+ * Lit les relevés quotidiens du périmètre réel/test de l'utilisateur.
+ * Les agrégats historiques non segmentés restent archivés hors de ces séries.
  *
  * En mode démo la série est VIDE, pas simulée : le principe « real DB data » veut
  * qu'un widget sans données affiche son état vide plutôt qu'une courbe inventée.

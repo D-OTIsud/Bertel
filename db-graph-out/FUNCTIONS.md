@@ -166,26 +166,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)`
 - returns: `integer` — SECURITY DEFINER
-- reads `public.crm_interaction` _(high)_
-- reads `public.metric_snapshot` _(high)_
-- reads `public.object` _(high)_
-- reads `public.object_amenity` _(high)_
-- reads `public.object_classification` _(high)_
-- reads `public.object_location` _(high)_
-- reads `public.object_sustainability_action` _(high)_
-- reads `public.ref_amenity` _(high)_
-- reads `public.ref_code_amenity_family` _(high)_
-- writes `public.metric_snapshot` _(high)_
 
-> Brique 2: fige le panel de KPIs dashboard pour p_date dans metric_snapshot (upsert idempotent).
-> Complétude via api.get_dashboard_completeness (pool publié), corpus net (tous statuts), classés
-> (granted, global+commune), couverture durable/accessibilité, backlog CRM.
-> crm_backlog = liste positive TYPÉE des statuts ouverts (new, in_progress, awaiting_provider) et
-> resolved_at IS NULL — prédicat identique MOT POUR MOT à celui de api.get_dashboard_crm_open, sans
-> quoi la carte du bandeau et la courbe de l'onglet Activité afficheraient deux chiffres pour la
-> même réalité. Une comparaison EN TEXTE y serait une panne muette : elle survivrait à tout
-> renommage du vocabulaire en se réduisant à resolved_at IS NULL (manifeste 17g).
-> Exécutée par le cron quotidien capture-metric-snapshots.
+> Capture current real and test KPI stocks independently. p_date labels a current capture, not a historical reconstruction.
 
 ## `api.check_membership_org_type()`
 - returns: `trigger` — SECURITY DEFINER
@@ -768,43 +750,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_dashboard_crm_activity()`
 - returns: `jsonb` — SECURITY DEFINER
-- reads `public.crm_interaction` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
 
-> Onglet Activité équipe §4 : arriéré CRM par âge et par sujet, flux mensuel, temps de
-> traitement NET. GLOBAL, sans paramètre (même raison que api.get_dashboard_crm_open).
-> Les statuts ouverts reprennent le prédicat exact de crm_backlog — liste positive TYPÉE
-> (new, in_progress, awaiting_provider) et resolved_at IS NULL, manifeste 17g.
-> open_by_age émet TOUJOURS les quatre tranches, une tranche vide à zéro : n'afficher que les
-> tranches peuplées mentirait par omission sur la forme de l'arriéré. Une demande sans date
-> d'occurrence vieillit au maximum — on ne rajeunit pas une demande faute d'information.
-> open_by_topic regroupe les demandes sans sujet sous un libellé explicite, jamais sous une case
-> vide, et la somme par sujet égale toujours open_interactions.
-> TEMPS NET = écoulé (resolved_at − occurred_at) MOINS l'attente prestataire, parce qu'un
-> indicateur ne doit mesurer que ce que l'équipe maîtrise. Il ne porte que sur les demandes
-> NÉES APRÈS la bascule 17g (leur premier événement de journal est la création) : les lignes
-> importées sans date de résolution n'ont pas d'événement de création et sont donc hors
-> moyenne PAR CONSTRUCTION, sans exclusion à maintenir. canceled exclu.
-> avg_days NULL = pas encore mesurable ; zéro voudrait dire instantané.
-> Manifeste 17h.
+> CRM age, topics, flow and net processing time in the caller real/test realm.
 
 ## `api.get_dashboard_crm_open()`
 - returns: `jsonb` — SECURITY DEFINER
-- reads `public.crm_interaction` _(high)_
 - reads `public.crm_task` _(high)_
 
-> Dashboard §1 : compteur GLOBAL des éléments CRM ouverts pour la carte d'attention du bandeau.
-> open_interactions reprend le prédicat exact de crm_backlog (api.capture_metric_snapshots) : la
-> liste positive TYPÉE des statuts ouverts (new, in_progress, awaiting_provider) et resolved_at
-> IS NULL. open_tasks = crm_task en todo/in_progress/blocked (les statuts terminaux de TÂCHE sont
-> exclus — une tâche annulée n'est pas du travail en attente ; vocabulaire crm_task_status,
-> distinct de celui des demandes). GLOBAL par décision produit (2026-08-30) : la carte est un
-> signal stable « ce qui m'attend aujourd'hui », elle n'obéit pas au panneau de filtres.
-> recent_interactions / backlog_interactions (manifeste 17h) partagent le MÊME ensemble : moins
-> de 90 jours d'un côté, le reste de l'autre. backlog est calculé par soustraction, si bien que
-> recent + backlog = open_interactions PAR CONSTRUCTION et qu'une demande sans date d'occurrence
-> tombe dans l'arriéré au lieu de disparaître entre deux bornes.
-> N'émet aucune PII (cinq entiers). Manifeste 17g, étendu par 17h.
+> Open CRM counters in the caller real/test realm, independent of object facets. Provider RPC uses the same base realm.
 
 ## `api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -839,6 +793,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > No filter parameters. Used to populate the dashboard lieu-dit filter dropdown.
 > Represents the full corpus lieu-dit domain, not the current filtered slice.
 
+## `api.get_dashboard_provider_crm_activity()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code_demand_topic` _(high)_
+
+## `api.get_dashboard_provider_crm_open()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_task` _(high)_
+
+## `api.get_dashboard_provider_team_activity()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_version` _(high)_
+
 ## `api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
@@ -861,24 +828,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.app_user_profile` _(high)_
 - reads `public.object_version` _(high)_
 
-> Onglet Activité équipe §2 : rythme de saisie sur 12 semaines + table des contributeurs.
-> GLOBAL, sans paramètre — n'obéit pas au panneau de filtres (même raison que
-> api.get_dashboard_crm_open : « comment l'équipe a travaillé » n'a pas de sens restreint à une
-> sélection d'objets).
-> ON COMPTE DES JOURS, PAS DES VERSIONS : editor_days = couples (éditeur, jour). Une passe
-> d'import produit des centaines de versions en une après-midi ; les compter ferait de cette
-> après-midi le sommet de l'année et écraserait les semaines de travail régulier. Un indicateur
-> de RYTHME mesure la régularité, pas le débit.
-> Les versions sans auteur (imports, système — 57,5 % du corpus au 31/08) sont EXCLUES.
-> Une semaine sans activité est émise à ZÉRO, jamais omise : un trou se lit « pas de données »,
-> pas « pas de travail ». L'agrégation se fait AVANT la jointure sur la série des semaines,
-> sans quoi le ROW(NULL,NULL) de la jointure compterait pour un jour-éditeur fantôme.
-> bulk_days = jours où un éditeur touche au moins 10 objets. La distribution réelle est bimodale
-> (≤ 9 d'un côté, ≥ 58 de l'autre) : le seuil sépare deux régimes, il ne coupe pas une
-> population continue. Si elle se remplit entre les deux, le seuil est à rediscuter.
-> display_name vient de api.crm_user_label — MÊME source que le kanban CRM et le journal de
-> transitions, pour qu'une personne porte un seul nom d'un écran à l'autre.
-> Manifeste 17h.
+> Twelve weeks of author activity on tourism objects in the caller real/test realm; unchanged editor-day formulas.
 
 ## `api.get_dashboard_type_breakdown(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -909,6 +859,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)`
 - returns: `TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)` — SECURITY DEFINER
 - reads `internal.mv_filtered_objects` _(high)_
+- reads `public.actor_object_role` _(high)_
 - reads `public.media` _(high)_
 - reads `public.meeting_room_equipment` _(high)_
 - reads `public.object` _(high)_
@@ -2267,6 +2218,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Cyclique : durée MM-JJ (approx. mois*31+jour, monotone) avec wrap. Fixe : date_end - date_start.
 > Base / sans dates : 100000 (∞, la plus large).
 
+## `api.partner_admit(p_key_hash text, p_limit integer DEFAULT 120, p_window_seconds integer DEFAULT 60)`
+- returns: `jsonb`
+
+> Service-role partner authentication and fixed-window quota in one RPC. Auth fails closed; quota errors alone fail open. No identity cache.
+
 ## `api.partner_authenticate(p_key_hash text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `internal.partner_api_key` _(high)_
@@ -3002,10 +2958,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.save_object_places(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
 - reads `public.object_place` _(high)_
+- reads `public.object_place_description` _(high)_
 - reads `public.object_zone` _(high)_
-- reads `public.ref_code_media_type` _(high)_
-- writes `public.media` _(high)_
+- reads `public.ref_commune` _(high)_
 - writes `public.object_location` _(high)_
 - writes `public.object_place` _(high)_
 - writes `public.object_place_description` _(high)_
@@ -3030,6 +2988,23 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > CREATE time (plpgsql validates syntax only), so a fresh apply in manifest order is fine — nothing
 > between step 7 and 16u calls this RPC. On a LIVE database, apply 16u BEFORE (or in the same pass as)
 > any re-apply of this file or of 8r, or the actors branch raises 42883 at the first save.
+
+## `api.save_object_rooms(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_room_type` _(high)_
+- reads `public.object_room_type_amenity` _(high)_
+- reads `public.object_room_type_bed` _(high)_
+- reads `public.object_room_type_media` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_code_bed_type` _(high)_
+- reads `public.ref_code_room_type` _(high)_
+- reads `public.ref_code_view_type` _(high)_
+- writes `public.object_room_type` _(high)_
+- writes `public.object_room_type_amenity` _(high)_
+- writes `public.object_room_type_bed` _(high)_
+- writes `public.object_room_type_media` _(high)_
 
 ## `api.save_object_workspace_sustainability(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
@@ -3139,6 +3114,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_list_item` _(high)_
 
 > 6.5 Remplacement des items statiques (reconcile non-destructif — §40)
+
+## `api.set_provider_only_preference(p_enabled boolean)`
+- returns: `boolean`
+- reads `public.app_user_profile` _(high)_
+- writes `public.app_user_profile` _(high)_
 
 ## `api.set_publication_workflow_timestamps()`
 - returns: `trigger`
@@ -3615,6 +3595,21 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.app_user_profile` _(high)_
 - reads `public.object_list` _(high)_
 
+## `internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)`
+- returns: `integer`
+- reads `internal.v_object_essentials` _(high)_
+- reads `public.actor` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
+- reads `storage.objects` _(medium)_
+- writes `public.metric_snapshot` _(high)_
+
 ## `internal.compute_open_status(p_at timestamp with time zone)`
 - returns: `TABLE(object_id text, is_open boolean)`
 - reads `public.object` _(high)_
@@ -3644,6 +3639,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `internal.crm_row_in_current_realm(p_object_id text, p_actor_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
+
+## `internal.dashboard_crm_interactions()`
+- returns: `SETOF crm_interaction`
+- reads `public.actor` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+
+## `internal.dashboard_object_ids()`
+- returns: `TABLE(object_id text)`
+- reads `public.object` _(high)_
 
 ## `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -3712,6 +3717,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.pending_change` _(high)_
+
+## `internal.provider_crm_interactions()`
+- returns: `SETOF crm_interaction`
+- reads `public.actor_object_role` _(high)_
+- reads `storage.objects` _(medium)_
+
+## `internal.provider_object_ids()`
+- returns: `TABLE(object_id text)`
+- reads `public.actor_object_role` _(high)_
 
 ## `internal.purge_expired_lists()`
 - returns: `integer` — SECURITY DEFINER
@@ -3975,11 +3989,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_org_business_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - reads `public.user_permission` _(high)_
-
-> Recipient form of api.user_can_moderate_object. No JWT substitution: the
-> caller remains the contributor throughout submission. This internal helper
-> mirrors the effective permission's two independent grants and the publisher
-> scope; administrative rank alone never grants moderation.
 
 ## `internal.workspace_assert_can_write_object(p_object_id text)`
 - returns: `void` — SECURITY DEFINER

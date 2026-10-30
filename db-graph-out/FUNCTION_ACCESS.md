@@ -150,8 +150,8 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)` _(DEFINER)_
 - **returns:** `integer`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/capture_metric_snapshots`
-- **object types served:** **all object types**
-- _Brique 2: fige le panel de KPIs dashboard pour p_date dans metric_snapshot (upsert idempotent)._
+- **object types served:** —
+- _Capture current real and test KPI stocks independently. p_date labels a current capture, not a historical reconstruction._
 
 ### `api.check_membership_org_type()` _(DEFINER)_
 - **returns:** `trigger`
@@ -546,14 +546,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.get_dashboard_crm_activity()` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_crm_activity`
-- **object types served:** **all object types**
-- _Onglet Activité équipe §4 : arriéré CRM par âge et par sujet, flux mensuel, temps de_
+- **object types served:** —
+- _CRM age, topics, flow and net processing time in the caller real/test realm._
 
 ### `api.get_dashboard_crm_open()` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_crm_open`
 - **object types served:** **all object types**
-- _Dashboard §1 : compteur GLOBAL des éléments CRM ouverts pour la carte d'attention du bandeau._
+- _Open CRM counters in the caller real/test realm, independent of object facets. Provider RPC uses the same base realm._
 
 ### `api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -573,6 +573,21 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Returns a sorted TEXT[] of distinct lieux-dits (btrim-cleaned, non-null/non-empty)_
 
+### `api.get_dashboard_provider_crm_activity()` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_provider_crm_activity`
+- **object types served:** —
+
+### `api.get_dashboard_provider_crm_open()` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_provider_crm_open`
+- **object types served:** **all object types**
+
+### `api.get_dashboard_provider_team_activity()` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_provider_team_activity`
+- **object types served:** **all object types**
+
 ### `api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_scorecards`
@@ -583,7 +598,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_team_activity`
 - **object types served:** **all object types**
-- _Onglet Activité équipe §2 : rythme de saisie sur 12 semaines + table des contributeurs._
+- _Twelve weeks of author activity on tourism objects in the caller real/test realm; unchanged editor-day formulas._
 
 ### `api.get_dashboard_type_breakdown(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -1401,6 +1416,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _3) Largeur de fenêtre en "jours" (à rang égal, la plus étroite gagne)._
 
+### `api.partner_admit(p_key_hash text, p_limit integer DEFAULT 120, p_window_seconds integer DEFAULT 60)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/partner_admit`
+- **object types served:** —
+- _Service-role partner authentication and fixed-window quota in one RPC. Auth fails closed; quota errors alone fail open. No identity cache._
+
 ### `api.partner_authenticate(p_key_hash text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/partner_authenticate`
@@ -1890,6 +1911,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _⚠ BODY SYNC: this function body must stay byte-identical to the copy in migration_actor_links_editor.sql (8r re-applies it after this file on fresh installs). Edit BOTH or fresh ≠ live._
 
+### `api.save_object_rooms(p_object_id text, p_payload jsonb)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/save_object_rooms`
+- **object types served:** **all object types**
+
 ### `api.save_object_workspace_sustainability(p_object_id text, p_payload jsonb)`
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/save_object_workspace_sustainability`
@@ -1954,6 +1980,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/set_list_items`
 - **object types served:** **all object types**
 - _6.5 Remplacement des items statiques (reconcile non-destructif — §40)_
+
+### `api.set_provider_only_preference(p_enabled boolean)`
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/set_provider_only_preference`
+- **object types served:** —
 
 ### `api.set_publication_workflow_timestamps()`
 - **returns:** `trigger`
@@ -2381,6 +2412,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
+### `internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)`
+- **returns:** `integer`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
 ### `internal.compute_open_status(p_at timestamp with time zone)`
 - **returns:** `TABLE(object_id text, is_open boolean)`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
@@ -2397,6 +2433,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `boolean`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** —
+
+### `internal.dashboard_crm_interactions()`
+- **returns:** `SETOF crm_interaction`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.dashboard_object_ids()`
+- **returns:** `TABLE(object_id text)`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
 
 ### `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -2452,6 +2498,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)` _(DEFINER)_
 - **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.provider_crm_interactions()`
+- **returns:** `SETOF crm_interaction`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.provider_object_ids()`
+- **returns:** `TABLE(object_id text)`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
@@ -2598,7 +2654,6 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `boolean`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
-- _Recipient form of api.user_can_moderate_object. No JWT substitution: the_
 
 ### `internal.workspace_assert_can_write_object(p_object_id text)` _(DEFINER)_
 - **returns:** `void`

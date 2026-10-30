@@ -60,6 +60,12 @@
 - **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
+## `audit.audit_log_2026_12`
+- **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
+  - `true`
+- **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+
 ## `audit.audit_log_default`
 - **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
   - `true`
@@ -318,7 +324,7 @@
 
 ## `public.metric_snapshot`
 - **SELECT** `metric_snapshot_read` — roles ['authenticated']
-  - `true`
+  - `(is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))`
 
 ## `public.object`
 - **ALL** `Accès admin/service_role (object)` — roles ['public']
@@ -1180,6 +1186,10 @@
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.object_version_2026_11`
+- **ALL** `admin_object_version` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+
+## `public.object_version_2026_12`
 - **ALL** `admin_object_version` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 

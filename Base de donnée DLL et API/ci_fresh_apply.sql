@@ -631,6 +631,10 @@ ROLLBACK;
 \ir ../supabase/migrations/20261030123304_provider_scope_preference.sql
 \ir tests/test_provider_scope_preference.sql
 
+\echo '== dashboard real/test realm for both provider modes and separated historical snapshots =='
+\ir ../supabase/migrations/20261030133440_dashboard_realm_consistency.sql
+\ir tests/test_dashboard_realm.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

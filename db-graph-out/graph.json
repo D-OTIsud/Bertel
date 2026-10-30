@@ -1,12 +1,12 @@
 {
  "meta": {
-  "table_count": 371,
+  "table_count": 370,
   "view_count": 13,
-  "function_count": 490,
-  "policy_count": 574,
-  "trigger_count": 567,
+  "function_count": 501,
+  "policy_count": 577,
+  "trigger_count": 565,
   "enum_count": 9,
-  "edge_count": 3873
+  "edge_count": 3898
  },
  "nodes": [
   {
@@ -13209,12 +13209,6 @@
       "name": "updated_at",
       "type": "timestamp with time zone",
       "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "submission_id",
-      "type": "uuid",
-      "nullable": true,
       "pk": false
      }
     ],
@@ -38906,6 +38900,12 @@
       "type": "timestamp with time zone",
       "nullable": false,
       "pk": false
+     },
+     {
+      "name": "is_test",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
      }
     ],
     "rls_enabled": true
@@ -42898,56 +42898,6 @@
    }
   },
   {
-   "id": "api.get_local_time_for_timezone(p_business_timezone text, p_at timestamp with time zone)",
-   "kind": "function",
-   "label": "get_local_time_for_timezone",
-   "schema": "api",
-   "domain": "api",
-   "doc": "§157 — variante paramétrée du résolveur d'heure locale : même validation\n« pas cher » de la zone (AT TIME ZONE lève 22023, attrapé → Indian/Reunion,\ncf. §37 — JAMAIS de scan pg_timezone_names sur un hot path), évaluée à un\ninstant ARBITRAIRE. C'est la brique du moteur d'ouverture paramétré\n(internal.compute_open_status) qui rend possible « ouvert à 18 h » alors\nqu'il est 10 h. get_local_now_for_timezone délègue (une seule implémentation).",
-   "props": {
-    "signature": "get_local_time_for_timezone(p_business_timezone text, p_at timestamp with time zone)",
-    "returns": "TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)",
-    "security_definer": false,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_filters_open_at_event_dates.sql",
-      "line": 43
-     },
-     {
-      "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5177
-     }
-    ]
-   }
-  },
-  {
-   "id": "internal.compute_open_status(p_at timestamp with time zone)",
-   "kind": "function",
-   "label": "compute_open_status",
-   "schema": "internal",
-   "domain": "api",
-   "doc": "§157 — LE moteur d'ouverture, paramétré par l'instant demandé. Source UNIQUE :\napi.refresh_open_status (cache « maintenant », cron) et le filtre « ouvert à … »\nde get_filtered_object_ids sont deux lectures du MÊME calcul — plus de dérive\npossible entre la pastille et le filtre. Publiés uniquement (parité stricte\navec le cache : un brouillon n'a jamais matché « Ouvert maintenant »).\nTRI-ÉTAT préservé (§133) : NULL = aucune donnée (jamais matché par un filtre,\npas de pastille) ; TRUE = ouvert (dont « jour ouvert sans horaire », §93) ;\nFALSE = a des horaires, fermé à cet instant. Pas de scan catalogue (§37).\nLa récurrence saisonnière (§92) est portée par is_opening_period_active_on_date.",
-   "props": {
-    "signature": "compute_open_status(p_at timestamp with time zone)",
-    "returns": "TABLE(object_id text, is_open boolean)",
-    "security_definer": false,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_filters_open_at_event_dates.sql",
-      "line": 94
-     },
-     {
-      "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5257
-     }
-    ]
-   }
-  },
-  {
    "id": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
    "kind": "function",
    "label": "get_filtered_object_ids",
@@ -42977,6 +42927,31 @@
    }
   },
   {
+   "id": "api.get_local_time_for_timezone(p_business_timezone text, p_at timestamp with time zone)",
+   "kind": "function",
+   "label": "get_local_time_for_timezone",
+   "schema": "api",
+   "domain": "api",
+   "doc": "§157 — variante paramétrée du résolveur d'heure locale : même validation\n« pas cher » de la zone (AT TIME ZONE lève 22023, attrapé → Indian/Reunion,\ncf. §37 — JAMAIS de scan pg_timezone_names sur un hot path), évaluée à un\ninstant ARBITRAIRE. C'est la brique du moteur d'ouverture paramétré\n(internal.compute_open_status) qui rend possible « ouvert à 18 h » alors\nqu'il est 10 h. get_local_now_for_timezone délègue (une seule implémentation).",
+   "props": {
+    "signature": "get_local_time_for_timezone(p_business_timezone text, p_at timestamp with time zone)",
+    "returns": "TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_filters_open_at_event_dates.sql",
+      "line": 43
+     },
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 5177
+     }
+    ]
+   }
+  },
+  {
    "id": "api.get_object_environment_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
    "kind": "function",
    "label": "get_object_environment_tags_compact",
@@ -42992,12 +42967,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2350
+      "line": 2357
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2350
+     "line": 2357
     }
    }
   },
@@ -43047,12 +43022,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2212
+      "line": 2219
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2212
+     "line": 2219
     }
    }
   },
@@ -43072,12 +43047,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2251
+      "line": 2258
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2251
+     "line": 2258
     }
    }
   },
@@ -43432,7 +43407,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2535
+      "line": 2542
      },
      {
       "path": "Base de donnée DLL et API/migration_cards_batch_authorize_definer.sql",
@@ -43467,6 +43442,31 @@
    }
   },
   {
+   "id": "api.get_dashboard_team_activity()",
+   "kind": "function",
+   "label": "get_dashboard_team_activity",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Twelve weeks of author activity on tourism objects in the caller real/test realm; unchanged editor-day formulas.",
+   "props": {
+    "signature": "get_dashboard_team_activity()",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 10342
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_dashboard_activity.sql",
+      "line": 96
+     }
+    ]
+   }
+  },
+  {
    "id": "api.jsonb_pick_keys(p_payload jsonb, p_keys text[])",
    "kind": "function",
    "label": "jsonb_pick_keys",
@@ -43482,38 +43482,13 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2839
+      "line": 2846
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2839
+     "line": 2846
     }
-   }
-  },
-  {
-   "id": "api.get_dashboard_team_activity()",
-   "kind": "function",
-   "label": "get_dashboard_team_activity",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Onglet Activité équipe §2 : rythme de saisie sur 12 semaines + table des contributeurs.\nGLOBAL, sans paramètre — n'obéit pas au panneau de filtres (même raison que\napi.get_dashboard_crm_open : « comment l'équipe a travaillé » n'a pas de sens restreint à une\nsélection d'objets).\nON COMPTE DES JOURS, PAS DES VERSIONS : editor_days = couples (éditeur, jour). Une passe\nd'import produit des centaines de versions en une après-midi ; les compter ferait de cette\naprès-midi le sommet de l'année et écraserait les semaines de travail régulier. Un indicateur\nde RYTHME mesure la régularité, pas le débit.\nLes versions sans auteur (imports, système — 57,5 % du corpus au 31/08) sont EXCLUES.\nUne semaine sans activité est émise à ZÉRO, jamais omise : un trou se lit « pas de données »,\npas « pas de travail ». L'agrégation se fait AVANT la jointure sur la série des semaines,\nsans quoi le ROW(NULL,NULL) de la jointure compterait pour un jour-éditeur fantôme.\nbulk_days = jours où un éditeur touche au moins 10 objets. La distribution réelle est bimodale\n(≤ 9 d'un côté, ≥ 58 de l'autre) : le seuil sépare deux régimes, il ne coupe pas une\npopulation continue. Si elle se remplit entre les deux, le seuil est à rediscuter.\ndisplay_name vient de api.crm_user_label — MÊME source que le kanban CRM et le journal de\ntransitions, pour qu'une personne porte un seul nom d'un écran à l'autre.\nManifeste 17h.",
-   "props": {
-    "signature": "get_dashboard_team_activity()",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10335
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_dashboard_activity.sql",
-      "line": 96
-     }
-    ]
    }
   },
   {
@@ -43522,7 +43497,7 @@
    "label": "get_dashboard_crm_activity",
    "schema": "api",
    "domain": "api",
-   "doc": "Onglet Activité équipe §4 : arriéré CRM par âge et par sujet, flux mensuel, temps de\ntraitement NET. GLOBAL, sans paramètre (même raison que api.get_dashboard_crm_open).\nLes statuts ouverts reprennent le prédicat exact de crm_backlog — liste positive TYPÉE\n(new, in_progress, awaiting_provider) et resolved_at IS NULL, manifeste 17g.\nopen_by_age émet TOUJOURS les quatre tranches, une tranche vide à zéro : n'afficher que les\ntranches peuplées mentirait par omission sur la forme de l'arriéré. Une demande sans date\nd'occurrence vieillit au maximum — on ne rajeunit pas une demande faute d'information.\nopen_by_topic regroupe les demandes sans sujet sous un libellé explicite, jamais sous une case\nvide, et la somme par sujet égale toujours open_interactions.\nTEMPS NET = écoulé (resolved_at − occurred_at) MOINS l'attente prestataire, parce qu'un\nindicateur ne doit mesurer que ce que l'équipe maîtrise. Il ne porte que sur les demandes\nNÉES APRÈS la bascule 17g (leur premier événement de journal est la création) : les lignes\nimportées sans date de résolution n'ont pas d'événement de création et sont donc hors\nmoyenne PAR CONSTRUCTION, sans exclusion à maintenir. canceled exclu.\navg_days NULL = pas encore mesurable ; zéro voudrait dire instantané.\nManifeste 17h.",
+   "doc": "CRM age, topics, flow and net processing time in the caller real/test realm.",
    "props": {
     "signature": "get_dashboard_crm_activity()",
     "returns": "jsonb",
@@ -43532,7 +43507,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10467
+      "line": 10474
      },
      {
       "path": "Base de donnée DLL et API/migration_dashboard_activity.sql",
@@ -43822,12 +43797,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7504
+      "line": 7511
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7504
+     "line": 7511
     }
    }
   },
@@ -43878,31 +43853,6 @@
     "source": {
      "path": "Base de donnée DLL et API/migration_trail_referential.sql",
      "line": 945
-    }
-   }
-  },
-  {
-   "id": "api.is_object_open_now(p_object_id text)",
-   "kind": "function",
-   "label": "is_object_open_now",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "is_object_open_now(p_object_id text)",
-    "returns": "boolean",
-    "security_definer": false,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 35
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 35
     }
    }
   },
@@ -43997,7 +43947,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 11032
+      "line": 11039
      },
      {
       "path": "Base de donnée DLL et API/migration_object_external_id_writes.sql",
@@ -44022,12 +43972,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2909
+      "line": 2916
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2909
+     "line": 2916
     }
    }
   },
@@ -44047,12 +43997,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2934
+      "line": 2941
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2934
+     "line": 2941
     }
    }
   },
@@ -44072,12 +44022,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9160
+      "line": 9167
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9160
+     "line": 9167
     }
    }
   },
@@ -44097,7 +44047,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5743
+      "line": 5750
      },
      {
       "path": "Base de donnée DLL et API/migration_opening_open_without_hours.sql",
@@ -44122,7 +44072,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 11043
+      "line": 11050
      },
      {
       "path": "Base de donnée DLL et API/migration_object_external_id_writes.sql",
@@ -44146,14 +44096,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 152
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 269
      }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_module.sql",
+     "line": 269
+    }
    }
   },
   {
@@ -44171,14 +44121,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 165
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 285
      }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_module.sql",
+     "line": 285
+    }
    }
   },
   {
@@ -44197,12 +44147,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5675
+      "line": 5682
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5675
+     "line": 5682
     }
    }
   },
@@ -44222,7 +44172,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 11092
+      "line": 11099
      },
      {
       "path": "Base de donnée DLL et API/migration_object_external_id_writes.sql",
@@ -44287,12 +44237,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8591
+      "line": 8598
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8591
+     "line": 8598
     }
    }
   },
@@ -44352,31 +44302,6 @@
    }
   },
   {
-   "id": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "kind": "function",
-   "label": "claim_unmailed_notifications",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Outbox e-mail : crm_task_assigned et fiche_submission_reviewed (TTL 10 min, SKIP LOCKED, 5 tentatives). Contenu joint en DB, creator_email/creator_name issus de crm_task.created_by pour les assignations uniquement. Réservée au drain Next en service_role.",
-   "props": {
-    "signature": "claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-      "line": 289
-     }
-    ],
-    "source": {
-     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-     "line": 289
-    }
-   }
-  },
-  {
    "id": "api.get_object_version_snapshot(p_object_id text, p_version_number integer)",
    "kind": "function",
    "label": "get_object_version_snapshot",
@@ -44392,7 +44317,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 11217
+      "line": 11224
      },
      {
       "path": "Base de donnée DLL et API/migration_object_version_read_restore.sql",
@@ -44457,12 +44382,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6990
+      "line": 6997
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6990
+     "line": 6997
     }
    }
   },
@@ -44482,12 +44407,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6738
+      "line": 6745
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6738
+     "line": 6745
     }
    }
   },
@@ -44507,12 +44432,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7148
+      "line": 7155
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7148
+     "line": 7155
     }
    }
   },
@@ -44532,7 +44457,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 11250
+      "line": 11257
      },
      {
       "path": "Base de donnée DLL et API/migration_object_version_read_restore.sql",
@@ -44622,12 +44547,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7610
+      "line": 7617
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7610
+     "line": 7617
     }
    }
   },
@@ -44647,7 +44572,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 11141
+      "line": 11148
      },
      {
       "path": "Base de donnée DLL et API/migration_object_version_read_restore.sql",
@@ -44697,12 +44622,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8032
+      "line": 8039
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8032
+     "line": 8039
     }
    }
   },
@@ -44722,12 +44647,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10902
+      "line": 10909
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 10902
+     "line": 10909
     }
    }
   },
@@ -44826,10 +44751,6 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 176
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 296
      },
@@ -44856,12 +44777,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9366
+      "line": 9373
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9366
+     "line": 9373
     }
    }
   },
@@ -44905,14 +44826,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 212
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 332
      }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_module.sql",
+     "line": 332
+    }
    }
   },
   {
@@ -44929,10 +44850,6 @@
     "volatility": "s",
     "dynamic_sql": false,
     "sources": [
-     {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 223
-     },
      {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 343
@@ -45065,11 +44982,11 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9713
+      "line": 9720
      },
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10174
+      "line": 10181
      },
      {
       "path": "Base de donnée DLL et API/migration_explorer_remplissage_filter.sql",
@@ -45092,10 +45009,6 @@
     "volatility": "s",
     "dynamic_sql": false,
     "sources": [
-     {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 280
-     },
      {
       "path": "Base de donnée DLL et API/migration_crm_lifecycle.sql",
       "line": 746
@@ -45158,6 +45071,35 @@
    }
   },
   {
+   "id": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
+   "kind": "function",
+   "label": "capture_metric_snapshots",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Capture current real and test KPI stocks independently. p_date labels a current capture, not a historical reconstruction.",
+   "props": {
+    "signature": "capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
+    "returns": "integer",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 10737
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_crm_lifecycle.sql",
+      "line": 340
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_metric_snapshot.sql",
+      "line": 34
+     }
+    ]
+   }
+  },
+  {
    "id": "api.check_object_legal_compliance(p_object_id text)",
    "kind": "function",
    "label": "check_object_legal_compliance",
@@ -45173,42 +45115,13 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8645
+      "line": 8652
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8645
+     "line": 8652
     }
-   }
-  },
-  {
-   "id": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "kind": "function",
-   "label": "capture_metric_snapshots",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Brique 2: fige le panel de KPIs dashboard pour p_date dans metric_snapshot (upsert idempotent).\nComplétude via api.get_dashboard_completeness (pool publié), corpus net (tous statuts), classés\n(granted, global+commune), couverture durable/accessibilité, backlog CRM.\ncrm_backlog = liste positive TYPÉE des statuts ouverts (new, in_progress, awaiting_provider) et\nresolved_at IS NULL — prédicat identique MOT POUR MOT à celui de api.get_dashboard_crm_open, sans\nquoi la carte du bandeau et la courbe de l'onglet Activité afficheraient deux chiffres pour la\nmême réalité. Une comparaison EN TEXTE y serait une panne muette : elle survivrait à tout\nrenommage du vocabulaire en se réduisant à resolved_at IS NULL (manifeste 17g).\nExécutée par le cron quotidien capture-metric-snapshots.",
-   "props": {
-    "signature": "capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-    "returns": "integer",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10730
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_crm_lifecycle.sql",
-      "line": 340
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_metric_snapshot.sql",
-      "line": 34
-     }
-    ]
    }
   },
   {
@@ -45251,10 +45164,6 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 246
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_assignee_eligibility.sql",
       "line": 119
      },
@@ -45280,64 +45189,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 1353
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 1521
      }
-    ]
-   }
-  },
-  {
-   "id": "api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)",
-   "kind": "function",
-   "label": "get_metric_snapshot_yoy",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)",
-    "returns": "TABLE(yr integer, mon integer, value numeric)",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10866
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_metric_snapshot.sql",
-      "line": 160
-     }
-    ]
-   }
-  },
-  {
-   "id": "api.get_metric_snapshot_series(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)",
-   "kind": "function",
-   "label": "get_metric_snapshot_series",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "get_metric_snapshot_series(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)",
-    "returns": "TABLE(bucket date, value numeric, denominator integer)",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10839
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_metric_snapshot.sql",
-      "line": 133
-     }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_module.sql",
+     "line": 1521
+    }
    }
   },
   {
@@ -45366,6 +45225,31 @@
    }
   },
   {
+   "id": "api.get_metric_snapshot_series(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)",
+   "kind": "function",
+   "label": "get_metric_snapshot_series",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_metric_snapshot_series(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)",
+    "returns": "TABLE(bucket date, value numeric, denominator integer)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 10846
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_metric_snapshot.sql",
+      "line": 133
+     }
+    ]
+   }
+  },
+  {
    "id": "api.resource_block_location(p_payload jsonb)",
    "kind": "function",
    "label": "resource_block_location",
@@ -45381,12 +45265,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2869
+      "line": 2876
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2869
+     "line": 2876
     }
    }
   },
@@ -45406,12 +45290,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2879
+      "line": 2886
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2879
+     "line": 2886
     }
    }
   },
@@ -45456,12 +45340,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2889
+      "line": 2896
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2889
+     "line": 2896
     }
    }
   },
@@ -45506,12 +45390,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2899
+      "line": 2906
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2899
+     "line": 2906
     }
    }
   },
@@ -45531,12 +45415,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2856
+      "line": 2863
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2856
+     "line": 2863
     }
    }
   },
@@ -45606,12 +45490,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10970
+      "line": 10977
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 10970
+     "line": 10977
     }
    }
   },
@@ -45631,7 +45515,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7685
+      "line": 7692
      },
      {
       "path": "Base de donnée DLL et API/migration_cards_batch_authorize_definer.sql",
@@ -45801,12 +45685,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9846
+      "line": 9853
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9846
+     "line": 9853
     }
    }
   },
@@ -46000,12 +45884,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10933
+      "line": 10940
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 10933
+     "line": 10940
     }
    }
   },
@@ -46130,12 +46014,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2472
+      "line": 2479
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2472
+     "line": 2479
     }
    }
   },
@@ -46245,12 +46129,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9528
+      "line": 9535
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9528
+     "line": 9535
     }
    }
   },
@@ -46370,7 +46254,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2082
+      "line": 2089
      },
      {
       "path": "Base de donnée DLL et API/migration_tags_create_and_order.sql",
@@ -46395,12 +46279,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2982
+      "line": 2989
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2982
+     "line": 2989
     }
    }
   },
@@ -46585,39 +46469,6 @@
    }
   },
   {
-   "id": "api.get_dashboard_crm_open()",
-   "kind": "function",
-   "label": "get_dashboard_crm_open",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Dashboard §1 : compteur GLOBAL des éléments CRM ouverts pour la carte d'attention du bandeau.\nopen_interactions reprend le prédicat exact de crm_backlog (api.capture_metric_snapshots) : la\nliste positive TYPÉE des statuts ouverts (new, in_progress, awaiting_provider) et resolved_at\nIS NULL. open_tasks = crm_task en todo/in_progress/blocked (les statuts terminaux de TÂCHE sont\nexclus — une tâche annulée n'est pas du travail en attente ; vocabulaire crm_task_status,\ndistinct de celui des demandes). GLOBAL par décision produit (2026-08-30) : la carte est un\nsignal stable « ce qui m'attend aujourd'hui », elle n'obéit pas au panneau de filtres.\nrecent_interactions / backlog_interactions (manifeste 17h) partagent le MÊME ensemble : moins\nde 90 jours d'un côté, le reste de l'autre. backlog est calculé par soustraction, si bien que\nrecent + backlog = open_interactions PAR CONSTRUCTION et qu'une demande sans date d'occurrence\ntombe dans l'arriéré au lieu de disparaître entre deux bornes.\nN'émet aucune PII (cinq entiers). Manifeste 17g, étendu par 17h.",
-   "props": {
-    "signature": "get_dashboard_crm_open()",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10634
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_crm_lifecycle.sql",
-      "line": 452
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_dashboard_activity.sql",
-      "line": 395
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_dashboard_crm_open.sql",
-      "line": 19
-     }
-    ]
-   }
-  },
-  {
    "id": "api.get_itinerary_track_geojson(p_object_id text, p_simplify boolean DEFAULT false, p_tolerance double precision DEFAULT 0.0001)",
    "kind": "function",
    "label": "get_itinerary_track_geojson",
@@ -46633,12 +46484,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8458
+      "line": 8465
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8458
+     "line": 8465
     }
    }
   },
@@ -46698,12 +46549,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7461
+      "line": 7468
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7461
+     "line": 7468
     }
    }
   },
@@ -46778,12 +46629,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8363
+      "line": 8370
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8363
+     "line": 8370
     }
    }
   },
@@ -47322,12 +47173,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2947
+      "line": 2954
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2947
+     "line": 2954
     }
    }
   },
@@ -47567,12 +47418,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6852
+      "line": 6859
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6852
+     "line": 6859
     }
    }
   },
@@ -47642,12 +47493,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8333
+      "line": 8340
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8333
+     "line": 8340
     }
    }
   },
@@ -47692,12 +47543,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9499
+      "line": 9506
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9499
+     "line": 9506
     }
    }
   },
@@ -47717,12 +47568,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9188
+      "line": 9195
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9188
+     "line": 9195
     }
    }
   },
@@ -47792,12 +47643,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7035
+      "line": 7042
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7035
+     "line": 7042
     }
    }
   },
@@ -47817,12 +47668,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9223
+      "line": 9230
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9223
+     "line": 9230
     }
    }
   },
@@ -47842,12 +47693,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9270
+      "line": 9277
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9270
+     "line": 9277
     }
    }
   },
@@ -47967,12 +47818,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2924
+      "line": 2931
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2924
+     "line": 2931
     }
    }
   },
@@ -48311,6 +48162,31 @@
    }
   },
   {
+   "id": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "kind": "function",
+   "label": "save_object_places",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "save_object_places(p_object_id text, p_payload jsonb)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_save_object_places_reconcile.sql",
+      "line": 9
+     },
+     {
+      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
+      "line": 1246
+     }
+    ]
+   }
+  },
+  {
    "id": "api.save_object_relations(p_object_id text, p_payload jsonb)",
    "kind": "function",
    "label": "save_object_relations",
@@ -48340,31 +48216,6 @@
    }
   },
   {
-   "id": "api.save_object_places(p_object_id text, p_payload jsonb)",
-   "kind": "function",
-   "label": "save_object_places",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "save_object_places(p_object_id text, p_payload jsonb)",
-    "returns": "jsonb",
-    "security_definer": false,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_save_object_places_reconcile.sql",
-      "line": 9
-     },
-     {
-      "path": "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql",
-      "line": 1246
-     }
-    ]
-   }
-  },
-  {
    "id": "api.save_crm_actor(p_payload jsonb)",
    "kind": "function",
    "label": "save_crm_actor",
@@ -48379,14 +48230,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 1204
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 1365
      }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_module.sql",
+     "line": 1365
+    }
    }
   },
   {
@@ -48405,12 +48256,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7235
+      "line": 7242
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7235
+     "line": 7242
     }
    }
   },
@@ -48520,12 +48371,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7691
+      "line": 7698
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7691
+     "line": 7698
     }
    }
   },
@@ -48595,12 +48446,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2333
+      "line": 2340
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2333
+     "line": 2340
     }
    }
   },
@@ -48944,10 +48795,6 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 400
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_assignee_eligibility.sql",
       "line": 165
      },
@@ -49274,12 +49121,37 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2957
+      "line": 2964
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2957
+     "line": 2964
+    }
+   }
+  },
+  {
+   "id": "api.list_object_resources_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)",
+   "kind": "function",
+   "label": "list_object_resources_page",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_object_resources_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)",
+    "returns": "json",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 5804
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 5804
     }
    }
   },
@@ -49324,37 +49196,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6010
+      "line": 6017
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6010
-    }
-   }
-  },
-  {
-   "id": "api.list_object_resources_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)",
-   "kind": "function",
-   "label": "list_object_resources_page",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "list_object_resources_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)",
-    "returns": "json",
-    "security_definer": false,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5797
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5797
+     "line": 6017
     }
    }
   },
@@ -49374,12 +49221,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5642
+      "line": 5649
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5642
+     "line": 5649
     }
    }
   },
@@ -49474,12 +49321,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 1968
+      "line": 1975
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 1968
+     "line": 1975
     }
    }
   },
@@ -49499,12 +49346,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7558
+      "line": 7565
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7558
+     "line": 7565
     }
    }
   },
@@ -49524,12 +49371,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6054
+      "line": 6061
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6054
+     "line": 6061
     }
    }
   },
@@ -49574,12 +49421,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6289
+      "line": 6296
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6289
+     "line": 6296
     }
    }
   },
@@ -49599,12 +49446,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6554
+      "line": 6561
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6554
+     "line": 6561
     }
    }
   },
@@ -49849,12 +49696,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8961
+      "line": 8968
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8961
+     "line": 8968
     }
    }
   },
@@ -49974,12 +49821,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7306
+      "line": 7313
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7306
+     "line": 7313
     }
    }
   },
@@ -49999,12 +49846,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7856
+      "line": 7863
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7856
+     "line": 7863
     }
    }
   },
@@ -50024,12 +49871,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7949
+      "line": 7956
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7949
+     "line": 7956
     }
    }
   },
@@ -50074,7 +49921,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 3012
+      "line": 3019
      },
      {
       "path": "Base de donnée DLL et API/migration_markdown_d2_place.sql",
@@ -50124,12 +49971,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9432
+      "line": 9439
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9432
+     "line": 9439
     }
    }
   },
@@ -50324,12 +50171,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2382
+      "line": 2389
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2382
+     "line": 2389
     }
    }
   },
@@ -50349,12 +50196,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8687
+      "line": 8694
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8687
+     "line": 8694
     }
    }
   },
@@ -50399,12 +50246,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8757
+      "line": 8764
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8757
+     "line": 8764
     }
    }
   },
@@ -50424,12 +50271,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9046
+      "line": 9053
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9046
+     "line": 9053
     }
    }
   },
@@ -50524,12 +50371,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9002
+      "line": 9009
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9002
+     "line": 9009
     }
    }
   },
@@ -50624,12 +50471,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9994
+      "line": 10001
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9994
+     "line": 10001
     }
    }
   },
@@ -50649,12 +50496,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9918
+      "line": 9925
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9918
+     "line": 9925
     }
    }
   },
@@ -50674,12 +50521,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10078
+      "line": 10085
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 10078
+     "line": 10085
     }
    }
   },
@@ -50699,12 +50546,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9726
+      "line": 9733
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9726
+     "line": 9733
     }
    }
   },
@@ -50824,13 +50671,28 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5536
+      "line": 5543
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5536
+     "line": 5543
     }
+   }
+  },
+  {
+   "id": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "kind": "function",
+   "label": "user_can_moderate_pending_object",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
    }
   },
   {
@@ -50849,13 +50711,28 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7340
+      "line": 7347
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7340
+     "line": 7347
     }
+   }
+  },
+  {
+   "id": "internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)",
+   "kind": "function",
+   "label": "pending_change_notification_is_open",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
    }
   },
   {
@@ -50884,6 +50761,36 @@
    }
   },
   {
+   "id": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
+   "kind": "function",
+   "label": "sync_pending_change_notifications",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.tg_pending_change_notifications()",
+   "kind": "function",
+   "label": "tg_pending_change_notifications",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "tg_pending_change_notifications()",
+    "returns": "trigger",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
    "id": "api.get_object_taxonomy_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
    "kind": "function",
    "label": "get_object_taxonomy_compact",
@@ -50899,12 +50806,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2026
+      "line": 2033
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2026
+     "line": 2033
     }
    }
   },
@@ -50924,7 +50831,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 11029
+      "line": 11036
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
@@ -50978,7 +50885,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 11030
+      "line": 11037
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
@@ -51013,6 +50920,31 @@
    }
   },
   {
+   "id": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "kind": "function",
+   "label": "list_my_notifications",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Les propositions de listes sont rendues seulement aux reviewers encore éligibles dans leur ORG active (ou superuser) et tant qu'elles sont pending/non archivées. Anon ⇒ boîte vide.",
+   "props": {
+    "signature": "list_my_notifications(p_limit integer DEFAULT 50)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql",
+      "line": 729
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql",
+     "line": 729
+    }
+   }
+  },
+  {
    "id": "api.can_read_extended(p_object_id text)",
    "kind": "function",
    "label": "can_read_extended",
@@ -51037,6 +50969,31 @@
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
       "line": 211
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "kind": "function",
+   "label": "claim_unmailed_notifications",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Outbox e-mail : crm_task_assigned et fiche_submission_reviewed (TTL 10 min, SKIP LOCKED, 5 tentatives). Contenu joint en DB, creator_email/creator_name issus de crm_task.created_by pour les assignations uniquement. Réservée au drain Next en service_role.",
+   "props": {
+    "signature": "claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1528
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_crm_task_email_documents.sql",
+      "line": 112
      }
     ]
    }
@@ -51136,7 +51093,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2290
+      "line": 2297
      },
      {
       "path": "Base de donnée DLL et API/migration_tags_create_and_order.sql",
@@ -51236,12 +51193,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8881
+      "line": 8888
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8881
+     "line": 8888
     }
    }
   },
@@ -51551,12 +51508,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8213
+      "line": 8220
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8213
+     "line": 8220
     }
    }
   },
@@ -51576,12 +51533,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8306
+      "line": 8313
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8306
+     "line": 8313
     }
    }
   },
@@ -51601,12 +51558,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8093
+      "line": 8100
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8093
+     "line": 8100
     }
    }
   },
@@ -51626,12 +51583,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8541
+      "line": 8548
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8541
+     "line": 8548
     }
    }
   },
@@ -51651,12 +51608,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8816
+      "line": 8823
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8816
+     "line": 8823
     }
    }
   },
@@ -51676,12 +51633,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9308
+      "line": 9315
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9308
+     "line": 9315
     }
    }
   },
@@ -51701,12 +51658,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9677
+      "line": 9684
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9677
+     "line": 9684
     }
    }
   },
@@ -51826,12 +51783,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7762
+      "line": 7769
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7762
+     "line": 7769
     }
    }
   },
@@ -51850,14 +51807,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-      "line": 368
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1619
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_crm_task_email_documents.sql",
+      "line": 204
      }
-    ],
-    "source": {
-     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-     "line": 368
-    }
+    ]
    }
   },
   {
@@ -52377,14 +52334,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 1380
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 1548
      }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_module.sql",
+     "line": 1548
+    }
    }
   },
   {
@@ -52547,7 +52504,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2127
+      "line": 2134
      },
      {
       "path": "Base de donnée DLL et API/migration_tags_create_and_order.sql",
@@ -52671,10 +52628,6 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 463
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 585
      },
@@ -52699,10 +52652,6 @@
     "volatility": "s",
     "dynamic_sql": false,
     "sources": [
-     {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 420
-     },
      {
       "path": "Base de donnée DLL et API/migration_actor_portal.sql",
       "line": 1668
@@ -52737,14 +52686,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 1168
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 1329
      }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_module.sql",
+     "line": 1329
+    }
    }
   },
   {
@@ -52812,10 +52761,6 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 701
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_interaction_default_status.sql",
       "line": 88
      },
@@ -52844,10 +52789,6 @@
     "volatility": "s",
     "dynamic_sql": false,
     "sources": [
-     {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 1048
-     },
      {
       "path": "Base de donnée DLL et API/migration_actor_channel_visibility.sql",
       "line": 155
@@ -52924,10 +52865,6 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 598
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 720
      },
@@ -52953,14 +52890,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 1437
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 1605
      }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_module.sql",
+     "line": 1605
+    }
    }
   },
   {
@@ -52977,10 +52914,6 @@
     "volatility": "v",
     "dynamic_sql": false,
     "sources": [
-     {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 1287
-     },
      {
       "path": "Base de donnée DLL et API/migration_actor_channel_visibility.sql",
       "line": 77
@@ -53109,17 +53042,7 @@
     "returns": "integer",
     "security_definer": true,
     "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-      "line": 407
-     }
-    ],
-    "source": {
-     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-     "line": 407
-    }
+    "dynamic_sql": false
    }
   },
   {
@@ -53327,10 +53250,6 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 893
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_directory_search.sql",
       "line": 69
      },
@@ -53356,14 +53275,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/crm_body_deploy.tmp.sql",
-      "line": 197
-     },
-     {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
       "line": 317
      }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_module.sql",
+     "line": 317
+    }
    }
   },
   {
@@ -53412,28 +53331,18 @@
    }
   },
   {
-   "id": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "id": "api.partner_admit(p_key_hash text, p_limit integer DEFAULT 120, p_window_seconds integer DEFAULT 60)",
    "kind": "function",
-   "label": "list_my_notifications",
+   "label": "partner_admit",
    "schema": "api",
    "domain": "api",
-   "doc": "Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Les propositions de listes sont rendues seulement aux reviewers encore éligibles dans leur ORG active (ou superuser) et tant qu'elles sont pending/non archivées. Anon ⇒ boîte vide.",
+   "doc": "Service-role partner authentication and fixed-window quota in one RPC. Auth fails closed; quota errors alone fail open. No identity cache.",
    "props": {
-    "signature": "list_my_notifications(p_limit integer DEFAULT 50)",
+    "signature": "partner_admit(p_key_hash text, p_limit integer DEFAULT 120, p_window_seconds integer DEFAULT 60)",
     "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-      "line": 196
-     }
-    ],
-    "source": {
-     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-     "line": 196
-    }
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false
    }
   },
   {
@@ -53636,6 +53545,274 @@
      {
       "path": "Base de donnée DLL et API/migration_team_roster_provenance.sql",
       "line": 44
+     }
+    ]
+   }
+  },
+  {
+   "id": "internal.compute_open_status(p_at timestamp with time zone)",
+   "kind": "function",
+   "label": "compute_open_status",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "§157 — LE moteur d'ouverture, paramétré par l'instant demandé. Source UNIQUE :\napi.refresh_open_status (cache « maintenant », cron) et le filtre « ouvert à … »\nde get_filtered_object_ids sont deux lectures du MÊME calcul — plus de dérive\npossible entre la pastille et le filtre. Publiés uniquement (parité stricte\navec le cache : un brouillon n'a jamais matché « Ouvert maintenant »).\nTRI-ÉTAT préservé (§133) : NULL = aucune donnée (jamais matché par un filtre,\npas de pastille) ; TRUE = ouvert (dont « jour ouvert sans horaire », §93) ;\nFALSE = a des horaires, fermé à cet instant. Pas de scan catalogue (§37).\nLa récurrence saisonnière (§92) est portée par is_opening_period_active_on_date.",
+   "props": {
+    "signature": "compute_open_status(p_at timestamp with time zone)",
+    "returns": "TABLE(object_id text, is_open boolean)",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_filters_open_at_event_dates.sql",
+      "line": 94
+     },
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 5257
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.is_object_open_now(p_object_id text)",
+   "kind": "function",
+   "label": "is_object_open_now",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "is_object_open_now(p_object_id text)",
+    "returns": "boolean",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 35
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/api_views_functions.sql",
+     "line": 35
+    }
+   }
+  },
+  {
+   "id": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "kind": "function",
+   "label": "save_object_rooms",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "save_object_rooms(p_object_id text, p_payload jsonb)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_save_object_rooms.sql",
+      "line": 7
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_save_object_rooms.sql",
+     "line": 7
+    }
+   }
+  },
+  {
+   "id": "internal.provider_object_ids()",
+   "kind": "function",
+   "label": "provider_object_ids",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "provider_object_ids()",
+    "returns": "TABLE(object_id text)",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.set_provider_only_preference(p_enabled boolean)",
+   "kind": "function",
+   "label": "set_provider_only_preference",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "set_provider_only_preference(p_enabled boolean)",
+    "returns": "boolean",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.provider_crm_interactions()",
+   "kind": "function",
+   "label": "provider_crm_interactions",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "provider_crm_interactions()",
+    "returns": "SETOF crm_interaction",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.get_dashboard_provider_team_activity()",
+   "kind": "function",
+   "label": "get_dashboard_provider_team_activity",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_dashboard_provider_team_activity()",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.get_dashboard_provider_crm_activity()",
+   "kind": "function",
+   "label": "get_dashboard_provider_crm_activity",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_dashboard_provider_crm_activity()",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.get_dashboard_provider_crm_open()",
+   "kind": "function",
+   "label": "get_dashboard_provider_crm_open",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_dashboard_provider_crm_open()",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.dashboard_object_ids()",
+   "kind": "function",
+   "label": "dashboard_object_ids",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "dashboard_object_ids()",
+    "returns": "TABLE(object_id text)",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.dashboard_crm_interactions()",
+   "kind": "function",
+   "label": "dashboard_crm_interactions",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "dashboard_crm_interactions()",
+    "returns": "SETOF crm_interaction",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.get_dashboard_crm_open()",
+   "kind": "function",
+   "label": "get_dashboard_crm_open",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Open CRM counters in the caller real/test realm, independent of object facets. Provider RPC uses the same base realm.",
+   "props": {
+    "signature": "get_dashboard_crm_open()",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 10641
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_crm_lifecycle.sql",
+      "line": 452
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_dashboard_activity.sql",
+      "line": 395
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_dashboard_crm_open.sql",
+      "line": 19
+     }
+    ]
+   }
+  },
+  {
+   "id": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "kind": "function",
+   "label": "capture_dashboard_realm_snapshots",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+    "returns": "integer",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)",
+   "kind": "function",
+   "label": "get_metric_snapshot_yoy",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)",
+    "returns": "TABLE(yr integer, mon integer, value numeric)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 10873
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_metric_snapshot.sql",
+      "line": 160
      }
     ]
    }
@@ -54361,6 +54538,41 @@
    }
   },
   {
+   "id": "policy:audit.audit_log_2026_12:Insertion via triggers",
+   "kind": "policy",
+   "label": "Insertion via triggers",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_12",
+    "cmd": "INSERT",
+    "roles": [
+     "postgres",
+     "service_role"
+    ],
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
+   "id": "policy:audit.audit_log_2026_12:Lecture audit (admin/service_role)",
+   "kind": "policy",
+   "label": "Lecture audit (admin/service_role)",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_12",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
    "id": "policy:public.ref_code_mood:admin_ref_code_write",
    "kind": "policy",
    "label": "admin_ref_code_write",
@@ -54475,7 +54687,7 @@
     "roles": [
      "authenticated"
     ],
-    "predicate": "true"
+    "predicate": "(is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))"
    }
   },
   {
@@ -58771,6 +58983,23 @@
    }
   },
   {
+   "id": "policy:public.object_version_2026_11:admin_object_version",
+   "kind": "policy",
+   "label": "admin_object_version",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_version_2026_11",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
+   }
+  },
+  {
    "id": "policy:public.org_branding_settings:read_org_branding",
    "kind": "policy",
    "label": "read_org_branding",
@@ -58882,41 +59111,6 @@
     ],
     "predicate": "true",
     "partition_of": "public.ref_code"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_11:Insertion via triggers",
-   "kind": "policy",
-   "label": "Insertion via triggers",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_11",
-    "cmd": "INSERT",
-    "roles": [
-     "postgres",
-     "service_role"
-    ],
-    "predicate": "true",
-    "partition_of": "audit.audit_log"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_11:Lecture audit (admin/service_role)",
-   "kind": "policy",
-   "label": "Lecture audit (admin/service_role)",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_11",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
-    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -59946,6 +60140,41 @@
    }
   },
   {
+   "id": "policy:audit.audit_log_2026_11:Insertion via triggers",
+   "kind": "policy",
+   "label": "Insertion via triggers",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_11",
+    "cmd": "INSERT",
+    "roles": [
+     "postgres",
+     "service_role"
+    ],
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
+   "id": "policy:audit.audit_log_2026_11:Lecture audit (admin/service_role)",
+   "kind": "policy",
+   "label": "Lecture audit (admin/service_role)",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_11",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
    "id": "policy:public.ref_classification_scheme:Lecture publique des schémas de classification",
    "kind": "policy",
    "label": "Lecture publique des schémas de classification",
@@ -60167,6 +60396,23 @@
      "public"
     ],
     "predicate": "(( SELECT auth.role() AS role) = 'service_role'::text) | (( SELECT auth.role() AS role) = 'service_role'::text)"
+   }
+  },
+  {
+   "id": "policy:public.object_version_2026_10:admin_object_version",
+   "kind": "policy",
+   "label": "admin_object_version",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_version_2026_10",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
    }
   },
   {
@@ -60586,41 +60832,6 @@
      "public"
     ],
     "predicate": "(EXISTS ( SELECT 1\n   FROM (object_menu_item omi\n     JOIN object_menu om ON ((om.id = omi.menu_id)))\n  WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.can_read_object(om.object_id))))"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_10:Insertion via triggers",
-   "kind": "policy",
-   "label": "Insertion via triggers",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_10",
-    "cmd": "INSERT",
-    "roles": [
-     "postgres",
-     "service_role"
-    ],
-    "predicate": "true",
-    "partition_of": "audit.audit_log"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_10:Lecture audit (admin/service_role)",
-   "kind": "policy",
-   "label": "Lecture audit (admin/service_role)",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_10",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
-    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -61301,20 +61512,38 @@
    }
   },
   {
-   "id": "policy:public.object_version_2026_10:admin_object_version",
+   "id": "policy:audit.audit_log_2026_10:Insertion via triggers",
    "kind": "policy",
-   "label": "admin_object_version",
-   "schema": "public",
-   "domain": "object-core",
+   "label": "Insertion via triggers",
+   "schema": "audit",
+   "domain": "audit",
    "doc": null,
    "props": {
-    "table": "public.object_version_2026_10",
-    "cmd": "ALL",
+    "table": "audit.audit_log_2026_10",
+    "cmd": "INSERT",
+    "roles": [
+     "postgres",
+     "service_role"
+    ],
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
+   "id": "policy:audit.audit_log_2026_10:Lecture audit (admin/service_role)",
+   "kind": "policy",
+   "label": "Lecture audit (admin/service_role)",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_10",
+    "cmd": "SELECT",
     "roles": [
      "public"
     ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-    "partition_of": "public.object_version"
+    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -61331,6 +61560,23 @@
      "public"
     ],
     "predicate": "( SELECT api.is_platform_superuser() AS is_platform_superuser)"
+   }
+  },
+  {
+   "id": "policy:public.object_version_2026_12:admin_object_version",
+   "kind": "policy",
+   "label": "admin_object_version",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_version_2026_12",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
    }
   },
   {
@@ -61507,23 +61753,6 @@
    "doc": null,
    "props": {
     "table": "public.object_version_2026_07",
-    "cmd": "ALL",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-    "partition_of": "public.object_version"
-   }
-  },
-  {
-   "id": "policy:public.object_version_2026_11:admin_object_version",
-   "kind": "policy",
-   "label": "admin_object_version",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_version_2026_11",
     "cmd": "ALL",
     "roles": [
      "public"
@@ -63945,83 +64174,11 @@
    "label": "app_notification",
    "schema": "public",
    "domain": "other",
-   "doc": "Notifications applicatives persistantes (16w). `recipient_id` EST la frontière de sécurité : aucune décision d'autorisation ne se lit dans `payload`. `payload` ne contient JAMAIS de nom de personne — tout libellé est joint à la lecture depuis app_user_profile, pour rester dans la portée de l'effacement RGPD (§C). Aucun accès PostgREST direct ni Realtime : RLS + REVOKE, lecture par RPC seulement.",
+   "doc": "(outside tbls scope — stub carrying RLS policies)",
    "props": {
-    "columns": [
-     {
-      "name": "id",
-      "type": "uuid",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "recipient_id",
-      "type": "uuid",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "kind",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "task_id",
-      "type": "uuid",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "created_by",
-      "type": "uuid",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "created_at",
-      "type": "timestamp with time zone",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "read_at",
-      "type": "timestamp with time zone",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "payload",
-      "type": "jsonb",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "email_claimed_at",
-      "type": "timestamp with time zone",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "email_sent_at",
-      "type": "timestamp with time zone",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "email_error",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "email_attempts",
-      "type": "integer",
-      "nullable": false,
-      "pk": false
-     }
-    ],
-    "rls_enabled": true
+    "columns": [],
+    "rls_enabled": true,
+    "external": true
    }
   },
   {
@@ -64074,132 +64231,6 @@
     "columns": [],
     "rls_enabled": true,
     "external": true
-   }
-  },
-  {
-   "id": "trigger:public.pending_change:trg_fiche_submission_resolve",
-   "kind": "trigger",
-   "label": "trg_fiche_submission_resolve",
-   "schema": "public",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "table": "public.pending_change",
-    "timing": null,
-    "events": []
-   }
-  },
-  {
-   "id": "trigger:public.pending_change:trg_pending_change_notifications",
-   "kind": "trigger",
-   "label": "trg_pending_change_notifications",
-   "schema": "public",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "table": "public.pending_change",
-    "timing": null,
-    "events": []
-   }
-  },
-  {
-   "id": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "kind": "function",
-   "label": "user_can_moderate_pending_object",
-   "schema": "internal",
-   "domain": "api",
-   "doc": "Recipient form of api.user_can_moderate_object. No JWT substitution: the\ncaller remains the contributor throughout submission. This internal helper\nmirrors the effective permission's two independent grants and the publisher\nscope; administrative rank alone never grants moderation.",
-   "props": {
-    "signature": "user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-    "returns": "boolean",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-      "line": 25
-     }
-    ],
-    "source": {
-     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-     "line": 25
-    }
-   }
-  },
-  {
-   "id": "internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)",
-   "kind": "function",
-   "label": "pending_change_notification_is_open",
-   "schema": "internal",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)",
-    "returns": "boolean",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-      "line": 79
-     }
-    ],
-    "source": {
-     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-     "line": 79
-    }
-   }
-  },
-  {
-   "id": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
-   "kind": "function",
-   "label": "sync_pending_change_notifications",
-   "schema": "internal",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
-    "returns": "void",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-      "line": 95
-     }
-    ],
-    "source": {
-     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-     "line": 95
-    }
-   }
-  },
-  {
-   "id": "internal.tg_pending_change_notifications()",
-   "kind": "function",
-   "label": "tg_pending_change_notifications",
-   "schema": "internal",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "tg_pending_change_notifications()",
-    "returns": "trigger",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-      "line": 142
-     }
-    ],
-    "source": {
-     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
-     "line": 142
-    }
    }
   }
  ],
@@ -81746,6 +81777,22 @@
    }
   },
   {
+   "source": "policy:audit.audit_log_2026_12:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_12"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_12:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_12"
+   }
+  },
+  {
    "source": "policy:public.ref_code_mood:admin_ref_code_write",
    "target": "public.ref_code",
    "kind": "gates",
@@ -83510,6 +83557,14 @@
    "props": {}
   },
   {
+   "source": "policy:public.object_version_2026_11:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_11"
+   }
+  },
+  {
    "source": "policy:public.org_branding_settings:read_org_branding",
    "target": "public.org_branding_settings",
    "kind": "gates",
@@ -83553,22 +83608,6 @@
    "kind": "gates",
    "props": {
     "via_partition": "public.ref_code_crm_sentiment"
-   }
-  },
-  {
-   "source": "policy:audit.audit_log_2026_11:Insertion via triggers",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_11"
-   }
-  },
-  {
-   "source": "policy:audit.audit_log_2026_11:Lecture audit (admin/service_role)",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_11"
    }
   },
   {
@@ -83986,6 +84025,22 @@
    "props": {}
   },
   {
+   "source": "policy:audit.audit_log_2026_11:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_11"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_11:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_11"
+   }
+  },
+  {
    "source": "policy:public.ref_classification_scheme:Lecture publique des schémas de classification",
    "target": "public.ref_classification_scheme",
    "kind": "gates",
@@ -84068,6 +84123,14 @@
    "target": "public.ref_classification_scheme_applicability",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.object_version_2026_10:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_10"
+   }
   },
   {
    "source": "policy:public.object_iti_info:canonical_del_object_iti_info",
@@ -84228,22 +84291,6 @@
    "target": "public.object_menu_item_dietary_tag",
    "kind": "gates",
    "props": {}
-  },
-  {
-   "source": "policy:audit.audit_log_2026_10:Insertion via triggers",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_10"
-   }
-  },
-  {
-   "source": "policy:audit.audit_log_2026_10:Lecture audit (admin/service_role)",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_10"
-   }
   },
   {
    "source": "policy:public.opening_time_period_weekday:canonical_del_opening_time_period_weekday",
@@ -84522,11 +84569,19 @@
    }
   },
   {
-   "source": "policy:public.object_version_2026_10:admin_object_version",
-   "target": "public.object_version",
+   "source": "policy:audit.audit_log_2026_10:Insertion via triggers",
+   "target": "audit.audit_log",
    "kind": "gates",
    "props": {
-    "via_partition": "public.object_version_2026_10"
+    "via_partition": "audit.audit_log_2026_10"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_10:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_10"
    }
   },
   {
@@ -84534,6 +84589,14 @@
    "target": "public.object_deletion_log",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.object_version_2026_12:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_12"
+   }
   },
   {
    "source": "policy:public.object_version_2026_06:admin_object_version",
@@ -84611,14 +84674,6 @@
    "kind": "gates",
    "props": {
     "via_partition": "public.object_version_2026_07"
-   }
-  },
-  {
-   "source": "policy:public.object_version_2026_11:admin_object_version",
-   "target": "public.object_version",
-   "kind": "gates",
-   "props": {
-    "via_partition": "public.object_version_2026_11"
    }
   },
   {
@@ -85910,90 +85965,6 @@
    }
   },
   {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_period",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM opening_period"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_schedule",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_schedule"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_time_period",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_time_period"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_time_period_weekday",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_time_period_weekday"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_time_frame",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_time_frame"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.ref_code_weekday",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_weekday"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object"
-    }
-   }
-  },
-  {
    "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
    "target": "internal.mv_filtered_objects",
    "kind": "reads",
@@ -86158,6 +86129,18 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_code_amenity_family"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.actor_object_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor_object_role"
     }
    }
   },
@@ -87471,18 +87454,6 @@
   },
   {
    "source": "api.get_dashboard_crm_activity()",
-   "target": "public.crm_interaction",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM   crm_interaction"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_crm_activity()",
    "target": "public.ref_code_demand_topic",
    "kind": "reads",
    "props": {
@@ -88030,78 +88001,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_trail_manager"
-    }
-   }
-  },
-  {
-   "source": "api.is_object_open_now(p_object_id text)",
-   "target": "public.opening_period",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM opening_period"
-    }
-   }
-  },
-  {
-   "source": "api.is_object_open_now(p_object_id text)",
-   "target": "public.opening_schedule",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_schedule"
-    }
-   }
-  },
-  {
-   "source": "api.is_object_open_now(p_object_id text)",
-   "target": "public.opening_time_period",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_time_period"
-    }
-   }
-  },
-  {
-   "source": "api.is_object_open_now(p_object_id text)",
-   "target": "public.opening_time_period_weekday",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_time_period_weekday"
-    }
-   }
-  },
-  {
-   "source": "api.is_object_open_now(p_object_id text)",
-   "target": "public.opening_time_frame",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_time_frame"
-    }
-   }
-  },
-  {
-   "source": "api.is_object_open_now(p_object_id text)",
-   "target": "public.ref_code_weekday",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_weekday"
     }
    }
   },
@@ -88666,78 +88565,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_code_iti_open_status"
-    }
-   }
-  },
-  {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "public.app_notification",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM app_notification"
-    }
-   }
-  },
-  {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "auth.users",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN auth.users"
-    }
-   }
-  },
-  {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "public.crm_task",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN crm_task"
-    }
-   }
-  },
-  {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN object"
-    }
-   }
-  },
-  {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "public.app_notification",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE app_notification"
     }
    }
   },
@@ -89654,126 +89481,6 @@
    }
   },
   {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object"
-    }
-   }
-  },
-  {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.object_classification",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_classification"
-    }
-   }
-  },
-  {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.object_location",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN object_location"
-    }
-   }
-  },
-  {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.object_sustainability_action",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_sustainability_action"
-    }
-   }
-  },
-  {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.object_amenity",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_amenity"
-    }
-   }
-  },
-  {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.ref_amenity",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_amenity"
-    }
-   }
-  },
-  {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.ref_code_amenity_family",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_amenity_family"
-    }
-   }
-  },
-  {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.crm_interaction",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM crm_interaction"
-    }
-   }
-  },
-  {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.metric_snapshot",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.metric_snapshot"
-    }
-   }
-  },
-  {
-   "source": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
-   "target": "public.metric_snapshot",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "INSERT INTO public.metric_snapshot"
-    }
-   }
-  },
-  {
    "source": "api.trail_link_source_record(p_source_record_id uuid, p_trail_id uuid)",
    "target": "public.trail_source_record",
    "kind": "reads",
@@ -89870,30 +89577,6 @@
    }
   },
   {
-   "source": "api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)",
-   "target": "public.metric_snapshot",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.metric_snapshot"
-    }
-   }
-  },
-  {
-   "source": "api.get_metric_snapshot_series(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)",
-   "target": "public.metric_snapshot",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.metric_snapshot"
-    }
-   }
-  },
-  {
    "source": "api.user_actor_ids()",
    "target": "public.actor_channel",
    "kind": "reads",
@@ -89914,6 +89597,18 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN public.ref_code_contact_kind"
+    }
+   }
+  },
+  {
+   "source": "api.get_metric_snapshot_series(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)",
+   "target": "public.metric_snapshot",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.metric_snapshot"
     }
    }
   },
@@ -90910,30 +90605,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM cron.job_run_details"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_crm_open()",
-   "target": "public.crm_interaction",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM crm_interaction"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_crm_open()",
-   "target": "public.crm_task",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM   crm_task"
     }
    }
   },
@@ -93086,6 +92757,126 @@
    }
   },
   {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_zone",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_zone"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.ref_commune",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_commune"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_place",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_place"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_location",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_location"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_place_description",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_place_description"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_place",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_place"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_location",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE public.object_location"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_place_description",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE public.object_place_description"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
+   "target": "public.object_zone",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_zone"
+    }
+   }
+  },
+  {
    "source": "api.save_object_relations(p_object_id text, p_payload jsonb)",
    "target": "public.object_relation",
    "kind": "reads",
@@ -93202,102 +92993,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "UPDATE public.actor_object_role"
-    }
-   }
-  },
-  {
-   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
-   "target": "public.object_place",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.object_place"
-    }
-   }
-  },
-  {
-   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
-   "target": "public.ref_code_media_type",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.ref_code_media_type"
-    }
-   }
-  },
-  {
-   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
-   "target": "public.object_zone",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.object_zone"
-    }
-   }
-  },
-  {
-   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
-   "target": "public.object_place",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "DELETE FROM public.object_place"
-    }
-   }
-  },
-  {
-   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
-   "target": "public.object_location",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "INSERT INTO public.object_location"
-    }
-   }
-  },
-  {
-   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
-   "target": "public.object_place_description",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "INSERT INTO public.object_place_description"
-    }
-   }
-  },
-  {
-   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
-   "target": "public.media",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "INSERT INTO public.media"
-    }
-   }
-  },
-  {
-   "source": "api.save_object_places(p_object_id text, p_payload jsonb)",
-   "target": "public.object_zone",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "DELETE FROM public.object_zone"
     }
    }
   },
@@ -94719,18 +94414,6 @@
   },
   {
    "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
-   "target": "public.ref_contact_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM ref_contact_role"
-    }
-   }
-  },
-  {
-   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
    "target": "public.contact_channel",
    "kind": "reads",
    "props": {
@@ -94750,6 +94433,18 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_code_contact_kind"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.ref_contact_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_contact_role"
     }
    }
   },
@@ -94803,6 +94498,18 @@
   },
   {
    "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM media"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
    "target": "public.media_tag",
    "kind": "reads",
    "props": {
@@ -94822,18 +94529,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_code_media_tag"
-    }
-   }
-  },
-  {
-   "source": "api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)",
-   "target": "public.media",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM media"
     }
    }
   },
@@ -96830,6 +96525,150 @@
    }
   },
   {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.object_org_link",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object_org_link"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.ref_org_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.ref_org_role"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.org_config",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.org_config"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.actor"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.user_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.user_permission"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.ref_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.ref_permission"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.org_role_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.org_role_permission"
+    }
+   }
+  },
+  {
+   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
+   "target": "public.user_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.user_org_business_role"
+    }
+   }
+  },
+  {
    "source": "api.get_objects_with_deep_data(p_object_ids text[], p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb)",
    "target": "public.object",
    "kind": "reads",
@@ -96922,6 +96761,66 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_contact_role"
+    }
+   }
+  },
+  {
+   "source": "internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.pending_change"
+    }
+   }
+  },
+  {
+   "source": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.pending_change"
+    }
+   }
+  },
+  {
+   "source": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
+   "target": "public.app_notification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
+   "target": "public.app_notification",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.app_notification"
     }
    }
   },
@@ -97066,6 +96965,138 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.app_notification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.crm_task"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_list"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.app_notification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM app_notification"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN auth.users"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN crm_task"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.app_notification",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE app_notification"
     }
    }
   },
@@ -100754,66 +100785,6 @@
    }
   },
   {
-   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "target": "public.app_notification",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.app_notification"
-    }
-   }
-  },
-  {
-   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "target": "public.crm_task",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.crm_task"
-    }
-   }
-  },
-  {
-   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.object"
-    }
-   }
-  },
-  {
-   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.object_list"
-    }
-   }
-  },
-  {
    "source": "public.seed_org_role_permission()",
    "target": "public.ref_org_business_role",
    "kind": "reads",
@@ -101182,6 +101153,654 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_period",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM opening_period"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_schedule",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_schedule"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_time_period",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_time_period"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_time_period_weekday",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_time_period_weekday"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.ref_code_weekday",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_weekday"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_time_frame",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM opening_time_frame"
+    }
+   }
+  },
+  {
+   "source": "api.is_object_open_now(p_object_id text)",
+   "target": "public.opening_period",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_period"
+    }
+   }
+  },
+  {
+   "source": "api.is_object_open_now(p_object_id text)",
+   "target": "public.opening_schedule",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_schedule"
+    }
+   }
+  },
+  {
+   "source": "api.is_object_open_now(p_object_id text)",
+   "target": "public.opening_time_period",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_time_period"
+    }
+   }
+  },
+  {
+   "source": "api.is_object_open_now(p_object_id text)",
+   "target": "public.opening_time_period_weekday",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_time_period_weekday"
+    }
+   }
+  },
+  {
+   "source": "api.is_object_open_now(p_object_id text)",
+   "target": "public.ref_code_weekday",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_weekday"
+    }
+   }
+  },
+  {
+   "source": "api.is_object_open_now(p_object_id text)",
+   "target": "public.opening_time_frame",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM opening_time_frame"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.object_room_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_room_type"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.ref_code_room_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_code_room_type"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.ref_code_view_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_code_view_type"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.ref_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.media"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.ref_code_bed_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_code_bed_type"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.object_room_type_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_room_type_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.object_room_type_bed",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_room_type_bed"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.object_room_type_media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_room_type_media"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.object_room_type",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_room_type"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.object_room_type_amenity",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_room_type_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.object_room_type_bed",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_room_type_bed"
+    }
+   }
+  },
+  {
+   "source": "api.save_object_rooms(p_object_id text, p_payload jsonb)",
+   "target": "public.object_room_type_media",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.object_room_type_media"
+    }
+   }
+  },
+  {
+   "source": "internal.provider_object_ids()",
+   "target": "public.actor_object_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor_object_role"
+    }
+   }
+  },
+  {
+   "source": "api.set_provider_only_preference(p_enabled boolean)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.set_provider_only_preference(p_enabled boolean)",
+   "target": "public.app_user_profile",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "internal.provider_crm_interactions()",
+   "target": "storage.objects",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "medium",
+     "evidence": "FROM objects"
+    }
+   }
+  },
+  {
+   "source": "internal.provider_crm_interactions()",
+   "target": "public.actor_object_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor_object_role"
+    }
+   }
+  },
+  {
+   "source": "api.get_dashboard_provider_team_activity()",
+   "target": "public.object_version",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM   object_version"
+    }
+   }
+  },
+  {
+   "source": "api.get_dashboard_provider_team_activity()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.get_dashboard_provider_crm_activity()",
+   "target": "public.ref_code_demand_topic",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_demand_topic"
+    }
+   }
+  },
+  {
+   "source": "api.get_dashboard_provider_crm_open()",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task"
+    }
+   }
+  },
+  {
+   "source": "internal.dashboard_object_ids()",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "internal.dashboard_crm_interactions()",
+   "target": "public.crm_interaction",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_interaction"
+    }
+   }
+  },
+  {
+   "source": "internal.dashboard_crm_interactions()",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object"
+    }
+   }
+  },
+  {
+   "source": "internal.dashboard_crm_interactions()",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.actor"
+    }
+   }
+  },
+  {
+   "source": "api.get_dashboard_crm_open()",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "internal.v_object_essentials",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.v_object_essentials"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "storage.objects",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "medium",
+     "evidence": "JOIN objects"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.crm_interaction",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_interaction"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.actor"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.object_classification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_classification"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.object_location",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object_location"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.object_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.object_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_amenity"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.ref_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.ref_amenity"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.ref_code_amenity_family",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.ref_code_amenity_family"
+    }
+   }
+  },
+  {
+   "source": "internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)",
+   "target": "public.metric_snapshot",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.metric_snapshot"
+    }
+   }
+  },
+  {
+   "source": "api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)",
+   "target": "public.metric_snapshot",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.metric_snapshot"
     }
    }
   },
@@ -102592,289 +103211,10 @@
    "props": {
     "object_type": "LOI"
    }
-  },
-  {
-   "source": "trigger:public.pending_change:trg_fiche_submission_resolve",
-   "target": "public.pending_change",
-   "kind": "trigger_on",
-   "props": {}
-  },
-  {
-   "source": "trigger:public.pending_change:trg_fiche_submission_resolve",
-   "target": "public.fiche_submission_after_review()",
-   "kind": "executes",
-   "props": {}
-  },
-  {
-   "source": "trigger:public.pending_change:trg_pending_change_notifications",
-   "target": "public.pending_change",
-   "kind": "trigger_on",
-   "props": {}
-  },
-  {
-   "source": "trigger:public.pending_change:trg_pending_change_notifications",
-   "target": "internal.tg_pending_change_notifications()",
-   "kind": "executes",
-   "props": {}
-  },
-  {
-   "source": "public.app_notification",
-   "target": "auth.users",
-   "kind": "fk",
-   "props": {
-    "columns": [
-     [
-      "created_by",
-      "id"
-     ]
-    ]
-   }
-  },
-  {
-   "source": "public.app_notification",
-   "target": "auth.users",
-   "kind": "fk",
-   "props": {
-    "columns": [
-     [
-      "recipient_id",
-      "id"
-     ]
-    ]
-   }
-  },
-  {
-   "source": "public.app_notification",
-   "target": "public.crm_task",
-   "kind": "fk",
-   "props": {
-    "columns": [
-     [
-      "task_id",
-      "id"
-     ]
-    ]
-   }
-  },
-  {
-   "source": "public.pending_change",
-   "target": "public.fiche_submission",
-   "kind": "fk",
-   "props": {
-    "columns": [
-     [
-      "submission_id",
-      "id"
-     ]
-    ]
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "auth.users",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM auth.users"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.user_org_membership",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.user_org_membership"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.object_org_link",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.object_org_link"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.ref_org_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.ref_org_role"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.object"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.org_config",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.org_config"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.actor",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.actor"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.user_permission",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.user_permission"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.ref_permission",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.ref_permission"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.org_role_permission",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.org_role_permission"
-    }
-   }
-  },
-  {
-   "source": "internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)",
-   "target": "public.user_org_business_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.user_org_business_role"
-    }
-   }
-  },
-  {
-   "source": "internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)",
-   "target": "public.pending_change",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.pending_change"
-    }
-   }
-  },
-  {
-   "source": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
-   "target": "public.pending_change",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.pending_change"
-    }
-   }
-  },
-  {
-   "source": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
-   "target": "public.app_notification",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.app_notification"
-    }
-   }
-  },
-  {
-   "source": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
-   "target": "auth.users",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM auth.users"
-    }
-   }
-  },
-  {
-   "source": "internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)",
-   "target": "public.app_notification",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "DELETE FROM public.app_notification"
-    }
-   }
   }
  ],
  "partitions": {
+  "audit.audit_log_2026_12": "audit.audit_log",
   "public.ref_code_mood": "public.ref_code",
   "public.ref_code_menu_category": "public.ref_code",
   "public.ref_code_dietary_tag": "public.ref_code",
@@ -102912,8 +103252,8 @@
   "public.ref_code_package_type": "public.ref_code",
   "public.ref_code_opening_period_type": "public.ref_code",
   "public.ref_code_bed_type": "public.ref_code",
+  "public.object_version_2026_11": "public.object_version",
   "public.ref_code_crm_sentiment": "public.ref_code",
-  "audit.audit_log_2026_11": "audit.audit_log",
   "public.ref_code_accommodation_unit_type": "public.ref_code",
   "public.ref_code_membership_campaign": "public.ref_code",
   "public.ref_code_incident_category": "public.ref_code",
@@ -102923,8 +103263,9 @@
   "public.ref_code_membership_tier": "public.ref_code",
   "public.ref_code_environment_tag": "public.ref_code",
   "public.ref_code_amenity_family": "public.ref_code",
+  "audit.audit_log_2026_11": "audit.audit_log",
+  "public.object_version_2026_10": "public.object_version",
   "audit.audit_log_2026_09": "audit.audit_log",
-  "audit.audit_log_2026_10": "audit.audit_log",
   "public.object_version_2026_03": "public.object_version",
   "public.ref_code_media_tag": "public.ref_code",
   "public.object_version_2026_04": "public.object_version",
@@ -102933,12 +103274,12 @@
   "audit.audit_log_default": "audit.audit_log",
   "audit.audit_log_2026_05": "audit.audit_log",
   "audit.audit_log_2026_06": "audit.audit_log",
-  "public.object_version_2026_10": "public.object_version",
+  "audit.audit_log_2026_10": "audit.audit_log",
+  "public.object_version_2026_12": "public.object_version",
   "public.object_version_2026_06": "public.object_version",
   "public.ref_code_weekday": "public.ref_code",
   "public.ref_code_language_level": "public.ref_code",
   "public.object_version_2026_07": "public.object_version",
-  "public.object_version_2026_11": "public.object_version",
   "public.ref_code_price_kind": "public.ref_code",
   "public.object_version_2026_09": "public.object_version",
   "public.ref_code_other": "public.ref_code",

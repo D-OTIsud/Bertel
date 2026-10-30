@@ -1,0 +1,234 @@
+{
+  "project_ref": "ryycrdhlkmzpxwwwwupy",
+  "migration": "20261030133440_dashboard_realm_consistency",
+  "sql_regression": "test_dashboard_realm.sql executed against Bertel V3; BEGIN/ROLLBACK",
+  "frontend_validation": {
+    "typecheck": "passed",
+    "tests": 43,
+    "suites": 4,
+    "production_build": "passed"
+  },
+  "security_advisors": {
+    "new_findings": []
+  },
+  "realms": {
+    "real": {
+      "before": {
+        "global": {
+          "total": 529,
+          "open_tasks": 90,
+          "open_interactions": 439,
+          "recent_interactions": 38,
+          "backlog_interactions": 401
+        },
+        "provider": {
+          "total": 170,
+          "open_tasks": 1,
+          "open_interactions": 169,
+          "recent_interactions": 2,
+          "backlog_interactions": 167
+        }
+      },
+      "after": {
+        "global": {
+          "total": 170,
+          "open_tasks": 1,
+          "open_interactions": 169,
+          "recent_interactions": 2,
+          "backlog_interactions": 167
+        },
+        "provider": {
+          "total": 170,
+          "open_tasks": 1,
+          "open_interactions": 169,
+          "recent_interactions": 2,
+          "backlog_interactions": 167
+        }
+      },
+      "unchanged_payload_hashes": {
+        "object_kpi_hashes": {
+          "scorecards": "f6624a22bc156a978067a65f84533dc7",
+          "completeness": "10b474e89ae07c13c4e0dea8aa418172",
+          "distinctions": "060f197156337bf0ff0a20aa0f2d170e",
+          "actualisation": "1b0015ba3338b4ed82ac194158932e0c",
+          "type_breakdown": "11f38a9c78153de528d3e6c0b80023df",
+          "city_distribution": "bd0060bbb7b18488672b49a55c6e5a28"
+        },
+        "object_provider_kpi_hashes": {
+          "scorecards": "ce467201b31af1444f4f625a4df1810b",
+          "completeness": "5563d9525eb5945b079dff6e5e1ca0ed",
+          "distinctions": "6eafecd3cee8c4dbf298dbdee7efbf7f",
+          "actualisation": "c2e7c4172c504a8ba6bf8b514159a6bf",
+          "type_breakdown": "baa406ab4e3c75b70a6ebb49c50a312a",
+          "city_distribution": "51624608e223a2d20739afb0c40cae68"
+        },
+        "provider_activity_hash": "971d81ff5f4b930f7e7da81d31e15c1c",
+        "provider_team_hash": "94cf73a0ac22d157dbd1353c8d8565dd",
+        "snapshot_integrity": {
+          "hash": "75a3208ee25f665cadd3ed67037dac9a",
+          "count": 6564
+        }
+      }
+    },
+    "test": {
+      "before": {
+        "global": {
+          "total": 529,
+          "open_tasks": 90,
+          "open_interactions": 439,
+          "recent_interactions": 38,
+          "backlog_interactions": 401
+        },
+        "provider": {
+          "total": 359,
+          "open_tasks": 89,
+          "open_interactions": 270,
+          "recent_interactions": 36,
+          "backlog_interactions": 234
+        }
+      },
+      "after": {
+        "global": {
+          "total": 359,
+          "open_tasks": 89,
+          "open_interactions": 270,
+          "recent_interactions": 36,
+          "backlog_interactions": 234
+        },
+        "provider": {
+          "total": 359,
+          "open_tasks": 89,
+          "open_interactions": 270,
+          "recent_interactions": 36,
+          "backlog_interactions": 234
+        }
+      },
+      "unchanged_payload_hashes": {
+        "object_kpi_hashes": {
+          "scorecards": "de4aca95efba256c2c56fd36937241ee",
+          "completeness": "ea78fb891120baa39f99152158c5754d",
+          "distinctions": "6a2566ae3c9954e81e3fff371a09ca1e",
+          "actualisation": "d180d79b262437a80793a035f9c99fa2",
+          "type_breakdown": "a59a5605e65f70337ab1150a2245c533",
+          "city_distribution": "ff0c5178c3bc3b7e978d1450732fcda7"
+        },
+        "object_provider_kpi_hashes": {
+          "scorecards": "de4aca95efba256c2c56fd36937241ee",
+          "completeness": "ea78fb891120baa39f99152158c5754d",
+          "distinctions": "6a2566ae3c9954e81e3fff371a09ca1e",
+          "actualisation": "d180d79b262437a80793a035f9c99fa2",
+          "type_breakdown": "a59a5605e65f70337ab1150a2245c533",
+          "city_distribution": "ff0c5178c3bc3b7e978d1450732fcda7"
+        },
+        "provider_activity_hash": "a01bac190afdee5cd441d7d6220f8c8b",
+        "provider_team_hash": "245843dd68b522c3f2ccb66c093843d4",
+        "snapshot_integrity": {
+          "hash": "75a3208ee25f665cadd3ed67037dac9a",
+          "count": 6564
+        }
+      }
+    }
+  },
+  "protected_readers": [
+    {
+      "acl": "{=X/postgres,postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "signature": "api.get_object_cards_batch(text[],text[])",
+      "definition_hash": "847d243ce2049c84f5916ebb8071dfec"
+    },
+    {
+      "acl": null,
+      "signature": "api.get_object_resource_adapted(text,text[])",
+      "definition_hash": "67b1df0161320511016aa5ea221a251d"
+    },
+    {
+      "acl": null,
+      "signature": "api.get_object_resource(text,text[],text,jsonb)",
+      "definition_hash": "1304633713f7440803641dba22681192"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "signature": "api.get_object_resources_batch(text[],text[],text,jsonb)",
+      "definition_hash": "95ee309b84f3424eb33a46680b6be761"
+    },
+    {
+      "acl": null,
+      "signature": "api.get_object_with_deep_data(text,text[],jsonb)",
+      "definition_hash": "a836af591b70806c87eaefd2871f693d"
+    }
+  ],
+  "fresh_global_snapshots": [
+    {
+      "value": 5,
+      "is_test": false,
+      "metric_key": "accessibility_count",
+      "denominator": null
+    },
+    {
+      "value": 209,
+      "is_test": false,
+      "metric_key": "classified_count",
+      "denominator": null
+    },
+    {
+      "value": 93.7,
+      "is_test": false,
+      "metric_key": "completeness_avg",
+      "denominator": 735
+    },
+    {
+      "value": 911,
+      "is_test": false,
+      "metric_key": "corpus_count",
+      "denominator": null
+    },
+    {
+      "value": 169,
+      "is_test": false,
+      "metric_key": "crm_backlog",
+      "denominator": null
+    },
+    {
+      "value": 22,
+      "is_test": false,
+      "metric_key": "sustainability_count",
+      "denominator": null
+    },
+    {
+      "value": 117,
+      "is_test": true,
+      "metric_key": "accessibility_count",
+      "denominator": null
+    },
+    {
+      "value": 45,
+      "is_test": true,
+      "metric_key": "classified_count",
+      "denominator": null
+    },
+    {
+      "value": 74.3,
+      "is_test": true,
+      "metric_key": "completeness_avg",
+      "denominator": 270
+    },
+    {
+      "value": 270,
+      "is_test": true,
+      "metric_key": "corpus_count",
+      "denominator": null
+    },
+    {
+      "value": 270,
+      "is_test": true,
+      "metric_key": "crm_backlog",
+      "denominator": null
+    },
+    {
+      "value": 0,
+      "is_test": true,
+      "metric_key": "sustainability_count",
+      "denominator": null
+    }
+  ],
+  "migration_sha256": "2f5d7ab10298a9944f2db94980e8d1571f6da9a6d5f98cb8da79b9063790505c"
+}

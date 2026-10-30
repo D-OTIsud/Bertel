@@ -1,5 +1,6 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { type SupabaseClient } from '@supabase/supabase-js';
 import { engineErrorDetail } from '@/lib/db-error-message';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { readBoundedJson, BodyTooLargeError } from '@/lib/request-body.server';
@@ -455,10 +456,7 @@ async function authorizeSuperuser(req: NextRequest, server: ServerClient): Promi
     }
     const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
     const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-    const asCaller = createClient(url, anon, {
-      global: { headers: { Authorization: `Bearer ${jwt}` } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const asCaller = createCallerClient(url, anon, jwt);
     const { data: isSuper, error: superErr } = await asCaller.schema('api').rpc('is_platform_superuser');
     if (superErr || isSuper !== true) {
       return { ok: false, response: NextResponse.json({ error: 'platform_superuser_required' }, { status: 403 }) };

@@ -1,4 +1,6 @@
 'use client';
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Boîte de réception (16w) — le tiroir de la cloche de la sidebar. D26 avait RETIRÉ une
 // cloche factice (pastille sans backend) en attendant `app_notification` : elle revient ici,
@@ -123,7 +125,7 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
       router.push(`/listes?${params.toString()}`);
       return;
     }
-    void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
+    void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks });
     router.push('/crm?tab=taches');
   }
 

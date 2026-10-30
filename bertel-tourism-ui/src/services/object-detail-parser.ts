@@ -1,3 +1,4 @@
+import { isRecord, readRecord, readArray as readList } from '../lib/json-read';
 import {
   parseActors,
   parseCapacities,
@@ -39,10 +40,6 @@ import {
 } from '../features/object-drawer/utils';
 import { resolveWebPlatform } from '../lib/web-platform';
 import { buildContactHref, normalizeUrlValue as normalizeContactUrlValue } from '../lib/contact-links';
-
-interface GenericRecord {
-  [key: string]: unknown;
-}
 
 type ContactSource = 'object' | 'actor' | 'organization';
 
@@ -325,18 +322,6 @@ const KNOWN_TOP_LEVEL_KEYS = new Set([
   'locations',
   'deep_data',
 ]);
-
-function isRecord(value: unknown): value is GenericRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function readRecord(value: unknown): Record<string, unknown> {
-  return isRecord(value) ? value : {};
-}
-
-function readList(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
 
 function readInteger(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {

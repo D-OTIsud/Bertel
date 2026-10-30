@@ -1,6 +1,7 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
-import { createClient } from '@supabase/supabase-js';
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 // Reuse the media image pipeline for scanned-certificate images (resize ≤ 2000 px +
 // EXIF/IPTC/XMP strip). PDFs are validated and stored as-is (validateDocument).
@@ -99,10 +100,7 @@ async function handlePostAuthenticated(
   // write policy. The service-role writes below are gated by THIS probe. Fail-closed on error.
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
   const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-  const asCaller = createClient(url, anon, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const asCaller = createCallerClient(url, anon, jwt);
   const { data: canWrite, error: canWriteErr } = await asCaller
     .schema('api')
     .rpc('user_can_write_object_canonical', { p_object_id: objectId });

@@ -1,1291 +1,191 @@
+import type {
+  WorkspaceTranslatableField,
+  ObjectWorkspaceTaxonomyPathNode,
+  ObjectWorkspaceTaxonomyDomain,
+  ObjectWorkspaceTaxonomyModule,
+  ObjectWorkspaceLocationForm,
+  ObjectWorkspaceDescriptionScope,
+  ObjectWorkspacePlaceItem,
+  ObjectWorkspacePlacesModule,
+  ObjectWorkspaceExternalIdentifierItem,
+  ObjectWorkspaceOriginItem,
+  ObjectWorkspaceSyncIdentifiersModule,
+  WorkspaceReferenceOption,
+  ObjectWorkspaceAmenityOption,
+  ObjectWorkspaceAmenityGroup,
+  ObjectWorkspaceCharacteristicsModule,
+  ObjectWorkspaceCapacityPoliciesModule,
+  ObjectWorkspaceDistinctionsModule,
+  ObjectWorkspacePricingModule,
+  ObjectWorkspaceRoomTypeItem,
+  ObjectWorkspaceRoomsModule,
+  ObjectWorkspaceMeetingRoomItem,
+  ObjectWorkspaceMeetingRoomsModule,
+  ObjectWorkspaceMenuItem,
+  ObjectWorkspaceMenu,
+  ObjectWorkspaceMenusModule,
+  ObjectWorkspaceCuisineModule,
+  ObjectWorkspaceActivityModule,
+  ObjectWorkspaceEventModule,
+  ObjectWorkspaceItineraryModule,
+  ObjectWorkspaceOpeningBucket,
+  ObjectWorkspaceOpeningSlot,
+  ObjectWorkspaceOpeningWeekday,
+  ObjectWorkspaceOpeningSchedule,
+  ObjectWorkspaceOpeningPeriod,
+  ObjectWorkspaceOpeningsModule,
+  ObjectWorkspaceFollowUpNote,
+  ObjectWorkspaceProviderFollowUpModule,
+  ObjectWorkspaceLinkedContactItem,
+  ObjectWorkspaceOrganizationLinkItem,
+  ObjectWorkspaceActorLinkItem,
+  ObjectWorkspaceRelatedObjectItem,
+  ObjectWorkspaceRelationshipsModule,
+  ObjectWorkspaceMembershipScopeOption,
+  ObjectWorkspaceMembershipItem,
+  ObjectWorkspaceMembershipModule,
+  ObjectWorkspaceLegalRecord,
+  ObjectWorkspaceLegalComplianceSummary,
+  ObjectWorkspaceLegalModule,
+  ObjectWorkspaceMediaItem,
+  ObjectWorkspaceContactItem,
+  ObjectWorkspaceWebChannelItem,
+  ObjectWorkspaceTagsModule,
+  ObjectWorkspaceSustainabilityCategory,
+  ObjectWorkspaceSustainabilityLabel,
+  ObjectWorkspaceSustainabilityModule,
+  ObjectWorkspaceDistributionChannel,
+  ObjectWorkspaceDistributionModule,
+  ObjectWorkspaceProviderModule,
+  ObjectWorkspaceModules,
+} from './object-workspace-types';
+
+import { EMPTY_UNIT_TYPES, EMPTY_POSITIONINGS } from './object-workspace-types';
+
+export type {
+  WorkspaceModuleId,
+  WorkspaceTranslatableField,
+  ObjectWorkspaceGeneralInfo,
+  ObjectWorkspaceTaxonomyPathNode,
+  ObjectWorkspaceTaxonomyNodeOption,
+  ObjectWorkspaceTaxonomyAssignment,
+  ObjectWorkspaceTaxonomyDomain,
+  ObjectWorkspaceUnitTypes,
+  ObjectWorkspacePositionings,
+  ObjectWorkspaceTaxonomyModule,
+  ObjectWorkspaceLocationForm,
+  ObjectWorkspacePlaceSummary,
+  ObjectWorkspaceZoneOption,
+  ObjectWorkspaceLocationModule,
+  ObjectWorkspaceDescriptionScope,
+  ObjectWorkspaceDescriptionsModule,
+  ObjectWorkspacePlaceItem,
+  ObjectWorkspacePlacesModule,
+  ObjectWorkspaceModuleAvailability,
+  ObjectWorkspaceModerationItem,
+  ObjectWorkspacePublicationSelectionItem,
+  ObjectWorkspacePublicationModule,
+  ObjectWorkspaceExternalIdentifierItem,
+  ObjectWorkspaceOriginItem,
+  ObjectWorkspaceSyncIdentifiersModule,
+  WorkspaceReferenceOption,
+  WorkspaceMediaOption,
+  ObjectWorkspaceAmenityOption,
+  ObjectWorkspaceAmenityGroup,
+  ObjectWorkspaceLanguageItem,
+  ObjectWorkspaceCharacteristicsModule,
+  ObjectWorkspaceCapacityItem,
+  ObjectWorkspaceGroupPolicyForm,
+  ObjectWorkspacePetPolicyForm,
+  ObjectWorkspaceStayPolicyForm,
+  ObjectWorkspaceCapacityPoliciesModule,
+  ObjectWorkspaceDistinctionItem,
+  ObjectWorkspaceDistinctionGroup,
+  ObjectWorkspaceAccessibilityAmenityItem,
+  ObjectWorkspaceDistinctionSchemeOption,
+  ObjectWorkspaceDistinctionsModule,
+  ObjectWorkspacePricePeriod,
+  ObjectWorkspacePriceItem,
+  ObjectWorkspaceDiscountItem,
+  ObjectWorkspacePromotionSummary,
+  ObjectWorkspacePricingModule,
+  ObjectWorkspaceRoomBed,
+  ObjectWorkspaceRoomTypeItem,
+  ObjectWorkspaceRoomsModule,
+  ObjectWorkspaceMeetingRoomItem,
+  ObjectWorkspaceMeetingRoomsModule,
+  ObjectWorkspaceMenuItem,
+  ObjectWorkspaceMenu,
+  ObjectWorkspaceMenusModule,
+  ObjectWorkspaceCuisineModule,
+  ObjectWorkspaceActivityModule,
+  ObjectWorkspaceEventOccurrence,
+  ObjectWorkspaceEventModule,
+  ObjectWorkspaceItineraryStageSummary,
+  ObjectWorkspaceItineraryAssocSummary,
+  ObjectWorkspaceItineraryModule,
+  ObjectWorkspaceOpeningBucket,
+  ObjectWorkspaceOpeningSlot,
+  ObjectWorkspaceOpeningWeekday,
+  ObjectWorkspaceOpeningTimeFrame,
+  ObjectWorkspaceOpeningTimePeriod,
+  ObjectWorkspaceOpeningSchedule,
+  ObjectWorkspaceOpeningPeriod,
+  ObjectWorkspaceOpeningPeriodTypeOption,
+  ObjectWorkspaceOpeningsModule,
+  ObjectWorkspaceFollowUpNote,
+  ObjectWorkspaceCrmInteractionItem,
+  ObjectWorkspaceCrmTopicCount,
+  ObjectWorkspaceProviderFollowUpModule,
+  ObjectWorkspaceLinkedContactItem,
+  ObjectWorkspaceOrganizationLinkItem,
+  ObjectWorkspaceActorLinkItem,
+  ObjectWorkspaceRelatedObjectItem,
+  ObjectWorkspaceOrgOption,
+  ObjectWorkspaceRelationshipsModule,
+  ObjectWorkspaceMembershipScopeOption,
+  ObjectWorkspaceMembershipItem,
+  ObjectWorkspaceMembershipModule,
+  ObjectWorkspaceLegalTypeOption,
+  ObjectWorkspaceLegalRecord,
+  ObjectWorkspaceLegalComplianceDetail,
+  ObjectWorkspaceLegalComplianceSummary,
+  ObjectWorkspaceLegalModule,
+  ObjectWorkspaceMediaItem,
+  ObjectWorkspaceMediaModule,
+  ObjectWorkspaceContactItem,
+  ObjectWorkspaceWebChannelItem,
+  ObjectWorkspaceContactsModule,
+  ObjectWorkspaceTagItem,
+  ObjectWorkspaceTagsModule,
+  ObjectWorkspaceSustainabilityAction,
+  ObjectWorkspaceSustainabilityCategory,
+  ObjectWorkspaceSustainabilityLabel,
+  ObjectWorkspaceSustainabilityModule,
+  ObjectWorkspaceDistributionChannel,
+  ObjectWorkspaceDistributionModule,
+  ObjectWorkspaceProviderModule,
+  ObjectWorkspaceModules,
+} from './object-workspace-types';
+
+export { EMPTY_UNIT_TYPES, EMPTY_POSITIONINGS } from './object-workspace-types';
+
 import { formatOpeningTime, parseItineraryTrackGeojson } from '../features/object-drawer/utils';
-import type { CrmInteractionReply, ObjectDetail } from '../types/domain';
+import type { ObjectDetail } from '../types/domain';
 import {
   readCoercingString,
   readPermissiveBoolean as readBoolean,
   readTrimmedStringList as readStringList,
+  isRecord,
+  readRecord,
+  readRecordArray as readArray,
 } from '../lib/json-read';
 
 interface GenericRecord {
   [key: string]: unknown;
 }
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider' | 'places';
 
-export interface WorkspaceTranslatableField {
-  baseValue: string;
-  values: Record<string, string>;
-}
-
-export interface ObjectWorkspaceGeneralInfo {
-  name: string;
-  nameTranslations: Record<string, string>;
-  businessTimezone: string;
-  commercialVisibility: string;
-  regionCode: string;
-  status: string;
-  publishedAt: string;
-  isEditing: boolean;
-  /**
-   * object.secondary_types — transitory, non-canonical, opt-in multi-family flag.
-   * Never replaces object.object_type and is not an API filter; read-only here.
-   */
-  secondaryTypes: string[];
-}
-
-export interface ObjectWorkspaceTaxonomyPathNode {
-  id: string;
-  code: string;
-  label: string;
-  description: string;
-  depth: number;
-}
-
-export interface ObjectWorkspaceTaxonomyNodeOption {
-  id: string;
-  code: string;
-  label: string;
-  description: string;
-  parentId: string | null;
-  parentCode: string | null;
-  depth: number;
-  isAssignable: boolean;
-  position: number;
-  axis?: 'famille' | 'nature' | 'sous_type' | 'type_unite' | 'positionnement' | null;
-  family?: string | null;
-  aliases?: string[];
-  sourceRef?: string | null;
-}
-
-export interface ObjectWorkspaceTaxonomyAssignment {
-  recordId: string | null;
-  nodeId: string;
-  code: string;
-  label: string;
-  description: string;
-  depth: number;
-  path: ObjectWorkspaceTaxonomyPathNode[];
-  updatedAt: string;
-  source: string;
-}
-
-export interface ObjectWorkspaceTaxonomyDomain {
-  domain: string;
-  label: string;
-  description: string;
-  objectType: string;
-  nodes: ObjectWorkspaceTaxonomyNodeOption[];
-  assignment: ObjectWorkspaceTaxonomyAssignment | null;
-}
-
-/**
- * §201 — axe « Type d'unité d'hébergement », MULTI-VALUÉ et distinct de la
- * NATURE. `object_taxonomy` n'accepte qu'une valeur par domaine : un
- * établissement qui propose une bulle ET un lodge ne peut pas s'y représenter.
- * Répond à « dans quoi le visiteur dort-il ? ».
- */
-export interface ObjectWorkspaceUnitTypes {
-  options: Array<{ code: string; label: string; description: string }>;
-  selectedCodes: string[];
-  /** Non nul = catalogue absent (taxo6 non appliquée) ⇒ contrôle désactivé AVEC motif. */
-  unavailableReason: string | null;
-}
-
-/** Positionnements commerciaux d'un hôtel, multi-valués et indépendants de sa nature. */
-export interface ObjectWorkspacePositionings {
-  options: Array<{ code: string; label: string; description: string }>;
-  selectedCodes: string[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceTaxonomyModule {
-  domains: ObjectWorkspaceTaxonomyDomain[];
-  unitTypes: ObjectWorkspaceUnitTypes;
-  /** Optionnel pour préserver les brouillons/imports créés avant cet axe. */
-  positionings?: ObjectWorkspacePositionings;
-  unavailableReason: string | null;
-}
-
-export const EMPTY_UNIT_TYPES: ObjectWorkspaceUnitTypes = {
-  options: [],
-  selectedCodes: [],
-  unavailableReason: null,
-};
-
-export const EMPTY_POSITIONINGS: ObjectWorkspacePositionings = {
-  options: [],
-  selectedCodes: [],
-  unavailableReason: null,
-};
-
-export interface ObjectWorkspaceLocationForm {
-  recordId: string | null;
-  altitude?: string;
-  raw?: Record<string, unknown>;
-  address1: string;
-  address1Suite: string;
-  address2: string;
-  address3: string;
-  postcode: string;
-  city: string;
-  codeInsee: string;
-  lieuDit: string;
-  direction: string;
-  latitude: string;
-  longitude: string;
-  zoneTouristique: string;
-}
-
-export interface ObjectWorkspacePlaceSummary {
-  id: string;
-  label: string;
-  isPrimary: boolean;
-  position: number;
-  locationLabel: string;
-}
-
-export interface ObjectWorkspaceZoneOption {
-  /** INSEE commune code (5 digits). */
-  code: string;
-  /** Commune display name. */
-  label: string;
-}
-
-export interface ObjectWorkspaceLocationModule {
-  main: ObjectWorkspaceLocationForm;
-  /** @deprecated Secondary sites live in the `places` module — kept empty at parse time. */
-  places: ObjectWorkspacePlaceSummary[];
-  /** Selected INSEE commune codes (object_zone). */
-  zoneCodes: string[];
-  /** Commune catalog for the §16 "communes desservies" multi-select (loaded from ref_commune; empty until enriched). */
-  zoneOptions: ObjectWorkspaceZoneOption[];
-  /** Non-null when the commune catalog / object_zone read failed — the saver then skips zone persistence (no clobber). */
-  zonesUnavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceDescriptionScope {
-  recordId: string | null;
-  scope: 'object' | 'place';
-  placeId: string | null;
-  label: string;
-  visibility: string;
-  description: WorkspaceTranslatableField;
-  chapo: WorkspaceTranslatableField;
-  adaptedDescription: WorkspaceTranslatableField;
-  mobileDescription: WorkspaceTranslatableField;
-  editorialDescription: WorkspaceTranslatableField;
-}
-
-export interface ObjectWorkspaceDescriptionsModule {
-  localLanguage: string;
-  activeLanguage: string;
-  availableLanguages: string[];
-  object: ObjectWorkspaceDescriptionScope;
-  /** Current user's organisation overlay (null when none / not enrichable). */
-  orgOverlay: ObjectWorkspaceDescriptionScope | null;
-  /** @deprecated Secondary sites live in the `places` module — kept empty at parse time. */
-  places: ObjectWorkspaceDescriptionScope[];
-}
-
-export interface ObjectWorkspacePlaceItem {
-  recordId: string | null;
-  isNew?: boolean;
-  label: string;
-  rawName?: string | null;
-  rawPlace?: Record<string, unknown>;
-  rawLocations?: Record<string, unknown>[];
-  rawDescriptions?: Record<string, unknown>[];
-  position: number;
-  descriptionRecordId: string | null;
-  description: WorkspaceTranslatableField;
-  visibility: 'public' | 'private' | 'partners';
-  rawVisibility?: string | null;
-  visibilityEdited?: boolean;
-  location: ObjectWorkspaceLocationForm;
-}
-
-export interface ObjectWorkspacePlacesModule {
-  items: ObjectWorkspacePlaceItem[];
-  knownPlaceIds?: string[];
-  unavailableReason: string | null;
-}
-
-export type ObjectWorkspaceModuleAvailability = 'available' | 'unavailable';
-
-export interface ObjectWorkspaceModerationItem {
-  id: string;
-  targetTable: string;
-  action: string;
-  status: string;
-  submittedAt: string;
-  reviewedAt: string;
-  appliedAt: string;
-  reviewNote: string;
-  summary: string;
-  /** Canonical field key from pending_change payload/metadata (e.g. lieu_dit). */
-  field: string;
-  beforeValue: string;
-  afterValue: string;
-  /** Human label for who submitted the change (prestataire, import, …). */
-  submittedByLabel: string;
-}
-
-export interface ObjectWorkspacePublicationSelectionItem {
-  publicationId: string;
-  publicationCode: string;
-  publicationName: string;
-  publicationYear: string;
-  publicationStatus: string;
-  workflowStatus: string;
-  pageNumber: string;
-  customPrintText: string;
-  proofSentAt: string;
-  validatedAt: string;
-}
-
-export interface ObjectWorkspacePublicationModule {
-  status: string;
-  publishedAt: string;
-  isEditing: boolean;
-  moderation: {
-    availability: ObjectWorkspaceModuleAvailability;
-    pendingCount: number;
-    unavailableReason: string | null;
-    items: ObjectWorkspaceModerationItem[];
-  };
-  printPublications: {
-    availability: ObjectWorkspaceModuleAvailability;
-    selectionCount: number;
-    unavailableReason: string | null;
-    items: ObjectWorkspacePublicationSelectionItem[];
-  };
-}
-
-export interface ObjectWorkspaceExternalIdentifierItem {
-  id: string;
-  organizationObjectId: string;
-  sourceSystem: string;
-  externalId: string;
-  lastSyncedAt: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ObjectWorkspaceOriginItem {
-  sourceSystem: string;
-  sourceObjectId: string;
-  importBatchId: string;
-  firstImportedAt: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ObjectWorkspaceSyncIdentifiersModule {
-  objectCreatedAt: string;
-  objectUpdatedAt: string;
-  objectUpdatedAtSource: string;
-  externalIdentifiers: ObjectWorkspaceExternalIdentifierItem[];
-  origins: ObjectWorkspaceOriginItem[];
-  externalIdentifiersVisibilityNote: string | null;
-  originsVisibilityNote: string | null;
-}
-
-export interface WorkspaceReferenceOption {
-  id: string;
-  code: string;
-  label: string;
-}
-
-/** A media reference option that also carries its file URL, so pickers can render a
- *  thumbnail (room photo picker §06, menu item media). `id`/`code` = media.id. */
-export interface WorkspaceMediaOption extends WorkspaceReferenceOption {
-  url: string;
-}
-
-export interface ObjectWorkspaceAmenityOption extends WorkspaceReferenceOption {
-  /** Disability types covered by this amenity (e.g. 'motor', 'hearing', 'visual', 'cognitive').
-   *  Empty array for non-accessibility families. */
-  disabilityTypes: string[];
-}
-
-export interface ObjectWorkspaceAmenityGroup {
-  familyCode: string;
-  familyLabel: string;
-  options: ObjectWorkspaceAmenityOption[];
-}
-
-export interface ObjectWorkspaceLanguageItem {
-  languageId: string;
-  code: string;
-  label: string;
-  levelId: string;
-  levelCode: string;
-  levelLabel: string;
-}
-
-export interface ObjectWorkspaceCharacteristicsModule {
-  languageOptions: WorkspaceReferenceOption[];
-  languageLevelOptions: WorkspaceReferenceOption[];
-  selectedLanguages: ObjectWorkspaceLanguageItem[];
-  paymentOptions: WorkspaceReferenceOption[];
-  selectedPaymentCodes: string[];
-  environmentOptions: WorkspaceReferenceOption[];
-  selectedEnvironmentCodes: string[];
-  amenityGroups: ObjectWorkspaceAmenityGroup[];
-  selectedAmenityCodes: string[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceCapacityItem {
-  recordId: string | null;
-  metricId: string;
-  metricCode: string;
-  metricLabel: string;
-  unit: string;
-  value: string;
-  effectiveFrom: string;
-  effectiveTo: string;
-}
-
-export interface ObjectWorkspaceGroupPolicyForm {
-  minSize: string;
-  maxSize: string;
-  groupOnly: boolean;
-  notes: string;
-}
-
-export interface ObjectWorkspacePetPolicyForm {
-  /** Tri-state: null = « non renseigné » (no DB row) — an absent statement must
-   *  never silently become a public « Animaux non acceptés » (accepted=false). */
-  accepted: boolean | null;
-  conditions: string;
-}
-
-/** Heure d'arrivée / départ (HEB) — check-in window + check-out deadline. Times are 'HH:MM' or ''. */
-export interface ObjectWorkspaceStayPolicyForm {
-  checkInFrom: string;
-  checkInUntil: string;
-  checkOutUntil: string;
-  conditions: string;
-}
-
-export interface ObjectWorkspaceCapacityPoliciesModule {
-  metricOptions: WorkspaceReferenceOption[];
-  capacityItems: ObjectWorkspaceCapacityItem[];
-  groupPolicy: ObjectWorkspaceGroupPolicyForm;
-  petPolicy: ObjectWorkspacePetPolicyForm;
-  stayPolicy: ObjectWorkspaceStayPolicyForm;
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceDistinctionItem {
-  recordId: string | null;
-  schemeId: string;
-  schemeCode: string;
-  schemeLabel: string;
-  valueId: string;
-  valueCode: string;
-  valueLabel: string;
-  status: string;
-  awardedAt: string;
-  validUntil: string;
-  disabilityTypesCovered: string[];
-  /** Justificatif (ref_document) attached to this classification — §71 C. */
-  documentId: string;
-  documentUrl: string;
-  documentTitle: string;
-}
-
-export interface ObjectWorkspaceDistinctionGroup {
-  schemeCode: string;
-  schemeLabel: string;
-  items: ObjectWorkspaceDistinctionItem[];
-}
-
-export interface ObjectWorkspaceAccessibilityAmenityItem {
-  code: string;
-  label: string;
-  disabilityTypes: string[];
-}
-
-export interface ObjectWorkspaceDistinctionSchemeOption {
-  id: string;
-  code: string;
-  label: string;
-  selectionMode: 'single' | 'multiple';
-  isAccessibility: boolean;
-  /** ref_classification_scheme.display_group — groups the §08 add-picker (official_classification / graded_label / quality_label). */
-  displayGroup: string;
-  valueOptions: WorkspaceReferenceOption[];
-}
-
-export interface ObjectWorkspaceDistinctionsModule {
-  distinctionGroups: ObjectWorkspaceDistinctionGroup[];
-  accessibilityLabels: ObjectWorkspaceDistinctionItem[];
-  accessibilityAmenityCoverage: ObjectWorkspaceAccessibilityAmenityItem[];
-  schemeOptions: ObjectWorkspaceDistinctionSchemeOption[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspacePricePeriod {
-  recordId: string | null;
-  startDate: string;
-  endDate: string;
-  startTime: string;
-  endTime: string;
-  note: string;
-}
-
-export interface ObjectWorkspacePriceItem {
-  recordId: string | null;
-  kindId: string;
-  kindCode: string;
-  kindLabel: string;
-  unitId: string;
-  unitCode: string;
-  unitLabel: string;
-  amount: string;
-  amountMax: string;
-  currency: string;
-  seasonCode: string;
-  indicationCode: string;
-  ageMinEnfant: string;
-  ageMaxEnfant: string;
-  ageMinJunior: string;
-  ageMaxJunior: string;
-  validFrom: string;
-  validTo: string;
-  conditions: string;
-  source: string;
-  periods: ObjectWorkspacePricePeriod[];
-}
-
-export interface ObjectWorkspaceDiscountItem {
-  recordId: string | null;
-  conditions: string;
-  discountPercent: string;
-  discountAmount: string;
-  currency: string;
-  minGroupSize: string;
-  maxGroupSize: string;
-  validFrom: string;
-  validTo: string;
-  source: string;
-}
-
-export interface ObjectWorkspacePromotionSummary {
-  promotionId: string;
-  code: string;
-  name: string;
-  discountType: string;
-  discountValue: string;
-  currency: string;
-  validFrom: string;
-  validTo: string;
-  isActive: boolean;
-  isPublic: boolean;
-}
-
-export interface ObjectWorkspacePricingModule {
-  priceKindOptions: WorkspaceReferenceOption[];
-  /** §13 two-axis: tariff type (ref_code domain 'price_type'), persisted in object_price.indication_code. */
-  priceTypeOptions: WorkspaceReferenceOption[];
-  /** §13 season scope (ref_code domain 'season_type'), persisted in object_price.season_code. */
-  priceSeasonOptions: WorkspaceReferenceOption[];
-  priceUnitOptions: WorkspaceReferenceOption[];
-  prices: ObjectWorkspacePriceItem[];
-  discounts: ObjectWorkspaceDiscountItem[];
-  promotions: ObjectWorkspacePromotionSummary[];
-  promotionsUnavailableReason: string | null;
-  unavailableReason: string | null;
-}
-
-/** One structured bed entry of a room type (§72): quantity × bed type from ref_code 'bed_type'. */
-export interface ObjectWorkspaceRoomBed {
-  bedTypeId: string;
-  bedTypeCode: string;
-  bedTypeLabel: string;
-  quantity: string;
-  position?: number | null;
-}
-
-export interface ObjectWorkspaceRoomTypeItem {
-  recordId: string | null;
-  /** Editor-only marker: stable client IDs on drafts must not be mistaken for persisted rows. */
-  isNew?: boolean;
-  code: string;
-  name: string;
-  rawName?: string | null;
-  extra?: Record<string, unknown> | null;
-  nameTranslations: Record<string, string>;
-  description: string;
-  descriptionTranslations: Record<string, string>;
-  capacityAdults: string;
-  capacityChildren: string;
-  capacityTotal: string;
-  sizeSqm: string;
-  bedConfig: string;
-  bedConfigTranslations: Record<string, string>;
-  quantity: string;
-  floorLevel: string;
-  viewTypeId: string;
-  viewTypeCode: string;
-  viewTypeLabel: string;
-  roomTypeId: string;
-  roomTypeCode: string;
-  roomTypeLabel: string;
-  basePrice: string;
-  currency: string;
-  accessible: boolean;
-  rawAccessible?: boolean | null;
-  published: boolean;
-  rawPublished?: boolean | null;
-  position: string;
-  amenityCodes: string[];
-  mediaIds: string[];
-  beds: ObjectWorkspaceRoomBed[];
-}
-
-export interface ObjectWorkspaceRoomsModule {
-  viewTypeOptions: WorkspaceReferenceOption[];
-  roomTypeOptions: WorkspaceReferenceOption[];
-  amenityOptions: WorkspaceReferenceOption[];
-  /** Room equipment catalog grouped by family, ordered by industry popularity (§73):
-   *  families by total usage, options by per-amenity usage. Drives the §06 collapsible picker. */
-  amenityGroups: ObjectWorkspaceAmenityGroup[];
-  bedTypeOptions: WorkspaceReferenceOption[];
-  mediaOptions: WorkspaceMediaOption[];
-  items: ObjectWorkspaceRoomTypeItem[];
-  /** IDs present when this editor snapshot was loaded; only omissions from this set are deletions. */
-  knownRoomIds?: string[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceMeetingRoomItem {
-  recordId: string | null;
-  uid?: string;
-  name: string;
-  rawName?: string | null;
-  extra?: Record<string, unknown> | null;
-  equipmentDetails?: { equipmentId: string; note: string | null; position: number | null }[];
-  nameTranslations: Record<string, string>;
-  areaM2: string;
-  capacityTheatre: string;
-  capacityU: string;
-  capacityClassroom: string;
-  capacityBoardroom: string;
-  equipmentCodes: string[];
-}
-
-export interface ObjectWorkspaceMeetingRoomsModule {
-  equipmentOptions: WorkspaceReferenceOption[];
-  items: ObjectWorkspaceMeetingRoomItem[];
-  /** IDs present when this editor snapshot was loaded; protects rooms added concurrently. */
-  knownRoomIds?: string[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceMenuItem {
-  recordId: string | null;
-  name: string;
-  description: string;
-  price: string;
-  currency: string;
-  kindId: string;
-  kindCode: string;
-  kindLabel: string;
-  unitId: string;
-  unitCode: string;
-  unitLabel: string;
-  mediaIds: string[];
-  available: boolean;
-  position: string;
-  dietaryTagCodes: string[];
-  allergenCodes: string[];
-  cuisineTypeCodes: string[];
-  // §06 P2b — section du plat (Entrée/Plat/Dessert…), object_menu_item.section_id → ref_code menu_category
-  sectionCode: string;
-  sectionId: string;
-  sectionLabel: string;
-}
-
-export interface ObjectWorkspaceMenu {
-  recordId: string | null;
-  categoryId: string;
-  categoryCode: string;
-  categoryLabel: string;
-  name: string;
-  rawName?: string | null;
-  description: string;
-  active: boolean;
-  visibility: string;
-  rawVisibility?: string | null;
-  position: string;
-  items: ObjectWorkspaceMenuItem[];
-}
-
-export interface ObjectWorkspaceMenusModule {
-  categoryOptions: WorkspaceReferenceOption[];
-  dietaryTagOptions: WorkspaceReferenceOption[];
-  allergenOptions: WorkspaceReferenceOption[];
-  cuisineTypeOptions: WorkspaceReferenceOption[];
-  priceKindOptions: WorkspaceReferenceOption[];
-  priceUnitOptions: WorkspaceReferenceOption[];
-  mediaOptions: WorkspaceMediaOption[];
-  items: ObjectWorkspaceMenu[];
-  unavailableReason: string | null;
-}
-
-/**
- * §06 P1 — « Cuisines proposées » : facette GLOBALE de recherche au niveau objet
- * (`object_cuisine_type`), découplée des menus. `codes` ordonné par `position`
- * (la 1ère = cuisine principale). `options` = catalogue complet `ref_code` `cuisine_type`.
- */
-export interface ObjectWorkspaceCuisineModule {
-  codes: string[];
-  options: WorkspaceReferenceOption[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceActivityModule {
-  durationMin: string;
-  minParticipants: string;
-  maxParticipants: string;
-  difficultyLevel: string;
-  guideRequired: boolean;
-  minAge: string;
-  equipmentProvided: boolean;
-  equipmentProvidedDetails: string;
-  /** ref_code domain iti_difficulty (codes 1–5). */
-  difficultyOptions: WorkspaceReferenceOption[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceEventOccurrence {
-  recordId: string | null;
-  startAt: string;
-  endAt: string;
-  state: string;
-}
-
-export interface ObjectWorkspaceEventModule {
-  startDate: string;
-  endDate: string;
-  startTime: string;
-  endTime: string;
-  recurring: boolean;
-  recurrenceText: string;
-  occurrences: ObjectWorkspaceEventOccurrence[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceItineraryStageSummary {
-  recordId: string | null;
-  /** §111 C: client-only stable id for DnD keying of not-yet-saved stages (recordId is null). Not persisted. */
-  uid?: string;
-  name: string;
-  rawName?: string | null;
-  nameTranslations?: Record<string, string>;
-  descriptionTranslations?: Record<string, string>;
-  extra?: Record<string, unknown>;
-  description: string;
-  position: string;
-  /** §111 C: stage type code (ref_code iti_stage_kind), stored in object_iti_stage.extra.kind. */
-  kind: string;
-  /** §111 C: stage GPS point (object_iti_stage.geom), surfaced as lng/lat strings. '' = no point. */
-  lng: string;
-  lat: string;
-  /** §111 C: linked media ids (object_iti_stage_media) — preserved across the RPC delete+reinsert. */
-  mediaIds: string[];
-}
-
-export interface ObjectWorkspaceItineraryAssocSummary {
-  associatedObjectId: string;
-  /** ref_iti_assoc_role id (UUID). */
-  roleId: string;
-  note: string;
-  targetName: string;
-  targetType: string;
-}
-
-export interface ObjectWorkspaceItineraryModule {
-  distanceKm: string;
-  durationMin: string;
-  difficultyLevel: string;
-  elevationPositiveM: string;
-  elevationNegativeM: string;
-  loop: boolean;
-  openStatus: string;
-  statusNote: string;
-  practiceOptions: WorkspaceReferenceOption[];
-  practiceCodes: string[];
-  /** §111 ref_code domain iti_difficulty — labels for the 1-5 difficulty select. */
-  difficultyOptions: WorkspaceReferenceOption[];
-  /** §111 ref_code domain iti_open_status — labels for the open/partially_closed/warning/closed select. */
-  openStatusOptions: WorkspaceReferenceOption[];
-  /** §111 ref_code domain iti_stage_kind — labels for the stage type select (depart/etape/POI/…). */
-  stageKindOptions: WorkspaceReferenceOption[];
-  /** §111 C3 ref_iti_assoc_role — roles for the « objets liés » select (sur_le_parcours/a_proximite/…). */
-  assocRoleOptions: WorkspaceReferenceOption[];
-  /** §111 stage-photos closeout — the object's §05 media rows, curated per stage (object_iti_stage_media).
-   *  Like RoomEditModal, stages LINK existing object media; files upload only in §05 (single-writer). */
-  mediaOptions: WorkspaceMediaOption[];
-  /** §111 C3 object_iti_associated_object — objets liés (existing tourism objects + a role). */
-  associatedObjects: ObjectWorkspaceItineraryAssocSummary[];
-  /** §111 object_iti_info — infos pratiques (grouped visually with the is_loop toggle in §06). */
-  access: string;
-  ambiance: string;
-  recommendedParking: string;
-  requiredEquipment: string;
-  infoPlaces: string;
-  childFriendly: boolean;
-  infoTranslations?: Record<string, unknown>;
-  /** §111 itinerary_details.track_geojson — the trace geometry for the editor MapLibre map (null = no trace yet). */
-  trackGeojson: { type: string; coordinates: number[][] } | null;
-  stages: ObjectWorkspaceItineraryStageSummary[];
-  sectionsCount: number;
-  profilesCount: number;
-  geometrySummary: string;
-  traceEditable: boolean;
-  unavailableReason: string | null;
-}
-
-export type ObjectWorkspaceOpeningBucket = 'current' | 'next-year' | 'undated';
-
-export interface ObjectWorkspaceOpeningSlot {
-  start: string;
-  end: string;
-}
-
-export interface ObjectWorkspaceOpeningWeekday {
-  code: string;
-  label: string;
-  slots: ObjectWorkspaceOpeningSlot[];
-}
-
-/** Fields accepted by save_object_openings, kept alongside the weekly editing projection. */
-export interface ObjectWorkspaceOpeningTimeFrame {
-  id: string | null;
-  start_time: string | null;
-  end_time: string | null;
-  recurrence: string | null;
-}
-
-export interface ObjectWorkspaceOpeningTimePeriod {
-  id: string | null;
-  closed: boolean;
-  note: string | null;
-  weekdays: { weekday_code: string }[];
-  time_frames: ObjectWorkspaceOpeningTimeFrame[];
-}
-
-export interface ObjectWorkspaceOpeningSchedule {
-  id: string | null;
-  schedule_type_id: string | null;
-  schedule_type_code: string | null;
-  name: string | null;
-  note: string | null;
-  name_i18n: Record<string, unknown> | null;
-  note_i18n: Record<string, unknown> | null;
-  extra: Record<string, unknown>;
-  time_periods: ObjectWorkspaceOpeningTimePeriod[];
-}
-
-export interface ObjectWorkspaceOpeningPeriod {
-  recordId: string | null;
-  order: string;
-  bucket: ObjectWorkspaceOpeningBucket;
-  label: string;
-  /** Explicit period-type code (ref_code_opening_period_type, e.g. high_season). '' = legacy/untyped. */
-  seasonTypeCode: string;
-  startDate: string;
-  endDate: string;
-  allYears: boolean;
-  /** Mode de récurrence dérivé/explicite (source de vérité de l'UI). */
-  recurrence: 'always' | 'cyclic' | 'fixed';
-  /** Couche fermeture (prioritaire, surcharge les périodes ouvertes). */
-  isClosure: boolean;
-  closedDays: string[];
-  weekdays: ObjectWorkspaceOpeningWeekday[];
-  sourcePeriodId?: string | null;
-  periodTypeId?: string | null;
-  originalSeasonTypeCode?: string;
-  originalRecurrence?: ObjectWorkspaceOpeningPeriod['recurrence'];
-  originalAllYears?: boolean;
-  nameI18n?: Record<string, unknown> | null;
-  extra?: Record<string, unknown>;
-  /** Full writer-compatible tree, including closed days and otherwise hidden notes. */
-  schedules?: ObjectWorkspaceOpeningSchedule[];
-  /** Notes belong to time periods; a simple weekly projection keeps their origin per day. */
-  weekdayNotes?: Record<string, string | null>;
-  /** Only this period is read-only when its full tree cannot be edited by one weekly grid. */
-  editingUnavailableReason?: string | null;
-}
-
-/** Admin-extensible period-type option (ref_code domain `opening_period_type`). */
-export interface ObjectWorkspaceOpeningPeriodTypeOption {
-  code: string;
-  label: string;
-  /** Ribbon/stripe colour (hex), from ref_code.metadata.color. '' when unset. */
-  color: string;
-  /** metadata.all_year = true ⇒ "open all year, no dates" (drives the modal's date UI). */
-  allYear: boolean;
-}
-
-export interface ObjectWorkspaceOpeningsModule {
-  periods: ObjectWorkspaceOpeningPeriod[];
-  periodTypeOptions: ObjectWorkspaceOpeningPeriodTypeOption[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceFollowUpNote {
-  id: string;
-  body: string;
-  audience: string;
-  category: 'general' | 'important' | 'urgent' | 'internal' | 'followup';
-  isPinned: boolean;
-  isArchived: boolean;
-  canEdit: boolean;
-  canDelete: boolean;
-  language: string;
-  createdAt: string;
-  updatedAt: string;
-  createdById: string;
-  createdByName: string;
-  createdByAvatarUrl: string;
-}
-
-/** One CRM interaction row from `api.list_object_crm` (§19 — CRM module, RPC-only DEFINER). */
-export interface ObjectWorkspaceCrmInteractionItem {
-  id: string;
-  interactionType: string;
-  subject: string;
-  body: string | null;
-  occurredAt: string | null;
-  /** Acteur de l'interaction (list_object_crm le porte désormais) — null si absent. */
-  actorId: string | null;
-  actorName: string | null;
-  topicCode: string | null;
-  topicName: string | null;
-  sentimentCode: string | null;
-  sentimentName: string | null;
-  ownerName: string | null;
-  source: string | null;
-  /** Interlocuteur connu (interlocutor_email) — alimente interactionAuthorOf (fix « par Système »). */
-  interlocutorEmail: string | null;
-  /** Statut de la demande, cycle de vie §6.1 : new, in_progress, awaiting_provider,
-   *  resolved, closed, canceled ; null = absent.
-   *  list_object_crm le porte (comme list_actor_crm / la timeline) ⇒ la chip « En attente /
-   *  Traitée » s'affiche dans la vue objet aussi (sinon elle restait fantôme, status hard-codé). */
-  status: string | null;
-  /** Demande traitée (§65/§66) : timestamp de résolution, null = en attente. */
-  resolvedAt: string | null;
-  /** Fil de discussion (§65/§66) — réponses NICHÉES ; [] si aucune. */
-  replies: CrmInteractionReply[];
-}
-
-/** Per-topic interaction count from `api.list_object_crm` (`demand_topic` distribution). */
-export interface ObjectWorkspaceCrmTopicCount {
-  code: string;
-  name: string;
-  count: number;
-}
-
-export interface ObjectWorkspaceProviderFollowUpModule {
-  notes: ObjectWorkspaceFollowUpNote[];
-  /** Real CRM journal — filled post-parse by the `list_object_crm` enrichment, never by the parser. */
-  interactions: ObjectWorkspaceCrmInteractionItem[];
-  topics: ObjectWorkspaceCrmTopicCount[];
-  interactionsUnavailableReason: string | null;
-  tasksUnavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceLinkedContactItem {
-  id: string;
-  kindCode: string;
-  kindLabel: string;
-  roleCode: string;
-  roleLabel: string;
-  value: string;
-  isPublic: boolean;
-  isPrimary: boolean;
-  position: string;
-}
-
-export interface ObjectWorkspaceOrganizationLinkItem {
-  id: string;
-  source: 'organization' | 'org_link';
-  type: string;
-  name: string;
-  status: string;
-  roleId: string;
-  roleCode: string;
-  roleLabel: string;
-  isPrimary: boolean;
-  note: string;
-  contacts: ObjectWorkspaceLinkedContactItem[];
-}
-
-export interface ObjectWorkspaceActorLinkItem {
-  id: string;
-  displayName: string;
-  firstName: string;
-  lastName: string;
-  gender: string;
-  roleId: string;
-  roleCode: string;
-  roleLabel: string;
-  visibility: string;
-  isPrimary: boolean;
-  validFrom: string;
-  validTo: string;
-  note: string;
-  contacts: ObjectWorkspaceLinkedContactItem[];
-  /** §208 — TRUE quand api.can_read_actor_contacts a refusé au CALLEUR (get_object_resource,
-   * migration_actor_contacts_org_gate.sql) : `note`/`contacts` sortent alors nuls/vides parce
-   * que RÉSERVÉS, pas parce que rien n'a été saisi. La sauvegarde (api.save_object_relations)
-   * REPORTE la note serveur pour un tel appelant quoi qu'il envoie (T13b) — l'éditeur DOIT
-   * désactiver le champ Note plutôt que laisser une saisie être silencieusement ignorée. */
-  contactsRestricted: boolean;
-}
-
-export interface ObjectWorkspaceRelatedObjectItem {
-  id: string;
-  name: string;
-  type: string;
-  status: string;
-  relationTypeId: string;
-  relationTypeCode: string;
-  relationTypeLabel: string;
-  direction: 'out' | 'in' | 'associated';
-  note: string;
-  distanceM: string;
-}
-
-export interface ObjectWorkspaceOrgOption {
-  id: string;
-  name: string;
-}
-
-export interface ObjectWorkspaceRelationshipsModule {
-  organizationLinks: ObjectWorkspaceOrganizationLinkItem[];
-  actors: ObjectWorkspaceActorLinkItem[];
-  relatedObjects: ObjectWorkspaceRelatedObjectItem[];
-  /** §48 reference catalogs filled by the relationships loader (empty in the parser defaults). */
-  orgRoleOptions: WorkspaceReferenceOption[];
-  orgOptions: ObjectWorkspaceOrgOption[];
-  actorRoleOptions: WorkspaceReferenceOption[];
-  organizationLinkWriteUnavailableReason: string | null;
-  actorWriteUnavailableReason: string | null;
-  actorConsentUnavailableReason: string | null;
-  relatedObjectWriteUnavailableReason: string | null;
-  /**
-   * §208 — motif (ou `null`) pour lequel la NOTE d'un lien prestataire n'est pas modifiable sur
-   * CETTE fiche. `contacts_restricted` est un verdict PAR APPELANT + PAR FICHE
-   * (api.can_read_actor_contacts), jamais par ligne : le résoudre UNE fois ici est la seule forme
-   * correcte — l'échantillonner sur une ligne quelconque ne dit rien d'un lien pas encore
-   * enregistré. Forme « …UnavailableReason » comme ses voisins : le motif EST le texte affiché,
-   * donc il ne peut pas mentir sur la raison. Voir `deriveActorNoteWriteUnavailableReason`.
-   */
-  actorNoteWriteUnavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceMembershipScopeOption {
-  orgObjectId: string;
-  label: string;
-  isPrimary: boolean;
-}
-
-export interface ObjectWorkspaceMembershipItem {
-  recordId: string | null;
-  scope: 'object' | 'organization';
-  orgObjectId: string;
-  orgLabel: string;
-  campaignId: string;
-  campaignCode: string;
-  campaignLabel: string;
-  tierId: string;
-  tierCode: string;
-  tierLabel: string;
-  status: string;
-  startsAt: string;
-  endsAt: string;
-  paymentDate: string;
-  metadataJson: string;
-  visibilityImpact: string;
-}
-
-export interface ObjectWorkspaceMembershipModule {
-  campaignOptions: WorkspaceReferenceOption[];
-  tierOptions: WorkspaceReferenceOption[];
-  scopeOptions: ObjectWorkspaceMembershipScopeOption[];
-  items: ObjectWorkspaceMembershipItem[];
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceLegalTypeOption {
-  id: string;
-  code: string;
-  label: string;
-  /** `ref_legal_type.description` — dans quelle situation cette pièce est demandée (§209). */
-  description: string;
-  category: string;
-  isPublic: boolean;
-  isRequired: boolean;
-}
-
-export interface ObjectWorkspaceLegalRecord {
-  recordId: string | null;
-  typeId: string;
-  typeCode: string;
-  typeLabel: string;
-  category: string;
-  isPublic: boolean;
-  isRequired: boolean;
-  valueJson: string;
-  documentId: string;
-  /**
-   * The attached justificatif's URL/title, resolved from ref_document for display only
-   * (by the loader for saved rows, or from the upload response for a just-attached file).
-   * NOT persisted directly — the saver writes document_id; these are derived.
-   */
-  documentUrl: string;
-  documentTitle: string;
-  validFrom: string;
-  validTo: string;
-  validityMode: string;
-  status: string;
-  documentRequestedAt: string;
-  documentDeliveredAt: string;
-  note: string;
-  daysUntilExpiry: string;
-}
-
-export interface ObjectWorkspaceLegalComplianceDetail {
-  typeCode: string;
-  typeLabel: string;
-  category: string;
-  isRequired: boolean;
-  hasRecord: boolean;
-  isValid: boolean;
-  status: string;
-  validTo: string;
-  daysUntilExpiry: string;
-}
-
-export interface ObjectWorkspaceLegalComplianceSummary {
-  complianceStatus: string;
-  requiredCount: number;
-  validCount: number;
-  expiringCount: number;
-  missingCount: number;
-  compliancePercentage: number;
-  details: ObjectWorkspaceLegalComplianceDetail[];
-}
-
-export interface ObjectWorkspaceLegalModule {
-  typeOptions: ObjectWorkspaceLegalTypeOption[];
-  records: ObjectWorkspaceLegalRecord[];
-  compliance: ObjectWorkspaceLegalComplianceSummary;
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceMediaItem {
-  id: string;
-  scope: 'object' | 'place';
-  placeId: string | null;
-  scopeLabel: string;
-  typeId: string;
-  typeCode: string;
-  typeLabel: string;
-  title: string;
-  titleTranslations: Record<string, string>;
-  description: string;
-  descriptionTranslations: Record<string, string>;
-  url: string;
-  credit: string;
-  visibility: string;
-  position: string;
-  width: string;
-  height: string;
-  rightsExpiresAt: string;
-  kind: string;
-  isMain: boolean;
-  isPublished: boolean;
-  tags: string[];
-}
-
-export interface ObjectWorkspaceMediaModule {
-  typeOptions: WorkspaceReferenceOption[];
-  tagOptions: WorkspaceReferenceOption[];
-  objectItems: ObjectWorkspaceMediaItem[];
-  placeItems: ObjectWorkspaceMediaItem[];
-  placeScopeUnavailableReason: string | null;
-  /** R1 no-clobber: set when the object-media load failed — the section renders a
-   *  notice instead of an empty grid and the saver refuses to reconcile (a save
-   *  against a failure-born empty list would delete every media row). */
-  unavailableReason: string | null;
-}
-
-export interface ObjectWorkspaceContactItem {
-  id: string;
-  kindId: string;
-  kindCode: string;
-  kindLabel: string;
-  roleId: string;
-  roleCode: string;
-  roleLabel: string;
-  value: string;
-  isPublic: boolean;
-  isPrimary: boolean;
-  position: string;
-}
-
-/**
- * §90 — object-scoped online presence: a réseau social (domain `social_network`)
- * OR a distribution/OTA link (domain `distribution_channel`). Backed by the
- * `object_web_channel` table (composite FK to `ref_code(id, domain)`); surfaced in
- * §03's second group. No role / no is_primary (unlike a contact channel).
- */
-export interface ObjectWorkspaceWebChannelItem {
-  id: string;
-  kindId: string;
-  kindCode: string;
-  kindLabel: string;
-  /** 'social_network' | 'distribution_channel' — drives the §03 UI grouping. */
-  kindDomain: string;
-  value: string;
-  isPublic: boolean;
-  position: string;
-}
-
-export interface ObjectWorkspaceContactsModule {
-  kindOptions: WorkspaceReferenceOption[];
-  roleOptions: WorkspaceReferenceOption[];
-  objectItems: ObjectWorkspaceContactItem[];
-  /** §90 réseaux sociaux + distribution (object_web_channel). */
-  webItems: ObjectWorkspaceWebChannelItem[];
-  /** §90 kind catalog for web channels (ref_code social_network + distribution_channel). */
-  webKindOptions: WorkspaceReferenceOption[];
-  relatedActorContactsCount: number;
-  relatedOrganizationContactsCount: number;
-}
-
-export interface ObjectWorkspaceTagItem {
-  tagId: string;
-  slug: string;
-  label: string;
-  /** Global display color (ref_tag.color) as a lowercase hex #rrggbb. */
-  color: string;
-}
-
-export interface ObjectWorkspaceTagsModule {
-  displayed: ObjectWorkspaceTagItem[];
-  library: ObjectWorkspaceTagItem[];
-}
-
-export interface ObjectWorkspaceSustainabilityAction {
-  id: string;
-  code: string;
-  label: string;
-  description: string;
-  selected: boolean;
-  note: string;
-  documentId: string;
-}
-
-export interface ObjectWorkspaceSustainabilityCategory {
-  id: string;
-  code: string;
-  label: string;
-  description: string;
-  actions: ObjectWorkspaceSustainabilityAction[];
-}
-
-export interface ObjectWorkspaceSustainabilityLabel {
-  code: string;
-  label: string;
-}
-
-export interface ObjectWorkspaceSustainabilityModule {
-  categories: ObjectWorkspaceSustainabilityCategory[];
-  equivalentLabels: ObjectWorkspaceSustainabilityLabel[];
-}
-
-export interface ObjectWorkspaceDistributionChannel {
-  id: string;
-  code: string;
-  name: string;
-  url: string;
-  syncStatus: string;
-  syncTone: 'ok' | 'warn';
-  group: 'booking' | 'social';
-}
-
-export interface ObjectWorkspaceDistributionModule {
-  channels: ObjectWorkspaceDistributionChannel[];
-  readonlyReason: string | null;
-}
-
-export interface ObjectWorkspaceProviderModule {
-  siret: string;
-  companyName: string;
-  sireneVerified: boolean;
-  legalForm: string;
-  nafCode: string;
-  consularChamber: string;
-  cfeOrganization: string;
-  directorFullName: string;
-  directorEmail: string;
-  directorPhone: string;
-  address: string;
-  incorporationDate: string;
-  readonlyReason: string | null;
-}
-
-export interface ObjectWorkspaceModules {
-  generalInfo: ObjectWorkspaceGeneralInfo;
-  taxonomy: ObjectWorkspaceTaxonomyModule;
-  distinctions: ObjectWorkspaceDistinctionsModule;
-  publication: ObjectWorkspacePublicationModule;
-  syncIdentifiers: ObjectWorkspaceSyncIdentifiersModule;
-  location: ObjectWorkspaceLocationModule;
-  descriptions: ObjectWorkspaceDescriptionsModule;
-  places: ObjectWorkspacePlacesModule;
-  media: ObjectWorkspaceMediaModule;
-  contacts: ObjectWorkspaceContactsModule;
-  characteristics: ObjectWorkspaceCharacteristicsModule;
-  capacityPolicies: ObjectWorkspaceCapacityPoliciesModule;
-  pricing: ObjectWorkspacePricingModule;
-  rooms: ObjectWorkspaceRoomsModule;
-  meetingRooms: ObjectWorkspaceMeetingRoomsModule;
-  menus: ObjectWorkspaceMenusModule;
-  cuisine: ObjectWorkspaceCuisineModule;
-  activity: ObjectWorkspaceActivityModule;
-  event: ObjectWorkspaceEventModule;
-  itinerary: ObjectWorkspaceItineraryModule;
-  openings: ObjectWorkspaceOpeningsModule;
-  providerFollowUp: ObjectWorkspaceProviderFollowUpModule;
-  relationships: ObjectWorkspaceRelationshipsModule;
-  memberships: ObjectWorkspaceMembershipModule;
-  legal: ObjectWorkspaceLegalModule;
-  tags: ObjectWorkspaceTagsModule;
-  sustainability: ObjectWorkspaceSustainabilityModule;
-  distribution: ObjectWorkspaceDistributionModule;
-  provider: ObjectWorkspaceProviderModule;
-}
-
-function isRecord(value: unknown): value is GenericRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function readRecord(value: unknown): GenericRecord {
-  return isRecord(value) ? value : {};
-}
-
-function readArray(value: unknown): GenericRecord[] {
-  return Array.isArray(value) ? value.filter(isRecord) as GenericRecord[] : [];
-}
 
 export function readString(value: unknown, fallback = ''): string {
   return readCoercingString(value, fallback);

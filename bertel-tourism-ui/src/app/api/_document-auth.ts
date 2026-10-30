@@ -1,5 +1,6 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 
 // Socle d'AUTHENTIFICATION des routes d'upload de documents privés — partagé par les deux
@@ -48,11 +49,7 @@ function bearer(req: NextRequest): string {
  * la lecture/écriture directe des tables CRM par ce client.
  */
 export function callerClient(jwt: string) {
-  return createClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim(),
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim(),
-    { global: { headers: { Authorization: `Bearer ${jwt}` } }, auth: { persistSession: false, autoRefreshToken: false } },
-  );
+  return createCallerClient((process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim(), (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim(), jwt);
 }
 
 /**

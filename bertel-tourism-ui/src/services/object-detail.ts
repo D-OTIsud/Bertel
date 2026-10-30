@@ -1,5 +1,10 @@
 import type { ObjectDetail } from '../types/domain';
-import { readCoercingString as readString } from '../lib/json-read';
+import {
+  readCoercingString as readString,
+  isRecord,
+  readRecord,
+  readArray,
+} from '../lib/json-read';
 
 interface ObjectRecord {
   [key: string]: unknown;
@@ -10,18 +15,6 @@ interface DeepObjectPayload {
   actors?: unknown;
   organizations?: unknown;
   parent_objects?: unknown;
-}
-
-function isRecord(value: unknown): value is ObjectRecord {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function readRecord(value: unknown): ObjectRecord {
-  return isRecord(value) ? value : {};
-}
-
-function readArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
 }
 
 /**

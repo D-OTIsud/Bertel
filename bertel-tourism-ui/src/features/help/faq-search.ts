@@ -1,3 +1,4 @@
+import { stripCombiningMarks } from '../../lib/text-fold';
 /**
  * Recherche du centre d'aide — pure, côté client (spec 2026-07-03-faq-aide-design.md).
  * Exigences PO : simple et efficace — insensible aux accents, correspondance par PRÉFIXE
@@ -14,7 +15,7 @@ const SCORE_ANSWER = 1;
 
 /** Minuscules + diacritiques strippés (NFD) — appliqué aux deux côtés de la recherche. */
 export function normalizeFaqText(value: string): string {
-  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return stripCombiningMarks(value.toLowerCase());
 }
 
 function toWords(value: string): string[] {

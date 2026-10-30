@@ -1,5 +1,9 @@
+import { stripDiacritics } from '../../../../lib/text-fold';
 import { z } from 'zod';
-import type { ObjectWorkspaceMenu, ObjectWorkspaceMenuItem } from '../../../../services/object-workspace-parser';
+import type {
+  ObjectWorkspaceMenu,
+  ObjectWorkspaceMenuItem,
+} from '../../../../services/object-workspace-parser';
 
 /**
  * Pure extraction helpers for /api/menu/extract (Phase 2). No network, no secrets — fully
@@ -51,11 +55,9 @@ export interface MappedExtraction {
 }
 
 function normalize(value: string): string {
-  return value
+  return stripDiacritics(value
     .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '');
+    .toLowerCase());
 }
 
 /** Build the (system, user) prompt. The user message is paired with the carte images by the route. */

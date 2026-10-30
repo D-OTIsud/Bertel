@@ -63,7 +63,7 @@ function AuthHeroScene() {
  * Réunion · l'île intense) ancre ; l'INSTITUTION (OTI du Sud) est en appui, en attribution.
  * Territoire et opérateur viennent du branding runtime ⇒ NULL = rien affiché (white-label).
  */
-export function AuthShell({ children }: { children: React.ReactNode }) {
+export function AuthShell({ children, partner = false }: { children: React.ReactNode; partner?: boolean }) {
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
   const operatorName = useThemeStore((state) => state.theme.operatorName);
@@ -74,7 +74,11 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
   const showBertelAcronym = brandName.trim().toLowerCase() === 'bertel';
 
   return (
-    <section className="auth-page">
+    <section className={partner ? 'auth-page auth-page--partner' : 'auth-page'}>
+      {partner ? <header className="auth-partner-brand">
+        {logoUrl ? <img src={logoUrl} alt="" width={40} height={40} /> : null}
+        <div><h1>{brandName}</h1><span>Espace partenaire</span></div>
+      </header> : null}
       <div className="auth-frame">
         <div className="auth-hero">
           <AuthHeroScene />

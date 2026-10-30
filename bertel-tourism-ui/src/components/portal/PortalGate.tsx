@@ -34,5 +34,6 @@ export function PortalGate({ children }: { children: React.ReactNode }) {
   if (status === 'guest') return null;
   if (status === 'ready' && role !== 'actor') return null;
   if (status !== 'ready') return <SessionScreen />;
-  return <PortalShell>{children}</PortalShell>;
+  const fichePath = /^\/espace\/fiches\/([^/]+)$/.exec(pathname);
+  return <PortalShell objectId={fichePath?.[1] ?? null}>{children}</PortalShell>;
 }

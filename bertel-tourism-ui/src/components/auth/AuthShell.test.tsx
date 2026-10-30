@@ -4,6 +4,11 @@ import { defaultThemeSettings } from '../../lib/theme';
 import { useThemeStore } from '../../store/theme-store';
 
 describe('AuthShell', () => {
+  it('la variante partenaire porte le cadrage de connexion sans modifier l’entrée de l’office', () => {
+    const { container } = render(<AuthShell partner><h2>Connexion</h2></AuthShell>);
+    expect(container.querySelector('.auth-page')).toHaveClass('auth-page--partner');
+    expect(container.querySelector('.auth-partner-brand')).toHaveTextContent('Espace partenaire');
+  });
   beforeEach(() => {
     useThemeStore.setState({ theme: { ...defaultThemeSettings } });
   });

@@ -39,6 +39,7 @@ import {
 import { PortalRubricScreen } from './PortalRubricScreen';
 import { PortalSendBar } from './PortalSendBar';
 import { PortalVerifyCard } from './PortalVerifyCard';
+import { PortalOfficeReturns } from './PortalOfficeReturns';
 import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 import { PhotosRubric, PORTAL_PHOTO_TARGET, countPortalPhotos } from './rubrics/PhotosRubric';
 import { formatPortalDate, portalProgressLabel } from './portal-format';
@@ -111,10 +112,12 @@ export interface PortalFicheHubProps {
   archetype: ArchetypeCode;
   rubrics: BuiltPortalRubric[];
   activeRubricId: string | null;
+  showReturns?: boolean;
   editor: ObjectEditorState;
   rejections: PortalRejection[];
   /** Modules acceptés par l'office mais pas encore recopiés sur la fiche. */
   approvedModules: Set<string>;
+  appliedModules?: ReadonlySet<string>;
   media: ObjectWorkspaceMediaModule | undefined;
   note: string;
   onNoteChange: (value: string) => void;
@@ -147,9 +150,11 @@ export function PortalFicheHub({
   archetype,
   rubrics,
   activeRubricId,
+  showReturns = false,
   editor,
   rejections,
   approvedModules,
+  appliedModules = new Set(),
   media,
   note,
   onNoteChange,
@@ -183,7 +188,7 @@ export function PortalFicheHub({
       thanksRef.current?.focus();
       return;
     }
-    if (active) return;
+    if (active || showReturns) return;
     if (focusPhotos) {
       setFocusPhotos(false);
       photosRef.current?.scrollIntoView({ block: 'start' });
@@ -191,7 +196,7 @@ export function PortalFicheHub({
       return;
     }
     headingRef.current?.focus();
-  }, [justSent, active, focusPhotos]);
+  }, [justSent, active, showReturns, focusPhotos]);
 
   /**
    * Tout lien qui QUITTE une rubrique passe par ici. Sans saisie en cours il laisse
@@ -233,7 +238,7 @@ export function PortalFicheHub({
   const rubricHref = (id: string) => `${hubHref}?rubrique=${id}`;
 
   return (
-    <div className="portal-fiche-page" data-view={active ? 'rubric' : 'hub'}>
+    <div className="portal-fiche-page" data-view={active || showReturns ? 'rubric' : 'hub'}>
       <div className="portal-fiche-head">
         {justSent ? (
           <div className="portal-card panel-card motion-success portal-thanks" role="status" tabIndex={-1} ref={thanksRef}>
@@ -243,6 +248,15 @@ export function PortalFicheHub({
               L’office les vérifie, en général sous une semaine.
               {serviceAvailability.email ? ' Vous recevrez un e-mail quand ce sera fait.' : ''}
             </p>
+            <p>Vous pouvez déjà préparer d’autres changements. Ils partiront quand l’office aura terminé sa vérification.</p>
+            {sentSnapshot && Object.keys(sentSnapshot.lines).length ? <section className="portal-thanks__summary" aria-label="Ce qui est en vérification">
+              <h3>Ce qui est en vérification</h3>
+              <ul>{Object.entries(sentSnapshot.lines).map(([module, lines]) => <li key={module}>
+                <strong>{rubrics.find((rubric) => rubric.module === module)?.title ?? 'Votre modification'}</strong>
+                {(lines ?? []).map((line) => <span key={line}>{line}</span>)}
+                <span className="badge badge--muted"><Clock size={14} aria-hidden /> Envoyé — en vérification</span>
+              </li>)}</ul>
+            </section> : null}
             {fiche.count >= 2 ? (
               <Link className="ghost-button" href="/espace" onClick={guardedLeave('/espace')}>
                 Retour à vos fiches
@@ -346,7 +360,10 @@ export function PortalFicheHub({
           </span>
         </div>
           <Link className="portal-overview-link portal-desktop-only" href={hubHref} scroll={false}
-            aria-current={!active ? 'page' : undefined} onClick={guardedLeave(hubHref)}>Vue d’ensemble</Link>
+            aria-current={!active && !showReturns ? 'page' : undefined} onClick={guardedLeave(hubHref)}>Vue d’ensemble</Link>
+          {rejections.length || approvedModules.size || appliedModules.size ? <Link className="portal-overview-link portal-returns-link"
+            href={`${hubHref}?retours=1`} scroll={false} aria-current={showReturns ? 'page' : undefined}
+            onClick={guardedLeave(`${hubHref}?retours=1`)}>Retours de l’office</Link> : null}
         <ol className="portal-tasks portal-hub-list" aria-label="Les rubriques de votre fiche">
           {rubrics.map((rubric) => {
             // « À faire » compris : quand la valeur acceptée n'est pas encore recopiée, la
@@ -395,7 +412,8 @@ export function PortalFicheHub({
         </nav>
 
         <div className="portal-panel">
-          {active ? (
+          {showReturns ? <PortalOfficeReturns rubrics={rubrics} rejections={rejections} approvedModules={approvedModules} appliedModules={appliedModules}
+            hubHref={hubHref} officeEmail={fiche.officeEmail} onBack={onBackToHub} onOpenRubric={(id) => onNavigate(rubricHref(id))} /> : active ? (
             <PortalRubricScreen
               rubric={active}
               archetype={archetype}

@@ -151,10 +151,20 @@ test('l’ordinateur dispose d’une navigation et de cartes de synthèse sur le
   expect(within(nav).getAllByRole('listitem')).toHaveLength(props.rubrics.length);
 });
 
+test('après l’envoi, le récapitulatif redit les valeurs envoyées en vérification', () => {
+  renderHub({ justSent: true, sentSnapshot: { submissionId: 'S1', submittedAt: '2026-10-30T08:00:00Z', lines: { contacts: ['Téléphone : 0692 00 00 00'] } } });
+  const summary = screen.getByRole('region', { name: 'Ce qui est en vérification' });
+  expect(summary).toHaveTextContent('Téléphone : 0692 00 00 00');
+  expect(summary).toHaveTextContent('Envoyé — en vérification');
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
   window.localStorage.clear();
+  window.localStorage.setItem('portal-welcome:u1', '1');
+  const currentUserId = useSessionStore.getState().userId;
+  if (currentUserId) window.localStorage.setItem(`portal-welcome:${currentUserId}`, '1');
   searchParams = new URLSearchParams('');
 });
 

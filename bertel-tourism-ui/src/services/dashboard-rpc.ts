@@ -125,7 +125,7 @@ export async function getDashboardDistinctionOverview(
 }
 
 /**
- * Compteur GLOBAL des éléments CRM ouverts (carte d'attention du bandeau).
+ * Compteur des éléments CRM ouverts dans le périmètre réel/test de l'utilisateur.
  * Le périmètre prestataires est optionnel ; les autres facettes ne filtrent pas l'activité.
  */
 export async function getDashboardCrmOpen(providerOnly = false): Promise<DashboardCrmOpen> {
@@ -148,7 +148,7 @@ export async function getDashboardCrmOpen(providerOnly = false): Promise<Dashboa
 
 /**
  * Rythme de saisie de l'équipe sur 12 semaines + table des contributeurs.
- * Série globale par défaut, ou limitée aux objets avec prestataire. Les autres
+ * Série du périmètre réel/test, ou limitée aux objets avec prestataire. Les autres
  * facettes ne filtrent pas l'activité. La formule jours-éditeur de 17h est conservée.
  */
 export async function getDashboardTeamActivity(providerOnly = false): Promise<DashboardTeamActivity> {

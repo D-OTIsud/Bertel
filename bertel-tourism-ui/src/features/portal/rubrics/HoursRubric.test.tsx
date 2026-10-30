@@ -164,3 +164,15 @@ test('retrouve une saisie commencée dans l’ancien formulaire après la mise �
   await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
   expect(written(editor).periods[0].weekdays.filter((d) => d.slots.length)).toHaveLength(2);
 });
+
+test('fermer puis rouvrir un jour retrouve ses horaires propres', async () => {
+  const { editor } = setup(); await userEvent.click(screen.getByRole('button', { name: 'Le week-end' }));
+  fillTime(/^de quelle heure/, '09:00'); fillTime(/^à quelle heure/, '17:00');
+  await userEvent.click(screen.getByRole('button', { name: 'Horaires différents selon les jours ?' }));
+  fillTime(/^à quelle heure, Dimanche/, '12:00');
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Dimanche' }));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Dimanche' }));
+  expect(screen.getByLabelText(/^à quelle heure, Dimanche/)).toHaveValue('12:00');
+  await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+  expect(written(editor).periods[0].weekdays.find((day) => day.code === 'sunday')?.slots).toEqual([{ start: '09:00', end: '12:00' }]);
+});

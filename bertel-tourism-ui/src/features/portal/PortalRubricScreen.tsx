@@ -177,7 +177,7 @@ export function PortalRubricScreen({
         <h2 className="portal-h1" id="portal-rubric-title" tabIndex={-1} ref={headingRef}>
           {rubric.title}
         </h2>
-        {rubric.id !== 'hours' && rubric.id !== 'welcome' ? <PortalHelp label={rubric.title}>{RUBRIC_HELP[rubric.id]}</PortalHelp> : null}
+        {rubric.id !== 'hours' && rubric.id !== 'welcome' ? <PortalHelp key={rubric.id} label={rubric.title}>{RUBRIC_HELP[rubric.id]}</PortalHelp> : null}
       </div>
 
       {waiting ? (

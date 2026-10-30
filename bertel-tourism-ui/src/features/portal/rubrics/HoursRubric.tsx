@@ -107,7 +107,8 @@ export function HoursRubric({ editor, formKey, onDone, onCancel, onDirtyChange, 
         // Le writer protège également ces jours : le raccourci ne promet pas de les fermer.
         if (current?.readOnly) continue;
         const open = codes.includes(code);
-        hours[code] = { ...(open && !current?.open ? template : current), open };
+        const restored = current?.slots.length ? current : template;
+        hours[code] = { ...(open && !current?.open ? restored : current), open };
       }
       return { ...previous, hours, error: null };
     });

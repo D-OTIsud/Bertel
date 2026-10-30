@@ -102,6 +102,7 @@ export function PortalFicheEditor({
   const [sentSnapshot, setSentSnapshot] = useState<PortalSentSnapshot | null>(() => null);
 
   const activeRubricId = searchParams.get('rubrique');
+  const showReturns = !activeRubricId && searchParams.get('retours') === '1';
   const hubHref = `/espace/fiches/${objectId}`;
 
   const resolvedAt = fiche?.lastResolved?.resolvedAt ?? null;
@@ -125,8 +126,8 @@ export function PortalFicheEditor({
   useEffect(() => {
     // Le remerciement appartient au geste qui vient d'avoir lieu : ouvrir une rubrique
     // tourne la page.
-    if (activeRubricId) setJustSent(false);
-  }, [activeRubricId]);
+    if (activeRubricId || showReturns) setJustSent(false);
+  }, [activeRubricId, showReturns]);
 
   const { open, resolved } = useMemo(
     () => splitSubmissions(submissions, fiche?.openSubmission?.id ?? null),
@@ -153,6 +154,10 @@ export function PortalFicheEditor({
     }
     return set;
   }, [resolved, pendingModules]);
+
+  const appliedModules = useMemo(() => new Set((resolved?.changes ?? [])
+    .filter((change) => change.status === 'applied' && change.section && !pendingModules.has(change.section as WorkspaceModuleId))
+    .map((change) => change.section!)), [resolved, pendingModules]);
 
   /**
    * Acceptés par l'office mais pas encore RECOPIÉS sur la fiche. C'est la forme dominante
@@ -275,7 +280,7 @@ export function PortalFicheEditor({
         handleBackToHub();
         return;
       }
-      if (activeRubricId) {
+      if (activeRubricId || showReturns) {
         // Rubrique → rubrique : on REMPLACE, l'historique n'enfle pas.
         router.replace(href, { scroll: false });
         return;
@@ -283,7 +288,7 @@ export function PortalFicheEditor({
       router.push(href, { scroll: false });
       depthRef.current = 1;
     },
-    [router, hubHref, activeRubricId, handleBackToHub],
+    [router, hubHref, activeRubricId, showReturns, handleBackToHub],
   );
 
   const handleDiscard = useCallback(() => {
@@ -298,7 +303,7 @@ export function PortalFicheEditor({
       // Sous 1024 px, l'en-tête de fiche — donc la carte « Merci ! » — est masqué en vue
       // rubrique : envoyer depuis un écran de rubrique ne changeait RIEN à l'écran, et le
       // focus tombait dans le vide sur un élément `display:none`. On revient à la fiche.
-      if (activeRubricId) router.push(hubHref, { scroll: false });
+      if (activeRubricId || showReturns) router.push(hubHref, { scroll: false });
       setJustSent(true);
       setSentSnapshot(readPortalSent(userId, objectId));
       draft.clear();
@@ -315,7 +320,7 @@ export function PortalFicheEditor({
       // Par PRÉFIXE : la clé porte l'id de la fiche, l'invalidation couvre toutes les fiches.
       void queryClient.invalidateQueries({ queryKey: ['portal-submissions'] });
     },
-    [userId, objectId, draft, queryClient, activeRubricId, router, hubHref],
+    [userId, objectId, draft, queryClient, activeRubricId, showReturns, router, hubHref],
   );
 
   const location = (resource.modules as unknown as { location?: { main?: Record<string, string> } }).location?.main ?? {};
@@ -343,9 +348,11 @@ export function PortalFicheEditor({
         archetype={archetype}
         rubrics={rubrics}
         activeRubricId={activeRubricId}
+        showReturns={showReturns}
         editor={portalEditor}
         rejections={rejections}
         approvedModules={approvedModules}
+        appliedModules={appliedModules}
         discardedRubrics={discardedRubrics}
         refreshFailed={refreshFailed}
         storageFailed={storageFailed}

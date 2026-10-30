@@ -150,12 +150,22 @@ function renderRouted(initial = '') {
 beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
+  window.localStorage.setItem(`portal-welcome:${USER}`, '1');
   searchParams = new URLSearchParams('');
   historyStack = [''];
   useSessionStore.setState({ userId: USER, role: 'actor', demoMode: false } as never);
 });
 
 describe('parcours — les DROITS d’un compte portail (D7)', () => {
+  it('le premier passage explique l’envoi puis ouvre la fiche', async () => {
+    window.localStorage.removeItem(`portal-welcome:${USER}`);
+    primeServices(fixture(), await actorPortalPermissions());
+    renderRouted('');
+    expect(await screen.findByRole('heading', { name: /^Bienvenue/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Voir ma fiche' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Villa Vanille' })).toBeInTheDocument();
+    expect(window.localStorage.getItem(`portal-welcome:${USER}`)).toBe('1');
+  });
   it('les trois sondes serveur refusent tout, et le partenaire garde quand même un chemin d’entrée', async () => {
     // ═══════════════════════════════════════════════════════════════════════════════
     // LE test que les sept suites du portail ne pouvaient pas faire : elles passaient

@@ -47,6 +47,27 @@
   padding: 20px 16px 120px;
 }
 .portal-shell__legal { padding: 0 16px calc(20px + env(safe-area-inset-bottom)); }
+.portal-welcome { max-width: 800px; margin-inline: auto; display: grid; gap: 20px; }
+.portal-welcome .portal-lead { margin-bottom: 0; }
+.portal-welcome__fiche { display: flex; align-items: center; gap: 20px; padding: 20px; }
+.portal-welcome__fiche > div { min-width: 0; overflow-wrap: anywhere; }
+.portal-welcome__fiche img,
+.portal-welcome__image { width: 100px; height: 100px; object-fit: cover; border-radius: var(--radius-sm); flex: none; }
+.portal-welcome__image { display: grid; place-items: center; color: var(--ink-3); background: var(--surface-soft); }
+.portal-welcome__fiche h2,
+.portal-welcome__steps h2 { margin: 0; font-family: var(--font-display), sans-serif; font-size: 1.1rem; }
+.portal-welcome__fiche p { margin: 6px 0 0; }
+.portal-welcome__steps { padding: 24px; }
+.portal-welcome__steps ol { display: grid; gap: 20px; padding-left: 24px; }
+.portal-returns-link { display: inline-flex; align-items: center; min-height: 48px; color: var(--teal); font-weight: 700; }
+.portal-office-returns { display: grid; gap: 20px; }
+.portal-office-returns h3 { margin: 0; font-size: 1rem; }
+.portal-review-news ul,
+.portal-thanks__summary ul { list-style: none; padding: 0; display: grid; gap: 12px; }
+.portal-review-news li,
+.portal-thanks__summary li { padding: 16px; display: grid; justify-items: start; gap: 8px; }
+.portal-review-news p { margin: 0; }
+.portal-thanks__summary { width: 100%; }
 /* Cibles tactiles. `.primary-button` / `.ghost-button` ne DÉCLARENT aucune hauteur
    (padding + font-weight seuls) : 48 px est POSÉ ici, ce n'est pas une surcharge. */
 .portal-shell .primary-button,
@@ -174,6 +195,8 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
   .portal-overview-rubric .muted { overflow-wrap: anywhere; font-size: 0.9rem; }
   .portal-overview-rubric .badge { margin-top: auto; }
   .portal-verification-note,
+  .portal-fiche-head .portal-returns,
+  .portal-office-returns > .portal-back,
   .portal-rubric > .portal-back { display: none; }
   .portal-home { max-width: 960px; margin-inline: auto; }
   .portal-home .portal-fiche { padding: 24px; }
@@ -193,6 +216,7 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
   .portal-fiche-page[data-view='hub'] .portal-overview-top { display: contents; }
   .portal-fiche-page[data-view='hub'] .portal-progress { order: 0; }
   .portal-fiche-page[data-view='hub'] .portal-todo,
+  .portal-fiche-page[data-view='hub'] .portal-returns-link,
   .portal-fiche-page[data-view='hub'] .portal-overview-top > .notice { order: 1; }
   .portal-fiche-page[data-view='hub'] .portal-hub-list { order: 2; }
   .portal-fiche-page[data-view='hub'] .portal-photos { order: 3; }

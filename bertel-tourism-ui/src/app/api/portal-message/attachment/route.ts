@@ -13,6 +13,7 @@ import {
 import { MediaProcessingError } from "../../media/upload/process-image";
 import {
   readBoundedFormData,
+  readBoundedJson,
   assertFormDataShape,
   acquireLease,
   BodyTooLargeError,
@@ -130,8 +131,9 @@ export async function PUT(req: NextRequest) {
   if (!auth.ok) return auth.response;
   let body: unknown;
   try {
-    body = await req.json();
-  } catch {
+    body = await readBoundedJson(req,2048);
+  } catch(error) {
+    if(error instanceof BodyTooLargeError)return fail('request_body_too_large',413);
     return fail("invalid_fields", 400);
   }
   const id =

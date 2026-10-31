@@ -41,7 +41,7 @@ export function renderPartnerInvitationEmailHtml(data: PartnerInvitationEmailDat
 <p>Vous pouvez désormais mettre à jour vous-même ${data.ficheNames.length === 1 ? 'la fiche de' : 'vos fiches'}${fiches ? ` <strong>${fiches}</strong>` : ''} sur le site de l’office.</p>
 <h2 style="font-size:18px;">Ce que vous pouvez changer</h2>
 <ul><li>Horaires et fermetures</li><li>Téléphone, e-mail et site internet</li><li>Tarifs</li><li>Présentation</li></ul>
-<p>Pour vos photos, l’office reste à votre disposition.</p>
+<p>Vous pouvez réordonner et retirer vos photos. L’office vérifie les nouvelles photos avant publication.</p>
 <h2 style="font-size:18px;">Comment ça se passe</h2>
 <p><strong>1. Vous modifiez</strong><br>Une rubrique à la fois, depuis votre téléphone ou un ordinateur.</p>
 <p><strong>2. Vous envoyez à l’office</strong><br>Un seul bouton. Votre fiche publiée ne change pas encore.</p>

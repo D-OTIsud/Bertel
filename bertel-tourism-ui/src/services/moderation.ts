@@ -6,6 +6,7 @@
 // metadata->>'rpc' (whitelisté). Le front ne dispatche RIEN — il dépose juste l'enveloppe
 // (payload + metadata.rpc) via submit, puis approuve/rejette par id.
 import { getApiClient } from '../lib/supabase';
+import { approvePortalPhotos } from './portal-photos';
 import { readNullableString, readStrictString as readString } from '../lib/json-read';
 import { mapDatabaseError } from './api-error';
 import { useSessionStore } from '../store/session-store';
@@ -128,7 +129,9 @@ export async function approvePendingChange(
   id: string,
   reviewNote: string | null = null,
   appliedManually = false,
+  portalPhotos = false,
 ): Promise<void> {
+  if(portalPhotos){await approvePortalPhotos({id,batch:false,reviewNote,manual:appliedManually});return;}
   const client = requireApiClient();
   const { error } = await client.schema('api').rpc('approve_pending_change', {
     p_id: id,
@@ -172,7 +175,12 @@ export async function approveFicheSubmission(
   submissionId: string,
   reviewNote: string | null = null,
   includeManual = false,
+  portalPhotos = false,
 ): Promise<FicheSubmissionApproval> {
+  if(portalPhotos){
+    const row=await approvePortalPhotos({id:submissionId,batch:true,reviewNote,manual:includeManual});
+    return{appliedCount:readCount(row.applied_count),approvedManualCount:readCount(row.approved_manual_count),skippedManualCount:readCount(row.skipped_manual_count),submissionStatus:readNullableString(row.submission_status)};
+  }
   const client = requireApiClient();
   const { data, error } = await client.schema('api').rpc('approve_fiche_submission', {
     p_submission_id: submissionId,

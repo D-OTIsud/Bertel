@@ -651,6 +651,10 @@ ROLLBACK;
 \ir migration_actor_portal_message.sql
 \ir tests/test_actor_portal_message.sql
 
+\echo '== private partner photo additions and immediate withdrawal/order =='
+\ir migration_actor_portal_media.sql
+\ir tests/test_actor_portal_media.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

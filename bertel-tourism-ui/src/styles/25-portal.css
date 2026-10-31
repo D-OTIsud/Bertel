@@ -553,6 +553,19 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
 .portal-accessibility__panel > p { margin: 12px 0; }
 @media (min-width: 1024px) { .portal-accessibility__families { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .portal-write-office { display: grid; gap: 28px; }
+.portal-photo-editor__grid { display: grid; gap: 16px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.portal-photo-editor__tile { display: grid; align-content: start; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.portal-photo-editor__tile > img,.portal-photo-placeholder { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius-sm); }
+.portal-photo-placeholder { background: var(--surface-soft); color: var(--ink-3); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px; text-align: center; overflow-wrap: anywhere; }
+.portal-photo-editor__labels,.portal-photo-editor__actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.portal-photo-editor__actions > button { display: inline-flex; align-items: center; justify-content: center; min-width: 48px; min-height: 48px; border-radius: var(--radius-sm); }
+.portal-shell .portal-photo-editor__actions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr)); }
+.portal-shell .portal-photo-editor__actions > button {width:auto;min-width:48px;padding:8px;}
+.portal-shell .portal-photo-editor__actions > button:first-child {grid-column:1/-1;justify-self:center;}
+.portal-photo-dropzone { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; padding: 24px; border: 2px dashed var(--line); border-radius: var(--radius-md); background: var(--surface-soft); color: var(--ink); text-align: center; cursor: pointer; }
+.portal-photo-dropzone strong { color: var(--teal); }
+.portal-photo-review .portal-photo-editor__grid { grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); }
+@media (min-width:1024px) { .portal-photo-editor__grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 .portal-schedule-block,.portal-named-schedules,.portal-named-services { display: grid; gap: 24px; }
 .portal-named-schedule { display: grid; gap: 20px; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .portal-named-schedule h2,.portal-named-services h2 { margin: 0; font-family: var(--font-display),sans-serif; font-size: 1.15rem; font-weight: 700; }

@@ -215,6 +215,7 @@ function projectActivity(draft: ObjectWorkspaceModules): string[] {
 type Projection = (draft: ObjectWorkspaceModules, archetype: ArchetypeCode) => string[];
 
 const PROJECTIONS: Partial<Record<WorkspaceModuleId, Projection>> = {
+  media:draft=>(draft.media?.objectItems??[]).filter(item=>item.portalUploadId).map(item=>`Photo à ajouter : ${item.title}${item.credit?` · Crédit : ${item.credit}`:''}${item.portalReplaceMediaId?' · Remplacement proposé':''}`),
   contacts: projectContacts,
   // Le MÊME module, deux lectures : un gîte parle de saison et de fermetures, un
   // restaurant d'heures d'ouverture. C'est la saisie qui change, pas le modèle.

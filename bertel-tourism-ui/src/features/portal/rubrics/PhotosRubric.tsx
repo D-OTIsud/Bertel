@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * « Vos photos » — LECTURE SEULE (D7/D11).
+ * Résumé de galerie, avec accès à l'éditeur du lot photos. La voie de contact
+ * reste disponible lorsque l'office garde la rubrique fermée au partenaire.
  *
  * La route `/api/media/upload` refuse la persona partenaire en 403 : un bouton « Ajouter une
  * photo » échouerait donc TOUJOURS. Plutôt qu'un bouton menteur, l'écran dit la vérité et
@@ -16,12 +17,13 @@ import { forwardRef } from 'react';
 import { Mail, Phone } from 'lucide-react';
 import { CopyButton } from '../../../components/common/CopyButton';
 import type { ObjectWorkspaceMediaModule } from '../../../services/object-workspace-parser';
+import { isPublishedPortalPhoto } from '../../../services/portal-photos';
 
 /** Le nombre de photos au-delà duquel une fiche « donne envie » (arbitrage PO, maquette). */
 export const PORTAL_PHOTO_TARGET = 4;
 
 export function countPortalPhotos(media: ObjectWorkspaceMediaModule | undefined): number {
-  return (media?.objectItems ?? []).filter((item) => isPhoto(item.typeCode, item.kind)).length;
+  return (media?.objectItems ?? []).filter((item) => isPhoto(item.typeCode, item.kind)&&item.isPublished!==false&&!['private','partners'].includes(item.visibility)).length;
 }
 
 function isPhoto(typeCode: string, kind: string): boolean {
@@ -41,9 +43,10 @@ export const PhotosRubric = forwardRef<
     ficheName: string;
     officeEmail: string | null;
     officePhone: string | null;
+    onEdit?:()=>void;
   }
->(function PhotosRubric({ media, ficheName, officeEmail, officePhone }, ref) {
-  const photos = (media?.objectItems ?? []).filter((item) => isPhoto(item.typeCode, item.kind));
+>(function PhotosRubric({ media, ficheName, officeEmail, officePhone,onEdit }, ref) {
+  const photos = (media?.objectItems ?? []).filter((item) => onEdit ? isPublishedPortalPhoto(item) : isPhoto(item.typeCode, item.kind)&&item.isPublished!==false&&!['private','partners'].includes(item.visibility));
 
   return (
     <section className="portal-card portal-photos" aria-labelledby="portal-photos-title" ref={ref} tabIndex={-1}>
@@ -66,6 +69,7 @@ export const PhotosRubric = forwardRef<
         </ul>
       )}
 
+      {onEdit?<><p className="muted">Seuls les ajouts sont relus. Vous pouvez retirer et réordonner vos photos directement.</p><button className="primary-button" type="button" onClick={onEdit}>Gérer vos photos</button></>:<>
       <div className="notice">
         <Mail size={18} aria-hidden />
         <span>
@@ -102,6 +106,7 @@ export const PhotosRubric = forwardRef<
       ) : (
         <p className="muted">Contactez votre office de tourisme.</p>
       )}
+      </>}
     </section>
   );
 });

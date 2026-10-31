@@ -19,6 +19,7 @@ jest.mock("../../actor-document/process-actor-document", () => ({
 jest.mock("@/lib/request-body.server", () => ({
   ...jest.requireActual("@/lib/request-body.server"),
   readBoundedFormData: jest.fn((req) => req.formData()),
+  readBoundedJson: jest.fn((req)=>req.json()),
 }));
 const rpc = jest.fn(),
   upload = jest.fn(),

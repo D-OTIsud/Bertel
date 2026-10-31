@@ -23,6 +23,8 @@ import { SmtpSettings } from '../features/settings/SmtpSettings';
 import { OrgsPanel } from '../features/orgs/OrgsPanel';
 import { OrgBrandingForm } from '../features/orgs/OrgBrandingForm';
 import { OrgSmtpForm } from '../features/orgs/OrgSmtpForm';
+import { confirmNavigation } from '../lib/navigation-guard';
+import { PortalLaunchConsole } from '../features/orgs/PortalLaunchConsole';
 import { ActorSectionVisibilityForm } from '../features/orgs/ActorSectionVisibilityForm';
 import { ProfileEditModal } from '../features/settings/ProfileEditModal';
 import { SettingsRail } from './SettingsRail';
@@ -45,6 +47,7 @@ function buildDrafts(markerStyles: ReturnType<typeof useUiStore.getState>['marke
 }
 
 export default function SettingsPage() {
+  const [showPortalSections,setShowPortalSections]=useState(false);
   const queryClient = useQueryClient();
   const role = useSessionStore((state) => state.role);
   const langPrefs = useSessionStore((state) => state.langPrefs);
@@ -97,6 +100,7 @@ export default function SettingsPage() {
     setActiveSection((current) => resolveSettingsSection(role, current, settingsNavOptions));
   }, [role, settingsNavOptions]);
   function selectSection(id: string) {
+    if(!confirmNavigation())return;
     setActiveSection(id);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -763,6 +767,7 @@ export default function SettingsPage() {
       {activeSection === 'actor-portal' && canManageActorPortal && orgId && (
         <article className="panel-card">
           <section className="settings-pane">
+            {!showPortalSections?<PortalLaunchConsole key={orgId} orgId={orgId} onShowSections={()=>setShowPortalSections(true)}/>:<>
             <div className="settings-pane__head">
               <div>
                 <h2>Portail acteurs</h2>
@@ -770,6 +775,8 @@ export default function SettingsPage() {
               </div>
             </div>
             <ActorSectionVisibilityForm orgId={orgId} />
+            <button type="button" className="ghost-button" onClick={()=>setShowPortalSections(false)}>Retour au lancement</button>
+            </>}
           </section>
         </article>
       )}

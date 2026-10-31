@@ -39,6 +39,7 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 COPY docker/entrypoint.sh /entrypoint.sh
+COPY --chown=node:node docker/portal-reminder-worker.mjs /app/docker/portal-reminder-worker.mjs
 COPY --from=builder --chown=node:node /app/.next/standalone /app
 COPY --from=builder --chown=node:node /app/.next/static /app/.next/static
 COPY --from=builder --chown=node:node /app/public /app/public

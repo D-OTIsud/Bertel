@@ -647,13 +647,17 @@ ROLLBACK;
 \ir ../supabase/migrations/20261031073734_partner_portal_stay_times.sql
 \ir tests/test_actor_portal_stay_times.sql
 
-\echo '== MV refresh (non-concurrent) =='
+\echo '== partner messages and private attachments =='
 \ir migration_actor_portal_message.sql
 \ir tests/test_actor_portal_message.sql
 
 \echo '== private partner photo additions and immediate withdrawal/order =='
 \ir migration_actor_portal_media.sql
 \ir tests/test_actor_portal_media.sql
+
+\echo '== office launch console and one seven-day reminder =='
+\ir migration_actor_portal_invitation.sql
+\ir tests/test_actor_portal_invitation.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

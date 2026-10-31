@@ -106,7 +106,7 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     it('présente dans « Mon organisation » quand l’option est accordée', () => {
       const org = buildSettingsNav('tourism_agent', { canManageActorPortal: true }).find((g) => g.id === 'org');
       expect(org?.sections.map((s) => s.id)).toContain('actor-portal');
-      expect(org?.sections.find((s) => s.id === 'actor-portal')?.label).toBe('Portail acteurs');
+      expect(org?.sections.find((s) => s.id === 'actor-portal')?.label).toBe('Espace partenaire');
     });
 
     it('ouvre le groupe « Mon organisation » à elle seule (aucune autre section accordée)', () => {

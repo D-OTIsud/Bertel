@@ -118,11 +118,12 @@ export async function getPortalAccessStatus(actorId: string): Promise<PortalAcce
  */
 export interface PortalActionResult {
   traced: boolean;
+  tracked?: boolean;
 }
 
 async function actionResult(response: Response): Promise<PortalActionResult> {
-  const payload = await unwrap<{ traced?: unknown }>(response);
-  return { traced: payload.traced !== false };
+  const payload = await unwrap<{ traced?: unknown;tracked?:unknown }>(response);
+  return { traced: payload.traced !== false,...(payload.tracked===false?{tracked:false}:{}) };
 }
 
 export async function invitePortalAccess(actorId: string, email: string): Promise<PortalActionResult> {

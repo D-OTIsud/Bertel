@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { SmtpConfig } from './env.server';
 import { resolveSmtpConfig } from './smtp-settings.server';
 import { readOrgSmtpConfig } from './org-smtp.server';
+import { safeSmtpError } from './smtp-error';
 
 interface MailContent { to: string; subject: string; html: string }
 /** Server-derived identity only: never take this from a notification request body. */
@@ -16,7 +17,6 @@ export class MailNotConfiguredError extends Error {
     this.name = 'MailNotConfiguredError';
   }
 }
-
 /**
  * Transport RÉUTILISÉ entre les appels, et POOLÉ.
  *
@@ -160,13 +160,4 @@ export async function verifySmtpConnection(): Promise<{ ok: boolean; detail: str
     // SMTP servers may echo credentials in their response: expose only known, safe diagnostics.
     return { ok: false, detail: safeSmtpError(error) };
   } finally { transport.close(); }
-}
-
-function safeSmtpError(error: unknown): string {
-  const code = (error as { code?: string } | null)?.code;
-  return code === 'EAUTH' ? 'Authentification refusée. Vérifiez l’identifiant et le mot de passe.'
-    : code === 'EDNS' || code === 'ENOTFOUND' ? 'Serveur SMTP introuvable. Vérifiez son nom.'
-      : code === 'ETIMEDOUT' || code === 'ECONNECTION' ? 'Le serveur SMTP ne répond pas. Vérifiez l’hôte, le port et les accès réseau.'
-        : code === 'ESOCKET' ? 'Connexion sécurisée impossible. Vérifiez le port et le mode TLS.'
-          : 'L’opération SMTP a échoué. Vérifiez les paramètres et l’accès au relais.';
 }

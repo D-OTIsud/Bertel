@@ -78,6 +78,7 @@ function buildOrgGroup(options: SettingsNavOptions): SettingsNavGroup | null {
   const sections: SettingsNavSection[] = [];
   if (options.canManageTeam) sections.push({ id: 'team', label: 'Équipe', icon: Users });
   if (options.canManageOrgBranding) sections.push({ id: 'org-branding', label: 'Apparence de l’organisation', icon: Brush });
+  if (options.canManageOrgSmtp) sections.push({ id: 'org-smtp', label: 'Envoi d’e-mails', icon: Mail });
   // Task 19 — la matrice du portail acteurs. MÊME seuil que le branding (rang ≥ 30), et le
   // même que celui d'api.rpc_set_actor_section_visibility : proposer la section plus bas
   // offrirait un écran dont chaque bascule échouerait en 42501.
@@ -108,6 +109,8 @@ export interface SettingsNavOptions {
   canManageTeam?: boolean;
   /** L'utilisateur peut gérer le branding de son ORG (admin rang ≥ 30) ⇒ section « Apparence de l'organisation ». */
   canManageOrgBranding?: boolean;
+  /** Configuration SMTP de cette ORG, contrôlée aussi par le RPC serveur. */
+  canManageOrgSmtp?: boolean;
   /** L'utilisateur peut régler le portail acteurs de son ORG (admin rang ≥ 30) ⇒ section « Portail acteurs ». */
   canManageActorPortal?: boolean;
 }

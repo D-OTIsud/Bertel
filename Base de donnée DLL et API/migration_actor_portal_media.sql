@@ -3,6 +3,9 @@
 -- l'office copie les octets traités vers media, puis appelle l'approbation SQL.
 -- Aucun utilisateur du portail ne peut marquer une copie prête à publier.
 BEGIN;
+-- Colonne déjà présente en production (jsonb nullable, sans défaut). La déclarer
+-- aussi pour une installation issue de l'ancien miroir schema_unified.sql.
+ALTER TABLE public.media ADD COLUMN IF NOT EXISTS extra jsonb;
 
 CREATE OR REPLACE FUNCTION internal.portal_photo_assert_actor(p_object_id text)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api AS $function$

@@ -1265,6 +1265,7 @@ CREATE TABLE IF NOT EXISTS media (
   url TEXT NOT NULL,
   description TEXT,
   analyse_data JSONB,
+  extra JSONB,
   width INTEGER,
   height INTEGER,
   is_main BOOLEAN DEFAULT FALSE,

@@ -29,6 +29,7 @@ services:
       # Server-only secret (service-role / sb_secret_*): runtime env ONLY — never a
       # build ARG, which would bake the secret into the image layers.
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      PORTAL_REMINDERS_ENABLED: ${PORTAL_REMINDERS_ENABLED:-true}
     # No persistent volumes - Next.js app is stateless, data lives in Supabase
 
 volumes: {}

@@ -104,6 +104,7 @@ interface StubOptions {
   inviteError?: { message: string } | null;
   listError?: { message: string } | null;
   missingLink?: boolean;
+  trackingError?: {message:string}|null;
   upsertError?: { message: string } | null;
   /** Aucun kind `email` au référentiel (fail-closed de `actorEmailChannels`). */
   missingKind?: boolean;
@@ -174,6 +175,7 @@ function serverStub(options: StubOptions = {}) {
   });
 
   mockedServer.mockReturnValue({
+    schema: jest.fn(()=>({rpc:jest.fn().mockResolvedValue({data:null,error:options.trackingError??null})})),
     auth: {
       getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'agent-1' } }, error: null }),
       admin: { generateLink, listUsers, deleteUser, getUserById },
@@ -378,6 +380,12 @@ describe('POST /api/crm/actor-access — les requêtes visent CET acteur, et lui
 });
 
 describe('POST /api/crm/actor-access — invitation', () => {
+  it('un suivi indisponible après SMTP ne supprime pas le compte déjà invité',async()=>{
+    const spy=jest.spyOn(console,'error').mockImplementation(()=>{});
+    const server=serverStub({channels:['marie@basalte.re'],trackingError:{message:'unavailable'}});gate({read:true,write:true});
+    const response=await POST(req({authorization:'Bearer agent'},{action:'invite',actorId:ACTOR,email:'marie@basalte.re'}));
+    expect(response.status).toBe(201);expect(await response.json()).toMatchObject({tracked:false});expect(sendMail).toHaveBeenCalledTimes(1);expect(server.deleteUser).not.toHaveBeenCalled();spy.mockRestore();
+  });
   it('201 nominal : e-mail vers /set-password?espace=1 + profil {role actor, actor_id} + trace CRM', async () => {
     const spies = serverStub({ channels: ['marie@basalte.re'], newUserId: 'u-new' });
     const { rpc } = gate();

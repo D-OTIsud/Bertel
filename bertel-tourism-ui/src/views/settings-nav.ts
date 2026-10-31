@@ -82,7 +82,7 @@ function buildOrgGroup(options: SettingsNavOptions): SettingsNavGroup | null {
   // Task 19 — la matrice du portail acteurs. MÊME seuil que le branding (rang ≥ 30), et le
   // même que celui d'api.rpc_set_actor_section_visibility : proposer la section plus bas
   // offrirait un écran dont chaque bascule échouerait en 42501.
-  if (options.canManageActorPortal) sections.push({ id: 'actor-portal', label: 'Portail acteurs', icon: KeyRound, introducedAt: '2026-09-04T00:00:00Z' });
+  if (options.canManageActorPortal) sections.push({ id: 'actor-portal', label: 'Espace partenaire', icon: KeyRound, introducedAt: '2026-09-04T00:00:00Z' });
   if (sections.length === 0) return null;
   return { id: 'org', label: 'Mon organisation', scope: { label: 'admin ORG', gated: true }, sections };
 }

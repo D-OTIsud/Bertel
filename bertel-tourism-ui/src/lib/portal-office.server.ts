@@ -65,6 +65,13 @@ export async function readPartnerInvitationContext(
   const { data: orgId, error } = await asCaller.schema('api').rpc('current_user_org_id');
   if (error) throw new Error('office_read_failed');
   if (typeof orgId !== 'string' || !orgId) throw new MailNotConfiguredError();
+  return readPartnerInvitationContextForOffice(server,orgId,actorId);
+}
+
+/** Réservé aux routes ayant déjà validé le périmètre (appelant ou claim serveur). */
+export async function readPartnerInvitationContextForOffice(
+  server: SupabaseClient,orgId:string,actorId:string,
+): Promise<PartnerInvitationContext> {
   if (!await readOrgSmtpConfig(orgId)) throw new MailNotConfiguredError(orgId);
 
   const [office, actor, links, publisher] = await Promise.all([

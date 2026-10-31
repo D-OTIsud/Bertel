@@ -354,5 +354,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       ? `Une nouvelle invitation a été envoyée à ${email}. Le lien précédent ne fonctionne plus.`
       : `Une invitation a été envoyée à ${email}. La personne choisit son mot de passe, puis accède à ses fiches.`,
   );
+  // L'e-mail est déjà parti. Une panne de suivi ne doit ni supprimer le compte,
+  // ni annoncer un échec d'envoi qui provoquerait une seconde invitation.
+  let tracked=false;
+  try {
+    const result=await server.schema('api').rpc('record_portal_invitation',{
+      p_org_id:context.orgId,p_actor_id:actorId,p_user_id:created.user.id,p_invited_by:auth.userId,
+    });
+    tracked=!result.error;
+  } catch { /* Rapporté à la console sans exposer de détail SQL. */ }
+  if(!tracked) console.error('[actor-access] invitation sent but tracking failed');
+  if(!tracked) return NextResponse.json({userId:created.user.id,traced,tracked:false},{status:201});
   return NextResponse.json({ userId: created.user.id, traced }, { status: 201 });
 }

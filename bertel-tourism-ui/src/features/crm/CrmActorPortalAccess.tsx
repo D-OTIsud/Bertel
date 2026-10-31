@@ -96,7 +96,7 @@ function PortalAccessCard({
     return {
       onSuccess: (result: PortalActionResult) => {
         setActionError(null);
-        setNotice(result.traced ? null : `${doneLabel}, mais l’action n’a pas pu être journalisée dans le CRM.`);
+        setNotice(result.tracked===false?`${doneLabel}, mais le suivi de la relance n’a pas pu être enregistré.`:result.traced ? null : `${doneLabel}, mais l’action n’a pas pu être journalisée dans le CRM.`);
         setConfirming(null);
         refresh();
       },

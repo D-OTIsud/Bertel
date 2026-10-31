@@ -18,6 +18,7 @@
  * disent systématiquement si quelque chose a été perdu.
  */
 import { getApiClient } from '../lib/supabase';
+export { sendPortalMessage } from './portal-message';
 import { isClockTime } from '../lib/clock-time';
 import {
   readStrictString as readString,

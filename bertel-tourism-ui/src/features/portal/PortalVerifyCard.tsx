@@ -15,6 +15,7 @@
  * être la seule chose saisie, et un rechargement l'effacerait sans un mot.
  */
 import { useState } from 'react';
+import Link from 'next/link';
 import { CopyButton } from '../../components/common/CopyButton';
 import { composePortalNote, readPortalMessage, readPortalReport } from './portal-note';
 
@@ -28,6 +29,7 @@ export function PortalVerifyCard({
   note,
   onNoteChange,
   hasPendingChanges,
+  writeOfficeHref,
 }: {
   ficheName: string;
   typeLabel: string;
@@ -39,6 +41,7 @@ export function PortalVerifyCard({
   onNoteChange: (value: string) => void;
   /** Au moins une rubrique modifiée : le message partira avec l'envoi. */
   hasPendingChanges: boolean;
+  writeOfficeHref?: string;
 }) {
   // §212 — l'état se resynchronise PENDANT LE RENDU sur la note. `usePortalDraft` la
   // restaure dans un EFFET : au premier rendu elle vaut '', et un `useState` figé laissait
@@ -123,6 +126,8 @@ export function PortalVerifyCard({
             </div>
           ) : null}
         </div>
+      ) : writeOfficeHref ? (
+        <Link className="ghost-button" href={writeOfficeHref}>Signaler une erreur</Link>
       ) : (
         <button
           type="button"

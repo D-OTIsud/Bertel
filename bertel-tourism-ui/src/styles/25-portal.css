@@ -552,3 +552,30 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
 .portal-accessibility__panel h3, .portal-tourism-handicap h3 { margin: 0 0 12px; font-size: 1.15rem; font-weight: 700; }
 .portal-accessibility__panel > p { margin: 12px 0; }
 @media (min-width: 1024px) { .portal-accessibility__families { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.portal-write-office { display: grid; gap: 28px; }
+.portal-write-office__main { min-width: 0; display: grid; gap: 24px; }
+.portal-write-office h2 { font-size: 1.15rem; font-weight: 700; }
+.portal-write-form { display: grid; gap: 24px; padding: 24px; }
+.portal-write-office__main > section.portal-card { padding: 24px; }
+.portal-write-form__fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 24px; }
+.portal-write-form__fields > legend { font-weight: 700; margin-bottom: 18px; }
+.portal-write-subjects { display: grid; gap: 6px; }
+.portal-write-subject { display: flex; align-items: center; gap: 12px; min-height: 48px; cursor: pointer; }
+.portal-write-subject input { width: 20px; height: 20px; accent-color: var(--teal); }
+.portal-message-reply { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
+.portal-message-reply > .auth-field { width: 100%; }
+.portal-file-button { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 48px; }
+.portal-file-button input { max-width: 100%; }
+.portal-message-attachments,.portal-message-history { list-style: none; padding: 0; margin: 0; }
+.portal-message-attachments li { display: flex; gap: 10px; align-items: center; }
+.portal-message-attachments li > span { overflow-wrap: anywhere; flex: 1; }
+.portal-message-history > li { padding: 24px 0; border-bottom: 1px solid var(--border); }
+.portal-message-history > li > div:first-child { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.portal-message-history time { color: var(--ink-3); font-size: .85rem; }
+.portal-message-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.portal-message-history blockquote { margin: 16px 0 0; padding-left: 16px; border-left: 3px solid var(--teal); }
+.portal-message-documents { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (min-width: 1024px) {
+  .portal-write-office { grid-template-columns: 280px minmax(0,1fr); gap: 40px; }
+  .portal-write-office__main { max-width: 760px; }
+}

@@ -45,7 +45,7 @@ describe('PortalShell', () => {
     expect(await screen.findByText('Office du Sud')).toBeInTheDocument();
     expect(screen.queryByText('Office de l’Ouest')).not.toBeInTheDocument();
     expect(screen.getByAltText('')).toHaveAttribute('src', 'https://office.test/logo.png');
-    expect(screen.getByRole('link', { name: 'Écrire à l’office' })).toHaveAttribute('href', 'mailto:contact@office.test');
+    expect(screen.getByRole('link', { name: 'Écrire à l’office' })).toHaveAttribute('href', '/espace/ecrire?fiche=OBJ-A');
   });
 
   it('n’affiche pas la marque précédente pendant le chargement d’une autre fiche', async () => {

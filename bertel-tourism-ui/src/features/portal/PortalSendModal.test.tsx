@@ -26,6 +26,8 @@ import type { ObjectWorkspaceModules } from '../../services/object-workspace-par
 import type { WorkspaceModuleId } from '../../services/object-workspace';
 import { readWriteCompatibility } from '../../services/write-compatibility';
 import { useSessionStore } from '../../store/session-store';
+import { portalModules } from './__fixtures__/portal-fixtures';
+import { portalPhotoDraft } from '../../services/portal-photos';
 
 jest.mock('../../services/portal');
 jest.mock('../../services/write-compatibility', () => ({
@@ -42,6 +44,7 @@ const modules = (over: Record<string, unknown> = {}) =>
     descriptions: { object: { chapo: { baseValue: '', values: {} }, description: { baseValue: '', values: {} } } },
     openings: { periods: [], periodTypeOptions: [], unavailableReason: null },
     characteristics: {
+      languageOptions: [], languageLevelOptions: [], selectedLanguages: [], environmentOptions: [], selectedEnvironmentCodes: [],
       selectedAmenityCodes: [],
       selectedPaymentCodes: [],
       amenityGroups: [],
@@ -144,6 +147,18 @@ function setup(over: { rubrics?: BuiltPortalRubric[]; onSent?: jest.Mock; editor
   return { editor, onSent, onNoteChange };
 }
 
+test('les photos partent une fois, comme identifiants privés à relire et sans URL du brouillon',async()=>{
+ const photoBase=portalModules();
+ const photoDraft={...photoBase,media:{...photoBase.media,objectItems:[portalPhotoDraft({id:'00000000-0000-4000-a000-000000008404',title:'Façade',width:1800,height:1200},'Auteur',null,photoBase.media)]}};
+ const editor={...fakeEditor(),baseline:photoBase,draft:photoDraft,dirtySections:{media:true}} as unknown as ObjectEditorState;
+ setup({editor,rubrics:rubrics({baseline:photoBase,draft:photoDraft,dirty:{media:true},floor:['legal','publication','provider']})});
+ await userEvent.click(screen.getByRole('button',{name:'Envoyer'}));
+ await waitFor(()=>expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+ const envelope=mockedPortal.submitActorFiche.mock.calls[0][1];
+ expect(envelope).toHaveLength(1);
+ expect(envelope[0]).toMatchObject({targetTable:'media',payload:{additions:[{upload_id:'00000000-0000-4000-a000-000000008404',credit:'Auteur',replace_media_id:null}]},metadata:{rpc:'publish_portal_photo_additions',manual_apply:false}});
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
@@ -153,6 +168,24 @@ beforeEach(() => {
     changeCount: 2,
     assigneeCount: 1,
   });
+});
+
+test('équipements et accessibilité partagent une seule ligne et une seule enveloppe sans perte de choix', async () => {
+  const base = modules();
+  base.characteristics.amenityGroups = [{ familyCode: 'accessibility', familyLabel: 'Accessibilité', options: [{ id: 'a', code: 'acc_pmr_parking', label: 'Parking réservé', disabilityTypes: ['motor'] }] }];
+  const next = modules({ characteristics: { ...base.characteristics, selectedAmenityCodes: ['wifi', 'acc_pmr_parking'] } });
+  const editor = { ...fakeEditor(), baseline: base, draft: next, dirtySections: { characteristics: true } };
+  const shared = rubrics({ baseline: base, draft: next, dirty: { characteristics: true } });
+  setup({ editor, rubrics: shared });
+  expect(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })).toHaveLength(1);
+  await userEvent.click(screen.getByRole('button', { name: /^Envoyer$/ }));
+  await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalled());
+  const envelopes = mockedPortal.submitActorFiche.mock.calls[0][1];
+  expect(envelopes).toHaveLength(1);
+  expect(envelopes[0].metadata).toMatchObject({ section: 'characteristics', field: expect.stringContaining('Accessibilité') });
+  expect(envelopes[0].payload).toEqual(buildContributorSubmission(OBJ, 'characteristics', base, next).payload);
+  expect(JSON.stringify(envelopes[0].payload)).toContain('acc_pmr_parking');
+  expect(JSON.stringify(envelopes[0].payload)).toContain('wifi');
 });
 
 describe('PortalSendModal', () => {

@@ -4,6 +4,8 @@ import { PortalShell } from './PortalShell';
 import { useSessionStore } from '../../store/session-store';
 import { useThemeStore } from '../../store/theme-store';
 import * as auth from '../../services/auth';
+import { getPortalOffice } from '../../services/portal-office';
+jest.mock('../../services/portal-office');
 
 jest.mock('../../services/auth');
 const mockedAuth = auth as jest.Mocked<typeof auth>;
@@ -22,6 +24,7 @@ const signOutButton = () => screen.getByRole('button', { name: /Se déconnecter/
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(getPortalOffice).mockReset();
   window.localStorage.clear();
   useSessionStore.setState({
     status: 'ready',
@@ -36,6 +39,24 @@ beforeEach(() => {
 });
 
 describe('PortalShell', () => {
+  it('affiche l’office de la fiche plutôt que le thème plateforme du compte acteur', async () => {
+    jest.mocked(getPortalOffice).mockResolvedValue({ id: 'ORG-SUD', name: 'Office du Sud', logoUrl: 'https://office.test/logo.png', email: 'contact@office.test', phone: null });
+    render(<PortalShell objectId="OBJ-A">contenu</PortalShell>);
+    expect(await screen.findByText('Office du Sud')).toBeInTheDocument();
+    expect(screen.queryByText('Office de l’Ouest')).not.toBeInTheDocument();
+    expect(screen.getByAltText('')).toHaveAttribute('src', 'https://office.test/logo.png');
+    expect(screen.getByRole('link', { name: 'Écrire à l’office' })).toHaveAttribute('href', '/espace/ecrire?fiche=OBJ-A');
+  });
+
+  it('n’affiche pas la marque précédente pendant le chargement d’une autre fiche', async () => {
+    jest.mocked(getPortalOffice).mockResolvedValueOnce({ id: 'ORG-A', name: 'Office A', logoUrl: null, email: null, phone: null });
+    const view = render(<PortalShell objectId="OBJ-A">contenu</PortalShell>);
+    await screen.findByText('Office A');
+    jest.mocked(getPortalOffice).mockReturnValueOnce(new Promise(() => {}));
+    view.rerender(<PortalShell objectId="OBJ-B">contenu</PortalShell>);
+    expect(screen.queryByText('Office A')).not.toBeInTheDocument();
+    expect(screen.getByText('Votre office de tourisme')).toBeInTheDocument();
+  });
   it('nomme l’espace « Espace partenaire », jamais « prestataire »', () => {
     render(<PortalShell>contenu</PortalShell>);
 

@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { UUID_SHAPE, authenticated, callerClient, type ServerClient } from '../../_document-auth';
+import { MailNotConfiguredError, sendMail } from '@/lib/mail.server';
+import { readPartnerInvitationContext, type PartnerInvitationContext } from '@/lib/portal-office.server';
+import { partnerInvitationEmailSubject, renderPartnerInvitationEmailHtml } from '@/emails/PartnerInvitationEmail';
 
 export const runtime = 'nodejs';
 
@@ -20,7 +23,7 @@ export const runtime = 'nodejs';
 //    acteur}. Un compte de l'office dont l'e-mail traîne dans `actor_channel` est donc
 //    structurellement hors d'atteinte, y compris sur la branche `resend` ;
 //  - on ne crée jamais un second compte pour un acteur qui en a déjà un — le refus est
-//    rendu AVANT `inviteUserByEmail`, parce qu'après, l'e-mail est parti.
+//    rendu AVANT la génération du lien. Aucun e-mail ne part avant le profil et tous les refus.
 //
 // Ne se marche pas sur les pieds avec `api.rpc_gdpr_erase_subject` (18a §8) : l'effacement
 // RGPD met `app_user_profile.actor_id` à NULL et REMONTE l'id du compte à l'opérateur, qui
@@ -221,9 +224,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // invite / resend
   if (linkedToOtherAccount) {
-    // L'index unique refuserait de toute façon un second profil sur cet acteur : mieux vaut
-    // le dire ici que laisser l'invitation créer un compte, échouer à l'écriture du profil,
-    // et se faire annuler par le rollback — l'e-mail, lui, serait déjà parti.
+    // L'index unique refuserait de toute façon un second profil sur cet acteur :
+    // refuser avant de générer un lien et de créer un compte destiné à être annulé.
     return NextResponse.json({ error: 'actor_already_linked' }, { status: 409 });
   }
 
@@ -242,7 +244,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (portal) {
     // L'acteur A DÉJÀ un compte portail. Tout ce qui n'est pas un renvoi À LA MÊME ADRESSE
-    // est refusé ICI, avant `inviteUserByEmail` : sinon l'e-mail partirait, puis l'upsert
+    // est refusé ICI, avant la génération du lien : sinon l'upsert
     // violerait `uq_app_user_profile_actor_id`, puis le rollback supprimerait le compte —
     // le partenaire recevrait une invitation dont le lien pointe vers un compte détruit.
     if (action === 'invite') {
@@ -257,12 +259,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (current.user.last_sign_in_at) {
       return NextResponse.json({ error: 'already_active' }, { status: 409 });
     }
-    // GoTrue refuse `inviteUserByEmail` sur une adresse existante : on supprime puis
-    // ré-invite. Rien à perdre — le compte ne s'est jamais connecté. La cible est
-    // `portal.id`, jamais un id trouvé par e-mail.
-    const { error: delErr } = await server.auth.admin.deleteUser(portal.id);
-    if (delErr) return NextResponse.json({ error: 'resend_failed' }, { status: 500 });
-    previousAccountClosed = true;
   } else {
     if (action === 'resend') {
       // Sans compte portail, il n'y a rien à renvoyer. Sans ce refus, `resend` se
@@ -272,23 +268,54 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // L'adresse doit être LIBRE. Un e-mail d'agent peut parfaitement figurer dans
     // `actor_channel` (il a répondu pour le partenaire, l'adresse a été consignée) : sans ce
     // refus, on écraserait un compte de l'office.
-    // perPage borné : correct à l'échelle actuelle, à revoir si la base de comptes dépasse ~1000.
-    const { data: list } = await server.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const existing = list?.users?.find((user) => user.email?.toLowerCase() === email);
-    if (existing) {
-      return NextResponse.json({ error: 'email_taken_by_staff' }, { status: 409 });
+    // Un échec de lecture n'est jamais la preuve qu'une adresse est libre. La pagination
+    // conserve ce verrou au-delà des mille premiers comptes, avec un refus si la borne
+    // d'exploration est atteinte plutôt qu'une invitation incertaine.
+    for (let page = 1; page <= 100; page += 1) {
+      const { data: list, error: listError } = await server.auth.admin.listUsers({ page, perPage: 1000 });
+      if (listError || !Array.isArray(list?.users)) return NextResponse.json({ error: 'profile_read_failed' }, { status: 500 });
+      if (list.users.some((user) => user.email?.toLowerCase() === email)) {
+        return NextResponse.json({ error: 'email_taken_by_staff' }, { status: 409 });
+      }
+      if (list.users.length < 1000) break;
+      if (page === 100) return NextResponse.json({ error: 'profile_read_failed' }, { status: 500 });
     }
   }
 
-  const { data: created, error: createErr } = await server.auth.admin.inviteUserByEmail(email, {
+  // Vérifier le relais AVANT de refermer l'ancien compte sur un renvoi. L'identité
+  // de l'office vient du JWT et les métadonnées restent limitées à cet acteur.
+  let context: PartnerInvitationContext;
+  try {
+    context = await readPartnerInvitationContext(server, callerClient(jwt), actorId);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof MailNotConfiguredError ? 'smtp_not_configured' : 'invitation_context_failed' },
+      { status: error instanceof MailNotConfiguredError ? 503 : 500 });
+  }
+  if (portal) {
+    // Seul le compte portail de CET acteur peut être refermé, jamais un compte résolu
+    // par e-mail. Sa première connexion a été exclue plus haut.
+    const { error: delErr } = await server.auth.admin.deleteUser(portal.id);
+    if (delErr) return NextResponse.json({ error: 'resend_failed' }, { status: 500 });
+    previousAccountClosed = true;
+  }
+
+  const { data: created, error: createErr } = await server.auth.admin.generateLink({
+    type: 'invite', email,
     // `?espace=1` : /set-password bascule alors sur la copie destinée au PARTENAIRE
     // (SetPasswordPage: `searchParams.get('espace') === '1'`). Sans ce paramètre, la
     // personne invitée lit la copie écrite pour le personnel de l'office.
     // ⚠ L'allowlist Auth → URL Configuration doit accepter la query string (motif
     // `…/set-password*`), sinon Supabase retombe sur le Site URL et le paramètre est perdu.
-    redirectTo: `${inviteOrigin(req)}/set-password?espace=1`,
+    options: { redirectTo: `${inviteOrigin(req)}/set-password?espace=1` },
   });
-  if (createErr || !created?.user) {
+  const actionLink = created?.properties?.action_link;
+  let validLink = false;
+  try { validLink = typeof actionLink === 'string' && new URL(actionLink).protocol === 'https:'; } catch { /* Refus avant envoi. */ }
+  if (createErr || !created?.user || !actionLink || !validLink) {
+    if (!createErr && created?.user) {
+      const cleanup = await server.auth.admin.deleteUser(created.user.id);
+      if (cleanup.error) return NextResponse.json({ error: 'account_cleanup_failed' }, { status: 500 });
+    }
     return NextResponse.json(
       { error: previousAccountClosed ? 'resend_lost_previous' : 'create_failed' },
       { status: 500 },
@@ -302,13 +329,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (upsertErr) {
     // Compte auth créé mais profil raté ⇒ rollback, sinon le compte reste sans rôle : il
     // se connecterait sans périmètre, ce que le front lit comme une session cassée.
-    await server.auth.admin.deleteUser(created.user.id);
+    const cleanup = await server.auth.admin.deleteUser(created.user.id);
+    if (cleanup.error) return NextResponse.json({ error: 'account_cleanup_failed' }, { status: 500 });
     // Sur un renvoi, l'ancien compte est parti AUSSI : l'acteur se retrouve sans accès du
     // tout, ce que « le compte a été annulé » ne dit pas.
     return NextResponse.json(
       { error: previousAccountClosed ? 'resend_lost_previous' : 'profile_failed' },
       { status: 500 },
     );
+  }
+  try {
+    const invitation = { ...context.email, invitationUrl: actionLink };
+    await sendMail({ orgId: context.orgId, to: email, subject: partnerInvitationEmailSubject(invitation), html: renderPartnerInvitationEmailHtml(invitation) });
+  } catch {
+    const cleanup = await server.auth.admin.deleteUser(created.user.id);
+    if (cleanup.error) return NextResponse.json({ error: 'account_cleanup_failed' }, { status: 500 });
+    return NextResponse.json({ error: previousAccountClosed ? 'resend_lost_previous' : 'mail_failed' }, { status: 502 });
   }
   const traced = await trace(
     jwt,
@@ -318,5 +354,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       ? `Une nouvelle invitation a été envoyée à ${email}. Le lien précédent ne fonctionne plus.`
       : `Une invitation a été envoyée à ${email}. La personne choisit son mot de passe, puis accède à ses fiches.`,
   );
+  // L'e-mail est déjà parti. Une panne de suivi ne doit ni supprimer le compte,
+  // ni annoncer un échec d'envoi qui provoquerait une seconde invitation.
+  let tracked=false;
+  try {
+    const result=await server.schema('api').rpc('record_portal_invitation',{
+      p_org_id:context.orgId,p_actor_id:actorId,p_user_id:created.user.id,p_invited_by:auth.userId,
+    });
+    tracked=!result.error;
+  } catch { /* Rapporté à la console sans exposer de détail SQL. */ }
+  if(!tracked) console.error('[actor-access] invitation sent but tracking failed');
+  if(!tracked) return NextResponse.json({userId:created.user.id,traced,tracked:false},{status:201});
   return NextResponse.json({ userId: created.user.id, traced }, { status: 201 });
 }

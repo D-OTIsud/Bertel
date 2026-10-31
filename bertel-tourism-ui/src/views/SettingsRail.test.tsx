@@ -54,7 +54,7 @@ describe('SettingsRail — expiration des nouveautés', () => {
     render(<SettingsRail groups={buildSettingsNav('super_admin', { canManageActorPortal: true, canManageOrgBranding: true })} activeSection="smtp" onSelect={jest.fn()} />);
 
     expect(screen.getAllByText('Nouveau')).toHaveLength(3);
-    for (const name of [/Portail acteurs/, /E-mails & SMTP/, /Corpus de test/]) {
+    for (const name of [/Espace partenaire/, /E-mails & SMTP/, /Corpus de test/]) {
       expect(within(screen.getByRole('button', { name })).getByText('Nouveau')).toBeInTheDocument();
     }
     for (const name of [/Apparence de l’organisation/, /Listes & référentiels/, /Clés API partenaire/, /Organisations/]) {

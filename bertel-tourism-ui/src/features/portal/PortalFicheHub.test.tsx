@@ -143,10 +143,28 @@ function renderHub(over: Record<string, unknown> = {}) {
   return props;
 }
 
+test('l’ordinateur dispose d’une navigation et de cartes de synthèse sur le même arbre', () => {
+  const props = renderHub();
+  const nav = screen.getByRole('navigation', { name: 'Navigation de votre fiche' });
+  expect(within(nav).getByRole('link', { name: 'Vue d’ensemble' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('region', { name: 'Les rubriques en résumé' })).toBeInTheDocument();
+  expect(within(nav).getAllByRole('listitem')).toHaveLength(props.rubrics.length);
+});
+
+test('après l’envoi, le récapitulatif redit les valeurs envoyées en vérification', () => {
+  renderHub({ justSent: true, sentSnapshot: { submissionId: 'S1', submittedAt: '2026-10-30T08:00:00Z', lines: { contacts: ['Téléphone : 0692 00 00 00'] } } });
+  const summary = screen.getByRole('region', { name: 'Ce qui est en vérification' });
+  expect(summary).toHaveTextContent('Téléphone : 0692 00 00 00');
+  expect(summary).toHaveTextContent('Envoyé — en vérification');
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
   window.localStorage.clear();
+  window.localStorage.setItem('portal-welcome:u1', '1');
+  const currentUserId = useSessionStore.getState().userId;
+  if (currentUserId) window.localStorage.setItem(`portal-welcome:${currentUserId}`, '1');
   searchParams = new URLSearchParams('');
 });
 
@@ -157,11 +175,11 @@ describe('PortalFicheHub — la liste des rubriques', () => {
     const list = screen.getByRole('list', { name: 'Les rubriques de votre fiche' });
     const links = within(list).getAllByRole('link');
     // HEB : coordonnées, présentation, ouverture/fermetures, équipements, accueil, tarifs.
-    expect(links).toHaveLength(6);
+    expect(links).toHaveLength(7);
     expect(within(list).getAllByText('À faire').length).toBeGreaterThan(0);
     expect(within(list).getByText('Vos coordonnées')).toBeInTheDocument();
     // Le huitième écran des hébergements, jamais les horaires d'un restaurant.
-    expect(within(list).getByText('Ouverture et fermetures')).toBeInTheDocument();
+    expect(within(list).getByText('Ouverture, arrivée et départ')).toBeInTheDocument();
     expect(within(list).queryByText('Vos horaires')).not.toBeInTheDocument();
   });
 
@@ -200,7 +218,7 @@ describe('PortalFicheHub — la liste des rubriques', () => {
     ).toBeInTheDocument();
     // Préparer d'autres changements reste possible : c'est écrit, ça doit être vrai.
     const list = screen.getByRole('list', { name: 'Les rubriques de votre fiche' });
-    expect(within(list).getAllByRole('link').length).toBe(6);
+    expect(within(list).getAllByRole('link').length).toBe(7);
   });
 
   it('retours de l’office : une ligne par changement refusé, avec la note et un lien Corriger vers ?rubrique=', () => {
@@ -231,7 +249,7 @@ describe('PortalFicheHub — la liste des rubriques', () => {
     expect(opened.container.querySelector('.portal-panel')).toBeInTheDocument();
     // …et la liste est COMPLÈTE : à partir de 1024 px elle reste sous les yeux pendant
     // la saisie. Une liste vidée en vue rubrique serait un second chemin à tester.
-    expect(opened.container.querySelectorAll('.portal-hub-list .portal-task__link')).toHaveLength(6);
+    expect(opened.container.querySelectorAll('.portal-hub-list .portal-task__link')).toHaveLength(7);
     const current = opened.container.querySelector('[aria-current="step"]');
     expect(current).toHaveTextContent('Vos coordonnées');
   });

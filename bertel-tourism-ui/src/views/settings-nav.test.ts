@@ -72,6 +72,14 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).not.toContain('org-branding');
   });
 
+  test('le SMTP de l’office ouvre son groupe uniquement quand le droit est accordé', () => {
+    expect(settingsSectionIds('tourism_agent')).not.toContain('org-smtp');
+    expect(settingsSectionIds('tourism_agent', { canManageOrgSmtp: true })).toContain('org-smtp');
+    expect(resolveSettingsSection('tourism_agent', 'org-smtp')).toBe(DEFAULT_SETTINGS_SECTION);
+    const group = buildSettingsNav('tourism_agent', { canManageOrgSmtp: true }).find((item) => item.id === 'org');
+    expect(group?.sections.map((item) => item.id)).toEqual(['org-smtp']);
+  });
+
   // « Mentions légales » : section d'information non gated, foyer découvrable des pages
   // légales publiques (confidentialité / CGU / DPIA). Visible sous TOUS les rôles.
   test('la section « legal » (Mentions légales) est exposée à tous les rôles, dans « Mon compte »', () => {
@@ -98,7 +106,7 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     it('présente dans « Mon organisation » quand l’option est accordée', () => {
       const org = buildSettingsNav('tourism_agent', { canManageActorPortal: true }).find((g) => g.id === 'org');
       expect(org?.sections.map((s) => s.id)).toContain('actor-portal');
-      expect(org?.sections.find((s) => s.id === 'actor-portal')?.label).toBe('Portail acteurs');
+      expect(org?.sections.find((s) => s.id === 'actor-portal')?.label).toBe('Espace partenaire');
     });
 
     it('ouvre le groupe « Mon organisation » à elle seule (aucune autre section accordée)', () => {

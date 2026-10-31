@@ -39,6 +39,7 @@ import {
 import { PortalRubricScreen } from './PortalRubricScreen';
 import { PortalSendBar } from './PortalSendBar';
 import { PortalVerifyCard } from './PortalVerifyCard';
+import { PortalOfficeReturns } from './PortalOfficeReturns';
 import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 import { PhotosRubric, PORTAL_PHOTO_TARGET, countPortalPhotos } from './rubrics/PhotosRubric';
 import { formatPortalDate, portalProgressLabel } from './portal-format';
@@ -68,13 +69,20 @@ const STATE_BADGE: Record<RubricState, { label: string; className: string; Icon:
  */
 const APPROVED_BADGE = { label: 'Accepté — en cours de report', className: 'badge--info', Icon: Check };
 
+const NAV_TITLE: Partial<Record<PortalRubricId, string>> = {
+  presentation: 'Présentation',
+  amenities: 'Équipements et paiement',
+};
+
 /** Le geste attendu, à l'impératif : « Indiquez vos horaires », pas « Horaires ». */
 const TODO_LABEL: Record<PortalRubricId, string> = {
+  photos:'Ajoutez des photos',
   contacts: 'Indiquez vos coordonnées',
   presentation: 'Présentez votre établissement',
   hours: 'Indiquez vos horaires',
   season: 'Indiquez vos périodes d’ouverture',
   amenities: 'Indiquez vos équipements',
+  accessibility: 'Indiquez vos aménagements d’accessibilité',
   welcome: 'Indiquez votre capacité d’accueil',
   pricing: 'Indiquez un tarif',
   activity: 'Décrivez votre activité',
@@ -84,6 +92,7 @@ export interface PortalHubFiche {
   id: string;
   name: string;
   typeLabel: string;
+  typeCode?: string;
   locality: string;
   address: string;
   publicPhone: string;
@@ -106,10 +115,12 @@ export interface PortalFicheHubProps {
   archetype: ArchetypeCode;
   rubrics: BuiltPortalRubric[];
   activeRubricId: string | null;
+  showReturns?: boolean;
   editor: ObjectEditorState;
   rejections: PortalRejection[];
   /** Modules acceptés par l'office mais pas encore recopiés sur la fiche. */
   approvedModules: Set<string>;
+  appliedModules?: ReadonlySet<string>;
   media: ObjectWorkspaceMediaModule | undefined;
   note: string;
   onNoteChange: (value: string) => void;
@@ -142,9 +153,11 @@ export function PortalFicheHub({
   archetype,
   rubrics,
   activeRubricId,
+  showReturns = false,
   editor,
   rejections,
   approvedModules,
+  appliedModules = new Set(),
   media,
   note,
   onNoteChange,
@@ -178,7 +191,7 @@ export function PortalFicheHub({
       thanksRef.current?.focus();
       return;
     }
-    if (active) return;
+    if (active || showReturns) return;
     if (focusPhotos) {
       setFocusPhotos(false);
       photosRef.current?.scrollIntoView({ block: 'start' });
@@ -186,7 +199,7 @@ export function PortalFicheHub({
       return;
     }
     headingRef.current?.focus();
-  }, [justSent, active, focusPhotos]);
+  }, [justSent, active, showReturns, focusPhotos]);
 
   /**
    * Tout lien qui QUITTE une rubrique passe par ici. Sans saisie en cours il laisse
@@ -218,8 +231,8 @@ export function PortalFicheHub({
   // Une rubrique DÉJÀ partie en vérification et remodifiée depuis : sa saisie est au chaud
   // mais rien ne peut partir tant que l'office n'a pas répondu. Sans ce comptage, « Valider »
   // n'a AUCUN effet visible et la phrase prévue pour ce cas est inatteignable.
-  const held = rubrics.filter((rubric) => rubric.state === 'pending' && editor.dirtySections[rubric.module]);
-  const todo = rubrics.filter((rubric) => rubric.state === 'todo');
+  const held = rubrics.filter((rubric) => rubric.state === 'pending' && (rubric.hasChanges ?? editor.dirtySections[rubric.module]));
+  const todo = rubrics.filter((rubric) => rubric.state === 'todo'&&rubric.id!=='photos');
   const countable = rubrics.filter((rubric) => rubric.state !== 'unavailable');
   const done = countable.filter((rubric) => rubric.state !== 'todo').length;
   const photos = countPortalPhotos(media);
@@ -228,7 +241,7 @@ export function PortalFicheHub({
   const rubricHref = (id: string) => `${hubHref}?rubrique=${id}`;
 
   return (
-    <div className="portal-fiche-page" data-view={active ? 'rubric' : 'hub'}>
+    <div className="portal-fiche-page" data-view={active || showReturns ? 'rubric' : 'hub'}>
       <div className="portal-fiche-head">
         {justSent ? (
           <div className="portal-card panel-card motion-success portal-thanks" role="status" tabIndex={-1} ref={thanksRef}>
@@ -238,6 +251,15 @@ export function PortalFicheHub({
               L’office les vérifie, en général sous une semaine.
               {serviceAvailability.email ? ' Vous recevrez un e-mail quand ce sera fait.' : ''}
             </p>
+            <p>Vous pouvez déjà préparer d’autres changements. Ils partiront quand l’office aura terminé sa vérification.</p>
+            {sentSnapshot && Object.keys(sentSnapshot.lines).length ? <section className="portal-thanks__summary" aria-label="Ce qui est en vérification">
+              <h3>Ce qui est en vérification</h3>
+              <ul>{Object.entries(sentSnapshot.lines).map(([module, lines]) => <li key={module}>
+                <strong>{rubrics.find((rubric) => rubric.module === module)?.title ?? 'Votre modification'}</strong>
+                {(lines ?? []).map((line) => <span key={line}>{line}</span>)}
+                <span className="badge badge--muted"><Clock size={14} aria-hidden /> Envoyé — en vérification</span>
+              </li>)}</ul>
+            </section> : null}
             {fiche.count >= 2 ? (
               <Link className="ghost-button" href="/espace" onClick={guardedLeave('/espace')}>
                 Retour à vos fiches
@@ -290,8 +312,8 @@ export function PortalFicheHub({
           </div>
         ) : null}
 
-        <p className="notice">
-          <Info size={18} aria-hidden /> Ce que vous modifiez ici est vérifié par l’office avant d’être publié.
+        <p className="notice portal-verification-note">
+          <Info size={18} aria-hidden /> Les informations envoyées à l’office sont vérifiées avant d’être publiées.
         </p>
 
         {fiche.openSubmission ? (
@@ -328,6 +350,11 @@ export function PortalFicheHub({
           </section>
         ) : null}
 
+
+      </div>
+
+      <div className="portal-fiche-layout">
+        <nav className="portal-navigation" aria-label="Navigation de votre fiche">
         <div className="portal-progress">
           <p>{portalProgressLabel(done, countable.length)}</p>
           {/* La barre est DÉCORATIVE : la valeur est portée par la phrase juste au-dessus. */}
@@ -335,8 +362,82 @@ export function PortalFicheHub({
             <span style={{ width: `${countable.length > 0 ? Math.round((done / countable.length) * 100) : 0}%` }} />
           </span>
         </div>
+          <Link className="portal-overview-link portal-desktop-only" href={hubHref} scroll={false}
+            aria-current={!active && !showReturns ? 'page' : undefined} onClick={guardedLeave(hubHref)}>Vue d’ensemble</Link>
+          {rejections.length || approvedModules.size || appliedModules.size ? <Link className="portal-overview-link portal-returns-link"
+            href={`${hubHref}?retours=1`} scroll={false} aria-current={showReturns ? 'page' : undefined}
+            onClick={guardedLeave(`${hubHref}?retours=1`)}>Retours de l’office</Link> : null}
+        <ol className="portal-tasks portal-hub-list" aria-label="Les rubriques de votre fiche">
+          {rubrics.map((rubric) => {
+            // « À faire » compris : quand la valeur acceptée n'est pas encore recopiée, la
+            // donnée publiée peut être VIDE — c'est le cas où le partenaire ressaisit le plus.
+            const approvedPending =
+              approvedModules.has(rubric.module) && (rubric.state === 'filled' || rubric.state === 'todo');
+            const badge = approvedPending ? APPROVED_BADGE : STATE_BADGE[rubric.state];
+            const summary = rubric.summary(editor.draft, archetype);
+            const heldHere = rubric.state === 'pending' && (rubric.hasChanges ?? editor.dirtySections[rubric.module]);
+            const body = (
+              <>
+                <span className="portal-task__body">
+                  <span className="portal-task__title">{NAV_TITLE[rubric.id] ?? rubric.title}</span>
+                  <span className="portal-task__summary">{summary || 'Pas encore renseigné'}</span>
+                  {heldHere ? (
+                    <span className="portal-task__held">Vos nouveaux changements sont gardés ici.</span>
+                  ) : null}
+                </span>
+                <span className={`badge ${badge.className}`}>
+                  <badge.Icon size={14} aria-hidden /> {badge.label}
+                </span>
+              </>
+            );
+            return (
+              <li key={rubric.id}>
+                {rubric.state === 'unavailable' ? (
+                  // Non cliquable : ouvrir un écran qui ne peut rien enregistrer serait un
+                  // bouton qui échoue.
+                  <span className="portal-task__link portal-task__link--off">{body}</span>
+                ) : (
+                  <Link
+                    className="portal-task__link"
+                    href={rubricHref(rubric.id)}
+                    scroll={false}
+                    aria-current={rubric.id === activeRubricId ? 'step' : undefined}
+                    onClick={guardedLeave(rubricHref(rubric.id))}
+                  >
+                    {body}
+                    <ChevronRight size={20} aria-hidden className="portal-fiche__chevron" />
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        </nav>
 
-        {todo.length > 0 || photosMissing ? (
+        <div className="portal-panel">
+          {showReturns ? <PortalOfficeReturns rubrics={rubrics} rejections={rejections} approvedModules={approvedModules} appliedModules={appliedModules}
+            hubHref={hubHref} officeEmail={fiche.officeEmail} onBack={onBackToHub} onOpenRubric={(id) => onNavigate(rubricHref(id))} /> : active ? (
+            <PortalRubricScreen
+                objectType={fiche.typeCode}
+              rubric={active}
+              archetype={archetype}
+              editor={editor}
+              sentLines={sentSnapshot?.lines[active.module] ?? []}
+              sentAt={sentSnapshot?.submittedAt ?? fiche.openSubmission?.submittedAt ?? null}
+              approved={approvedModules.has(active.module)}
+              hubHref={hubHref}
+              formCache={formCache}
+              leaveRequested={leaveTarget !== null}
+              onLeaveResolved={resolveLeave}
+              onBack={onBackToHub}
+              onDirtyChange={setFormDirty}
+            />
+          ) : (
+            <>
+              <h2 className="portal-overview-heading portal-desktop-only">Vue d’ensemble</h2>
+              <p className="muted portal-desktop-only">Les informations envoyées à l’office sont vérifiées avant d’être publiées.</p>
+              <div className="portal-overview-top">
+                {todo.length > 0 || photosMissing ? (
           <section className="portal-card portal-todo" aria-label="Pour compléter votre fiche">
             <h2>Pour compléter votre fiche</h2>
             {todo.map((rubric) => (
@@ -378,81 +479,8 @@ export function PortalFicheHub({
             <Check size={18} aria-hidden /> Votre fiche est complète. Merci !
           </p>
         )}
-      </div>
-
-      <div className="portal-fiche-layout">
-        <ol className="portal-tasks portal-hub-list" aria-label="Les rubriques de votre fiche">
-          {rubrics.map((rubric) => {
-            // « À faire » compris : quand la valeur acceptée n'est pas encore recopiée, la
-            // donnée publiée peut être VIDE — c'est le cas où le partenaire ressaisit le plus.
-            const approvedPending =
-              approvedModules.has(rubric.module) && (rubric.state === 'filled' || rubric.state === 'todo');
-            const badge = approvedPending ? APPROVED_BADGE : STATE_BADGE[rubric.state];
-            const summary = rubric.summary(editor.draft, archetype);
-            const heldHere = rubric.state === 'pending' && editor.dirtySections[rubric.module];
-            const body = (
-              <>
-                <span className="portal-task__body">
-                  <span className="portal-task__title">{rubric.title}</span>
-                  <span className="portal-task__summary">{summary || 'Pas encore renseigné'}</span>
-                  {heldHere ? (
-                    <span className="portal-task__held">Vos nouveaux changements sont gardés ici.</span>
-                  ) : null}
-                </span>
-                <span className={`badge ${badge.className}`}>
-                  <badge.Icon size={14} aria-hidden /> {badge.label}
-                </span>
-              </>
-            );
-            return (
-              <li key={rubric.id}>
-                {rubric.state === 'unavailable' ? (
-                  // Non cliquable : ouvrir un écran qui ne peut rien enregistrer serait un
-                  // bouton qui échoue.
-                  <span className="portal-task__link portal-task__link--off">{body}</span>
-                ) : (
-                  <Link
-                    className="portal-task__link"
-                    href={rubricHref(rubric.id)}
-                    scroll={false}
-                    aria-current={rubric.id === activeRubricId ? 'step' : undefined}
-                    onClick={guardedLeave(rubricHref(rubric.id))}
-                  >
-                    {body}
-                    <ChevronRight size={20} aria-hidden className="portal-fiche__chevron" />
-                  </Link>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-
-        <div className="portal-panel">
-          {active ? (
-            <PortalRubricScreen
-              rubric={active}
-              archetype={archetype}
-              editor={editor}
-              sentLines={sentSnapshot?.lines[active.module] ?? []}
-              sentAt={sentSnapshot?.submittedAt ?? fiche.openSubmission?.submittedAt ?? null}
-              approved={approvedModules.has(active.module)}
-              hubHref={hubHref}
-              formCache={formCache}
-              leaveRequested={leaveTarget !== null}
-              onLeaveResolved={resolveLeave}
-              onBack={onBackToHub}
-              onDirtyChange={setFormDirty}
-            />
-          ) : (
-            <>
-              <PhotosRubric
-                ref={photosRef}
-                media={media}
-                ficheName={fiche.name}
-                officeEmail={fiche.officeEmail}
-                officePhone={fiche.officePhone}
-              />
-              <PortalVerifyCard
+                              <PortalVerifyCard
+                writeOfficeHref={`/espace/ecrire?fiche=${encodeURIComponent(fiche.id)}&sujet=correction`}
                 ficheName={fiche.name}
                 typeLabel={fiche.typeLabel}
                 address={fiche.address}
@@ -462,6 +490,33 @@ export function PortalFicheHub({
                 note={note}
                 onNoteChange={onNoteChange}
                 hasPendingChanges={dirty.length > 0}
+              />
+              </div>
+              <section className="portal-overview-rubrics portal-desktop-only" aria-label="Les rubriques en résumé">
+                <h2>Les rubriques</h2>
+                <div className="portal-rubric-grid">
+                  {rubrics.map((rubric) => {
+                    const approved = approvedModules.has(rubric.module) && (rubric.state === 'filled' || rubric.state === 'todo');
+                    const badge = approved ? APPROVED_BADGE : STATE_BADGE[rubric.state];
+                    const body = <>
+                      <strong>{rubric.title}</strong>
+                      <span className="muted">{rubric.summary(editor.draft, archetype) || 'Pas encore renseigné'}</span>
+                      <span className={'badge ' + badge.className}><badge.Icon size={14} aria-hidden /> {badge.label}</span>
+                    </>;
+                    return rubric.state === 'unavailable'
+                      ? <div className="portal-overview-rubric" key={rubric.id}>{body}</div>
+                      : <Link key={rubric.id} className="portal-overview-rubric" href={rubricHref(rubric.id)} scroll={false}
+                          onClick={guardedLeave(rubricHref(rubric.id))}>{body}</Link>;
+                  })}
+                </div>
+              </section>
+              <PhotosRubric
+                onEdit={rubrics.some(rubric=>rubric.id==='photos'&&rubric.state!=='unavailable')?()=>onNavigate(rubricHref('photos')):undefined}
+                ref={photosRef}
+                media={media}
+                ficheName={fiche.name}
+                officeEmail={fiche.officeEmail}
+                officePhone={fiche.officePhone}
               />
             </>
           )}

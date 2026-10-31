@@ -20,4 +20,8 @@ export NEXT_PUBLIC_MAP_STYLE_CLASSIC NEXT_PUBLIC_MAP_STYLE_SATELLITE NEXT_PUBLIC
 
 envsubst < /app/public/runtime-config.template.js > /app/public/runtime-config.js
 
+if [ "${NEXT_PUBLIC_ENABLE_DEMO_MODE}" != "true" ] && [ "${PORTAL_REMINDERS_ENABLED:-true}" != "false" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+  node /app/docker/portal-reminder-worker.mjs &
+fi
+
 exec "$@"

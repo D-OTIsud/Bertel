@@ -39,6 +39,7 @@ import { Modal } from '../components/common/Modal';
 import { diffWords } from '../lib/diff-words';
 import type { PendingChangeItem } from '../types/domain';
 import { strictErrorMessage } from '../lib/strict-error-message';
+import { PortalPhotoReview } from '../features/portal/PortalPhotoReview';
 
 /** D6 — rendu du diff : Avant = same+del (<del> rouge), Après = same+ins (<ins> vert). */
 function DiffText({ before, after, side }: { before: string; after: string; side: 'before' | 'after' }) {
@@ -129,7 +130,9 @@ export default function ModerationPage() {
 
   const approveMutation = useMutation({
     mutationFn: ({ id, appliedManually }: { id: string; appliedManually: boolean }) =>
-      approvePendingChange(id, null, appliedManually),
+      (query.data??[]).some(item=>item.id===id&&item.targetTable==='media'&&item.submissionId&&!item.manualApply)
+        ? approvePendingChange(id,null,appliedManually,true)
+        : approvePendingChange(id, null, appliedManually),
     onSuccess: () => {
       setActionError(null);
       setActionNotice(null);
@@ -144,7 +147,9 @@ export default function ModerationPage() {
 
   const approveGroupMutation = useMutation({
     mutationFn: ({ id, withManual }: { id: string; withManual: boolean }) =>
-      approveFicheSubmission(id, null, withManual),
+      (query.data??[]).some(item=>item.submissionId===id&&item.status==='pending'&&item.targetTable==='media'&&!item.manualApply)
+        ? approveFicheSubmission(id,null,withManual,true)
+        : approveFicheSubmission(id, null, withManual),
     onSuccess: (result) => {
       setActionError(null);
       // Le RPC ne traite pas forcément tout : ses trois compteurs sont le SEUL moyen pour
@@ -231,6 +236,7 @@ export default function ModerationPage() {
         <div>
           <span className="facet-title">Après</span>
           <DiffText before={item.before ?? ''} after={item.after ?? ''} side="after" />
+          {item.status==='pending'&&item.targetTable==='media'&&item.submissionId&&!item.manualApply?<PortalPhotoReview changeId={item.id}/>:null}
         </div>
         <footer className="split-card__footer">
           {/* D6 : métadonnées sur deux lignes (fiche/champ puis auteur/date) au lieu

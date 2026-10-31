@@ -63,6 +63,17 @@ const proposalRow = (id: string) => ({
 describe('POST /api/crm/notify-drain', () => {
   beforeEach(() => { jest.clearAllMocks(); mockedSmtp.mockResolvedValue(smtpOk); });
 
+  it('alerte l’office pour un message du portail, avec le lien CRM et sans contenu privé dans l’e-mail', async () => {
+    const rpc = jest.fn().mockResolvedValueOnce({data:[{...row('portal-n1'),kind:'portal_message',actor_id:'actor&x=1',object_name:'Le <Longanis>',assigner_name:'Marie'}],error:null}).mockResolvedValueOnce({data:1,error:null});
+    mockedServer.mockReturnValue(serverWith(rpc));
+    const response=await POST(req({authorization:'Bearer jwt'}));
+    expect(await response.json()).toEqual({sent:1,failed:0});
+    expect(mockedSend).toHaveBeenCalledWith(expect.objectContaining({to:'dest@x.re',subject:'Message d’un partenaire — Le <Longanis>'}));
+    expect(mockedSend.mock.calls[0][0].html).toContain('/crm?acteur=actor%26x%3D1');
+    expect(mockedSend.mock.calls[0][0].html).toContain('Le &lt;Longanis&gt;');
+    expect(rpc).toHaveBeenLastCalledWith('mark_notifications_emailed',{p_sent:['portal-n1'],p_failed:[]});
+  });
+
   it('401 sans Bearer', async () => {
     mockedServer.mockReturnValue(serverWith(jest.fn()));
     const res = await POST(req({}));

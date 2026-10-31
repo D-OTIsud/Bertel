@@ -22,7 +22,11 @@ import Link from 'next/link';
 import { EmptyState } from '../../components/common/EmptyState';
 import { PageSkeleton } from '../../components/common/PageSkeleton';
 import { PortalFicheEditor } from './PortalFicheEditor';
-import { resolvePortalArchetype } from './portal-rubrics';
+import { portalTypeLabel, resolvePortalArchetype } from './portal-rubrics';
+import { PortalWelcome } from './PortalWelcome';
+import { usePortalWelcome } from './usePortalWelcome';
+import { countPortalPhotos } from './rubrics/PhotosRubric';
+import { useSessionStore } from '../../store/session-store';
 import { loadObjectWorkspace } from '../../hooks/useExplorerQueries';
 import { getPortalSectionVisibility, listMyPortalFiches, listMySubmissions } from '../../services/portal';
 
@@ -34,6 +38,9 @@ const WORKSPACE_STALE_MS = 60_000;
 
 export function PortalFichePage({ objectId }: { objectId: string }) {
   const queryClient = useQueryClient();
+  const userId = useSessionStore((state) => state.userId);
+  const userName = useSessionStore((state) => state.userName);
+  const welcome = usePortalWelcome(userId);
 
   const workspace = useQuery({
     queryKey: ['object-workspace', objectId, PORTAL_LANGS],
@@ -100,6 +107,14 @@ export function PortalFichePage({ objectId }: { objectId: string }) {
   }
 
   const list = fiches.data ?? [];
+  if (!welcome.ready) return <PageSkeleton variant="form" />;
+  if (welcome.show) {
+    const media = resource.modules.media;
+    const photo = media?.objectItems.find((item) => /photo|image/i.test(`${item.typeCode} ${item.kind}`));
+    const locality = resource.modules.location?.main?.city ?? '';
+    return <PortalWelcome userName={userName} ficheName={resource.name} typeLabel={portalTypeLabel(resource.type)} locality={locality}
+      photoUrl={photo?.url ?? null} photoCount={countPortalPhotos(media)} onContinue={welcome.dismiss} />;
+  }
   return (
     <PortalFicheEditor
       // La clé garantit un état d'édition NEUF par fiche : `useObjectEditorState` est

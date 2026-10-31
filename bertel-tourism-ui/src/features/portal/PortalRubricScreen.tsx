@@ -29,6 +29,8 @@ import { ArrowLeft, Check, Clock } from 'lucide-react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { ActivityRubric } from './rubrics/ActivityRubric';
 import { AmenitiesRubric } from './rubrics/AmenitiesRubric';
+import { AccessibilityRubric } from './rubrics/AccessibilityRubric';
+import { PhotosEditorRubric } from './rubrics/PhotosEditorRubric';
 import { ContactsRubric } from './rubrics/ContactsRubric';
 import { HoursRubric } from './rubrics/HoursRubric';
 import { PresentationRubric } from './rubrics/PresentationRubric';
@@ -36,7 +38,7 @@ import { PricingRubric } from './rubrics/PricingRubric';
 import { SeasonRubric } from './rubrics/SeasonRubric';
 import { WelcomeRubric } from './rubrics/WelcomeRubric';
 import { formatPortalDate } from './portal-format';
-import type { PortalFormCache } from './rubrics/rubric-kit';
+import { PortalHelp, type PortalFormCache } from './rubrics/rubric-kit';
 import type { BuiltPortalRubric, PortalRubricId } from './portal-rubrics';
 import type { ArchetypeCode } from '../object-editor/archetypes';
 import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
@@ -44,22 +46,26 @@ import type { PortalRubricFormProps } from './rubrics/types';
 
 /** Une phrase d'aide par rubrique, en français courant : ce que le visiteur en verra. */
 const RUBRIC_HELP: Record<PortalRubricId, string> = {
+  photos:'Les ajouts sont relus par l’office. Les retraits et l’ordre des photos sont enregistrés directement.',
   contacts: 'Ces coordonnées sont affichées aux visiteurs.',
   presentation: 'Ce texte est lu par les visiteurs avant de venir chez vous.',
   hours: 'Indiquez vos jours et heures d’ouverture habituels.',
   season: 'Indiquez la période où vous accueillez des visiteurs, et vos fermetures.',
   amenities: 'Cochez ce que vous proposez. Les visiteurs filtrent souvent là-dessus.',
+  accessibility: 'Cochez les aménagements qui existent déjà. L’office les relira avant publication.',
   welcome: 'Ce que vous pouvez accueillir, et à quelles conditions.',
   pricing: 'Le tarif que les visiteurs verront en premier.',
   activity: 'Ce qu’il faut savoir avant de réserver votre activité.',
 };
 
 const FORMS: Record<PortalRubricId, (props: PortalRubricFormProps) => React.ReactElement> = {
+  photos:PhotosEditorRubric,
   contacts: ContactsRubric,
   presentation: PresentationRubric,
   hours: HoursRubric,
   season: SeasonRubric,
   amenities: AmenitiesRubric,
+  accessibility: AccessibilityRubric,
   welcome: WelcomeRubric,
   pricing: PricingRubric,
   activity: ActivityRubric,
@@ -68,6 +74,7 @@ const FORMS: Record<PortalRubricId, (props: PortalRubricFormProps) => React.Reac
 export interface PortalRubricScreenProps {
   rubric: BuiltPortalRubric;
   archetype: ArchetypeCode;
+  objectType?: string;
   editor: ObjectEditorState;
   /** Ce qui a été envoyé pour cette rubrique, tel que le partenaire l'avait écrit. */
   sentLines: string[];
@@ -90,6 +97,7 @@ export interface PortalRubricScreenProps {
 export function PortalRubricScreen({
   rubric,
   archetype,
+  objectType,
   editor,
   sentLines,
   sentAt,
@@ -102,6 +110,7 @@ export function PortalRubricScreen({
   onDirtyChange,
 }: PortalRubricScreenProps) {
   const [formDirty, setFormDirty] = useState(false);
+  const [formBusy, setFormBusy] = useState(false);
   const [askLeave, setAskLeave] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -116,9 +125,10 @@ export function PortalRubricScreen({
   // décide s'il faut demander ou laisser passer.
   useEffect(() => {
     if (!leaveRequested) return;
-    if (formDirty) setAskLeave(true);
+    if (formBusy) onLeaveResolved?.(false);
+    else if (formDirty) setAskLeave(true);
     else onLeaveResolved?.(true);
-  }, [leaveRequested, formDirty, onLeaveResolved]);
+  }, [leaveRequested, formDirty, formBusy, onLeaveResolved]);
 
   function reportDirty(dirty: boolean) {
     setFormDirty(dirty);
@@ -126,6 +136,7 @@ export function PortalRubricScreen({
   }
 
   function requestLeave() {
+    if (formBusy) return;
     if (formDirty) {
       setAskLeave(true);
       return;
@@ -157,12 +168,14 @@ export function PortalRubricScreen({
       <Link
         className="portal-back"
         href={hubHref}
+        aria-disabled={formBusy || undefined}
         scroll={false}
         onClick={(event) => {
           // TOUJOURS intercepté : laisser le lien naviguer nativement contournerait la
           // comptabilité d'historique de l'éditeur (`back` vs `push`) et empilerait une
           // entrée de plus à chaque retour.
           event.preventDefault();
+          if (formBusy) return;
           if (formDirty) {
             setAskLeave(true);
             return;
@@ -173,10 +186,12 @@ export function PortalRubricScreen({
         <ArrowLeft size={18} aria-hidden /> Retour à la fiche
       </Link>
 
-      <h2 className="portal-h1" id="portal-rubric-title" tabIndex={-1} ref={headingRef}>
-        {rubric.title}
-      </h2>
-      <p className="portal-lead">{RUBRIC_HELP[rubric.id]}</p>
+      <div className="portal-rubric__heading">
+        <h2 className="portal-h1" id="portal-rubric-title" tabIndex={-1} ref={headingRef}>
+          {rubric.title}
+        </h2>
+        {rubric.id !== 'hours' && rubric.id !== 'welcome' ? <PortalHelp key={rubric.id} label={rubric.title}>{RUBRIC_HELP[rubric.id]}</PortalHelp> : null}
+      </div>
 
       {waiting ? (
         <div className="notice">
@@ -205,7 +220,7 @@ export function PortalRubricScreen({
         </div>
       ) : null}
 
-      {rubric.state === 'unavailable' || rubric.readOnlyReason ? (
+      {(rubric.state === 'unavailable' || rubric.readOnlyReason) && !(rubric.id === 'season' && rubric.editableRelatedModules?.includes('capacity-policies')) ? (
         <>
           <p className="notice notice--warn">{rubric.readOnlyReason}</p>
           <button type="button" className="ghost-button" onClick={onBack}>
@@ -216,6 +231,7 @@ export function PortalRubricScreen({
         <Form
           rubric={rubric}
           archetype={archetype}
+          objectType={objectType}
           editor={editor}
           formKey={rubric.id}
           formCache={formCache}
@@ -226,6 +242,7 @@ export function PortalRubricScreen({
           }}
           onCancel={requestLeave}
           onDirtyChange={reportDirty}
+          onBusyChange={setFormBusy}
         />
       )}
 

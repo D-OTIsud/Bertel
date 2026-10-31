@@ -22,7 +22,7 @@
 //
 // La question n'est posée QUE s'il y a quelque chose à perdre (`hasUnsentPortalWork`, qui
 // balaye le compte entier) : sans saisie en attente la déconnexion reste un seul geste.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SandboxBanner } from '../layout/SandboxBanner';
 import { LogOut } from 'lucide-react';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -32,17 +32,36 @@ import { useThemeStore } from '../../store/theme-store';
 import { useToast } from '../../hooks/useToast';
 import { clearAllPortalDrafts, hasUnsentPortalWork } from '../../features/portal/usePortalDraft';
 import { strictErrorMessage } from '../../lib/strict-error-message';
+import { getPortalOffice, type PortalOffice } from '../../services/portal-office';
+import Link from 'next/link';
+import { confirmNavigation } from '../../lib/navigation-guard';
 
-export function PortalShell({ children }: { children: React.ReactNode }) {
-  const brandName = useThemeStore((state) => state.theme.brandName);
-  const logoUrl = useThemeStore((state) => state.theme.logoUrl);
+export function PortalShell({ children, objectId }: { children: React.ReactNode; objectId?: string | null }) {
+  const themeName = useThemeStore((state) => state.theme.brandName);
+  const themeLogo = useThemeStore((state) => state.theme.logoUrl);
   const userName = useSessionStore((state) => state.userName);
   const userId = useSessionStore((state) => state.userId);
   const toast = useToast();
   const [askSignOut, setAskSignOut] = useState(false);
+  const [identity, setIdentity] = useState<{ key: string; office: PortalOffice | null } | null>(null);
+  const scopeKey = `${userId}:${objectId ?? 'home'}`;
+  useEffect(() => {
+    if (objectId === undefined || !userId) return;
+    let cancelled = false;
+    void getPortalOffice(objectId).then((office) => {
+      if (!cancelled) setIdentity({ key: scopeKey, office });
+    }).catch(() => { if (!cancelled) setIdentity({ key: scopeKey, office: null }); });
+    return () => { cancelled = true; };
+  }, [objectId, userId, scopeKey]);
+  // Le cache d'une autre fiche ne doit jamais afficher la mauvaise institution,
+  // même le temps d'une requête. Les acteurs n'ont pas de membership d'équipe.
+  const office = identity?.key === scopeKey ? identity.office : null;
+  const brandName = office?.name ?? (objectId === undefined ? themeName : 'Votre office de tourisme');
+  const logoUrl = office ? office.logoUrl : objectId === undefined ? themeLogo : null;
 
   /** Le clic sur « Se déconnecter » : il DEMANDE avant de détruire, ou file droit. */
   function requestSignOut() {
+    if (!confirmNavigation()) return;
     if (hasUnsentPortalWork(userId)) {
       setAskSignOut(true);
       return;
@@ -82,6 +101,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className="portal-shell__user">
           <span className="portal-shell__user-name muted">{userName}</span>
+          <Link className="ghost-button portal-desktop-only" href={objectId ? `/espace/ecrire?fiche=${encodeURIComponent(objectId)}` : '/espace/ecrire'} onClick={event => { if (!confirmNavigation()) event.preventDefault(); }}>Écrire à l’office</Link>
           <button type="button" className="ghost-button" onClick={requestSignOut}>
             <LogOut size={16} aria-hidden /> Se déconnecter
           </button>

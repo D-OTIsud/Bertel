@@ -6,10 +6,11 @@
 // sur iPhone et la barre d'envoi de la fiche (Task 14) se colle sous la barre système.
 import type { Metadata, Viewport } from 'next';
 import { PortalGate } from '@/components/portal/PortalGate';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = { title: 'Espace partenaire' };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
-  return <PortalGate>{children}</PortalGate>;
+  return <Suspense fallback={null}><PortalGate>{children}</PortalGate></Suspense>;
 }

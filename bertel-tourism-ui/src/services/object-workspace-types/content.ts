@@ -92,6 +92,9 @@ export interface ObjectWorkspaceLegalModule {
 }
 
 export interface ObjectWorkspaceMediaItem {
+  /** Private partner upload awaiting review; never a canonical media identifier. */
+  portalUploadId?: string;
+  portalReplaceMediaId?: string | null;
   id: string;
   scope: 'object' | 'place';
   placeId: string | null;

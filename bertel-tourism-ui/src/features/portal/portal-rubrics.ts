@@ -12,10 +12,9 @@
  * identité VISUELLE (accent, famille, couverture), jamais une gouvernance. L'applicabilité
  * d'une rubrique se lit ICI, et nulle part ailleurs.
  *
- * UNE RUBRIQUE = UN MODULE = UNE ENVELOPPE (contrat `submit_actor_fiche`). Deux rubriques
- * peuvent partager un module — « Vos horaires » (restaurant) et « Ouverture et fermetures »
- * (hébergement) écrivent toutes deux `openings` — mais jamais pour le MÊME type, sans quoi
- * deux enveloppes du même module se marcheraient dessus dans un seul envoi.
+ * UNE ENVELOPPE PAR MODULE (contrat `submit_actor_fiche`). Plusieurs rubriques peuvent
+ * présenter des champs du même module. Leurs états de saisie sont calculés séparément ;
+ * les états de vérification et l’envoi restent communs au module.
  *
  * LIAISONS PURES. `unavailableReason` n'est pas un champ mais une convention éclatée :
  * 408 références, 62 fichiers, 13 identifiants distincts, des imbrications à deux niveaux
@@ -68,6 +67,8 @@ import {
   type PortalHeadlineMetric,
 } from './portal-bindings';
 import { isModuleSubmittable } from './portal-visibility';
+import { portalAccessibilityFields, portalEquipmentFields } from './portal-accessibility';
+import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 
 export type PortalRubricId =
   | 'contacts'
@@ -75,11 +76,19 @@ export type PortalRubricId =
   | 'hours'
   | 'season'
   | 'amenities'
+  | 'accessibility'
   | 'welcome'
   | 'pricing'
-  | 'activity';
+  | 'activity'
+  | 'photos';
 
 export type RubricState = 'todo' | 'filled' | 'dirty' | 'pending' | 'rejected' | 'unavailable';
+
+export const PORTAL_SERVICE_SUGGESTIONS: Partial<Record<ArchetypeCode,readonly string[]>> = {
+  HEB: ['Petit-déjeuner', 'Table d’hôtes', 'Piscine', 'Spa', 'Location de vélos'],
+  VIS: ['Nourrissage des animaux', 'Visite guidée', 'Spectacle', 'Atelier', 'Dégustation', 'Vente à la ferme'],
+  ASC: ['Départs des sorties', 'Location de matériel'],
+};
 
 /** Ce que lit le partenaire quand une rubrique est fermée. Le motif BRUT n'est jamais
  *  affiché : « Module non applicable au type HLO (référentiel ref_facet_applicability) »
@@ -89,8 +98,14 @@ export const PORTAL_UNAVAILABLE_REASON =
 
 export interface PortalRubric {
   id: PortalRubricId;
-  /** UNE rubrique = UN module = UNE enveloppe. */
+  /** Module d’envoi ; plusieurs rubriques peuvent le partager. */
   module: WorkspaceModuleId;
+  /** Modules lus par la vue en plus du module d’envoi, pour la reprise du formulaire. */
+  relatedModules?: readonly WorkspaceModuleId[];
+  /** Libellé des champs contrôlés par chaque module dans une vue composée. */
+  moduleLabels?: Readonly<Partial<Record<WorkspaceModuleId, string>>>;
+  /** Champs propres à la rubrique, lorsque le module est partagé. */
+  readFields?(draft: ObjectWorkspaceModules, archetype: ArchetypeCode): unknown;
   /** Libellé portail, français courant. */
   title: string;
   /** Types couverts — l'applicabilité vit ICI, fail-closed. Gelé : un consommateur qui
@@ -251,7 +266,7 @@ function weekHoursSummary(draft: ObjectWorkspaceModules): string {
   const { hours } = readWeekHours(slice(draft, 'openings') as never);
   const open = Object.entries(hours).filter(([, entry]) => entry.open);
   if (open.length === 0) return '';
-  const days = open.length === 7 ? 'Ouvert tous les jours' : `Ouvert ${open.length} jours sur 7`;
+  const days = open.length === 7 ? 'Ouvert tous les jours' : `Ouvert ${open.length} jour${open.length > 1 ? 's' : ''} sur 7`;
   const detail = weekHoursDetail(hours);
   return detail ? `${days} · ${detail}` : days;
 }
@@ -299,19 +314,23 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
   {
     id: 'season',
     module: 'openings',
-    title: 'Ouverture et fermetures',
+    relatedModules: ['capacity-policies'],
+    moduleLabels: { openings: 'Ouverture et fermetures', 'capacity-policies': 'Arrivée et départ' },
+    title: 'Ouverture, arrivée et départ',
     archetypes: ['HEB'],
-    isFilled: (draft) => readStayOpening(slice(draft, 'openings') as never).opening.openAllYear !== null,
+    isFilled: (draft) => readStayOpening(slice(draft, 'openings') as never).opening.openAllYear !== null
+      || Boolean(draft.capacityPolicies?.stayPolicy?.checkInFrom || draft.capacityPolicies?.stayPolicy?.checkOutUntil),
     summary: (draft) => {
       const { opening, closures } = readStayOpening(slice(draft, 'openings') as never);
-      if (opening.openAllYear === null) return '';
-      const head = opening.openAllYear
+      const head = opening.openAllYear === null ? '' : opening.openAllYear
         ? 'Ouvert toute l’année'
         : [opening.startDate, opening.endDate].every(Boolean)
           ? `Ouvert du ${frDate(opening.startDate)} au ${frDate(opening.endDate)}`
           : 'Ouvert sur une partie de l’année';
-      if (closures.length === 0) return head;
-      return `${head} · ${closures.length} fermeture${closures.length > 1 ? 's' : ''}`;
+      const times = draft.capacityPolicies?.stayPolicy;
+      return [head, closures.length ? `${closures.length} fermeture${closures.length > 1 ? 's' : ''}` : '',
+        times?.checkInFrom ? `Arrivée dès ${times.checkInFrom.slice(0, 5)}` : '',
+        times?.checkOutUntil ? `Départ jusqu’à ${times.checkOutUntil.slice(0, 5)}` : ''].filter(Boolean).join(' · ');
     },
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'openings').unavailableReason),
     readStructuralReadOnly: (draft) => readStayOpening(slice(draft, 'openings') as never).readOnlyReason,
@@ -321,21 +340,35 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
     module: 'characteristics',
     title: 'Équipements et moyens de paiement',
     archetypes: ALL_ESTABLISHMENTS,
+    readFields: portalEquipmentFields,
     isFilled: (draft) => {
       const characteristics = slice(draft, 'characteristics');
       return (
-        ((characteristics.selectedAmenityCodes as unknown[] | undefined)?.length ?? 0) > 0 ||
+        portalEquipmentFields(draft).amenities.length > 0 ||
         ((characteristics.selectedPaymentCodes as unknown[] | undefined)?.length ?? 0) > 0
       );
     },
     summary: (draft) => {
       const characteristics = slice(draft, 'characteristics');
-      const amenities = (characteristics.selectedAmenityCodes as unknown[] | undefined)?.length ?? 0;
+      const amenities = portalEquipmentFields(draft).amenities.length;
       const payments = (characteristics.selectedPaymentCodes as unknown[] | undefined)?.length ?? 0;
       const parts: string[] = [];
       if (amenities > 0) parts.push(`${amenities} équipement${amenities > 1 ? 's' : ''}`);
       if (payments > 0) parts.push(`${payments} moyen${payments > 1 ? 's' : ''} de paiement`);
       return parts.join(' · ');
+    },
+    readUnavailableReason: (draft) => reasonOf(slice(draft, 'characteristics').unavailableReason),
+  },
+  {
+    id: 'accessibility',
+    module: 'characteristics',
+    title: 'Accessibilité',
+    archetypes: ALL_ESTABLISHMENTS,
+    readFields: portalAccessibilityFields,
+    isFilled: (draft, archetype) => portalAccessibilityFields(draft, archetype).length > 0,
+    summary: (draft, archetype) => {
+      const count = portalAccessibilityFields(draft, archetype).length;
+      return count ? `${count} aménagement${count > 1 ? 's' : ''}` : '';
     },
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'characteristics').unavailableReason),
   },
@@ -413,12 +446,23 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
     },
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'activity').unavailableReason),
   },
+  {
+    id:'photos',module:'media',title:'Vos photos',archetypes:ALL_ESTABLISHMENTS,
+    isFilled:draft=>Boolean(draft.media?.objectItems?.some(item=>item.typeCode==='photo'&&(item.portalUploadId||(item.isPublished&&(!item.visibility||item.visibility==='public'))))),
+    summary:draft=>{
+      const count=draft.media?.objectItems?.filter(item=>item.typeCode==='photo'&&(item.portalUploadId||(item.isPublished&&(!item.visibility||item.visibility==='public')))).length??0;
+      return count?`${count} photo${count>1?'s':''} · 4 conseillées`:'';
+    },
+    readUnavailableReason:draft=>reasonOf(slice(draft,'media').unavailableReason),
+  },
 ];
 
 // Gel PROFOND, en deux temps : annoter le littéral d'abord (un `.map` en fin de littéral
 // coupe le typage contextuel et rend tous les paramètres `any`), figer ensuite.
 for (const rubric of RUBRIC_REGISTRY) {
   Object.freeze(rubric.archetypes);
+  if (rubric.relatedModules) Object.freeze(rubric.relatedModules);
+  if (rubric.moduleLabels) Object.freeze(rubric.moduleLabels);
   Object.freeze(rubric);
 }
 
@@ -448,6 +492,7 @@ export function resolvePortalArchetype(typeCode: string | null | undefined): Arc
 export interface BuildPortalRubricsInput {
   archetype: ArchetypeCode;
   draft: ObjectWorkspaceModules;
+  baseline?: ObjectWorkspaceModules;
   dirty: Partial<Record<WorkspaceModuleId, boolean>>;
   masked: string[];
   floor: string[];
@@ -455,7 +500,11 @@ export interface BuildPortalRubricsInput {
   rejectedModules: Set<WorkspaceModuleId>;
 }
 
-export type BuiltPortalRubric = PortalRubric & { state: RubricState; readOnlyReason: string | null };
+export type BuiltPortalRubric = PortalRubric & { state: RubricState; readOnlyReason: string | null; hasChanges?: boolean; editableRelatedModules?: readonly WorkspaceModuleId[] };
+
+export function isPortalRubricChanged(rubric: PortalRubric, baseline: ObjectWorkspaceModules, draft: ObjectWorkspaceModules, archetype: ArchetypeCode): boolean {
+  return !rubric.readFields || JSON.stringify(rubric.readFields(baseline, archetype)) !== JSON.stringify(rubric.readFields(draft, archetype));
+}
 
 /**
  * Les rubriques à afficher, dans l'ordre, avec leur état.
@@ -473,28 +522,32 @@ export function buildPortalRubrics(input: BuildPortalRubricsInput): BuiltPortalR
 
   for (const rubric of PORTAL_RUBRICS) {
     if (!rubric.archetypes.includes(input.archetype)) continue;
-    if (!isModuleSubmittable(rubric.module, input.masked, input.floor)) continue;
+    const primaryAllowed = isModuleSubmittable(rubric.module, input.masked, input.floor);
+    const editableRelatedModules = (rubric.relatedModules ?? []).filter((module) => isModuleSubmittable(module, input.masked, input.floor)
+      && !reasonOf(slice(input.draft, MODULE_KEY_MAP[module]).unavailableReason));
+    if (!primaryAllowed && !editableRelatedModules.length) continue;
 
     // La DONNÉE seule. Aucun refus de droits n'entre ici : voir l'en-tête du fichier —
     // pour un partenaire, `permissions.<module>.disabledReason` est toujours posé, et le
     // lire fermait le portail entier.
-    const blocked = rubric.readUnavailableReason(input.draft);
+    const blocked = !primaryAllowed || rubric.readUnavailableReason(input.draft);
     if (blocked) {
-      built.push({ ...rubric, state: 'unavailable', readOnlyReason: PORTAL_UNAVAILABLE_REASON });
+      built.push({ ...rubric, editableRelatedModules, state: editableRelatedModules.length ? (rubric.isFilled(input.draft, input.archetype) ? 'filled' : 'todo') : 'unavailable', readOnlyReason: PORTAL_UNAVAILABLE_REASON });
       continue;
     }
 
+    const hasChanges = Boolean(input.dirty[rubric.module]) && (!input.baseline || isPortalRubricChanged(rubric, input.baseline, input.draft, input.archetype));
     const state: RubricState = input.pendingModules.has(rubric.module)
       ? 'pending'
       : input.rejectedModules.has(rubric.module)
         ? 'rejected'
-        : input.dirty[rubric.module]
+        : hasChanges
           ? 'dirty'
           : rubric.isFilled(input.draft, input.archetype)
             ? 'filled'
             : 'todo';
 
-    built.push({ ...rubric, state, readOnlyReason: rubric.readStructuralReadOnly?.(input.draft) ?? null });
+    built.push({ ...rubric, state, hasChanges, editableRelatedModules, readOnlyReason: rubric.readStructuralReadOnly?.(input.draft) ?? null });
   }
 
   return built;

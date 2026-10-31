@@ -17,9 +17,9 @@ export type { SubmissionOutcome };
 type GenericRecord = Record<string, unknown>;
 
 /** Espèces de notification rendues par l'UI. Le serveur en refuse toute autre (CHECK). */
-export type AppNotificationKind = 'crm_task_assigned' | 'fiche_submission_reviewed' | 'list_feature_requested' | 'pending_change_submitted';
+export type AppNotificationKind = 'crm_task_assigned' | 'fiche_submission_reviewed' | 'list_feature_requested' | 'pending_change_submitted' | 'portal_message';
 
-const KNOWN_KINDS: readonly string[] = ['crm_task_assigned', 'fiche_submission_reviewed', 'list_feature_requested', 'pending_change_submitted'];
+const KNOWN_KINDS: readonly string[] = ['crm_task_assigned', 'fiche_submission_reviewed', 'list_feature_requested', 'pending_change_submitted', 'portal_message'];
 
 export interface AppNotification {
   id: string;
@@ -45,6 +45,7 @@ export interface AppNotification {
   listId?: string | null;
   listName?: string | null;
   orgObjectId?: string | null;
+  actorId?: string | null;
 }
 
 export interface AppNotificationInbox {
@@ -80,7 +81,7 @@ export function parseAppNotification(record: GenericRecord): AppNotification | n
     readAt: readNullableString(record.read_at),
     taskId: readNullableString(record.task_id),
     taskTitle: readNullableString(record.task_title),
-    objectId: readNullableString(record.object_id),
+    objectId: readNullableString(record.object_id) ?? (kind === 'portal_message' ? readNullableString(payload.object_id) : null),
     objectName: readNullableString(record.object_name),
     createdById: readNullableString(record.created_by_id),
     createdByName: readNullableString(record.created_by_name),
@@ -92,6 +93,7 @@ export function parseAppNotification(record: GenericRecord): AppNotification | n
       listName: readNullableString(payload.list_name),
       orgObjectId: readNullableString(payload.org_object_id),
     } : {}),
+    ...(kind === 'portal_message' ? { actorId: readNullableString(payload.actor_id) } : {}),
   };
 }
 

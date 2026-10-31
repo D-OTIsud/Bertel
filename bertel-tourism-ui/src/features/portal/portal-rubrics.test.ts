@@ -24,7 +24,7 @@ import type { ObjectWorkspaceModules } from '../../services/object-workspace-par
 import type { ObjectWorkspacePermissions } from '../../services/object-workspace';
 import { TYPE_LABEL, type ArchetypeCode } from '../object-editor/archetypes';
 
-const floor = ['legal', 'provider-follow-up', 'publication', 'sync-identifiers', 'distribution', 'provider', 'relationships', 'places', 'media'];
+const floor = ['legal', 'provider-follow-up', 'publication', 'sync-identifiers', 'distribution', 'provider', 'relationships', 'places'];
 
 const draft = (over: Record<string, unknown> = {}) =>
   ({
@@ -60,18 +60,18 @@ const build = (over: Partial<Parameters<typeof buildPortalRubrics>[0]> = {}) =>
 describe('buildPortalRubrics — composition par type', () => {
   it('HEB : huitième écran « ouverture / fermetures », pas les horaires du restaurant', () => {
     const ids = build({ archetype: 'HEB', draft: draft() }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'season', 'amenities', 'accessibility', 'welcome', 'pricing']);
+    expect(ids).toEqual(['contacts', 'presentation', 'season', 'amenities', 'accessibility', 'welcome', 'pricing','photos']);
     expect(ids).not.toContain('hours');
   });
 
   it('RES : horaires oui, ouverture saisonnière non', () => {
     const ids = build({ archetype: 'RES' }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'welcome', 'pricing']);
+    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'welcome', 'pricing','photos']);
   });
 
   it('ASC : la rubrique activité, pas la capacité', () => {
     const ids = build({ archetype: 'ASC' }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'pricing', 'activity']);
+    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'pricing', 'activity','photos']);
   });
 
   it('les deux rubriques d’ouverture portent le MÊME module (une enveloppe par module)', () => {

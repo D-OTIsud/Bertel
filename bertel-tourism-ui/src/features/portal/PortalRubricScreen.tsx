@@ -30,6 +30,7 @@ import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { ActivityRubric } from './rubrics/ActivityRubric';
 import { AmenitiesRubric } from './rubrics/AmenitiesRubric';
 import { AccessibilityRubric } from './rubrics/AccessibilityRubric';
+import { PhotosEditorRubric } from './rubrics/PhotosEditorRubric';
 import { ContactsRubric } from './rubrics/ContactsRubric';
 import { HoursRubric } from './rubrics/HoursRubric';
 import { PresentationRubric } from './rubrics/PresentationRubric';
@@ -45,6 +46,7 @@ import type { PortalRubricFormProps } from './rubrics/types';
 
 /** Une phrase d'aide par rubrique, en français courant : ce que le visiteur en verra. */
 const RUBRIC_HELP: Record<PortalRubricId, string> = {
+  photos:'Les ajouts sont relus par l’office. Les retraits et l’ordre des photos sont enregistrés directement.',
   contacts: 'Ces coordonnées sont affichées aux visiteurs.',
   presentation: 'Ce texte est lu par les visiteurs avant de venir chez vous.',
   hours: 'Indiquez vos jours et heures d’ouverture habituels.',
@@ -57,6 +59,7 @@ const RUBRIC_HELP: Record<PortalRubricId, string> = {
 };
 
 const FORMS: Record<PortalRubricId, (props: PortalRubricFormProps) => React.ReactElement> = {
+  photos:PhotosEditorRubric,
   contacts: ContactsRubric,
   presentation: PresentationRubric,
   hours: HoursRubric,

@@ -79,7 +79,8 @@ export type PortalRubricId =
   | 'accessibility'
   | 'welcome'
   | 'pricing'
-  | 'activity';
+  | 'activity'
+  | 'photos';
 
 export type RubricState = 'todo' | 'filled' | 'dirty' | 'pending' | 'rejected' | 'unavailable';
 
@@ -444,6 +445,15 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
       return parts.join(' · ');
     },
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'activity').unavailableReason),
+  },
+  {
+    id:'photos',module:'media',title:'Vos photos',archetypes:ALL_ESTABLISHMENTS,
+    isFilled:draft=>Boolean(draft.media?.objectItems?.some(item=>item.typeCode==='photo'&&(item.portalUploadId||(item.isPublished&&(!item.visibility||item.visibility==='public'))))),
+    summary:draft=>{
+      const count=draft.media?.objectItems?.filter(item=>item.typeCode==='photo'&&(item.portalUploadId||(item.isPublished&&(!item.visibility||item.visibility==='public')))).length??0;
+      return count?`${count} photo${count>1?'s':''} · 4 conseillées`:'';
+    },
+    readUnavailableReason:draft=>reasonOf(slice(draft,'media').unavailableReason),
   },
 ];
 

@@ -52,6 +52,10 @@ Le contrôle après transactions annulées retrouve ces mêmes empreintes ; les 
 
 Validation locale du front : **570 suites et 5 666 tests**, plus TypeScript. Les tests du worker passent séparément avec `node --test docker/portal-reminder-worker.test.mjs`. Les tests SQL couvrent notamment les refus entre partenaires/offices/realms, les ajouts privés, la publication par l’office, la compensation après réponse perdue, le compte activé et l’unicité de la relance.
 
+Contrôles GitHub sur `14ab9c6` : [Frontend CI](https://github.com/D-OTIsud/Bertel/actions/runs/41195757703) et [SQL fresh-apply](https://github.com/D-OTIsud/Bertel/actions/runs/41195757632) réussis.
+
+Le contrôle complémentaire du lot 4 confirme deux corrections encore nécessaires : le lecteur public mélange les plages du service avec celles de l’ouverture et omet les noms ; le calcul « ouvert maintenant » considère aussi les services. Sur une fiche synthétique ouverte de 9 h à midi avec un service de 15 h à 15 h 30, le calcul actuel la dit ouverte à 15 h 10. Cette vérification a été annulée et aucune fonction d’ouverture n’a été remplacée. La proposition SQL conserve les corps vifs et ajoute le filtre du planning principal ainsi que les plannings nommés dans la réponse. Elle doit encore être intégrée, testée et relue après la validation de sa référence.
+
 ## Avant mise en service
 
 Revue de la branche, contrôle CI sur base vierge, accord de fin de lot puis application des migrations et déploiement. Refaire la comparaison des fonctions juste avant l’application. Conserver les définitions antérieures et interrompre en cas de divergence non expliquée.

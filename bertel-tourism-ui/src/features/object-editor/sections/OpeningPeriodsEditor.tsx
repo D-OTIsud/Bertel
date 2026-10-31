@@ -11,8 +11,9 @@ import {
   todayMonthFraction,
   type OpeningPeriodKind,
 } from './blocks/opening-period-meta';
-import { openingPeriodEditingReason, openingPeriodNotes, scheduleRowsFromPeriod } from './blocks/opening-schedule';
+import { openingPeriodNotes, scheduleRowsFromPeriod } from './blocks/opening-schedule';
 import { classifyClosedDays } from './opening-period-edit';
+import { officeOpeningSchedules } from './opening-schedules';
 import { tagChipStyle } from '../../../utils/explorer-card';
 
 /** Read-only per-day hours for the expanded row detail. */
@@ -249,21 +250,26 @@ export function OpeningPeriodsEditor({ periods, periodTypeOptions, currentIndex,
 
               {isExpanded && (
                 <div className="opC__row-detail">
-                  <div className="opC__row-hours">
-                    {periodDayHours(period).map((day) => (
-                      <span key={day.short} className={day.open ? '' : 'muted'}>
-                        <strong>{day.short}</strong> {day.text}
-                      </span>
-                    ))}
-                  </div>
-                  {openingPeriodNotes(period).map(({ days, note }) => (
-                    <p key={note} className="muted" style={{ fontSize: 12, margin: '6px 0', whiteSpace: 'pre-wrap' }}>
-                      {days} — {note}
-                    </p>
+                  {officeOpeningSchedules(period).map((view) => (
+                    <div className="opC__schedule-block" key={view.index}>
+                      <h4>{view.title}</h4>
+                      <div className="opC__row-hours">
+                        {periodDayHours(view.period).map((day) => (
+                          <span key={day.short} className={day.open ? '' : 'muted'}>
+                            <strong>{day.short}</strong> {day.text}
+                          </span>
+                        ))}
+                      </div>
+                      {openingPeriodNotes(view.period).map(({ days, note }) => (
+                        <p key={note} className="muted" style={{ fontSize: 12, margin: '6px 0', whiteSpace: 'pre-wrap' }}>
+                          {days} — {note}
+                        </p>
+                      ))}
+                      {view.reason && (
+                        <p className="muted" style={{ fontSize: 12, margin: '6px 0' }}>{view.reason}</p>
+                      )}
+                    </div>
                   ))}
-                  {openingPeriodEditingReason(period) && (
-                    <p className="muted" style={{ fontSize: 12, margin: '6px 0' }}>{openingPeriodEditingReason(period)}</p>
-                  )}
                   {dateClosures.length > 0 && (
                     <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
                       Fermetures exceptionnelles : {dateClosures.join(', ')}

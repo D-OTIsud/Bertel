@@ -650,6 +650,9 @@ ROLLBACK;
 \echo '== partner messages and private attachments =='
 \ir migration_actor_portal_message.sql
 \ir tests/test_actor_portal_message.sql
+\echo '== named reception and service schedules =='
+\ir migration_opening_schedule_type_named.sql
+\ir tests/test_opening_schedule_type_named.sql
 
 \echo '== private partner photo additions and immediate withdrawal/order =='
 \ir migration_actor_portal_media.sql

@@ -27,6 +27,25 @@ canonique avant validation par un éditeur.
 | D11 | Photos (proposé 2026-09-02, **à valider PO**) | v1 : photos en **lecture seule** + repli « envoyez-les à l'office » (mailto) — la route d'upload refuse la persona acteur (D7) et aucun writer ne sait appliquer une photo proposée. Le téléversement par le prestataire est le **chantier de suite n°1** (§9, options A/B) |
 | D12 | Lisibilité des modifications pour l'office (proposé 2026-09-02, **à valider PO**) | Le portail surcharge **uniquement** les trois clés présentationnelles `metadata.field/before/after` de l'enveloppe par une projection en clair (une ligne par champ) ; `section`, `rpc`, `manual_apply`, `payload` restent byte-identiques à `buildContributorSubmission` (seuls validés serveur). Sans cela, l'office lit un JSON de tranche entière tronqué à 4000 caractères |
 
+### Arbitrages complémentaires du 31/10/2026
+
+La maquette « Portail partenaire — lancement » reste la référence pour les libellés,
+les sujets et leurs exemples. Le PDF Tourisme & Handicap sera fourni ultérieurement ;
+aucun lien provisoire ne doit être inventé.
+
+- D7 garde les portes d’écriture canonique générales fermées. Deux exceptions étroites
+  sont autorisées via des RPC dédiées, contrôlées côté serveur : les trois heures de
+  séjour d’un hébergement du partenaire, et le retrait ou l’ordre de ses photos.
+  L’enregistrement d’heures ne valide jamais les autres modifications du même module.
+- L’arrivée et le départ se trouvent dans « Ouverture, arrivée et départ », uniquement
+  pour les hébergements. Format HH:MM ou valeur vide ; les conditions restent hors de
+  cette écriture immédiate. Les périodes et fermetures gardent leur envoi à l’office.
+- D11 est remplacée pour la suite par l’option B : tout nouvel ajout de photo est privé
+  jusqu’à sa vérification. Le retrait et la réorganisation ne demandent pas de relecture.
+- L’accueil sur place est pré-coché pour les hôtels et campings. Les sujets « Conseils »
+  et « Événement ou nouveauté » sont à créer ; les exemples visibles restent ceux de la
+  maquette, sans ajouter de canal de promotion au formulaire du partenaire.
+
 ## 3. État des lieux (recon 2026-09-01, 6 sous-systèmes)
 
 Ce qui existe déjà et se réutilise tel quel ou presque :

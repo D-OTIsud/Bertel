@@ -643,6 +643,10 @@ ROLLBACK;
 \ir migration_org_smtp_settings.sql
 \ir tests/test_org_smtp_settings.sql
 
+\echo '== partner stay times: narrow immediate-write exception, accommodation and scope gates =='
+\ir ../supabase/migrations/20261031073734_partner_portal_stay_times.sql
+\ir tests/test_actor_portal_stay_times.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

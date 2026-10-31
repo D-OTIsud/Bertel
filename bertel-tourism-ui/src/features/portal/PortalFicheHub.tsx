@@ -81,6 +81,7 @@ const TODO_LABEL: Record<PortalRubricId, string> = {
   hours: 'Indiquez vos horaires',
   season: 'Indiquez vos périodes d’ouverture',
   amenities: 'Indiquez vos équipements',
+  accessibility: 'Indiquez vos aménagements d’accessibilité',
   welcome: 'Indiquez votre capacité d’accueil',
   pricing: 'Indiquez un tarif',
   activity: 'Décrivez votre activité',
@@ -228,7 +229,7 @@ export function PortalFicheHub({
   // Une rubrique DÉJÀ partie en vérification et remodifiée depuis : sa saisie est au chaud
   // mais rien ne peut partir tant que l'office n'a pas répondu. Sans ce comptage, « Valider »
   // n'a AUCUN effet visible et la phrase prévue pour ce cas est inatteignable.
-  const held = rubrics.filter((rubric) => rubric.state === 'pending' && editor.dirtySections[rubric.module]);
+  const held = rubrics.filter((rubric) => rubric.state === 'pending' && (rubric.hasChanges ?? editor.dirtySections[rubric.module]));
   const todo = rubrics.filter((rubric) => rubric.state === 'todo');
   const countable = rubrics.filter((rubric) => rubric.state !== 'unavailable');
   const done = countable.filter((rubric) => rubric.state !== 'todo').length;
@@ -310,7 +311,7 @@ export function PortalFicheHub({
         ) : null}
 
         <p className="notice portal-verification-note">
-          <Info size={18} aria-hidden /> Ce que vous modifiez ici est vérifié par l’office avant d’être publié.
+          <Info size={18} aria-hidden /> Les informations envoyées à l’office sont vérifiées avant d’être publiées.
         </p>
 
         {fiche.openSubmission ? (
@@ -372,7 +373,7 @@ export function PortalFicheHub({
               approvedModules.has(rubric.module) && (rubric.state === 'filled' || rubric.state === 'todo');
             const badge = approvedPending ? APPROVED_BADGE : STATE_BADGE[rubric.state];
             const summary = rubric.summary(editor.draft, archetype);
-            const heldHere = rubric.state === 'pending' && editor.dirtySections[rubric.module];
+            const heldHere = rubric.state === 'pending' && (rubric.hasChanges ?? editor.dirtySections[rubric.module]);
             const body = (
               <>
                 <span className="portal-task__body">
@@ -431,7 +432,7 @@ export function PortalFicheHub({
           ) : (
             <>
               <h2 className="portal-overview-heading portal-desktop-only">Vue d’ensemble</h2>
-              <p className="muted portal-desktop-only">Ce que vous modifiez ici est vérifié par l’office avant d’être publié.</p>
+              <p className="muted portal-desktop-only">Les informations envoyées à l’office sont vérifiées avant d’être publiées.</p>
               <div className="portal-overview-top">
                 {todo.length > 0 || photosMissing ? (
           <section className="portal-card portal-todo" aria-label="Pour compléter votre fiche">

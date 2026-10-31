@@ -137,17 +137,17 @@ export function PortalChoice({
  * Le pied commun d'une rubrique. « Valider » est un `submit` : la touche Entrée d'un
  * clavier de téléphone valide donc le formulaire, comme partout ailleurs.
  */
-export function PortalRubricActions({ onCancel, disabled }: { onCancel: () => void; disabled?: boolean }) {
+export function PortalRubricActions({ onCancel, disabled, note, busy }: { onCancel: () => void; disabled?: boolean; note?: string; busy?: boolean }) {
   return (
     <div className="portal-rubric-actions">
-      <button type="submit" className="primary-button" disabled={disabled}>
-        Valider
+      <button type="submit" className="primary-button" disabled={disabled || busy} aria-busy={busy || undefined}>
+        {busy ? 'Enregistrement…' : 'Valider'}
       </button>
-      <button type="button" className="ghost-button" onClick={onCancel}>
+      <button type="button" className="ghost-button" onClick={onCancel} disabled={busy}>
         Retour sans changer
       </button>
       <p className="muted portal-rubric-actions__note">
-        Rien n’est envoyé pour l’instant. Vous enverrez tout depuis la page de la fiche.
+        {note ?? 'Rien n’est envoyé pour l’instant. Vous enverrez tout depuis la page de la fiche.'}
       </p>
     </div>
   );

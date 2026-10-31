@@ -20,7 +20,7 @@ import { resolveLanguageLabel } from '../object-editor/sections/spoken-languages
 import type { WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { readStayOpening, readWeekHours } from './portal-bindings';
-import { PORTAL_RUBRICS, frDate } from './portal-rubrics';
+import { PORTAL_RUBRICS, frDate, isPortalRubricChanged } from './portal-rubrics';
 import type { ArchetypeCode } from '../object-editor/archetypes';
 
 const MAX_CHARS = 4000;
@@ -224,11 +224,12 @@ const PROJECTIONS: Partial<Record<WorkspaceModuleId, Projection>> = {
   activity: projectActivity,
 };
 
-function titleFor(module: WorkspaceModuleId, archetype: ArchetypeCode): string {
-  const scoped = PORTAL_RUBRICS.find(
+function titleFor(module: WorkspaceModuleId, archetype: ArchetypeCode, baseline: ObjectWorkspaceModules, draft: ObjectWorkspaceModules): string {
+  const scoped = PORTAL_RUBRICS.filter(
     (rubric) => rubric.module === module && rubric.archetypes.includes(archetype),
   );
-  return (scoped ?? PORTAL_RUBRICS.find((rubric) => rubric.module === module))?.title ?? module;
+  const changed = scoped.filter((rubric) => isPortalRubricChanged(rubric, baseline, draft, archetype));
+  return (changed.length ? changed : scoped).map((rubric) => rubric.moduleLabels?.[module] ?? rubric.title).join(' · ') || module;
 }
 
 /**
@@ -254,9 +255,9 @@ export function describePortalChange(
       descriptionField(baseline, field, language) !== descriptionField(draft, field, language));
     const ordered = [...languages.filter(changed), ...languages.filter((language) => !changed(language))];
     const render = (source: ObjectWorkspaceModules) => projectDescriptions(source, ordered).join('\n');
-    return { field: titleFor(module, archetype), before: render(baseline), after: render(draft) };
+    return { field: titleFor(module, archetype, baseline, draft), before: render(baseline), after: render(draft) };
   }
   const project = PROJECTIONS[module];
   const render = (source: ObjectWorkspaceModules) => (project ? project(source, archetype).join('\n').slice(0, MAX_CHARS) : '');
-  return { field: titleFor(module, archetype), before: render(baseline), after: render(draft) };
+  return { field: titleFor(module, archetype, baseline, draft), before: render(baseline), after: render(draft) };
 }

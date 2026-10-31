@@ -18,6 +18,7 @@
  * disent systématiquement si quelque chose a été perdu.
  */
 import { getApiClient } from '../lib/supabase';
+import { isClockTime } from '../lib/clock-time';
 import {
   readStrictString as readString,
   readNullableString,
@@ -59,6 +60,22 @@ function portalRpcError(error: unknown, fallback: string): Error & { code?: stri
   const code = record ? readNullableString(record.code) : null;
   if (code) wrapped.code = code;
   return wrapped;
+}
+
+export interface PortalStayTimes { checkInFrom: string; checkInUntil: string; checkOutUntil: string }
+
+/** Exception D7 approuvée : trois heures seulement, contrôlées aussi par le serveur. */
+export async function savePortalStayTimes(objectId: string, times: PortalStayTimes): Promise<PortalStayTimes> {
+  if (!Object.values(times).every(isClockTime)) throw new Error('Saisissez une heure valide entre 00:00 et 23:59.');
+  const { data, error } = await requireApiClient().schema('api').rpc('save_portal_stay_times', {
+    p_object_id: objectId, p_check_in_from: times.checkInFrom, p_check_in_until: times.checkInUntil, p_check_out_until: times.checkOutUntil,
+  });
+  if (error) throw portalRpcError(error, 'Les heures n’ont pas pu être enregistrées. Réessayez ; votre saisie est conservée.');
+  const row = readRecord(data);
+  if (!row || !['checkInFrom', 'checkInUntil', 'checkOutUntil'].every((key) => isClockTime(row[key]))) {
+    throw new Error('Nous n’avons pas pu confirmer l’enregistrement des heures. Rechargez votre fiche pour vérifier.');
+  }
+  return { checkInFrom: row.checkInFrom as string, checkInUntil: row.checkInUntil as string, checkOutUntil: row.checkOutUntil as string };
 }
 
 /**

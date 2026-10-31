@@ -42,6 +42,7 @@ const modules = (over: Record<string, unknown> = {}) =>
     descriptions: { object: { chapo: { baseValue: '', values: {} }, description: { baseValue: '', values: {} } } },
     openings: { periods: [], periodTypeOptions: [], unavailableReason: null },
     characteristics: {
+      languageOptions: [], languageLevelOptions: [], selectedLanguages: [], environmentOptions: [], selectedEnvironmentCodes: [],
       selectedAmenityCodes: [],
       selectedPaymentCodes: [],
       amenityGroups: [],
@@ -153,6 +154,24 @@ beforeEach(() => {
     changeCount: 2,
     assigneeCount: 1,
   });
+});
+
+test('équipements et accessibilité partagent une seule ligne et une seule enveloppe sans perte de choix', async () => {
+  const base = modules();
+  base.characteristics.amenityGroups = [{ familyCode: 'accessibility', familyLabel: 'Accessibilité', options: [{ id: 'a', code: 'acc_pmr_parking', label: 'Parking réservé', disabilityTypes: ['motor'] }] }];
+  const next = modules({ characteristics: { ...base.characteristics, selectedAmenityCodes: ['wifi', 'acc_pmr_parking'] } });
+  const editor = { ...fakeEditor(), baseline: base, draft: next, dirtySections: { characteristics: true } };
+  const shared = rubrics({ baseline: base, draft: next, dirty: { characteristics: true } });
+  setup({ editor, rubrics: shared });
+  expect(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })).toHaveLength(1);
+  await userEvent.click(screen.getByRole('button', { name: /^Envoyer$/ }));
+  await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalled());
+  const envelopes = mockedPortal.submitActorFiche.mock.calls[0][1];
+  expect(envelopes).toHaveLength(1);
+  expect(envelopes[0].metadata).toMatchObject({ section: 'characteristics', field: expect.stringContaining('Accessibilité') });
+  expect(envelopes[0].payload).toEqual(buildContributorSubmission(OBJ, 'characteristics', base, next).payload);
+  expect(JSON.stringify(envelopes[0].payload)).toContain('acc_pmr_parking');
+  expect(JSON.stringify(envelopes[0].payload)).toContain('wifi');
 });
 
 describe('PortalSendModal', () => {

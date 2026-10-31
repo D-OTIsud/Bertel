@@ -90,6 +90,11 @@ export function PortalFicheEditor({
   });
   const portalEditor: ObjectEditorState = {
     ...editor,
+    mergeSavedModule: (key, update) => {
+      editor.mergeSavedModule(key, update);
+      void queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] });
+      void queryClient.invalidateQueries({ queryKey: ['portal-fiches'] });
+    },
     replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => {
       editor.replaceModule(key, value);
       const module = (Object.keys(MODULE_KEY_MAP) as WorkspaceModuleId[]).find((entry) => MODULE_KEY_MAP[entry] === key);
@@ -202,13 +207,14 @@ export function PortalFicheEditor({
       buildPortalRubrics({
         archetype,
         draft: editor.draft,
+        baseline: editor.baseline,
         dirty: editor.dirtySections,
         masked: visibility.maskedModules,
         floor: visibility.floorModules,
         pendingModules,
         rejectedModules,
       }),
-    [archetype, editor.draft, editor.dirtySections, visibility, pendingModules, rejectedModules],
+    [archetype, editor.draft, editor.baseline, editor.dirtySections, visibility, pendingModules, rejectedModules],
   );
 
   const rejections = useMemo<PortalRejection[]>(() => {

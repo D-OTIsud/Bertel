@@ -9,7 +9,7 @@
  */
 import { useEffect } from 'react';
 import { PortalChoice, PortalField, PortalRubricActions, useRubricForm } from './rubric-kit';
-import { readHeadlineCapacity, setHeadlineCapacity, setPetPolicy, setStayPolicy } from '../portal-bindings';
+import { readHeadlineCapacity, setHeadlineCapacity, setPetPolicy } from '../portal-bindings';
 import { PORTAL_HEADLINE_METRIC } from '../portal-rubrics';
 import type { PortalRubricFormProps } from './types';
 import type { ObjectWorkspaceCapacityPoliciesModule } from '../../../services/object-workspace-parser';
@@ -18,8 +18,6 @@ interface WelcomeForm {
   capacity: string;
   pets: 'yes' | 'no' | 'unset';
   petConditions: string;
-  checkInFrom: string;
-  checkOutUntil: string;
   writeError: string | null;
 }
 
@@ -32,8 +30,6 @@ export function WelcomeRubric({ archetype, editor, formKey, onDone, onCancel, on
     capacity: readHeadlineCapacity(capacity, metric),
     pets: capacity.petPolicy?.accepted === true ? 'yes' : capacity.petPolicy?.accepted === false ? 'no' : 'unset',
     petConditions: capacity.petPolicy?.conditions ?? '',
-    checkInFrom: capacity.stayPolicy?.checkInFrom ?? '',
-    checkOutUntil: capacity.stayPolicy?.checkOutUntil ?? '',
     writeError: null,
   }), formCache);
 
@@ -44,7 +40,6 @@ export function WelcomeRubric({ archetype, editor, formKey, onDone, onCancel, on
     try {
       let next = setHeadlineCapacity(capacity, metric, form.capacity);
       next = setPetPolicy(next, form.pets === 'yes' ? true : form.pets === 'no' ? false : null, form.petConditions);
-      if (isStay) next = setStayPolicy(next, { checkInFrom: form.checkInFrom, checkOutUntil: form.checkOutUntil });
       // La CLÉ de module (`capacityPolicies`), pas l'id de module (`capacity-policies`) :
       // `replaceModule` indexe la tranche, pas le registre.
       editor.replaceModule('capacityPolicies', next);
@@ -118,31 +113,6 @@ export function WelcomeRubric({ archetype, editor, formKey, onDone, onCancel, on
             />
           )}
         </PortalField>
-      ) : null}
-
-      {isStay ? (
-        <div className="portal-dates">
-          <PortalField id="portal-checkin" label="Arrivée à partir de">
-            {(slots) => (
-              <input
-                {...slots}
-                type="time"
-                value={form.checkInFrom}
-                onChange={(event) => setForm((previous) => ({ ...previous, checkInFrom: event.target.value }))}
-              />
-            )}
-          </PortalField>
-          <PortalField id="portal-checkout" label="Départ avant">
-            {(slots) => (
-              <input
-                {...slots}
-                type="time"
-                value={form.checkOutUntil}
-                onChange={(event) => setForm((previous) => ({ ...previous, checkOutUntil: event.target.value }))}
-              />
-            )}
-          </PortalField>
-        </div>
       ) : null}
 
       {form.writeError ? (

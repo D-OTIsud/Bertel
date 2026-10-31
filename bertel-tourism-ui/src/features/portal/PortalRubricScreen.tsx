@@ -29,6 +29,7 @@ import { ArrowLeft, Check, Clock } from 'lucide-react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { ActivityRubric } from './rubrics/ActivityRubric';
 import { AmenitiesRubric } from './rubrics/AmenitiesRubric';
+import { AccessibilityRubric } from './rubrics/AccessibilityRubric';
 import { ContactsRubric } from './rubrics/ContactsRubric';
 import { HoursRubric } from './rubrics/HoursRubric';
 import { PresentationRubric } from './rubrics/PresentationRubric';
@@ -49,6 +50,7 @@ const RUBRIC_HELP: Record<PortalRubricId, string> = {
   hours: 'Indiquez vos jours et heures d’ouverture habituels.',
   season: 'Indiquez la période où vous accueillez des visiteurs, et vos fermetures.',
   amenities: 'Cochez ce que vous proposez. Les visiteurs filtrent souvent là-dessus.',
+  accessibility: 'Cochez les aménagements qui existent déjà. L’office les relira avant publication.',
   welcome: 'Ce que vous pouvez accueillir, et à quelles conditions.',
   pricing: 'Le tarif que les visiteurs verront en premier.',
   activity: 'Ce qu’il faut savoir avant de réserver votre activité.',
@@ -60,6 +62,7 @@ const FORMS: Record<PortalRubricId, (props: PortalRubricFormProps) => React.Reac
   hours: HoursRubric,
   season: SeasonRubric,
   amenities: AmenitiesRubric,
+  accessibility: AccessibilityRubric,
   welcome: WelcomeRubric,
   pricing: PricingRubric,
   activity: ActivityRubric,
@@ -102,6 +105,7 @@ export function PortalRubricScreen({
   onDirtyChange,
 }: PortalRubricScreenProps) {
   const [formDirty, setFormDirty] = useState(false);
+  const [formBusy, setFormBusy] = useState(false);
   const [askLeave, setAskLeave] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -116,9 +120,10 @@ export function PortalRubricScreen({
   // décide s'il faut demander ou laisser passer.
   useEffect(() => {
     if (!leaveRequested) return;
-    if (formDirty) setAskLeave(true);
+    if (formBusy) onLeaveResolved?.(false);
+    else if (formDirty) setAskLeave(true);
     else onLeaveResolved?.(true);
-  }, [leaveRequested, formDirty, onLeaveResolved]);
+  }, [leaveRequested, formDirty, formBusy, onLeaveResolved]);
 
   function reportDirty(dirty: boolean) {
     setFormDirty(dirty);
@@ -126,6 +131,7 @@ export function PortalRubricScreen({
   }
 
   function requestLeave() {
+    if (formBusy) return;
     if (formDirty) {
       setAskLeave(true);
       return;
@@ -157,12 +163,14 @@ export function PortalRubricScreen({
       <Link
         className="portal-back"
         href={hubHref}
+        aria-disabled={formBusy || undefined}
         scroll={false}
         onClick={(event) => {
           // TOUJOURS intercepté : laisser le lien naviguer nativement contournerait la
           // comptabilité d'historique de l'éditeur (`back` vs `push`) et empilerait une
           // entrée de plus à chaque retour.
           event.preventDefault();
+          if (formBusy) return;
           if (formDirty) {
             setAskLeave(true);
             return;
@@ -207,7 +215,7 @@ export function PortalRubricScreen({
         </div>
       ) : null}
 
-      {rubric.state === 'unavailable' || rubric.readOnlyReason ? (
+      {(rubric.state === 'unavailable' || rubric.readOnlyReason) && !(rubric.id === 'season' && rubric.editableRelatedModules?.includes('capacity-policies')) ? (
         <>
           <p className="notice notice--warn">{rubric.readOnlyReason}</p>
           <button type="button" className="ghost-button" onClick={onBack}>
@@ -228,6 +236,7 @@ export function PortalRubricScreen({
           }}
           onCancel={requestLeave}
           onDirtyChange={reportDirty}
+          onBusyChange={setFormBusy}
         />
       )}
 

@@ -157,6 +157,7 @@ export function fakeEditor(
     replaceModule: jest.fn(),
     resetModule: jest.fn(),
     commitModules: jest.fn(),
+    mergeSavedModule: jest.fn(),
     setSavedStatus: jest.fn(),
   } as unknown as ObjectEditorState;
 }

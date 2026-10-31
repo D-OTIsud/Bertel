@@ -97,7 +97,9 @@ INSERT INTO ref_code (domain, code, name) VALUES
  ('opening_schedule_type','seasonal','Saisonnier'),
  ('opening_schedule_type','exceptional','Exceptionnel'),
  ('opening_schedule_type','by_appointment','Sur rendez-vous'),
- ('opening_schedule_type','continuous_service','Service continu')
+ ('opening_schedule_type','continuous_service','Service continu'),
+ ('opening_schedule_type','reception','Accueil'),
+ ('opening_schedule_type','service','Service')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ref_code (domain, code, name, description) VALUES
@@ -1459,6 +1461,8 @@ WITH ref_code_translations(domain, code, name_en, name_es, description_en, descr
     ('opening_schedule_type','exceptional','Exceptional','Excepcional','Exceptional or special opening schedule','Horario excepcional o especial'),
     ('opening_schedule_type','by_appointment','By appointment','Con cita previa','Open only by appointment','Apertura solo con cita previa'),
     ('opening_schedule_type','continuous_service','Continuous service','Servicio continuo','Open continuously without closing','Abierto de forma continua sin cierre'),
+    ('opening_schedule_type','reception','Reception','Recepción',NULL,NULL),
+    ('opening_schedule_type','service','Service','Servicio',NULL,NULL),
     ('media_type','photo','Photo','Foto','Official photographs','Fotografías oficiales'),
     ('media_type','video','Video','Vídeo','Presentation videos','Vídeos de presentación'),
     ('media_type','audio','Audio','Audio','Audio files and podcasts','Archivos de audio y pódcasts'),

@@ -14,3 +14,15 @@
 .object-editor.ed-opening-period-modal .opening-preview-hours > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); align-items: baseline; gap: 8px; }
 .object-editor.ed-opening-period-modal .opening-preview-hours dt { color: var(--ink-3); font-size: 11px; }
 .object-editor.ed-opening-period-modal .opening-preview-hours dd { margin: 0; color: var(--ink); text-align: right; font: 500 10.5px/1.5 var(--font-mono, 'IBM Plex Mono', monospace); overflow-wrap: anywhere; }
+.object-editor.ed-opening-period-modal .opening-schedules {display:grid;gap:20px;}
+.object-editor.ed-opening-period-modal .opening-schedule-card {padding:16px;border:1px solid var(--line);border-radius:var(--radius-md);min-width:0;}
+.object-editor.ed-opening-period-modal .opening-schedule-card h3 {margin:0 0 14px;}
+.object-editor.ed-opening-period-modal .opening-schedule-fields {display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 16px;padding:0;border:0;min-width:0;}
+.object-editor.ed-opening-period-modal .opening-schedule-grid {border:0;padding:0;margin:0;min-width:0;}
+.object-editor.ed-opening-period-modal .opening-schedule-note {font-size:12px;margin:6px 0;white-space:pre-wrap;}
+.object-editor.ed-opening-period-modal .opening-schedule-preview + .opening-schedule-preview {border-top:1px solid var(--line);padding-top:12px;margin-top:12px;}
+.object-editor.ed-opening-period-modal .opening-schedule-preview h4 {font-weight:600;margin:8px 0;}
+.object-editor .opC__schedule-block + .opC__schedule-block {border-top:1px solid var(--line);margin-top:12px;padding-top:12px;}
+.object-editor .opC__schedule-block h4 {font-size:12px;font-weight:600;margin:0 0 8px;}
+@media(max-width:600px){.object-editor.ed-opening-period-modal .opening-schedule-fields{grid-template-columns:1fr;gap:10px;}.object-editor.ed-opening-period-modal .opening-schedule-card{padding:12px;}}
+@media(max-width:600px){.object-editor.ed-opening-period-modal .sched__slot input{padding-inline:0;}}

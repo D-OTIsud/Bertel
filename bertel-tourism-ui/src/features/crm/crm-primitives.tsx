@@ -29,6 +29,7 @@ import {
 import type { AnyCrmInteractionStatus } from './crm-status';
 import { CrmStatusModal } from './CrmStatusModal';
 import { strictErrorMessage } from '../../lib/strict-error-message';
+import { PortalMessageDocuments } from '../portal/PortalMessageDocuments';
 
 /**
  * Callbacks d'écriture du fil (§65/§66) — fournis par les consommateurs qui ont la query +
@@ -835,6 +836,7 @@ function TlCard({
         >
           <div className="tl-card__top">
             <strong>{title}</strong>
+            {item.source === 'portal' ? <span className="pill-mini">Espace partenaire</span> : null}
             {/* Type = pastille secondaire (plus le titre, rectif PO v5 point 4). */}
             <span className="pill-mini">{interactionTypeLabelOf(item.interactionType)}</span>
             <Mood sentimentCode={item.sentimentCode} sentimentName={item.sentimentName} />
@@ -879,6 +881,7 @@ function TlCard({
 
         {/* Éditeur inline de la RACINE (§66) — FRÈRE de .tl-card__nav, hors role=button (a11y).
             Prérempli avec le corps + le sentiment courants ; remplace visuellement le corps. */}
+        {item.source === 'portal' ? <PortalMessageDocuments interactionId={item.id} /> : null}
         {editingRoot && onEditInteraction ? (
           <TlCommentEditor
             initialBody={item.body ?? ''}

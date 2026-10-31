@@ -33,6 +33,8 @@ import { useToast } from '../../hooks/useToast';
 import { clearAllPortalDrafts, hasUnsentPortalWork } from '../../features/portal/usePortalDraft';
 import { strictErrorMessage } from '../../lib/strict-error-message';
 import { getPortalOffice, type PortalOffice } from '../../services/portal-office';
+import Link from 'next/link';
+import { confirmNavigation } from '../../lib/navigation-guard';
 
 export function PortalShell({ children, objectId }: { children: React.ReactNode; objectId?: string | null }) {
   const themeName = useThemeStore((state) => state.theme.brandName);
@@ -59,6 +61,7 @@ export function PortalShell({ children, objectId }: { children: React.ReactNode;
 
   /** Le clic sur « Se déconnecter » : il DEMANDE avant de détruire, ou file droit. */
   function requestSignOut() {
+    if (!confirmNavigation()) return;
     if (hasUnsentPortalWork(userId)) {
       setAskSignOut(true);
       return;
@@ -98,9 +101,7 @@ export function PortalShell({ children, objectId }: { children: React.ReactNode;
         </div>
         <div className="portal-shell__user">
           <span className="portal-shell__user-name muted">{userName}</span>
-          {office?.email && /^[^@\s?]+@[^@\s?]+\.[^@\s?]+$/.test(office.email) ? (
-            <a className="ghost-button portal-desktop-only" href={`mailto:${office.email}`}>Écrire à l’office</a>
-          ) : null}
+          <Link className="ghost-button portal-desktop-only" href={objectId ? `/espace/ecrire?fiche=${encodeURIComponent(objectId)}` : '/espace/ecrire'} onClick={event => { if (!confirmNavigation()) event.preventDefault(); }}>Écrire à l’office</Link>
           <button type="button" className="ghost-button" onClick={requestSignOut}>
             <LogOut size={16} aria-hidden /> Se déconnecter
           </button>

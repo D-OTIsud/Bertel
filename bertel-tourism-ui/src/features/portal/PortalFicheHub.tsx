@@ -477,6 +477,7 @@ export function PortalFicheHub({
           </p>
         )}
                               <PortalVerifyCard
+                writeOfficeHref={`/espace/ecrire?fiche=${encodeURIComponent(fiche.id)}&sujet=correction`}
                 ficheName={fiche.name}
                 typeLabel={fiche.typeLabel}
                 address={fiche.address}

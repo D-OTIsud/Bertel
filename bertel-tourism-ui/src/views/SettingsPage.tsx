@@ -22,6 +22,7 @@ import { TestCorpusSettings } from '../features/settings/TestCorpusSettings';
 import { SmtpSettings } from '../features/settings/SmtpSettings';
 import { OrgsPanel } from '../features/orgs/OrgsPanel';
 import { OrgBrandingForm } from '../features/orgs/OrgBrandingForm';
+import { OrgSmtpForm } from '../features/orgs/OrgSmtpForm';
 import { ActorSectionVisibilityForm } from '../features/orgs/ActorSectionVisibilityForm';
 import { ProfileEditModal } from '../features/settings/ProfileEditModal';
 import { SettingsRail } from './SettingsRail';
@@ -83,9 +84,10 @@ export default function SettingsPage() {
   // est celui qu'api.rpc_set_actor_section_visibility applique côté serveur ; l'ORG est
   // exigée parce que la matrice est portée PAR ORG (org_object_id est un paramètre du RPC).
   const canManageActorPortal = (adminRank ?? 0) >= 30 && !!orgId;
+  const canManageOrgSmtp = !!orgId && (role === 'super_admin' || (adminRank ?? 0) >= 30);
   const settingsNavOptions = useMemo(
-    () => ({ canManageTeam, canManageOrgBranding, canManageActorPortal }),
-    [canManageTeam, canManageOrgBranding, canManageActorPortal],
+    () => ({ canManageTeam, canManageOrgBranding, canManageActorPortal, canManageOrgSmtp }),
+    [canManageTeam, canManageOrgBranding, canManageActorPortal, canManageOrgSmtp],
   );
   const settingsNav = useMemo(() => buildSettingsNav(role, settingsNavOptions), [role, settingsNavOptions]);
   const [activeSection, setActiveSection] = useState<string>(() =>
@@ -772,6 +774,17 @@ export default function SettingsPage() {
         </article>
       )}
 
+          {activeSection === 'org-smtp' && canManageOrgSmtp && orgId && (
+            <article className="panel-card">
+              <section className="settings-pane">
+                <div className="settings-pane__head"><div>
+                  <h2>Envoi d’e-mails</h2>
+                  <p className="muted">Le serveur utilisé pour les invitations à vos partenaires. Enregistrez puis testez votre configuration avant le lancement.</p>
+                </div></div>
+                <OrgSmtpForm key={orgId} orgId={orgId} />
+              </section>
+            </article>
+          )}
         </div>
       </div>
     </section>

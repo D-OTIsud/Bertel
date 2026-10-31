@@ -25,9 +25,16 @@ export function openingTimePeriodKey(timePeriod: Pick<ObjectWorkspaceOpeningTime
 
 
 
-export function buildOpeningSchedules(period: ObjectWorkspaceOpeningPeriod): ObjectWorkspaceOpeningSchedule[] {
+export function buildOpeningSchedules(period: ObjectWorkspaceOpeningPeriod, includeNamed = false): ObjectWorkspaceOpeningSchedule[] {
   const source = period.schedules ?? [];
-  const projected = projectWorkspaceOpeningSchedules(source);
+  if (!includeNamed && source.some(schedule => ['reception','service'].includes(schedule.schedule_type_code ?? ''))) {
+    const isMain=(schedule:ObjectWorkspaceOpeningSchedule)=>!['reception','service'].includes(schedule.schedule_type_code ?? '');
+    const main=source.filter(isMain);
+    const built=buildOpeningSchedules({...period,schedules:main},true);
+    let index=0;
+    return [...source.map(schedule=>isMain(schedule)?built[index++]:schedule),...built.slice(index)];
+  }
+  const projected = projectWorkspaceOpeningSchedules(source,includeNamed);
   if (projected.editingUnavailableReason) {
     if (openingProjectionKey(period) !== openingProjectionKey(projected)) {
       throw new Error(projected.editingUnavailableReason);

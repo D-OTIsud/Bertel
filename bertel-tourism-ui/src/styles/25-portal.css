@@ -553,6 +553,11 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
 .portal-accessibility__panel > p { margin: 12px 0; }
 @media (min-width: 1024px) { .portal-accessibility__families { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .portal-write-office { display: grid; gap: 28px; }
+.portal-schedule-block,.portal-named-schedules,.portal-named-services { display: grid; gap: 24px; }
+.portal-named-schedule { display: grid; gap: 20px; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.portal-named-schedule h2,.portal-named-services h2 { margin: 0; font-family: var(--font-display),sans-serif; font-size: 1.15rem; font-weight: 700; }
+.portal-named-schedule__head { display: flex; align-items: end; gap: 16px; flex-wrap: wrap; }
+.portal-named-schedule__head > .auth-field { flex: 1; min-width: 160px; }
 .portal-write-office__main { min-width: 0; display: grid; gap: 24px; }
 .portal-write-office h2 { font-size: 1.15rem; font-weight: 700; }
 .portal-write-form { display: grid; gap: 24px; padding: 24px; }

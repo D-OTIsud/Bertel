@@ -23,6 +23,18 @@ import {
 } from './utils';
 
 describe('object drawer utils', () => {
+  it('affiche le nom et la grille propres à chaque planning, avec les jours sans horaires fixes', () => {
+    const raw={opening_times:{periods_current:[{all_years:true,weekday_slots:{monday:[{start:'09:00',end:'18:00'}]},schedules:[
+      {name:'Ouverture',schedule_type:{code:'regular',name:'Régulier'},time_periods:[{weekdays:[{weekday_code:'monday'}],time_frames:[{start_time:'09:00',end_time:'18:00'}]}]},
+      {name:'Nourrissage des animaux',schedule_type:{code:'service',name:'Service'},time_periods:[{weekdays:[{weekday_code:'monday'}],time_frames:[{start_time:'15:00',end_time:'15:30'}]}]},
+      {name:'Accueil',schedule_type:{code:'reception',name:'Accueil'},time_periods:[{weekdays:[{weekday_code:'tuesday'}],time_frames:[]}]},
+    ]}]}};
+    const result=parseOpenings(raw);
+    expect(result.map(item=>item.label)).toEqual(['Ouverture','Nourrissage des animaux','Accueil']);
+    expect(result[1].weekdaySlots).toEqual([{weekday:'Lundi',slots:['15:00–15:30']}]);
+    expect(result[2].weekdaySlots).toEqual([{weekday:'Mardi',slots:['Ouvert, sans horaires fixes']}]);
+    expect(result[0].slots).not.toContain('15:00–15:30');
+  });
   it('parses memberships from structured object payloads', () => {
     const raw = (mockObjectDetails.HOTRUN0000000001.raw ?? {}) as Record<string, unknown>;
     const memberships = parseMemberships(raw);

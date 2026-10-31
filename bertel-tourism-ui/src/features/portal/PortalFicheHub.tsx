@@ -91,6 +91,7 @@ export interface PortalHubFiche {
   id: string;
   name: string;
   typeLabel: string;
+  typeCode?: string;
   locality: string;
   address: string;
   publicPhone: string;
@@ -416,6 +417,7 @@ export function PortalFicheHub({
           {showReturns ? <PortalOfficeReturns rubrics={rubrics} rejections={rejections} approvedModules={approvedModules} appliedModules={appliedModules}
             hubHref={hubHref} officeEmail={fiche.officeEmail} onBack={onBackToHub} onOpenRubric={(id) => onNavigate(rubricHref(id))} /> : active ? (
             <PortalRubricScreen
+                objectType={fiche.typeCode}
               rubric={active}
               archetype={archetype}
               editor={editor}

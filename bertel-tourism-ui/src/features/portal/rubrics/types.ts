@@ -13,6 +13,7 @@ import type { PortalFormCache } from './rubric-kit';
 export interface PortalRubricFormProps {
   rubric: BuiltPortalRubric;
   archetype: ArchetypeCode;
+  objectType?: string;
   editor: ObjectEditorState;
   /**
    * Clé de resynchronisation §212 — change dès que la rubrique affichée change. L'état

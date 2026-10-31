@@ -1570,12 +1570,15 @@ function parseWorkspaceOpeningSchedules(value: unknown): ObjectWorkspaceOpeningS
   }));
 }
 
-export function projectWorkspaceOpeningSchedules(schedules: ObjectWorkspaceOpeningSchedule[]): {
+export function projectWorkspaceOpeningSchedules(schedules: ObjectWorkspaceOpeningSchedule[], includeNamed = false): {
   weekdays: ObjectWorkspaceOpeningWeekday[];
   closedDays: string[];
   weekdayNotes: Record<string, string | null>;
   editingUnavailableReason: string | null;
 } {
+  // Reception and services have independent grids. They must never be unioned
+  // into the establishment's opening hours or make that principal grid read-only.
+  schedules = includeNamed ? schedules : schedules.filter(schedule => !['reception','service'].includes(schedule.schedule_type_code ?? ''));
   const days = new Map<string, ObjectWorkspaceOpeningWeekday>();
   const closedDays = new Set<string>();
   const weekdayNotes: Record<string, string | null> = {};

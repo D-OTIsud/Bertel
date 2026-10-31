@@ -20,6 +20,7 @@ import { resolveLanguageLabel } from '../object-editor/sections/spoken-languages
 import type { WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { readStayOpening, readWeekHours } from './portal-bindings';
+import { readPortalNamedSchedules } from './portal-named-schedules';
 import { PORTAL_RUBRICS, frDate, isPortalRubricChanged } from './portal-rubrics';
 import type { ArchetypeCode } from '../object-editor/archetypes';
 
@@ -217,7 +218,17 @@ const PROJECTIONS: Partial<Record<WorkspaceModuleId, Projection>> = {
   contacts: projectContacts,
   // Le MÊME module, deux lectures : un gîte parle de saison et de fermetures, un
   // restaurant d'heures d'ouverture. C'est la saisie qui change, pas le modèle.
-  openings: (draft, archetype) => (archetype === 'HEB' ? projectStayOpening(draft) : projectWeekHours(draft)),
+  openings: (draft, archetype) => [
+    ...(archetype === 'HEB' ? projectStayOpening(draft) : projectWeekHours(draft)),
+    ...(Array.isArray(draft.openings?.periods) ? readPortalNamedSchedules(draft.openings).flatMap(entry=>[
+      `${entry.type==='reception'?'Accueil':'Service'} : ${entry.name}`,
+      ...OPENING_WEEKDAYS.flatMap(day=>{
+        const hours=entry.form.hours[day.code];
+        if(!hours?.open)return [];
+        return [`${day.label} : ${hours.fixedHours?hours.slots.map(slot=>`${slot.start}–${slot.end}`).join(' et '):'ouvert, sans horaires fixes'}`];
+      }),
+    ]) : []),
+  ],
   characteristics: projectCharacteristics,
   'capacity-policies': projectCapacityPolicies,
   pricing: projectPricing,

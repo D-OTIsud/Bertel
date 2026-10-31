@@ -71,6 +71,7 @@ const FORMS: Record<PortalRubricId, (props: PortalRubricFormProps) => React.Reac
 export interface PortalRubricScreenProps {
   rubric: BuiltPortalRubric;
   archetype: ArchetypeCode;
+  objectType?: string;
   editor: ObjectEditorState;
   /** Ce qui a été envoyé pour cette rubrique, tel que le partenaire l'avait écrit. */
   sentLines: string[];
@@ -93,6 +94,7 @@ export interface PortalRubricScreenProps {
 export function PortalRubricScreen({
   rubric,
   archetype,
+  objectType,
   editor,
   sentLines,
   sentAt,
@@ -226,6 +228,7 @@ export function PortalRubricScreen({
         <Form
           rubric={rubric}
           archetype={archetype}
+          objectType={objectType}
           editor={editor}
           formKey={rubric.id}
           formCache={formCache}

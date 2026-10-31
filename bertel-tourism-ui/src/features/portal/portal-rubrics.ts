@@ -83,6 +83,12 @@ export type PortalRubricId =
 
 export type RubricState = 'todo' | 'filled' | 'dirty' | 'pending' | 'rejected' | 'unavailable';
 
+export const PORTAL_SERVICE_SUGGESTIONS: Partial<Record<ArchetypeCode,readonly string[]>> = {
+  HEB: ['Petit-déjeuner', 'Table d’hôtes', 'Piscine', 'Spa', 'Location de vélos'],
+  VIS: ['Nourrissage des animaux', 'Visite guidée', 'Spectacle', 'Atelier', 'Dégustation', 'Vente à la ferme'],
+  ASC: ['Départs des sorties', 'Location de matériel'],
+};
+
 /** Ce que lit le partenaire quand une rubrique est fermée. Le motif BRUT n'est jamais
  *  affiché : « Module non applicable au type HLO (référentiel ref_facet_applicability) »
  *  n'aide personne, et « Vos droits actuels… » ne veut rien dire pour un gîte. */

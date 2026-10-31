@@ -5,17 +5,31 @@ import { buildPortalRubrics } from '../portal-rubrics';
 import { savePortalStayTimes } from '../../../services/portal';
 jest.mock('../../../services/portal', () => ({ savePortalStayTimes: jest.fn() }));
 
-function setup(complex = false, masked: string[] = []) {
+function setup(complex = false, masked: string[] = [],objectType?:string) {
   const modules = portalModules();
   modules.openings.periods = [openingPeriod(), ...(complex ? [openingPeriod({ recordId: 'second' })] : [])] as never;
   modules.capacityPolicies.stayPolicy = { checkInFrom: '14:00', checkInUntil: '', checkOutUntil: '10:00', conditions: 'Ne pas écraser' };
   const editor = fakeEditor(modules); editor.objectId = 'HOT1';
   const rubric = buildPortalRubrics({ archetype: 'HEB', draft: modules, dirty: {}, masked, floor: [], pendingModules: new Set(), rejectedModules: new Set() }).find((entry) => entry.id === 'season')!;
   const onDone = jest.fn();
-  render(<SeasonRubric rubric={rubric} archetype="HEB" editor={editor} formKey="season" onDone={onDone} onCancel={jest.fn()} onDirtyChange={jest.fn()} />);
-  return { editor, onDone };
+  const view=render(<SeasonRubric rubric={rubric} archetype="HEB" objectType={objectType} editor={editor} formKey="season" onDone={onDone} onCancel={jest.fn()} onDirtyChange={jest.fn()} />);
+  return { editor, onDone,unmount:view.unmount };
 }
 beforeEach(() => jest.clearAllMocks());
+
+test('l’accueil est pré-coché pour un hôtel et reste décoché pour un gîte',()=>{
+  const view=setup(false,[],'HOT');expect(screen.getByRole('checkbox',{name:'Il y a un accueil sur place'})).toBeChecked();view.unmount();
+  setup(false,[],'HLO');expect(screen.getByRole('checkbox',{name:'Il y a un accueil sur place'})).not.toBeChecked();
+});
+
+test('un service renseigné sans période d’ouverture reste dans le formulaire au lieu d’être perdu',()=>{
+  const modules=portalModules();modules.openings.periods=[];
+  const editor=fakeEditor(modules);
+  const rubric=buildPortalRubrics({archetype:'HEB',draft:modules,dirty:{},masked:[],floor:[],pendingModules:new Set(),rejectedModules:new Set()}).find(entry=>entry.id==='season')!;
+  render(<SeasonRubric rubric={rubric} archetype="HEB" objectType="HLO" editor={editor} formKey="new-season" onDone={jest.fn()} onCancel={jest.fn()} onDirtyChange={jest.fn()}/>);
+  fireEvent.click(screen.getByRole('button',{name:'Petit-déjeuner'}));fireEvent.click(screen.getByRole('button',{name:'Tous les jours'}));fireEvent.click(screen.getByRole('checkbox',{name:'Ouvert, sans horaires fixes'}));
+  fireEvent.click(screen.getByRole('button',{name:'Valider'}));expect(screen.getByRole('alert')).toHaveTextContent('Indiquez d’abord si vous êtes ouvert toute l’année.');expect(editor.replaceModule).not.toHaveBeenCalled();expect(screen.getByLabelText('Nom du service')).toHaveValue('Petit-déjeuner');
+});
 
 test('l’arrivée et le départ sont enregistrés sans soumettre les autres champs', async () => {
   const { editor, onDone } = setup();

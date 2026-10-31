@@ -341,6 +341,7 @@ export function PortalFicheEditor({
           id: objectId,
           name: resource.name,
           typeLabel: portalTypeLabel(resource.type),
+          typeCode: resource.type,
           locality: location.city ?? '',
           address,
           // Le téléphone PUBLIÉ, lu sur les modules du serveur : le brouillon local porte

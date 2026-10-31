@@ -67,6 +67,8 @@ La migration reprend les définitions vives des quatre lecteurs ci-dessous, cons
 
 Le précontrôle accepte seulement ces références connues et la version cible pour une réexécution ; toute autre divergence interrompt la migration. Les tests annulés sur le projet réel couvrent les trois plannings, le lecteur public complet, la borne de fin exclusive et le mode sans horaires. Avec une ouverture de 9 h à midi et un service de 15 h à 15 h 30, la fiche est bien fermée à 15 h 10. Après annulation, les empreintes vives sont inchangées et le nouveau lecteur reste absent.
 
+Le test historique du tri-état ne dépend plus de l’alias SQL `o` du fichier ancien : la référence vive utilise `obj`. Il vérifie directement les trois résultats du moteur (aucune donnée → `NULL`, ouvert sans horaire → `TRUE`, autre jour → `FALSE`), puis leur écriture dans le cache. La délégation du rafraîchissement au moteur reste contrôlée.
+
 ## Avant mise en service
 
 Revue de la branche, contrôle CI sur base vierge, accord de fin de lot puis application des migrations et déploiement. Refaire la comparaison des fonctions juste avant l’application. Conserver les définitions antérieures et interrompre en cas de divergence non expliquée.

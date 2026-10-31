@@ -97,6 +97,14 @@ describe('les rubriques listées suivent le type de fiche', () => {
 });
 
 describe('bascule d’une rubrique', () => {
+  it('un seul réglage pilote les équipements et l’accessibilité du même module', async () => {
+    renderForm();
+    const shared = await screen.findByRole('checkbox', { name: /Équipements.*Accessibilité/ });
+    expect(screen.getAllByRole('checkbox', { name: /Accessibilité/ })).toHaveLength(1);
+    fireEvent.click(shared);
+    await waitFor(() => expect(mocked.setActorSectionVisibility).toHaveBeenCalledWith('ORG1', 'HLO', 'characteristics', false));
+    expect(screen.getByRole('checkbox', { name: /Capacité.*Arrivée et départ/ })).toBeInTheDocument();
+  });
   it('une rubrique fermée est décochée ; la rouvrir écrit visible = true', async () => {
     mocked.getActorSectionVisibility.mockResolvedValue({ floorModules: FLOOR, maskedModules: ['pricing'] });
     const { invalidate } = renderForm();

@@ -254,7 +254,10 @@ function modulesOfForms(forms: Record<string, unknown>): WorkspaceModuleId[] {
   const modules = new Set<WorkspaceModuleId>();
   for (const rubricId of Object.keys(forms)) {
     const rubric = PORTAL_RUBRICS.find((entry) => entry.id === rubricId);
-    if (rubric) modules.add(rubric.module);
+    if (rubric) {
+      modules.add(rubric.module);
+      rubric.relatedModules?.forEach((module) => modules.add(module));
+    }
   }
   return PORTAL_MODULES.filter((module) => modules.has(module));
 }

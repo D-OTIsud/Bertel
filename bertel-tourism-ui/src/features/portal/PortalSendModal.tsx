@@ -106,7 +106,12 @@ export function PortalSendModal({
     }
   }, [open]);
 
-  const modified = rubrics.filter((rubric) => rubric.state === 'dirty');
+  // Une ligne par module : retirer cette ligne garde ensemble toutes ses vues.
+  const groups = new Map<WorkspaceModuleId, BuiltPortalRubric[]>();
+  for (const rubric of rubrics.filter((entry) => entry.state === 'dirty')) {
+    groups.set(rubric.module, [...(groups.get(rubric.module) ?? []), rubric]);
+  }
+  const modified = [...groups.values()].map((views) => ({ ...views[0], title: views.map((view) => view.moduleLabels?.[view.module] ?? view.title).join(' · ') }));
   const sending = modified.filter((rubric) => !excluded.has(rubric.module));
 
   async function handleSend() {
@@ -136,8 +141,7 @@ export function PortalSendModal({
     // l'appel, elle emprunterait le message du RÉSEAU, qui ne décrit pas ce qui s'est passé.
     try {
       for (const rubric of sending) {
-        // Deux rubriques ne partagent jamais un module POUR UN MÊME TYPE, mais une double
-        // enveloppe se marcherait dessus dans un seul envoi : on ferme la porte.
+        // L’unicité porte sur le module, même si plusieurs vues ont été modifiées.
         if (seen.has(rubric.module)) continue;
         seen.add(rubric.module);
         modules.push(rubric.module);

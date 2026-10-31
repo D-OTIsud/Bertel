@@ -14,10 +14,28 @@ import {
   listMySubmissions,
   getPortalSectionVisibility,
   submitActorFiche,
+  savePortalStayTimes,
 } from './portal';
 
 const mockGetApiClient = getApiClient as jest.Mock;
 const rpc = jest.fn();
+
+describe('heures de séjour appliquées immédiatement', () => {
+  const times = { checkInFrom: '15:00', checkInUntil: '23:00', checkOutUntil: '10:00' };
+  it('ne transmet que la fiche et les trois heures, jamais un payload de capacité', async () => {
+    rpc.mockResolvedValue({ data: times, error: null });
+    await expect(savePortalStayTimes('HOT1', times)).resolves.toEqual(times);
+    expect(rpc).toHaveBeenCalledWith('save_portal_stay_times', { p_object_id: 'HOT1', p_check_in_from: '15:00', p_check_in_until: '23:00', p_check_out_until: '10:00' });
+  });
+  it('refuse une date ou des secondes avant le réseau', async () => {
+    await expect(savePortalStayTimes('HOT1', { ...times, checkInUntil: '23:00:01' })).rejects.toThrow(/heure valide/);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it('ne confirme pas une réponse serveur incomplète', async () => {
+    rpc.mockResolvedValue({ data: { checkInFrom: '15:00' }, error: null });
+    await expect(savePortalStayTimes('HOT1', times)).rejects.toThrow(/confirmer/);
+  });
+});
 
 beforeEach(() => {
   rpc.mockReset();

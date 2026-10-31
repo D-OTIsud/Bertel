@@ -60,18 +60,18 @@ const build = (over: Partial<Parameters<typeof buildPortalRubrics>[0]> = {}) =>
 describe('buildPortalRubrics — composition par type', () => {
   it('HEB : huitième écran « ouverture / fermetures », pas les horaires du restaurant', () => {
     const ids = build({ archetype: 'HEB', draft: draft() }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'season', 'amenities', 'welcome', 'pricing']);
+    expect(ids).toEqual(['contacts', 'presentation', 'season', 'amenities', 'accessibility', 'welcome', 'pricing']);
     expect(ids).not.toContain('hours');
   });
 
   it('RES : horaires oui, ouverture saisonnière non', () => {
     const ids = build({ archetype: 'RES' }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'welcome', 'pricing']);
+    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'welcome', 'pricing']);
   });
 
   it('ASC : la rubrique activité, pas la capacité', () => {
     const ids = build({ archetype: 'ASC' }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'pricing', 'activity']);
+    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'pricing', 'activity']);
   });
 
   it('les deux rubriques d’ouverture portent le MÊME module (une enveloppe par module)', () => {
@@ -79,12 +79,8 @@ describe('buildPortalRubrics — composition par type', () => {
     const season = PORTAL_RUBRICS.find((r) => r.id === 'season');
     expect(hours?.module).toBe('openings');
     expect(season?.module).toBe('openings');
-    // …et JAMAIS ensemble pour un même type : deux enveloppes du même module se
-    // marcheraient dessus dans un seul envoi.
-    for (const archetype of ['HEB', 'RES', 'ASC', 'VIS', 'SRV', 'ITI', 'FMA'] as ArchetypeCode[]) {
-      const modules = build({ archetype }).map((r) => r.module);
-      expect(new Set(modules).size).toBe(modules.length);
-    }
+    const shared = build({ archetype: 'RES' }).filter((rubric) => rubric.module === 'characteristics');
+    expect(shared.map((rubric) => rubric.id)).toEqual(['amenities', 'accessibility']);
   });
 
   it('fail-CLOSED : un type sans rubrique n’ouvre aucun écran', () => {
@@ -107,6 +103,23 @@ describe('buildPortalRubrics — composition par type', () => {
 });
 
 describe('buildPortalRubrics — visibilité et états', () => {
+  it('calcule les modifications sur les champs de chaque vue du module partagé', () => {
+    const base = draft();
+    base.characteristics.amenityGroups = [{ familyCode: 'accessibility', familyLabel: 'Accessibilité', options: [{ id: 'acc', code: 'acc_pmr_parking', label: 'Parking réservé', disabilityTypes: ['motor'] }] }];
+    const next = draft({ characteristics: { ...base.characteristics, selectedAmenityCodes: ['acc_pmr_parking'] } });
+    const rubrics = build({ baseline: base, draft: next, dirty: { characteristics: true } });
+    expect(rubrics.find((rubric) => rubric.id === 'amenities')?.state).toBe('todo');
+    expect(rubrics.find((rubric) => rubric.id === 'accessibility')?.state).toBe('dirty');
+    const pending = build({ baseline: base, draft: next, dirty: { characteristics: true }, pendingModules: new Set(['characteristics']) });
+    expect(pending.filter((rubric) => rubric.module === 'characteristics').every((rubric) => rubric.state === 'pending')).toBe(true);
+  });
+
+  it('garde les heures accessibles quand les périodes d’un hébergement sont masquées', () => {
+    const season = build({ archetype: 'HEB', masked: ['openings'] }).find((rubric) => rubric.id === 'season');
+    expect(season?.state).toBe('todo');
+    expect(season?.editableRelatedModules).toEqual(['capacity-policies']);
+    expect(build({ archetype: 'HEB', masked: ['openings', 'capacity-policies'] }).some((rubric) => rubric.id === 'season')).toBe(false);
+  });
   it('un module masqué par l’office retire sa rubrique ; un module dégradé la rend « unavailable »', () => {
     const rubrics = build({
       draft: draft({ pricing: { prices: [], unavailableReason: 'x' } }),

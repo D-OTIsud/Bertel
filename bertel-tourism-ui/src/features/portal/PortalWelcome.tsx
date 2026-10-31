@@ -26,7 +26,7 @@ export function PortalWelcome({ userName, ficheName, typeLabel, locality, photoU
         <li><strong>Envoyez à l’office</strong> d’un seul bouton, quand vous avez fini.</li>
         <li><strong>L’office relit et publie</strong>, en général sous une semaine.{services.email ? ' Vous êtes prévenu par e-mail.' : ''}</li>
       </ol>
-      <p className="notice">Rien ne change sur votre fiche publiée tant que l’office n’a pas relu.</p>
+      <p className="notice">Les informations envoyées à l’office sont publiées après sa relecture.</p>
     </section>
     <button type="button" className="primary-button" onClick={onContinue}>Voir ma fiche</button>
   </section>;

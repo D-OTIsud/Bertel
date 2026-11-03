@@ -34,7 +34,7 @@ try{
  const login=await ordinary.auth.signInWithPassword({email:created.data.user.email,password:'Disposable-'+id});assert(!login.error&&login.data.session,'Disposable login failed');
  const authenticatedHeaders={apikey:status.ANON_KEY,Authorization:`Bearer ${login.data.session.access_token}`};
  const bucket=await admin.storage.getBucket('restaurant-cartes-private');assert(!bucket.error&&bucket.data.public===false&&bucket.data.file_size_limit===10485760,'Private 10 MiB bucket contract missing');checks++;
- const staged=await admin.storage.from('restaurant-cartes-private').upload(privatePath,pdf,{contentType:'application/pdf',upsert:false});assert(!staged.error,'Private staging upload failed');checks++;
+ const staged=await admin.storage.from('restaurant-cartes-private').upload(privatePath,pdf,{contentType:'application/pdf',cacheControl:'0',upsert:false});assert(!staged.error,'Private staging upload failed');checks++;
  await denied(publicUrl('restaurant-cartes-private',privatePath));
  await denied(publicUrl('restaurant-cartes-private',privatePath),{method:'HEAD'});
  await denied(new URL(`/storage/v1/object/authenticated/restaurant-cartes-private/${privatePath}`,endpoint),{headers:authenticatedHeaders});
@@ -45,7 +45,9 @@ try{
  const again=await admin.storage.from('restaurant-cartes-private').copy(privatePath,publicPath,{destinationBucket:'documents'});assert(again.error,'Immutable copy unexpectedly overwrote destination');checks++;
  const url=publicUrl('documents',publicPath),get=await fetch(url,{signal:AbortSignal.timeout(10000)});
  assert.equal(get.status,200);assert.equal(get.redirected,false);assert.equal(get.url,url.href);assert.match(get.headers.get('content-type')||'',/^application\/pdf/);assert.equal(sha(await bytes(get)),sha(pdf));checks++;
- const cache=get.headers.get('cache-control');assert(cache&&/\bpublic\b/i.test(cache)&&!/\b(private|no-store)\b/i.test(cache),'Public cache header missing');checks++;
+ // Match the actual route's private upload metadata, which the public copy keeps.
+ // Public access does not imply a positive cache TTL: every response must revalidate.
+ const cache=get.headers.get('cache-control');assert(cache&&/\bmax-age=0\b/i.test(cache)&&!/\b(private|no-store)\b/i.test(cache),'Public copy must preserve the route cacheControl=0');checks++;
  const head=await fetch(url,{method:'HEAD',signal:AbortSignal.timeout(10000)});assert.equal(head.status,200);assert.equal(head.redirected,false);assert.equal(head.url,url.href);assert.equal(head.headers.get('cache-control'),cache);assert.equal(Number(head.headers.get('content-length')),pdf.length);assert.equal((await bytes(head)).length,0);checks++;
  const range=await fetch(url,{headers:{Range:'bytes=0-15'},signal:AbortSignal.timeout(10000)});assert.equal(range.status,206);assert.equal(range.headers.get('content-range'),`bytes 0-15/${pdf.length}`);assert((await bytes(range)).equals(pdf.subarray(0,16)));checks++;
  const forgedPrivate=await ordinary.storage.from('restaurant-cartes-private').upload(privatePath,Buffer.from('replace'),{contentType:'application/pdf',upsert:true});assert(forgedPrivate.error,'Ordinary user overwrote private staging');checks++;

@@ -30,10 +30,9 @@ CREATE POLICY menu_visibility_read ON public.object_menu AS RESTRICTIVE FOR SELE
    OR api.can_read_object_for_correction(object_id));
 DROP POLICY IF EXISTS menu_item_visibility_read ON public.object_menu_item;
 CREATE POLICY menu_item_visibility_read ON public.object_menu_item AS RESTRICTIVE FOR SELECT TO anon,authenticated
- USING(EXISTS(SELECT 1 FROM public.object_menu m WHERE m.id=menu_id
-   AND (object_menu_item.visibility IS NULL OR object_menu_item.visibility='public'
-    OR m.object_id IN(SELECT api.current_user_extended_object_ids())
-    OR api.can_read_object_for_correction(m.object_id))));
+ -- Items have no visibility column: their authorization follows the parent menu.
+ -- Its SELECT policies above are evaluated with the calling reader's RLS scope.
+ USING(EXISTS(SELECT 1 FROM public.object_menu m WHERE m.id=menu_id));
 
 -- Bound each link to a visible item, even if another permissive policy is added later.
 DO $links$

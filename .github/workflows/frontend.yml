@@ -49,6 +49,9 @@ jobs:
 
       - run: npm run build
 
+      - name: Verify compiled standalone PDF rendering without checkout dependency fallback
+        run: node scripts/verify-menu-document-native.cjs .next/standalone
+
       - name: Install Playwright Chromium
         run: node scripts/run-playwright.mjs install --with-deps chromium
 

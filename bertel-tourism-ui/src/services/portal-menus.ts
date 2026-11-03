@@ -44,13 +44,19 @@ export async function publishPortalMenus(
   objectId: string,
   input: ObjectWorkspaceMenusModule,
   extractionOperationId: string | null = null,
+  extractionDraftVersion: number | null = null,
 ): Promise<ObjectWorkspaceMenusModule> {
   if (input.unavailableReason) throw new Error(input.unavailableReason);
+  if (extractionOperationId && (extractionDraftVersion === null || !Number.isInteger(extractionDraftVersion) || extractionDraftVersion < 0)) {
+    throw new Error('Rechargez le brouillon d’extraction avant de le publier ; votre saisie est conservée.');
+  }
+  if (!extractionOperationId && extractionDraftVersion !== null) throw new Error('Une version de brouillon nécessite son opération d’extraction.');
   const knownItems = new Set(input.menuWriteBaseline?.snapshot.items.map(row => row.id));
   if (input.items.some(menu => menu.items.some(item => !knownItems.has(item.recordId) && !item.name.trim()))) {
     throw new Error('Nommez les nouveaux plats avant de publier les menus ; votre saisie est conservée.');
   }
-  const payload = { ...buildMenusWritePayload(input), extraction_operation_id: extractionOperationId };
+  const payload = { ...buildMenusWritePayload(input), extraction_operation_id: extractionOperationId,
+    ...(extractionOperationId ? { extraction_draft_version: extractionDraftVersion } : {}) };
   const result = await withPendingMenuRequest(useSessionStore.getState().userId, objectId, payload, async request => {
     const patch = Object.fromEntries(Object.entries(request).filter(([key]) => key !== 'extraction_operation_id'));
     return rpc('publish_portal_menus', { p_object_id: objectId, p_payload: patch, p_extraction_operation_id: request.extraction_operation_id ?? null });

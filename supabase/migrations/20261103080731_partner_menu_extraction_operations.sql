@@ -280,7 +280,7 @@ END $fn$;
 
 -- Called only from the narrow M wrapper under its object lock. Replay returns the committed
 -- receipt before checking a source changed by the publication itself.
-CREATE FUNCTION internal.assert_menu_extraction_publication(p_operation_id uuid,p_object_id text) RETURNS jsonb
+CREATE FUNCTION internal.assert_menu_extraction_publication(p_operation_id uuid,p_object_id text,p_expected_draft_version integer) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,internal,storage,pg_temp SET lock_timeout='5s' AS $fn$
 DECLARE v_op internal.menu_extraction_operation%ROWTYPE; v_source jsonb; v_stat jsonb;
 BEGIN
@@ -290,6 +290,8 @@ BEGIN
  IF NOT FOUND OR v_op.created_by IS DISTINCT FROM auth.uid() OR v_op.object_id IS DISTINCT FROM p_object_id THEN RAISE EXCEPTION 'Opération inaccessible' USING ERRCODE='42501'; END IF;
  IF v_op.published_result IS NOT NULL THEN RETURN v_op.published_result; END IF;
  IF v_op.state<>'succeeded' OR v_op.result IS NULL THEN RAISE EXCEPTION 'Brouillon indisponible' USING ERRCODE='PT409'; END IF;
+ IF p_expected_draft_version IS DISTINCT FROM v_op.draft_version THEN
+  RAISE EXCEPTION 'Le brouillon a changé. Vérifiez la correction avant de publier.' USING ERRCODE='PT409'; END IF;
  FOR v_source IN SELECT value FROM jsonb_array_elements(v_op.context->'sources') ORDER BY value->>'id' LOOP
   IF v_source->>'kind'='upload' THEN
    PERFORM 1 FROM internal.restaurant_carte_upload WHERE id=(v_source->>'id')::uuid FOR UPDATE;
@@ -356,7 +358,7 @@ BEGIN
 END $fn$;
 
 REVOKE ALL ON FUNCTION internal.menu_extraction_storage_snapshot(text,text),internal.menu_extraction_context(text,jsonb,uuid),
- internal.menu_extraction_quota_json(uuid,date),internal.assert_menu_extraction_publication(uuid,text),
+ internal.menu_extraction_quota_json(uuid,date),internal.assert_menu_extraction_publication(uuid,text,integer),
  internal.record_menu_extraction_publication(uuid,text,jsonb,uuid[]) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION api.menu_extraction_storage_receipt(text,text),api.menu_extraction_context(text,jsonb,uuid),
  api.seal_menu_extraction(uuid,uuid,text,jsonb,uuid,jsonb,jsonb,integer,jsonb),api.get_menu_extraction(uuid),api.list_menu_extractions(text),api.reserve_menu_extraction(uuid),

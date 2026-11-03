@@ -29,10 +29,11 @@ it('publishes a narrow patch with a distinct intention UUID and optional extract
   input.items[0].name = 'Nouvelle carte';
   const confirmed = snapshot(); confirmed.menus[0].name = 'Nouvelle carte';
   rpc.mockResolvedValueOnce({ data: { success: true, snapshot: confirmed }, error: null });
-  const result = await publishPortalMenus('RES1', input, '00000000-0000-4000-a000-000000009102');
+  const result = await publishPortalMenus('RES1', input, '00000000-0000-4000-a000-000000009102', 0);
   expect(rpc).toHaveBeenLastCalledWith('publish_portal_menus', {
     p_object_id: 'RES1', p_extraction_operation_id: '00000000-0000-4000-a000-000000009102',
-    p_payload: expect.objectContaining({ request_id: expect.stringMatching(/^[0-9a-f-]{36}$/), menus: [expect.objectContaining({ id, changes: { name: 'Nouvelle carte' } })] }),
+    p_payload: expect.objectContaining({ request_id: expect.stringMatching(/^[0-9a-f-]{36}$/), extraction_draft_version: 0,
+      menus: [expect.objectContaining({ id, changes: { name: 'Nouvelle carte' } })] }),
   });
   expect(result.items[0].name).toBe('Nouvelle carte');
 });
@@ -73,4 +74,25 @@ it('never turns an unnamed new dish into a placeholder publication', async () =>
   input.items[0].items = [{ recordId: '00000000-0000-4000-a000-000000009104', name: '' }] as typeof input.items[number]['items'];
   await expect(publishPortalMenus('RES1', input)).rejects.toThrow(/Nommez.*saisie est conservée/);
   expect(rpc).toHaveBeenCalledTimes(1);
+});
+
+it('requires the extraction draft version before any publication call', async () => {
+  rpc.mockResolvedValueOnce({ data: snapshot(), error: null });
+  const input = await getPortalMenus('RES1', empty());
+  await expect(publishPortalMenus('RES1', input, '00000000-0000-4000-a000-000000009102')).rejects.toThrow(/Rechargez le brouillon/);
+  expect(rpc).toHaveBeenCalledTimes(1);
+});
+
+it('reconciles a lost successful publication with its exact old version before a new intention', async () => {
+  rpc.mockResolvedValueOnce({ data: snapshot(), error: null });
+  const input = await getPortalMenus('RES1', empty()); input.items[0].name = 'From extraction';
+  rpc.mockRejectedValueOnce(new Error('response lost'));
+  const operation = '00000000-0000-4000-a000-000000009102';
+  await expect(publishPortalMenus('RES1', input, operation, 1)).rejects.toThrow('response lost');
+  const sent = rpc.mock.calls[1][1];
+  rpc.mockResolvedValueOnce({ data: { success: true, replayed: true, snapshot: snapshot() }, error: null });
+  await expect(publishPortalMenus('RES1', input, operation, 2)).rejects.toThrow(/confirmé.*Rechargez/);
+  expect(rpc.mock.calls[2][1]).toEqual(sent);
+  expect(rpc.mock.calls[2][1].p_payload.extraction_draft_version).toBe(1);
+  expect(input.items[0].name).toBe('From extraction');
 });

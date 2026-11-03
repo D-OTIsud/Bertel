@@ -29,6 +29,8 @@ Les suppressions sont explicites, les identifiants restent stables, et une erreu
 
 `api.publish_portal_menus(text,jsonb,uuid)` accepte une opération E facultative. Sans opération, la saisie manuelle fonctionne sans document ni IA. Avec E, le contrôle de source/pages/cible précède l’écriture et l’enregistrement des IDs effectivement écrits appartient à la même transaction. L’ordre commun est fiche, opération, source/document, menus. Un échec tardif annule menus, reçus et association E.
 
+Avec une opération E, `p_payload.extraction_draft_version` est obligatoire et appartient à l’intention exacte. E compare cette version sous son verrou avant toute écriture : une publication prise avant la correction d’un autre onglet est refusée. Ce champ est retiré avant le writer R4. Un reçu de publication déjà réussie est réconcilié avant les nouvelles vérifications de version/source et ne réécrit rien.
+
 Le parent menu ne possède pas de prix/devise de formule dans ce contrat. Le backend ne crée aucun faux plat pour représenter une formule tarifée. Une formule non représentable doit être signalée dans le résultat E, conservée comme telle pour revue, et rester hors publication structurée jusqu’à une décision de contrat. Aucune propriété publique supplémentaire ni suppression silencieuse n’est retenue ici.
 
 ## Validation et activation

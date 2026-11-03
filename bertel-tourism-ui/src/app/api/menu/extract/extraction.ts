@@ -45,6 +45,10 @@ export const extractedMenuSchema = z.object({
       }),
     )
     .default([]),
+  unsupported_offers: z.array(z.object({
+    label: z.string().min(1).max(240), price: z.union([z.string().max(80), z.number()]).optional(),
+    reason: z.string().max(240).optional(),
+  })).max(50).optional(),
 });
 export type ExtractedMenu = z.infer<typeof extractedMenuSchema>;
 
@@ -65,6 +69,7 @@ export function buildExtractionPrompt(inp: {
   allowedSections: AllowedOption[];
   allowedDietary: AllowedOption[];
   lang?: string;
+  reportUnsupportedOffers?: boolean;
 }): { system: string; user: string } {
   const sections = inp.allowedSections.map((s) => s.label).filter(Boolean);
   const dietary = inp.allowedDietary.map((d) => d.label).filter(Boolean);
@@ -79,6 +84,10 @@ export function buildExtractionPrompt(inp: {
     "N'invente jamais de régime. Et surtout : n'inclus JAMAIS d'allergènes — ne devine pas les allergènes, ils sont saisis par un humain.",
     '"price" est une chaîne telle qu\'affichée (ex. "12 €", "15.50"), ou "" si absent.',
     `Langue des libellés et descriptions : ${lang}.`,
+    ...(inp.reportUnsupportedOffers ? [
+      'Les prix globaux de formules ou menus composés ne sont pas représentables comme prix de plat. Ne crée pas de faux plat, ne répartis pas ce prix entre les plats et ne mets pas le prix dans le titre.',
+      'Conserve ces offres séparément dans "unsupported_offers": [{"label": string, "price": string, "reason": string}]. Recopie leur libellé et prix affichés, avec reason="formula_price_not_modelled". Extrais les vrais plats sans leur attribuer le prix de la formule.',
+    ] : []),
   ].join('\n');
 
   const user =

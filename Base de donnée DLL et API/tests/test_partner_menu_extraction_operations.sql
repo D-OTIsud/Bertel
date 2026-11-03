@@ -81,17 +81,31 @@ BEGIN
  ASSERT api.get_menu_extraction(op)#>>'{draft,menu,title}'='Reviewed';
  ASSERT api.get_menu_extraction(op)#>>'{result,menu,title}'='Extracted','draft overwrote model audit result';
  ASSERT jsonb_array_length(api.list_menu_extractions('RESRUN999999E201'))=1,'server recovery lost operation list';
+ -- Two tabs share version 1; tab B saves version 2 while menus stay unchanged.
+ -- Tab A cannot publish its obsolete content simply because its menu CAS matches.
+ before_state:=internal.object_menu_write_snapshot('RESRUN999999E201');
+ SELECT r INTO expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(before_state)->'menus') r WHERE r->>'id'=menu::text;
+ PERFORM api.save_menu_extraction_draft(op,1,'{"menu":{"title":"Newer tab correction","items":[]}}');
+ payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e215',
+  'extraction_draft_version',1,'menus',jsonb_build_array(jsonb_build_object('id',menu,'expected',expected,'changes',jsonb_build_object('description','Stale tab content'))),
+  'items','[]'::jsonb,'deleted_items','[]'::jsonb,'deleted_menus','[]'::jsonb);
+ rejected:=false;BEGIN PERFORM api.publish_portal_menus('RESRUN999999E201',payload,op);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
+ ASSERT rejected,'stale draft version published over a newer tab correction';
+ ASSERT internal.object_menu_write_snapshot('RESRUN999999E201')=before_state,'stale draft changed menus';
+ ASSERT api.get_menu_extraction(op)#>>'{draft,menu,title}'='Newer tab correction','newer draft was lost';
+ ASSERT (SELECT published_result IS NULL FROM internal.menu_extraction_operation WHERE id=op),'stale draft left publication receipt';
  -- A later child conflicts against the E target bundle, with no mutation.
  INSERT INTO public.object_menu_item(id,menu_id,name) VALUES(child,menu,'Concurrent child');
- rejected:=false;BEGIN PERFORM internal.assert_menu_extraction_publication(op,'RESRUN999999E201');EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
+ rejected:=false;BEGIN PERFORM internal.assert_menu_extraction_publication(op,'RESRUN999999E201',2);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
  ASSERT rejected,'late target child was ignored';
  DELETE FROM public.object_menu_item WHERE id=child;
- ASSERT internal.assert_menu_extraction_publication(op,'RESRUN999999E201') IS NULL;
+ ASSERT internal.assert_menu_extraction_publication(op,'RESRUN999999E201',2) IS NULL;
  -- Real M/E transaction: deleting the sole target leaves no published menu IDs;
  -- E record rejects and PostgreSQL rolls back BOTH menu deletion and receipts.
  expected:=internal.portal_menu_write_snapshot(internal.object_menu_write_snapshot('RESRUN999999E201'));
  SELECT r INTO expected FROM jsonb_array_elements(expected->'menus') r WHERE r->>'id'=menu::text;
  payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e210',
+  'extraction_draft_version',2,
   'menus','[]'::jsonb,'items','[]'::jsonb,'deleted_items','[]'::jsonb,
   'deleted_menus',jsonb_build_array(jsonb_build_object('id',menu,'expected',jsonb_build_object('row',expected))));
  before_state:=internal.object_menu_write_snapshot('RESRUN999999E201');
@@ -101,6 +115,7 @@ BEGIN
  ASSERT (SELECT published_result IS NULL FROM internal.menu_extraction_operation WHERE id=op),'record failure left E receipt';
  SELECT r INTO expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(before_state)->'menus') r WHERE r->>'id'=other_menu::text;
  payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e214',
+  'extraction_draft_version',2,
   'menus',jsonb_build_array(jsonb_build_object('id',other_menu,'expected',expected,'changes',jsonb_build_object('description','Wrong target'))),
   'items','[]'::jsonb,'deleted_items','[]'::jsonb,'deleted_menus','[]'::jsonb);
  rejected:=false;BEGIN PERFORM api.publish_portal_menus('RESRUN999999E201',payload,op);EXCEPTION WHEN invalid_parameter_value THEN rejected:=true;END;
@@ -108,6 +123,7 @@ BEGIN
  ASSERT internal.object_menu_write_snapshot('RESRUN999999E201')=before_state,'wrong-target association left a menu write';
  SELECT r INTO expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(before_state)->'menus') r WHERE r->>'id'=menu::text;
  payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e211',
+  'extraction_draft_version',2,
   'menus',jsonb_build_array(jsonb_build_object('id',menu,'expected',expected,'changes',jsonb_build_object('description','Reviewed extraction'))),
   'items','[]'::jsonb,'deleted_items','[]'::jsonb,'deleted_menus','[]'::jsonb);
  result:=api.publish_portal_menus('RESRUN999999E201',payload,op);

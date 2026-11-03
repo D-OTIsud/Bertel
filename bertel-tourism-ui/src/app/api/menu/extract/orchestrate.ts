@@ -19,16 +19,20 @@ export interface OrchestrateInput {
   allowedDietary: AllowedOption[];
   images: VisionImage[];
   lang?: string;
+  reportUnsupportedOffers?: boolean;
 }
 
 export interface OrchestrateDeps {
   getActiveProvider: () => Promise<{ config: ProviderConfig; apiKey: string | null } | null>;
   callProvider?: typeof callVisionExtraction;
   signal?: AbortSignal;
+  /** Partner jobs meter one provider attempt; the existing office flow keeps repair by default. */
+  repairInvalidJson?: boolean;
 }
 
 export type OrchestrateResult =
-  | { ok: true; menu: ObjectWorkspaceMenu; suggestedDietaryByDish: string[][] }
+  | { ok: true; menu: ObjectWorkspaceMenu; suggestedDietaryByDish: string[][];
+      warnings?: { code: 'formula_price_not_modelled'; message: string; offers: {label:string;price:string;reason:string}[] }[] }
   | { ok: false; code: 'no_images' | 'not_configured' | 'provider_error' | 'unparseable'; detail: string };
 
 export async function orchestrateExtraction(
@@ -49,6 +53,7 @@ export async function orchestrateExtraction(
     allowedSections: input.allowedSections,
     allowedDietary: input.allowedDietary,
     lang: input.lang,
+    reportUnsupportedOffers: input.reportUnsupportedOffers,
   });
 
   async function attempt(userPrompt: string) {
@@ -61,7 +66,7 @@ export async function orchestrateExtraction(
 
   try {
     let parsed = await attempt(prompt.user);
-    if (!parsed.ok) {
+    if (!parsed.ok && deps.repairInvalidJson !== false) {
       // one repair retry — tell the model exactly what was wrong
       parsed = await attempt(
         `${prompt.user}\n\nTon précédent retour n'était pas un JSON valide (${parsed.error}). Réponds UNIQUEMENT avec le JSON conforme au schéma.`,
@@ -76,7 +81,11 @@ export async function orchestrateExtraction(
       allowedDietary: input.allowedDietary,
       lang: input.lang,
     });
-    return { ok: true, menu, suggestedDietaryByDish };
+    return { ok: true, menu, suggestedDietaryByDish, ...(input.reportUnsupportedOffers ? {warnings:[{
+      code:'formula_price_not_modelled' as const,
+      message:'Vérifiez les formules de la carte : leur prix global ne peut pas être publié comme prix de plat. Les offres signalées restent à vérifier dans la source.',
+      offers:(parsed.data.unsupported_offers??[]).map(offer=>({label:offer.label,price:offer.price===undefined?'':String(offer.price),reason:offer.reason||'formula_price_not_modelled'})),
+    }]} : {}) };
   } catch (err) {
     if (err instanceof ProviderError) {
       return { ok: false, code: 'provider_error', detail: err.message };

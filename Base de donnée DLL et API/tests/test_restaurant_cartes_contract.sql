@@ -95,6 +95,32 @@ BEGIN
  v_rejected:=false; BEGIN PERFORM api.finalize_restaurant_carte_mutation(v_edit); EXCEPTION WHEN SQLSTATE 'PT409' THEN v_rejected:=true; END;
  ASSERT v_rejected,'old baseline overwrote office correction';
  ASSERT (SELECT title='Office correction' FROM public.object_document WHERE object_id='RESRUN999999C201' AND document_id=v_new);
+ -- A target withdrawn/replaced by another writer is a stale baseline, not a
+ -- permission failure. Both preparation and finalization preserve that writer.
+ SELECT value->'expected' INTO v_expected FROM jsonb_array_elements(api.read_restaurant_cartes('RESRUN999999C201'))
+ WHERE value->>'documentId'=v_other::text;
+ v_payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','remove','document_id',v_other,'expected',v_expected);
+ PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999C201','00000000-0000-4000-a000-00000000c20c',v_payload);
+ DELETE FROM public.object_document WHERE object_id='RESRUN999999C201' AND document_id=v_other;
+ v_rejected:=false; BEGIN PERFORM api.finalize_restaurant_carte_mutation('00000000-0000-4000-a000-00000000c20c'); EXCEPTION WHEN SQLSTATE 'PT409' THEN v_rejected:=true; END;
+ ASSERT v_rejected,'concurrent withdrawal was not reported as conflict';
+ v_rejected:=false; BEGIN PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999C201','00000000-0000-4000-a000-00000000c20d',v_payload); EXCEPTION WHEN SQLSTATE 'PT409' THEN v_rejected:=true; END;
+ ASSERT v_rejected,'already withdrawn target was not reported as conflict';
+ INSERT INTO public.object_document(object_id,document_id,role_id,title,position) VALUES('RESRUN999999C201',v_other,v_carte,'Independent menu',2);
+ SELECT value->'expected' INTO v_expected FROM jsonb_array_elements(api.read_restaurant_cartes('RESRUN999999C201')) WHERE value->>'documentId'=v_other::text;
+ v_payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','publish','upload_id',v_upload,'document_id',v_other,'expected',v_expected);
+ PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999C201','00000000-0000-4000-a000-00000000c20e',v_payload);
+ DELETE FROM public.object_document WHERE object_id='RESRUN999999C201' AND document_id=v_other;
+ INSERT INTO public.object_document(object_id,document_id,role_id,title,position) VALUES('RESRUN999999C201',v_old,v_carte,'Concurrent replacement',2);
+ v_rejected:=false; BEGIN PERFORM api.finalize_restaurant_carte_mutation('00000000-0000-4000-a000-00000000c20e'); EXCEPTION WHEN SQLSTATE 'PT409' THEN v_rejected:=true; END;
+ ASSERT v_rejected,'concurrent replacement was not reported as conflict';
+ ASSERT EXISTS(SELECT 1 FROM public.object_document WHERE object_id='RESRUN999999C201' AND document_id=v_old),'concurrent replacement lost';
+ DELETE FROM public.object_document WHERE object_id='RESRUN999999C201' AND document_id=v_old;
+ INSERT INTO public.object_document(object_id,document_id,role_id,title,position) VALUES('RESRUN999999C201',v_other,v_carte,'Independent menu',2);
+ v_payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','remove','document_id',v_private,
+  'expected',internal.restaurant_carte_link_snapshot('RESRUN999999C201',v_private));
+ v_rejected:=false; BEGIN PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999C201','00000000-0000-4000-a000-00000000c20f',v_payload); EXCEPTION WHEN insufficient_privilege THEN v_rejected:=true; END;
+ ASSERT v_rejected,'non-public actor target no longer denied';
  SELECT value->'expected' INTO v_expected FROM jsonb_array_elements(api.read_restaurant_cartes('RESRUN999999C201'))
  WHERE value->>'documentId'=v_new::text;
  v_payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','remove','document_id',v_new,'expected',v_expected);

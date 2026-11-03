@@ -1,5 +1,11 @@
 -- R3b cutover: run only after R4 has closed old menu delete/reinsert clients.
 -- Do not reopen private reads or raw menu DML during rollback.
+-- Intended INVOKER impact: search_restaurants_by_cuisine and
+-- search_events_by_restaurant_cuisine inherit this visibility gate. Anonymous
+-- membership/counts/cuisines (including nested associated restaurant cuisines)
+-- no longer derive from private/partners menus. Canonical correctors and the
+-- privileged service role retain their existing responses; no RPC JSON is changed.
+-- Rehearsal: tests/test_partner_menu_cuisine_invoker_read.sql, disposable DB only.
 BEGIN;
 SET LOCAL lock_timeout='500ms';
 SET LOCAL statement_timeout='10s';

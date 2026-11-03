@@ -21,6 +21,9 @@ on:
       - 'bertel-tourism-ui/src/app/api/public/**'
       - 'bertel-tourism-ui/src/lib/public-api.ts'
       - 'bertel-tourism-ui/src/lib/partner-auth.ts'
+      - 'bertel-tourism-ui/src/lib/**'
+      - 'bertel-tourism-ui/src/services/**'
+      - 'bertel-tourism-ui/src/types/**'
       - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
@@ -35,6 +38,9 @@ on:
       - 'bertel-tourism-ui/src/app/api/public/**'
       - 'bertel-tourism-ui/src/lib/public-api.ts'
       - 'bertel-tourism-ui/src/lib/partner-auth.ts'
+      - 'bertel-tourism-ui/src/lib/**'
+      - 'bertel-tourism-ui/src/services/**'
+      - 'bertel-tourism-ui/src/types/**'
       - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
@@ -94,6 +100,11 @@ jobs:
           # runs. Seed only the empty namespace during the CLI bootstrap.
           cat > "$RUNNER_TEMP/bertel-fresh/supabase/seed.sql" <<'SQL'
           CREATE SCHEMA IF NOT EXISTS api;
+          -- Independent evidence of the disposable bootstrap, checked by fixtures.
+          CREATE SCHEMA bertel_ci_fixture;
+          REVOKE ALL ON SCHEMA bertel_ci_fixture FROM PUBLIC;
+          CREATE TABLE bertel_ci_fixture.bootstrap (purpose text NOT NULL);
+          INSERT INTO bertel_ci_fixture.bootstrap VALUES ('partner-contract-local-only');
           SQL
 
       - name: Start Supabase local database
@@ -601,6 +612,9 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_api_route_contract.sql"
           supabase status --workdir "$RUNNER_TEMP/bertel-fresh" -o json > "$RUNNER_TEMP/bertel-local-status.json"
           node tools/partner-api/run-ephemeral-route-tests.mjs "$RUNNER_TEMP/bertel-local-status.json"
+          mkdir -p "$RUNNER_TEMP/partner-api-evidence"
+          psql "$DB_URL" -At -v ON_ERROR_STOP=1 -c 'SELECT row_to_json(b) FROM internal.portal_api_contract_baseline b' > "$RUNNER_TEMP/partner-api-evidence/synthetic-api-reference.jsonl"
+          psql "$DB_URL" -At -v ON_ERROR_STOP=1 -c 'SELECT row_to_json(b) FROM internal.partner_api_full_benchmark b ORDER BY phase,sample' > "$RUNNER_TEMP/partner-api-evidence/full100-benchmark.jsonl"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_api_full_benchmark.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_portal_api_contract.sql"
 

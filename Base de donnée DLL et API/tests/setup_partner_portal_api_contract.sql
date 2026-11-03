@@ -2,6 +2,7 @@
 -- Run once before R1/R3a for upgrade, or after them for a fresh final-schema check.
 -- PGOPTIONS='-c bertel.ephemeral_ci=on' is required; never run on production.
 \set ON_ERROR_STOP on
+\ir assert_partner_api_ephemeral.sql
 DO $$ BEGIN
  IF current_setting('bertel.ephemeral_ci',true) IS DISTINCT FROM 'on' THEN
   RAISE EXCEPTION 'Disposable Supabase required: bertel.ephemeral_ci=on';
@@ -84,7 +85,8 @@ INSERT INTO public.ref_document(id,url,title,access_scope,valid_from,valid_to) V
  ('00000000-0000-4000-a000-00000000b234','https://files.example.test/cards/b234.pdf','Future document','public',CURRENT_DATE+1,NULL),
  ('00000000-0000-4000-a000-00000000b235','https://files.example.test/cards/b235.pdf','Expired document','public',NULL,CURRENT_DATE-1),
  ('00000000-0000-4000-a000-00000000b236','https://files.example.test/cards/b236.pdf','Private document','crm_private',NULL,NULL),
- ('00000000-0000-4000-a000-00000000b237','https://files.example.test/cards/b237.jpg','Inclusive boundary document','public',CURRENT_DATE,CURRENT_DATE);
+ ('00000000-0000-4000-a000-00000000b237','https://files.example.test/cards/b237.jpg','Inclusive boundary document','public',CURRENT_DATE,CURRENT_DATE),
+ ('00000000-0000-4000-a000-00000000b238','storage://actor-documents/private-card.pdf','Non HTTP public metadata','public',NULL,NULL);
 INSERT INTO public.object_document(object_id,document_id,role_id,title,position,valid_from,valid_to)
  SELECT 'RESRUN999999B201',d.id,r.id,'Link title '||right(d.id::text,4),
         row_number() OVER(ORDER BY d.id)::integer,
@@ -94,7 +96,8 @@ INSERT INTO public.object_document(object_id,document_id,role_id,title,position,
  WHERE r.code='carte' AND d.id IN (
  '00000000-0000-4000-a000-00000000b231','00000000-0000-4000-a000-00000000b232',
  '00000000-0000-4000-a000-00000000b233','00000000-0000-4000-a000-00000000b234',
- '00000000-0000-4000-a000-00000000b235','00000000-0000-4000-a000-00000000b236','00000000-0000-4000-a000-00000000b237');
+ '00000000-0000-4000-a000-00000000b235','00000000-0000-4000-a000-00000000b236',
+ '00000000-0000-4000-a000-00000000b237','00000000-0000-4000-a000-00000000b238');
 -- The valid source is also shared: no visibility patch may unlink or delete it.
 INSERT INTO public.object_document(object_id,document_id,role_id)
  SELECT 'ORGRUN999999B901','00000000-0000-4000-a000-00000000b231',id

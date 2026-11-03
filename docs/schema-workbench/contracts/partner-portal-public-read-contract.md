@@ -8,7 +8,7 @@ including when its SQL value is NULL. All other JSON keys, labels, types, values
 orders remain unchanged. Office table reads/writes retain the new nullable text.
 
 R3a filters only public content: active menus, available dishes, and public cards whose
-link and document dates are valid (inclusive date bounds). Existing extended object scope
+link and document dates are valid (inclusive date bounds), with an HTTP(S) URL. Existing extended object scope
 retains the complete menu/card data. `service_role` alone does not create extended scope.
 There is no RLS change here. R3b remains dependent on the safe office menu writer.
 
@@ -37,7 +37,7 @@ After the historical reader patches (whose final normalized prosrc MD5 is
 1. `supabase/migrations/20261103065333_partner_portal_activity_api_contract.sql`
    — resulting reader MD5 `fc810940fc3fff5db7d3068563e924a2`.
 2. `supabase/migrations/20261103065350_partner_portal_restaurant_public_read_contract.sql`
-   — resulting reader MD5 `c344c79a5cbda390def03d9c2da5b31e`.
+   — resulting reader MD5 `f37390c0e22123cdfa378626b0ded7f9`.
 3. `supabase/migrations/20261103065411_partner_portal_regional_primary_openings.sql`
    — optional regional reader, source `f124fc6099dc2373bcf3a32aaead4fc5`,
    target `e4d112b4f34528f2412065d3802cbe0d`.
@@ -93,7 +93,7 @@ Exact public exclusions on complete RES:
 - Unavailable dish `00000000-0000-4000-a000-00000000b222`.
 - Private/partners menus `...b213`/`...b214` were already filtered by the existing reader.
 - Card IDs `00000000-0000-4000-a000-00000000b232` through `...b236` (link dates, document
-  dates, or private scope). `...b231` and inclusive-current-day `...b237` remain byte-for-byte
+  dates, or private scope), plus `...b238` (`storage://` URL). `...b231` and inclusive-current-day `...b237` remain byte-for-byte
   equivalent as JSON values. The valid document has a second link to prove it is not deleted.
 
 ## Isolated full-page performance budget

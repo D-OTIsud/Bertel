@@ -1,3 +1,4 @@
+\ir assert_partner_api_ephemeral.sql
 DO $$ BEGIN
   IF current_setting('bertel.ephemeral_ci',true) IS DISTINCT FROM 'on' THEN
     RAISE EXCEPTION 'Disposable Supabase required: bertel.ephemeral_ci=on';

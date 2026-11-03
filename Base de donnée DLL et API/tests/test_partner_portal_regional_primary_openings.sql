@@ -9,10 +9,8 @@ BEGIN;
 DO $test$
 DECLARE v_main jsonb; v_reception jsonb; v_service jsonb; v_before jsonb; v_after jsonb;
 BEGIN
- IF to_regprocedure('api.tourinsoft_reunion_regional_documents(text[])') IS NULL THEN
-  RAISE NOTICE 'X1 optional regional serializer absent; no fixture/export activation';
-  RETURN;
- END IF;
+ ASSERT to_regprocedure('api.tourinsoft_reunion_regional_documents(text[])') IS NOT NULL,
+   'CI manifest must install the real regional serializer; absence is not a passing X1 test';
  ASSERT NOT has_function_privilege('anon','api.tourinsoft_reunion_regional_documents(text[])','EXECUTE');
  ASSERT NOT has_function_privilege('authenticated','api.tourinsoft_reunion_regional_documents(text[])','EXECUTE');
  ASSERT has_function_privilege('service_role','api.tourinsoft_reunion_regional_documents(text[])','EXECUTE');

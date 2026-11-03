@@ -14,7 +14,7 @@ BEGIN
   IF v_function IS NULL THEN RAISE EXCEPTION 'restaurant_public_read_contract: reviewed reader missing'; END IF;
   SELECT md5(replace(p.prosrc,E'\r\n',E'\n')),pg_get_functiondef(p.oid),jsonb_build_object('owner',p.proowner,'acl',to_jsonb(p.proacl),'config',to_jsonb(p.proconfig),'definer',p.prosecdef,'strict',p.proisstrict,'volatility',p.provolatile,'parallel',p.proparallel,'returns',p.prorettype,'set',p.proretset,'args',p.proargtypes::text)
     INTO v_source_md5,v_definition,v_metadata FROM pg_proc p WHERE p.oid=v_function;
-  IF v_source_md5='c344c79a5cbda390def03d9c2da5b31e' THEN RETURN; END IF;
+  IF v_source_md5='f37390c0e22123cdfa378626b0ded7f9' THEN RETURN; END IF;
   IF v_source_md5 IS DISTINCT FROM 'fc810940fc3fff5db7d3068563e924a2' THEN
     RAISE EXCEPTION 'restaurant_public_read_contract: unexpected source %, compare live definition before applying',v_source_md5;
   END IF;
@@ -40,6 +40,7 @@ BEGIN
   v_after := $after3$AND rt.code = 'carte'
           AND (v_can_read_extended OR (
             d.access_scope = 'public'
+            AND d.url ~* '^https?://'
             AND (od.valid_from IS NULL OR od.valid_from <= CURRENT_DATE)
             AND (od.valid_to IS NULL OR od.valid_to >= CURRENT_DATE)
             AND (d.valid_from IS NULL OR d.valid_from <= CURRENT_DATE)
@@ -60,7 +61,7 @@ BEGIN
   END IF;
   v_definition:=replace(v_definition,v_before,v_after);
   EXECUTE v_definition;
-  IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=v_function) IS DISTINCT FROM 'c344c79a5cbda390def03d9c2da5b31e' THEN
+  IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=v_function) IS DISTINCT FROM 'f37390c0e22123cdfa378626b0ded7f9' THEN
     RAISE EXCEPTION 'restaurant_public_read_contract: unexpected target definition';
   END IF;
   IF (SELECT jsonb_build_object('owner',p.proowner,'acl',to_jsonb(p.proacl),'config',to_jsonb(p.proconfig),'definer',p.prosecdef,'strict',p.proisstrict,'volatility',p.provolatile,'parallel',p.proparallel,'returns',p.prorettype,'set',p.proretset,'args',p.proargtypes::text) FROM pg_proc p WHERE p.oid=v_function) IS DISTINCT FROM v_metadata THEN

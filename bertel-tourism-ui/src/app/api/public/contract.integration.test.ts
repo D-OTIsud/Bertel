@@ -74,6 +74,9 @@ isolatedSuite('public API against ephemeral Supabase (no business mocks)', () =>
     expect(response.status).toBe(200);
     expect(response.headers.get('X-Bertel-Api-Version')).toBe('1.0.0');
     expect(response.headers.get('X-RateLimit-Limit')).toBe('120');
+    const remaining = Number(response.headers.get('X-RateLimit-Remaining'));
+    expect(remaining).toBeGreaterThanOrEqual(0);
+    expect(remaining).toBeLessThan(120); // the fail-open fallback returns 120
     const body = await response.json();
     expect(Object.keys(body).sort()).toEqual(['data', 'meta']);
     expect(body.meta).toEqual({ contract_version: '1.0.0' });
@@ -87,7 +90,7 @@ isolatedSuite('public API against ephemeral Supabase (no business mocks)', () =>
   });
 
   it('preserves the actual all-language enrichment instead of accepting a degraded 200', async () => {
-    const id = ids[0];
+    const id = 'RESRUN999999B201';
     const response = await getObject(request(`objects/${id}?lang=all`), { params: Promise.resolve({ id }) });
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -95,6 +98,8 @@ isolatedSuite('public API against ephemeral Supabase (no business mocks)', () =>
     const sql = await callPublicRpc('get_object_i18n_all', { p_object_id: id });
     expect(sql.ok).toBe(true);
     expect(body.data.i18n).toEqual(sql.body ?? {});
+    expect(JSON.stringify(body.data.i18n)).toContain('English description');
+    expect(JSON.stringify(body.data.i18n)).toContain('Restaurant');
   });
 
   it('keeps list defaults, ceilings, metadata and opaque pagination', async () => {
@@ -108,6 +113,7 @@ isolatedSuite('public API against ephemeral Supabase (no business mocks)', () =>
       expect(body.meta.total).toBeGreaterThanOrEqual(ids.length);
       expect(Array.isArray(body.data)).toBe(true);
       expect(body.data.length).toBeLessThanOrEqual(pageSize);
+      if (pageSize === 100) expect(body.data).toHaveLength(100);
       assertNoActivityDetail(body.data);
     }
     const firstResponse = await listObjects(request('objects?page_size=2'));

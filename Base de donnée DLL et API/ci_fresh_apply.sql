@@ -672,6 +672,8 @@ ROLLBACK;
 
 -- The upgrade CI scenario stops before the reader patches, then reconstructs the
 -- observed missing activity column and captures real responses before upgrading.
+\echo '== Package the already-live reader baseline before new corrections or upgrade capture =='
+\ir packaging_partner_resource_live_baseline.sql
 \if :{?partner_portal_skip_read_fixes}
 \echo '== Reader fixes deferred ONLY for disposable upgrade verification =='
 \else

@@ -52,7 +52,8 @@ BEGIN
 END
 $function$;
 REVOKE ALL ON FUNCTION api.save_portal_stay_times(text,text,text,text) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION api.save_portal_stay_times(text,text,text,text) TO authenticated;
+-- Historical preparation was never live. Keep it unreachable even if replayed after R2.
+-- Only patch_portal_stay_times, granted by the explicit CAS cutover, may expose actor writes.
 COMMENT ON FUNCTION api.save_portal_stay_times(text,text,text,text) IS 'Portail : exception D7 pour trois heures seulement. Persona acteur, propre hebergement, perimetre et masquage verifies ; conditions preservees.';
 COMMIT;
 NOTIFY pgrst, 'reload schema';

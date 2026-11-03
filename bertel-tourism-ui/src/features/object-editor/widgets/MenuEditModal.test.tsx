@@ -9,7 +9,7 @@ jest.mock('../../../components/markdown/MarkdownEditorLazy', () => ({
 }));
 const SECTIONS = [{ id: 'entree', code: 'entree', label: 'Entrées' }, { id: 'main', code: 'main', label: 'Plats' }];
 function dish(over: Partial<ObjectWorkspaceMenuItem> = {}): ObjectWorkspaceMenuItem {
-  return { ...createMenuItem(0, 'main', 'Plats'), recordId: 'mi1', name: 'Cari', price: '14', ...over };
+  return { ...createMenuItem(0, 'main', 'Plats'), isNew: false, recordId: 'mi1', name: 'Cari', price: '14', ...over };
 }
 function baseMenu(items: ObjectWorkspaceMenuItem[] = [], over: Partial<ObjectWorkspaceMenu> = {}): ObjectWorkspaceMenu {
   return { recordId: null, categoryId: '', categoryCode: '', categoryLabel: '', name: '', description: '', active: true, visibility: 'public', position: '1', items, ...over };

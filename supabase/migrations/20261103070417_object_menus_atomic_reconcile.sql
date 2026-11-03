@@ -2,6 +2,20 @@
 -- The public reader/JSON contract is deliberately untouched. Raw table DML closes separately.
 BEGIN;
 
+-- A receipt belongs only to this writer. Its exact request guards hash collisions;
+-- retaining it prevents a retry from recreating a row subsequently deleted elsewhere.
+CREATE TABLE IF NOT EXISTS internal.object_menu_write_receipt(
+  object_id text NOT NULL REFERENCES public.object(id) ON DELETE CASCADE,
+  principal text NOT NULL,
+  request_hash text NOT NULL,
+  request jsonb NOT NULL,
+  result jsonb NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY(object_id,principal,request_hash)
+);
+ALTER TABLE internal.object_menu_write_receipt ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON internal.object_menu_write_receipt FROM PUBLIC,anon,authenticated;
+
 CREATE OR REPLACE FUNCTION internal.object_menu_write_snapshot(p_object_id text)
 RETURNS jsonb LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog,public AS $$
   WITH menus AS (SELECT m.* FROM public.object_menu m WHERE m.object_id=p_object_id),
@@ -54,7 +68,9 @@ BEGIN
     RAISE EXCEPTION 'Contrat de liens de menu invalide.' USING ERRCODE='22023';
   END IF;
   IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_patch->'values') r
-      WHERE jsonb_typeof(r) IS DISTINCT FROM 'object' OR NOT r ? v_column
+      WHERE jsonb_typeof(r) IS DISTINCT FROM 'object' OR jsonb_typeof(r->v_column) IS DISTINCT FROM 'string'
+        OR (r->>v_column) !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+        OR (p_key='media' AND (jsonb_typeof(r->'position') IS DISTINCT FROM 'number' OR (r->>'position') !~ '^[0-9]+$'))
         OR EXISTS(SELECT 1 FROM jsonb_object_keys(r) k WHERE k<>v_column AND NOT(p_key='media' AND k='position')))
     OR (SELECT count(*) FROM jsonb_array_elements(p_patch->'values'))<>(SELECT count(DISTINCT r->>v_column) FROM jsonb_array_elements(p_patch->'values') r) THEN
     RAISE EXCEPTION 'Références de menu invalides ou répétées.' USING ERRCODE='22023';
@@ -89,9 +105,10 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION api.save_object_menus(p_object_id text,p_payload jsonb)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,internal AS $$
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,internal SET lock_timeout='5s' AS $$
 DECLARE v_entry jsonb; v_changes jsonb; v_expected jsonb; v_current jsonb; v_next jsonb;
   v_id uuid; v_menu_id uuid; v_key text; v_value jsonb; v_snapshot jsonb;
+  v_hash text; v_principal text; v_receipt internal.object_menu_write_receipt%ROWTYPE; v_result jsonb;
 BEGIN
   IF COALESCE(api.is_actor_persona(),false) THEN RAISE EXCEPTION 'Écriture réservée à l’office.' USING ERRCODE='42501'; END IF;
   PERFORM internal.workspace_assert_can_write_object(p_object_id);
@@ -108,17 +125,32 @@ BEGIN
   -- All cooperating writes serialize here, including first insert. Row locks also protect
   -- the preparation period from ordinary writes to known menus/items and their FK children.
   PERFORM 1 FROM public.object WHERE id=p_object_id FOR UPDATE;
+  v_hash:=md5(p_payload::text); v_principal:=COALESCE(auth.uid()::text,'service_role');
+  SELECT * INTO v_receipt FROM internal.object_menu_write_receipt WHERE object_id=p_object_id AND principal=v_principal AND request_hash=v_hash;
+  IF FOUND THEN
+    IF v_receipt.request IS DISTINCT FROM p_payload THEN RAISE EXCEPTION 'Collision de requête de menus.' USING ERRCODE='22023'; END IF;
+    RETURN v_receipt.result;
+  END IF;
   PERFORM 1 FROM public.object_menu WHERE object_id=p_object_id ORDER BY id FOR UPDATE;
   PERFORM 1 FROM public.object_menu_item WHERE menu_id IN(SELECT id FROM public.object_menu WHERE object_id=p_object_id) ORDER BY id FOR UPDATE;
 
   FOR v_entry IN SELECT value FROM jsonb_array_elements(p_payload->'menus') LOOP
     v_id:=(v_entry->>'id')::uuid; v_changes:=v_entry->'changes'; v_expected:=v_entry->'expected';
     IF v_id IS NULL OR jsonb_typeof(v_entry) IS DISTINCT FROM 'object' OR NOT v_entry ? 'expected'
+      OR jsonb_typeof(v_entry->'id') IS DISTINCT FROM 'string' OR jsonb_typeof(v_expected) NOT IN ('object','null')
       OR jsonb_typeof(v_changes) IS DISTINCT FROM 'object'
       OR EXISTS(SELECT 1 FROM jsonb_object_keys(v_entry) k WHERE k NOT IN ('id','expected','changes'))
       OR EXISTS(SELECT 1 FROM jsonb_object_keys(v_changes) k WHERE k NOT IN ('category_id','name','description','is_active','visibility','position')) THEN
       RAISE EXCEPTION 'Champs de menu invalides.' USING ERRCODE='22023';
     END IF;
+    FOR v_key,v_value IN SELECT key,value FROM jsonb_each(v_changes) LOOP
+      IF (v_key='name' AND jsonb_typeof(v_value)<>'string')
+        OR (v_key='is_active' AND jsonb_typeof(v_value)<>'boolean')
+        OR (v_key IN ('category_id','description','visibility') AND jsonb_typeof(v_value) NOT IN ('string','null'))
+        OR (v_key='position' AND (jsonb_typeof(v_value) NOT IN ('number','null') OR (v_value<>'null'::jsonb AND (v_value#>>'{}') !~ '^-?[0-9]+$'))) THEN
+        RAISE EXCEPTION 'Type de champ de menu invalide.' USING ERRCODE='22023';
+      END IF;
+    END LOOP;
     SELECT to_jsonb(m) INTO v_current FROM public.object_menu m WHERE id=v_id;
     IF v_current IS NOT NULL AND v_current->>'object_id'<>p_object_id THEN RAISE EXCEPTION 'Menu inaccessible.' USING ERRCODE='42501'; END IF;
     IF v_current IS NULL THEN
@@ -145,12 +177,23 @@ BEGIN
   FOR v_entry IN SELECT value FROM jsonb_array_elements(p_payload->'items') LOOP
     v_id:=(v_entry->>'id')::uuid; v_menu_id:=(v_entry->>'menu_id')::uuid; v_changes:=v_entry->'changes'; v_expected:=v_entry->'expected';
     IF v_id IS NULL OR jsonb_typeof(v_entry) IS DISTINCT FROM 'object' OR NOT v_entry ? 'expected'
+      OR jsonb_typeof(v_entry->'id') IS DISTINCT FROM 'string' OR jsonb_typeof(v_entry->'menu_id') IS DISTINCT FROM 'string'
+      OR jsonb_typeof(v_expected) NOT IN ('object','null')
       OR jsonb_typeof(v_changes) IS DISTINCT FROM 'object' OR jsonb_typeof(v_entry->'links') IS DISTINCT FROM 'object'
       OR EXISTS(SELECT 1 FROM jsonb_object_keys(v_entry) k WHERE k NOT IN ('id','menu_id','expected','changes','links'))
       OR EXISTS(SELECT 1 FROM jsonb_object_keys(v_changes) k WHERE k NOT IN ('name','description','price','currency','kind_id','unit_id','media_id','is_available','position','section_id'))
       OR EXISTS(SELECT 1 FROM jsonb_object_keys(v_entry->'links') k WHERE k NOT IN ('media','dietary','allergens','cuisines')) THEN
       RAISE EXCEPTION 'Champs de plat invalides.' USING ERRCODE='22023';
     END IF;
+    FOR v_key,v_value IN SELECT key,value FROM jsonb_each(v_changes) LOOP
+      IF (v_key IN ('name','currency') AND jsonb_typeof(v_value)<>'string')
+        OR (v_key='is_available' AND jsonb_typeof(v_value)<>'boolean')
+        OR (v_key IN ('kind_id','unit_id','media_id','section_id','description') AND jsonb_typeof(v_value) NOT IN ('string','null'))
+        OR (v_key IN ('price','position') AND jsonb_typeof(v_value) NOT IN ('number','null'))
+        OR (v_key='position' AND v_value<>'null'::jsonb AND (v_value#>>'{}') !~ '^-?[0-9]+$') THEN
+        RAISE EXCEPTION 'Type de champ de plat invalide.' USING ERRCODE='22023';
+      END IF;
+    END LOOP;
     IF NOT EXISTS(SELECT 1 FROM public.object_menu WHERE id=v_menu_id AND object_id=p_object_id)
       OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'deleted_menus') r WHERE r->>'id'=v_menu_id::text) THEN
       RAISE EXCEPTION 'Menu inaccessible.' USING ERRCODE='42501';
@@ -207,7 +250,12 @@ BEGIN
     IF v_current IS NOT NULL AND v_current IS DISTINCT FROM v_entry->'expected' THEN RAISE EXCEPTION 'Le menu à supprimer a changé. Rechargez les menus.' USING ERRCODE='PT409'; END IF;
     DELETE FROM public.object_menu WHERE id=v_id AND object_id=p_object_id;
   END LOOP;
-  RETURN jsonb_build_object('success',true,'snapshot',internal.object_menu_write_snapshot(p_object_id));
+  v_result:=jsonb_build_object('success',true,'snapshot',internal.object_menu_write_snapshot(p_object_id));
+  -- Empty patches only read the current state; they must not replay an old read receipt.
+  IF jsonb_array_length(p_payload->'menus')+jsonb_array_length(p_payload->'items')+jsonb_array_length(p_payload->'deleted_menus')+jsonb_array_length(p_payload->'deleted_items')>0 THEN
+    INSERT INTO internal.object_menu_write_receipt(object_id,principal,request_hash,request,result) VALUES(p_object_id,v_principal,v_hash,p_payload,v_result);
+  END IF;
+  RETURN v_result;
 END;
 $$;
 

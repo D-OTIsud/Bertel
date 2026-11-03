@@ -65,10 +65,14 @@ describe('mapExtractionToMenu', () => {
     expect(mapExtractionToMenu({ dishes: [] }, { menuTitle: '', allowedSections: SECTIONS, allowedDietary: DIETARY }).menu.name).toBe('Carte');
   });
 
-  it('maps each dish into the workspace shape (recordId null, available, position)', () => {
+  it('maps each dish into the workspace shape (stable UUIDs, new draft, available, position)', () => {
     const { menu } = mapExtractionToMenu(data, { menuTitle: '', allowedSections: SECTIONS, allowedDietary: DIETARY });
     expect(menu.items).toHaveLength(3);
-    expect(menu.items[0].recordId).toBeNull();
+    const ids = [menu.recordId, ...menu.items.map((item) => item.recordId)];
+    expect(ids.every((id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))).toBe(true);
+    expect(new Set(ids).size).toBe(4);
+    expect(menu.isNew).toBe(true);
+    expect(menu.items.every((item) => item.isNew)).toBe(true);
     expect(menu.items[0].available).toBe(true);
     expect(menu.items[0].position).toBe('1');
     expect(menu.active).toBe(true);

@@ -10,7 +10,7 @@ DECLARE
   v_other uuid:='00000000-0000-4000-a000-000000008715';
   v_photo uuid:='00000000-0000-4000-a000-000000008716';
   v_photo2 uuid:='00000000-0000-4000-a000-000000008717';
-  v_type uuid; v_base jsonb; v_payload jsonb; v_patch jsonb; v_before jsonb; v_after jsonb; v_result jsonb; v_denied boolean;
+  v_type uuid; v_base jsonb; v_payload jsonb; v_create_payload jsonb; v_patch jsonb; v_before jsonb; v_after jsonb; v_result jsonb; v_denied boolean;
 BEGIN
   PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
   ASSERT NOT has_function_privilege('anon','api.save_object_menus(text,jsonb)','execute');
@@ -63,6 +63,7 @@ BEGIN
   ASSERT internal.object_menu_write_snapshot('RESRUN9999998711')=v_before,'partial write survived failure';
   -- Stable client-generated ID makes a newly inserted menu retryable.
   v_payload:=jsonb_set(v_base,'{menus}',jsonb_build_array(jsonb_build_object('id',v_new,'expected','null'::jsonb,'changes','{"name":"Desserts","is_active":true,"visibility":"public","position":3}'::jsonb)));
+  v_create_payload:=v_payload;
   v_result:=api.save_object_menus('RESRUN9999998711',v_payload);
   ASSERT api.save_object_menus('RESRUN9999998711',v_payload)=v_result,'new menu retry duplicated or changed it';
   -- Full expected bundle catches an item added after the deletion was prepared.
@@ -81,6 +82,16 @@ BEGIN
   v_denied:=false;
   BEGIN PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base,'{deleted_menus}',jsonb_build_array(jsonb_build_object('id',v_other,'expected','{}'::jsonb)))); EXCEPTION WHEN insufficient_privilege THEN v_denied:=true; END;
   ASSERT v_denied,'foreign menu accepted';
+  -- A lost creation response followed by another writer's deletion must never resurrect it.
+  DELETE FROM public.object_menu WHERE id=v_new;
+  PERFORM api.save_object_menus('RESRUN9999998711',v_create_payload);
+  ASSERT NOT EXISTS(SELECT 1 FROM public.object_menu WHERE id=v_new),'retry resurrected a subsequently deleted menu';
+  v_denied:=false;
+  BEGIN
+    PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base,'{menus}',jsonb_build_array(jsonb_build_object('id',v_added,
+      'expected',(SELECT to_jsonb(m) FROM public.object_menu m WHERE id=v_added),'changes','{"is_active":"true"}'::jsonb))));
+  EXCEPTION WHEN invalid_parameter_value THEN v_denied:=true; END;
+  ASSERT v_denied,'string boolean accepted';
   v_denied:=false; BEGIN PERFORM api.save_object_menus('HOTRUN9999998713',v_base); EXCEPTION WHEN invalid_parameter_value THEN v_denied:=true; END;
   ASSERT v_denied,'non-RES write accepted';
 END $test$;

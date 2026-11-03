@@ -211,6 +211,10 @@ La fiche `data` contient l'ensemble des données publiques : identité, descript
 
 Un exemple de réponse détail complet est fourni dans le contrat OpenAPI (`openapi.json`) et la collection Postman. Il est repris d'une capture réelle, à une exception près : le bloc `actors` y est **illustratif** (identifiants fabriqués) — il montre la FORME d'un acteur rédigé (§208) ; sur cette fiche, un appel partenaire reçoit en réalité `"actors": []`.
 
+**Menus et cartes.** `menus` restitue les menus publics actifs et leurs plats disponibles. `menu_documents` restitue les cartes publiques dont le document et le lien sont valides à la date de lecture, avec une URL HTTP(S). Les bornes de dates sont incluses et évaluées dans le fuseau de la base. Un tableau sans contenu éligible reste `[]` ; aucune clé ni aucun libellé ne change. Ces règles s'appliquent aussi à la liste `view=full`. Lors d'une synchronisation, remplacer ces collections par leur valeur reçue permet de retirer les éléments devenus inactifs, indisponibles, privés ou hors dates.
+
+Le retrait d'une carte des restitutions ne révoque pas une URL publique déjà connue ni une copie téléchargée. Les détails internes de matériel fourni pour une activité ne sont pas ajoutés au JSON partenaire. Ces corrections conservent la version de contrat `1.0.0`.
+
 **Acteurs (`actors`).** Depuis §208, `contacts` est vide (`[]`) et `contacts_restricted` vaut `true` pour les appels partenaires : les coordonnées personnelles des acteurs (téléphone, e-mail, adresse) ne sortent plus par l'API publique. `first_name`, `last_name`, `gender` et `note` sortent également à `null` dans ce cas. Les contacts de l'ÉTABLISSEMENT (bloc racine `contacts`) sont inchangés.
 
 **Langues.** Le code de résolution par défaut est `fr`. Le corpus est aujourd'hui majoritairement francophone : la traduction du contenu des établissements est un chantier en cours. À défaut de traduction disponible pour un champ dans la langue demandée, c'est la valeur française qui est renvoyée.

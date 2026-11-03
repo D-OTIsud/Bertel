@@ -182,12 +182,12 @@ export function DishEditModal({
   return (
     <EditorModal
       open={open}
-      title={dish.recordId ? 'Modifier le plat' : 'Ajouter un plat'}
+      title={(dish.isNew ?? !dish.recordId) ? 'Ajouter un plat' : 'Modifier le plat'}
       eyebrow={sectionLabel || undefined}
       onClose={onClose}
       onSave={() => onSave(draft)}
       saveDisabled={!draft.name.trim()}
-      saveLabel={dish.recordId ? 'Appliquer' : 'Ajouter'}
+      saveLabel={(dish.isNew ?? !dish.recordId) ? 'Ajouter' : 'Appliquer'}
       footerNote={draft.name.trim() ? 'Prêt à appliquer au brouillon' : '1 point à compléter'}
     >
       <DishFields

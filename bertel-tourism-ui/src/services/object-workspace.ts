@@ -12,6 +12,7 @@ import { buildCharacteristicsRpcPayload } from './object-workspace-payloads/char
 import { buildStayPolicyPatch, parseStayPolicySnapshot, stayPolicySnapshot, withStayPolicySnapshot } from './stay-policy-contract';
 import type { WorkspaceSaveResult } from './workspace-save-result';
 import { buildMenusWritePayload, parseMenuWriteSnapshot, withMenusWriteSnapshot } from './menu-write-contract';
+import { withPendingMenuRequest } from './menu-save-request';
 export {
   ACCESSIBILITY_AMENITY_FAMILY,
   filterEstablishmentAmenityGroups,
@@ -268,7 +269,7 @@ async function callObjectWorkspaceRpc(
     if (readRecord(error).code === 'PT409' && ['save_object_capacity_policies', 'save_object_menus'].includes(functionName)) {
       throw Object.assign(new Error('Ces informations ont changé. Rechargez la fiche pour les vérifier ; votre saisie est conservée.'), { code: 'PT409' });
     }
-    throw mapMutationError(error, fallback);
+    throw Object.assign(mapMutationError(error, fallback), { code: readRecord(error).code });
   }
 
   const result = readRecord(data);
@@ -5177,7 +5178,9 @@ export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWo
   if (session.demoMode) return;
   assertWorkspaceSaveAvailable('menus', input);
   const payload = buildMenusWritePayload(input);
-  const result = await callObjectWorkspaceRpc('save_object_menus', objectId, payload, 'Impossible d’enregistrer les menus. Votre saisie est conservée.');
+  const result = await withPendingMenuRequest(session.userId,objectId,payload,
+    request=>callObjectWorkspaceRpc('save_object_menus',objectId,request,'Impossible d’enregistrer les menus. Votre saisie est conservée.'),
+    response=>{ parseMenuWriteSnapshot(response.snapshot); });
   const snapshot = parseMenuWriteSnapshot(result.snapshot);
   return { menus: withMenusWriteSnapshot(input, snapshot) };
 }

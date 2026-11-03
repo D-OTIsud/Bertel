@@ -14,6 +14,7 @@ import { MenuExtractModal } from '../../widgets/MenuExtractModal';
 function createMenu(index: number): ObjectWorkspaceMenu {
   return {
     recordId: crypto.randomUUID(),
+    isNew: true,
     categoryId: '',
     categoryCode: '',
     categoryLabel: '',

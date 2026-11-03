@@ -90,6 +90,11 @@ jobs:
           port = 54321
           schemas = ["public", "storage", "graphql_public", "api"]
           TOML
+          # PostgREST validates exposed schemas before the application manifest
+          # runs. Seed only the empty namespace during the CLI bootstrap.
+          cat > "$RUNNER_TEMP/bertel-fresh/supabase/seed.sql" <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS api;
+          SQL
 
       - name: Start Supabase local database
         # Boots the Supabase-flavoured Postgres (DB image provides the auth/storage

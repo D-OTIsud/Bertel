@@ -576,6 +576,15 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/object_menus_atomic_reconcile.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_menus_atomic_cutover.sql"
 
+      - name: Restaurant card receipts, publication and targeted cutover
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_restaurant_cartes_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/restaurant_cartes_atomic.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_restaurant_cartes_cutover.sql"
+
       - name: Reconstruct observed pre-R1 activity schema (upgrade scenario only)
         if: matrix.contract-scenario == 'upgrade'
         env:

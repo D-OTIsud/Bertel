@@ -670,6 +670,9 @@ ROLLBACK;
 \ir ../supabase/migrations/20261103070417_object_menus_atomic_reconcile.sql
 \ir tests/test_object_menus_atomic_reconcile.sql
 
+\echo '== C preparation: private card staging and atomic publication; actor rollout and DML cutover remain separate =='
+\ir ../supabase/migrations/20261103072138_partner_restaurant_cartes_contract.sql
+
 -- The upgrade CI scenario stops before the reader patches, then reconstructs the
 -- observed missing activity column and captures real responses before upgrading.
 \echo '== Package the already-live reader baseline before new corrections or upgrade capture =='

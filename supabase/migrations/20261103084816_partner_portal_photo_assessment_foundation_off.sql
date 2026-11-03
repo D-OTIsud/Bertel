@@ -2,6 +2,14 @@
 BEGIN;
 SET LOCAL lock_timeout='500ms';
 SET LOCAL statement_timeout='15s';
+DO $dependencies$
+BEGIN
+ IF to_regprocedure('internal.portal_photo_assert_actor(text)') IS NULL
+    OR to_regprocedure('api.can_read_object_for_correction(text)') IS NULL THEN
+  RAISE EXCEPTION 'Install R5 photo rights and R3b correction reads before P';
+ END IF;
+END;
+$dependencies$;
 CREATE TABLE internal.portal_photo_analysis_settings(
  singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton), enabled boolean NOT NULL DEFAULT false,
  daily_analysis_limit integer CHECK(daily_analysis_limit>0),
@@ -22,10 +30,18 @@ CREATE TABLE internal.portal_photo_analysis(
  claim_id uuid, started_at timestamptz, finished_at timestamptz, outcome jsonb,
  created_at timestamptz NOT NULL DEFAULT now(),
  appeal_interaction_id uuid REFERENCES public.crm_interaction(id) ON DELETE SET NULL,
- appeal_client_id uuid UNIQUE, appeal_body text,
+ appeal_client_id uuid UNIQUE,
+ appeal_intent_hash text CHECK(appeal_intent_hash IS NULL OR appeal_intent_hash ~ '^[0-9a-f]{64}$'),
  CHECK((state IN('assessed','unavailable','uncertain'))=(outcome IS NOT NULL))
 );
 CREATE INDEX portal_photo_analysis_actor_day ON internal.portal_photo_analysis(actor_id,local_day,state);
+-- Full FK indexes support erasure/cascades/SET NULL, including unavailable rows.
+-- actor_id is already the leading key of actor_day. Settings has at most one row.
+CREATE INDEX portal_photo_analysis_object ON internal.portal_photo_analysis(object_id);
+CREATE INDEX portal_photo_analysis_document ON internal.portal_photo_analysis(document_id);
+CREATE INDEX portal_photo_analysis_creator ON internal.portal_photo_analysis(created_by);
+CREATE INDEX portal_photo_analysis_provider ON internal.portal_photo_analysis(provider_id);
+CREATE INDEX portal_photo_analysis_appeal ON internal.portal_photo_analysis(appeal_interaction_id);
 -- One result or unconfirmed provider attempt per unchanged private photo/version.
 CREATE UNIQUE INDEX portal_photo_analysis_one_attempt ON internal.portal_photo_analysis(created_by,document_id,source_sha256,contract_version)
  WHERE state IN('reserved','started','assessed','uncertain');
@@ -113,12 +129,24 @@ DECLARE v_actor uuid;v_doc public.ref_document%ROWTYPE;v_op internal.portal_phot
 BEGIN
  IF p_request_id IS NULL THEN RAISE EXCEPTION 'Identifiant requis' USING ERRCODE='22023'; END IF;
  v_actor:=internal.photo_analysis_assert_owner(p_object_id,p_document_id);
+ SELECT * INTO v_settings FROM internal.portal_photo_analysis_settings WHERE singleton;
+ SELECT * INTO v_provider FROM public.app_ai_provider_config WHERE id=v_settings.provider_id AND is_active AND api_kind='openai_compatible';
+ IF NOT COALESCE(v_settings.enabled,false) OR v_settings.daily_analysis_limit IS NULL OR v_provider.id IS NULL THEN
+  RETURN jsonb_build_object('created',false,'enabled',false,'state','unavailable','assessment',NULL,'publication','office_review');
+ END IF;
  -- This domain's actor/day lock is separate from menu extraction and photo stock.
  PERFORM pg_advisory_xact_lock(hashtextextended('portal-photo-analysis:'||v_actor::text,0));
  PERFORM 1 FROM public.object WHERE id=p_object_id FOR UPDATE;
  SELECT * INTO v_doc FROM public.ref_document WHERE id=p_document_id FOR UPDATE;
  -- Permissions may have changed while waiting for the actor/object/receipt locks.
  PERFORM internal.photo_analysis_assert_owner(p_object_id,p_document_id);
+ -- Activation/provider may also have changed during the wait. OFF never returns
+ -- a dispatch context, including for a pre-existing reserved operation.
+ SELECT * INTO v_settings FROM internal.portal_photo_analysis_settings WHERE singleton;
+ SELECT * INTO v_provider FROM public.app_ai_provider_config WHERE id=v_settings.provider_id AND is_active AND api_kind='openai_compatible';
+ IF NOT COALESCE(v_settings.enabled,false) OR v_settings.daily_analysis_limit IS NULL OR v_provider.id IS NULL THEN
+  RETURN jsonb_build_object('created',false,'enabled',false,'state','unavailable','assessment',NULL,'publication','office_review');
+ END IF;
  IF v_doc.extra->>'upload_complete' IS DISTINCT FROM 'true' OR v_doc.extra->>'slot_state'='cancelled'
     OR COALESCE(v_doc.extra->>'upload_sha256','')!~'^[0-9a-f]{64}$' THEN RAISE EXCEPTION 'Dépôt non finalisé' USING ERRCODE='PT409'; END IF;
  SELECT * INTO v_op FROM internal.portal_photo_analysis WHERE id=p_request_id FOR UPDATE;
@@ -126,23 +154,26 @@ BEGIN
   IF v_op.created_by IS DISTINCT FROM auth.uid() OR v_op.object_id IS DISTINCT FROM p_object_id
     OR v_op.document_id IS DISTINCT FROM p_document_id OR v_op.source_sha256 IS DISTINCT FROM v_doc.extra->>'upload_sha256' THEN
    RAISE EXCEPTION 'Requête différente sous le même identifiant' USING ERRCODE='PT409'; END IF;
-  RETURN internal.photo_analysis_envelope(v_op.id);
+  IF v_op.state='reserved' AND (v_op.provider_id IS DISTINCT FROM v_provider.id OR v_op.provider_revision IS DISTINCT FROM v_provider.updated_at) THEN
+   UPDATE internal.portal_photo_analysis SET state='unavailable',finished_at=now(),outcome='{"state":"unavailable","assessment":null,"publication":"office_review"}' WHERE id=v_op.id;
+  END IF;
+  RETURN internal.photo_analysis_envelope(v_op.id)||jsonb_build_object('created',false);
  END IF;
  SELECT * INTO v_op FROM internal.portal_photo_analysis WHERE created_by=auth.uid() AND document_id=p_document_id
   AND source_sha256=v_doc.extra->>'upload_sha256' AND state IN('reserved','started','assessed','uncertain') FOR UPDATE;
- IF FOUND THEN RETURN internal.photo_analysis_envelope(v_op.id); END IF;
- SELECT * INTO v_settings FROM internal.portal_photo_analysis_settings WHERE singleton;
- SELECT * INTO v_provider FROM public.app_ai_provider_config WHERE id=v_settings.provider_id AND is_active AND api_kind='openai_compatible';
- IF NOT v_settings.enabled OR v_settings.daily_analysis_limit IS NULL OR v_provider.id IS NULL THEN
-  RETURN jsonb_build_object('enabled',false,'state','unavailable','assessment',NULL,'publication','office_review');
+ IF FOUND THEN
+  IF v_op.state='reserved' AND (v_op.provider_id IS DISTINCT FROM v_provider.id OR v_op.provider_revision IS DISTINCT FROM v_provider.updated_at) THEN
+   UPDATE internal.portal_photo_analysis SET state='unavailable',finished_at=now(),outcome='{"state":"unavailable","assessment":null,"publication":"office_review"}' WHERE id=v_op.id;
+  END IF;
+  RETURN internal.photo_analysis_envelope(v_op.id)||jsonb_build_object('created',false);
  END IF;
  SELECT count(*) INTO v_used FROM internal.portal_photo_analysis WHERE actor_id=v_actor AND local_day=v_day AND state<>'unavailable';
  IF v_used>=v_settings.daily_analysis_limit THEN
-  RETURN jsonb_build_object('enabled',true,'state','quota_reached','assessment',NULL,'publication','office_review','resetAt',internal.photo_analysis_reset_at(v_day));
+  RETURN jsonb_build_object('created',false,'enabled',true,'state','quota_reached','assessment',NULL,'publication','office_review','resetAt',internal.photo_analysis_reset_at(v_day));
  END IF;
  INSERT INTO internal.portal_photo_analysis(id,object_id,document_id,actor_id,created_by,source_sha256,local_day,provider_id,provider_revision)
  VALUES(p_request_id,p_object_id,p_document_id,v_actor,auth.uid(),v_doc.extra->>'upload_sha256',v_day,v_provider.id,v_provider.updated_at);
- RETURN internal.photo_analysis_envelope(p_request_id);
+ RETURN internal.photo_analysis_envelope(p_request_id)||jsonb_build_object('created',true);
 END;
 $fn$;
 
@@ -155,7 +186,7 @@ BEGIN
  IF COALESCE(api.is_actor_persona(),false) THEN
   IF v_op.created_by IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'Analyse inaccessible' USING ERRCODE='42501'; END IF;
   PERFORM internal.photo_analysis_assert_owner(v_op.object_id,v_op.document_id);
- ELSIF NOT api.can_read_object_for_correction(v_op.object_id) THEN RAISE EXCEPTION 'Analyse inaccessible' USING ERRCODE='42501'; END IF;
+ ELSIF v_op.appeal_interaction_id IS NULL OR NOT api.can_read_object_for_correction(v_op.object_id) THEN RAISE EXCEPTION 'Analyse inaccessible' USING ERRCODE='42501'; END IF;
  RETURN internal.photo_analysis_json(p_request_id);
 END;
 $fn$;
@@ -211,11 +242,11 @@ BEGIN
  IF (p_outcome->>'state'='assessed' AND NOT internal.photo_assessment_valid(p_outcome->'assessment'))
    OR (p_outcome->>'state'<>'assessed' AND p_outcome->'assessment' IS DISTINCT FROM 'null'::jsonb) THEN
   RAISE EXCEPTION 'Évaluation invalide' USING ERRCODE='22023'; END IF;
- SELECT * INTO v_op FROM internal.portal_photo_analysis WHERE id=p_request_id;
- IF v_op.id IS NULL THEN RAISE EXCEPTION 'Analyse inaccessible' USING ERRCODE='42501'; END IF;
- PERFORM 1 FROM public.object WHERE id=v_op.object_id FOR UPDATE;
- PERFORM 1 FROM public.ref_document WHERE id=v_op.document_id FOR UPDATE;
  SELECT * INTO v_op FROM internal.portal_photo_analysis WHERE id=p_request_id FOR UPDATE;
+ IF v_op.id IS NULL THEN RAISE EXCEPTION 'Analyse inaccessible' USING ERRCODE='42501'; END IF;
+ -- A paid outcome only needs its operation row. Waiting for an unrelated gallery
+ -- or receipt lock here can discard a known result after provider dispatch.
+ IF p_claim_id IS DISTINCT FROM v_op.claim_id THEN RAISE EXCEPTION 'Reçu de traitement invalide' USING ERRCODE='PT409'; END IF;
  IF v_op.state IN('assessed','unavailable','uncertain') THEN
   IF v_op.outcome IS DISTINCT FROM p_outcome THEN RAISE EXCEPTION 'Résultat déjà confirmé' USING ERRCODE='PT409'; END IF;
   RETURN internal.photo_analysis_json(p_request_id);
@@ -230,21 +261,23 @@ $fn$;
 
 CREATE FUNCTION api.appeal_portal_photo_analysis(p_request_id uuid,p_body text,p_client_id uuid) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,internal,auth,pg_temp SET lock_timeout='5s' AS $fn$
-DECLARE v_op internal.portal_photo_analysis%ROWTYPE;v_actor uuid;v_title text;v_body text;v_id uuid;
+DECLARE v_op internal.portal_photo_analysis%ROWTYPE;v_actor uuid;v_title text;v_body text;v_id uuid;v_intent_hash text;
 BEGIN
  SELECT * INTO v_op FROM internal.portal_photo_analysis WHERE id=p_request_id;
- IF v_op.id IS NULL OR v_op.created_by IS DISTINCT FROM auth.uid() OR p_client_id IS NULL
-   OR length(btrim(COALESCE(p_body,''))) NOT BETWEEN 1 AND 3000 THEN RAISE EXCEPTION 'Recours invalide' USING ERRCODE='22023'; END IF;
+ IF p_client_id IS NULL OR length(btrim(COALESCE(p_body,''))) NOT BETWEEN 1 AND 3000 THEN RAISE EXCEPTION 'Recours invalide' USING ERRCODE='22023'; END IF;
+ IF v_op.id IS NULL OR v_op.created_by IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'Analyse inaccessible' USING ERRCODE='42501'; END IF;
  v_actor:=internal.photo_analysis_assert_owner(v_op.object_id,v_op.document_id);
+ v_intent_hash:=encode(sha256(convert_to(jsonb_build_array(p_request_id,p_client_id,btrim(p_body))::text,'UTF8')),'hex');
  -- Take the existing message actor lock BEFORE object/operation. send_portal_message
  -- uses this same lock, then its CRM FK; never acquire it after an object lock.
  PERFORM pg_advisory_xact_lock(hashtextextended('portal-message:'||v_actor::text,0));
  PERFORM 1 FROM public.object WHERE id=v_op.object_id FOR UPDATE;
  SELECT * INTO v_op FROM internal.portal_photo_analysis WHERE id=p_request_id FOR UPDATE;
+ PERFORM internal.photo_analysis_assert_owner(v_op.object_id,v_op.document_id);
  IF v_op.state NOT IN('assessed','unavailable','uncertain') AND NOT(v_op.state='started' AND v_op.started_at<now()-interval '60 seconds') THEN
   RAISE EXCEPTION 'Analyse encore en cours' USING ERRCODE='PT409'; END IF;
  IF v_op.appeal_interaction_id IS NOT NULL THEN
-  IF v_op.appeal_body IS DISTINCT FROM btrim(p_body) OR v_op.appeal_client_id IS DISTINCT FROM p_client_id THEN
+  IF v_op.appeal_intent_hash IS DISTINCT FROM v_intent_hash OR v_op.appeal_client_id IS DISTINCT FROM p_client_id THEN
    RAISE EXCEPTION 'Un recours existe déjà pour cette analyse' USING ERRCODE='PT409'; END IF;
   RETURN v_op.appeal_interaction_id;
  END IF;
@@ -255,7 +288,9 @@ BEGIN
  v_id:=api.send_portal_message(v_op.object_id,'correction',v_body,'[]'::jsonb,NULL,p_client_id);
  UPDATE public.crm_interaction SET extra=COALESCE(extra,'{}')||jsonb_build_object('portal_photo_analysis_id',p_request_id,
    'portal_photo_document_id',v_op.document_id,'portal_photo_source_sha256',v_op.source_sha256) WHERE id=v_id;
- UPDATE internal.portal_photo_analysis SET appeal_interaction_id=v_id,appeal_client_id=p_client_id,appeal_body=btrim(p_body) WHERE id=p_request_id;
+ -- The existing CRM conversation is the single copy of the free text. Retain only
+ -- the request-bound intent digest so a retry can be checked without duplicating PII.
+ UPDATE internal.portal_photo_analysis SET appeal_interaction_id=v_id,appeal_client_id=p_client_id,appeal_intent_hash=v_intent_hash WHERE id=p_request_id;
  RETURN v_id;
 END;
 $fn$;

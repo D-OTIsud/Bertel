@@ -10,6 +10,13 @@ export async function POST(req:NextRequest){
  try{input=schema.parse(await readBoundedJson(req,16_384));}
  catch(error){return NextResponse.json({error:error instanceof BodyTooLargeError?'request_body_too_large':'invalid_fields'},{status:error instanceof BodyTooLargeError?413:400});}
  const result=await callerClient(auth.jwt).schema('api').rpc('appeal_portal_photo_analysis',{p_request_id:input.requestId,p_body:input.body,p_client_id:input.clientId});
- if(result.error)return NextResponse.json({error:result.error.code==='PT409'?'conflict':'unavailable'},{status:result.error.code==='42501'?403:result.error.code==='PT409'?409:503});
+ if(result.error){
+  const {code,message}=result.error;
+  // P0001 is a generic RAISE code. Only the existing message quota is a 429.
+  const quota=code==='P0001'&&message==='Limite quotidienne atteinte. Réessayez demain.';
+  const status=code==='42501'?403:code==='PT409'||code==='23505'?409:code==='22023'?400:quota?429:503;
+  const error=status===403?'forbidden':status===409?'conflict':status===400?'invalid_fields':quota?'quota_reached':'unavailable';
+  return NextResponse.json({error},{status,headers:{'Cache-Control':'private, no-store'}});
+ }
  return NextResponse.json({interactionId:result.data},{headers:{'Cache-Control':'private, no-store'}});
 }

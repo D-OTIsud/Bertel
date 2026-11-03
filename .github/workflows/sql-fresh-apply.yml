@@ -123,9 +123,9 @@ jobs:
           CONTRACT_SCENARIO: ${{ matrix.contract-scenario }}
         run: |
           if [ "$CONTRACT_SCENARIO" = upgrade ]; then
-            psql "$DB_URL" -v ON_ERROR_STOP=1 -v partner_portal_defer_collection_guard=1 -v partner_portal_skip_read_fixes=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -v partner_portal_defer_collection_guard=1 -v partner_portal_defer_read_scope=1 -v partner_portal_skip_read_fixes=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
           else
-            psql "$DB_URL" -v ON_ERROR_STOP=1 -v partner_portal_defer_collection_guard=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -v partner_portal_defer_collection_guard=1 -v partner_portal_defer_read_scope=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
           fi
 
       - name: Smoke — assert the manifest produced the expected schema
@@ -625,8 +625,19 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
           PGOPTIONS: '-c bertel.ephemeral_ci=on'
         run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103083731_partner_portal_menu_stay_correction_read_scope.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/partner_menu_read_privacy.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_menu_stay_correction_read.sql"
+
+      - name: Guarded partner menus and durable extraction remain OFF after acceptance
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103082027_portal_menus_guarded_publication.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103080731_partner_menu_extraction_operations.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_portal_menus_guarded_publication.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_menu_extraction_operations.sql"
 
       - name: Reconstruct observed pre-R1 activity schema (upgrade scenario only)
         if: matrix.contract-scenario == 'upgrade'

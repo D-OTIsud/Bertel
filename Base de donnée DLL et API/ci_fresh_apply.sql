@@ -671,7 +671,11 @@ ROLLBACK;
 \ir tests/test_object_menus_atomic_reconcile.sql
 
 \echo '== R3b preparation: complete canonical correction reads; privacy cutover remains separate =='
+\if :{?partner_portal_defer_read_scope}
+\echo '== R3b deferred ONLY for disposable historical-policy verification =='
+\else
 \ir ../supabase/migrations/20261103083731_partner_portal_menu_stay_correction_read_scope.sql
+\endif
 
 \echo '== C preparation: private card staging and atomic publication; actor rollout and DML cutover remain separate =='
 \ir ../supabase/migrations/20261103072138_partner_restaurant_cartes_contract.sql
@@ -685,6 +689,9 @@ ROLLBACK;
 \ir tests/test_actor_test_realm.sql
 \echo '== R5 photo stock reservations and gallery CAS preparation; activation remains separate =='
 \ir ../supabase/migrations/20261103072105_partner_portal_photo_stock_and_gallery_contract.sql
+\echo '== M/E backend preparation: shared menu writer and durable extraction; actor features remain OFF =='
+\ir ../supabase/migrations/20261103082027_portal_menus_guarded_publication.sql
+\ir ../supabase/migrations/20261103080731_partner_menu_extraction_operations.sql
 \endif
 
 -- The upgrade CI scenario stops before the reader patches, then reconstructs the

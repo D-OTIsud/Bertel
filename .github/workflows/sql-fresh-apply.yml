@@ -623,6 +623,7 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_public_read_contract.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_regional_primary_openings.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -v benchmark_phase=after -f "Base de donnée DLL et API/tests/measure_partner_api_full_benchmark.sql"
+          python tools/partner-api/test-reader-replay-guard.py "$DB_URL"
 
       - name: Install route test dependencies
         working-directory: bertel-tourism-ui

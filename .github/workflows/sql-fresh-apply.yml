@@ -617,6 +617,8 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/partner_photo_stock_and_gallery.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_photo_stock.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_stock_and_gallery.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_stock_reactivation.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_gallery_url_contract.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_photo_stock.sql"
           python tools/partner-api/test-photo-stock-concurrency.py "$DB_URL"
 
@@ -638,6 +640,8 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103080731_partner_menu_extraction_operations.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_portal_menus_guarded_publication.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_menu_extraction_operations.sql"
+          python tools/partner-api/test-menu-cutover.py "$DB_URL"
+          python tools/partner-api/test-extraction-concurrency.py "$DB_URL"
 
       - name: Reconstruct observed pre-R1 activity schema (upgrade scenario only)
         if: matrix.contract-scenario == 'upgrade'

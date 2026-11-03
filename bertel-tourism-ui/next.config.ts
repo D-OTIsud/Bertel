@@ -90,10 +90,23 @@ const securityHeaders = [
   { key: 'Content-Security-Policy', value: contentSecurityPolicy },
 ];
 
+function pdfRuntimeTraces(): string[] {
+  // Match the real dependency path too when this checkout uses a node_modules
+  // junction. Worker, fonts and native canvas must accompany the external module.
+  let modules = './node_modules';
+  try { modules = path.relative(process.cwd(), fs.realpathSync(path.join(process.cwd(), 'node_modules'))).split(path.sep).join('/'); }
+  catch { /* Regular installs are traced relative to the app. */ }
+  return [`${modules}/pdfjs-dist/package.json`, `${modules}/pdfjs-dist/legacy/build/pdf.worker.mjs`,
+    `${modules}/pdfjs-dist/standard_fonts/**/*`, `${modules}/pdfjs-dist/cmaps/**/*`, `${modules}/@napi-rs/canvas*/**/*`];
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   transpilePackages: [],
+  // E: PDF.js uses its installed Node canvas/worker without bundling native binaries.
+  serverExternalPackages: ['pdfjs-dist', '@napi-rs/canvas'],
+  outputFileTracingIncludes: { '/api/portal-menu/extract': pdfRuntimeTraces() },
   productionBrowserSourceMaps: false,
   // Pins the workspace root explicitly. Without this, Turbopack's nearest-lockfile
   // inference gets confused by git worktrees (each worktree checks out its own copy

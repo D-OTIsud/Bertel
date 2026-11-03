@@ -71,4 +71,17 @@ describe('orchestrateExtraction', () => {
     expect(n).toBe(2);
     expect(res).toMatchObject({ ok: false, code: 'unparseable' });
   });
+  it('makes one paid attempt when repair is disabled for a durable operation', async () => {
+    const callProvider = jest.fn(async () => ({ text: 'not json' }));
+    const res = await orchestrateExtraction(baseInput, deps({ callProvider, repairInvalidJson: false }));
+    expect(callProvider).toHaveBeenCalledTimes(1);
+    expect(res).toMatchObject({ ok: false, code: 'unparseable' });
+  });
+  it('preserves a priced formula as a warning without inventing a dish or dish price', async () => {
+    const callProvider=jest.fn(async()=>({text:JSON.stringify({title:'Carte',dishes:[{name:'Cari',price:''}],unsupported_offers:[{label:'Entrée + plat',price:'18 €',reason:'formula_price_not_modelled'}]})}));
+    const result=await orchestrateExtraction({...baseInput,reportUnsupportedOffers:true},deps({callProvider,repairInvalidJson:false}));
+    expect(callProvider).toHaveBeenCalledWith(expect.anything(),expect.anything(),expect.anything(),expect.objectContaining({system:expect.stringContaining('Ne crée pas de faux plat')}),expect.anything());
+    expect(result.ok).toBe(true);
+    if(result.ok){expect(result.menu.items).toHaveLength(1);expect(result.menu.items[0].price).toBe('');expect(result.warnings?.[0].offers).toEqual([{label:'Entrée + plat',price:'18 €',reason:'formula_price_not_modelled'}]);}
+  });
 });

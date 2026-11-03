@@ -37,7 +37,7 @@ BEGIN
       ('internal.prepare_portal_menu_patch(text,jsonb,jsonb)','03e0b6df0be752ecbbc92825d00085e2',false),
       ('api.get_portal_menus_snapshot(text)','5f250062a41065f68a454250922b46f9',true),
       ('api.get_portal_menu_write_receipt(text,jsonb)','404efc6e54a427f8c456c4c128c13b28',true),
-      ('api.publish_portal_menus(text,jsonb,uuid)','61496e5c82f6629c22533d83c2974817',true)
+      ('api.publish_portal_menus(text,jsonb,uuid)','7a27364a1644d7c03d6187f663d43189',true)
   ) expected(signature,source_hash,definer) LOOP
     IF r.signature='api.save_object_menus(text,jsonb)' THEN CONTINUE; END IF;
     v_oid:=to_regprocedure(r.signature);
@@ -394,7 +394,7 @@ $$;
 CREATE OR REPLACE FUNCTION api.publish_portal_menus(p_object_id text,p_payload jsonb,p_extraction_operation_id uuid DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,internal SET TimeZone='UTC' SET lock_timeout='5s' AS $$
 DECLARE v_id uuid; v_request jsonb; v_receipt internal.object_menu_write_receipt%ROWTYPE; v_snapshot jsonb;
-  v_payload jsonb; v_result jsonb; v_previous jsonb; v_menu_ids uuid[];
+  v_payload jsonb; v_result jsonb; v_previous jsonb; v_menu_ids uuid[]; v_draft_version integer;
 BEGIN
   PERFORM internal.assert_portal_menu_write(p_object_id);
   IF jsonb_typeof(p_payload) IS DISTINCT FROM 'object' OR jsonb_typeof(p_payload->'request_id') IS DISTINCT FROM 'string' THEN
@@ -408,21 +408,28 @@ BEGIN
     RETURN jsonb_build_object('success',true,'request_id',v_id,'replayed',true,'snapshot',internal.portal_menu_write_snapshot(internal.object_menu_write_snapshot(p_object_id)));
   END IF;
   IF p_extraction_operation_id IS NOT NULL THEN
-    IF to_regprocedure('internal.assert_menu_extraction_publication(uuid,text)') IS NULL
+    IF jsonb_typeof(p_payload->'extraction_draft_version') IS DISTINCT FROM 'number'
+      OR COALESCE(p_payload->>'extraction_draft_version','') !~ '^[0-9]+$'
+      OR (p_payload->>'extraction_draft_version')::numeric>2147483647 THEN
+      RAISE EXCEPTION 'Rechargez le brouillon d’extraction avant de le publier.' USING ERRCODE='22023'; END IF;
+    v_draft_version:=(p_payload->>'extraction_draft_version')::integer;
+    IF to_regprocedure('internal.assert_menu_extraction_publication(uuid,text,integer)') IS NULL
       OR to_regprocedure('internal.record_menu_extraction_publication(uuid,text,jsonb,uuid[])') IS NULL THEN
       RAISE EXCEPTION 'La publication de cette extraction n’est pas disponible.' USING ERRCODE='22023'; END IF;
     -- Common lock order: object -> extraction operation -> source/document -> menus.
-    v_previous:=internal.assert_menu_extraction_publication(p_extraction_operation_id,p_object_id);
+    v_previous:=internal.assert_menu_extraction_publication(p_extraction_operation_id,p_object_id,v_draft_version);
     IF v_previous IS NOT NULL THEN
       IF v_previous->>'request_id' IS DISTINCT FROM v_id::text THEN
         RAISE EXCEPTION 'Cette extraction est déjà publiée. Rechargez les menus pour préparer une correction manuelle.' USING ERRCODE='PT409'; END IF;
       RETURN jsonb_build_object('success',true,'request_id',v_id,'replayed',true,'snapshot',internal.portal_menu_write_snapshot(internal.object_menu_write_snapshot(p_object_id)));
     END IF;
+  ELSIF p_payload ? 'extraction_draft_version' THEN
+    RAISE EXCEPTION 'Une version de brouillon nécessite son opération d’extraction.' USING ERRCODE='22023';
   END IF;
   PERFORM 1 FROM public.object_menu WHERE object_id=p_object_id ORDER BY id FOR UPDATE;
   PERFORM 1 FROM public.object_menu_item WHERE menu_id IN(SELECT id FROM public.object_menu WHERE object_id=p_object_id) ORDER BY id FOR UPDATE;
   v_snapshot:=internal.object_menu_write_snapshot(p_object_id);
-  v_payload:=internal.prepare_portal_menu_patch(p_object_id,p_payload,v_snapshot);
+  v_payload:=internal.prepare_portal_menu_patch(p_object_id,p_payload-'extraction_draft_version',v_snapshot);
   v_result:=internal.apply_object_menus_patch(p_object_id,v_payload);
   v_result:=jsonb_build_object('success',true,'request_id',v_id,'snapshot',internal.portal_menu_write_snapshot(v_result->'snapshot'));
   IF p_extraction_operation_id IS NOT NULL THEN

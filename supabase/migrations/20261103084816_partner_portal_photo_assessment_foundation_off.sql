@@ -117,6 +117,8 @@ BEGIN
  PERFORM pg_advisory_xact_lock(hashtextextended('portal-photo-analysis:'||v_actor::text,0));
  PERFORM 1 FROM public.object WHERE id=p_object_id FOR UPDATE;
  SELECT * INTO v_doc FROM public.ref_document WHERE id=p_document_id FOR UPDATE;
+ -- Permissions may have changed while waiting for the actor/object/receipt locks.
+ PERFORM internal.photo_analysis_assert_owner(p_object_id,p_document_id);
  IF v_doc.extra->>'upload_complete' IS DISTINCT FROM 'true' OR v_doc.extra->>'slot_state'='cancelled'
     OR COALESCE(v_doc.extra->>'upload_sha256','')!~'^[0-9a-f]{64}$' THEN RAISE EXCEPTION 'Dépôt non finalisé' USING ERRCODE='PT409'; END IF;
  SELECT * INTO v_op FROM internal.portal_photo_analysis WHERE id=p_request_id FOR UPDATE;
@@ -170,6 +172,9 @@ BEGIN
  PERFORM 1 FROM public.object WHERE id=v_op.object_id FOR UPDATE;
  SELECT * INTO v_doc FROM public.ref_document WHERE id=v_op.document_id FOR UPDATE;
  SELECT * INTO v_op FROM internal.portal_photo_analysis WHERE id=p_request_id FOR UPDATE;
+ -- Recheck the current profile, realm and module mask after every lock wait,
+ -- immediately before permitting a provider dispatch.
+ PERFORM internal.photo_analysis_assert_owner(v_op.object_id,v_op.document_id);
  IF v_op.state<>'reserved' THEN RETURN jsonb_build_object('started',false,'operation',internal.photo_analysis_json(p_request_id)); END IF;
  IF v_doc.extra->>'upload_sha256' IS DISTINCT FROM v_op.source_sha256 OR v_doc.extra->>'slot_state'='cancelled'
   OR NOT EXISTS(SELECT 1 FROM internal.portal_photo_analysis_settings s JOIN public.app_ai_provider_config p ON p.id=s.provider_id

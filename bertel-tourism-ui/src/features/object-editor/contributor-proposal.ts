@@ -44,6 +44,7 @@ import type { ObjectWorkspaceModules } from '../../services/object-workspace-par
 import { assertWorkspaceSaveAvailable } from '../../services/object-workspace-safety';
 import { MODULE_KEY_MAP } from './editor-state';
 import { moduleLabel } from './save-issues';
+import { validProposalCollectionBaseline } from '../../services/proposal-collection-baseline';
 
 /** Cap on the serialized before/after diff strings stored in metadata (moderation display only). */
 const DIFF_MAX_CHARS = 4000;
@@ -169,6 +170,11 @@ export function buildContributorSubmission(
   const field = moduleLabel(module);
 
   const payload: unknown = route ? route.buildPayload(draft) : (draft[moduleKey] ?? {});
+  const guarded = module === 'characteristics' || module === 'openings';
+  const collectionBaseline = guarded ? baseline[module].proposalCollectionBaseline : undefined;
+  if (guarded && !validProposalCollectionBaseline(collectionBaseline, objectId, module)) {
+    throw new Error('Rechargez cette rubrique avant de l’envoyer ; votre saisie est conservée.');
+  }
 
   return {
     objectId,
@@ -183,6 +189,7 @@ export function buildContributorSubmission(
       field,
       before,
       after,
+      ...(guarded ? { collection_baseline: collectionBaseline } : {}),
     },
   };
 }

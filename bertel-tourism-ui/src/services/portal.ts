@@ -57,6 +57,9 @@ function requireApiClient() {
  * une liste de codes ici se désynchroniserait du SQL au premier `RAISE` ajouté.
  */
 function portalRpcError(error: unknown, fallback: string): Error & { code?: string } {
+  if (['PT412', 'PT428'].includes(String(readRecord(error)?.code))) {
+    return Object.assign(new Error('Cette rubrique a changé ou son état de départ doit être vérifié. Rechargez-la avant de l’envoyer ; votre saisie est conservée.'), { code: String(readRecord(error)?.code) });
+  }
   const wrapped = mapDatabaseError(error, fallback) as Error & { code?: string };
   const record = readRecord(error);
   const code = record ? readNullableString(record.code) : null;

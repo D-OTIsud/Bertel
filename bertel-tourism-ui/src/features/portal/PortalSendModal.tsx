@@ -38,6 +38,8 @@ import { useSessionStore } from '../../store/session-store';
 /** Les refus que le partenaire peut TRAITER, et ce qu'il doit faire de chacun. Le repli
  *  générique du service (« Rien n'est perdu ») ne dit aucune action : on comble ce blanc. */
 const SEND_ERRORS: Record<string, string> = {
+  PT412: 'L’office a modifié cette rubrique depuis votre lecture. Rechargez la fiche pour vérifier vos changements avant de les envoyer ; votre saisie est conservée.',
+  PT428: 'Rechargez cette rubrique pour vérifier son état de départ avant de l’envoyer ; votre saisie est conservée.',
   PT409:
     'L’office est déjà en train de vérifier cette fiche. Vous pourrez envoyer ces changements quand la vérification sera terminée.',
   '22023':

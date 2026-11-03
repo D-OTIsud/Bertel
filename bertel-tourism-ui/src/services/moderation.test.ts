@@ -187,6 +187,12 @@ describe('submitPendingChange', () => {
 });
 
 describe('approvePendingChange / rejectPendingChange', () => {
+  it('distinguishes a stale collection from historical manual reporting', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'PT412', message: 'stale' } });
+    await expect(approvePendingChange('pc-1')).rejects.toThrow(/fiche a changé.*rien n’a été appliqué/);
+    rpc.mockResolvedValue({ data: null, error: { code: 'PT428', message: 'history' } });
+    await expect(approvePendingChange('pc-1')).rejects.toThrow(/historique.*report manuel.*motif/);
+  });
   const rpc = jest.fn();
   beforeEach(() => {
     rpc.mockReset();

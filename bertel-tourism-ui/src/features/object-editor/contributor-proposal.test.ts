@@ -23,12 +23,13 @@ const OBJECT_ID = 'HOTRUN0000000001';
 function makeModules(): ObjectWorkspaceModules {
   return {
     characteristics: {
+      proposalCollectionBaseline: { contract: 'actor-collection-baseline-v1', object_id: OBJECT_ID, domain: 'characteristics', digest: 'a'.repeat(64) },
       selectedLanguages: [],
       selectedPaymentCodes: ['cash', 'card'],
       selectedEnvironmentCodes: ['beach'],
       selectedAmenityCodes: ['wifi', 'pool'],
     },
-    openings: { periods: [] },
+    openings: { periods: [], proposalCollectionBaseline: { contract: 'actor-collection-baseline-v1', object_id: OBJECT_ID, domain: 'openings', digest: 'b'.repeat(64) } },
     sustainability: {
       categories: [
         {
@@ -87,6 +88,16 @@ describe('contributor-proposal — auto-dispatch registry', () => {
 });
 
 describe('buildContributorSubmission — complete baseline and draft', () => {
+  it('refuses a missing reliable baseline even when a before display summary exists', () => {
+    const baseline = makeModules();
+    delete baseline.characteristics.proposalCollectionBaseline;
+    expect(() => buildContributorSubmission(OBJECT_ID, 'characteristics', baseline, makeModules())).toThrow(/Rechargez.*saisie est conservée/);
+  });
+  it('keeps the private precondition separate from the editable display summary', () => {
+    const baseline = makeModules();
+    const result = buildContributorSubmission(OBJECT_ID, 'characteristics', baseline, makeModules());
+    expect(result.metadata).toMatchObject({ collection_baseline: baseline.characteristics.proposalCollectionBaseline });
+  });
   it.each(['baseline', 'draft'] as const)('rejects a failed %s read even when the other slice is complete', (source) => {
     const baseline = makeModules();
     const draft = makeModules();

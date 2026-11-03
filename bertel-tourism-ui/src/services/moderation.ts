@@ -139,6 +139,8 @@ export async function approvePendingChange(
     p_applied_manually: appliedManually,
   });
   if (error) {
+    if (error.code === 'PT412') throw new Error('La fiche a changé depuis cette proposition. Vérifiez les différences et demandez une nouvelle proposition ; rien n’a été appliqué.');
+    if (error.code === 'PT428') throw new Error('Cette proposition historique nécessite un report manuel dans l’éditeur, puis votre attestation avec un motif.');
     throw mapDatabaseError(error, 'Approbation impossible.');
   }
 }
@@ -188,6 +190,8 @@ export async function approveFicheSubmission(
     p_include_manual: includeManual,
   });
   if (error) {
+    if (error.code === 'PT412') throw new Error('La fiche a changé depuis cette proposition. Vérifiez les différences et demandez une nouvelle proposition ; rien n’a été appliqué.');
+    if (error.code === 'PT428') throw new Error('Cette proposition historique nécessite un report manuel dans l’éditeur, puis votre attestation avec un motif.');
     throw mapDatabaseError(error, 'Approbation de l’envoi impossible.');
   }
   const row = (data ?? {}) as GenericRecord;

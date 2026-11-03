@@ -41,6 +41,7 @@ import {
   type PortalStayTimes,
 } from "../../../services/portal";
 import { isClockTime } from "../../../lib/clock-time";
+import { withStayPolicySnapshot } from "../../../services/stay-policy-contract";
 import { strictErrorMessage } from "../../../lib/strict-error-message";
 import type { PortalRubricFormProps } from "./types";
 import type { ObjectWorkspaceOpeningsModule } from "../../../services/object-workspace-parser";
@@ -165,9 +166,9 @@ export function SeasonRubric({
         JSON.stringify(times) !== JSON.stringify(initialTimes)
       ) {
         setBusy(true);
-        const saved = await savePortalStayTimes(editor.objectId, times);
+        const saved = await savePortalStayTimes(editor.objectId, times, editor.draft.capacityPolicies.stayPolicySnapshot);
         editor.mergeSavedModule("capacityPolicies", (current) =>
-          setStayPolicy(current, saved),
+          withStayPolicySnapshot(setStayPolicy(current, saved), saved.snapshot),
         );
       }
       if (openingChanged || next !== openings)

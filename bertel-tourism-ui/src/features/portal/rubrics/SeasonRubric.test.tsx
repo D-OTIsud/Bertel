@@ -3,12 +3,14 @@ import { SeasonRubric } from './SeasonRubric';
 import { fakeEditor, portalModules, openingPeriod } from '../__fixtures__/portal-fixtures';
 import { buildPortalRubrics } from '../portal-rubrics';
 import { savePortalStayTimes } from '../../../services/portal';
+import { stayPolicySnapshot } from '../../../services/stay-policy-contract';
 jest.mock('../../../services/portal', () => ({ savePortalStayTimes: jest.fn() }));
 
 function setup(complex = false, masked: string[] = [],objectType?:string) {
   const modules = portalModules();
   modules.openings.periods = [openingPeriod(), ...(complex ? [openingPeriod({ recordId: 'second' })] : [])] as never;
   modules.capacityPolicies.stayPolicy = { checkInFrom: '14:00', checkInUntil: '', checkOutUntil: '10:00', conditions: 'Ne pas écraser' };
+  modules.capacityPolicies.stayPolicySnapshot = stayPolicySnapshot({ check_in_from: '14:00:00', check_in_until: null, check_out_until: '10:00:00', conditions: 'Ne pas écraser' });
   const editor = fakeEditor(modules); editor.objectId = 'HOT1';
   const rubric = buildPortalRubrics({ archetype: 'HEB', draft: modules, dirty: {}, masked, floor: [], pendingModules: new Set(), rejectedModules: new Set() }).find((entry) => entry.id === 'season')!;
   const onDone = jest.fn();
@@ -33,14 +35,14 @@ test('un service renseigné sans période d’ouverture reste dans le formulaire
 
 test('l’arrivée et le départ sont enregistrés sans soumettre les autres champs', async () => {
   const { editor, onDone } = setup();
-  jest.mocked(savePortalStayTimes).mockResolvedValue({ checkInFrom: '15:00', checkInUntil: '23:00', checkOutUntil: '11:00' });
+  jest.mocked(savePortalStayTimes).mockResolvedValue({ checkInFrom: '15:00', checkInUntil: '23:00', checkOutUntil: '11:00', snapshot: stayPolicySnapshot({ check_in_from: '15:00:00', check_in_until: '23:00:00', check_out_until: '11:00:00', conditions: 'Ne pas écraser' }) });
   fireEvent.change(screen.getByLabelText('Arrivée à partir de'), { target: { value: '15:00' } });
   fireEvent.change(screen.getByLabelText('Départ jusqu’à'), { target: { value: '11:00' } });
   fireEvent.click(screen.getByLabelText('Préciser une heure limite d’arrivée'));
   fireEvent.change(screen.getByLabelText('Arrivée jusqu’à'), { target: { value: '23:00' } });
   fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
   await waitFor(() => expect(onDone).toHaveBeenCalled());
-  expect(savePortalStayTimes).toHaveBeenCalledWith('HOT1', { checkInFrom: '15:00', checkInUntil: '23:00', checkOutUntil: '11:00' });
+  expect(savePortalStayTimes).toHaveBeenCalledWith('HOT1', { checkInFrom: '15:00', checkInUntil: '23:00', checkOutUntil: '11:00' }, editor.draft.capacityPolicies.stayPolicySnapshot);
   expect(editor.commitModules).not.toHaveBeenCalled();
   expect(editor.replaceModule).not.toHaveBeenCalled();
   const update = jest.mocked(editor.mergeSavedModule).mock.calls[0][1];

@@ -199,6 +199,8 @@ export interface ObjectWorkspaceMenu {
 }
 
 export interface ObjectWorkspaceMenusModule {
+  /** Office-only exact read baseline, never sent through the public resource reader. */
+  menuWriteBaseline?: import('../menu-write-contract').MenuWriteBaseline;
   categoryOptions: WorkspaceReferenceOption[];
   dietaryTagOptions: WorkspaceReferenceOption[];
   allergenOptions: WorkspaceReferenceOption[];

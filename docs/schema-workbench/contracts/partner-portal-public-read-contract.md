@@ -87,6 +87,21 @@ Exact public exclusions on complete RES:
   dates, or private scope). `...b231` and inclusive-current-day `...b237` remain byte-for-byte
   equivalent as JSON values. The valid document has a second link to prove it is not deleted.
 
+## Isolated full-page performance budget
+
+The CI upgrade scenario measures the same 100 published restaurant resources before
+and after R1/R3a. Each has a menu, two dishes and two document links, including content
+that the public correction must remove. One warm-up and five timed service-role SQL
+calls use `view=full`, `page_size=100` and a fixture-specific search. The row count is
+asserted, so a fast empty result cannot pass. A local materialized-view refresh makes
+the synthetic objects visible to the list path.
+
+The median after the patch must stay below the larger of 1.5 times the original median
+and the original median plus 100 ms. This allows shared-runner timing noise while
+stopping a material regression. Both sample sets and the budget appear in CI output.
+This is a controlled SQL comparison, not a promise about production network latency;
+the real route integration separately verifies the complete 100-row request path.
+
 ## Rollback
 
 Disable a failing new domain without restoring the old disclosure. Keep the office column and

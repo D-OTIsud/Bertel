@@ -1,4 +1,5 @@
 import type { ObjectWorkspaceCapacityPoliciesModule, ObjectWorkspaceCharacteristicsModule } from './object-workspace-parser';
+import { stayPolicySnapshot } from './stay-policy-contract';
 
 jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn(), getSupabaseClient: jest.fn() }));
 jest.mock('../store/session-store', () => ({
@@ -31,6 +32,7 @@ function baseModule(): ObjectWorkspaceCapacityPoliciesModule {
     groupPolicy: { minSize: '', maxSize: '', groupOnly: false, notes: '' },
     petPolicy: { accepted: false, conditions: '' },
     stayPolicy: { checkInFrom: '', checkInUntil: '', checkOutUntil: '', conditions: '' },
+    stayPolicySnapshot: stayPolicySnapshot(null),
     unavailableReason: null,
   };
 }
@@ -103,10 +105,18 @@ function characteristicsModule(over: Partial<ObjectWorkspaceCharacteristicsModul
 }
 
 function apiClientCapturingRpc() {
-  const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
+  const rpc = jest.fn().mockResolvedValue({ data: { success: true, stay_policy: stayPolicySnapshot(null) }, error: null });
   mockGetApiClient.mockReturnValue({ schema: () => ({ rpc }) });
   return rpc;
 }
+
+it('explains a stay CAS conflict and keeps the local draft',async()=>{
+  const input=baseModule();
+  const before=JSON.stringify(input);
+  mockGetApiClient.mockReturnValue({schema:()=>({rpc:jest.fn().mockResolvedValue({data:null,error:{code:'PT409',message:'Les informations de séjour ont changé.'}})})});
+  await expect(saveObjectWorkspaceCapacityPolicies('o1',input)).rejects.toThrow(/ont changé.*Rechargez.*saisie est conservée/);
+  expect(JSON.stringify(input)).toBe(before);
+});
 
 /**
  * §07 review: metricOptions are filtered by ref_capacity_applicability for the

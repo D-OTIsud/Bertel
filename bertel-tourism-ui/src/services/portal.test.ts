@@ -9,6 +9,7 @@
 jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn(), getSupabaseClient: jest.fn() }));
 
 import { getApiClient } from '../lib/supabase';
+import { stayPolicySnapshot } from './stay-policy-contract';
 import {
   listMyPortalFiches,
   listMySubmissions,
@@ -22,10 +23,15 @@ const rpc = jest.fn();
 
 describe('heures de séjour appliquées immédiatement', () => {
   const times = { checkInFrom: '15:00', checkInUntil: '23:00', checkOutUntil: '10:00' };
+  const baseline = stayPolicySnapshot(null);
+  const saved = stayPolicySnapshot({ check_in_from: '15:00:00', check_in_until: '23:00:00', check_out_until: '10:00:00', conditions: 'Office' });
   it('ne transmet que la fiche et les trois heures, jamais un payload de capacité', async () => {
-    rpc.mockResolvedValue({ data: times, error: null });
-    await expect(savePortalStayTimes('HOT1', times)).resolves.toEqual(times);
-    expect(rpc).toHaveBeenCalledWith('save_portal_stay_times', { p_object_id: 'HOT1', p_check_in_from: '15:00', p_check_in_until: '23:00', p_check_out_until: '10:00' });
+    rpc.mockResolvedValue({ data: { stay_policy: saved }, error: null });
+    await expect(savePortalStayTimes('HOT1', times, baseline)).resolves.toEqual({ ...times, snapshot: saved });
+    expect(rpc).toHaveBeenCalledWith('patch_portal_stay_times', { p_object_id: 'HOT1', p_payload: {
+      write_contract: 'stay-policy-patch-v1', expected: baseline,
+      changes: { check_in_from: '15:00', check_in_until: '23:00', check_out_until: '10:00' },
+    } });
   });
   it('refuse une date ou des secondes avant le réseau', async () => {
     await expect(savePortalStayTimes('HOT1', { ...times, checkInUntil: '23:00:01' })).rejects.toThrow(/heure valide/);
@@ -33,7 +39,15 @@ describe('heures de séjour appliquées immédiatement', () => {
   });
   it('ne confirme pas une réponse serveur incomplète', async () => {
     rpc.mockResolvedValue({ data: { checkInFrom: '15:00' }, error: null });
-    await expect(savePortalStayTimes('HOT1', times)).rejects.toThrow(/confirmer/);
+    await expect(savePortalStayTimes('HOT1', times, baseline)).rejects.toThrow(/confirmer/);
+  });
+  it('refuse une ancienne saisie sans état de départ avant le réseau', async () => {
+    await expect(savePortalStayTimes('HOT1', times)).rejects.toThrow(/Rechargez/);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it('explique le conflit séjour sans le confondre avec une vérification déjà ouverte', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'PT409', message: 'Les informations de séjour ont changé.' } });
+    await expect(savePortalStayTimes('HOT1', times, baseline)).rejects.toMatchObject({ code:'PT409', message:expect.stringMatching(/heures ont changé.*Rechargez.*saisie est conservée/) });
   });
 });
 

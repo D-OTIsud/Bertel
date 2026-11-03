@@ -133,7 +133,7 @@ export function mapExtractionToMenu(data: ExtractedMenu, inp: ExtractionInputs):
     suggestedDietaryByDish.push([...new Set(suggested)]);
 
     return {
-      recordId: null,
+      recordId: crypto.randomUUID(),
       name: dish.name.trim(),
       description: (dish.description ?? '').trim(),
       price: priceToString(dish.price),
@@ -159,7 +159,7 @@ export function mapExtractionToMenu(data: ExtractedMenu, inp: ExtractionInputs):
   const name = inp.menuTitle.trim() || (data.title ?? '').trim() || 'Carte';
 
   const menu: ObjectWorkspaceMenu = {
-    recordId: null,
+    recordId: crypto.randomUUID(),
     categoryId: '',
     categoryCode: '',
     categoryLabel: '',

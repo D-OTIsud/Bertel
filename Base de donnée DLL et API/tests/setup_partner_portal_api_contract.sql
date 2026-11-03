@@ -171,4 +171,6 @@ BEGIN
  END LOOP;
 END;
 $capture$;
+-- Real list/full routes use the materialized filter inventory, not the raw object table.
+REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
 COMMIT;

@@ -51,13 +51,20 @@ export interface ObjectEditorState {
   patchModule: <K extends keyof ObjectWorkspaceModules>(key: K, patch: Partial<ObjectWorkspaceModules[K]>) => void;
   replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => void;
   resetModule: (key: keyof ObjectWorkspaceModules) => void;
-  commitModules: (keys: (keyof ObjectWorkspaceModules)[], options?: { canonicalRooms?: boolean; canonicalPlaces?: boolean }) => void;
+  commitModules: (keys: (keyof ObjectWorkspaceModules)[], options?: CanonicalCommitOptions) => void;
   /** Rebase only the fields confirmed by the server, retaining other local edits. Updater must be pure. */
   mergeSavedModule: <K extends keyof ObjectWorkspaceModules>(key: K, update: (current: ObjectWorkspaceModules[K]) => ObjectWorkspaceModules[K]) => void;
   /** Sets object.status in BOTH draft and baseline (the new saved truth) without
    *  touching other fields — used after a successful status-lifecycle mutation so
    *  the UI reflects the change without a refetch (the snapshot is init-once). */
   setSavedStatus: (status: string) => void;
+}
+
+interface CanonicalCommitOptions {
+  canonicalRooms?: boolean;
+  canonicalPlaces?: boolean;
+  canonicalModules?: import('../../services/workspace-save-result').WorkspaceSaveResult;
+  sentModules?: ObjectWorkspaceModules;
 }
 
 /** Copies one module slice between snapshots; the generic key keeps it type-safe. */
@@ -162,7 +169,7 @@ export function useObjectEditorState(
     });
   }, [freshSnapshot, identityKey]);
 
-  const commitModules = useCallback((keys: (keyof ObjectWorkspaceModules)[], options?: { canonicalRooms?: boolean; canonicalPlaces?: boolean }) => {
+  const commitModules = useCallback((keys: (keyof ObjectWorkspaceModules)[], options?: CanonicalCommitOptions) => {
     setEditorState((prev) => {
       const current = prev.identityKey === identityKey ? prev.snapshot : freshSnapshot;
       const baseline = { ...current.baseline };
@@ -171,6 +178,16 @@ export function useObjectEditorState(
       const draftClone = cloneModules(current.draft);
       for (const key of keys) {
         copyModule(baseline, draftClone, key);
+      }
+      for (const key of ['capacityPolicies', 'menus'] as const) {
+        const canonical = options?.canonicalModules?.[key];
+        if (!keys.includes(key) || !canonical) continue;
+        const sent = options?.sentModules?.[key] ?? current.draft[key];
+        // A successful response rebases server truth while preserving typing during the request.
+        const merged = mergeDraftAgainstServer(sent, current.draft[key], canonical);
+        (baseline as unknown as Record<string, unknown>)[key] = canonical;
+        (draftClone as unknown as Record<string, unknown>)[key] = merged.value;
+        canonicalModuleUpdated = true;
       }
       if (options?.canonicalRooms) {
         if (keys.includes('rooms')) {

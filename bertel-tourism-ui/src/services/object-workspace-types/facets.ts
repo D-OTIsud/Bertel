@@ -22,6 +22,8 @@ export interface ObjectWorkspaceLanguageItem {
 }
 
 export interface ObjectWorkspaceCharacteristicsModule {
+  /** Private precondition for the existing moderated collection redispatch. */
+  proposalCollectionBaseline?: import('../proposal-collection-baseline').ProposalCollectionBaseline;
   languageOptions: WorkspaceReferenceOption[];
   languageLevelOptions: WorkspaceReferenceOption[];
   selectedLanguages: ObjectWorkspaceLanguageItem[];

@@ -673,6 +673,14 @@ ROLLBACK;
 \echo '== C preparation: private card staging and atomic publication; actor rollout and DML cutover remain separate =='
 \ir ../supabase/migrations/20261103072138_partner_restaurant_cartes_contract.sql
 
+-- Historical moderation fixtures run against their original envelopes first in CI.
+\if :{?partner_portal_defer_collection_guard}
+\echo '== R6 deferred ONLY for disposable historical-envelope verification =='
+\else
+\echo '== R6 collection preconditions and explicit manual handling of historical proposals =='
+\ir ../supabase/migrations/20261103073527_actor_collection_proposal_preconditions.sql
+\endif
+
 -- The upgrade CI scenario stops before the reader patches, then reconstructs the
 -- observed missing activity column and captures real responses before upgrading.
 \echo '== Package the already-live reader baseline before new corrections or upgrade capture =='

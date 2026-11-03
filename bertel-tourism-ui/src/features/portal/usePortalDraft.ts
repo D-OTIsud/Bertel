@@ -41,6 +41,7 @@ import { mergeDraftAgainstServer } from '../object-editor/draft-recovery';
 import { restoreCatalogOptions, stripCatalogOptions } from '../object-editor/io/object-io-serialize';
 import { parsePortalDraft, portalDraftFingerprint, serializePortalDraft } from './portal-draft-schema';
 import { PORTAL_MODULES, PORTAL_RUBRICS } from './portal-rubrics';
+import { validProposalCollectionBaseline } from '../../services/proposal-collection-baseline';
 import {
   portalDraftKey,
   portalFormKey,
@@ -200,6 +201,14 @@ export function readPortalDraft(
   for (const module of carried) {
     const key = MODULE_KEY_MAP[module];
     const local = payload.modules[module];
+    if ((module === 'characteristics' || module === 'openings')
+      && !validProposalCollectionBaseline((payload.baseline?.[module] as { proposalCollectionBaseline?: unknown } | undefined)?.proposalCollectionBaseline, objectId, module)) {
+      // Older local drafts remain readable, but cannot acquire a fresh server precondition
+      // silently. Reuse the existing recovery review before building a new proposal.
+      draft[module] = restoreCatalogOptions(local, live[key], key);
+      conflicts.push(module);
+      continue;
+    }
     if (payload.fingerprint !== currentFingerprint) {
       const base = payload.baseline?.[module];
       if (base === undefined) {

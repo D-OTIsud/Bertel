@@ -13,6 +13,7 @@ import { buildStayPolicyPatch, parseStayPolicySnapshot, stayPolicySnapshot, with
 import type { WorkspaceSaveResult } from './workspace-save-result';
 import { buildMenusWritePayload, parseMenuWriteSnapshot, withMenusWriteSnapshot } from './menu-write-contract';
 import { withPendingMenuRequest } from './menu-save-request';
+import { loadProposalCollection } from './proposal-collection-baseline';
 export {
   ACCESSIBILITY_AMENITY_FAMILY,
   filterEstablishmentAmenityGroups,
@@ -609,17 +610,16 @@ async function getObjectWorkspaceCharacteristicsModule(
     objectEnvironmentsResult,
     objectAmenitiesResult,
   ] = await Promise.all([
-    client.from('object_language').select('language_id, level_id').eq('object_id', objectId),
-    client.from('object_payment_method').select('payment_method_id').eq('object_id', objectId),
-    client.from('object_environment_tag').select('environment_tag_id').eq('object_id', objectId),
-    client.from('object_amenity').select('amenity_id').eq('object_id', objectId),
+    client.from('object_language').select('language_id, level_id', { count: 'exact' }).eq('object_id', objectId),
+    client.from('object_payment_method').select('payment_method_id', { count: 'exact' }).eq('object_id', objectId),
+    client.from('object_environment_tag').select('environment_tag_id', { count: 'exact' }).eq('object_id', objectId),
+    client.from('object_amenity').select('amenity_id', { count: 'exact' }).eq('object_id', objectId),
   ]);
 
   if (
-    objectLanguagesResult.error
-    || objectPaymentsResult.error
-    || objectEnvironmentsResult.error
-    || objectAmenitiesResult.error
+    [objectLanguagesResult, objectPaymentsResult, objectEnvironmentsResult, objectAmenitiesResult].some(result =>
+      result.error || !Array.isArray(result.data) || result.data.some(row => !row || typeof row !== 'object' || Array.isArray(row))
+      || (typeof result.count === 'number' ? result.count !== result.data.length : result.data.length >= 1000))
   ) {
     return {
       ...baseModule,
@@ -670,6 +670,13 @@ async function getObjectWorkspaceCharacteristicsModule(
       .map((row) => amenityRefs.find((amenity) => amenity.id === readString(row.amenity_id))?.code ?? '')
       .filter(Boolean),
   );
+
+  if ((objectLanguagesResult.data ?? []).some(row => !languageById.has(readString(row.language_id)) || (row.level_id && !levelById.has(readString(row.level_id))))
+    || (objectPaymentsResult.data ?? []).some(row => !paymentById.has(readString(row.payment_method_id)))
+    || (objectEnvironmentsResult.data ?? []).some(row => !environmentById.has(readString(row.environment_tag_id)))
+    || (objectAmenitiesResult.data ?? []).some(row => !amenityRefs.some(ref => ref.id === readString(row.amenity_id)))) {
+    return { ...baseModule, unavailableReason: 'Certaines références des caractéristiques ne sont pas lisibles. Rechargez cette rubrique avant de préparer une modification.' };
+  }
 
   return {
     languageOptions,
@@ -4153,7 +4160,7 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions, catalogs, detail.type ?? ''),
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
     getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),
-    getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings, catalogs),
+    loadProposalCollection(objectId, 'openings', () => getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings, catalogs)),
     getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships, catalogs),
     getObjectWorkspaceLegalModule(objectId, parsedModules.legal, catalogs),
     getObjectWorkspaceSustainabilityModule(parsedModules.sustainability, catalogs),
@@ -4169,7 +4176,7 @@ export async function getObjectWorkspaceResource(
     // database, not just the object's existing values (which is all get_object_resource carries).
     // Without this, §10 accessibility equipment panels showed "0 / 0" and nothing was selectable.
     // See lot1_mapping_decisions §32.
-    getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics, catalogs),
+    loadProposalCollection(objectId, 'characteristics', () => getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics, catalogs)),
     // Zones (communes desservies): ref_commune catalog (public read) + the object's object_zone
     // (can_read_object). Enriched unconditionally like contacts/characteristics (§41).
     getObjectWorkspaceZonesModule(objectId, parsedModules.location),

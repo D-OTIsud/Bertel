@@ -82,6 +82,7 @@ export interface ObjectWorkspaceOpeningPeriodTypeOption {
 }
 
 export interface ObjectWorkspaceOpeningsModule {
+  proposalCollectionBaseline?: import('../proposal-collection-baseline').ProposalCollectionBaseline;
   periods: ObjectWorkspaceOpeningPeriod[];
   periodTypeOptions: ObjectWorkspaceOpeningPeriodTypeOption[];
   unavailableReason: string | null;

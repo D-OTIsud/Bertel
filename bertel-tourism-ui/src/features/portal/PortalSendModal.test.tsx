@@ -42,8 +42,9 @@ const modules = (over: Record<string, unknown> = {}) =>
   ({
     contacts: { objectItems: [], webItems: [], kindOptions: [], roleOptions: [] },
     descriptions: { object: { chapo: { baseValue: '', values: {} }, description: { baseValue: '', values: {} } } },
-    openings: { periods: [], periodTypeOptions: [], unavailableReason: null },
+    openings: { periods: [], periodTypeOptions: [], unavailableReason: null, proposalCollectionBaseline: { contract: 'actor-collection-baseline-v1', object_id: OBJ, domain: 'openings', digest: 'b'.repeat(64) } },
     characteristics: {
+      proposalCollectionBaseline: { contract: 'actor-collection-baseline-v1', object_id: OBJ, domain: 'characteristics', digest: 'a'.repeat(64) },
       languageOptions: [], languageLevelOptions: [], selectedLanguages: [], environmentOptions: [], selectedEnvironmentCodes: [],
       selectedAmenityCodes: [],
       selectedPaymentCodes: [],
@@ -328,6 +329,17 @@ describe('PortalSendModal', () => {
         'Une rubrique n’est plus modifiable depuis ici (l’office l’a fermée). Retirez-la de l’envoi, puis réessayez.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('a stale collection asks to reload and keeps the full local draft', async () => {
+    mockedPortal.submitActorFiche.mockRejectedValue(Object.assign(new Error('stale collection'), { code: 'PT412' }));
+    window.localStorage.setItem(portalDraftKey(USER, OBJ), '{"version":1,"note":"à conserver"}');
+    const { editor, onSent } = setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(await screen.findByText(/L’office a modifié cette rubrique.*Rechargez.*saisie est conservée/)).toBeInTheDocument();
+    expect(onSent).not.toHaveBeenCalled();
+    expect(editor.commitModules).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(portalDraftKey(USER, OBJ))).toBe('{"version":1,"note":"à conserver"}');
   });
 
   it('une panne quelconque dit quoi faire — jamais « rien n’est perdu » sans suite', async () => {

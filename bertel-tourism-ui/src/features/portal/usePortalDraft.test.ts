@@ -27,6 +27,18 @@ import type { WorkspaceModuleId } from '../../services/object-workspace';
 const USER = 'u1';
 const OBJ = 'RESRUN0001';
 
+it('preserves a historical collection draft without silently giving it a fresh precondition', () => {
+  writePortalDraft(USER, OBJ, server(), { characteristics: server().characteristics }, 'Ancien brouillon');
+  const original = window.localStorage.getItem(portalDraftKey(USER, OBJ));
+  const fresh = server();
+  fresh.characteristics.proposalCollectionBaseline = { contract: 'actor-collection-baseline-v1', object_id: OBJ, domain: 'characteristics', digest: 'a'.repeat(64) };
+  const restored = readPortalDraft(USER, OBJ, fresh);
+  expect(restored?.note).toBe('Ancien brouillon');
+  expect(restored?.draft.characteristics).toMatchObject({ selectedAmenityCodes: ['wifi'] });
+  expect(restored?.droppedModules).toContain('characteristics');
+  expect(window.localStorage.getItem(portalDraftKey(USER, OBJ))).toBe(original);
+});
+
 /** Les modules tels que le SERVEUR les rend — catalogues compris. */
 const server = (over: Record<string, unknown> = {}) =>
   ({

@@ -20,6 +20,7 @@ BEGIN
   INSERT INTO public.object(id,object_type,name,status,is_test) VALUES
     ('ORGRUN9999998811','ORG','R6 office','published',true),('HOTRUN9999998812','HOT','R6 collection','published',true),('HOTRUN9999998813','HOT','R6 foreign','published',true);
   INSERT INTO public.org_config(org_object_id,is_test_org) VALUES('ORGRUN9999998811',true);
+  INSERT INTO public.user_org_membership(user_id,org_object_id,is_active) VALUES(v_admin,'ORGRUN9999998811',true);
   SELECT id INTO v_role FROM public.ref_actor_role WHERE code='operator';
   SELECT id INTO v_org_role FROM public.ref_org_role WHERE code='publisher';
   INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary) VALUES('HOTRUN9999998812','ORGRUN9999998811',v_org_role,true);
@@ -49,6 +50,7 @@ BEGIN
   ASSERT EXISTS(SELECT 1 FROM internal.pending_collection_baseline WHERE pending_change_id=v_id),'accepted baseline was not captured privately';
   INSERT INTO public.object_payment_method(object_id,payment_method_id) VALUES('HOTRUN9999998812',v_method);
   PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',v_admin,'role','authenticated')::text,true);
+  ASSERT api.current_user_test_realm() AND api.can_read_object('HOTRUN9999998812'),'fixture reviewer must read the test realm through an actual membership';
   v_denied:=false;
   BEGIN PERFORM api.approve_pending_change(v_id,NULL,false); EXCEPTION WHEN SQLSTATE 'PT412' THEN v_denied:=true; END;
   ASSERT v_denied,'approval overwrote a newer collection';

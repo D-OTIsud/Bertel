@@ -679,6 +679,7 @@ jobs:
           fi
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_activity_api_contract.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_public_read_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_restaurant_carte_public_projection.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_reader_safe_restore.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_regional_primary_openings.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -v benchmark_phase=after -f "Base de donnée DLL et API/tests/measure_partner_api_full_benchmark.sql"

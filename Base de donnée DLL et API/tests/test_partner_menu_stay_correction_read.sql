@@ -26,12 +26,12 @@ INSERT INTO public.object_menu(id,object_id,name,visibility,is_active) VALUES
  ('00000000-0000-4000-a000-00000000d723','RESRUN999999D701','Partners menu','partners',true),
  ('00000000-0000-4000-a000-00000000d724','RESRUN999999D702','Draft private menu','private',false),
  ('00000000-0000-4000-a000-00000000d725','RESRUN999999D704','Wrong realm private menu','private',true);
-INSERT INTO public.object_menu_item(id,menu_id,name,visibility,is_available) VALUES
- ('00000000-0000-4000-a000-00000000d731','00000000-0000-4000-a000-00000000d721','Unavailable public dish','public',false),
- ('00000000-0000-4000-a000-00000000d732','00000000-0000-4000-a000-00000000d721','Private dish','private',true),
- ('00000000-0000-4000-a000-00000000d733','00000000-0000-4000-a000-00000000d722','Public dish private parent','public',true),
- ('00000000-0000-4000-a000-00000000d734','00000000-0000-4000-a000-00000000d724','Draft private dish','private',false),
- ('00000000-0000-4000-a000-00000000d735','00000000-0000-4000-a000-00000000d721','Partners dish','partners',true);
+INSERT INTO public.object_menu_item(id,menu_id,name,is_available) VALUES
+ ('00000000-0000-4000-a000-00000000d731','00000000-0000-4000-a000-00000000d721','Unavailable public dish',false),
+ ('00000000-0000-4000-a000-00000000d732','00000000-0000-4000-a000-00000000d722','Dish in private menu',true),
+ ('00000000-0000-4000-a000-00000000d733','00000000-0000-4000-a000-00000000d722','Second dish in private menu',true),
+ ('00000000-0000-4000-a000-00000000d734','00000000-0000-4000-a000-00000000d724','Draft private dish',false),
+ ('00000000-0000-4000-a000-00000000d735','00000000-0000-4000-a000-00000000d723','Dish in partners menu',true);
 INSERT INTO public.media(id,object_id,media_type_id,url,visibility)
  SELECT '00000000-0000-4000-a000-00000000d741','RESRUN999999D701',id,'https://example.test/private-dish.jpg','private'
  FROM public.ref_code_media_type WHERE code='photo';

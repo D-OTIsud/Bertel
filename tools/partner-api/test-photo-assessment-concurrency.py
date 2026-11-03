@@ -97,7 +97,17 @@ def verify_scope_after_wait(kind):
             if time.monotonic() >= deadline:
                 raise RuntimeError(kind + " was not observed waiting on the object")
             time.sleep(0.05)
-        sql("SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',false);UPDATE public.app_user_profile SET actor_id='00000000-0000-4000-a000-00000000c523' WHERE id='00000000-0000-4000-a000-00000000c511';")
+        # actor_id is unique: transfer B from its fixture account atomically,
+        # without weakening the real account-to-actor constraint for the race.
+        sql("""BEGIN;
+          SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
+          DO $$ BEGIN
+            ASSERT (SELECT actor_id FROM public.app_user_profile WHERE id='00000000-0000-4000-a000-00000000c511')='00000000-0000-4000-a000-00000000c521'::uuid;
+            ASSERT (SELECT actor_id FROM public.app_user_profile WHERE id='00000000-0000-4000-a000-00000000c513')='00000000-0000-4000-a000-00000000c523'::uuid;
+          END $$;
+          UPDATE public.app_user_profile SET actor_id=NULL WHERE id='00000000-0000-4000-a000-00000000c513';
+          UPDATE public.app_user_profile SET actor_id='00000000-0000-4000-a000-00000000c523' WHERE id='00000000-0000-4000-a000-00000000c511';
+          COMMIT;""")
         switched = True
         sql(prefix("bertel_photo_scope_positive") + "DO $$ BEGIN ASSERT EXISTS(SELECT 1 FROM api.current_user_portal_object_ids() id WHERE id='" + object_id + "'),'Actor B lacks the positive-control object right';END $$;COMMIT;")
         holding.stdin.write("COMMIT;\n")
@@ -113,7 +123,15 @@ def verify_scope_after_wait(kind):
         stop(attempting)
         stop(holding)
         if switched:
-            sql("SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',false);UPDATE public.app_user_profile SET actor_id='00000000-0000-4000-a000-00000000c521' WHERE id='00000000-0000-4000-a000-00000000c511';")
+            sql("""BEGIN;
+              SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
+              UPDATE public.app_user_profile SET actor_id='00000000-0000-4000-a000-00000000c521' WHERE id='00000000-0000-4000-a000-00000000c511';
+              UPDATE public.app_user_profile SET actor_id='00000000-0000-4000-a000-00000000c523' WHERE id='00000000-0000-4000-a000-00000000c513';
+              DO $$ BEGIN
+                ASSERT (SELECT actor_id FROM public.app_user_profile WHERE id='00000000-0000-4000-a000-00000000c511')='00000000-0000-4000-a000-00000000c521'::uuid;
+                ASSERT (SELECT actor_id FROM public.app_user_profile WHERE id='00000000-0000-4000-a000-00000000c513')='00000000-0000-4000-a000-00000000c523'::uuid;
+              END $$;
+              COMMIT;""")
 
 
 def verify_off_without_object_wait():

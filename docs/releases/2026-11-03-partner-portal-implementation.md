@@ -92,8 +92,13 @@ passent (`41617836078`). Les recettes SQL M et E passent, puis la nouvelle
 fixture de continuité s'arrête avant son scénario : le lien publisher recalculait
 le realm depuis une configuration d'office absente. La fixture est corrigée en
 déclarant son office de test avant ce lien ; aucune garde métier n'est relâchée.
-Le scénario intégré et les précontrôles M doivent encore passer sur le prochain
-commit. Claude contre-vérifie indépendamment M/E sur `2ee31cd`.
+`f7b4fe2` passe ensuite M/E, le scénario intégré et les précontrôles M dans
+les deux scénarios SQL (`41619569645`). Le frontend et l'image Alpine passent
+entièrement (`41619569671`). La recette SQL P complète passe aussi, dont
+l'anonymisation avec document partagé conservé. Le harnais P échoue ensuite
+sur la fixture de permutation d'acteur : B appartient déjà à un autre compte.
+Le transfert temporaire des deux comptes est corrigé atomiquement en respectant
+l'unicité, sans modifier la règle métier. Les dernières courses restent à rejouer.
 
 ## Revue indépendante Claude
 
@@ -163,6 +168,17 @@ du recours est remplacée par l'empreinte de son intention exacte ; le texte res
 uniquement dans le CRM, traité par son effacement existant. Après cette revue,
 l'interface Claude affiche 97 % du quota normal et 93 USD de crédits cloud
 restants. Aucun achat n'a été effectué.
+
+La septième revue, contre-vérification M/E sur `2ee31cd`, clôt sept des huit
+points. Elle démontre deux cas restants : une promotion `staged` → `copied`
+sans lien public encore présent est trop permissive, et la comparaison textuelle
+des UUID peut masquer l'impact d'une source écrite en majuscules. Les deux cas
+sont confiés au sous-agent E avec leurs tests. Le contrôle DML de bascule M est
+aussi étendu à `anon` et une suppression autorisée du plat cible est testée.
+Les limites de ce contrôle restent explicites : les helpers R4 et hooks E doivent
+être comparés sur la cible réelle avant activation. Les tables de fondation
+M/E/P sont absentes de la production examinée à 10:33 UTC ; aucune ancienne
+préparation n'y a été appliquée par cette tâche.
 
 `14e9c25` convertit les commandes de cartes existantes de l'office au contrat
 atomique : instantané brut distinct de l'affichage, demande durable, état

@@ -50,10 +50,10 @@ CREATE FUNCTION internal.menu_extraction_context(p_object_id text,p_sources json
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,internal,pg_temp AS $fn$
 DECLARE v_source jsonb; v_rows jsonb:='[]'; v_id uuid; v_upload internal.restaurant_carte_upload%ROWTYPE;
  v_link jsonb; v_doc public.ref_document%ROWTYPE; v_target jsonb; v_page jsonb;
+ v_source_key text; v_seen_sources text[]:=ARRAY[]::text[];
 BEGIN
  PERFORM internal.assert_portal_menu_write(p_object_id);
- IF jsonb_typeof(p_sources) IS DISTINCT FROM 'array' OR jsonb_array_length(p_sources) NOT BETWEEN 1 AND 8
-   OR (SELECT count(DISTINCT (s->>'kind',s->>'id')) FROM jsonb_array_elements(p_sources) s)<>jsonb_array_length(p_sources) THEN
+  IF jsonb_typeof(p_sources) IS DISTINCT FROM 'array' OR jsonb_array_length(p_sources) NOT BETWEEN 1 AND 8 THEN
   RAISE EXCEPTION 'Sources invalides' USING ERRCODE='22023'; END IF;
  IF p_target_menu_id IS NOT NULL THEN
   IF NOT EXISTS(SELECT 1 FROM public.object_menu m WHERE m.id=p_target_menu_id AND m.object_id=p_object_id AND m.visibility='public') THEN
@@ -66,6 +66,10 @@ BEGIN
    OR v_source->>'kind' IS NULL OR v_source->>'kind' NOT IN ('upload','carte') THEN RAISE EXCEPTION 'Source invalide' USING ERRCODE='22023'; END IF;
   BEGIN v_id:=(v_source->>'id')::uuid; EXCEPTION WHEN invalid_text_representation THEN RAISE EXCEPTION 'Source invalide' USING ERRCODE='22023'; END;
   IF v_id IS NULL THEN RAISE EXCEPTION 'Source requise' USING ERRCODE='22023'; END IF;
+   -- Compare UUID identity without rewriting the sealed request or old receipts.
+   v_source_key:=(v_source->>'kind')||':'||v_id::text;
+   IF v_source_key=ANY(v_seen_sources) THEN RAISE EXCEPTION 'Sources invalides' USING ERRCODE='22023'; END IF;
+   v_seen_sources:=array_append(v_seen_sources,v_source_key);
   IF v_source ? 'pages' THEN
    IF jsonb_typeof(v_source->'pages') IS DISTINCT FROM 'array' OR jsonb_array_length(v_source->'pages') NOT BETWEEN 1 AND 8 THEN
     RAISE EXCEPTION 'Pages invalides' USING ERRCODE='22023'; END IF;
@@ -106,6 +110,7 @@ BEGIN
    x:=a->'upload';y:=b->'upload';
    IF x->>'state' IS NULL OR x->>'state' NOT IN('staged','copied') OR y->>'state' IS NULL OR y->>'state' NOT IN('staged','copied') THEN RETURN false; END IF;
    IF x->>'state' IS DISTINCT FROM y->>'state' AND NOT(x->>'state'='staged' AND y->>'state'='copied') THEN RETURN false; END IF;
+    IF x->>'state'='staged' AND y->>'state'='copied' AND nullif(b->'linked','null'::jsonb) IS NULL THEN RETURN false; END IF;
    IF x->>'state'='copied' AND x->'publicUrl' IS DISTINCT FROM y->'publicUrl' THEN RETURN false; END IF;
    IF nullif(a->'linked','null'::jsonb) IS NULL AND nullif(b->'linked','null'::jsonb) IS NOT NULL THEN
     IF y->>'state' IS DISTINCT FROM 'copied' OR b#>>'{linked,object_id}' IS DISTINCT FROM y->>'objectId'
@@ -417,9 +422,9 @@ BEGIN
    SELECT 1 FROM internal.menu_extraction_operation o WHERE o.object_id=p_object_id AND o.state='succeeded'
     AND o.published_at IS NOT NULL AND o.published_result IS NOT NULL AND m.id=ANY(o.published_menu_ids)
     AND EXISTS(SELECT 1 FROM jsonb_array_elements(o.source_refs) s WHERE
-     (s->>'kind'='carte' AND s->>'id'=v_document::text) OR
+     (s->>'kind'='carte' AND CASE WHEN pg_input_is_valid(s->>'id','uuid') THEN (s->>'id')::uuid END=v_document) OR
      (s->>'kind'='upload' AND EXISTS(SELECT 1 FROM internal.restaurant_carte_upload u
-       WHERE u.id::text=s->>'id' AND u.object_id=p_object_id AND u.document_id=v_document)))
+       WHERE u.id=CASE WHEN pg_input_is_valid(s->>'id','uuid') THEN (s->>'id')::uuid END AND u.object_id=p_object_id AND u.document_id=v_document)))
   )),'[]'::jsonb));
 END $fn$;
 

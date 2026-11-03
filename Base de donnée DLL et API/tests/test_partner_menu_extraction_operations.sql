@@ -102,8 +102,7 @@ BEGIN
  ASSERT rejected,'late target child was ignored';
  DELETE FROM public.object_menu_item WHERE id=child;
  ASSERT internal.assert_menu_extraction_publication(op,'RESRUN999999E201',2) IS NULL;
- -- Real M/E transaction: deleting the sole target leaves no published menu IDs;
- -- E record rejects and PostgreSQL rolls back BOTH menu deletion and receipts.
+ -- E rejects menu deletion before the shared writer; no menu or receipt changes.
  expected:=internal.portal_menu_write_snapshot(internal.object_menu_write_snapshot('RESRUN999999E201'));
  SELECT r INTO expected FROM jsonb_array_elements(expected->'menus') r WHERE r->>'id'=menu::text;
  payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e210',
@@ -139,13 +138,33 @@ BEGIN
  rejected:=false;BEGIN PERFORM api.publish_portal_menus('RESRUN999999E201',payload,op);EXCEPTION WHEN invalid_parameter_value THEN rejected:=true;END;
  ASSERT rejected,'E targeted to A associated with a different public menu B';
  ASSERT internal.object_menu_write_snapshot('RESRUN999999E201')=before_state,'wrong-target association left a menu write';
+ -- Positive counterpart: explicitly deleting a dish of E's exact target is allowed.
+ -- Keep the target menu in the mutation so its ID is recorded with the publication.
  SELECT r INTO expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(before_state)->'menus') r WHERE r->>'id'=menu::text;
+ SELECT r INTO delete_expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(before_state)->'items') r WHERE r->>'id'=target_item::text;
+ ASSERT delete_expected IS NOT NULL AND delete_expected->>'menu_id'=menu::text,'positive deletion fixture lacks its target dish';
  payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e211',
   'extraction_draft_version',2,
   'menus',jsonb_build_array(jsonb_build_object('id',menu,'expected',expected,'changes',jsonb_build_object('description','Reviewed extraction'))),
-  'items','[]'::jsonb,'deleted_items','[]'::jsonb,'deleted_menus','[]'::jsonb);
+  'items','[]'::jsonb,
+  'deleted_items',jsonb_build_array(jsonb_build_object('id',target_item,'menu_id',menu,'expected',jsonb_build_object('row',delete_expected))),
+  'deleted_menus','[]'::jsonb);
  result:=api.publish_portal_menus('RESRUN999999E201',payload,op);
  ASSERT result->>'success'='true';
+ ASSERT NOT EXISTS(SELECT 1 FROM public.object_menu_item WHERE id=target_item),'exact target dish was not deleted';
+ ASSERT internal.object_menu_delete_bundle(internal.object_menu_write_snapshot('RESRUN999999E201'),other_menu,true)
+   =internal.object_menu_delete_bundle(before_state,other_menu,true),'target dish deletion changed independent menu, dishes or links';
+ ASSERT internal.object_menu_delete_bundle(internal.object_menu_write_snapshot('RESRUN999999E201'),private_menu,true)
+   =internal.object_menu_delete_bundle(before_state,private_menu,true),'target dish deletion changed hidden office menu';
+ ASSERT (SELECT r.request FROM internal.object_menu_write_receipt r WHERE r.object_id='RESRUN999999E201'
+   AND r.principal='portal:'||u::text AND r.request_id='00000000-0000-4000-a000-00000000e211')
+   =jsonb_build_object('payload',payload,'extraction_operation_id',op),'M receipt lost the exact target-deletion intent';
+ ASSERT (SELECT r.result FROM internal.object_menu_write_receipt r WHERE r.object_id='RESRUN999999E201'
+   AND r.principal='portal:'||u::text AND r.request_id='00000000-0000-4000-a000-00000000e211')=result,'M receipt differs from the confirmed result';
+ ASSERT EXISTS(SELECT 1 FROM internal.object_menu_write_receipt r WHERE r.object_id='RESRUN999999E201'
+   AND r.principal=u::text AND r.request_id='00000000-0000-4000-a000-00000000e211'
+   AND r.request#>>'{deleted_items,0,id}'=target_item::text),'shared writer did not record the target deletion';
+ ASSERT (SELECT e.published_result FROM internal.menu_extraction_operation e WHERE e.id=op)=result,'E and M target-deletion receipts differ';
  rejected:=false;BEGIN PERFORM api.save_menu_extraction_draft(op,2,'{"menu":{"title":"Already published"}}');EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
  ASSERT rejected,'saving a published extraction did not return conflict';
  ASSERT (SELECT description='Reviewed extraction' FROM public.object_menu WHERE id=menu);
@@ -153,6 +172,7 @@ BEGIN
  ASSERT EXISTS(SELECT 1 FROM public.object_menu WHERE id=private_menu AND visibility='private'),'office menu was changed';
  UPDATE public.ref_document SET title='Source changed after publication' WHERE id=doc;
  ASSERT api.publish_portal_menus('RESRUN999999E201',payload,op)->>'replayed'='true','lost publication response revalidated obsolete source';
+ ASSERT NOT EXISTS(SELECT 1 FROM public.object_menu_item WHERE id=target_item),'publication replay restored the deleted target dish';
  rejected:=false;BEGIN PERFORM api.publish_portal_menus('RESRUN999999E201',payload||jsonb_build_object('request_id','00000000-0000-4000-a000-00000000e212'),op);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
  ASSERT rejected,'published extraction reused for new intention';
  -- Use a fresh source baseline for quota/uncertain/day-boundary tests.

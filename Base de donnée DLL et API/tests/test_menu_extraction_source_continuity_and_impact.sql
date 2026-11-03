@@ -12,7 +12,7 @@ DECLARE
  office uuid:='00000000-0000-4000-a000-00000000e40b'; hidden_menu uuid:='00000000-0000-4000-a000-00000000e40c';
  foreign_menu uuid:='00000000-0000-4000-a000-00000000e40d'; other_office uuid:='00000000-0000-4000-a000-00000000e40e';
  old_author_menu uuid:='00000000-0000-4000-a000-00000000e40f'; role_id uuid; carte_role uuid; publisher_role uuid; old_doc uuid; new_doc uuid;
- claims jsonb; receipt jsonb; refs jsonb; ctx jsonb; current_ctx jsonb; stats jsonb; expected jsonb; payload jsonb; impact jsonb; ids jsonb;
+ claims jsonb; receipt jsonb; refs jsonb; ctx jsonb; source_ctx jsonb; current_ctx jsonb; stats jsonb; expected jsonb; payload jsonb; impact jsonb; ids jsonb;
  claim uuid:=gen_random_uuid(); rejected boolean; row_value jsonb;
 BEGIN
  IF current_setting('bertel.ephemeral_ci',true) IS DISTINCT FROM 'on' THEN RAISE EXCEPTION 'Ephemeral CI database only'; END IF;
@@ -45,8 +45,14 @@ BEGIN
  PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
  PERFORM api.record_restaurant_carte_staged(upload1,repeat('a',64));
  PERFORM set_config('request.jwt.claims',claims::text,true);
- refs:=jsonb_build_array(jsonb_build_object('kind','upload','id',upload1));
+  -- Uppercase is accepted by UUID parsing and must retain the same provenance.
+  refs:=jsonb_build_array(jsonb_build_object('kind','upload','id',upper(upload1::text)));
  ctx:=api.menu_extraction_context('RESRUN999999E401',refs,target)->'context';
+  source_ctx:=api.menu_extraction_context('RESRUN999999E401',refs,NULL)->'context';
+  rejected:=false;BEGIN
+   PERFORM api.menu_extraction_context('RESRUN999999E401',refs||jsonb_build_array(jsonb_build_object('kind','upload','id',upload1)),target);
+  EXCEPTION WHEN invalid_parameter_value THEN rejected:=true;END;
+  ASSERT rejected,'same upload UUID with mixed casing was counted twice';
  stats:=jsonb_build_array(jsonb_build_object('id',upload1,'bucket','restaurant-cartes-private','path',receipt->>'stagingPath','sha256',repeat('a',64),
   'mimeType','application/pdf','pageCount',1,'selectedPages',jsonb_build_array(1),'storageExpected',internal.menu_extraction_storage_snapshot('restaurant-cartes-private',receipt->>'stagingPath')));
  PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
@@ -59,6 +65,10 @@ BEGIN
  INSERT INTO storage.objects(bucket_id,name) VALUES('documents',receipt->>'publicPath');
  PERFORM api.record_restaurant_carte_copied(upload1,repeat('a',64),'https://project.example/storage/v1/object/public/documents/'||(receipt->>'publicPath'));
  PERFORM set_config('request.jwt.claims',claims::text,true);
+  current_ctx:=api.menu_extraction_context('RESRUN999999E401',refs,target)->'context';
+  ASSERT NOT internal.menu_extraction_context_matches(ctx,current_ctx),'copy without C finalization accepted as publication';
+  rejected:=false;BEGIN PERFORM internal.assert_menu_extraction_publication(op,'RESRUN999999E401',0);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
+  ASSERT rejected,'E publication accepted a copied upload without its public C link';
  payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','publish','upload_id',upload1,'expected','null'::jsonb);
  PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999E401','00000000-0000-4000-a000-00000000e410',payload);PERFORM api.finalize_restaurant_carte_mutation('00000000-0000-4000-a000-00000000e410');
  current_ctx:=api.menu_extraction_context('RESRUN999999E401',refs,target)->'context';
@@ -68,6 +78,23 @@ BEGIN
  ASSERT NOT internal.menu_extraction_context_matches(ctx,jsonb_set(current_ctx,'{sources,0,linked,document,access_scope}','"crm_private"')),'non-public publication accepted';
  ASSERT NOT internal.menu_extraction_context_matches(ctx,jsonb_set(current_ctx,'{targetFingerprint}','"changed"')),'changed target accepted';
  ASSERT NOT internal.menu_extraction_context_matches(current_ctx,jsonb_set(current_ctx,'{sources,0,linked,title}','"Changed existing link"')),'existing link edits became version-neutral';
+  rejected:=false;BEGIN
+   PERFORM api.menu_extraction_context('RESRUN999999E401',jsonb_build_array(
+    jsonb_build_object('kind','carte','id',upper(old_doc::text),'expected',current_ctx#>'{sources,0,linked}'),
+    jsonb_build_object('kind','carte','id',lower(old_doc::text),'expected',current_ctx#>'{sources,0,linked}')),NULL);
+  EXCEPTION WHEN invalid_parameter_value THEN rejected:=true;END;
+  ASSERT rejected,'same card UUID with mixed casing was counted twice';
+  -- A copied upload stays copied after removal; its first public link is still
+  -- mandatory when reconciling an extraction originally inspected while staged.
+  payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','remove','document_id',old_doc,'expected',current_ctx#>'{sources,0,linked}');
+  PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999E401','00000000-0000-4000-a000-00000000e413',payload);PERFORM api.finalize_restaurant_carte_mutation('00000000-0000-4000-a000-00000000e413');
+  current_ctx:=api.menu_extraction_context('RESRUN999999E401',refs,target)->'context';
+  ASSERT NOT internal.menu_extraction_context_matches(ctx,current_ctx),'published then removed card was accepted as unchanged';
+  rejected:=false;BEGIN PERFORM internal.assert_menu_extraction_publication(op,'RESRUN999999E401',0);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
+  ASSERT rejected,'E publication accepted a public C link removed after copying';
+  payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','publish','upload_id',upload1,'expected','null'::jsonb);
+  PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999E401','00000000-0000-4000-a000-00000000e414',payload);PERFORM api.finalize_restaurant_carte_mutation('00000000-0000-4000-a000-00000000e414');
+  ASSERT internal.menu_extraction_context_matches(ctx,api.menu_extraction_context('RESRUN999999E401',refs,target)->'context'),'restored canonical C publication no longer allowed E';
  SELECT r INTO expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(internal.object_menu_write_snapshot('RESRUN999999E401'))->'menus') r WHERE r->>'id'=target::text;
  payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e411','extraction_draft_version',0,
   'menus',jsonb_build_array(jsonb_build_object('id',target,'expected',expected,'changes',jsonb_build_object('description','Reviewed from private source'))),'items','[]'::jsonb,'deleted_items','[]'::jsonb,'deleted_menus','[]'::jsonb);
@@ -83,6 +110,7 @@ BEGIN
  payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','publish','upload_id',upload2,'document_id',old_doc,'expected',expected);
  PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999E401','00000000-0000-4000-a000-00000000e412',payload);PERFORM api.finalize_restaurant_carte_mutation('00000000-0000-4000-a000-00000000e412');
  ASSERT NOT EXISTS(SELECT 1 FROM public.object_document WHERE object_id='RESRUN999999E401' AND document_id=old_doc);
+  ASSERT NOT internal.menu_extraction_context_matches(source_ctx,api.menu_extraction_context('RESRUN999999E401',refs,NULL)->'context'),'published then replaced card was accepted as unchanged';
  ASSERT api.get_menu_extraction_source_impact('RESRUN999999E401','carte',new_doc)->'menus'='[]'::jsonb,'new source inherited an old extraction';
  UPDATE internal.menu_extraction_operation SET created_at=now()-interval '50 days' WHERE id=op;
  -- Historical read fixtures, not dispatch/expense fixtures: previous authors,
@@ -90,7 +118,7 @@ BEGIN
  INSERT INTO internal.menu_extraction_operation(id,object_id,created_by,source_refs,context,source_stats,request_meta,page_count,state,result,published_result,published_menu_ids,published_at,created_at)
  SELECT gen_random_uuid(),'RESRUN999999E401',u,jsonb_build_array(jsonb_build_object('kind','carte','id',new_doc)),'{}','[]','{}',1,'succeeded','{}','{}',ARRAY[new_source_menu],now(),now()-n*interval '1 minute' FROM generate_series(1,35) n;
  INSERT INTO internal.menu_extraction_operation(id,object_id,created_by,source_refs,context,source_stats,request_meta,page_count,state,result,published_result,published_menu_ids,published_at,created_at)
- SELECT gen_random_uuid(),'RESRUN999999E401',foreign_user,jsonb_build_array(jsonb_build_object('kind','carte','id',old_doc)),'{}','[]','{}',1,'succeeded','{"secret":"DO_NOT_PROJECT"}','{}',ARRAY[x],now(),now()-interval '45 days'
+  SELECT gen_random_uuid(),'RESRUN999999E401',foreign_user,jsonb_build_array(jsonb_build_object('kind','carte','id',upper(old_doc::text))),'{}','[]','{}',1,'succeeded','{"secret":"DO_NOT_PROJECT"}','{}',ARRAY[x],now(),now()-interval '45 days'
  FROM unnest(ARRAY[old_author_menu,hidden_menu,'00000000-0000-4000-a000-00000000e499'::uuid]) x;
  INSERT INTO public.object_document(object_id,document_id,role_id,title) VALUES('RESRUN999999E402',old_doc,carte_role,'Shared source');
  INSERT INTO internal.menu_extraction_operation(id,object_id,created_by,source_refs,context,source_stats,request_meta,page_count,state,result,published_result,published_menu_ids,published_at)

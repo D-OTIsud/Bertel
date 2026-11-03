@@ -43,11 +43,13 @@ DO $$ BEGIN
 END $$;
 """
 closed_dml = """
-DO $$ DECLARE t text; BEGIN
- FOREACH t IN ARRAY ARRAY['object_menu','object_menu_item','object_menu_item_media',
-   'object_menu_item_dietary_tag','object_menu_item_allergen','object_menu_item_cuisine_type'] LOOP
-  ASSERT NOT has_table_privilege('authenticated','public.'||t,'INSERT,UPDATE,DELETE'),t||' DML reopened';
-  ASSERT NOT has_any_column_privilege('authenticated','public.'||t,'INSERT,UPDATE'),t||' column DML reopened';
+DO $$ DECLARE t text; r text; BEGIN
+ FOREACH r IN ARRAY ARRAY['anon','authenticated'] LOOP
+  FOREACH t IN ARRAY ARRAY['object_menu','object_menu_item','object_menu_item_media',
+    'object_menu_item_dietary_tag','object_menu_item_allergen','object_menu_item_cuisine_type'] LOOP
+   ASSERT NOT has_table_privilege(r,'public.'||t,'INSERT,UPDATE,DELETE'),r||' '||t||' DML reopened';
+   ASSERT NOT has_any_column_privilege(r,'public.'||t,'INSERT,UPDATE'),r||' '||t||' column DML reopened';
+  END LOOP;
  END LOOP;
 END $$;
 """
@@ -118,6 +120,13 @@ try:
         sql(off + closed_dml)
     finally:
         sql("REVOKE EXECUTE ON FUNCTION internal.apply_object_menus_patch(text,jsonb) FROM authenticated;")
+    try:
+        sql("GRANT UPDATE(name) ON public.object_menu TO anon;")
+        sql(m_cutover, "Fermer d’abord les anciens droits menus (object_menu).")
+        sql(off)
+    finally:
+        sql("REVOKE UPDATE(name) ON public.object_menu FROM anon;")
+    sql(off + closed_dml)
     sql(m_cutover)
     sql(active + closed_dml)
     # Repeating an exact activation also checks all nine sources/attributes/ACL.

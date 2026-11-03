@@ -42,3 +42,23 @@ Ordre : R4 corrigé → préparation M → préparation E → recettes isolées 
 Le cutover M est séparé et refuse l’activation tant que les anciennes permissions DML menus subsistent. La validation de l’interface et les décisions sur formules précèdent toute activation produit. Les appels au service M ne sont actuellement branchés à aucun écran.
 
 Juste avant tout grant, le cutover recontrôle les neuf empreintes de source, propriétaire, langage, mode de sécurité, volatilité, arguments/retour, expression canonique des paramètres par défaut, configuration et ACL. Une dérive depuis la préparation bloque l’activation. Sa recette réelle vérifie aussi les dérives de source, de valeur par défaut, de configuration et de privilège, puis la restauration OFF sans réouverture du DML.
+
+Ce contrôle automatisé porte sur les neuf fonctions M et les droits DML effectifs
+d’`anon` et `authenticated`, par table et par colonne. La recette injecte un
+`GRANT UPDATE(name)` à `anon` et exige son refus avant activation. Le contrôle
+ne certifie pas les helpers R4 appelés ni les hooks E
+`assert_menu_extraction_publication` et `record_menu_extraction_publication`.
+Avant la bascule sur une cible réelle,
+comparer aussi ces dépendances au commit recetté : définitions normalisées LF,
+empreintes, signatures, defaults, propriétaire, sécurité, configuration et ACL
+(donneur et options de grant compris). Vérifier les privilèges effectifs de table
+et de colonne d’`anon` et `authenticated` sur les six tables menus, y compris
+`PUBLIC` et les rôles hérités. Une divergence arrête M/E jusqu’à correction
+explicite ; elle ne justifie pas de remplacer l’empreinte attendue.
+
+Attester enfin qu’aucune ancienne préparation M/E n’a été installée sur la cible
+persistante. Le contrôle en lecture seule du 3 novembre à 10:33 UTC confirme
+l’absence des tables de fondation M/E/P dans la production examinée. Les versions
+précédentes de cette tâche ont été exécutées uniquement dans les bases jetables
+de CI. Une autre cible déjà préparée exige une migration de mise à niveau dédiée,
+pas un rejeu aveugle de la migration E à installation unique.

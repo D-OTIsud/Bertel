@@ -42,7 +42,9 @@ BEGIN
   END LOOP;
   FOREACH v_table IN ARRAY ARRAY['object_menu','object_menu_item','object_menu_item_media','object_menu_item_dietary_tag','object_menu_item_allergen','object_menu_item_cuisine_type'] LOOP
     IF has_table_privilege('authenticated','public.'||v_table,'INSERT,UPDATE,DELETE')
-      OR has_any_column_privilege('authenticated','public.'||v_table,'INSERT,UPDATE') THEN
+      OR has_any_column_privilege('authenticated','public.'||v_table,'INSERT,UPDATE')
+      OR has_table_privilege('anon','public.'||v_table,'INSERT,UPDATE,DELETE')
+      OR has_any_column_privilege('anon','public.'||v_table,'INSERT,UPDATE') THEN
       RAISE EXCEPTION 'Fermer d’abord les anciens droits menus (%).',v_table USING ERRCODE='55000';
     END IF;
   END LOOP;

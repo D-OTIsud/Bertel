@@ -7,9 +7,11 @@ import {
   normalizeOpeningWeekdayCode,
   buildCodeIdMap,
   ensureKnownCodes,
-  workspaceNameForSave,
 } from './object-workspace-payloads/input';
 import { buildCharacteristicsRpcPayload } from './object-workspace-payloads/characteristics';
+import { buildStayPolicyPatch, parseStayPolicySnapshot, stayPolicySnapshot, withStayPolicySnapshot } from './stay-policy-contract';
+import type { WorkspaceSaveResult } from './workspace-save-result';
+import { buildMenusWritePayload, parseMenuWriteSnapshot, withMenusWriteSnapshot } from './menu-write-contract';
 export {
   ACCESSIBILITY_AMENITY_FAMILY,
   filterEstablishmentAmenityGroups,
@@ -263,6 +265,9 @@ async function callObjectWorkspaceRpc(
   });
 
   if (error) {
+    if (readRecord(error).code === 'PT409' && ['save_object_capacity_policies', 'save_object_menus'].includes(functionName)) {
+      throw Object.assign(new Error('Ces informations ont changé. Rechargez la fiche pour les vérifier ; votre saisie est conservée.'), { code: 'PT409' });
+    }
     throw mapMutationError(error, fallback);
   }
 
@@ -793,6 +798,7 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
       checkOutUntil: toHm(readString(stayPolicy.check_out_until)),
       conditions: readString(stayPolicy.conditions),
     },
+    stayPolicySnapshot: stayPolicySnapshot(stayPolicyResult.data),
     unavailableReason: null,
   };
 }
@@ -3000,7 +3006,7 @@ export async function getObjectWorkspaceMenusModule(
   };
 
   const [menusResult, mediaResult] = await Promise.allSettled([
-    client.from('object_menu').select('id, category_id, name, description, is_active, visibility, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('object_menu').select('*').eq('object_id', objectId).order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
@@ -3016,7 +3022,7 @@ export async function getObjectWorkspaceMenusModule(
   const [itemRowsResult] = await Promise.allSettled([menuIds.length > 0
     ? client
         .from('object_menu_item')
-        .select('id, menu_id, name, description, price, currency, kind_id, unit_id, media_id, is_available, position, section_id')
+        .select('*')
         .in('menu_id', menuIds)
         .order('position', { ascending: true })
     : Promise.resolve({ data: [], error: null })]);
@@ -3030,12 +3036,12 @@ export async function getObjectWorkspaceMenusModule(
     ? await Promise.allSettled([
         client
           .from('object_menu_item_media')
-          .select('menu_item_id, media_id, position')
+          .select('*')
           .in('menu_item_id', itemIds)
           .order('position', { ascending: true }),
-        client.from('object_menu_item_dietary_tag').select('menu_item_id, dietary_tag_id').in('menu_item_id', itemIds),
-        client.from('object_menu_item_allergen').select('menu_item_id, allergen_id').in('menu_item_id', itemIds),
-        client.from('object_menu_item_cuisine_type').select('menu_item_id, cuisine_type_id').in('menu_item_id', itemIds),
+        client.from('object_menu_item_dietary_tag').select('*').in('menu_item_id', itemIds),
+        client.from('object_menu_item_allergen').select('*').in('menu_item_id', itemIds),
+        client.from('object_menu_item_cuisine_type').select('*').in('menu_item_id', itemIds),
       ])
     : [
         { status: 'fulfilled' as const, value: { data: [], error: null } },
@@ -3169,7 +3175,7 @@ export async function getObjectWorkspaceMenusModule(
     return { ...baseModule, unavailableReason: 'Certaines données associées aux plats ont changé ou ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
   }
 
-  return {
+  return withMenusWriteSnapshot({
     categoryOptions,
     dietaryTagOptions,
     allergenOptions,
@@ -3196,7 +3202,11 @@ export async function getObjectWorkspaceMenusModule(
       };
     }),
     unavailableReason: null,
-  };
+  }, {
+    menus, items: itemRows,
+    media: workspaceReadRows(mediaLinksResult)!, dietary: workspaceReadRows(dietaryLinksResult)!,
+    allergens: workspaceReadRows(allergenLinksResult)!, cuisines: workspaceReadRows(cuisineLinksResult)!,
+  });
 }
 
 async function getObjectWorkspaceActivityModule(
@@ -4809,10 +4819,10 @@ export async function saveObjectWorkspaceCharacteristics(objectId: string, input
   );
 }
 
-export async function saveObjectWorkspaceCapacityPolicies(objectId: string, input: ObjectWorkspaceCapacityPoliciesModule): Promise<void> {
+export async function saveObjectWorkspaceCapacityPolicies(objectId: string, input: ObjectWorkspaceCapacityPoliciesModule): Promise<WorkspaceSaveResult> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
-    return;
+    return { capacityPolicies: input };
   }
 
   // §07 review no-clobber guard (§28/§40/§05 precedent): the capacities leg is a
@@ -4822,7 +4832,9 @@ export async function saveObjectWorkspaceCapacityPolicies(objectId: string, inpu
     throw new Error(input.unavailableReason);
   }
 
-  await callObjectWorkspaceRpc('save_object_commercial', objectId, {
+  const stayPatch = buildStayPolicyPatch(input.stayPolicy, input.stayPolicySnapshot);
+  const result = await callObjectWorkspaceRpc('save_object_capacity_policies', objectId, {
+    stay_policy: stayPatch,
     capacities: input.capacityItems.map((item) => ({
       id: toRpcUuid(item.recordId),
       metric_id: toRpcUuid(item.metricId),
@@ -4847,26 +4859,7 @@ export async function saveObjectWorkspaceCapacityPolicies(objectId: string, inpu
         },
   }, 'Impossible d enregistrer capacites et politiques.');
 
-  // §85 stay policy (heure d'arrivée / départ) — direct PostgREST write, gated by the
-  // canonical_* RLS on object_stay_policy (§40/§41 child-write precedent). All-empty ⇒ delete
-  // the row (so an untouched form never materialises an empty policy).
-  const client = getSupabaseClient();
-  if (client) {
-    const sp = input.stayPolicy;
-    const stayEmpty = ![sp.checkInFrom, sp.checkInUntil, sp.checkOutUntil, sp.conditions].some((value) => value.trim().length > 0);
-    const { error } = stayEmpty
-      ? await client.from('object_stay_policy').delete().eq('object_id', objectId)
-      : await client.from('object_stay_policy').upsert({
-          object_id: objectId,
-          check_in_from: sp.checkInFrom.trim() || null,
-          check_in_until: sp.checkInUntil.trim() || null,
-          check_out_until: sp.checkOutUntil.trim() || null,
-          conditions: sp.conditions.trim() || null,
-        });
-    if (error) {
-      throw new Error('Impossible d enregistrer la politique de séjour.');
-    }
-  }
+  return { capacityPolicies: withStayPolicySnapshot(input, parseStayPolicySnapshot(result.stay_policy)) };
 }
 
 export async function saveObjectWorkspacePricing(objectId: string, input: ObjectWorkspacePricingModule): Promise<void> {
@@ -5179,192 +5172,14 @@ export async function saveObjectWorkspaceCuisine(objectId: string, input: Object
   }
 }
 
-export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWorkspaceMenusModule): Promise<void> {
+export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWorkspaceMenusModule): Promise<void | WorkspaceSaveResult> {
   const session = useSessionStore.getState();
-  if (session.demoMode) {
-    return;
-  }
-  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  if (session.demoMode) return;
   assertWorkspaceSaveAvailable('menus', input);
-
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer les menus.');
-  }
-
-  const [
-    categoryRefsResult,
-    dietaryRefsResult,
-    allergenRefsResult,
-    cuisineRefsResult,
-    kindRefsResult,
-    unitRefsResult,
-    existingMenusResult,
-  ] = await Promise.all([
-    client.from('ref_code').select('id, code').eq('domain', 'menu_category'),
-    client.from('ref_code').select('id, code').eq('domain', 'dietary_tag'),
-    client.from('ref_code').select('id, code').eq('domain', 'allergen'),
-    client.from('ref_code').select('id, code').eq('domain', 'cuisine_type'),
-    client.from('ref_code').select('id, code').eq('domain', 'price_kind'),
-    client.from('ref_code').select('id, code').eq('domain', 'price_unit'),
-    client.from('object_menu').select('id').eq('object_id', objectId),
-  ]);
-
-  if (categoryRefsResult.error) {
-    throw mapMutationError(categoryRefsResult.error, 'Impossible de charger les categories de menu.');
-  }
-  if (dietaryRefsResult.error) {
-    throw mapMutationError(dietaryRefsResult.error, 'Impossible de charger les tags alimentaires.');
-  }
-  if (allergenRefsResult.error) {
-    throw mapMutationError(allergenRefsResult.error, 'Impossible de charger les allergenes.');
-  }
-  if (cuisineRefsResult.error) {
-    throw mapMutationError(cuisineRefsResult.error, 'Impossible de charger les cuisines.');
-  }
-  if (kindRefsResult.error) {
-    throw mapMutationError(kindRefsResult.error, 'Impossible de charger les types de prix.');
-  }
-  if (unitRefsResult.error) {
-    throw mapMutationError(unitRefsResult.error, 'Impossible de charger les unites de prix.');
-  }
-  if (existingMenusResult.error) {
-    throw mapMutationError(existingMenusResult.error, 'Impossible de charger les menus existants.');
-  }
-
-  const categoryIdByCode = buildCodeIdMap(categoryRefsResult.data ?? []);
-  const dietaryIdByCode = buildCodeIdMap(dietaryRefsResult.data ?? []);
-  const allergenIdByCode = buildCodeIdMap(allergenRefsResult.data ?? []);
-  const cuisineIdByCode = buildCodeIdMap(cuisineRefsResult.data ?? []);
-  const kindIdByCode = buildCodeIdMap(kindRefsResult.data ?? []);
-  const unitIdByCode = buildCodeIdMap(unitRefsResult.data ?? []);
-  ensureKnownCodes(input.items.map((menu) => menu.categoryCode).filter(Boolean), categoryIdByCode, 'Categorie de menu');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.map((item) => item.kindCode).filter(Boolean)), kindIdByCode, 'Type de prix');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.map((item) => item.unitCode).filter(Boolean)), unitIdByCode, 'Unite de prix');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.dietaryTagCodes)), dietaryIdByCode, 'Tag alimentaire');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.allergenCodes)), allergenIdByCode, 'Allergene');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.cuisineTypeCodes)), cuisineIdByCode, 'Cuisine');
-
-  const existingMenuIds = (existingMenusResult.data ?? [])
-    .map((row) => readString((row as Record<string, unknown>).id))
-    .filter(Boolean);
-  if (existingMenuIds.length > 0) {
-    const existingItems = await client.from('object_menu_item').select('id').in('menu_id', existingMenuIds);
-    if (existingItems.error) {
-      throw mapMutationError(existingItems.error, 'Impossible de charger les lignes de menu existantes.');
-    }
-    const existingItemIds = (existingItems.data ?? [])
-      .map((row) => readString((row as Record<string, unknown>).id))
-      .filter(Boolean);
-    if (existingItemIds.length > 0) {
-      const [deleteMedia, deleteDietary, deleteAllergens, deleteCuisine] = await Promise.all([
-        client.from('object_menu_item_media').delete().in('menu_item_id', existingItemIds),
-        client.from('object_menu_item_dietary_tag').delete().in('menu_item_id', existingItemIds),
-        client.from('object_menu_item_allergen').delete().in('menu_item_id', existingItemIds),
-        client.from('object_menu_item_cuisine_type').delete().in('menu_item_id', existingItemIds),
-      ]);
-      if (deleteMedia.error) {
-        throw mapMutationError(deleteMedia.error, 'Impossible de reinitialiser les medias de menu.');
-      }
-      if (deleteDietary.error) {
-        throw mapMutationError(deleteDietary.error, 'Impossible de reinitialiser les tags alimentaires.');
-      }
-      if (deleteAllergens.error) {
-        throw mapMutationError(deleteAllergens.error, 'Impossible de reinitialiser les allergenes.');
-      }
-      if (deleteCuisine.error) {
-        throw mapMutationError(deleteCuisine.error, 'Impossible de reinitialiser les cuisines.');
-      }
-    }
-    const { error: deleteItemsError } = await client.from('object_menu_item').delete().in('menu_id', existingMenuIds);
-    if (deleteItemsError) {
-      throw mapMutationError(deleteItemsError, 'Impossible de reinitialiser les lignes de menu.');
-    }
-  }
-  const { error: deleteMenusError } = await client.from('object_menu').delete().eq('object_id', objectId);
-  if (deleteMenusError) {
-    throw mapMutationError(deleteMenusError, 'Impossible de reinitialiser les menus.');
-  }
-
-  for (const menu of input.items) {
-    const menuPayload = {
-      object_id: objectId,
-      category_id: menu.categoryCode ? categoryIdByCode.get(menu.categoryCode.toLowerCase()) ?? null : null,
-      name: workspaceNameForSave(menu.name, menu.rawName) ?? '',
-      description: toNullableText(menu.description),
-      is_active: menu.active,
-      visibility: toNullableText(menu.visibility) ?? (menu.rawVisibility === null ? null : 'public'),
-      position: toNullableInteger(menu.position),
-    };
-    const { data: menuData, error: menuError } = await client.from('object_menu').insert(menuPayload).select('id').single();
-    if (menuError) {
-      throw mapMutationError(menuError, 'Impossible de sauvegarder un menu.');
-    }
-    const menuId = readString((menuData as Record<string, unknown>).id);
-    for (const item of menu.items) {
-      const mediaIds = Array.from(new Set(item.mediaIds ?? [])).filter((mediaId) => isUuid(mediaId));
-      const itemPayload = {
-        menu_id: menuId,
-        name: toNullableText(item.name) ?? 'Ligne',
-        description: toNullableText(item.description),
-        price: toNullableNumber(item.price),
-        currency: toNullableText(item.currency) ?? 'EUR',
-        kind_id: item.kindCode ? kindIdByCode.get(item.kindCode.toLowerCase()) ?? null : null,
-        unit_id: item.unitCode ? unitIdByCode.get(item.unitCode.toLowerCase()) ?? null : null,
-        media_id: mediaIds[0] ?? null,
-        is_available: item.available,
-        position: toNullableInteger(item.position),
-        // §06 P2b — section du plat (menu_category) ; même catalogue que la catégorie de menu.
-        section_id: item.sectionCode ? categoryIdByCode.get(item.sectionCode.toLowerCase()) ?? null : null,
-      };
-      const { data: itemData, error: itemError } = await client.from('object_menu_item').insert(itemPayload).select('id').single();
-      if (itemError) {
-        throw mapMutationError(itemError, 'Impossible de sauvegarder une ligne de menu.');
-      }
-      const itemId = readString((itemData as Record<string, unknown>).id);
-      const dietaryRows = Array.from(new Set(item.dietaryTagCodes)).map((code) => ({
-        menu_item_id: itemId,
-        dietary_tag_id: dietaryIdByCode.get(code.toLowerCase()) as string,
-      }));
-      const allergenRows = Array.from(new Set(item.allergenCodes)).map((code) => ({
-        menu_item_id: itemId,
-        allergen_id: allergenIdByCode.get(code.toLowerCase()) as string,
-      }));
-      const cuisineRows = Array.from(new Set(item.cuisineTypeCodes)).map((code) => ({
-        menu_item_id: itemId,
-        cuisine_type_id: cuisineIdByCode.get(code.toLowerCase()) as string,
-      }));
-      const mediaRows = mediaIds.map((mediaId, mediaIndex) => ({
-        menu_item_id: itemId,
-        media_id: mediaId,
-        position: mediaIndex + 1,
-      }));
-      if (mediaRows.length > 0) {
-        const { error } = await client.from('object_menu_item_media').insert(mediaRows);
-        if (error) {
-          throw mapMutationError(error, 'Impossible de sauvegarder les medias de menu.');
-        }
-      }
-      if (dietaryRows.length > 0) {
-        const { error } = await client.from('object_menu_item_dietary_tag').insert(dietaryRows);
-        if (error) {
-          throw mapMutationError(error, 'Impossible de sauvegarder les tags alimentaires.');
-        }
-      }
-      if (allergenRows.length > 0) {
-        const { error } = await client.from('object_menu_item_allergen').insert(allergenRows);
-        if (error) {
-          throw mapMutationError(error, 'Impossible de sauvegarder les allergenes.');
-        }
-      }
-      if (cuisineRows.length > 0) {
-        const { error } = await client.from('object_menu_item_cuisine_type').insert(cuisineRows);
-        if (error) {
-          throw mapMutationError(error, 'Impossible de sauvegarder les cuisines.');
-        }
-      }
-    }
-  }
+  const payload = buildMenusWritePayload(input);
+  const result = await callObjectWorkspaceRpc('save_object_menus', objectId, payload, 'Impossible d’enregistrer les menus. Votre saisie est conservée.');
+  const snapshot = parseMenuWriteSnapshot(result.snapshot);
+  return { menus: withMenusWriteSnapshot(input, snapshot) };
 }
 
 export async function saveObjectWorkspaceActivity(objectId: string, input: ObjectWorkspaceActivityModule): Promise<void> {

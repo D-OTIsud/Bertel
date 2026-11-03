@@ -72,6 +72,7 @@ export function planSaveBatch(
 }
 
 export interface EditorSaveResult {
+  canonicalModules?: import('../../services/workspace-save-result').WorkspaceSaveResult;
   /** Modules persisted directly (canonical writer). */
   saved: WorkspaceModuleId[];
   /** P1.3 — modules submitted to the moderation queue as pending changes (contributor). */
@@ -145,6 +146,7 @@ export function useEditorSave(objectId: string) {
       const saved: WorkspaceModuleId[] = [];
       const submitted: WorkspaceModuleId[] = [];
       const failed: { module: WorkspaceModuleId; message: string }[] = [];
+      const canonicalModules: import('../../services/workspace-save-result').WorkspaceSaveResult = {};
       setSaving(true);
       try {
         let compatibility: WriteCompatibility | undefined;
@@ -167,6 +169,7 @@ export function useEditorSave(objectId: string) {
           const module = plan.writable[index];
           if (result.status === 'fulfilled') {
             saved.push(module);
+            if (result.value) Object.assign(canonicalModules, result.value);
           } else {
             failed.push({
               module,
@@ -201,7 +204,8 @@ export function useEditorSave(objectId: string) {
         // Preserve the deployed one-shot notification for a settled proposal batch.
         void pingNotifyDrain();
       }
-      return { saved, submitted, failed, blocked: plan.blocked };
+      return { saved, submitted, failed, blocked: plan.blocked,
+        ...(Object.keys(canonicalModules).length ? { canonicalModules } : {}) };
     },
     [queryClient, objectId],
   );

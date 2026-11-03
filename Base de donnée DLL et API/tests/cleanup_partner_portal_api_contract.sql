@@ -20,4 +20,5 @@ DELETE FROM auth.users WHERE id IN (
 DELETE FROM public.actor WHERE id='00000000-0000-4000-a000-00000000b921';
 DROP TABLE IF EXISTS internal.portal_api_contract_baseline;
 DROP TABLE IF EXISTS internal.portal_api_contract_reader_before;
+REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
 COMMIT;

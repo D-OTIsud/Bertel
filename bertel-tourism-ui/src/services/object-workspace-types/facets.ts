@@ -73,6 +73,8 @@ export interface ObjectWorkspaceCapacityPoliciesModule {
   groupPolicy: ObjectWorkspaceGroupPolicyForm;
   petPolicy: ObjectWorkspacePetPolicyForm;
   stayPolicy: ObjectWorkspaceStayPolicyForm;
+  /** Exact last-read state for the narrow CAS writer; not part of the public API. */
+  stayPolicySnapshot?: import('../stay-policy-contract').StayPolicySnapshot;
   unavailableReason: string | null;
 }
 

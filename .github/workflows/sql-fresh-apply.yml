@@ -558,6 +558,8 @@ jobs:
         run: |
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/partner_stay_policy_cas.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_stay_policy_cutover.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/object_menus_atomic_reconcile.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_menus_atomic_cutover.sql"
 
       - name: Reconstruct observed pre-R1 activity schema (upgrade scenario only)
         if: matrix.contract-scenario == 'upgrade'
@@ -574,7 +576,9 @@ jobs:
           CONTRACT_SCENARIO: ${{ matrix.contract-scenario }}
         run: |
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_portal_api_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_api_full_benchmark.sql"
           if [ "$CONTRACT_SCENARIO" = upgrade ]; then
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -v benchmark_phase=before -f "Base de donnée DLL et API/tests/measure_partner_api_full_benchmark.sql"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103065333_partner_portal_activity_api_contract.sql"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_activity_api_contract.sql"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103065350_partner_portal_restaurant_public_read_contract.sql"
@@ -583,6 +587,7 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_activity_api_contract.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_public_read_contract.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_regional_primary_openings.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -v benchmark_phase=after -f "Base de donnée DLL et API/tests/measure_partner_api_full_benchmark.sql"
 
       - name: Install route test dependencies
         working-directory: bertel-tourism-ui
@@ -596,7 +601,34 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_api_route_contract.sql"
           supabase status --workdir "$RUNNER_TEMP/bertel-fresh" -o json > "$RUNNER_TEMP/bertel-local-status.json"
           node tools/partner-api/run-ephemeral-route-tests.mjs "$RUNNER_TEMP/bertel-local-status.json"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_api_full_benchmark.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_portal_api_contract.sql"
+
+      - name: Capture isolated reader definition and attributes for review
+        if: always()
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          mkdir -p "$RUNNER_TEMP/partner-api-evidence"
+          if pg_isready -d "$DB_URL" >/dev/null 2>&1; then
+            psql "$DB_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_get_functiondef(p.oid) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='api' AND p.proname='get_object_resource'" > "$RUNNER_TEMP/partner-api-evidence/reader.sql"
+            psql "$DB_URL" -At -v ON_ERROR_STOP=1 > "$RUNNER_TEMP/partner-api-evidence/reader-metadata.json" <<'SQL'
+          SELECT jsonb_build_object('hash',md5(replace(p.prosrc,E'\r\n',E'\n')),
+            'signature',p.oid::regprocedure::text,'owner',pg_get_userbyid(p.proowner),
+            'acl',p.proacl,'config',p.proconfig,'definer',p.prosecdef)
+          FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+          WHERE n.nspname='api' AND p.proname='get_object_resource';
+          SQL
+          fi
+
+      - name: Upload isolated SQL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-api-${{ matrix.contract-scenario }}
+          path: ${{ runner.temp }}/partner-api-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Stop Supabase
         if: always()

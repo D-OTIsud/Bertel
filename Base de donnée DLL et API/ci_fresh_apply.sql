@@ -666,6 +666,10 @@ ROLLBACK;
 \ir ../supabase/migrations/20261103065612_partner_stay_policy_cas.sql
 \ir tests/test_partner_stay_policy_cas.sql
 
+\echo '== R4 preparation: atomic menu reconciliation with stable identities; legacy DML closes separately =='
+\ir ../supabase/migrations/20261103070417_object_menus_atomic_reconcile.sql
+\ir tests/test_object_menus_atomic_reconcile.sql
+
 -- The upgrade CI scenario stops before the reader patches, then reconstructs the
 -- observed missing activity column and captures real responses before upgrading.
 \if :{?partner_portal_skip_read_fixes}

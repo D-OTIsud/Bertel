@@ -204,6 +204,22 @@ reste analysable. Copie inachevée, retrait et remplacement sont testés ; une
 publication C valide reste acceptée. La recette finale et la contre-vérification
 de ces deux derniers cas restent nécessaires avant clôture.
 
+`3f9d9f1` passe ensuite toute la CI SQL fresh/upgrade (`41622520506`) et le
+frontend, image Alpine comprise (`41622520431`). Les six preuves de concurrence
+P passent sur les deux bases : budget commun, OFF sans attente, changement
+d'acteur après attente pour réserve/début/recours, et résultat payé conservé sous
+verrous parents. Les douze routes Next et les contrôles Storage passent aussi.
+Le full100 upgrade sur vingt mesures donne une médiane 585,51 → 558,91 ms
+(budget 878,27) et un p95 632,06 → 612,57 ms (budget 948,09).
+
+La dixième revue consolidée clôt les deux derniers constats E/P et la fixture.
+Son unique ajustement résiduel est `PGRST001` : ce code reste désormais incertain
+comme dans les helpers menus/galerie existants, sans compensation ni appel
+fournisseur. Les 35 tests ciblés de route passent. Aucun autre code métier n'est
+modifié par cet alignement ; sa CI et sa courte contre-vérification sont suivies
+sur le dernier HEAD de la PR. Les artifacts CI et le suivi de livraison conservent
+les résultats datés du commit exact, distincts de cette chronologie.
+
 Le dernier relevé des crédits Claude affiche 81 USD promotionnels restants sur
 100, avec 97 % du quota normal consommé. Aucun achat ni appel IA produit.
 

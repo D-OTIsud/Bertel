@@ -679,6 +679,9 @@ ROLLBACK;
 \else
 \echo '== R6 collection preconditions and explicit manual handling of historical proposals =='
 \ir ../supabase/migrations/20261103073527_actor_collection_proposal_preconditions.sql
+\ir tests/test_actor_test_realm.sql
+\echo '== R5 photo stock reservations and gallery CAS preparation; activation remains separate =='
+\ir ../supabase/migrations/20261103072105_partner_portal_photo_stock_and_gallery_contract.sql
 \endif
 
 -- The upgrade CI scenario stops before the reader patches, then reconstructs the

@@ -15,6 +15,7 @@ import {
   withdrawPortalPhoto,
   reorderPortalPhotos,
   uploadPortalPhoto,
+  cancelPortalPhotoUpload,
   portalPhotoDraft,
   mergePortalPublishedPhotos,
   type PortalPublishedPhoto,
@@ -161,6 +162,22 @@ export function PhotosEditorRubric({
       setBusy(false);
     }
   }
+  async function cancelAddition(documentId: string, queued: boolean) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await cancelPortalPhotoUpload(editor.objectId, documentId);
+      setForm((previous) => ({
+        ...previous,
+        additions: queued ? previous.additions : previous.additions.filter((photo) => photo.portalUploadId !== documentId),
+        files: queued ? previous.files.filter((file) => file.key !== documentId) : previous.files,
+      }));
+      setStatus("L’ajout de la photo est annulé.");
+    } catch (e) {
+      setError(strictErrorMessage(e, "L’annulation n’a pas pu être confirmée. Réessayez."));
+    } finally { setBusy(false); }
+  }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (busy) return;
@@ -185,6 +202,8 @@ export function PhotosEditorRubric({
           editor.objectId,
           entry.file!,
           form.rights,
+          entry.key,
+          entry.replaceId,
         );
         prepared = [
           ...prepared,
@@ -347,14 +366,8 @@ export function PhotosEditorRubric({
                 <button
                   className="ghost-button"
                   type="button"
-                  onClick={() =>
-                    setForm((previous) => ({
-                      ...previous,
-                      additions: previous.additions.filter(
-                        (photo) => photo.id !== item.id,
-                      ),
-                    }))
-                  }
+                  disabled={busy}
+                  onClick={() => void cancelAddition(item.portalUploadId!, false)}
                 >
                   <X size={18} aria-hidden />
                   Annuler
@@ -372,14 +385,8 @@ export function PhotosEditorRubric({
               <button
                 className="ghost-button"
                 type="button"
-                onClick={() =>
-                  setForm((previous) => ({
-                    ...previous,
-                    files: previous.files.filter(
-                      (file) => file.key !== entry.key,
-                    ),
-                  }))
-                }
+                disabled={busy}
+                onClick={() => void cancelAddition(entry.key, true)}
               >
                 <X size={18} aria-hidden />
                 Annuler<span className="sr-only"> {entry.name}</span>

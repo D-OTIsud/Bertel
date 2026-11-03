@@ -96,9 +96,14 @@ async function request(
       "La connexion a été interrompue. Votre saisie est conservée ; réessayez.",
     );
   }
+  const data = rec(await response.json().catch(() => ({})));
   if (!response.ok)
     throw new Error(
-      response.status === 413
+      data.error === "photo_limit"
+        ? "Votre galerie peut contenir vingt photos. Retirez une photo ou choisissez un remplacement."
+        : data.error === "upload_conflict"
+          ? "Ce dépôt correspond déjà à un autre fichier ou remplacement. Actualisez la galerie."
+        : response.status === 413
         ? "La photo dépasse 20 Mo. Choisissez un fichier plus petit."
         : response.status === 415
           ? "Choisissez une photo JPG, PNG ou WebP."
@@ -106,17 +111,21 @@ async function request(
             ? "Une validation est déjà en cours, ou les photos ont changé. Actualisez avant de réessayer."
             : "L’opération n’a pas pu être confirmée. Actualisez la fiche avant de réessayer.",
     );
-  return rec(await response.json());
+  return data;
 }
 export async function uploadPortalPhoto(
   objectId: string,
   file: File,
   rights: boolean,
+  uploadId: string,
+  replaceMediaId: string | null = null,
 ): Promise<PortalPhotoUpload> {
   const form = new FormData();
   form.append("object_id", objectId);
   form.append("file", file);
   form.append("rights", String(rights));
+  form.append("upload_id", uploadId);
+  if (replaceMediaId) form.append("replace_media_id", replaceMediaId);
   const data = await request("/api/portal-photo/upload", form);
   if (!text(data.id))
     throw new Error("Le dépôt n’a pas pu être confirmé. Réessayez.");
@@ -126,6 +135,13 @@ export async function uploadPortalPhoto(
     width: Number(data.width) || 0,
     height: Number(data.height) || 0,
   };
+}
+export async function cancelPortalPhotoUpload(objectId: string, documentId: string): Promise<void> {
+  const { data, error } = await client().schema("api").rpc("cancel_portal_photo_upload", {
+    p_object_id: objectId, p_document_id: documentId,
+  });
+  if (error || rec(data).cancelled !== true)
+    throw new Error("L’annulation n’a pas pu être confirmée. Votre photo est conservée ; actualisez avant de réessayer.");
 }
 export async function getPortalPhotoPreview(id: string): Promise<string> {
   const data = await request(

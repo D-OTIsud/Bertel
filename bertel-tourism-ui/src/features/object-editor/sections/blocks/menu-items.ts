@@ -10,6 +10,7 @@ import type { ObjectWorkspaceMenuItem } from '../../../../services/object-worksp
 export function createMenuItem(index: number, sectionCode = '', sectionLabel = ''): ObjectWorkspaceMenuItem {
   return {
     recordId: crypto.randomUUID(),
+    isNew: true,
     name: '',
     description: '',
     price: '',

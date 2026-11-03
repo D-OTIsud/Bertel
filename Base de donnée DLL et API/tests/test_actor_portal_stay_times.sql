@@ -13,7 +13,7 @@ DECLARE
 BEGIN
   PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
   ASSERT NOT has_function_privilege('anon', 'api.save_portal_stay_times(text,text,text,text)', 'execute');
-  ASSERT has_function_privilege('authenticated', 'api.save_portal_stay_times(text,text,text,text)', 'execute');
+  ASSERT NOT has_function_privilege('authenticated', 'api.save_portal_stay_times(text,text,text,text)', 'execute'), 'historical endpoint must never be activated';
   SELECT id INTO v_role FROM public.ref_actor_role WHERE code='operator';
   SELECT id INTO v_org_role FROM public.ref_org_role WHERE code='publisher';
   INSERT INTO auth.users(id,email) VALUES(v_user,'portal-stay-8101@example.test');

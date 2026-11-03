@@ -81,6 +81,7 @@ DECLARE r record; refs jsonb; ctx jsonb; stats jsonb; carte_role uuid;
  actor_claims jsonb:=jsonb_build_object('sub',u,'role','authenticated','app_metadata',jsonb_build_object('sandbox_discovery',true));
 BEGIN
  ASSERT (SELECT NOT enabled FROM internal.portal_menu_write_configuration WHERE singleton),'M must start OFF';
+ ASSERT NOT has_function_privilege('authenticated','api.publish_portal_menus(text,jsonb,uuid)','EXECUTE'),'M must start without actor publication permission';
  ASSERT (SELECT NOT enabled AND daily_page_limit IS NULL FROM internal.menu_extraction_settings WHERE singleton),'E must start OFF with no product quota';
  INSERT INTO auth.users(id,email) VALUES(u,'extraction-race@example.test');
  INSERT INTO public.actor(id,display_name,is_test,extra) VALUES(actor_id,'Extraction race actor',true,'{"test_corpus":true}');
@@ -88,6 +89,8 @@ BEGIN
  ON CONFLICT(id) DO UPDATE SET role='actor',actor_id=EXCLUDED.actor_id;
  SELECT id INTO carte_role FROM public.ref_code_document_type WHERE code='carte';
  UPDATE internal.portal_menu_write_configuration SET enabled=true WHERE singleton;
+ -- Match the real M cutover for this disposable fixture; cleanup closes both gates.
+ GRANT EXECUTE ON FUNCTION api.get_portal_menus_snapshot(text),api.get_portal_menu_write_receipt(text,jsonb),api.publish_portal_menus(text,jsonb,uuid) TO authenticated;
  -- One page is a temporary test boundary, restored to NULL in finally.
  UPDATE internal.menu_extraction_settings SET enabled=true,daily_page_limit=1 WHERE singleton;
  FOR r IN SELECT * FROM (VALUES
@@ -129,6 +132,12 @@ DELETE FROM auth.users WHERE id='00000000-0000-4000-a000-00000000e701';
 DELETE FROM public.actor WHERE id='00000000-0000-4000-a000-00000000e702';
 UPDATE internal.menu_extraction_settings SET enabled=false,daily_page_limit=NULL WHERE singleton;
 UPDATE internal.portal_menu_write_configuration SET enabled=false WHERE singleton;
+REVOKE EXECUTE ON FUNCTION api.get_portal_menus_snapshot(text),api.get_portal_menu_write_receipt(text,jsonb),api.publish_portal_menus(text,jsonb,uuid) FROM authenticated;
+DO $$ BEGIN
+ ASSERT NOT has_function_privilege('authenticated','api.publish_portal_menus(text,jsonb,uuid)','EXECUTE');
+ ASSERT (SELECT NOT enabled FROM internal.portal_menu_write_configuration WHERE singleton);
+ ASSERT (SELECT NOT enabled AND daily_page_limit IS NULL FROM internal.menu_extraction_settings WHERE singleton);
+END $$;
 COMMIT;
 """
 sql(setup)

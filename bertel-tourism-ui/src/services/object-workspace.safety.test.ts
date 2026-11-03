@@ -297,12 +297,12 @@ describe('write boundaries block unavailable snapshots before any backend call',
     expect(mockApi).not.toHaveBeenCalled();
     expect(mockClient).not.toHaveBeenCalled();
   });
-  it('fails closed at the direct dispatcher before any database writer when the app protocol is too new', async () => {
+  it('fails closed at the direct dispatcher before any database writer when the server requires a newer protocol', async () => {
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ minimumClientVersion: 2, writeContractVersion: 2 }),
+      json: async () => ({ minimumClientVersion: 3, writeContractVersion: 3 }),
     } as unknown as Response);
     try {
       await expect(saveWorkspaceModule('o1', { moduleId: 'openings', value: empty().openings }))

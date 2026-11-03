@@ -254,7 +254,8 @@ BEGIN
  IF v_mutation.state='committed' THEN RETURN jsonb_build_object('state','committed','result',v_mutation.result); END IF;
  IF v_action<>'link-existing' AND v_document IS NOT NULL THEN
   v_snapshot:=internal.restaurant_carte_link_snapshot(p_object_id,v_document);
-  IF v_snapshot IS NULL OR (v_actor AND v_snapshot->'document'->>'access_scope'<>'public') THEN
+  IF v_snapshot IS NULL THEN RAISE EXCEPTION 'La carte a changé' USING ERRCODE='PT409'; END IF;
+  IF v_actor AND v_snapshot->'document'->>'access_scope' IS DISTINCT FROM 'public' THEN
     RAISE EXCEPTION 'Carte inaccessible' USING ERRCODE='42501'; END IF;
   IF p_payload->'expected' IS DISTINCT FROM v_snapshot THEN RAISE EXCEPTION 'La carte a changé' USING ERRCODE='PT409'; END IF;
  ELSIF coalesce(p_payload->'expected','null')<>'null'::jsonb THEN
@@ -283,7 +284,8 @@ BEGIN
    PERFORM 1 FROM public.object_document WHERE object_id=v_mutation.object_id AND document_id=v_target FOR UPDATE;
    PERFORM 1 FROM public.ref_document WHERE id=v_target FOR UPDATE;
    v_snapshot:=internal.restaurant_carte_link_snapshot(v_mutation.object_id,v_target);
-   IF v_snapshot IS NULL OR (v_actor AND v_snapshot->'document'->>'access_scope'<>'public') THEN
+   IF v_snapshot IS NULL THEN RAISE EXCEPTION 'La carte a changé' USING ERRCODE='PT409'; END IF;
+   IF v_actor AND v_snapshot->'document'->>'access_scope' IS DISTINCT FROM 'public' THEN
      RAISE EXCEPTION 'Carte inaccessible' USING ERRCODE='42501'; END IF;
    IF v_mutation.payload->'expected' IS DISTINCT FROM v_snapshot THEN RAISE EXCEPTION 'La carte a changé' USING ERRCODE='PT409'; END IF;
  END IF;

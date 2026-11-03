@@ -10,7 +10,8 @@ DECLARE
   v_other uuid:='00000000-0000-4000-a000-000000008715';
   v_photo uuid:='00000000-0000-4000-a000-000000008716';
   v_photo2 uuid:='00000000-0000-4000-a000-000000008717';
-  v_type uuid; v_base jsonb; v_payload jsonb; v_create_payload jsonb; v_patch jsonb; v_before jsonb; v_after jsonb; v_result jsonb; v_denied boolean;
+  v_type uuid; v_allergen uuid; v_base jsonb; v_payload jsonb; v_create_payload jsonb; v_patch jsonb; v_before jsonb; v_after jsonb; v_result jsonb; v_denied boolean;
+  v_add_payload jsonb;
 BEGIN
   PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
   ASSERT NOT has_function_privilege('anon','api.save_object_menus(text,jsonb)','execute');
@@ -24,31 +25,31 @@ BEGIN
   SELECT id INTO v_type FROM public.ref_code_media_type WHERE code='photo';
   INSERT INTO public.media(id,object_id,media_type_id,url) VALUES(v_photo,'RESRUN9999998711',v_type,'https://example.test/r4-one.jpg'),(v_photo2,'RESRUN9999998711',v_type,'https://example.test/r4-two.jpg');
   INSERT INTO public.object_menu_item_media(menu_item_id,media_id,position,created_at) VALUES(v_item,v_photo,1,'2020-01-01');
-  v_base:='{"write_contract":"menus-reconcile-v1","menus":[],"items":[],"deleted_menus":[],"deleted_items":[]}';
+  v_base:='{"write_contract":"menus-reconcile-v1","menus":[],"items":[],"deleted_menus":[],"deleted_items":[]}'::jsonb||jsonb_build_object('request_id',gen_random_uuid());
   v_before:=internal.object_menu_write_snapshot('RESRUN9999998711');
   -- Another writer adds a menu after the office loaded its baseline. A price patch cannot delete it.
   INSERT INTO public.object_menu(id,object_id,name,is_active,visibility) VALUES(v_added,'RESRUN9999998711','Concurrent',false,'private');
   v_patch:=jsonb_build_object('id',v_item,'menu_id',v_menu,'expected',v_before->'items'->0,'changes',jsonb_build_object('price',19),'links','{}'::jsonb);
-  v_payload:=jsonb_set(v_base,'{items}',jsonb_build_array(v_patch));
+  v_payload:=jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{items}',jsonb_build_array(v_patch));
   PERFORM set_config('request.jwt.claims',jsonb_build_object('sub',v_admin,'role','authenticated')::text,true);
   v_result:=api.save_object_menus('RESRUN9999998711',v_payload);
   ASSERT (SELECT price=19 FROM public.object_menu_item WHERE id=v_item),'price not saved with stable ID';
   ASSERT EXISTS(SELECT 1 FROM public.object_menu WHERE id=v_added AND NOT is_active AND visibility='private'),'off-screen menu was lost';
   ASSERT (SELECT visibility IS NULL AND created_at='2020-01-01'::timestamptz FROM public.object_menu WHERE id=v_menu),'untouched menu metadata changed';
   v_after:=internal.object_menu_write_snapshot('RESRUN9999998711');
-  ASSERT api.save_object_menus('RESRUN9999998711',v_payload)=v_result,'lost-response retry changed rows';
+  ASSERT (api.save_object_menus('RESRUN9999998711',v_payload)->'snapshot')=(v_result->'snapshot'),'lost-response retry changed rows';
   v_denied:=false;
-  BEGIN PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_payload,'{items,0,changes,price}','20')); EXCEPTION WHEN SQLSTATE 'PT409' THEN v_denied:=true; END;
+  BEGIN PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_payload||jsonb_build_object('request_id',gen_random_uuid()),'{items,0,changes,price}','20')); EXCEPTION WHEN SQLSTATE 'PT409' THEN v_denied:=true; END;
   ASSERT v_denied,'stale same-field edit overwrote newer price';
   -- Disjoint edit can retain that newer price.
-  v_payload:=jsonb_set(v_base,'{items}',jsonb_build_array(jsonb_set(v_patch,'{changes}','{"description":"Office description"}')));
+  v_payload:=jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{items}',jsonb_build_array(jsonb_set(v_patch,'{changes}','{"description":"Office description"}')));
   PERFORM api.save_object_menus('RESRUN9999998711',v_payload);
   ASSERT (SELECT price=19 AND description='Office description' FROM public.object_menu_item WHERE id=v_item);
   -- Link reconciliation retains metadata on an unchanged member.
   v_before:=internal.object_menu_write_snapshot('RESRUN9999998711');
   v_patch:=jsonb_build_object('id',v_item,'menu_id',v_menu,'expected',v_before->'items'->0,'changes','{}'::jsonb,'links',
     jsonb_build_object('media',jsonb_build_object('expected',v_before->'media','values',jsonb_build_array(jsonb_build_object('media_id',v_photo,'position',1),jsonb_build_object('media_id',v_photo2,'position',2)))));
-  v_payload:=jsonb_set(v_base,'{items}',jsonb_build_array(v_patch));
+  v_payload:=jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{items}',jsonb_build_array(v_patch));
   PERFORM api.save_object_menus('RESRUN9999998711',v_payload);
   ASSERT (SELECT created_at='2020-01-01'::timestamptz FROM public.object_menu_item_media WHERE menu_item_id=v_item AND media_id=v_photo),'retained link was recreated';
   v_result:=api.save_object_menus('RESRUN9999998711',v_payload);
@@ -58,37 +59,64 @@ BEGIN
   v_patch:=jsonb_build_object('id',v_item,'menu_id',v_menu,'expected',v_before->'items'->0,'changes','{"price":30}'::jsonb,'links',
     jsonb_build_object('allergens',jsonb_build_object('expected','[]'::jsonb,'values','[{"allergen_id":"00000000-0000-4000-a000-000000009999"}]'::jsonb)));
   v_denied:=false;
-  BEGIN PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base,'{items}',jsonb_build_array(v_patch))); EXCEPTION WHEN foreign_key_violation THEN v_denied:=true; END;
+  BEGIN PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{items}',jsonb_build_array(v_patch))); EXCEPTION WHEN foreign_key_violation THEN v_denied:=true; END;
   ASSERT v_denied,'fixture must fail at link FK';
   ASSERT internal.object_menu_write_snapshot('RESRUN9999998711')=v_before,'partial write survived failure';
+  -- Each intention is distinct even when a link add/remove/add has the same raw parent row.
+  SELECT id INTO v_allergen FROM public.ref_code_allergen WHERE code='gluten' LIMIT 1;
+  ASSERT v_allergen IS NOT NULL,'fixture needs existing gluten reference';
+  v_patch:=jsonb_build_object('id',v_item,'menu_id',v_menu,'expected',v_before->'items'->0,'changes','{}'::jsonb,'links',
+    jsonb_build_object('allergens',jsonb_build_object('expected','[]'::jsonb,'values',jsonb_build_array(jsonb_build_object('allergen_id',v_allergen)))));
+  v_add_payload:=jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{items}',jsonb_build_array(v_patch));
+  PERFORM api.save_object_menus('RESRUN9999998711',v_add_payload);
+  v_after:=internal.object_menu_write_snapshot('RESRUN9999998711');
+  v_patch:=jsonb_set(v_patch,'{links,allergens}',jsonb_build_object('expected',v_after->'allergens','values','[]'::jsonb));
+  PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{items}',jsonb_build_array(v_patch)));
+  ASSERT NOT EXISTS(SELECT 1 FROM public.object_menu_item_allergen WHERE menu_item_id=v_item);
+  PERFORM api.save_object_menus('RESRUN9999998711',v_add_payload||jsonb_build_object('request_id',gen_random_uuid()));
+  ASSERT EXISTS(SELECT 1 FROM public.object_menu_item_allergen WHERE menu_item_id=v_item AND allergen_id=v_allergen),'later identical link intention was mistaken for a retry';
+  ASSERT (SELECT to_jsonb(i) FROM public.object_menu_item i WHERE id=v_item)=v_before->'items'->0,'link-only edits unexpectedly modified the parent baseline';
+  v_denied:=false;
+  BEGIN PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_add_payload,'{items,0,changes,name}','"Different payload, same request ID"')); EXCEPTION WHEN invalid_parameter_value THEN v_denied:=true; END;
+  ASSERT v_denied,'same request ID accepted a different payload';
+  -- Bounds match NUMERIC(12,2), before implicit rounding/overflow can hide intent.
+  v_denied:=false;
+  BEGIN PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{items}',
+    jsonb_build_array(jsonb_build_object('id',v_item,'menu_id',v_menu,'expected',v_before->'items'->0,'changes','{"price":10000000000}'::jsonb,'links','{}'::jsonb))));
+  EXCEPTION WHEN numeric_value_out_of_range THEN v_denied:=true; END;
+  ASSERT v_denied,'out-of-range price accepted';
   -- Stable client-generated ID makes a newly inserted menu retryable.
-  v_payload:=jsonb_set(v_base,'{menus}',jsonb_build_array(jsonb_build_object('id',v_new,'expected','null'::jsonb,'changes','{"name":"Desserts","is_active":true,"visibility":"public","position":3}'::jsonb)));
+  v_payload:=jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{menus}',jsonb_build_array(jsonb_build_object('id',v_new,'expected','null'::jsonb,'changes','{"name":"Desserts","is_active":true,"visibility":"public","position":3}'::jsonb)));
   v_create_payload:=v_payload;
   v_result:=api.save_object_menus('RESRUN9999998711',v_payload);
-  ASSERT api.save_object_menus('RESRUN9999998711',v_payload)=v_result,'new menu retry duplicated or changed it';
+  ASSERT (api.save_object_menus('RESRUN9999998711',v_payload)->'snapshot')=(v_result->'snapshot'),'new menu retry duplicated or changed it';
   -- Full expected bundle catches an item added after the deletion was prepared.
   v_before:=internal.object_menu_write_snapshot('RESRUN9999998711');
-  v_payload:=jsonb_set(v_base,'{deleted_menus}',jsonb_build_array(jsonb_build_object('id',v_new,'expected',internal.object_menu_delete_bundle(v_before,v_new,true))));
+  v_payload:=jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{deleted_menus}',jsonb_build_array(jsonb_build_object('id',v_new,'expected',internal.object_menu_delete_bundle(v_before,v_new,true))));
   INSERT INTO public.object_menu_item(menu_id,name) VALUES(v_new,'New child');
   v_denied:=false;
   BEGIN PERFORM api.save_object_menus('RESRUN9999998711',v_payload); EXCEPTION WHEN SQLSTATE 'PT409' THEN v_denied:=true; END;
   ASSERT v_denied,'menu deletion silently removed an unseen item';
   v_before:=internal.object_menu_write_snapshot('RESRUN9999998711');
-  v_payload:=jsonb_set(v_base,'{deleted_items}',jsonb_build_array(jsonb_build_object('id',v_item,'menu_id',v_menu,'expected',internal.object_menu_delete_bundle(v_before,v_item,false))));
+  v_payload:=jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{deleted_items}',jsonb_build_array(jsonb_build_object('id',v_item,'menu_id',v_menu,'expected',internal.object_menu_delete_bundle(v_before,v_item,false))));
   PERFORM api.save_object_menus('RESRUN9999998711',v_payload);
   PERFORM api.save_object_menus('RESRUN9999998711',v_payload);
   ASSERT NOT EXISTS(SELECT 1 FROM public.object_menu_item WHERE id=v_item),'explicit deletion not applied';
   ASSERT EXISTS(SELECT 1 FROM public.object_menu WHERE id=v_menu),'deleting item deleted its menu';
   v_denied:=false;
-  BEGIN PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base,'{deleted_menus}',jsonb_build_array(jsonb_build_object('id',v_other,'expected','{}'::jsonb)))); EXCEPTION WHEN insufficient_privilege THEN v_denied:=true; END;
+  BEGIN PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{deleted_menus}',jsonb_build_array(jsonb_build_object('id',v_other,'expected','{}'::jsonb)))); EXCEPTION WHEN insufficient_privilege THEN v_denied:=true; END;
   ASSERT v_denied,'foreign menu accepted';
   -- A lost creation response followed by another writer's deletion must never resurrect it.
   DELETE FROM public.object_menu WHERE id=v_new;
-  PERFORM api.save_object_menus('RESRUN9999998711',v_create_payload);
+  v_result:=api.save_object_menus('RESRUN9999998711',v_create_payload);
   ASSERT NOT EXISTS(SELECT 1 FROM public.object_menu WHERE id=v_new),'retry resurrected a subsequently deleted menu';
+  ASSERT v_result->>'replayed'='true' AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(v_result#>'{snapshot,menus}') r WHERE r->>'id'=v_new::text),'retry returned a stale creation snapshot';
+  v_result:=api.get_object_menu_write_receipt('RESRUN9999998711',jsonb_build_object('request_id',v_create_payload->'request_id'));
+  ASSERT v_result->>'known'='true';
+  ASSERT NOT EXISTS(SELECT 1 FROM jsonb_array_elements(v_result#>'{snapshot,menus}') r WHERE r->>'id'=v_new::text),'read-only receipt lookup returned stale state';
   v_denied:=false;
   BEGIN
-    PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base,'{menus}',jsonb_build_array(jsonb_build_object('id',v_added,
+    PERFORM api.save_object_menus('RESRUN9999998711',jsonb_set(v_base||jsonb_build_object('request_id',gen_random_uuid()),'{menus}',jsonb_build_array(jsonb_build_object('id',v_added,
       'expected',(SELECT to_jsonb(m) FROM public.object_menu m WHERE id=v_added),'changes','{"is_active":"true"}'::jsonb))));
   EXCEPTION WHEN invalid_parameter_value THEN v_denied:=true; END;
   ASSERT v_denied,'string boolean accepted';

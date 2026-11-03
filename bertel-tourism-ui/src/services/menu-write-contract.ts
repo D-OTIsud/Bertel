@@ -4,7 +4,7 @@ import { isUuid, toNullableInteger, toNullableNumber } from './object-workspace-
 type Row = Record<string, unknown>;
 export const MENU_LINKS = ['media', 'dietary', 'allergens', 'cuisines'] as const;
 export type MenuWriteSnapshot = { menus: Row[]; items: Row[] } & Record<typeof MENU_LINKS[number], Row[]>;
-export interface MenuWriteBaseline { models: ObjectWorkspaceMenu[]; snapshot: MenuWriteSnapshot }
+export interface MenuWriteBaseline { models: ObjectWorkspaceMenu[]; snapshot: MenuWriteSnapshot; readId: string }
 const text = (value: unknown) => value == null ? '' : String(value);
 const nullable = (value: string) => value.trim() || null;
 const idForCode = (options: WorkspaceReferenceOption[], code: string): string | null => {
@@ -29,7 +29,12 @@ function menuValues(menu: ObjectWorkspaceMenu, refs: ObjectWorkspaceMenusModule)
     visibility: nullable(menu.visibility) ?? (menu.rawVisibility === null ? null : 'public'), position: toNullableInteger(menu.position) };
 }
 function itemValues(item: ObjectWorkspaceMenuItem, refs: ObjectWorkspaceMenusModule): Row {
-  return { name: item.name.trim() || 'Ligne', description: nullable(item.description), price: toNullableNumber(item.price),
+  const price = toNullableNumber(item.price);
+  if (item.price.trim() && (!/^-?\d+(?:[.,]\d+)?$/.test(item.price.trim()) || price === null
+    || price < 0 || price > 9999999999.99 || Math.round(price * 100) / 100 !== price)) {
+    throw new Error('Le prix doit être compris entre 0 et 9 999 999 999,99, avec deux décimales au maximum.');
+  }
+  return { name: item.name.trim() || 'Ligne', description: nullable(item.description), price,
     currency: nullable(item.currency) ?? 'EUR', kind_id: idForCode(refs.priceKindOptions,item.kindCode),
     unit_id: idForCode(refs.priceUnitOptions,item.unitCode), media_id: item.mediaIds[0] ?? null,
     is_available: item.available, position: toNullableInteger(item.position), section_id: idForCode(refs.categoryOptions,item.sectionCode) };
@@ -114,5 +119,5 @@ export function withMenusWriteSnapshot(input: ObjectWorkspaceMenusModule,snapsho
           cuisineTypeCodes:codes('cuisines','cuisine_type_id',input.cuisineTypeOptions),sectionCode:section?.code??'',sectionId:text(item.section_id),sectionLabel:section?.label??'' };
       }) };
   });
-  return { ...input,items,menuWriteBaseline:{ models:JSON.parse(JSON.stringify(items)) as ObjectWorkspaceMenu[],snapshot } };
+  return { ...input,items,menuWriteBaseline:{ models:JSON.parse(JSON.stringify(items)) as ObjectWorkspaceMenu[],snapshot,readId:crypto.randomUUID() } };
 }

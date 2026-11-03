@@ -70,7 +70,7 @@ def write_call(domain, value):
                 "jsonb_build_object('write_contract','stay-policy-patch-v1','expected'," + expected +
                 ",'changes',jsonb_build_object('check_in_from','" + value + "'))))")
     return ("api.save_object_menus('RESRUN999999D402',jsonb_build_object("
-            "'write_contract','menus-reconcile-v1','menus','[]'::jsonb,'deleted_menus','[]'::jsonb,"
+            "'write_contract','menus-reconcile-v1','request_id',gen_random_uuid(),'menus','[]'::jsonb,'deleted_menus','[]'::jsonb,"
             "'deleted_items','[]'::jsonb,'items',jsonb_build_array(jsonb_build_object("
             "'id','00000000-0000-4000-a000-00000000d403','menu_id','00000000-0000-4000-a000-00000000d402',"
             "'expected'," + expected + ",'changes',jsonb_build_object('price'," + value + "),'links','{}'::jsonb))))")

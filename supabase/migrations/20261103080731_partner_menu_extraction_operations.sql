@@ -81,8 +81,19 @@ BEGIN
   IF v_source->>'kind'='upload' THEN
    SELECT * INTO v_upload FROM internal.restaurant_carte_upload u WHERE u.id=v_id AND u.object_id=p_object_id AND u.created_by=auth.uid() AND u.state IN ('staged','copied');
    IF NOT FOUND THEN RAISE EXCEPTION 'Dépôt inaccessible' USING ERRCODE='42501'; END IF;
+   v_link:=internal.restaurant_carte_link_snapshot(p_object_id,v_upload.document_id);
+   -- A copied upload may have lost its link after publication. Reject it even
+   -- on first inspection, so copied/NULL -> published -> copied/NULL is not ABA.
+   IF v_upload.state='copied' AND (v_link IS NULL OR v_upload.public_url IS NULL
+    OR v_link->>'object_id' IS DISTINCT FROM v_upload.object_id
+    OR v_link->>'document_id' IS DISTINCT FROM v_upload.document_id::text
+    OR v_link#>>'{document,access_scope}' IS DISTINCT FROM 'public'
+    OR v_link#>>'{document,storage_bucket}' IS DISTINCT FROM 'documents'
+    OR v_link#>>'{document,storage_path}' IS DISTINCT FROM v_upload.public_path
+    OR v_link#>>'{document,url}' IS DISTINCT FROM v_upload.public_url) THEN
+    RAISE EXCEPTION 'Terminez ou reprenez la publication de la carte avant l’extraction' USING ERRCODE='PT409'; END IF;
    v_rows:=v_rows||jsonb_build_array(jsonb_build_object('kind','upload','id',v_id,
-    'upload',internal.restaurant_carte_upload_json(v_id),'linked',internal.restaurant_carte_link_snapshot(p_object_id,v_upload.document_id)));
+    'upload',internal.restaurant_carte_upload_json(v_id),'linked',v_link));
   ELSE
    v_link:=internal.restaurant_carte_link_snapshot(p_object_id,v_id);
    IF v_link IS NULL OR v_link->'document'->>'access_scope' IS DISTINCT FROM 'public' THEN RAISE EXCEPTION 'Carte inaccessible' USING ERRCODE='42501'; END IF;

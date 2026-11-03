@@ -66,9 +66,11 @@ export async function POST(req:NextRequest){
   startUnconfirmed=true;
   const claim=await caller.rpc('start_portal_photo_analysis',{p_request_id:operationId,p_claim_id:claimId});
   if(claim.error){
-   // Supabase leaves code empty on fetch/abort failures. A SQLSTATE or PostgREST
-   // code is an actual refusal, so this transaction did not authorize a dispatch.
-   if(/^(?:[A-Z0-9]{5}|PGRST[A-Z0-9]{3})$/.test(claim.error.code??'')){
+   // A connection SQLSTATE can lose the COMMIT acknowledgement too. Keep class
+   // 08 uncertain, like fetch/abort failures (whose Supabase code is empty).
+   // Other SQLSTATE/PostgREST responses retain the existing refusal handling.
+   const code=claim.error.code??'';
+   if(!code.startsWith('08')&&/^(?:[A-Z0-9]{5}|PGRST[A-Z0-9]{3})$/.test(code)){
     startUnconfirmed=false;
     await cancelCreatedReservation();
     return failure(claim.error,operationId);

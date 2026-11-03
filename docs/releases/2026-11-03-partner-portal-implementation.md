@@ -180,6 +180,33 @@ Les limites de ce contrôle restent explicites : les helpers R4 et hooks E doive
 M/E/P sont absentes de la production examinée à 10:33 UTC ; aucune ancienne
 préparation n'y a été appliquée par cette tâche.
 
+`9b620fb` clôt en recette SQL fresh/upgrade les deux constats M/E, la suppression
+positive du plat cible, la bascule M contrôlant `anon` et les courses E
+(`41621042637`). Son frontend et l'image Alpine passent (`41621042472`). Le
+harnais P révèle ensuite que le second acteur n'avait pas obtenu son lien de
+fiche : une contrainte d'unicité du rôle primaire faisait ignorer son insertion.
+La fixture lui attribue le même droit avec un rôle non primaire et vérifie
+positivement sa portée avant et après le transfert de compte.
+
+La huitième revue P sur `f7b4fe2` clôt tous les constats précédents. Elle identifie
+un accès office résiduel après anonymisation d'un recours dont le document
+partagé est conservé. GET et aperçu P exigent maintenant l'association CRM
+vivante analyse/document/hash ; la recette prouve leur refus après effacement
+avec hash inchangé. La notification `portal_message` doit aussi exister dans la
+fixture. Les erreurs de connexion SQLSTATE `08` restent incertaines sans
+compensation ; les 34 tests de route P passent localement.
+
+La neuvième revue M/E sur `9b620fb` clôt les deux corrections et les contrôles
+supplémentaires. Son dernier cas concerne une première inspection sur une copie
+déjà réalisée mais non publiée. E exige désormais, dès la construction du
+contexte, le lien public cohérent de tout dépôt `copied`. Le dépôt privé `staged`
+reste analysable. Copie inachevée, retrait et remplacement sont testés ; une
+publication C valide reste acceptée. La recette finale et la contre-vérification
+de ces deux derniers cas restent nécessaires avant clôture.
+
+Le dernier relevé des crédits Claude affiche 81 USD promotionnels restants sur
+100, avec 97 % du quota normal consommé. Aucun achat ni appel IA produit.
+
 `14e9c25` convertit les commandes de cartes existantes de l'office au contrat
 atomique : instantané brut distinct de l'affichage, demande durable, état
 courant relu après reçu, saisie conservée en conflit ou pendant une réponse.

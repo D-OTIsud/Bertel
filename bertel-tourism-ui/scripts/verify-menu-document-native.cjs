@@ -1,31 +1,35 @@
-// Native dependency/standalone smoke. Optional argument: standalone package root. No environment or network calls.
+// Native dependency/runtime smoke. Optional argument: packaged runtime root (.next/standalone or /app).
+// The explicit runtime mode loads only the built route and packaged dependencies; no source/TypeScript fallback.
 const fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('node:url'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..'),runtimeRoot=path.resolve(process.argv[2]||root);
+const compiledMode=Boolean(process.argv[2]);
 if(!fs.existsSync(path.join(runtimeRoot,'package.json')))throw Error('Runtime package root required');
 process.chdir(runtimeRoot);
-const ts=require(path.join(root,'node_modules/typescript'));
 const requireFrom=require('node:module').createRequire(path.join(runtimeRoot,'package.json'));
 const dir=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'bertel-menu-native-'));
-function compile(source,name,replacements){
- let code=ts.transpileModule(fs.readFileSync(path.join(root,source),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
- for(const [from,to]of replacements)code=code.split(from).join(to);
- fs.writeFileSync(path.join(dir,name),code);
-}
 function fileImport(name){return pathToFileURL(requireFrom.resolve(name)).href;}
-if(process.argv[2]){
+if(compiledMode){
  // Refuse accidental fallback into the developer checkout. CI passes the real
  // standalone package root (normally .next/standalone with regular node_modules).
  for(const name of ['pdfjs-dist/package.json','pdfjs-dist/legacy/build/pdf.mjs','sharp','@napi-rs/canvas']){
   const resolved=fs.realpathSync(requireFrom.resolve(name)),relative=path.relative(runtimeRoot,resolved);
-  assert(relative&&!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative),'Dependency escaped standalone: '+name);
+  assert(relative&&!relative.startsWith('..'+path.sep)&&!path.isAbsolute(relative),'Dependency escaped packaged runtime: '+name);
  }
 }
-compile('src/app/api/media/upload/process-image.ts','process-image.mjs',[["'sharp'","'"+fileImport('sharp')+"'"]]);
-compile('src/app/api/menu/extract/media-prep.ts','media-prep.mjs',[["'../../media/upload/process-image'","'./process-image.mjs'"]]);
-compile('src/lib/menu-document-pages.server.ts','menu-document-pages.mjs',[
- ["'../app/api/menu/extract/media-prep'","'./media-prep.mjs'"],
- ["'pdfjs-dist/legacy/build/pdf.mjs'","'"+fileImport('pdfjs-dist/legacy/build/pdf.mjs')+"'"]
-]);
+if(!compiledMode){
+ const ts=require(path.join(root,'node_modules/typescript'));
+ function compile(source,name,replacements){
+  let code=ts.transpileModule(fs.readFileSync(path.join(root,source),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+  for(const [from,to]of replacements)code=code.split(from).join(to);
+  fs.writeFileSync(path.join(dir,name),code);
+ }
+ compile('src/app/api/media/upload/process-image.ts','process-image.mjs',[["'sharp'","'"+fileImport('sharp')+"'"]]);
+ compile('src/app/api/menu/extract/media-prep.ts','media-prep.mjs',[["'../../media/upload/process-image'","'./process-image.mjs'"]]);
+ compile('src/lib/menu-document-pages.server.ts','menu-document-pages.mjs',[
+  ["'../app/api/menu/extract/media-prep'","'./media-prep.mjs'"],
+  ["'pdfjs-dist/legacy/build/pdf.mjs'","'"+fileImport('pdfjs-dist/legacy/build/pdf.mjs')+"'"]
+ ]);
+}
 function fixturePdf(pageCount=1){
  const stream='BT /F1 16 Tf 30 140 Td (Carte du Longanis) Tj ET';
  const objects=[
@@ -45,7 +49,7 @@ function fixturePdf(pageCount=1){
 }
 (async()=>{
  let mod,compiled=false;
- if(process.argv[2]){
+ if(compiledMode){
   const bundle=path.join(runtimeRoot,'.next/server/app/api/portal-menu/extract/route.js');
   assert(fs.existsSync(bundle),'Compiled standalone extraction route missing');
   // Load the actual webpack output, including its Node resolver transformation.

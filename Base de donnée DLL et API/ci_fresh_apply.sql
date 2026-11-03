@@ -662,6 +662,21 @@ ROLLBACK;
 \ir migration_actor_portal_invitation.sql
 \ir tests/test_actor_portal_invitation.sql
 
+\echo '== R2 preparation: atomic capacity/stay write and actor field CAS; actor activation remains closed until separate cutover =='
+\ir ../supabase/migrations/20261103065612_partner_stay_policy_cas.sql
+\ir tests/test_partner_stay_policy_cas.sql
+
+-- The upgrade CI scenario stops before the reader patches, then reconstructs the
+-- observed missing activity column and captures real responses before upgrading.
+\if :{?partner_portal_skip_read_fixes}
+\echo '== Reader fixes deferred ONLY for disposable upgrade verification =='
+\else
+\echo '== R1/R3a/X1: preserve the public contract, correct public content, separate primary opening =='
+\ir ../supabase/migrations/20261103065333_partner_portal_activity_api_contract.sql
+\ir ../supabase/migrations/20261103065350_partner_portal_restaurant_public_read_contract.sql
+\ir ../supabase/migrations/20261103065411_partner_portal_regional_primary_openings.sql
+\endif
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -3,7 +3,7 @@
  * (PLAN 3.3). Pure. Lit le payload `menus` (object_menu + items) et
  * `cuisine_types` top-level de get_object_resource. Formatage de prix conscient
  * de la devise (Intl.NumberFormat 'fr-FR', repli EUR), plats indisponibles
- * masqués, menus privés ignorés, ordre d'entrée préservé. Aucune donnée
+ * masqués, menus inactifs ou non publics ignorés, ordre d'entrée préservé. Aucune donnée
  * fabriquée : un plat sans nom est ignoré ; un menu sans plat visible NI
  * description est omis.
  */
@@ -78,8 +78,11 @@ export function buildRestaurantMenuData(raw: Record<string, unknown>): Restauran
 
   const menus: RestaurantMenu[] = [];
   readArray(raw.menus).forEach((menu, menuIndex) => {
-    // Le RPC applique déjà l'accès en lecture ; défense contre une fuite de menu privé (PLAN 3.3.7).
-    if (str(menu.visibility).toLowerCase() === 'private') return;
+    // Ce volet présente la projection publique, même si le lecteur office fournit
+    // un état étendu. Les anciennes projections sans indicateur restent lisibles.
+    const visibility = str(menu.visibility).toLowerCase();
+    if (visibility && visibility !== 'public') return;
+    if (Object.hasOwn(menu, 'is_active') && menu.is_active !== true) return;
 
     const items = readArray(menu.items);
     const sectionOrder: string[] = [];

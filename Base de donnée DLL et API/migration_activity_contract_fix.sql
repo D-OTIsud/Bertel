@@ -1,7 +1,9 @@
 -- migration_activity_contract_fix.sql
 -- Surface fix: object_act.equipment_provided stays boolean; optional detail text when true.
--- get_object_resource emits activity via to_jsonb(object_act) — the new column is included automatically.
--- IDEMPOTENT. REVERSIBLE: DROP CONSTRAINT + DROP COLUMN equipment_provided_details.
+-- Historical fresh-apply step. A served existing database must instead use
+-- 20261103065333_partner_portal_activity_api_contract.sql: it adds this column and
+-- excludes its key from the shared JSON reader in ONE transaction, preserving the API.
+-- Keep additive data on rollback; do not drop this column to revert an application release.
 
 BEGIN;
 

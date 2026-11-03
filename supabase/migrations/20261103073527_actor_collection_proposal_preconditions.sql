@@ -126,107 +126,23 @@ REVOKE ALL ON FUNCTION internal.pending_collection_domain(jsonb),internal.pendin
 REVOKE ALL ON FUNCTION api.get_object_proposal_baseline(text,text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION api.get_object_proposal_baseline(text,text) TO authenticated,service_role;
 
-CREATE OR REPLACE FUNCTION api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'api', 'auth', 'pg_temp'
-AS $function$
-DECLARE
-  v_row pending_change%ROWTYPE;
-  v_rpc text;
-  v_uid uuid := auth.uid();
-  -- SEPT entrées — cf. l'avertissement ci-dessus. Miroir exact de api.submit_actor_fiche.
-  v_allowed text[] := ARRAY[
-    'publish_portal_photo_additions',
-    'save_object_commercial',
-    'save_object_workspace_sustainability',
-    'save_object_workspace_tags',
-    'save_object_itinerary_nested',
-    'save_object_openings',
-    'save_object_places',
-    'save_object_relations'
-  ];
-  v_now timestamptz := now();
-  v_sub_id uuid; v_domain text; v_baseline jsonb;
+
+-- Preserve the current complete definitions (including the September actor-realm reader).
+-- Pins cover the read-only live catalogue and the explicitly identified fresh preparations:
+-- approval-with-photos, declared reject, and declared recurrence writer. Unknown drift aborts.
+DO $targeted_patches$
+DECLARE r record; v_oid oid; v_raw text; v_source text; v_original text; v_new text; v_definition text;
+  v_pairs jsonb; v_pair jsonb; v_before text; v_after text; v_hash text; v_done boolean;
 BEGIN
-  -- Same order as bulk approval / photo preparation: submission -> proposal -> object.
+  FOR r IN SELECT * FROM (VALUES
+('api.approve_pending_change(uuid,text,boolean)',
+  ARRAY['78b171f997cd630da118ecc81382448d','e6130617c05459dccd63d23814160f60']::text[],
+  'r6-collection-approve',
+  jsonb_build_array(jsonb_build_object('before',$patch$  v_now timestamptz := now();$patch$,'after',$patch$  v_now timestamptz := now();
+  v_sub_id uuid; v_domain text; v_baseline jsonb;$patch$),jsonb_build_object('before',$patch$  SELECT * INTO v_row FROM pending_change WHERE id = p_id FOR UPDATE;$patch$,'after',$patch$  -- /* r6-collection-approve */ Same lock order as the batch: submission -> proposal -> object.
   SELECT submission_id INTO v_sub_id FROM pending_change WHERE id=p_id;
   IF v_sub_id IS NOT NULL THEN PERFORM 1 FROM fiche_submission WHERE id=v_sub_id FOR UPDATE; END IF;
-  SELECT * INTO v_row FROM pending_change WHERE id = p_id FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Suggestion introuvable: %', p_id USING ERRCODE = 'no_data_found';
-  END IF;
-  IF v_row.status <> 'pending' THEN
-    RAISE EXCEPTION 'Suggestion déjà résolue (statut=%)', v_row.status USING ERRCODE = '22023';
-  END IF;
-  -- La garde d'autorisation reste AVANT toute branche : l'attestation est un geste de
-  -- modération de plus, pas un chemin parallèle. Elle s'évalue sur auth.uid() — SECURITY
-  -- DEFINER change le propriétaire des droits Postgres, jamais l'identité applicative.
-  -- Le bras `object_id IS NULL` est EXPLICITE, et il est indispensable :
-  -- user_can_moderate_object rend NULL (et non FALSE) sur un object_id NULL, parce que
-  -- `NULL IN (<ensemble non vide>)` vaut NULL — `IF NOT NULL THEN` n'est alors pas pris, et
-  -- la garde laisse passer. pending_change.object_id EST nullable, et api.submit_pending_change
-  -- (exécutable par tout `authenticated`) accepte p_object_id NULL en sautant son propre
-  -- contrôle de lisibilité : une ligne orpheline est donc fabricable. Tant que rpc NULL était
-  -- refusé avant toute écriture, ce trou était inerte ; la branche attestée est la PREMIÈRE
-  -- écriture atteignable derrière cette garde — un agent sans aucun droit sur la ligne y
-  -- signerait une attestation nominative. La fonction sœur list_pending_changes filtre déjà
-  -- `pc.object_id IS NOT NULL` : l'asymétrie était un oubli. Les gardes jumelles de §7.2
-  -- n'en ont pas besoin — elles portent sur fiche_submission.object_id, déclaré NOT NULL.
-  IF v_row.object_id IS NULL OR NOT api.user_can_moderate_object(v_row.object_id) THEN
-    RAISE EXCEPTION 'Droits de modération insuffisants sur cet objet' USING ERRCODE = '42501';
-  END IF;
-
-  v_rpc := v_row.metadata->>'rpc';
-
-  IF v_rpc IS NULL THEN
-    -- 18a/D9 : un changement manual_apply devient APPROUVABLE — à la seule condition que le
-    -- modérateur ATTESTE l'avoir reporté à la main dans l'éditeur. Aucun SQL ne peut vérifier
-    -- ce report ; ce que la base peut faire, et fait ici, c'est le rendre ATTESTABLE.
-    IF NOT COALESCE(p_applied_manually, FALSE) THEN
-      -- Message ADRESSÉ au conseiller, pas au développeur : c'est le refus le plus courant du
-      -- nouveau flux (5 rubriques sur 7 sont manual_apply), et il doit dire le REMÈDE. Le
-      -- jargon précédent (« RPC de re-dispatch absent… ») n'indiquait rien : le conseiller
-      -- appelait le support, ou refusait la soumission par dépit — et le prestataire recevait
-      -- un refus injustifié. Il doit surtout être DISTINCT de celui du writer non autorisé
-      -- ci-dessous, qui demande l'action INVERSE (ne surtout pas valider).
-      RAISE EXCEPTION 'Cette rubrique n''a pas de report automatique : reportez la modification dans l''éditeur, puis cochez « j''ai reporté ces modifications » pour la valider'
-        USING ERRCODE = '22023';
-    END IF;
-    UPDATE pending_change
-       SET status      = 'approved',   -- approved ≠ applied : attesté par un humain, pas écrit par la machine
-           reviewed_by = v_uid,
-           reviewed_at = v_now,
-           review_note = p_review_note,
-           -- Trace EXPLICITE, et non dérivée. « status='approved' AND applied_at IS NULL »
-           -- dit la même chose aujourd'hui, mais c'est une inférence : le premier remaniement
-           -- des statuts l'efface sans bruit. reviewed_by seul ne suffit pas non plus — un
-           -- REJET en pose un aussi. On écrit donc le fait lui-même, avec son auteur et sa
-           -- date. Clé distincte de metadata.manual_apply, qui est la DÉCLARATION du
-           -- soumetteur (« cette rubrique n'a pas de writer ») : ici c'est l'ATTESTATION du
-           -- modérateur (« je l'ai reportée »). Deux faits, deux clés, deux responsables.
-           metadata    = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(
-                           'applied_manually', TRUE,
-                           'attested_by', v_uid,
-                           'attested_at', v_now),
-           updated_at  = v_now
-     WHERE id = p_id;
-    RETURN jsonb_build_object('success', true, 'id', p_id, 'status', 'approved', 'reviewed_at', v_now);
-  END IF;
-
-  -- Un writer PRÉSENT mais hors whitelist reste refusé, attestation ou pas : l'attestation
-  -- ne couvre que l'ABSENCE de route automatique. Sans cette branche distincte du bras
-  -- « v_rpc IS NULL », p_applied_manually deviendrait un interrupteur d'approbation
-  -- universel, capable d'ouvrir n'importe quelle enveloppe déposée par un autre chemin.
-  IF NOT (v_rpc = ANY(v_allowed)) THEN
-    -- Ici l'enveloppe porte un writer RÉEL hors whitelist : ce n'est pas une rubrique à
-    -- reporter, c'est une anomalie. Le conseiller ne doit surtout pas « valider quand même ».
-    RAISE EXCEPTION 'Anomalie sur cette suggestion (writer « % » non autorisé) : ne la validez pas, signalez-la à l''administrateur', v_rpc
-      USING ERRCODE = '22023';
-  END IF;
-
-  v_domain:=internal.pending_collection_domain(v_row.metadata);
+  SELECT * INTO v_row FROM pending_change WHERE id = p_id FOR UPDATE;$patch$),jsonb_build_object('before',$patch$  EXECUTE format('SELECT api.%I($1, $2)', v_rpc) USING v_row.object_id, v_row.payload;$patch$,'after',$patch$  v_domain:=internal.pending_collection_domain(v_row.metadata);
   IF v_domain IS NOT NULL THEN
     SELECT baseline INTO v_baseline FROM internal.pending_collection_baseline WHERE pending_change_id=p_id;
     IF NOT FOUND THEN
@@ -247,209 +163,90 @@ BEGIN
     END IF;
   END IF;
 
-  -- Re-dispatch vers le writer structuré (signature uniforme (p_object_id, p_payload)).
-  -- %I quote l'identifiant ; le nom est en outre whitelisté ci-dessus. AS THE CALLER : le
-  -- writer re-vérifie ses propres gates d'écriture canonique contre auth.uid().
-  EXECUTE format('SELECT api.%I($1, $2)', v_rpc) USING v_row.object_id, v_row.payload;
-
-  UPDATE pending_change
-     SET status      = 'applied',
-         reviewed_by = v_uid,
-         reviewed_at = v_now,
-         applied_at  = v_now,
-         review_note = p_review_note,
-         updated_at  = v_now
-   WHERE id = p_id;
-
-  RETURN jsonb_build_object('success', true, 'id', p_id, 'status', 'applied', 'applied_at', v_now);
-END;
-$function$;
-ALTER FUNCTION api.approve_pending_change(uuid,text,boolean) SET lock_timeout='5s';
-
-CREATE OR REPLACE FUNCTION api.approve_fiche_submission(
-  p_submission_id  uuid,
-  p_review_note    text    DEFAULT NULL,
-  p_include_manual boolean DEFAULT FALSE
-)
-RETURNS jsonb
-LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-SET search_path = public, api, auth, pg_temp
-AS $$
-DECLARE
-  v_sub fiche_submission%ROWTYPE;
-  v_pc  RECORD;
-  v_applied int := 0;
-  v_manual  int := 0;
-  v_skipped int := 0;
-BEGIN
-  SELECT * INTO v_sub FROM fiche_submission WHERE id = p_submission_id FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Soumission introuvable: %', p_submission_id USING ERRCODE = 'no_data_found';
-  END IF;
-  -- Garde PROPRE, et pas seulement celle d'approve_pending_change : sur une soumission dont
-  -- plus aucune ligne n'est pending, la boucle ci-dessous ne s'exécute pas — sans ce contrôle,
-  -- l'appel rendrait un SUCCÈS à quelqu'un qui n'a aucun droit sur la fiche.
-  IF NOT api.user_can_moderate_object(v_sub.object_id) THEN
-    RAISE EXCEPTION 'Droits de modération insuffisants sur cet objet' USING ERRCODE = '42501';
-  END IF;
-
-  FOR v_pc IN
-    SELECT id, (metadata->>'rpc') AS rpc, internal.pending_change_needs_manual_report(id,metadata) AS needs_manual FROM pending_change
-    WHERE submission_id = p_submission_id AND status = 'pending'
-    ORDER BY submitted_at, id
-  LOOP
-    IF v_pc.needs_manual AND NOT COALESCE(p_include_manual, FALSE) THEN
-      -- Reste pending, DÉLIBÉRÉMENT : le modérateur n'a pas déclaré avoir reporté ces
-      -- rubriques. Tant qu'il en reste une, la soumission ne peut pas se résoudre — le
-      -- verrou « une seule vérification ouverte » tient, et l'acteur ne rouvre pas la fiche
-      -- pendant que l'office travaille encore.
-      v_skipped := v_skipped + 1;
-      CONTINUE;
-    END IF;
-    -- L'attestation n'est propagée que pour les lignes SANS writer : sur une ligne auto, elle
-    -- serait un mensonge d'audit (la machine écrit, personne n'atteste).
-    PERFORM api.approve_pending_change(v_pc.id, p_review_note, v_pc.needs_manual);
-    IF v_pc.needs_manual THEN v_manual := v_manual + 1; ELSE v_applied := v_applied + 1; END IF;
-  END LOOP;
-
-  RETURN jsonb_build_object(
-    'applied_count', v_applied, 'approved_manual_count', v_manual,
-    'skipped_manual_count', v_skipped,
-    -- Relu APRÈS la boucle : le trigger de résolution (§8) a pu le faire basculer pendant.
-    'submission_status', (SELECT status FROM fiche_submission WHERE id = p_submission_id));
-END;
-$$;
-
-
-CREATE OR REPLACE FUNCTION api.list_pending_changes(
-  p_status    text DEFAULT 'pending',
-  p_object_id text DEFAULT NULL,
-  p_limit     int  DEFAULT 50,
-  p_offset    int  DEFAULT 0
-)
-RETURNS TABLE (
-  id             uuid,
-  object_id      text,
-  object_name    text,
-  target_table   text,
-  target_pk      text,
-  action         text,
-  status         text,
-  field_label    text,
-  before_value   text,
-  after_value    text,
-  submitted_by   uuid,
-  submitter_label text,
-  submitted_at   timestamptz,
-  reviewed_by    uuid,
-  reviewer_label text,
-  reviewed_at    timestamptz,
-  review_note    text,
-  applied_at     timestamptz,
-  submission_id  uuid,
-  submission_note text,
-  actor_label    text,
-  manual_apply   boolean
-)
-LANGUAGE plpgsql STABLE SECURITY DEFINER
-SET search_path = public, api, auth, pg_temp
-AS $$
-DECLARE
-  v_is_super boolean := api.is_platform_superuser();
-  v_scope    text[]  := ARRAY(SELECT api.current_user_crm_object_ids());
-  v_can_validate boolean := api.user_has_permission('validate_changes');
-  v_limit    int := LEAST(GREATEST(COALESCE(p_limit, 50), 1), 200);
-  v_offset   int := GREATEST(COALESCE(p_offset, 0), 0);
-BEGIN
-  RETURN QUERY
-  SELECT
-    pc.id, pc.object_id, o.name, pc.target_table, pc.target_pk, pc.action, pc.status,
-    pc.metadata->>'field'  AS field_label,
-    pc.metadata->>'before' AS before_value,
-    pc.metadata->>'after'  AS after_value,
-    pc.submitted_by,
-    COALESCE(sp.display_name, 'Utilisateur ' || left(pc.submitted_by::text, 8)) AS submitter_label,
-    pc.submitted_at,
-    pc.reviewed_by,
-    CASE WHEN pc.reviewed_by IS NULL THEN NULL
-         ELSE COALESCE(rp.display_name, 'Utilisateur ' || left(pc.reviewed_by::text, 8)) END AS reviewer_label,
-    pc.reviewed_at, pc.review_note, pc.applied_at,
-    -- 18a/D9 : le groupage par soumission + le libellé acteur (joint à la lecture, RGPD).
-    pc.submission_id,
-    fs.note AS submission_note,
-    a.display_name AS actor_label,
-    -- UNE seule source de vérité : le prédicat exact sur lequel la MACHINE décide
-    -- (approve_pending_change et approve_fiche_submission branchent tous deux sur
-    -- `metadata->>'rpc' IS NULL`). metadata.manual_apply est une DÉCLARATION du soumetteur,
-    -- recopiée depuis le corps de requête et jamais confrontée à rpc : s'en servir pour peindre
-    -- le bouton du modérateur rouvrait la panne même que D9 ferme — la file annonce
-    -- « application automatique » sur une rubrique sans writer, le conseiller clique Approuver,
-    -- prend un refus, et il ne lui reste que le rejet ; la soumission ne se résout pas, le
-    -- verrou tient, le prestataire reste en PT409. Symétrie inverse tout aussi fausse :
-    -- {rpc: save_object_openings, manual_apply: true} faisait cocher une attestation sur une
-    -- ligne que la machine applique elle-même. `->>` ne caste rien : le rationale anti-22P02
-    -- sur jsonb libre (classe §17m) est préservé, y compris face à une valeur aberrante.
-    internal.pending_change_needs_manual_report(pc.id,pc.metadata) AS manual_apply
-  FROM pending_change pc
-  LEFT JOIN object o            ON o.id = pc.object_id
-  LEFT JOIN app_user_profile sp ON sp.id = pc.submitted_by
-  LEFT JOIN app_user_profile rp ON rp.id = pc.reviewed_by
-  LEFT JOIN fiche_submission fs ON fs.id = pc.submission_id
-  LEFT JOIN actor a             ON a.id = fs.actor_id
-  WHERE (p_status IS NULL OR pc.status = p_status)
-    AND (p_object_id IS NULL OR pc.object_id = p_object_id)
-    AND (
-      v_is_super
-      OR (v_can_validate AND pc.object_id IS NOT NULL AND pc.object_id = ANY(v_scope))
-    )
-  ORDER BY pc.submitted_at DESC, pc.id
-  LIMIT v_limit OFFSET v_offset;
-END;
-$$;
-CREATE OR REPLACE FUNCTION api.reject_pending_change(
-  p_id          uuid,
-  p_review_note text
-)
-RETURNS jsonb
-LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-SET search_path = public, api, auth
-AS $$
-DECLARE
-  v_row pending_change%ROWTYPE;
-  v_now timestamptz := now();
-  v_sub_id uuid;
-BEGIN
-  IF p_review_note IS NULL OR btrim(p_review_note) = '' THEN
-    RAISE EXCEPTION 'Un motif de refus est obligatoire' USING ERRCODE = '22023';
-  END IF;
-
+  EXECUTE format('SELECT api.%I($1, $2)', v_rpc) USING v_row.object_id, v_row.payload;$patch$)),
+  true),
+('api.approve_fiche_submission(uuid,text,boolean)',
+  ARRAY['3cec67930cf677455e933ddafbf0739b']::text[],
+  'r6-manual-history-bulk',
+  jsonb_build_array(jsonb_build_object('before',$patch$SELECT id, (metadata->>'rpc') AS rpc FROM pending_change$patch$,'after',$patch$SELECT id, (metadata->>'rpc') AS rpc, internal.pending_change_needs_manual_report(id,metadata) AS needs_manual /* r6-manual-history-bulk */ FROM pending_change$patch$),jsonb_build_object('before',$patch$IF v_pc.rpc IS NULL AND NOT COALESCE(p_include_manual, FALSE) THEN$patch$,'after',$patch$IF v_pc.needs_manual AND NOT COALESCE(p_include_manual, FALSE) THEN$patch$),jsonb_build_object('before',$patch$PERFORM api.approve_pending_change(v_pc.id, p_review_note, v_pc.rpc IS NULL);$patch$,'after',$patch$PERFORM api.approve_pending_change(v_pc.id, p_review_note, v_pc.needs_manual);$patch$),jsonb_build_object('before',$patch$IF v_pc.rpc IS NULL THEN v_manual := v_manual + 1; ELSE v_applied := v_applied + 1; END IF;$patch$,'after',$patch$IF v_pc.needs_manual THEN v_manual := v_manual + 1; ELSE v_applied := v_applied + 1; END IF;$patch$)),
+  true),
+('api.list_pending_changes(text,text,integer,integer)',
+  ARRAY['91417b2391fd136e76f75895265a1b37']::text[],
+  'r6-manual-history-list',
+  jsonb_build_array(jsonb_build_object('before',$patch$((pc.metadata->>'rpc') IS NULL) AS manual_apply$patch$,'after',$patch$internal.pending_change_needs_manual_report(pc.id,pc.metadata) /* r6-manual-history-list */ AS manual_apply$patch$)),
+  true),
+('api.reject_pending_change(uuid,text)',
+  ARRAY['c125ebd25849243cf45f1b7a114960ed','5b328414dc0e0551504ab0b5aa2f7b6e']::text[],
+  'r6-collection-reject',
+  jsonb_build_array(jsonb_build_object('before',$patch$  v_now timestamptz := now();$patch$,'after',$patch$  v_now timestamptz := now();
+  v_sub_id uuid;$patch$),jsonb_build_object('before',$patch$  SELECT * INTO v_row FROM pending_change WHERE id = p_id FOR UPDATE;$patch$,'after',$patch$  -- /* r6-collection-reject */ Same lock order as the batch: submission -> proposal -> object.
   SELECT submission_id INTO v_sub_id FROM pending_change WHERE id=p_id;
   IF v_sub_id IS NOT NULL THEN PERFORM 1 FROM fiche_submission WHERE id=v_sub_id FOR UPDATE; END IF;
-  SELECT * INTO v_row FROM pending_change WHERE id = p_id FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Suggestion introuvable: %', p_id USING ERRCODE = 'no_data_found';
-  END IF;
-  IF v_row.status <> 'pending' THEN
-    RAISE EXCEPTION 'Suggestion déjà résolue (statut=%)', v_row.status USING ERRCODE = '22023';
-  END IF;
-  IF v_row.object_id IS NULL OR NOT api.user_can_moderate_object(v_row.object_id) THEN
-    RAISE EXCEPTION 'Droits de modération insuffisants sur cet objet' USING ERRCODE = '42501';
-  END IF;
-
-  UPDATE pending_change
-     SET status      = 'rejected',
-         reviewed_by = auth.uid(),
-         reviewed_at = v_now,
-         review_note = p_review_note,
-         updated_at  = v_now
-   WHERE id = p_id;
-
-  RETURN jsonb_build_object('success', true, 'id', p_id, 'status', 'rejected', 'reviewed_at', v_now);
+  SELECT * INTO v_row FROM pending_change WHERE id = p_id FOR UPDATE;$patch$)),
+  true),
+('api.save_object_commercial(text,jsonb)',
+  ARRAY['25d01e673bc3d478512ce6c1c7ae40bd']::text[],
+  'r6-object-before-children',
+  jsonb_build_array(jsonb_build_object('before',$patch$  PERFORM internal.workspace_assert_can_write_object(p_object_id);$patch$,'after',$patch$  PERFORM internal.workspace_assert_can_write_object(p_object_id);
+  -- /* r6-object-before-children */ Serialize before DELETE/INSERT of any collection child.
+  PERFORM 1 FROM public.object WHERE id=p_object_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Fiche inaccessible.' USING ERRCODE='42501'; END IF;$patch$)),
+  false),
+('api.save_object_openings(text,jsonb)',
+  ARRAY['7f1665faf55856c0c3b867a243d999e3','a6967f74a8959360215207b1c0d65d6e']::text[],
+  'r6-object-before-children',
+  jsonb_build_array(jsonb_build_object('before',$patch$  PERFORM internal.workspace_assert_can_write_object(p_object_id);$patch$,'after',$patch$  PERFORM internal.workspace_assert_can_write_object(p_object_id);
+  -- /* r6-object-before-children */ Serialize before DELETE/INSERT of any collection child.
+  PERFORM 1 FROM public.object WHERE id=p_object_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Fiche inaccessible.' USING ERRCODE='42501'; END IF;$patch$)),
+  false)
+  ) inventory(signature,allowed_sources,marker,pairs,expected_definer) LOOP
+    v_oid:=to_regprocedure(r.signature);
+    IF v_oid IS NULL THEN RAISE EXCEPTION 'R6 function missing: %',r.signature; END IF;
+    SELECT prosrc INTO v_raw FROM pg_proc WHERE oid=v_oid AND prosecdef=r.expected_definer;
+    IF v_raw IS NULL THEN RAISE EXCEPTION 'R6 unexpected security mode: %',r.signature; END IF;
+    v_source:=replace(v_raw,E'\r\n',E'\n');
+    v_pairs:=r.pairs;
+    -- Preserve an existing null-object guard; add only the missing guard on the fresh declaration.
+    IF r.signature='api.reject_pending_change(uuid,text)' AND
+      (position('/* r6-null-object */' IN v_source)>0 OR position('IF NOT api.user_can_moderate_object(v_row.object_id) THEN' IN v_source)>0) THEN
+      v_pairs:=v_pairs||jsonb_build_array(jsonb_build_object(
+        'before','IF NOT api.user_can_moderate_object(v_row.object_id) THEN',
+        'after','IF v_row.object_id IS NULL OR NOT api.user_can_moderate_object(v_row.object_id) /* r6-null-object */ THEN'));
+    END IF;
+    v_done:=position(r.marker IN v_source)>0;
+    v_original:=v_source;
+    IF v_done THEN
+      FOR v_pair IN SELECT value FROM jsonb_array_elements(v_pairs) LOOP
+        v_after:=v_pair->>'after';
+        IF (length(v_original)-length(replace(v_original,v_after,'')))/length(v_after)<>1 THEN RAISE EXCEPTION 'R6 replay anchor drift: %',r.signature; END IF;
+        v_original:=replace(v_original,v_after,v_pair->>'before');
+      END LOOP;
+    END IF;
+    v_hash:=md5(v_original);
+    IF NOT v_hash=ANY(r.allowed_sources) THEN RAISE EXCEPTION 'R6 unexpected source %: %',r.signature,v_hash; END IF;
+    IF r.signature LIKE 'api.list_pending_changes%' AND position('/* actor-realm:actor */' IN v_original)=0 THEN
+      RAISE EXCEPTION 'R6 refuses to lose the actor realm scope';
+    END IF;
+    IF v_done THEN CONTINUE; END IF;
+    v_new:=v_source;
+    FOR v_pair IN SELECT value FROM jsonb_array_elements(v_pairs) LOOP
+      v_before:=v_pair->>'before';
+      IF (length(v_new)-length(replace(v_new,v_before,'')))/length(v_before)<>1 THEN RAISE EXCEPTION 'R6 source anchor drift: %',r.signature; END IF;
+      v_new:=replace(v_new,v_before,v_pair->>'after');
+    END LOOP;
+    v_definition:=pg_get_functiondef(v_oid);
+    IF (length(v_definition)-length(replace(v_definition,v_raw,'')))/length(v_raw)<>1 THEN RAISE EXCEPTION 'R6 function definition drift: %',r.signature; END IF;
+    EXECUTE replace(v_definition,v_raw,v_new);
+    RAISE NOTICE 'R6 % source % -> %',r.signature,v_hash,md5(v_new);
+  END LOOP;
 END;
-$$;
-
+$targeted_patches$;
+ALTER FUNCTION api.approve_pending_change(uuid,text,boolean) SET lock_timeout='5s';
 ALTER FUNCTION api.reject_pending_change(uuid,text) SET lock_timeout='5s';
 ALTER FUNCTION api.approve_fiche_submission(uuid,text,boolean) SET lock_timeout='5s';
 ALTER FUNCTION api.reject_fiche_submission(uuid,text) SET lock_timeout='5s';
+ALTER FUNCTION api.save_object_commercial(text,jsonb) SET lock_timeout='5s';
+ALTER FUNCTION api.save_object_openings(text,jsonb) SET lock_timeout='5s';
 COMMIT;
 NOTIFY pgrst,'reload schema';

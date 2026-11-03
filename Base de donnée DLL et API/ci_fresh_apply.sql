@@ -692,6 +692,8 @@ ROLLBACK;
 \echo '== M/E backend preparation: shared menu writer and durable extraction; actor features remain OFF =='
 \ir ../supabase/migrations/20261103082027_portal_menus_guarded_publication.sql
 \ir ../supabase/migrations/20261103080731_partner_menu_extraction_operations.sql
+\echo '== P backend preparation: durable photo assessment and human appeal remain OFF =='
+\ir ../supabase/migrations/20261103084816_partner_portal_photo_assessment_foundation_off.sql
 \endif
 
 -- The upgrade CI scenario stops before the reader patches, then reconstructs the

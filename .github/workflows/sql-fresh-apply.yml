@@ -643,6 +643,17 @@ jobs:
           python tools/partner-api/test-menu-cutover.py "$DB_URL"
           python tools/partner-api/test-extraction-concurrency.py "$DB_URL"
 
+      - name: Photo assessment and human appeal remain OFF after acceptance
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103084816_partner_portal_photo_assessment_foundation_off.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_photo_stock.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_assessment_foundation.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_photo_stock.sql"
+          python tools/partner-api/test-photo-assessment-concurrency.py "$DB_URL"
+
       - name: Reconstruct observed pre-R1 activity schema (upgrade scenario only)
         if: matrix.contract-scenario == 'upgrade'
         env:

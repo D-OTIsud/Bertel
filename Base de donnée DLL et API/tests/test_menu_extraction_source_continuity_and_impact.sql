@@ -22,10 +22,15 @@ BEGIN
  INSERT INTO public.app_user_profile(id,role,actor_id) VALUES(u,'actor',actor),(foreign_user,'actor',foreign_actor),(office,'super_admin',NULL),(other_office,'tourism_agent',NULL)
  ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role,actor_id=EXCLUDED.actor_id;
  INSERT INTO public.object(id,object_type,name,status,is_test) VALUES('RESRUN999999E401','RES','E continuity','published',true),('RESRUN999999E402','RES','E foreign','published',true),('RESRUN999999E403','RES','E other realm','published',false),('ORGRUN999999E404','ORG','E office scope','published',true);
+ -- A primary publisher recomputes the object realm from org_config, not the
+ -- ORG object's initial is_test flag. Stamp the test office before linking it.
+ INSERT INTO public.org_config(org_object_id,is_test_org) VALUES('ORGRUN999999E404',true)
+ ON CONFLICT(org_object_id) DO UPDATE SET is_test_org=true;
  SELECT id INTO role_id FROM public.ref_actor_role WHERE code='operator';
  SELECT id INTO carte_role FROM public.ref_code_document_type WHERE code='carte';
  SELECT id INTO publisher_role FROM public.ref_org_role WHERE code='publisher';
  INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary) VALUES('RESRUN999999E401','ORGRUN999999E404',publisher_role,true);
+ ASSERT (SELECT is_test FROM public.object WHERE id='RESRUN999999E401'),'fixture publisher unexpectedly changed object realm';
  INSERT INTO public.actor_object_role(actor_id,object_id,role_id,is_primary) VALUES(actor,'RESRUN999999E401',role_id,true),(foreign_actor,'RESRUN999999E402',role_id,true);
  INSERT INTO public.object_menu(id,object_id,name,visibility) VALUES(target,'RESRUN999999E401','A extracted','public'),(manual_menu,'RESRUN999999E401','Manual independent','public'),
  (new_source_menu,'RESRUN999999E401','New source only','public'),(old_author_menu,'RESRUN999999E401','B previous author','public'),(hidden_menu,'RESRUN999999E401','Hidden history','private'),(foreign_menu,'RESRUN999999E402','Foreign object','public');

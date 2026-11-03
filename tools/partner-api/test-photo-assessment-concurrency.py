@@ -40,56 +40,119 @@ def prefix(name):
             "\"role\":\"authenticated\"}',true); SET LOCAL ROLE authenticated;\n")
 
 
-def verify_scope_after_wait():
-    """Revoke the registered actor while a real caller waits on the object lock."""
-    holding = attempting = None
-    revoked = False
+def stop(process):
+    if process is not None and process.poll() is None:
+        process.terminate()
+        process.wait(timeout=5)
+
+
+def finish(process, timeout=15):
+    if process.wait(timeout=timeout):
+        raise RuntimeError(process.stderr.read())
+
+
+def hold_fixture_object(object_id, name, document_id=None):
+    holding = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, text=True, env=env, bufsize=1)
+    observed = queue.Queue()
+    threading.Thread(target=lambda stream=holding.stdout: [observed.put(line.strip()) for line in stream], daemon=True).start()
+    source = guard + "BEGIN; SET application_name='" + name + "'; SELECT 1 FROM public.object WHERE id='" + object_id + "' FOR UPDATE;"
+    if document_id:
+        source += "SELECT 1 FROM public.ref_document WHERE id='" + document_id + "' FOR UPDATE;"
+    holding.stdin.write(source + "SELECT 'LOCK_HELD';\n")
+    holding.stdin.flush()
+    deadline = time.monotonic() + 10
     try:
-        holding = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, text=True, env=env, bufsize=1)
-        observed = queue.Queue()
-        threading.Thread(target=lambda stream=holding.stdout: [observed.put(line.strip()) for line in stream], daemon=True).start()
-        holding.stdin.write(guard + "BEGIN; SET application_name='bertel_photo_analysis_scope_holder';"
-                            "SELECT 1 FROM public.object WHERE id='HOTRUN999999C502' FOR UPDATE; SELECT 'LOCK_HELD';\n")
-        holding.stdin.flush()
-        deadline = time.monotonic() + 10
         while observed.get(timeout=max(0.1, deadline - time.monotonic())) != "LOCK_HELD":
             if time.monotonic() >= deadline:
-                raise RuntimeError("Scope test did not obtain the object lock")
-        attempting = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                      stderr=subprocess.PIPE, text=True, env=env)
-        attempting.stdin.write(prefix("bertel_photo_analysis_scope_waiter")
-                               + "DO $$ DECLARE refused boolean:=false;BEGIN BEGIN PERFORM api.start_portal_photo_analysis("
-                               "'00000000-0000-4000-af00-000000000111','00000000-0000-4000-af00-000000000141');"
-                               "EXCEPTION WHEN insufficient_privilege THEN refused:=true;END;"
-                               "ASSERT refused,'Revoked actor passed dispatch authorization after the lock wait';END $$;ROLLBACK;\n")
+                raise RuntimeError("Fixture holder did not acquire its locks")
+        return holding
+    except BaseException:
+        stop(holding)
+        raise
+
+
+def verify_scope_after_wait(kind):
+    """B has object/library rights, but cannot use the receipt bound to A's path."""
+    object_id = "HOTRUN999999C501" if kind == "reserve" else "HOTRUN999999C502"
+    document_id = "00000000-0000-4000-af00-000000000102" if kind == "reserve" else "00000000-0000-4000-af00-000000000101"
+    calls = {
+        "reserve": "api.reserve_portal_photo_analysis('HOTRUN999999C501','00000000-0000-4000-af00-000000000102','00000000-0000-4000-af00-000000000112')",
+        "start": "api.start_portal_photo_analysis('00000000-0000-4000-af00-000000000111','00000000-0000-4000-af00-000000000141')",
+        "appeal": "api.appeal_portal_photo_analysis('00000000-0000-4000-af00-000000000111','Concurrency scope appeal','00000000-0000-4000-af00-000000000151')",
+    }
+    name = "bertel_photo_scope_waiter_" + kind
+    holding = attempting = None
+    switched = False
+    try:
+        sql("INSERT INTO public.actor_object_role(actor_id,object_id,role_id,is_primary) SELECT '00000000-0000-4000-a000-00000000c523','" + object_id + "',id,true FROM public.ref_actor_role WHERE code='operator' ON CONFLICT DO NOTHING;"
+            "INSERT INTO public.actor_document(actor_id,document_id,created_by,title) VALUES('00000000-0000-4000-a000-00000000c523','" + document_id + "','00000000-0000-4000-a000-00000000c511','Shared identity-switch fixture') ON CONFLICT DO NOTHING;")
+        holding = hold_fixture_object(object_id, "bertel_photo_scope_holder")
+        attempting = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+        attempting.stdin.write(prefix(name) + "DO $$ DECLARE refused boolean:=false;BEGIN BEGIN PERFORM " + calls[kind]
+                               + ";EXCEPTION WHEN insufficient_privilege THEN refused:=true;END;ASSERT refused,'Actor B used a receipt bound to A after waiting';END $$;COMMIT;\n")
         attempting.stdin.close()
-        waiting = False
         deadline = time.monotonic() + 4
-        while time.monotonic() < deadline:
-            if sql("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name='bertel_photo_analysis_scope_waiter' AND wait_event_type='Lock');") == "t":
-                waiting = True
-                break
+        while sql("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name='" + name + "' AND wait_event_type='Lock');") != "t":
+            if time.monotonic() >= deadline:
+                raise RuntimeError(kind + " was not observed waiting on the object")
             time.sleep(0.05)
-        if not waiting:
-            raise RuntimeError("Dispatch caller was not observed waiting on the object")
-        sql("UPDATE public.app_user_profile SET actor_id=NULL WHERE id='00000000-0000-4000-a000-00000000c511';")
-        revoked = True
+        sql("SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',false);UPDATE public.app_user_profile SET actor_id='00000000-0000-4000-a000-00000000c523' WHERE id='00000000-0000-4000-a000-00000000c511';")
+        switched = True
+        sql(prefix("bertel_photo_scope_positive") + "DO $$ BEGIN ASSERT EXISTS(SELECT 1 FROM api.current_user_portal_object_ids() id WHERE id='" + object_id + "'),'Actor B lacks the positive-control object right';END $$;COMMIT;")
         holding.stdin.write("COMMIT;\n")
         holding.stdin.close()
-        if holding.wait(timeout=15):
-            raise RuntimeError(holding.stderr.read())
-        if attempting.wait(timeout=15):
-            raise RuntimeError(attempting.stderr.read())
-        sql("DO $$ BEGIN ASSERT EXISTS(SELECT 1 FROM internal.portal_photo_analysis WHERE id='00000000-0000-4000-af00-000000000111' AND state='reserved' AND started_at IS NULL AND claim_id IS NULL);END $$;")
-        print("Photo dispatch after a real object wait: revoked actor refused; no provider attempt marked")
+        finish(holding)
+        finish(attempting)
+        sql("DO $$ BEGIN ASSERT NOT EXISTS(SELECT 1 FROM internal.portal_photo_analysis WHERE id='00000000-0000-4000-af00-000000000112');"
+            "ASSERT NOT EXISTS(SELECT 1 FROM internal.portal_photo_analysis WHERE id='00000000-0000-4000-af00-000000000111' AND appeal_interaction_id IS NOT NULL);END $$;")
+        if kind != "appeal":
+            sql("DO $$ BEGIN ASSERT EXISTS(SELECT 1 FROM internal.portal_photo_analysis WHERE id='00000000-0000-4000-af00-000000000111' AND state='reserved' AND started_at IS NULL AND claim_id IS NULL);END $$;")
+        print("Photo " + kind + ": real object wait, A-to-B switch refused despite B object/library rights, waiter committed")
     finally:
-        for process in (attempting, holding):
-            if process is not None and process.poll() is None:
-                process.terminate()
-                process.wait(timeout=5)
-        if revoked:
+        stop(attempting)
+        stop(holding)
+        if switched:
             sql("SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',false);UPDATE public.app_user_profile SET actor_id='00000000-0000-4000-a000-00000000c521' WHERE id='00000000-0000-4000-a000-00000000c511';")
+
+
+def verify_off_without_object_wait():
+    holding = attempting = None
+    try:
+        holding = hold_fixture_object("HOTRUN999999C502", "bertel_photo_off_holder")
+        sql("UPDATE internal.portal_photo_analysis_settings SET enabled=false;")
+        attempting = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+        attempting.stdin.write(prefix("bertel_photo_off_caller") + "DO $$ DECLARE r jsonb;BEGIN r:=api.reserve_portal_photo_analysis('HOTRUN999999C502','00000000-0000-4000-af00-000000000101','00000000-0000-4000-af00-000000000111');"
+                               "ASSERT r->>'enabled'='false' AND r->>'created'='false' AND NOT(r ? 'operation') AND NOT(r ? 'context'),'OFF leaked a previous dispatch context';END $$;COMMIT;\n")
+        attempting.stdin.close()
+        finish(attempting, timeout=3)
+        sql("DO $$ BEGIN ASSERT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name='bertel_photo_off_holder' AND state='idle in transaction');"
+            "ASSERT EXISTS(SELECT 1 FROM internal.portal_photo_analysis WHERE id='00000000-0000-4000-af00-000000000111' AND state='reserved');END $$;")
+        print("Photo OFF: existing reservation returned no context without waiting on a held object; waiter committed")
+    finally:
+        stop(attempting)
+        stop(holding)
+        sql("UPDATE internal.portal_photo_analysis_settings SET enabled=true;")
+
+
+def verify_paid_finish_without_parent_wait():
+    holding = completing = None
+    try:
+        sql(prefix("bertel_photo_finish_start") + "DO $$ DECLARE r jsonb;BEGIN r:=api.start_portal_photo_analysis('00000000-0000-4000-af00-000000000111','00000000-0000-4000-af00-000000000141');ASSERT r->>'started'='true';END $$;COMMIT;")
+        holding = hold_fixture_object("HOTRUN999999C502", "bertel_photo_finish_holder", "00000000-0000-4000-af00-000000000101")
+        completing = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+        completing.stdin.write(guard + "BEGIN;SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',true);SET LOCAL ROLE service_role;"
+                              "DO $$ DECLARE r jsonb;BEGIN r:=api.finish_portal_photo_analysis('00000000-0000-4000-af00-000000000111','00000000-0000-4000-af00-000000000141',"
+                              "'{\"state\":\"assessed\",\"assessment\":{\"score\":7,\"summary\":\"Concurrency fixture\",\"strengths\":[],\"issues\":[]},\"publication\":\"office_review\"}');"
+                              "ASSERT r->>'state'='assessed' AND r->>'publication'='office_review';END $$;COMMIT;\n")
+        completing.stdin.close()
+        finish(completing, timeout=3)
+        sql("DO $$ BEGIN ASSERT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name='bertel_photo_finish_holder' AND state='idle in transaction');"
+            "ASSERT EXISTS(SELECT 1 FROM internal.portal_photo_analysis WHERE id='00000000-0000-4000-af00-000000000111' AND state='assessed');END $$;")
+        print("Photo paid finish: durable assessed result committed while object and document locks remain held")
+    finally:
+        stop(completing)
+        stop(holding)
 
 
 fixture("setup_partner_photo_stock.sql")
@@ -113,7 +176,7 @@ try:
                          stderr=subprocess.PIPE, text=True, env=env)
     b.stdin.write(prefix("bertel_photo_analysis_race_b") + "DO $$ DECLARE r jsonb; BEGIN r:=api.reserve_portal_photo_analysis("
                   "'HOTRUN999999C501','00000000-0000-4000-af00-000000000102','00000000-0000-4000-af00-000000000112');"
-                  "ASSERT r->>'state'='quota_reached','Second object bypassed the shared actor analysis budget'; END $$; ROLLBACK;\n")
+                  "ASSERT r->>'state'='quota_reached','Second object bypassed the shared actor analysis budget'; END $$; COMMIT;\n")
     b.stdin.close()
     waiting = False
     deadline = time.monotonic() + 4
@@ -137,7 +200,11 @@ try:
       ASSERT internal.gallery_photo_usage('HOTRUN999999C502')=1;
     END $$;""")
     print("Photo analysis across two objects: real actor advisory wait observed; one budget reservation, both private uploads retained")
-    verify_scope_after_wait()
+    verify_off_without_object_wait()
+    verify_scope_after_wait("reserve")
+    verify_scope_after_wait("start")
+    verify_paid_finish_without_parent_wait()
+    verify_scope_after_wait("appeal")
 finally:
     for process in (b, a):
         if process is not None and process.poll() is None:

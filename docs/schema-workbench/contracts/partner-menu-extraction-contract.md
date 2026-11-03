@@ -22,7 +22,7 @@ L’ordre de dépendance prime sur les timestamps : **M `20261103082027` doit pr
 
 | Étape | Fichier ou condition |
 | --- | --- |
-| 1. Socle | Auth, schéma `api`, Storage/Vault, registre IA et gardes persona/périmètre/realm déjà installés. R4 corrigé : `supabase/migrations/20261103070417_object_menus_atomic_reconcile.sql`. Correction des lectures office R3b selon le plan global. |
+| 1. Socle | Auth, schéma `api`, Storage/Vault, registre IA et gardes persona/périmètre/realm déjà installés. R4 corrigé pour M : `supabase/migrations/20261103070417_object_menus_atomic_reconcile.sql`. R3b est nécessaire aux lectures de correction M et au lecteur d’impact E ; C seule garde son chemin indépendant de R4/R3b. |
 | 2. C additif | `supabase/migrations/20261103072138_partner_restaurant_cartes_contract.sql`. Garder `internal.restaurant_carte_rollout.partner_enabled=false`. |
 | 3. M préparatoire | `supabase/migrations/20261103082027_portal_menus_guarded_publication.sql`. Writer R4 partagé, gardes M, configuration `enabled=false`, RPC acteur de publication non accordées. |
 | 4. E préparatoire | `supabase/migrations/20261103080731_partner_menu_extraction_operations.sql`. `internal.menu_extraction_settings.enabled=false`, `daily_page_limit=NULL`. |
@@ -32,6 +32,8 @@ L’ordre de dépendance prime sur les timestamps : **M `20261103082027` doit pr
 | 8. Ouvertures C puis E | C partenaire nécessite son accord UI et son flag explicite. E nécessite M ouvert, source C autorisée, interface validée, quota exact décidé et fournisseur compatible/configuré. Aucun script livré ne choisit ou n’active ce quota. |
 
 Les cutovers sont séparés des migrations additives et du manifeste fresh. Les migrations C/E sont des installations uniques : leurs `CREATE` refusent un rejeu, elles ne constituent pas des scripts de réinitialisation. M tolère uniquement sa préparation exacte encore OFF, sous contrôles d’empreinte/ACL. Respecter l’historique de migration ; ne pas rejouer C/E pour corriger un état partiel. Les fixtures et activations fictives de CI ne s’exécutent jamais sur une base métier.
+
+Pour E avec lecture d’impact, installer explicitement **`20261103083731_partner_portal_menu_stay_correction_read_scope.sql` avant E** : son helper `api.can_read_object_for_correction(text)` est la garde de lecture office de `api.get_menu_extraction_source_impact`. La recette M/E intervient après R3b dans le workflow. Ce prérequis du lecteur E ne rend pas R3b nécessaire au dépôt/publication C livré séparément.
 
 L’office conserve son interface existante et sa garde canonique. Son client C utilise les mutations ciblées ; le champ d’upload office existant peut encore passer par la route document existante puis `link-existing`. Le nouvel aperçu privé partenaire n’est pas implicitement branché par le déploiement serveur.
 

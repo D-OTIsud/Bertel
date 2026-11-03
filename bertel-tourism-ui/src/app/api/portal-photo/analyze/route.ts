@@ -12,7 +12,13 @@ const bodySchema=z.object({objectId:z.string().regex(/^[A-Z]{3}[A-Z0-9]{13}$/),d
 const providerSchema=z.object({id:z.string().uuid(),api_kind:z.literal('openai_compatible'),base_url:z.string().url().refine(value=>/^https?:\/\//i.test(value)),model:z.string().min(1),max_output_tokens:z.number().int().min(256).max(32768),extra:z.record(z.unknown()).nullable(),api_key:z.string().nullable()});
 const rec=(value:unknown):Record<string,unknown>=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
 const json=(value:unknown,status=200)=>NextResponse.json(value,{status,headers:{'Cache-Control':'private, no-store'}});
-const failure=(error:{code?:string}|null)=>json({error:error?.code==='42501'?'forbidden':error?.code==='PT409'?'conflict':'unavailable'},error?.code==='42501'?403:error?.code==='PT409'?409:503);
+const operationStatus=(operation:Record<string,unknown>)=>operation.state==='unavailable'?503:['reserved','started','uncertain'].includes(String(operation.state))?202:200;
+const failure=(error:{code?:string}|null,operationId?:string)=>{
+ const code=error?.code;
+ const status=code==='42501'?403:code==='PT409'||code==='23505'?409:code==='22023'||code==='22P02'?400:503;
+ return json({...(operationId?{requestId:operationId,...failedPhotoAssessment(false)}:{}),
+  error:status===403?'forbidden':status===409?'conflict':status===400?'invalid_fields':'unavailable'},status);
+};
 
 export async function POST(req:NextRequest){
  const deadline=Date.now()+55_000;
@@ -21,9 +27,19 @@ export async function POST(req:NextRequest){
  try{body=bodySchema.parse(await readBoundedJson(req,4096));}
  catch(error){return json({error:error instanceof BodyTooLargeError?'request_body_too_large':'invalid_fields'},error instanceof BodyTooLargeError?413:400);}
  const caller=callerClient(auth.jwt).schema('api');
- let operationId:string|null=null,claimId:string|null=null,started=false,startUnconfirmed=false;
+ let operationId:string|null=null,claimId:string|null=null,started=false,startUnconfirmed=false,createdReservation=false;
  let lease:ReturnType<typeof acquireLease>|null=null;
+ const cancelCreatedReservation=async()=>{
+  if(!operationId||!createdReservation||started||startUnconfirmed)return;
+  await auth.server.schema('api').rpc('finish_portal_photo_analysis',{
+   p_request_id:operationId,p_claim_id:null,p_outcome:failedPhotoAssessment(false),
+  }).then(()=>undefined,()=>undefined);
+ };
  try{
+  // Do not create a new reservation when this process cannot prepare a dispatch.
+  // Durable receipts remain readable through GET without taking this lease.
+  lease=acquireLease('ai');
+  if(!lease)return json({requestId:body.requestId,...failedPhotoAssessment(false),error:'too_many_requests'},429);
   const reserved=await caller.rpc('reserve_portal_photo_analysis',{p_object_id:body.objectId,p_document_id:body.documentId,p_request_id:body.requestId});
   if(reserved.error)return failure(reserved.error);
   const envelope=rec(reserved.data),operation=rec(envelope.operation);
@@ -31,11 +47,11 @@ export async function POST(req:NextRequest){
   if(envelope.state==='quota_reached')return json(envelope,429);
   if(typeof operation.requestId!=='string'||operation.objectId!==body.objectId||operation.documentId!==body.documentId)return json({error:'invalid_receipt'},503);
   operationId=operation.requestId;
-  if(operation.state!=='reserved')return json(operation,['started','uncertain'].includes(String(operation.state))?202:200);
+  createdReservation=envelope.created===true;
+  if(operation.state!=='reserved')return json(operation,operationStatus(operation));
   const context=rec(envelope.context);
   if(context.bucket!==PRIVATE_BUCKET||typeof context.path!=='string'||!/^portal-photos\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.jpg$/i.test(context.path)
     ||typeof context.sha256!=='string'||!/^[0-9a-f]{64}$/.test(context.sha256))throw new Error('invalid_source');
-  lease=acquireLease('ai');if(!lease)throw new Error('too_many_requests');
   // The existing secret resolver RPC is service-only. Pin this domain to the
   // explicitly selected provider ID; an active menu provider alone cannot enable P.
   const active=await auth.server.schema('api').rpc('get_active_ai_provider_secret');
@@ -47,10 +63,25 @@ export async function POST(req:NextRequest){
   if(createHash('sha256').update(bytes).digest('hex')!==context.sha256)throw new Error('source_changed');
   if(req.signal.aborted||deadline-Date.now()<5_000)throw new Error('preparation_timeout');
   claimId=randomUUID();
+  startUnconfirmed=true;
   const claim=await caller.rpc('start_portal_photo_analysis',{p_request_id:operationId,p_claim_id:claimId});
-  if(claim.error){startUnconfirmed=true;throw new Error('start_unconfirmed');}
+  if(claim.error){
+   // Supabase leaves code empty on fetch/abort failures. A SQLSTATE or PostgREST
+   // code is an actual refusal, so this transaction did not authorize a dispatch.
+   if(/^(?:[A-Z0-9]{5}|PGRST[A-Z0-9]{3})$/.test(claim.error.code??'')){
+    startUnconfirmed=false;
+    await cancelCreatedReservation();
+    return failure(claim.error,operationId);
+   }
+   throw new Error('start_unconfirmed');
+  }
   const claimed=rec(claim.data);
-  if(claimed.started!==true)return json(rec(claimed.operation),202);
+  if(typeof claimed.started!=='boolean'||rec(claimed.operation).requestId!==operationId)throw new Error('start_unconfirmed');
+  startUnconfirmed=false;
+  if(claimed.started!==true){
+   const current=rec(claimed.operation);
+   return claimed.quotaReached===true?json({...current,quotaReached:true,resetAt:claimed.resetAt},429):json(current,operationStatus(current));
+  }
   started=true;
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.max(1,deadline-Date.now()));
   let outcome=failedPhotoAssessment(true);
@@ -65,11 +96,8 @@ export async function POST(req:NextRequest){
   if(finished.error||rec(finished.data).requestId!==operationId||rec(finished.data).publication!=='office_review')return json({requestId:operationId,state:'uncertain',assessment:null,publication:'office_review'},503);
   return json(finished.data,outcome.state==='uncertain'?202:200);
  }catch{
-  if(operationId&&!started){
-   // If marking started had an uncertain response, SQL refuses this cancellation;
-   // the durable started receipt then prevents a second paid attempt.
-   await auth.server.schema('api').rpc('finish_portal_photo_analysis',{p_request_id:operationId,p_claim_id:null,p_outcome:failedPhotoAssessment(false)}).then(()=>undefined,()=>undefined);
-  }
+  // Never cancel another request's reservation or a start whose response is lost.
+  await cancelCreatedReservation();
   return json({requestId:operationId??body.requestId,...failedPhotoAssessment(started||startUnconfirmed)},503);
  }finally{lease?.release();}
 }

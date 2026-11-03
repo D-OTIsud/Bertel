@@ -22,6 +22,15 @@ source is used for fresh installation; the new migration upgrades only its known
 
 ## Strict migration order
 
+Fresh packaging first runs `Base de donnée DLL et API/packaging_partner_resource_live_baseline.sql`
+after historical tests. The historical manifest produces reader
+`4a695fba4869dd45a3881e4804808c2c`: the raw source plus its two actor-realm substitutions.
+The explicit nine-hunk packaging patch converges this exact source to the already-live
+`523b18abc402528c494e25f3895f2912`, including render reuse and legal/raw-description gates.
+The adjacent `partner-resource-fresh-live-alignment.diff` contains the complete reviewed diff.
+The live target is a no-op; any other source stops. This is not permission to accept a new
+reader hash without examining its definition. Upgrade CI runs packaging BEFORE capture.
+
 After the historical reader patches (whose final normalized prosrc MD5 is
 `523b18abc402528c494e25f3895f2912`), apply:
 

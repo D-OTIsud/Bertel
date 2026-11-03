@@ -40,7 +40,7 @@ export function buildStayPolicyPatch(form: ObjectWorkspaceStayPolicyForm, snapsh
   const changes: Partial<Record<StayPolicyKey, string | null>> = {};
   STAY_KEYS.forEach((key, index) => {
     const field = FORM_KEYS[index];
-    if (keys.includes(key) && form[field].trim() !== baseline[field]) changes[key] = form[field].trim() || null;
+    if (keys.includes(key) && form[field].trim() !== baseline[field].trim()) changes[key] = form[field].trim() || null;
   });
   return { write_contract: STAY_POLICY_WRITE_CONTRACT, expected: snapshot, changes };
 }

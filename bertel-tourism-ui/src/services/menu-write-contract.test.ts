@@ -41,3 +41,9 @@ it('uses stable new IDs and produces the same payload for a lost-response retry'
   expect(first.menus).toEqual([expect.objectContaining({id:secondId,expected:null})]);
   expect(buildMenusWritePayload(input)).toEqual(first);
 });
+
+it.each(['10000000000', '-1', '12.345', '12garbage'])('rejects price %p before a write', price => {
+  const input = moduleWith();
+  input.items[0].items[0].price = price;
+  expect(() => buildMenusWritePayload(input)).toThrow(/deux décimales/);
+});

@@ -5187,7 +5187,13 @@ export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWo
   const payload = buildMenusWritePayload(input);
   const result = await withPendingMenuRequest(session.userId,objectId,payload,
     request=>callObjectWorkspaceRpc('save_object_menus',objectId,request,'Impossible d’enregistrer les menus. Votre saisie est conservée.'),
-    response=>{ parseMenuWriteSnapshot(response.snapshot); });
+    response=>{ parseMenuWriteSnapshot(response.snapshot); }, {
+      baselineReadId: input.menuWriteBaseline?.readId,
+      resolve: async requestId => {
+        const receipt = await callObjectWorkspaceRpc('get_object_menu_write_receipt', objectId, { request_id: requestId }, 'Impossible de vérifier l’ancien enregistrement. Rechargez les menus ; votre saisie est conservée.');
+        return receipt.known === true ? receipt : null;
+      },
+    });
   const snapshot = parseMenuWriteSnapshot(result.snapshot);
   return { menus: withMenusWriteSnapshot(input, snapshot) };
 }

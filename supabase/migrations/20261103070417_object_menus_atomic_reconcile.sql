@@ -1,18 +1,24 @@
 -- R4 preparation: replace the office multi-request delete/reinsert saver.
 -- The public reader/JSON contract is deliberately untouched. Raw table DML closes separately.
 BEGIN;
+SET LOCAL lock_timeout='5s';
 
--- A receipt belongs only to this writer. Its exact request guards hash collisions;
+-- A receipt belongs to one explicit intent, never to the semantic payload's hash.
 -- retaining it prevents a retry from recreating a row subsequently deleted elsewhere.
 CREATE TABLE IF NOT EXISTS internal.object_menu_write_receipt(
   object_id text NOT NULL REFERENCES public.object(id) ON DELETE CASCADE,
   principal text NOT NULL,
+  request_id uuid NOT NULL,
   request_hash text NOT NULL,
   request jsonb NOT NULL,
   result jsonb NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY(object_id,principal,request_hash)
+  PRIMARY KEY(object_id,principal,request_id)
 );
+-- Preserve receipts from an earlier preparation, but never alias a later intention to them.
+ALTER TABLE internal.object_menu_write_receipt ADD COLUMN IF NOT EXISTS request_id uuid NOT NULL DEFAULT gen_random_uuid();
+ALTER TABLE internal.object_menu_write_receipt DROP CONSTRAINT IF EXISTS object_menu_write_receipt_pkey;
+ALTER TABLE internal.object_menu_write_receipt ADD PRIMARY KEY(object_id,principal,request_id);
 ALTER TABLE internal.object_menu_write_receipt ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON internal.object_menu_write_receipt FROM PUBLIC,anon,authenticated;
 
@@ -108,7 +114,7 @@ CREATE OR REPLACE FUNCTION api.save_object_menus(p_object_id text,p_payload json
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,internal SET lock_timeout='5s' AS $$
 DECLARE v_entry jsonb; v_changes jsonb; v_expected jsonb; v_current jsonb; v_next jsonb;
   v_id uuid; v_menu_id uuid; v_key text; v_value jsonb; v_snapshot jsonb;
-  v_hash text; v_principal text; v_receipt internal.object_menu_write_receipt%ROWTYPE; v_result jsonb;
+  v_hash text; v_principal text; v_request_id uuid; v_receipt internal.object_menu_write_receipt%ROWTYPE; v_result jsonb;
 BEGIN
   IF COALESCE(api.is_actor_persona(),false) THEN RAISE EXCEPTION 'Écriture réservée à l’office.' USING ERRCODE='42501'; END IF;
   PERFORM internal.workspace_assert_can_write_object(p_object_id);
@@ -116,7 +122,9 @@ BEGIN
     RAISE EXCEPTION 'Les menus concernent les restaurants.' USING ERRCODE='22023';
   END IF;
   IF jsonb_typeof(p_payload) IS DISTINCT FROM 'object' OR p_payload->>'write_contract' IS DISTINCT FROM 'menus-reconcile-v1'
-    OR EXISTS(SELECT 1 FROM jsonb_object_keys(p_payload) k WHERE k NOT IN ('write_contract','menus','items','deleted_menus','deleted_items'))
+    OR jsonb_typeof(p_payload->'request_id') IS DISTINCT FROM 'string'
+    OR COALESCE(p_payload->>'request_id','') !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    OR EXISTS(SELECT 1 FROM jsonb_object_keys(p_payload) k WHERE k NOT IN ('write_contract','request_id','menus','items','deleted_menus','deleted_items'))
     OR EXISTS(SELECT 1 FROM unnest(ARRAY['menus','items','deleted_menus','deleted_items']) k WHERE jsonb_typeof(p_payload->k) IS DISTINCT FROM 'array') THEN
     RAISE EXCEPTION 'Contrat de menus invalide. Rechargez les menus.' USING ERRCODE='22023';
   END IF;
@@ -125,11 +133,11 @@ BEGIN
   -- All cooperating writes serialize here, including first insert. Row locks also protect
   -- the preparation period from ordinary writes to known menus/items and their FK children.
   PERFORM 1 FROM public.object WHERE id=p_object_id FOR UPDATE;
-  v_hash:=md5(p_payload::text); v_principal:=COALESCE(auth.uid()::text,'service_role');
-  SELECT * INTO v_receipt FROM internal.object_menu_write_receipt WHERE object_id=p_object_id AND principal=v_principal AND request_hash=v_hash;
+  v_hash:=md5(p_payload::text); v_principal:=COALESCE(auth.uid()::text,'service_role'); v_request_id:=(p_payload->>'request_id')::uuid;
+  SELECT * INTO v_receipt FROM internal.object_menu_write_receipt WHERE object_id=p_object_id AND principal=v_principal AND request_id=v_request_id;
   IF FOUND THEN
     IF v_receipt.request IS DISTINCT FROM p_payload THEN RAISE EXCEPTION 'Collision de requête de menus.' USING ERRCODE='22023'; END IF;
-    RETURN v_receipt.result;
+    RETURN jsonb_build_object('success',true,'replayed',true,'snapshot',internal.object_menu_write_snapshot(p_object_id));
   END IF;
   PERFORM 1 FROM public.object_menu WHERE object_id=p_object_id ORDER BY id FOR UPDATE;
   PERFORM 1 FROM public.object_menu_item WHERE menu_id IN(SELECT id FROM public.object_menu WHERE object_id=p_object_id) ORDER BY id FOR UPDATE;
@@ -194,6 +202,10 @@ BEGIN
         RAISE EXCEPTION 'Type de champ de plat invalide.' USING ERRCODE='22023';
       END IF;
     END LOOP;
+    IF v_changes ? 'price' AND v_changes->'price'<>'null'::jsonb AND
+      ((v_changes->>'price')::numeric<0 OR (v_changes->>'price')::numeric>9999999999.99 OR round((v_changes->>'price')::numeric,2)<>(v_changes->>'price')::numeric) THEN
+      RAISE EXCEPTION 'Le prix doit être compris entre 0 et 9 999 999 999,99, avec deux décimales au maximum.' USING ERRCODE='22003';
+    END IF;
     IF NOT EXISTS(SELECT 1 FROM public.object_menu WHERE id=v_menu_id AND object_id=p_object_id)
       OR EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'deleted_menus') r WHERE r->>'id'=v_menu_id::text) THEN
       RAISE EXCEPTION 'Menu inaccessible.' USING ERRCODE='42501';
@@ -233,7 +245,9 @@ BEGIN
   v_snapshot:=internal.object_menu_write_snapshot(p_object_id);
   FOR v_entry IN SELECT value FROM jsonb_array_elements(p_payload->'deleted_items') LOOP
     v_id:=(v_entry->>'id')::uuid; v_menu_id:=(v_entry->>'menu_id')::uuid;
-    IF v_id IS NULL OR NOT v_entry ? 'expected' OR EXISTS(SELECT 1 FROM jsonb_object_keys(v_entry) k WHERE k NOT IN ('id','menu_id','expected')) THEN
+    IF v_id IS NULL OR v_menu_id IS NULL OR jsonb_typeof(v_entry->'id') IS DISTINCT FROM 'string'
+      OR jsonb_typeof(v_entry->'menu_id') IS DISTINCT FROM 'string'
+      OR NOT v_entry ? 'expected' OR EXISTS(SELECT 1 FROM jsonb_object_keys(v_entry) k WHERE k NOT IN ('id','menu_id','expected')) THEN
       RAISE EXCEPTION 'Suppression de plat invalide.' USING ERRCODE='22023'; END IF;
     IF EXISTS(SELECT 1 FROM public.object_menu_item i JOIN public.object_menu m ON m.id=i.menu_id WHERE i.id=v_id AND (m.object_id<>p_object_id OR i.menu_id<>v_menu_id)) THEN
       RAISE EXCEPTION 'Plat inaccessible.' USING ERRCODE='42501'; END IF;
@@ -253,14 +267,33 @@ BEGIN
   v_result:=jsonb_build_object('success',true,'snapshot',internal.object_menu_write_snapshot(p_object_id));
   -- Empty patches only read the current state; they must not replay an old read receipt.
   IF jsonb_array_length(p_payload->'menus')+jsonb_array_length(p_payload->'items')+jsonb_array_length(p_payload->'deleted_menus')+jsonb_array_length(p_payload->'deleted_items')>0 THEN
-    INSERT INTO internal.object_menu_write_receipt(object_id,principal,request_hash,request,result) VALUES(p_object_id,v_principal,v_hash,p_payload,v_result);
+    INSERT INTO internal.object_menu_write_receipt(object_id,principal,request_id,request_hash,request,result) VALUES(p_object_id,v_principal,v_request_id,v_hash,p_payload,v_result);
   END IF;
   RETURN v_result;
+END;
+$$;
+
+-- A delayed client resolves a receipt without replaying its old write intention.
+CREATE OR REPLACE FUNCTION api.get_object_menu_write_receipt(p_object_id text,p_payload jsonb)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog,public,api,internal SET lock_timeout='5s' AS $$
+DECLARE v_id uuid;
+BEGIN
+  IF COALESCE(api.is_actor_persona(),false) THEN RAISE EXCEPTION 'Lecture réservée à l’office.' USING ERRCODE='42501'; END IF;
+  PERFORM internal.workspace_assert_can_write_object(p_object_id);
+  IF jsonb_typeof(p_payload) IS DISTINCT FROM 'object' OR jsonb_typeof(p_payload->'request_id') IS DISTINCT FROM 'string'
+    OR EXISTS(SELECT 1 FROM jsonb_object_keys(p_payload) k WHERE k<>'request_id') THEN
+    RAISE EXCEPTION 'Identifiant de demande invalide.' USING ERRCODE='22023'; END IF;
+  v_id:=(p_payload->>'request_id')::uuid;
+  RETURN jsonb_build_object('success',true,'known',EXISTS(SELECT 1 FROM internal.object_menu_write_receipt
+    WHERE object_id=p_object_id AND principal=COALESCE(auth.uid()::text,'service_role') AND request_id=v_id),
+    'snapshot',internal.object_menu_write_snapshot(p_object_id));
 END;
 $$;
 
 REVOKE ALL ON FUNCTION internal.object_menu_write_snapshot(text),internal.object_menu_delete_bundle(jsonb,uuid,boolean),internal.reconcile_menu_item_links(uuid,text,jsonb) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION api.save_object_menus(text,jsonb) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION api.save_object_menus(text,jsonb) TO authenticated,service_role;
+REVOKE ALL ON FUNCTION api.get_object_menu_write_receipt(text,jsonb) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION api.get_object_menu_write_receipt(text,jsonb) TO authenticated,service_role;
 COMMIT;
 NOTIFY pgrst,'reload schema';

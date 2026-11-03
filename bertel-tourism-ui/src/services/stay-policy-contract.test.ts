@@ -18,3 +18,9 @@ test('le partenaire ne peut inclure les conditions dans son patch', () => {
 test('état de départ absent ne vaut jamais autorisation de remplacement', () => {
   expect(() => buildStayPolicyPatch(stayPolicyForm(stayPolicySnapshot(null)), undefined)).toThrow(/Rechargez/);
 });
+
+test('une condition entourée d’espaces ne devient pas un patch lors d’une sauvegarde de capacité', () => {
+  const snapshot = stayPolicySnapshot({ check_in_from: '14:00:30', conditions: '  Texte office  ' });
+  expect(buildStayPolicyPatch(stayPolicyForm(snapshot), snapshot).changes).toEqual({});
+  expect(snapshot.values.conditions).toBe('  Texte office  ');
+});

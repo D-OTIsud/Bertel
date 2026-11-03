@@ -49,6 +49,7 @@ BEGIN
   refs:=jsonb_build_array(jsonb_build_object('kind','upload','id',upper(upload1::text)));
  ctx:=api.menu_extraction_context('RESRUN999999E401',refs,target)->'context';
   source_ctx:=api.menu_extraction_context('RESRUN999999E401',refs,NULL)->'context';
+  ASSERT source_ctx#>>'{sources,0,upload,state}'='staged' AND nullif(source_ctx#>'{sources,0,linked}','null'::jsonb) IS NULL,'private staged upload was no longer inspectable';
   rejected:=false;BEGIN
    PERFORM api.menu_extraction_context('RESRUN999999E401',refs||jsonb_build_array(jsonb_build_object('kind','upload','id',upload1)),target);
   EXCEPTION WHEN invalid_parameter_value THEN rejected:=true;END;
@@ -65,13 +66,16 @@ BEGIN
  INSERT INTO storage.objects(bucket_id,name) VALUES('documents',receipt->>'publicPath');
  PERFORM api.record_restaurant_carte_copied(upload1,repeat('a',64),'https://project.example/storage/v1/object/public/documents/'||(receipt->>'publicPath'));
  PERFORM set_config('request.jwt.claims',claims::text,true);
-  current_ctx:=api.menu_extraction_context('RESRUN999999E401',refs,target)->'context';
-  ASSERT NOT internal.menu_extraction_context_matches(ctx,current_ctx),'copy without C finalization accepted as publication';
+  -- First inspection must itself reject copied/NULL, before a baseline can
+  -- encode the ABA state which a later publish/remove would reproduce.
+  rejected:=false;BEGIN PERFORM api.menu_extraction_context('RESRUN999999E401',refs,NULL);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
+  ASSERT rejected,'initial inspection accepted a copied upload before C finalization';
   rejected:=false;BEGIN PERFORM internal.assert_menu_extraction_publication(op,'RESRUN999999E401',0);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
   ASSERT rejected,'E publication accepted a copied upload without its public C link';
  payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','publish','upload_id',upload1,'expected','null'::jsonb);
  PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999E401','00000000-0000-4000-a000-00000000e410',payload);PERFORM api.finalize_restaurant_carte_mutation('00000000-0000-4000-a000-00000000e410');
  current_ctx:=api.menu_extraction_context('RESRUN999999E401',refs,target)->'context';
+ ASSERT current_ctx#>>'{sources,0,upload,state}'='copied' AND nullif(current_ctx#>'{sources,0,linked}','null'::jsonb) IS NOT NULL,'finalized copied source was not inspectable with its public link';
  ASSERT internal.menu_extraction_context_matches(ctx,current_ctx),'canonical staged-to-copied publication invalidated identical source';
  ASSERT NOT internal.menu_extraction_context_matches(ctx,jsonb_set(current_ctx,'{sources,0,upload,sha256}',to_jsonb(repeat('b',64)))),'changed hash accepted';
  ASSERT NOT internal.menu_extraction_context_matches(ctx,jsonb_set(current_ctx,'{sources,0,upload,stagingPath}','"wrong/path"')),'changed private path accepted';
@@ -88,8 +92,8 @@ BEGIN
   -- mandatory when reconciling an extraction originally inspected while staged.
   payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','remove','document_id',old_doc,'expected',current_ctx#>'{sources,0,linked}');
   PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999E401','00000000-0000-4000-a000-00000000e413',payload);PERFORM api.finalize_restaurant_carte_mutation('00000000-0000-4000-a000-00000000e413');
-  current_ctx:=api.menu_extraction_context('RESRUN999999E401',refs,target)->'context';
-  ASSERT NOT internal.menu_extraction_context_matches(ctx,current_ctx),'published then removed card was accepted as unchanged';
+  rejected:=false;BEGIN PERFORM api.menu_extraction_context('RESRUN999999E401',refs,NULL);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
+  ASSERT rejected,'inspection accepted copied/NULL again after real publication and removal';
   rejected:=false;BEGIN PERFORM internal.assert_menu_extraction_publication(op,'RESRUN999999E401',0);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
   ASSERT rejected,'E publication accepted a public C link removed after copying';
   payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','publish','upload_id',upload1,'expected','null'::jsonb);
@@ -110,7 +114,8 @@ BEGIN
  payload:=jsonb_build_object('write_contract','restaurant-carte-v1','action','publish','upload_id',upload2,'document_id',old_doc,'expected',expected);
  PERFORM api.prepare_restaurant_carte_mutation('RESRUN999999E401','00000000-0000-4000-a000-00000000e412',payload);PERFORM api.finalize_restaurant_carte_mutation('00000000-0000-4000-a000-00000000e412');
  ASSERT NOT EXISTS(SELECT 1 FROM public.object_document WHERE object_id='RESRUN999999E401' AND document_id=old_doc);
-  ASSERT NOT internal.menu_extraction_context_matches(source_ctx,api.menu_extraction_context('RESRUN999999E401',refs,NULL)->'context'),'published then replaced card was accepted as unchanged';
+  rejected:=false;BEGIN PERFORM api.menu_extraction_context('RESRUN999999E401',refs,NULL);EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
+  ASSERT rejected,'inspection accepted copied upload after its card was replaced';
  ASSERT api.get_menu_extraction_source_impact('RESRUN999999E401','carte',new_doc)->'menus'='[]'::jsonb,'new source inherited an old extraction';
  UPDATE internal.menu_extraction_operation SET created_at=now()-interval '50 days' WHERE id=op;
  -- Historical read fixtures, not dispatch/expense fixtures: previous authors,

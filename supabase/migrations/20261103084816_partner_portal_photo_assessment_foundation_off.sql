@@ -186,7 +186,12 @@ BEGIN
  IF COALESCE(api.is_actor_persona(),false) THEN
   IF v_op.created_by IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'Analyse inaccessible' USING ERRCODE='42501'; END IF;
   PERFORM internal.photo_analysis_assert_owner(v_op.object_id,v_op.document_id);
- ELSIF v_op.appeal_interaction_id IS NULL OR NOT api.can_read_object_for_correction(v_op.object_id) THEN RAISE EXCEPTION 'Analyse inaccessible' USING ERRCODE='42501'; END IF;
+ ELSIF NOT api.can_read_object_for_correction(v_op.object_id)
+   OR NOT EXISTS(SELECT 1 FROM public.crm_interaction c WHERE c.id=v_op.appeal_interaction_id
+     AND c.extra->>'portal_photo_analysis_id'=v_op.id::text
+     AND c.extra->>'portal_photo_document_id'=v_op.document_id::text
+     AND c.extra->>'portal_photo_source_sha256'=v_op.source_sha256) THEN
+  RAISE EXCEPTION 'Analyse inaccessible' USING ERRCODE='42501'; END IF;
  RETURN internal.photo_analysis_json(p_request_id);
 END;
 $fn$;
@@ -303,17 +308,21 @@ DECLARE v_function regprocedure:='api.portal_photo_preview(uuid)'::regprocedure;
  v_before text:=$preview_before$      OR (NOT api.is_actor_persona() AND api.user_can_moderate_object(v_doc.extra->>'object_id')$preview_before$;
  v_after text:=$preview_after$      OR (api.can_read_object_for_correction(v_doc.extra->>'object_id')
         AND EXISTS(SELECT 1 FROM internal.portal_photo_analysis a WHERE a.document_id=v_doc.id
-          AND a.object_id=v_doc.extra->>'object_id' AND a.source_sha256=v_doc.extra->>'upload_sha256' AND a.appeal_interaction_id IS NOT NULL))
+           AND a.object_id=v_doc.extra->>'object_id' AND a.source_sha256=v_doc.extra->>'upload_sha256'
+           AND EXISTS(SELECT 1 FROM public.crm_interaction c WHERE c.id=a.appeal_interaction_id
+             AND c.extra->>'portal_photo_analysis_id'=a.id::text
+             AND c.extra->>'portal_photo_document_id'=a.document_id::text
+             AND c.extra->>'portal_photo_source_sha256'=a.source_sha256)))
       OR (NOT api.is_actor_persona() AND api.user_can_moderate_object(v_doc.extra->>'object_id')$preview_after$;
 BEGIN
  SELECT md5(replace(p.prosrc,E'\r\n',E'\n')),pg_get_functiondef(p.oid),jsonb_build_object('owner',p.proowner,'acl',to_jsonb(p.proacl),'config',to_jsonb(p.proconfig),'definer',p.prosecdef,'strict',p.proisstrict,'volatility',p.provolatile,'parallel',p.proparallel,'returns',p.prorettype,'set',p.proretset,'args',p.proargtypes::text)
  INTO v_hash,v_definition,v_meta FROM pg_proc p WHERE p.oid=v_function;
- IF v_hash='3b9fef4e878d9886d935a3edae319739' THEN RETURN; END IF;
+ IF v_hash='177a6144c5303763d48207b109f1ea3b' THEN RETURN; END IF;
  IF v_hash IS DISTINCT FROM 'a4f9168e03b8821e0bbf240675576727' THEN RAISE EXCEPTION 'P: unreviewed private photo preview source %',v_hash; END IF;
  v_definition:=replace(v_definition,E'\r\n',E'\n');
  IF (length(v_definition)-length(replace(v_definition,v_before,'')))/length(v_before)<>1 THEN RAISE EXCEPTION 'P: preview authorization anchor differs'; END IF;
  EXECUTE replace(v_definition,v_before,v_after);
- IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=v_function) IS DISTINCT FROM '3b9fef4e878d9886d935a3edae319739'
+ IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=v_function) IS DISTINCT FROM '177a6144c5303763d48207b109f1ea3b'
    OR (SELECT jsonb_build_object('owner',p.proowner,'acl',to_jsonb(p.proacl),'config',to_jsonb(p.proconfig),'definer',p.prosecdef,'strict',p.proisstrict,'volatility',p.provolatile,'parallel',p.proparallel,'returns',p.prorettype,'set',p.proretset,'args',p.proargtypes::text) FROM pg_proc p WHERE p.oid=v_function) IS DISTINCT FROM v_meta THEN
   RAISE EXCEPTION 'P: preview target or attributes differ'; END IF;
 END;

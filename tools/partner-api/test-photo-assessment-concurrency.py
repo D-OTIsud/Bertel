@@ -34,9 +34,9 @@ def fixture(name):
         raise RuntimeError(result.stderr.strip())
 
 
-def prefix(name):
+def prefix(name, user_id="00000000-0000-4000-a000-00000000c511"):
     return (guard + "BEGIN; SET application_name='" + name + "'; SET LOCAL statement_timeout='12s';\n"
-            "SELECT set_config('request.jwt.claims','{\"sub\":\"00000000-0000-4000-a000-00000000c511\","
+            "SELECT set_config('request.jwt.claims','{\"sub\":\"" + user_id + "\","
             "\"role\":\"authenticated\"}',true); SET LOCAL ROLE authenticated;\n")
 
 
@@ -85,8 +85,11 @@ def verify_scope_after_wait(kind):
     holding = attempting = None
     switched = False
     try:
-        sql("INSERT INTO public.actor_object_role(actor_id,object_id,role_id,is_primary) SELECT '00000000-0000-4000-a000-00000000c523','" + object_id + "',id,true FROM public.ref_actor_role WHERE code='operator' ON CONFLICT DO NOTHING;"
+        sql("INSERT INTO public.actor_object_role(actor_id,object_id,role_id,is_primary) SELECT '00000000-0000-4000-a000-00000000c523','" + object_id + "',id,false FROM public.ref_actor_role WHERE code='operator' ON CONFLICT DO NOTHING;"
             "INSERT INTO public.actor_document(actor_id,document_id,created_by,title) VALUES('00000000-0000-4000-a000-00000000c523','" + document_id + "','00000000-0000-4000-a000-00000000c511','Shared identity-switch fixture') ON CONFLICT DO NOTHING;")
+        sql(prefix("bertel_photo_scope_b_before", "00000000-0000-4000-a000-00000000c513")
+            + "DO $$ BEGIN ASSERT EXISTS(SELECT 1 FROM api.current_user_portal_object_ids() id WHERE id='" + object_id
+            + "'),'Actor B lacks the positive-control object right before waiting';END $$;COMMIT;")
         holding = hold_fixture_object(object_id, "bertel_photo_scope_holder")
         attempting = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
         attempting.stdin.write(prefix(name) + "DO $$ DECLARE refused boolean:=false;BEGIN BEGIN PERFORM " + calls[kind]

@@ -186,6 +186,12 @@ END; $test$;
 
 -- Human appeal is a single existing portal-message conversation, with typed
 -- document/assessment association; no incompatible attachment or paid analysis.
+-- The office fixture is a real verifier, so notification assertions cannot pass
+-- merely because the recipient set was empty.
+DO $test$ BEGIN
+ ASSERT EXISTS(SELECT 1 FROM api.list_object_verifier_ids('HOTRUN999999C502') reviewer
+  WHERE reviewer='00000000-0000-4000-a000-00000000c512'::uuid),'missing appeal reviewer fixture';
+END; $test$;
 DO $test$
 DECLARE a uuid;b uuid;v_failed boolean:=false;
 BEGIN
@@ -203,6 +209,9 @@ DO $test$ BEGIN
   AND extra->>'portal_photo_document_id'='00000000-0000-4000-af00-000000000001' AND extra->'attachment_ids'='[]'::jsonb AND source='portal');
  ASSERT EXISTS(SELECT 1 FROM public.crm_interaction WHERE extra->>'portal_photo_analysis_id'='00000000-0000-4000-af00-000000000011'
   AND extra->>'portal_subject'='correction'),'appeal changed the existing message subject contract';
+ ASSERT EXISTS(SELECT 1 FROM public.app_notification n JOIN internal.portal_photo_analysis p ON n.payload->>'interaction_id'=p.appeal_interaction_id::text
+  WHERE p.id='00000000-0000-4000-af00-000000000011' AND n.kind='portal_message'
+   AND n.recipient_id='00000000-0000-4000-a000-00000000c512'),'appeal failed to emit the existing reviewer notification';
  ASSERT NOT EXISTS(SELECT 1 FROM public.app_notification n JOIN internal.portal_photo_analysis p ON n.payload->>'interaction_id'=p.appeal_interaction_id::text
   WHERE p.id='00000000-0000-4000-af00-000000000011' AND n.kind<>'portal_message'),'appeal invented a notification kind';
  ASSERT (SELECT count(*) FROM internal.portal_photo_analysis)=3,'appeal started another paid analysis';
@@ -237,6 +246,7 @@ END; $test$;
 RESET ROLE;
 -- If a privileged repair changes the source, the old analysis is labelled stale
 -- and the appeal does not silently sign different bytes as its original photo.
+SAVEPOINT p_changed_photo_source;
 UPDATE public.ref_document SET extra=jsonb_set(extra,'{upload_sha256}',to_jsonb(repeat('f',64))) WHERE id='00000000-0000-4000-af00-000000000001';
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-a000-00000000c512","role":"authenticated","app_metadata":{"sandbox_discovery":true}}',true);
 SET LOCAL ROLE authenticated;
@@ -245,6 +255,8 @@ DO $test$ DECLARE v_failed boolean:=false;BEGIN
  BEGIN PERFORM api.portal_photo_preview('00000000-0000-4000-af00-000000000001');EXCEPTION WHEN insufficient_privilege THEN v_failed:=true;END;ASSERT v_failed;
 END;$test$;
 RESET ROLE;
+ROLLBACK TO SAVEPOINT p_changed_photo_source;
+RELEASE SAVEPOINT p_changed_photo_source;
 -- The existing anonymize RPC deliberately retains a document linked to another
 -- actor. Its CASCADE therefore cannot be used to erase a duplicated P message.
 INSERT INTO public.actor_document(actor_id,document_id,created_by,title) VALUES
@@ -255,6 +267,10 @@ DO $test$ BEGIN
 END;$test$;
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-a000-00000000c512","role":"authenticated","app_metadata":{"sandbox_discovery":true}}',true);
 SET LOCAL ROLE authenticated;
+DO $test$ BEGIN
+ ASSERT api.get_portal_photo_analysis('00000000-0000-4000-af00-000000000011')->>'sourceCurrent'='true','erasure fixture did not restore the original source hash';
+ ASSERT api.portal_photo_preview('00000000-0000-4000-af00-000000000001')->>'bucket'='actor-documents','office access must exist immediately before anonymize';
+END;$test$;
 SELECT api.rpc_gdpr_erase_subject('actor','00000000-0000-4000-a000-00000000c521','anonymize','Disposable photo-appeal erasure fixture');
 RESET ROLE;
 DO $test$ BEGIN
@@ -262,8 +278,19 @@ DO $test$ BEGIN
  ASSERT EXISTS(SELECT 1 FROM public.crm_interaction c JOIN p_erasure_receipt p ON p.appeal_interaction_id=c.id WHERE c.body IS NULL AND c.actor_id IS NULL AND c.extra IS NULL),'CRM text was not erased';
  ASSERT EXISTS(SELECT 1 FROM internal.portal_photo_analysis a JOIN p_erasure_receipt p ON p.id=a.id
   WHERE a.appeal_interaction_id=p.appeal_interaction_id AND a.appeal_client_id=p.appeal_client_id AND a.appeal_intent_hash=p.appeal_intent_hash),'retained analysis lost its coherent appeal receipt';
+ ASSERT EXISTS(SELECT 1 FROM public.ref_document d JOIN internal.portal_photo_analysis a ON a.document_id=d.id
+  WHERE a.id='00000000-0000-4000-af00-000000000011' AND d.extra->>'upload_sha256'=a.source_sha256),'anonymize changed the source hash, masking the appeal-access revocation';
  ASSERT NOT EXISTS(SELECT 1 FROM internal.portal_photo_analysis p WHERE to_jsonb(p)::text LIKE '%recours-photo@example.test%'),'free-text appeal survived anonymize in P';
  ASSERT NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='internal' AND table_name='portal_photo_analysis' AND column_name='appeal_body'),'P still has a duplicate appeal body column';
  ASSERT (SELECT actor_id IS NULL FROM public.app_user_profile WHERE id='00000000-0000-4000-a000-00000000c511');
 END;$test$;
+SET LOCAL ROLE authenticated;
+DO $test$ DECLARE v_failed boolean:=false;BEGIN
+ BEGIN PERFORM api.get_portal_photo_analysis('00000000-0000-4000-af00-000000000011');EXCEPTION WHEN insufficient_privilege THEN v_failed:=true;END;
+ ASSERT v_failed,'office read an assessment after its CRM appeal association was erased';
+ v_failed:=false;
+ BEGIN PERFORM api.portal_photo_preview('00000000-0000-4000-af00-000000000001');EXCEPTION WHEN insufficient_privilege THEN v_failed:=true;END;
+ ASSERT v_failed,'office preview survived erasure of its CRM appeal association with an unchanged source';
+END;$test$;
+RESET ROLE;
 ROLLBACK;

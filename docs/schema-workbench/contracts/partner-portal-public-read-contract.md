@@ -118,3 +118,11 @@ data. Reader snapshots are evidence, not an instruction to reintroduce private/i
 Restore only a reviewed safe reader with matching ACL, or temporarily suppress the affected
 public content while retaining its existing keys/empty-array conventions. Never remove a shared
 document, published file or operation as an automatic response to a lost HTTP acknowledgement.
+
+`test_partner_reader_safe_restore.sql` rehearses the reviewed post-R1/R3a checkpoint
+inside the guarded disposable database. It captures the exact definition and all
+`pg_proc` attributes (including owner and ACL), makes a harmless synthetic later edit,
+restores the checkpoint, then compares all 126 responses before rolling back the test.
+This checks the restoration mechanism; it does not authorize restoring a stale checkpoint
+over a later production migration. A deployment must still capture and review its actual
+current definition and privileges immediately before any change.

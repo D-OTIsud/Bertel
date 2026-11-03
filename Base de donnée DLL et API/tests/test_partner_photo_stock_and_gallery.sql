@@ -170,25 +170,25 @@ RESET ROLE;
 DO $test$ BEGIN ASSERT internal.gallery_published_photo_count('HOTRUN999999C501')=19; END; $test$;
 
 -- Expired unsubmitted reservations release capacity; pending ones remain counted until resolution.
-UPDATE public.ref_document SET extra=extra||jsonb_build_object('slot_reserved_until',now()-interval '1 second') WHERE extra->>'object_id'='HOTRUN999999C502';
+UPDATE public.ref_document SET extra=extra||jsonb_build_object('slot_first_reserved_at',now()-interval '25 hours','slot_reserved_at',now()-interval '25 hours','slot_reserved_until',now()-interval '1 hour') WHERE extra->>'object_id'='HOTRUN999999C502';
 DO $test$ BEGIN ASSERT internal.gallery_photo_usage('HOTRUN999999C502')=0; END; $test$;
 
 -- A pending B proposal keeps its slot even when the unsubmitted TTL has elapsed.
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-a000-00000000c511","role":"authenticated"}',true);
 SET LOCAL ROLE authenticated;
-SELECT api.reserve_portal_photo_upload('HOTRUN999999C502','00000000-0000-4000-a502-000000000001');
+SELECT api.reserve_portal_photo_upload('HOTRUN999999C502','00000000-0000-4000-a502-000000000022');
 RESET ROLE;
 SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
 SET LOCAL ROLE service_role;
-SELECT api.complete_portal_photo_upload('00000000-0000-4000-a000-00000000c511','00000000-0000-4000-a502-000000000001',repeat('c',64),'Pending photo',1800,1200);
+SELECT api.complete_portal_photo_upload('00000000-0000-4000-a000-00000000c511','00000000-0000-4000-a502-000000000022',repeat('c',64),'Pending photo',1800,1200);
 RESET ROLE;
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-a000-00000000c511","role":"authenticated"}',true);
 SET LOCAL ROLE authenticated;
 SELECT api.submit_actor_fiche('HOTRUN999999C502',jsonb_build_array(jsonb_build_object('target_table','media','action','update',
- 'payload',jsonb_build_object('additions',jsonb_build_array(jsonb_build_object('upload_id','00000000-0000-4000-a502-000000000001','credit','CI author'))),
+ 'payload',jsonb_build_object('additions',jsonb_build_array(jsonb_build_object('upload_id','00000000-0000-4000-a502-000000000022','credit','CI author'))),
  'metadata',jsonb_build_object('section','media','rpc','publish_portal_photo_additions','field','Vos photos'))),NULL);
 RESET ROLE;
-UPDATE public.ref_document SET extra=extra||jsonb_build_object('slot_reserved_until',now()-interval '1 second') WHERE id='00000000-0000-4000-a502-000000000001';
+UPDATE public.ref_document SET extra=extra||jsonb_build_object('slot_reserved_until',now()-interval '1 second') WHERE id='00000000-0000-4000-a502-000000000022';
 DO $test$ BEGIN ASSERT internal.gallery_photo_usage('HOTRUN999999C502')=1,'pending slot expired while awaiting office'; END; $test$;
 SELECT set_config('bertel.r5_submission_c502',(SELECT id::text FROM public.fiche_submission WHERE object_id='HOTRUN999999C502' AND status='pending'),true);
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-a000-00000000c512","role":"authenticated","app_metadata":{"sandbox_discovery":true}}',true);

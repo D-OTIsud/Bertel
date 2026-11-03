@@ -9,7 +9,7 @@ const fail = (error: string, status: number) => NextResponse.json({ error }, { s
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const digest = (value: Buffer) => createHash("sha256").update(value).digest("hex");
 function rpcFailure(error: { code?: string; details?: string } | null) {
-  return error?.code === "PT409" ? fail(error.details === "photo_limit" ? "photo_limit" : "upload_conflict", 409)
+  return error?.code === "PT409" ? fail(error.details === "photo_limit" ? "photo_limit" : error.details === "reservation_expired" ? "upload_expired" : "upload_conflict", 409)
     : error?.code === "PT429" ? fail("upload_daily_limit", 429)
     : error?.code === "42501" ? fail("forbidden", 403) : fail("upload_unconfirmed", 503);
 }

@@ -273,3 +273,53 @@ détaillent dépendances, quotas, reprise et arrêt. M doit précéder E malgré
 l'ordre numérique des deux noms de migration. P suit R5 et la préparation R3b.
 Les réglages E/P restent désactivés avec quota NULL ; P n'a aucun fournisseur
 sélectionné. Aucun seuil de publication automatique photo n'est créé.
+
+## Complément catégories — base existante, 3 novembre 2026 au soir
+
+Le retour sur l'aperçu demandait de classer les plats et de distinguer boissons,
+cocktails et vins. Le classement utilise déjà `object_menu_item.section_id` et
+`ref_code_menu_category`. Le 3 novembre à 16:16 UTC, le seul SQL de
+`20261103160524_partner_menu_category_cocktails_wines.sql` a été exécuté sur la
+base Bertel existante via l'outil SQL connecté : deux références `cocktails`
+(Cocktails) et `wines` (Vins), avec traductions EN/ES et UUID générés. Le bloc
+équivalent est conservé dans les seeds ; les seeds complets n'ont pas été rejoués.
+L'historique des migrations n'a pas été modifié par cette écriture de données ;
+le fichier reste rejouable lors du déploiement versionné ultérieur.
+
+Les comparaisons avant/après et le second passage du même SQL confirment :
+
+- 10 → 12 catégories, exactement les deux codes attendus ; les dix anciennes
+  lignes complètes, UUID, libellés, traductions et positions sont identiques.
+- Les liens des 16 menus et 60 lignes de menu sont inchangés. Aucun reclassement
+  automatique des plats n'a été effectué.
+- Les quatre définitions API contrôlées et les dix entrées préexistantes du
+  catalogue sont identiques. Les douze entrées gardent la même structure JSON.
+- Le rejeu ne modifie aucune des douze lignes, aucun lien, aucune fonction ni
+  sortie du catalogue. Aucune colonne, clé JSON, route, règle RLS ou fonction
+  n'est ajoutée ou renommée.
+
+Claude Opus 5.5, réglé sur Max dans l'application, a clos les deux constats UI
+et n'a relevé aucun défaut SQL dans cet ajout ciblé. Les parseurs SQL/PLpgSQL
+déjà installés, l'égalité des blocs migration/seeds et `git diff --check` passent.
+Les contrôles de l'aperçu ont validé l'ajout, la catégorie, la conservation des
+brouillons et les écrans bureau/390/320 px. L'aperçu reste séparé de l'application.
+
+Conformément à la précision de l'utilisateur, aucune base neuve, aucun Docker,
+aucune image Supabase et aucune CI créant une base de test ne sont lancés pour
+ce complément. Le commit utilise `[skip ci]` ; les CI vertes de `24080c3`
+restent des preuves du lot précédent, pas de ce nouveau commit. La PR reste
+en brouillon. Aucun autre lot backend ni écran n'est déployé par cet ajout.
+
+À 16:18 UTC, les deux routes publiques répondent en HTTPS avec le 401 JSON
+attendu sans clé et `X-Bertel-Api-Version: 1.0.0`. Le journal agrégé relève
+46 succès sur 46 appels en 24 h et aucun 5xx. Cela ne remplace pas le GET
+authentifié de la recette d'ouverture, toujours restant.
+
+Les lecteurs SQL voient directement les nouvelles références. Le cache client
+existant `['reference-catalogs', 2]`, persisté avec une fraîcheur d'une heure,
+nécessite une relecture ciblée ou son expiration ; un simple F5 peut conserver
+ses anciennes valeurs. Le raccord des nouveaux écrans devra charger les options
+réelles et résoudre leurs UUID, sans codes `proposal_*` ni IDs figés. Le saver
+préexistant ne résout la section que par son code : le cas d'un UUID inconnu
+sans code reste à traiter au raccord, sans l'assimiler silencieusement à une
+catégorie vide. La validation visuelle des nouveaux écrans reste attendue.

@@ -44,13 +44,13 @@ jobs:
             --tmpfs /tmp:rw,nosuid,nodev,size=512m \
             --mount "type=bind,source=$PWD/scripts/verify-menu-document-native.cjs,target=/tmp/verify-menu-document-native.cjs,readonly" \
             --entrypoint node bertel-pdf-runtime:ci \
-            /tmp/verify-menu-document-native.cjs /app | tee "$RUNNER_TEMP/pdf-production-runtime.json"
+            /tmp/verify-menu-document-native.cjs /app | tee "$RUNNER_TEMP/pdf-production-runtime.log"
 
       - name: Upload the production runtime verification
         uses: actions/upload-artifact@v4
         with:
           name: pdf-production-runtime
-          path: ${{ runner.temp }}/pdf-production-runtime.json
+          path: ${{ runner.temp }}/pdf-production-runtime.log
           retention-days: 7
 
   build-and-test:

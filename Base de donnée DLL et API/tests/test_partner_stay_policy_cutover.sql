@@ -12,7 +12,7 @@ END $$;
 -- The same caller passes the canonical gate. Denial must come from closed DML,
 -- not a missing identity, absent row, or a row-level rule unrelated to cutover.
 INSERT INTO auth.users(id,email) VALUES('00000000-0000-4000-a000-000000008699','r2-cutover@example.test');
-INSERT INTO public.app_user_profile(id,role) VALUES('00000000-0000-4000-a000-000000008699','super_admin');
+INSERT INTO public.app_user_profile(id,role) VALUES('00000000-0000-4000-a000-000000008699','super_admin') ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role;
 INSERT INTO public.object(id,object_type,name,status,is_test) VALUES
   ('HOTRUN9999998698','HOT','R2 cutover existing','published',true),('HOTRUN9999998699','HOT','R2 cutover insert','published',true);
 INSERT INTO public.object_stay_policy(object_id,check_in_from,conditions) VALUES('HOTRUN9999998698','14:00:30','Office');

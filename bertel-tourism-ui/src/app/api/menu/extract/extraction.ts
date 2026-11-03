@@ -45,10 +45,6 @@ export const extractedMenuSchema = z.object({
       }),
     )
     .default([]),
-  unsupported_offers: z.array(z.object({
-    label: z.string().min(1).max(240), price: z.union([z.string().max(80), z.number()]).optional(),
-    reason: z.string().max(240).optional(),
-  })).max(50).optional(),
 });
 export type ExtractedMenu = z.infer<typeof extractedMenuSchema>;
 
@@ -96,8 +92,24 @@ export function buildExtractionPrompt(inp: {
   return { system, user };
 }
 
-/** Strip an optional code fence, JSON.parse, validate against the schema. */
-export function parseExtraction(raw: string): { ok: true; data: ExtractedMenu } | { ok: false; error: string } {
+export interface UnsupportedOffer { label:string;price:string;reason:string }
+function readUnsupportedOffers(value:unknown) {
+  const offers:UnsupportedOffer[]=[];let omitted=0,adjusted=0;
+  if(value===undefined)return{offers,omitted,adjusted};
+  if(!Array.isArray(value))return{offers,omitted,adjusted:1};
+  omitted=Math.max(0,value.length-50);
+  for(const entry of value.slice(0,50)){
+    if(!entry||typeof entry!=='object'||Array.isArray(entry)||typeof entry.label!=='string'||!entry.label.trim()){omitted++;continue;}
+    const label=entry.label.trim(),price=typeof entry.price==='string'?entry.price.trim():typeof entry.price==='number'&&Number.isFinite(entry.price)?String(entry.price):'';
+    const reason=typeof entry.reason==='string'?entry.reason.trim():'formula_price_not_modelled';
+    if(label.length>240||price.length>80||reason.length>240)adjusted++;
+    offers.push({label:label.slice(0,240),price:price.slice(0,80),reason:reason.slice(0,240)||'formula_price_not_modelled'});
+  }
+  return{offers,omitted,adjusted};
+}
+/** Core dishes stay strict. E warning metadata is parsed separately and never invalidates them. */
+export function parseExtraction(raw: string, reportUnsupportedOffers=false):
+  { ok:true;data:ExtractedMenu;unsupported?:ReturnType<typeof readUnsupportedOffers> } | {ok:false;error:string} {
   const cleaned = raw
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
@@ -118,7 +130,8 @@ export function parseExtraction(raw: string): { ok: true; data: ExtractedMenu } 
   }
   const parsed = extractedMenuSchema.safeParse(json);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
-  return { ok: true, data: parsed.data };
+  return {ok:true,data:parsed.data,...(reportUnsupportedOffers?{unsupported:readUnsupportedOffers(
+    json&&typeof json==='object'&&!Array.isArray(json)?(json as Record<string,unknown>).unsupported_offers:undefined)}:{})};
 }
 
 function priceToString(price: string | number | undefined): string {

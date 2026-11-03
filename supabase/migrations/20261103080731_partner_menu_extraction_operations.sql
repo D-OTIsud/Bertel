@@ -25,6 +25,8 @@ CREATE TABLE internal.menu_extraction_operation (
  created_at timestamptz NOT NULL DEFAULT now(), finished_at timestamptz
 );
 CREATE INDEX menu_extraction_operation_owner ON internal.menu_extraction_operation(created_by,created_at);
+CREATE INDEX menu_extraction_operation_published_object ON internal.menu_extraction_operation(object_id)
+ WHERE state='succeeded' AND published_at IS NOT NULL AND published_result IS NOT NULL;
 ALTER TABLE internal.menu_extraction_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE internal.menu_extraction_day ENABLE ROW LEVEL SECURITY;
 ALTER TABLE internal.menu_extraction_operation ENABLE ROW LEVEL SECURITY;
@@ -88,6 +90,37 @@ BEGIN
  END LOOP;
  RETURN jsonb_build_object('sources',v_rows,'targetMenuId',p_target_menu_id,
   'targetFingerprint',CASE WHEN v_target IS NOT NULL THEN md5(v_target::text) ELSE NULL END);
+END $fn$;
+
+-- Only the canonical publication of the SAME private upload is version-neutral.
+-- Byte identity, ownership (rechecked by context), paths and target bundle stay guarded.
+CREATE FUNCTION internal.menu_extraction_context_matches(p_expected jsonb,p_actual jsonb) RETURNS boolean
+LANGUAGE plpgsql IMMUTABLE SECURITY INVOKER SET search_path=pg_catalog AS $fn$
+DECLARE l jsonb:=p_expected; r jsonb:=p_actual; a jsonb; b jsonb; x jsonb; y jsonb; i integer;
+BEGIN
+ IF jsonb_typeof(l->'sources') IS DISTINCT FROM 'array' OR jsonb_typeof(r->'sources') IS DISTINCT FROM 'array' THEN RETURN false; END IF;
+ IF jsonb_array_length(l->'sources')<>jsonb_array_length(r->'sources') THEN RETURN false; END IF;
+ FOR i IN 0..jsonb_array_length(l->'sources')-1 LOOP
+  a:=l->'sources'->i;b:=r->'sources'->i;
+  IF a->>'kind'='upload' AND b->>'kind'='upload' THEN
+   x:=a->'upload';y:=b->'upload';
+   IF x->>'state' IS NULL OR x->>'state' NOT IN('staged','copied') OR y->>'state' IS NULL OR y->>'state' NOT IN('staged','copied') THEN RETURN false; END IF;
+   IF x->>'state' IS DISTINCT FROM y->>'state' AND NOT(x->>'state'='staged' AND y->>'state'='copied') THEN RETURN false; END IF;
+   IF x->>'state'='copied' AND x->'publicUrl' IS DISTINCT FROM y->'publicUrl' THEN RETURN false; END IF;
+   IF nullif(a->'linked','null'::jsonb) IS NULL AND nullif(b->'linked','null'::jsonb) IS NOT NULL THEN
+    IF y->>'state' IS DISTINCT FROM 'copied' OR b#>>'{linked,object_id}' IS DISTINCT FROM y->>'objectId'
+     OR b#>>'{linked,document_id}' IS DISTINCT FROM y->>'documentId'
+     OR b#>>'{linked,document,access_scope}' IS DISTINCT FROM 'public'
+     OR b#>>'{linked,document,storage_bucket}' IS DISTINCT FROM 'documents'
+     OR b#>>'{linked,document,storage_path}' IS DISTINCT FROM y->>'publicPath'
+     OR b#>>'{linked,document,url}' IS DISTINCT FROM y->>'publicUrl' THEN RETURN false; END IF;
+    l:=jsonb_set(l,ARRAY['sources',i::text,'linked'],'null');r:=jsonb_set(r,ARRAY['sources',i::text,'linked'],'null');
+   END IF;
+   l:=jsonb_set(l,ARRAY['sources',i::text,'upload'],x-'state'-'publicUrl');
+   r:=jsonb_set(r,ARRAY['sources',i::text,'upload'],y-'state'-'publicUrl');
+  END IF;
+ END LOOP;
+ RETURN l=r;
 END $fn$;
 
 CREATE FUNCTION api.menu_extraction_context(p_object_id text,p_sources jsonb,p_target_menu_id uuid DEFAULT NULL) RETURNS jsonb
@@ -174,7 +207,7 @@ BEGIN
   PERFORM 1 FROM public.object_menu WHERE id=v_op.target_menu_id FOR UPDATE;
   PERFORM 1 FROM public.object_menu_item WHERE menu_id=v_op.target_menu_id ORDER BY id FOR UPDATE;
  END IF;
- IF internal.menu_extraction_context(v_op.object_id,v_op.source_refs,v_op.target_menu_id) IS DISTINCT FROM v_op.context THEN
+ IF NOT internal.menu_extraction_context_matches(v_op.context,internal.menu_extraction_context(v_op.object_id,v_op.source_refs,v_op.target_menu_id)) THEN
   RAISE EXCEPTION 'Source ou menu modifié' USING ERRCODE='PT409'; END IF;
  INSERT INTO internal.menu_extraction_day(user_id,local_day) VALUES(auth.uid(),v_day) ON CONFLICT DO NOTHING;
  SELECT * INTO v_used FROM internal.menu_extraction_day WHERE user_id=auth.uid() AND local_day=v_day FOR UPDATE;
@@ -213,7 +246,7 @@ BEGIN
  PERFORM 1 FROM public.object WHERE id=v_op.object_id FOR UPDATE;
  SELECT * INTO v_op FROM internal.menu_extraction_operation WHERE id=p_request_id FOR UPDATE;
  IF v_op.state<>'preparing' OR v_op.claim_id IS DISTINCT FROM p_claim_id THEN RAISE EXCEPTION 'Traitement déjà pris en charge' USING ERRCODE='PT409'; END IF;
- IF internal.menu_extraction_context(v_op.object_id,v_op.source_refs,v_op.target_menu_id) IS DISTINCT FROM v_op.context THEN
+ IF NOT internal.menu_extraction_context_matches(v_op.context,internal.menu_extraction_context(v_op.object_id,v_op.source_refs,v_op.target_menu_id)) THEN
   RAISE EXCEPTION 'Source ou menu modifié' USING ERRCODE='PT409'; END IF;
  FOR v_stat IN SELECT value FROM jsonb_array_elements(v_op.source_stats) LOOP
   IF internal.menu_extraction_storage_snapshot(v_stat->>'bucket',v_stat->>'path') IS DISTINCT FROM v_stat->'storageExpected' THEN
@@ -237,7 +270,7 @@ BEGIN
   UPDATE internal.menu_extraction_operation SET state='cancelled',error_code=CASE WHEN v_op.local_day<>v_today THEN 'day_changed' ELSE 'disabled' END,finished_at=now() WHERE id=p_request_id;
   RETURN jsonb_build_object('started',false,'error',CASE WHEN v_op.local_day<>v_today THEN 'day_changed' ELSE 'disabled' END);
  END IF;
- IF internal.menu_extraction_context(v_op.object_id,v_op.source_refs,v_op.target_menu_id) IS DISTINCT FROM v_op.context THEN
+ IF NOT internal.menu_extraction_context_matches(v_op.context,internal.menu_extraction_context(v_op.object_id,v_op.source_refs,v_op.target_menu_id)) THEN
   RAISE EXCEPTION 'Source ou menu modifié' USING ERRCODE='PT409'; END IF;
  FOR v_stat IN SELECT value FROM jsonb_array_elements(v_op.source_stats) LOOP
   IF internal.menu_extraction_storage_snapshot(v_stat->>'bucket',v_stat->>'path') IS DISTINCT FROM v_stat->'storageExpected' THEN
@@ -311,7 +344,7 @@ BEGIN
   PERFORM 1 FROM public.object_menu WHERE id=v_op.target_menu_id FOR UPDATE;
   PERFORM 1 FROM public.object_menu_item WHERE menu_id=v_op.target_menu_id ORDER BY id FOR UPDATE;
  END IF;
- IF internal.menu_extraction_context(v_op.object_id,v_op.source_refs,v_op.target_menu_id) IS DISTINCT FROM v_op.context THEN
+ IF NOT internal.menu_extraction_context_matches(v_op.context,internal.menu_extraction_context(v_op.object_id,v_op.source_refs,v_op.target_menu_id)) THEN
   RAISE EXCEPTION 'Source ou menu modifié' USING ERRCODE='PT409'; END IF;
  RETURN NULL;
 END $fn$;
@@ -346,7 +379,8 @@ BEGIN
  PERFORM internal.assert_portal_menu_write(v_op.object_id);
  PERFORM 1 FROM public.object WHERE id=v_op.object_id FOR UPDATE;
  SELECT * INTO v_op FROM internal.menu_extraction_operation WHERE id=p_request_id FOR UPDATE;
- IF v_op.state<>'succeeded' OR v_op.published_result IS NOT NULL OR jsonb_typeof(p_draft) IS DISTINCT FROM 'object'
+ IF v_op.published_result IS NOT NULL THEN RAISE EXCEPTION 'Brouillon déjà publié. Rechargez les menus.' USING ERRCODE='PT409'; END IF;
+ IF v_op.state<>'succeeded' OR jsonb_typeof(p_draft) IS DISTINCT FROM 'object'
    OR length(p_draft::text)>1048576 OR p_expected_version IS NULL OR p_expected_version<0 THEN
   RAISE EXCEPTION 'Brouillon invalide' USING ERRCODE='22023'; END IF;
  IF v_op.draft_version=p_expected_version+1 AND v_op.draft=p_draft THEN
@@ -357,7 +391,42 @@ BEGIN
  RETURN jsonb_build_object('draft',p_draft,'draftVersion',p_expected_version+1);
 END $fn$;
 
+-- Read-only impact of a card change. History is not limited to a browser/user's
+-- recent jobs. Only surviving associated menus of this object are projected.
+CREATE FUNCTION api.get_menu_extraction_source_impact(p_object_id text,p_source_kind text,p_source_id uuid) RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog,public,api,internal,pg_temp AS $fn$
+DECLARE v_actor boolean:=coalesce(api.is_actor_persona(),false); v_document uuid; v_upload internal.restaurant_carte_upload%ROWTYPE;
+BEGIN
+ IF auth.uid() IS NULL OR p_source_kind IS NULL OR p_source_kind NOT IN('carte','upload') OR p_source_id IS NULL THEN
+  RAISE EXCEPTION 'Source inaccessible' USING ERRCODE='42501'; END IF;
+ IF v_actor THEN PERFORM internal.restaurant_carte_assert_user(p_object_id);
+ ELSIF NOT coalesce(api.can_read_object_for_correction(p_object_id),false)
+  OR NOT EXISTS(SELECT 1 FROM public.object WHERE id=p_object_id AND object_type='RES') THEN
+  RAISE EXCEPTION 'Fiche inaccessible' USING ERRCODE='42501'; END IF;
+ IF p_source_kind='upload' THEN
+  SELECT * INTO v_upload FROM internal.restaurant_carte_upload WHERE id=p_source_id AND object_id=p_object_id;
+  IF NOT FOUND OR (v_actor AND v_upload.created_by IS DISTINCT FROM auth.uid()) THEN RAISE EXCEPTION 'Dépôt inaccessible' USING ERRCODE='42501'; END IF;
+  v_document:=v_upload.document_id;
+ ELSE
+  v_document:=p_source_id;
+  IF v_actor AND NOT EXISTS(SELECT 1 FROM public.ref_document WHERE id=v_document AND access_scope='public') THEN
+   RAISE EXCEPTION 'Carte inaccessible' USING ERRCODE='42501'; END IF;
+ END IF;
+ RETURN jsonb_build_object('menus',coalesce((SELECT jsonb_agg(jsonb_build_object('id',m.id,'name',m.name) ORDER BY m.name,m.id)
+  FROM public.object_menu m WHERE m.object_id=p_object_id AND (NOT v_actor OR m.visibility='public') AND EXISTS(
+   SELECT 1 FROM internal.menu_extraction_operation o WHERE o.object_id=p_object_id AND o.state='succeeded'
+    AND o.published_at IS NOT NULL AND o.published_result IS NOT NULL AND m.id=ANY(o.published_menu_ids)
+    AND EXISTS(SELECT 1 FROM jsonb_array_elements(o.source_refs) s WHERE
+     (s->>'kind'='carte' AND s->>'id'=v_document::text) OR
+     (s->>'kind'='upload' AND EXISTS(SELECT 1 FROM internal.restaurant_carte_upload u
+       WHERE u.id::text=s->>'id' AND u.object_id=p_object_id AND u.document_id=v_document)))
+  )),'[]'::jsonb));
+END $fn$;
+
+REVOKE ALL ON FUNCTION api.get_menu_extraction_source_impact(text,text,uuid) FROM PUBLIC,anon,authenticated,service_role;
+GRANT EXECUTE ON FUNCTION api.get_menu_extraction_source_impact(text,text,uuid) TO authenticated;
 REVOKE ALL ON FUNCTION internal.menu_extraction_storage_snapshot(text,text),internal.menu_extraction_context(text,jsonb,uuid),
+ internal.menu_extraction_context_matches(jsonb,jsonb),
  internal.menu_extraction_quota_json(uuid,date),internal.assert_menu_extraction_publication(uuid,text,integer),
  internal.record_menu_extraction_publication(uuid,text,jsonb,uuid[]) FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION api.menu_extraction_storage_receipt(text,text),api.menu_extraction_context(text,jsonb,uuid),

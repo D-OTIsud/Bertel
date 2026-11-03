@@ -84,4 +84,17 @@ describe('orchestrateExtraction', () => {
     expect(result.ok).toBe(true);
     if(result.ok){expect(result.menu.items).toHaveLength(1);expect(result.menu.items[0].price).toBe('');expect(result.warnings?.[0].offers).toEqual([{label:'Entrée + plat',price:'18 €',reason:'formula_price_not_modelled'}]);}
   });
+  it('keeps valid dishes when E formula metadata is null, overlong or over the warning bound',async()=>{
+    const offers=Array.from({length:61},(_,i)=>({label:i?'Formule':'x'.repeat(300),price:null}));
+    const callProvider=jest.fn(async()=>({text:JSON.stringify({dishes:[{name:'Cari',price:'12 €'}],unsupported_offers:offers})}));
+    const res=await orchestrateExtraction({...baseInput,reportUnsupportedOffers:true},deps({callProvider,repairInvalidJson:false}));
+    expect(res.ok).toBe(true);expect(callProvider).toHaveBeenCalledTimes(1);
+    if(res.ok){expect(res.menu.items[0].price).toBe('12 €');expect(res.warnings?.[0]).toMatchObject({omittedOffers:11,adjustedOffers:1});expect(res.warnings?.[0].offers).toHaveLength(50);expect(res.warnings?.[0].offers[0].label).toHaveLength(240);expect(res.warnings?.[0].offers[0].price).toBe('');}
+  });
+  it('does not relax invalid dishes in E and leaves default office parsing unchanged',async()=>{
+    const office=await orchestrateExtraction(baseInput,deps({callProvider:async()=>({text:'{"dishes":[{"name":"Cari"}],"unsupported_offers":[{"label":null,"price":null}]}'})}));
+    expect(office.ok).toBe(true);if(office.ok)expect(office.warnings).toBeUndefined();
+    const invalid=await orchestrateExtraction({...baseInput,reportUnsupportedOffers:true},deps({repairInvalidJson:false,callProvider:async()=>({text:'{"dishes":[{"name":null}],"unsupported_offers":null}'})}));
+    expect(invalid).toMatchObject({ok:false,code:'unparseable'});
+  });
 });

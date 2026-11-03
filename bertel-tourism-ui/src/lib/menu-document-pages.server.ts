@@ -72,7 +72,10 @@ export async function renderMenuDocument(buffer: Buffer, inspection: MenuDocumen
   if (signal?.aborted) throw new MenuDocumentError('aborted');
   if (mimeType !== 'application/pdf') return [await prepareVisionImage(buffer, mimeType)];
   const task = await openPdf(buffer);
+  const cancelTask=()=>{void task.destroy().catch(()=>undefined);};
+  signal?.addEventListener('abort',cancelTask,{once:true});
   try {
+    if(signal?.aborted)throw new MenuDocumentError('aborted');
     const doc = await task.promise;
     if (doc.numPages !== inspection.pageCount) throw new MenuDocumentError('source_changed');
     const factory = doc.canvasFactory as NodeCanvasFactory;
@@ -98,5 +101,6 @@ export async function renderMenuDocument(buffer: Buffer, inspection: MenuDocumen
       }
     }
     return images;
-  } catch(error) { fileError(error); } finally { await task.destroy(); }
+  } catch(error) { if(signal?.aborted)throw new MenuDocumentError('aborted');return fileError(error); }
+  finally { signal?.removeEventListener('abort',cancelTask);await task.destroy(); }
 }

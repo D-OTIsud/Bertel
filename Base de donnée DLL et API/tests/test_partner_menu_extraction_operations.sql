@@ -12,6 +12,7 @@ DECLARE
  op3 uuid:='00000000-0000-4000-a000-00000000e209'; op4 uuid:='00000000-0000-4000-a000-00000000e20a';
  claim uuid:='00000000-0000-4000-a000-00000000e20b'; claim2 uuid:='00000000-0000-4000-a000-00000000e20c';
  refs jsonb; ctx jsonb; stats jsonb; expected jsonb; result jsonb; payload jsonb; before_state jsonb;
+ target_item uuid:='00000000-0000-4000-a000-00000000e216'; other_item uuid:='00000000-0000-4000-a000-00000000e217'; item_expected jsonb; delete_expected jsonb;
  rejected boolean; day date:=(now() AT TIME ZONE 'Indian/Reunion')::date; claims jsonb;
 BEGIN
  IF current_setting('bertel.ephemeral_ci',true) IS DISTINCT FROM 'on' THEN RAISE EXCEPTION 'Ephemeral CI database only'; END IF;
@@ -34,6 +35,7 @@ BEGIN
  INSERT INTO public.object_document(object_id,document_id,role_id,title,position) VALUES('RESRUN999999E201',doc,carte_id,'Source carte',1);
  INSERT INTO storage.objects(bucket_id,name,metadata) VALUES('documents','RESRUN999999E201/cartes/e-fixture.pdf','{"size":128,"mimetype":"application/pdf"}');
  INSERT INTO public.object_menu(id,object_id,name,visibility) VALUES(menu,'RESRUN999999E201','Carte','public'),(private_menu,'RESRUN999999E201','Hidden office','private'),(other_menu,'RESRUN999999E201','Other public','public');
+ INSERT INTO public.object_menu_item(id,menu_id,name) VALUES(target_item,menu,'Target dish'),(other_item,other_menu,'Independent dish');
  claims:=jsonb_build_object('sub',u,'role','authenticated','app_metadata',jsonb_build_object('sandbox_discovery',true));
  PERFORM set_config('request.jwt.claims',claims::text,true);
  refs:=jsonb_build_array(jsonb_build_object('kind','carte','id',doc,'pages',jsonb_build_array(1),'expected',internal.restaurant_carte_link_snapshot('RESRUN999999E201',doc)));
@@ -110,9 +112,25 @@ BEGIN
   'deleted_menus',jsonb_build_array(jsonb_build_object('id',menu,'expected',jsonb_build_object('row',expected))));
  before_state:=internal.object_menu_write_snapshot('RESRUN999999E201');
  rejected:=false;BEGIN PERFORM api.publish_portal_menus('RESRUN999999E201',payload,op);EXCEPTION WHEN invalid_parameter_value THEN rejected:=true;END;
- ASSERT rejected,'missing publication IDs did not reject E record';
+ ASSERT rejected,'E menu deletion was accepted';
  ASSERT internal.object_menu_write_snapshot('RESRUN999999E201')=before_state,'record failure left partial menus';
  ASSERT (SELECT published_result IS NULL FROM internal.menu_extraction_operation WHERE id=op),'record failure left E receipt';
+ -- Target updates cannot smuggle independent deletions into an E publication.
+ SELECT r INTO delete_expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(before_state)->'menus') r WHERE r->>'id'=other_menu::text;
+ payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e218','extraction_draft_version',2,
+  'menus',jsonb_build_array(jsonb_build_object('id',menu,'expected',expected,'changes',jsonb_build_object('description','Must roll back'))),
+  'items','[]'::jsonb,'deleted_items','[]'::jsonb,'deleted_menus',jsonb_build_array(jsonb_build_object('id',other_menu,'expected',jsonb_build_object('row',delete_expected))));
+ rejected:=false;BEGIN PERFORM api.publish_portal_menus('RESRUN999999E201',payload,op);EXCEPTION WHEN invalid_parameter_value THEN rejected:=true;END;
+ ASSERT rejected AND internal.object_menu_write_snapshot('RESRUN999999E201')=before_state,'target edit deleted an independent menu';
+ SELECT r INTO item_expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(before_state)->'items') r WHERE r->>'id'=target_item::text;
+ SELECT r INTO delete_expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(before_state)->'items') r WHERE r->>'id'=other_item::text;
+ payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e219','extraction_draft_version',2,
+  'menus','[]'::jsonb,'items',jsonb_build_array(jsonb_build_object('id',target_item,'menu_id',menu,'expected',item_expected,'changes',jsonb_build_object('description','Must roll back'),'links','{}'::jsonb)),
+  'deleted_items',jsonb_build_array(jsonb_build_object('id',other_item,'menu_id',other_menu,'expected',jsonb_build_object('row',delete_expected))),'deleted_menus','[]'::jsonb);
+ rejected:=false;BEGIN PERFORM api.publish_portal_menus('RESRUN999999E201',payload,op);EXCEPTION WHEN invalid_parameter_value THEN rejected:=true;END;
+ ASSERT rejected AND internal.object_menu_write_snapshot('RESRUN999999E201')=before_state,'target dish edit deleted an independent dish';
+ ASSERT (SELECT published_result IS NULL FROM internal.menu_extraction_operation WHERE id=op),'rejected independent deletions left E receipt';
+ ASSERT NOT EXISTS(SELECT 1 FROM internal.object_menu_write_receipt WHERE request_id IN('00000000-0000-4000-a000-00000000e218','00000000-0000-4000-a000-00000000e219')),'rejected independent deletions left menu receipt';
  SELECT r INTO expected FROM jsonb_array_elements(internal.portal_menu_write_snapshot(before_state)->'menus') r WHERE r->>'id'=other_menu::text;
  payload:=jsonb_build_object('write_contract','menus-reconcile-v1','request_id','00000000-0000-4000-a000-00000000e214',
   'extraction_draft_version',2,
@@ -128,6 +146,8 @@ BEGIN
   'items','[]'::jsonb,'deleted_items','[]'::jsonb,'deleted_menus','[]'::jsonb);
  result:=api.publish_portal_menus('RESRUN999999E201',payload,op);
  ASSERT result->>'success'='true';
+ rejected:=false;BEGIN PERFORM api.save_menu_extraction_draft(op,2,'{"menu":{"title":"Already published"}}');EXCEPTION WHEN SQLSTATE 'PT409' THEN rejected:=true;END;
+ ASSERT rejected,'saving a published extraction did not return conflict';
  ASSERT (SELECT description='Reviewed extraction' FROM public.object_menu WHERE id=menu);
  ASSERT (SELECT published_menu_ids=ARRAY[menu] AND published_result->>'request_id'='00000000-0000-4000-a000-00000000e211' AND source_refs=refs AND page_count=1 FROM internal.menu_extraction_operation WHERE id=op),'source/pages/menu IDs not associated atomically';
  ASSERT EXISTS(SELECT 1 FROM public.object_menu WHERE id=private_menu AND visibility='private'),'office menu was changed';
@@ -169,6 +189,16 @@ BEGIN
  ASSERT api.mark_menu_extraction_started(op4,claim)->>'started'='false','old-day reservation bypassed current-day quota';
  ASSERT (SELECT reserved_pages=0 FROM internal.menu_extraction_day WHERE user_id=u AND local_day=day-1);
  ASSERT (SELECT consumed_pages=2 AND reserved_pages=0 FROM internal.menu_extraction_day WHERE user_id=u AND local_day=day);
+ PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
+ PERFORM api.seal_menu_extraction('00000000-0000-4000-a000-00000000e220',u,'RESRUN999999E201',refs,NULL,ctx,stats,1,'{}');
+ PERFORM set_config('request.jwt.claims',claims::text,true);
+ PERFORM api.reserve_menu_extraction('00000000-0000-4000-a000-00000000e220');PERFORM api.claim_menu_extraction('00000000-0000-4000-a000-00000000e220',claim);
+ PERFORM api.mark_menu_extraction_started('00000000-0000-4000-a000-00000000e220',claim);
+ PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
+ PERFORM api.finish_menu_extraction('00000000-0000-4000-a000-00000000e220',claim,NULL,'non_dispatch');
+ ASSERT (SELECT state='failed' AND error_code='non_dispatch' FROM internal.menu_extraction_operation WHERE id='00000000-0000-4000-a000-00000000e220'),'lost-start acknowledgement not terminal';
+ ASSERT (SELECT consumed_pages=3 AND reserved_pages=0 FROM internal.menu_extraction_day WHERE user_id=u AND local_day=day),'non_dispatch silently refunded quota';
+ PERFORM set_config('request.jwt.claims',claims::text,true);
  DELETE FROM public.actor_object_role WHERE actor_id=a;
  rejected:=false;BEGIN PERFORM api.get_menu_extraction(op);EXCEPTION WHEN insufficient_privilege THEN rejected:=true;END;
  ASSERT rejected,'revoked actor read persisted draft';

@@ -10,13 +10,17 @@ BEGIN
   v_oid:=to_regprocedure('api.save_object_menus(text,jsonb)');
   SELECT md5(replace(prosrc,E'\r\n',E'\n')) INTO v_hash FROM pg_proc WHERE oid=v_oid
     AND proowner='postgres'::regrole AND prosecdef AND provolatile='v' AND prorettype='jsonb'::regtype
-    AND NOT proretset AND proargnames=ARRAY['p_object_id','p_payload']::text[];
+    AND NOT proretset AND NOT proisstrict AND NOT proleakproof AND proparallel='u' AND pronargdefaults=0
+    AND pg_get_expr(proargdefaults,0) IS NULL
+    AND prolang=(SELECT oid FROM pg_language WHERE lanname='plpgsql') AND proargnames=ARRAY['p_object_id','p_payload']::text[];
   IF v_hash NOT IN ('644b7f082141ec6c0cc3f0c807d67242','8f48b203e5004582232ed20659b9511c') OR v_hash IS NULL THEN
     RAISE EXCEPTION 'M refuses unexpected R4 writer source/attributes: %',v_hash;
   END IF;
-  IF NOT has_function_privilege('authenticated',v_oid,'EXECUTE') OR NOT has_function_privilege('service_role',v_oid,'EXECUTE')
+  IF NOT has_function_privilege('postgres',v_oid,'EXECUTE') OR NOT has_function_privilege('authenticated',v_oid,'EXECUTE') OR NOT has_function_privilege('service_role',v_oid,'EXECUTE')
     OR EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
-      WHERE p.oid=v_oid AND (a.privilege_type<>'EXECUTE' OR a.grantee NOT IN ('postgres'::regrole,'authenticated'::regrole,'service_role'::regrole)))
+      WHERE p.oid=v_oid AND (a.privilege_type<>'EXECUTE' OR a.grantor<>'postgres'::regrole
+        OR a.grantee NOT IN ('postgres'::regrole,'authenticated'::regrole,'service_role'::regrole)
+        OR (a.is_grantable AND a.grantee<>'postgres'::regrole)))
     OR EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL unnest(p.proconfig) c WHERE p.oid=v_oid
       AND replace(c,' ','') NOT IN ('search_path=pg_catalog,public,api,internal','lock_timeout=5s'))
     OR EXISTS(SELECT 1 FROM pg_proc WHERE oid=v_oid AND cardinality(proconfig) IS DISTINCT FROM 2) THEN
@@ -29,26 +33,40 @@ BEGIN
     IF v_enabled IS DISTINCT FROM false THEN RAISE EXCEPTION 'Do not replay M preparation after activation'; END IF;
   ELSIF to_regclass('internal.portal_menu_write_configuration') IS NOT NULL THEN RAISE EXCEPTION 'M configuration already exists without the expected preparation'; END IF;
   FOR r IN SELECT * FROM (VALUES
-      ('internal.apply_object_menus_patch(text,jsonb)','38f62500b36dde52dccec81ea78a4b2d',false),
-      ('api.save_object_menus(text,jsonb)','8f48b203e5004582232ed20659b9511c',true),
-      ('internal.assert_portal_menu_write(text)','958eda0135a706268a06cc707acba49e',false),
-      ('internal.portal_menu_bundle_token(jsonb)','360f21c6b9982447860dea15472ed9cb',false),
-      ('internal.portal_menu_write_snapshot(jsonb)','be6f41cef20de439d5d14161d57a3dce',false),
-      ('internal.prepare_portal_menu_patch(text,jsonb,jsonb)','03e0b6df0be752ecbbc92825d00085e2',false),
-      ('api.get_portal_menus_snapshot(text)','5f250062a41065f68a454250922b46f9',true),
-      ('api.get_portal_menu_write_receipt(text,jsonb)','404efc6e54a427f8c456c4c128c13b28',true),
-      ('api.publish_portal_menus(text,jsonb,uuid)','7a27364a1644d7c03d6187f663d43189',true)
-  ) expected(signature,source_hash,definer) LOOP
-    IF r.signature='api.save_object_menus(text,jsonb)' THEN CONTINUE; END IF;
+      ('internal.apply_object_menus_patch(text,jsonb)','38f62500b36dde52dccec81ea78a4b2d',false,'v','plpgsql','jsonb',ARRAY['p_object_id','p_payload']::text[],0,ARRAY['lock_timeout=5s','search_path=pg_catalog,public,api,internal']::text[],'private'),
+      ('api.save_object_menus(text,jsonb)','8f48b203e5004582232ed20659b9511c',true,'v','plpgsql','jsonb',ARRAY['p_object_id','p_payload']::text[],0,ARRAY['lock_timeout=5s','search_path=pg_catalog,public,api,internal']::text[],'office'),
+      ('internal.assert_portal_menu_write(text)','958eda0135a706268a06cc707acba49e',false,'v','plpgsql','void',ARRAY['p_object_id']::text[],0,ARRAY['search_path=pg_catalog,public,api,internal']::text[],'private'),
+      ('internal.portal_menu_bundle_token(jsonb)','360f21c6b9982447860dea15472ed9cb',false,'i','sql','text',ARRAY['p_bundle']::text[],0,ARRAY['search_path=pg_catalog']::text[],'private'),
+      ('internal.portal_menu_write_snapshot(jsonb)','be6f41cef20de439d5d14161d57a3dce',false,'i','plpgsql','jsonb',ARRAY['p_snapshot']::text[],0,ARRAY['search_path=pg_catalog,internal']::text[],'private'),
+      ('internal.prepare_portal_menu_patch(text,jsonb,jsonb)','03e0b6df0be752ecbbc92825d00085e2',false,'v','plpgsql','jsonb',ARRAY['p_object_id','p_payload','p_snapshot']::text[],0,ARRAY['search_path=pg_catalog,public,internal']::text[],'private'),
+      ('api.get_portal_menus_snapshot(text)','5f250062a41065f68a454250922b46f9',true,'s','plpgsql','jsonb',ARRAY['p_object_id']::text[],0,ARRAY['lock_timeout=5s','search_path=pg_catalog,public,api,internal','timezone=utc']::text[],'actor'),
+      ('api.get_portal_menu_write_receipt(text,jsonb)','404efc6e54a427f8c456c4c128c13b28',true,'s','plpgsql','jsonb',ARRAY['p_object_id','p_payload']::text[],0,ARRAY['lock_timeout=5s','search_path=pg_catalog,public,api,internal','timezone=utc']::text[],'actor'),
+      ('api.publish_portal_menus(text,jsonb,uuid)','37e0aa67266209fbea31ba928454a301',true,'v','plpgsql','jsonb',ARRAY['p_object_id','p_payload','p_extraction_operation_id']::text[],1,ARRAY['lock_timeout=5s','search_path=pg_catalog,public,api,internal','timezone=utc']::text[],'actor')
+  ) expected(signature,source_hash,definer,volatility,language_name,return_type,argument_names,default_count,configuration,access_kind) LOOP
     v_oid:=to_regprocedure(r.signature);
+    IF r.access_kind='office' AND NOT v_replay THEN CONTINUE; END IF;
     IF NOT v_replay THEN
       IF v_oid IS NOT NULL THEN RAISE EXCEPTION 'M function already exists: %',r.signature; END IF;
     ELSE
-      IF NOT EXISTS(SELECT 1 FROM pg_proc WHERE oid=v_oid AND proowner='postgres'::regrole AND prosecdef=r.definer
-        AND md5(replace(prosrc,E'\r\n',E'\n'))=r.source_hash)
-        OR EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
-          WHERE p.oid=v_oid AND (a.privilege_type<>'EXECUTE' OR a.grantee<>'postgres'::regrole)) THEN
-        RAISE EXCEPTION 'M preparation drift: %',r.signature;
+      IF NOT EXISTS(SELECT 1 FROM pg_proc p JOIN pg_language l ON l.oid=p.prolang
+        WHERE p.oid=v_oid AND p.proowner='postgres'::regrole AND p.prosecdef=r.definer
+          AND md5(replace(p.prosrc,E'\r\n',E'\n'))=r.source_hash
+          AND p.provolatile::text=r.volatility AND l.lanname::text=r.language_name
+          AND p.prorettype=r.return_type::regtype AND NOT p.proretset AND p.proargnames=r.argument_names
+          AND p.pronargdefaults=r.default_count
+          AND pg_get_expr(p.proargdefaults,0) IS NOT DISTINCT FROM CASE WHEN r.default_count=1 THEN 'NULL::uuid'::text ELSE NULL::text END
+          AND NOT p.proisstrict AND NOT p.proleakproof AND p.proparallel='u'
+          AND COALESCE((SELECT array_agg(lower(replace(c,' ','')) ORDER BY lower(replace(c,' ',''))) FROM unnest(p.proconfig) c),ARRAY[]::text[])=r.configuration) THEN
+        RAISE EXCEPTION 'M preparation source/attributes drift: %',r.signature;
+      END IF;
+      IF NOT has_function_privilege('postgres',v_oid,'EXECUTE') OR EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a
+        WHERE p.oid=v_oid AND (a.privilege_type<>'EXECUTE' OR a.grantor<>'postgres'::regrole
+          OR NOT (a.grantee='postgres'::regrole
+            OR (r.access_kind='office' AND a.grantee IN ('authenticated'::regrole,'service_role'::regrole)))
+          OR (a.is_grantable AND a.grantee<>'postgres'::regrole)))
+        OR (r.access_kind='office' AND (NOT has_function_privilege('authenticated',v_oid,'EXECUTE')
+          OR NOT has_function_privilege('service_role',v_oid,'EXECUTE'))) THEN
+        RAISE EXCEPTION 'M preparation ACL drift: %',r.signature;
       END IF;
     END IF;
   END LOOP;
@@ -394,7 +412,7 @@ $$;
 CREATE OR REPLACE FUNCTION api.publish_portal_menus(p_object_id text,p_payload jsonb,p_extraction_operation_id uuid DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,internal SET TimeZone='UTC' SET lock_timeout='5s' AS $$
 DECLARE v_id uuid; v_request jsonb; v_receipt internal.object_menu_write_receipt%ROWTYPE; v_snapshot jsonb;
-  v_payload jsonb; v_result jsonb; v_previous jsonb; v_menu_ids uuid[]; v_draft_version integer;
+  v_payload jsonb; v_result jsonb; v_previous jsonb; v_menu_ids uuid[]; v_draft_version integer; v_extraction_target uuid;
 BEGIN
   PERFORM internal.assert_portal_menu_write(p_object_id);
   IF jsonb_typeof(p_payload) IS DISTINCT FROM 'object' OR jsonb_typeof(p_payload->'request_id') IS DISTINCT FROM 'string' THEN
@@ -422,6 +440,21 @@ BEGIN
       IF v_previous->>'request_id' IS DISTINCT FROM v_id::text THEN
         RAISE EXCEPTION 'Cette extraction est déjà publiée. Rechargez les menus pour préparer une correction manuelle.' USING ERRCODE='PT409'; END IF;
       RETURN jsonb_build_object('success',true,'request_id',v_id,'replayed',true,'snapshot',internal.portal_menu_write_snapshot(internal.object_menu_write_snapshot(p_object_id)));
+    END IF;
+    -- E has locked its operation and target. Resolve deletion ownership from the database,
+    -- never from a posted menu_id, before the shared writer can change any row.
+    SELECT COALESCE(target_menu_id,(result#>>'{menu,recordId}')::uuid) INTO v_extraction_target
+      FROM internal.menu_extraction_operation
+      WHERE id=p_extraction_operation_id AND object_id=p_object_id AND created_by=auth.uid();
+    IF v_extraction_target IS NULL OR jsonb_typeof(p_payload->'deleted_menus') IS DISTINCT FROM 'array'
+      OR jsonb_array_length(p_payload->'deleted_menus')<>0
+      OR jsonb_typeof(p_payload->'deleted_items') IS DISTINCT FROM 'array' THEN
+      RAISE EXCEPTION 'Une extraction ne peut pas supprimer un menu.' USING ERRCODE='22023';
+    END IF;
+    IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_payload->'deleted_items') d
+      LEFT JOIN public.object_menu_item i ON i.id=(d->>'id')::uuid
+      WHERE i.id IS NULL OR i.menu_id<>v_extraction_target) THEN
+      RAISE EXCEPTION 'Une extraction ne peut supprimer que les plats de sa cible exacte.' USING ERRCODE='22023';
     END IF;
   ELSIF p_payload ? 'extraction_draft_version' THEN
     RAISE EXCEPTION 'Une version de brouillon nécessite son opération d’extraction.' USING ERRCODE='22023';

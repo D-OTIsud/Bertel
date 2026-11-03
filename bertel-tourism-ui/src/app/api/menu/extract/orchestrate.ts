@@ -32,7 +32,7 @@ export interface OrchestrateDeps {
 
 export type OrchestrateResult =
   | { ok: true; menu: ObjectWorkspaceMenu; suggestedDietaryByDish: string[][];
-      warnings?: { code: 'formula_price_not_modelled'; message: string; offers: {label:string;price:string;reason:string}[] }[] }
+      warnings?: { code: 'formula_price_not_modelled'; message: string; offers: {label:string;price:string;reason:string}[];omittedOffers?:number;adjustedOffers?:number }[] }
   | { ok: false; code: 'no_images' | 'not_configured' | 'provider_error' | 'unparseable'; detail: string };
 
 export async function orchestrateExtraction(
@@ -61,7 +61,7 @@ export async function orchestrateExtraction(
       system: prompt.system,
       user: userPrompt,
     }, { signal: deps.signal });
-    return parseExtraction(text);
+    return parseExtraction(text,input.reportUnsupportedOffers===true);
   }
 
   try {
@@ -83,8 +83,9 @@ export async function orchestrateExtraction(
     });
     return { ok: true, menu, suggestedDietaryByDish, ...(input.reportUnsupportedOffers ? {warnings:[{
       code:'formula_price_not_modelled' as const,
-      message:'Vérifiez les formules de la carte : leur prix global ne peut pas être publié comme prix de plat. Les offres signalées restent à vérifier dans la source.',
-      offers:(parsed.data.unsupported_offers??[]).map(offer=>({label:offer.label,price:offer.price===undefined?'':String(offer.price),reason:offer.reason||'formula_price_not_modelled'})),
+      message:'Vérifiez les formules de la carte : leur prix global ne peut pas être publié comme prix de plat. Les offres signalées restent à vérifier dans la source.'+
+        (parsed.unsupported?.omitted||parsed.unsupported?.adjusted?' Certains signalements sont incomplets ou abrégés ; relisez la source.':''),
+      offers:parsed.unsupported?.offers??[],omittedOffers:parsed.unsupported?.omitted??0,adjustedOffers:parsed.unsupported?.adjusted??0,
     }]} : {}) };
   } catch (err) {
     if (err instanceof ProviderError) {

@@ -44,6 +44,7 @@ beforeEach(()=>{
  jest.mocked(renderExtractionSources).mockResolvedValue([{mime:'image/jpeg',base64:'AAAA'}]);
  jest.mocked(orchestrateExtraction).mockResolvedValue({ok:true,menu:{title:'Carte',items:[]},suggestedDietaryByDish:[]} as never);
 });
+afterEach(()=>{jest.restoreAllMocks();jest.useRealTimers();});
 test('all E endpoints reject anonymous callers before RPC or storage',async()=>{
  jest.mocked(authenticated).mockResolvedValue({ok:false,response:new Response(null,{status:401})} as never);
  for(const handler of [extract,status,draft,list])expect((await handler(req())).status).toBe(401);
@@ -104,6 +105,30 @@ test('source conflict immediately before consumption cancels reservation without
  expect((await extract(req())).status).toBe(409);expect(orchestrateExtraction).not.toHaveBeenCalled();
  expect(extractionServiceRpc).toHaveBeenCalledWith(expect.anything(),'cancel_menu_extraction_before_dispatch',expect.objectContaining({p_request_id:ID}));
 });
+test('slow preparation leaves insufficient provider budget and cancels before quota consumption',async()=>{
+ let now=1_000;jest.spyOn(Date,'now').mockImplementation(()=>now);
+ jest.mocked(renderExtractionSources).mockImplementation(async()=>{now+=30_000;return[{mime:'image/jpeg',base64:'AAAA'}];});
+ const response=await extract(req());expect(response.status).toBe(503);expect(await response.json()).toMatchObject({error:'preparation_timeout'});
+ expect(jest.mocked(extractionRpc).mock.calls.some(c=>c[1]==='mark_menu_extraction_started')).toBe(false);expect(orchestrateExtraction).not.toHaveBeenCalled();
+ expect(extractionServiceRpc).toHaveBeenCalledWith(expect.anything(),'cancel_menu_extraction_before_dispatch',expect.anything());
+});
+test('rendering has its own deadline without requiring a disconnected browser',async()=>{
+ jest.useFakeTimers();
+ jest.mocked(renderExtractionSources).mockImplementation(async(_sources,signal)=>new Promise((_resolve,reject)=>signal?.addEventListener('abort',()=>reject(new Error('renderer stopped')),{once:true})));
+ const pending=extract(req());await jest.advanceTimersByTimeAsync(25_001);
+ const response=await pending;expect(response.status).toBe(503);expect(await response.json()).toMatchObject({error:'preparation_timeout'});
+ expect(orchestrateExtraction).not.toHaveBeenCalled();expect(jest.mocked(extractionRpc).mock.calls.some(c=>c[1]==='mark_menu_extraction_started')).toBe(false);
+});
+test('lost start response closes the same claim as non_dispatch without provider call or automatic refund',async()=>{
+ jest.mocked(extractionRpc).mockImplementation((_a,name)=>{
+  if(name==='get_menu_extraction')return Promise.resolve(reads++===0?{state:'absent'}:{...done(),state:'failed',error:'non_dispatch'});
+  if(name==='mark_menu_extraction_started')return Promise.reject(new CarteRouteError('operation_uncertain',503));
+  return normalRpc(name);
+ });
+ const response=await extract(req());expect(response.status).toBe(200);expect(await response.json()).toMatchObject({state:'failed',error:'non_dispatch'});
+ expect(orchestrateExtraction).not.toHaveBeenCalled();expect(extractionServiceRpc).toHaveBeenCalledWith(expect.anything(),'finish_menu_extraction',expect.objectContaining({p_result:null,p_error:'non_dispatch',p_claim_id:expect.any(String)}));
+ expect(jest.mocked(extractionServiceRpc).mock.calls.some(c=>c[1]==='cancel_menu_extraction_before_dispatch')).toBe(false);
+});
 test('uncertain paid response is kept consumed and never cancelled or retried',async()=>{
  jest.mocked(orchestrateExtraction).mockRejectedValue(new Error('response lost'));
  jest.mocked(extractionRpc).mockImplementation((_a,name)=>name==='get_menu_extraction'?Promise.resolve(reads++===0?{state:'absent'}:{state:'started'}):normalRpc(name));
@@ -124,6 +149,10 @@ test('draft version conflict retains the operation ID and rejects replacement',a
  jest.mocked(extractionRpc).mockRejectedValue(new CarteRouteError('conflict',409));
  const response=await draft(req({requestId:ID,expectedVersion:1,draft:{menu:{title:'Stale'}}}));
  expect(response.status).toBe(409);expect(await response.json()).toMatchObject({requestId:ID});
+});
+test('saving a published draft reports HTTP409',async()=>{
+ jest.mocked(extractionRpc).mockRejectedValue(new CarteRouteError('conflict',409));
+ expect((await draft(req({requestId:ID,expectedVersion:2,draft:{menu:{title:'Already published'}}}))).status).toBe(409);
 });
 test('server recovery lists the caller operations without relying on local browser metadata',async()=>{
  jest.mocked(extractionRpc).mockResolvedValue([{id:ID,state:'succeeded'}]);

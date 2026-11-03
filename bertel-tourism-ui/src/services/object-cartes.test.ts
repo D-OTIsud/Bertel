@@ -1,5 +1,8 @@
 jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn() }));
 
+jest.mock('./restaurant-cartes', () => ({ mutateRestaurantCarte: jest.fn(), restaurantCarteOperation: jest.fn() }));
+import { mutateRestaurantCarte } from './restaurant-cartes';
+import { useSessionStore } from '../store/session-store';
 import { getSupabaseClient } from '../lib/supabase';
 import { linkObjectCarte, listObjectCartes, unlinkObjectCarte, updateObjectCarte } from './object-cartes';
 
@@ -31,45 +34,59 @@ function makeClient(opts: { roleId?: string | null; rows?: Record<string, unknow
   return { from: builder };
 }
 
-describe('object-cartes service (§06 P3)', () => {
-  beforeEach(() => jest.clearAllMocks());
+const row = { object_id: 'o1', document_id: 'doc9', role_id: 'role-carte', title: null,
+  valid_from: null, valid_to: null, position: 1, ref_document: { url: 'https://x.test/c.pdf', title: 'Carte', access_scope: 'public', valid_from: null, valid_to: null, storage_bucket: 'documents', storage_path: 'o1/c.pdf' } };
+const mockMutate = mutateRestaurantCarte as jest.Mock;
 
-  it('lists cartes with ref_document url + link-title fallback + validity', async () => {
-    mockGet.mockReturnValue(makeClient({
-      rows: [
-        { document_id: 'd1', title: 'Carte midi', valid_from: '2026-01-01', valid_to: '2026-12-31', position: 1, ref_document: { url: 'u1', title: 'fallback' } },
-        { document_id: 'd2', title: '', valid_from: null, valid_to: null, position: 2, ref_document: { url: 'u2', title: 'Carte du soir' } },
-      ],
-    }));
-    expect(await listObjectCartes('o1')).toEqual([
-      { documentId: 'd1', url: 'u1', title: 'Carte midi', validFrom: '2026-01-01', validTo: '2026-12-31', position: 1 },
-      { documentId: 'd2', url: 'u2', title: 'Carte du soir', validFrom: '', validTo: '', position: 2 },
-    ]);
+describe('object-cartes atomic office adapter', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    window.localStorage.clear();
+    useSessionStore.setState({ userId: 'office-1' });
+    mockMutate.mockResolvedValue([]);
   });
 
-  it('returns [] when the carte role is unseeded', async () => {
+  it('keeps the raw null baseline separate from the title fallback', async () => {
+    mockGet.mockReturnValue(makeClient({ rows: [row] }));
+    const [carte] = await listObjectCartes('o1');
+    expect(carte).toMatchObject({ title: 'Carte', validFrom: '', expected: { title: null, valid_from: null, document: row.ref_document } });
+    expect(carte.readId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('fails closed when the role catalog is missing', async () => {
     mockGet.mockReturnValue(makeClient({ roleId: null }));
-    expect(await listObjectCartes('o1')).toEqual([]);
+    await expect(listObjectCartes('o1')).rejects.toThrow(/indisponible/);
   });
 
-  it('links a carte with role_id + position', async () => {
+  it('attaches through the office-only writer and lets SQL assign the next position', async () => {
     const capture: Capture = {};
-    mockGet.mockReturnValue(makeClient({ capture }));
-    await linkObjectCarte('o1', 'doc9', 3);
-    expect(capture.inserted).toEqual({ object_id: 'o1', document_id: 'doc9', role_id: 'role-carte', position: 3 });
+    mockGet.mockReturnValue(makeClient({ rows: [row], capture }));
+    await linkObjectCarte('o1', 'doc9');
+    expect(mockMutate).toHaveBeenCalledWith('o1', expect.any(String), { write_contract: 'restaurant-carte-v1', action: 'link-existing', document_id: 'doc9' });
+    expect(capture.inserted).toBeUndefined();
   });
 
-  it('updates only provided fields, blanking empties to null', async () => {
+  it('sends only changed metadata with the original expected row and no direct DML', async () => {
     const capture: Capture = {};
-    mockGet.mockReturnValue(makeClient({ capture }));
-    await updateObjectCarte('o1', 'doc9', { title: 'Carte été', validTo: '' });
-    expect(capture.updated).toEqual({ title: 'Carte été', valid_to: null });
+    mockGet.mockReturnValue(makeClient({ rows: [row], capture }));
+    const [carte] = await listObjectCartes('o1');
+    await updateObjectCarte('o1', 'doc9', { title: 'Carte été', validTo: '' }, carte);
+    expect(mockMutate).toHaveBeenCalledWith('o1', expect.any(String), expect.objectContaining({ expected: carte.expected, patch: { title: 'Carte été', valid_to: null } }));
+    expect(capture.updated).toBeUndefined();
   });
 
-  it('unlinks by object + document', async () => {
-    const capture: Capture = {};
-    mockGet.mockReturnValue(makeClient({ capture }));
-    await unlinkObjectCarte('o1', 'doc9');
-    expect(capture.eqs).toMatchObject({ object_id: 'o1', document_id: 'doc9' });
+  it('refuses mutation without the previously loaded baseline', async () => {
+    await expect(updateObjectCarte('o1', 'doc9', { title: 'Changed' })).rejects.toThrow(/Rechargez/);
+    await expect(unlinkObjectCarte('o1', 'doc9')).rejects.toThrow(/Rechargez/);
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it('detaches only the observed card and reloads current rows after a receipt replay', async () => {
+    mockGet.mockReturnValue(makeClient({ rows: [row] }));
+    const [carte] = await listObjectCartes('o1');
+    mockMutate.mockResolvedValue([{ documentId: 'stale-receipt' }]);
+    mockGet.mockReturnValue(makeClient({ rows: [] }));
+    expect(await unlinkObjectCarte('o1', 'doc9', carte)).toEqual([]);
+    expect(mockMutate).toHaveBeenCalledWith('o1', expect.any(String), expect.objectContaining({ action: 'remove', document_id: 'doc9', expected: carte.expected }));
   });
 });

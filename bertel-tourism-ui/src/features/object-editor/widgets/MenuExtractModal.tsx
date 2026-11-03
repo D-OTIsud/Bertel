@@ -130,7 +130,7 @@ export function MenuExtractModal({
       let linked = false;
       try {
         const uploaded = await uploadDocument({ file, objectId, accessToken });
-        await linkObjectCarte(objectId, uploaded.documentId, Math.floor(performance.now()));
+        await linkObjectCarte(objectId, uploaded.documentId);
         linked = true;
         onCarteUploaded?.();
         // The upload itself remains useful even if AI was switched off while it

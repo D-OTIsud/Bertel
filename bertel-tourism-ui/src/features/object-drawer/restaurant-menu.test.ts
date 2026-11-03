@@ -81,6 +81,21 @@ describe('buildRestaurantMenuData', () => {
     expect(data.menus).toEqual([]);
   });
 
+  it('garde la projection publique quand un office charge aussi les menus cachés', () => {
+    const visible = { id: 'm-visible', name: 'Carte publique', is_active: true, visibility: 'public',
+      items: [{ id: 'dish', name: 'Cari', price: 0, currency: 'EUR', is_available: true }] };
+    const data = buildRestaurantMenuData({ menus: [
+      { ...visible, id: 'inactive', is_active: false, description: 'Ne doit pas suffire à le rendre visible' },
+      { ...visible, id: 'partners', visibility: 'partners' },
+      { ...visible, id: 'null-active', is_active: null },
+      visible,
+      { ...visible, id: 'legacy-visibility', visibility: null },
+    ] });
+    expect(data.menus.map(menu => menu.key)).toEqual(['m-visible', 'legacy-visibility']);
+    expect(data.menus[0].sections[0].dishes[0].key).toBe('dish');
+    expect(data.menus[0].sections[0].dishes[0].formattedPrice).toContain('0');
+  });
+
   it('porte régimes et allergènes', () => {
     const dish = firstDish(menuWith([{
       name: 'Cari', price: '6',

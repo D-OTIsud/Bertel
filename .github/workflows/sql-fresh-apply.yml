@@ -16,6 +16,11 @@ on:
     paths:
       - 'Base de donnée DLL et API/**.sql'
       - 'supabase/migrations/**.sql'
+      - 'supabase/cutovers/**.sql'
+      - 'tools/partner-api/**'
+      - 'bertel-tourism-ui/src/app/api/public/**'
+      - 'bertel-tourism-ui/src/lib/public-api.ts'
+      - 'bertel-tourism-ui/src/lib/partner-auth.ts'
       - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
@@ -25,6 +30,11 @@ on:
     paths:
       - 'Base de donnée DLL et API/**.sql'
       - 'supabase/migrations/**.sql'
+      - 'supabase/cutovers/**.sql'
+      - 'tools/partner-api/**'
+      - 'bertel-tourism-ui/src/app/api/public/**'
+      - 'bertel-tourism-ui/src/lib/public-api.ts'
+      - 'bertel-tourism-ui/src/lib/partner-auth.ts'
       - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
@@ -35,9 +45,19 @@ on:
 jobs:
   fresh-apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        contract-scenario: [fresh, upgrade]
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: bertel-tourism-ui/package-lock.json
 
       - name: Validate Tourinsoft Reunion contract inventory
         run: |
@@ -62,6 +82,14 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/bertel-fresh/supabase"
           cp supabase/config.toml "$RUNNER_TEMP/bertel-fresh/supabase/config.toml"
+          # Only the disposable API exposes the application's API schema here.
+          # Production configuration is untouched.
+          cat >> "$RUNNER_TEMP/bertel-fresh/supabase/config.toml" <<'TOML'
+
+          [api]
+          port = 54321
+          schemas = ["public", "storage", "graphql_public", "api"]
+          TOML
 
       - name: Start Supabase local database
         # Boots the Supabase-flavoured Postgres (DB image provides the auth/storage
@@ -72,7 +100,13 @@ jobs:
       - name: Apply the canonical fresh-install manifest (aborts on first error)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
+          CONTRACT_SCENARIO: ${{ matrix.contract-scenario }}
+        run: |
+          if [ "$CONTRACT_SCENARIO" = upgrade ]; then
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -v partner_portal_skip_read_fixes=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
+          else
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
+          fi
 
       - name: Smoke — assert the manifest produced the expected schema
         env:
@@ -510,6 +544,54 @@ jobs:
             exit 1
           fi
           echo "RGPD mirror alignment OK."
+
+      # Closing legacy DML is a separate release operation. Exercise it only after
+      # the historical/preparation assertions above, in this disposable database.
+      - name: Partner stay cutover and old-client rejection
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/partner_stay_policy_cas.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_stay_policy_cutover.sql"
+
+      - name: Reconstruct observed pre-R1 activity schema (upgrade scenario only)
+        if: matrix.contract-scenario == 'upgrade'
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          # This is the disposable local DB, never a remote project or production clone.
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c 'ALTER TABLE public.object_act DROP COLUMN equipment_provided_details'
+
+      - name: Capture real public SQL reference and apply the guarded upgrade
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+          CONTRACT_SCENARIO: ${{ matrix.contract-scenario }}
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_portal_api_contract.sql"
+          if [ "$CONTRACT_SCENARIO" = upgrade ]; then
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103065333_partner_portal_activity_api_contract.sql"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_activity_api_contract.sql"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103065350_partner_portal_restaurant_public_read_contract.sql"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103065411_partner_portal_regional_primary_openings.sql"
+          fi
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_activity_api_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_public_read_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_regional_primary_openings.sql"
+
+      - name: Install route test dependencies
+        working-directory: bertel-tourism-ui
+        run: npm ci --legacy-peer-deps
+
+      - name: Exercise actual Next routes with ephemeral service-role SQL and partner auth
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_api_route_contract.sql"
+          supabase status --workdir "$RUNNER_TEMP/bertel-fresh" -o json > "$RUNNER_TEMP/bertel-local-status.json"
+          node tools/partner-api/run-ephemeral-route-tests.mjs "$RUNNER_TEMP/bertel-local-status.json"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_portal_api_contract.sql"
 
       - name: Stop Supabase
         if: always()

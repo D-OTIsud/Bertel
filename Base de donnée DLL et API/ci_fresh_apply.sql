@@ -670,6 +670,9 @@ ROLLBACK;
 \ir ../supabase/migrations/20261103070417_object_menus_atomic_reconcile.sql
 \ir tests/test_object_menus_atomic_reconcile.sql
 
+\echo '== R3b preparation: complete canonical correction reads; privacy cutover remains separate =='
+\ir ../supabase/migrations/20261103083731_partner_portal_menu_stay_correction_read_scope.sql
+
 \echo '== C preparation: private card staging and atomic publication; actor rollout and DML cutover remain separate =='
 \ir ../supabase/migrations/20261103072138_partner_restaurant_cartes_contract.sql
 

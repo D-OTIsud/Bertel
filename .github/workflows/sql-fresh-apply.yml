@@ -620,6 +620,14 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_photo_stock.sql"
           python tools/partner-api/test-photo-stock-concurrency.py "$DB_URL"
 
+      - name: Menu privacy and complete canonical correction reads
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/partner_menu_read_privacy.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_menu_stay_correction_read.sql"
+
       - name: Reconstruct observed pre-R1 activity schema (upgrade scenario only)
         if: matrix.contract-scenario == 'upgrade'
         env:

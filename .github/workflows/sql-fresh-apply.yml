@@ -575,6 +575,7 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_stay_policy_cutover.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/object_menus_atomic_reconcile.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_menus_atomic_cutover.sql"
+          python tools/partner-api/test-write-concurrency.py "$DB_URL"
 
       - name: Restaurant card receipts, publication and targeted cutover
         env:

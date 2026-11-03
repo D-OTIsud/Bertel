@@ -67,10 +67,11 @@ export async function POST(req:NextRequest){
   const claim=await caller.rpc('start_portal_photo_analysis',{p_request_id:operationId,p_claim_id:claimId});
   if(claim.error){
    // A connection SQLSTATE can lose the COMMIT acknowledgement too. Keep class
-   // 08 uncertain, like fetch/abort failures (whose Supabase code is empty).
+   // 08 and PGRST001 uncertain, like fetch/abort failures (whose code is empty).
+   // PGRST001 matches the existing menu/gallery ambiguous-response policy.
    // Other SQLSTATE/PostgREST responses retain the existing refusal handling.
    const code=claim.error.code??'';
-   if(!code.startsWith('08')&&/^(?:[A-Z0-9]{5}|PGRST[A-Z0-9]{3})$/.test(code)){
+   if(!code.startsWith('08')&&code!=='PGRST001'&&/^(?:[A-Z0-9]{5}|PGRST[A-Z0-9]{3})$/.test(code)){
     startUnconfirmed=false;
     await cancelCreatedReservation();
     return failure(claim.error,operationId);

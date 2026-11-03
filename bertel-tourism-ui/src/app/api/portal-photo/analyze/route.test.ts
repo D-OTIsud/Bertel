@@ -131,6 +131,16 @@ test('SQLSTATE 08006 au démarrage peut perdre le COMMIT : incertain sans compen
  expect(callVisionExtraction).not.toHaveBeenCalled();
 });
 
+test('PGRST001 au démarrage suit la politique menus/galerie : incertain sans compensation ni dispatch',async()=>{
+ const base=rpc.getMockImplementation()!;
+ rpc.mockImplementation((name,args)=>name==='start_portal_photo_analysis'?Promise.resolve({data:null,error:{code:'PGRST001',message:'database connection response unavailable'}}):base(name,args));
+ const result=await POST(request());
+ expect(result.status).toBe(503);
+ expect(await result.json()).toMatchObject({requestId:REQ,state:'uncertain',assessment:null,publication:'office_review'});
+ expect(service.mock.calls.filter(([name])=>name==='finish_portal_photo_analysis')).toHaveLength(0);
+ expect(callVisionExtraction).not.toHaveBeenCalled();
+});
+
 test('une exception réseau au démarrage garde aussi la réservation incertaine',async()=>{
  const base=rpc.getMockImplementation()!;
  rpc.mockImplementation((name,args)=>name==='start_portal_photo_analysis'?Promise.reject(new TypeError('fetch failed')):base(name,args));

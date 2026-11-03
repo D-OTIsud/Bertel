@@ -60,6 +60,10 @@ test('la vingt-et-unième réservation est refusée avant toute écriture Storag
 test('un ancien client sans identifiant de dépôt ne contourne pas la réservation',async()=>{
  const form=photoForm();form.delete('upload_id');expect((await uploadPhoto(req({},form))).status).toBe(400);expect(upload).not.toHaveBeenCalled();
 });
+test('un même dépôt expiré ne crée pas de nouvelle copie et demande un nouveau choix explicite',async()=>{
+ rpc.mockImplementation(async(name)=>name==='portal_photo_upload_context'?{data:{actorId:ACTOR},error:null}:{data:null,error:{code:'PT409',details:'reservation_expired'}});
+ const result=await uploadPhoto(req({},photoForm()));expect(result.status).toBe(409);expect(await result.json()).toEqual({error:'upload_expired'});expect(upload).not.toHaveBeenCalled();
+});
 test('une réponse Storage perdue est reprise seulement si les octets privés correspondent',async()=>{
  upload.mockResolvedValue({error:{message:'already exists'}});
  expect((await uploadPhoto(req({},photoForm()))).status).toBe(201);expect(download).toHaveBeenCalledWith(`portal-photos/${ACTOR}/${DOC}.jpg`);expect(remove).not.toHaveBeenCalled();

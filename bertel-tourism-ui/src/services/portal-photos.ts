@@ -101,6 +101,8 @@ async function request(
     throw new Error(
       data.error === "photo_limit"
         ? "Votre galerie peut contenir vingt photos. Retirez une photo ou choisissez un remplacement."
+        : data.error === "upload_expired"
+          ? "Ce dépôt a expiré. Annulez cet ajout puis choisissez de nouveau la photo."
         : data.error === "upload_conflict"
           ? "Ce dépôt correspond déjà à un autre fichier ou remplacement. Actualisez la galerie."
         : response.status === 413

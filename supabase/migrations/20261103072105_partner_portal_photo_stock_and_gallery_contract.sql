@@ -35,8 +35,9 @@ LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog,public AS $funct
  FROM public.ref_document d
  CROSS JOIN LATERAL (
    SELECT COALESCE(bool_or(pc.status='pending'),false) AS pending,
-          COALESCE(bool_or(pc.status<>'pending' AND pc.submitted_at>=
-            COALESCE(NULLIF(d.extra->>'slot_reserved_at','')::timestamptz,d.created_at)),false) AS resolved
+          COALESCE(bool_or(pc.status<>'pending' AND CASE
+            WHEN d.extra->>'slot_contract'='photo-stock-v1' THEN pc.id::text=d.extra->>'slot_pending_change_id'
+            ELSE pc.submitted_at>=COALESCE(NULLIF(d.extra->>'slot_reserved_at','')::timestamptz,d.created_at) END),false) AS resolved
    FROM public.pending_change pc
    WHERE pc.object_id=p_object_id AND pc.metadata->>'rpc'='publish_portal_photo_additions'
      AND EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(pc.payload->'additions','[]')) a
@@ -71,6 +72,57 @@ BEGIN
  END IF;
 END;
 $function$;
+
+CREATE OR REPLACE FUNCTION internal.gallery_arm_photo_reservation(p_object_id text,p_document_id uuid,p_replace_media_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,public,internal AS $function$
+DECLARE v_doc public.ref_document%ROWTYPE;v_first timestamptz;
+BEGIN
+ -- Callers already hold object -> receipt, or submission -> proposal -> object -> receipt.
+ SELECT * INTO v_doc FROM public.ref_document WHERE id=p_document_id FOR UPDATE;
+ IF EXISTS(SELECT 1 FROM public.pending_change pc WHERE pc.object_id=p_object_id AND pc.status='pending'
+   AND pc.metadata->>'rpc'='publish_portal_photo_additions' AND EXISTS(
+    SELECT 1 FROM jsonb_array_elements(COALESCE(pc.payload->'additions','[]')) a WHERE a->>'upload_id'=p_document_id::text)) THEN RETURN; END IF;
+ v_first:=COALESCE(NULLIF(v_doc.extra->>'slot_first_reserved_at','')::timestamptz,
+   NULLIF(v_doc.extra->>'slot_reserved_at','')::timestamptz,v_doc.created_at);
+ IF v_first+interval '24 hours'<=now() THEN
+  RAISE EXCEPTION 'Ce dépôt a expiré. Choisissez à nouveau la photo pour la déposer.' USING ERRCODE='PT409',DETAIL='reservation_expired';
+ END IF;
+ UPDATE public.ref_document SET extra=COALESCE(extra,'{}')||jsonb_build_object(
+  'slot_contract','photo-stock-v1','slot_state',CASE WHEN extra->>'upload_complete'='true' OR extra->>'slot_contract' IS DISTINCT FROM 'photo-stock-v1' THEN 'uploaded' ELSE 'reserved' END,
+  'upload_complete',CASE WHEN extra->>'slot_contract'='photo-stock-v1' THEN COALESCE(extra->'upload_complete','false'::jsonb)
+    ELSE COALESCE(extra->'upload_complete','true'::jsonb) END,
+  'slot_replace_media_id',p_replace_media_id,'slot_first_reserved_at',v_first,'slot_reserved_at',v_first,
+  'slot_reserved_until',v_first+interval '24 hours','slot_pending_change_id',NULL) WHERE id=p_document_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION internal.gallery_bind_photo_proposal()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,internal,pg_temp AS $function$
+DECLARE v_item jsonb;v_id uuid;v_published integer;
+BEGIN
+ IF NEW.status<>'pending' OR NEW.metadata->>'rpc' IS DISTINCT FROM 'publish_portal_photo_additions' THEN RETURN NEW; END IF;
+ PERFORM 1 FROM public.object WHERE id=NEW.object_id FOR UPDATE;
+ FOR v_item IN SELECT value FROM jsonb_array_elements(COALESCE(NEW.payload->'additions','[]')) LOOP
+  v_id:=(v_item->>'upload_id')::uuid;
+  IF EXISTS(SELECT 1 FROM public.pending_change pc WHERE pc.id<>NEW.id AND pc.object_id=NEW.object_id AND pc.status='pending'
+    AND pc.metadata->>'rpc'='publish_portal_photo_additions' AND EXISTS(
+      SELECT 1 FROM jsonb_array_elements(COALESCE(pc.payload->'additions','[]')) a WHERE a->>'upload_id'=v_id::text)) THEN
+   RAISE EXCEPTION 'Cette photo est déjà en relecture.' USING ERRCODE='PT409';
+  END IF;
+  UPDATE public.ref_document d SET extra=COALESCE(d.extra,'{}')||jsonb_build_object('slot_pending_change_id',NEW.id)
+   WHERE d.id=v_id AND d.extra->>'source'='portal_photo' AND d.extra->>'object_id'=NEW.object_id
+    AND EXISTS(SELECT 1 FROM public.actor_document a WHERE a.document_id=d.id AND a.created_by=NEW.submitted_by);
+  IF NOT FOUND THEN RAISE EXCEPTION 'Photo proposée inaccessible' USING ERRCODE='42501'; END IF;
+ END LOOP;
+ -- Check the state AFTER the actual proposal exists, not just the earlier validator.
+ -- A pre-existing gallery above twenty may be retained, never increased by a proposal.
+ v_published:=internal.gallery_published_photo_count(NEW.object_id);
+ PERFORM internal.gallery_assert_photo_capacity(NEW.object_id,greatest(20,v_published),v_published);
+ RETURN NEW;
+END;
+$function$;
+DROP TRIGGER IF EXISTS gallery_bind_photo_proposal ON public.pending_change;
+CREATE TRIGGER gallery_bind_photo_proposal AFTER INSERT ON public.pending_change FOR EACH ROW EXECUTE FUNCTION internal.gallery_bind_photo_proposal();
 
 CREATE OR REPLACE FUNCTION api.reserve_portal_photo_upload(
  p_object_id text,p_upload_id uuid,p_replace_media_id uuid DEFAULT NULL)
@@ -123,13 +175,10 @@ BEGIN
    VALUES(p_upload_id,'storage://actor-documents/'||v_path,'Photo','actor-documents',v_path,'crm_private',
     jsonb_build_object('source','portal_photo','object_id',p_object_id,'rights_confirmed',true,
       'rights_confirmed_at',now(),'slot_contract','photo-stock-v1','slot_state','reserved',
-      'slot_replace_media_id',p_replace_media_id,'slot_reserved_at',now(),'slot_reserved_until',now()+interval '24 hours'));
+      'slot_replace_media_id',p_replace_media_id,'slot_first_reserved_at',now(),'slot_reserved_at',now(),'slot_reserved_until',now()+interval '24 hours'));
   INSERT INTO public.actor_document(actor_id,document_id,title,created_by) VALUES(v_actor,p_upload_id,'Photo',auth.uid());
  ELSE
-  UPDATE public.ref_document SET extra=COALESCE(extra,'{}')||jsonb_build_object(
-    'slot_contract','photo-stock-v1','slot_state',CASE WHEN extra->>'upload_complete'='true' THEN 'uploaded' ELSE 'reserved' END,
-    'slot_replace_media_id',p_replace_media_id,'slot_reserved_at',now(),'slot_reserved_until',now()+interval '24 hours')
-   WHERE id=p_upload_id;
+  PERFORM internal.gallery_arm_photo_reservation(p_object_id,p_upload_id,p_replace_media_id);
  END IF;
  PERFORM internal.gallery_assert_photo_capacity(p_object_id,v_before,v_published);
  SELECT * INTO v_doc FROM public.ref_document WHERE id=p_upload_id;
@@ -210,6 +259,7 @@ $function$;
 
 REVOKE ALL ON FUNCTION internal.gallery_published_photo_count(text),internal.gallery_photo_reservations(text),
  internal.gallery_photo_usage(text),internal.gallery_assert_photo_capacity(text,integer,integer) FROM PUBLIC,anon,authenticated;
+REVOKE ALL ON FUNCTION internal.gallery_arm_photo_reservation(text,uuid,uuid),internal.gallery_bind_photo_proposal() FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION api.reserve_portal_photo_upload(text,uuid,uuid),
  api.complete_portal_photo_upload(uuid,uuid,text,text,integer,integer),api.cancel_portal_photo_upload(text,uuid) FROM PUBLIC,anon,authenticated;
 -- reserve/cancel remain unavailable to ordinary clients until the targeted gallery cutover.
@@ -268,6 +318,10 @@ BEGIN
    v_json:=to_jsonb(v_current);
    -- A lost acknowledgement may be retried, without touching another field changed meanwhile.
    IF NOT EXISTS(SELECT 1 FROM jsonb_each(v_changes) x WHERE v_json->x.key IS DISTINCT FROM x.value) THEN CONTINUE; END IF;
+   IF v_changes ? 'url' AND v_changes->'url' IS DISTINCT FROM v_json->'url'
+      AND (jsonb_typeof(v_changes->'url') IS DISTINCT FROM 'string' OR COALESCE(v_changes->>'url','')!~*'^https?://[^[:space:]/?#]+([/?#][^[:space:]]*)?$') THEN
+    RAISE EXCEPTION 'Saisissez une URL HTTP ou HTTPS absolue.' USING ERRCODE='22023';
+   END IF;
    IF jsonb_typeof(v_expected) IS DISTINCT FROM 'object' OR v_expected->>'id' IS DISTINCT FROM v_id::text
      OR EXISTS(SELECT 1 FROM jsonb_object_keys(v_changes) k WHERE NOT (v_expected ? k))
      OR EXISTS(SELECT 1 FROM jsonb_each(v_expected) x WHERE v_json->x.key IS DISTINCT FROM x.value) THEN
@@ -292,6 +346,9 @@ BEGIN
   ELSE
    IF jsonb_typeof(v_expected) IS DISTINCT FROM 'null' OR NOT (v_changes ?& ARRAY['media_type_id','url']) THEN
     RAISE EXCEPTION 'Le média a changé. Rechargez la galerie.' USING ERRCODE='PT409';
+   END IF;
+   IF jsonb_typeof(v_changes->'url') IS DISTINCT FROM 'string' OR COALESCE(v_changes->>'url','')!~*'^https?://[^[:space:]/?#]+([/?#][^[:space:]]*)?$' THEN
+    RAISE EXCEPTION 'Saisissez une URL HTTP ou HTTPS absolue.' USING ERRCODE='22023';
    END IF;
    v_next:=jsonb_populate_record(NULL::public.media,v_changes);
    IF v_next.is_main AND EXISTS(SELECT 1 FROM public.media m WHERE m.object_id=p_object_id AND m.place_id IS NULL
@@ -367,7 +424,7 @@ DECLARE v_function regprocedure:='internal.validate_portal_photo_additions(text,
 BEGIN
  SELECT md5(replace(p.prosrc,E'\r\n',E'\n')),pg_get_functiondef(p.oid),jsonb_build_object('owner',p.proowner,'acl',to_jsonb(p.proacl),'config',to_jsonb(p.proconfig),'definer',p.prosecdef,'strict',p.proisstrict,'volatility',p.provolatile,'parallel',p.proparallel,'returns',p.prorettype,'set',p.proretset,'args',p.proargtypes::text)
  INTO v_md5,v_definition,v_meta FROM pg_proc p WHERE p.oid=v_function;
- IF v_md5='0a5d60aeb43d8625e8aeb331b0e784ef' THEN RETURN; END IF;
+ IF v_md5='f2141450982dafb04be58f5967913aca' THEN RETURN; END IF;
  IF v_md5 IS DISTINCT FROM 'b30da0642a74f33f2625eb7d38d3a239' THEN RAISE EXCEPTION 'R5: unreviewed internal.validate_portal_photo_additions source %',v_md5; END IF;
  v_definition:=replace(v_definition,E'\r\n',E'\n');
  v_before:=$r5_before_1$v_replace uuid;$r5_before_1$;
@@ -404,19 +461,16 @@ BEGIN
   END LOOP;
 END $r5_before_5$;
  v_after:=$r5_after_5$    END IF;
-    -- Preserve pre-R5 pending receipts; bind their replacement under the same lock.
-    UPDATE public.ref_document SET extra=COALESCE(extra,'{}')||jsonb_build_object(
-      'slot_contract','photo-stock-v1','slot_state','uploaded',
-      'upload_complete',COALESCE(extra->'upload_complete','true'::jsonb),'slot_replace_media_id',v_replace,
-      'slot_reserved_at',COALESCE(extra->'slot_reserved_at',to_jsonb(now())),
-      'slot_reserved_until',now()+interval '24 hours') WHERE id=v_id;
+    -- Rearm a resolved receipt under the same object lock; the first reservation
+    -- deadline never moves. The AFTER INSERT trigger binds the actual proposal.
+    PERFORM internal.gallery_arm_photo_reservation(p_object_id,v_id,v_replace);
   END LOOP;
   PERFORM internal.gallery_assert_photo_capacity(p_object_id,v_previous_usage,v_previous_published);
 END $r5_after_5$;
  IF (length(v_definition)-length(replace(v_definition,v_before,'')))/length(v_before)<>1 THEN RAISE EXCEPTION 'R5: internal.validate_portal_photo_additions anchor 5 differs'; END IF;
  v_definition:=replace(v_definition,v_before,v_after);
  EXECUTE v_definition;
- IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=v_function) IS DISTINCT FROM '0a5d60aeb43d8625e8aeb331b0e784ef' OR (SELECT jsonb_build_object('owner',p.proowner,'acl',to_jsonb(p.proacl),'config',to_jsonb(p.proconfig),'definer',p.prosecdef,'strict',p.proisstrict,'volatility',p.provolatile,'parallel',p.proparallel,'returns',p.prorettype,'set',p.proretset,'args',p.proargtypes::text) FROM pg_proc p WHERE p.oid=v_function) IS DISTINCT FROM v_meta THEN RAISE EXCEPTION 'R5: internal.validate_portal_photo_additions target or attributes differ'; END IF;
+ IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=v_function) IS DISTINCT FROM 'f2141450982dafb04be58f5967913aca' OR (SELECT jsonb_build_object('owner',p.proowner,'acl',to_jsonb(p.proacl),'config',to_jsonb(p.proconfig),'definer',p.prosecdef,'strict',p.proisstrict,'volatility',p.provolatile,'parallel',p.proparallel,'returns',p.prorettype,'set',p.proretset,'args',p.proargtypes::text) FROM pg_proc p WHERE p.oid=v_function) IS DISTINCT FROM v_meta THEN RAISE EXCEPTION 'R5: internal.validate_portal_photo_additions target or attributes differ'; END IF;
 END;
 $validate_portal_photo_additions_stock$;
 

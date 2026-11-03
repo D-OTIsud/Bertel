@@ -643,6 +643,34 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_api_full_benchmark.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_portal_api_contract.sql"
 
+      - name: Install schema documentation tool
+        if: matrix.contract-scenario == 'fresh'
+        uses: k1LoW/setup-tbls@7399c439510bac2907bc5d25da371b8b9875f3ee # v1
+        with:
+          version: v1.96.1
+
+      - name: Rebuild the isolated schema knowledge graph
+        if: matrix.contract-scenario == 'fresh'
+        env:
+          TBLS_DSN: postgres://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/assert_partner_api_ephemeral.sql"
+          SNAPSHOT="$RUNNER_TEMP/partner-api-evidence/schema-isolated"
+          mkdir -p "$SNAPSHOT/db-graph-out"
+          sed "s|^docPath: dbdoc$|docPath: $SNAPSHOT/dbdoc|" tools/db-graph/.tbls.yml > "$RUNNER_TEMP/tbls-isolated.yml"
+          tbls doc -c "$RUNNER_TEMP/tbls-isolated.yml"
+          tbls out -t json -o "$SNAPSHOT/db-graph-out/schema_tbls.json" -c "$RUNNER_TEMP/tbls-isolated.yml"
+          psql "$DB_URL" -tA -v ON_ERROR_STOP=1 -f tools/db-graph/db_supplement_extract.sql > "$SNAPSHOT/db-graph-out/catalog_extra.json"
+          python tools/db-graph/db_graph.py --snapshot-root "$SNAPSHOT"
+          cat > "$SNAPSHOT/PROVENANCE.txt" <<EOF
+          Source: disposable Supabase 17, canonical manifest plus tested cutovers.
+          Commit: $GITHUB_SHA
+          Scenario: fresh
+          This is the proposed release schema, not the production catalog.
+          EOF
+
       - name: Capture isolated reader definition and attributes for review
         if: always()
         env:

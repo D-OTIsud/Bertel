@@ -1,6 +1,7 @@
 """CLI: read db-graph-out/{schema_tbls.json, catalog_extra.json} + the .sql files, build the unified
 graph, and emit graph.json + graph.html + FUNCTIONS/POLICIES/TYPES/DB_AGENT_INDEX markdown.
 Strips function bodies from everything it writes."""
+import argparse
 import glob
 import json
 import os
@@ -63,6 +64,16 @@ def _load_live_reference_extract(g, extra):
 
 
 def main():
+    global OUT, DOCS
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--snapshot-root", help="Separate root for an isolated schema snapshot; leaves the repository's live catalog untouched")
+    args = parser.parse_args()
+    if args.snapshot_root:
+        snapshot_root = os.path.abspath(args.snapshot_root)
+        if snapshot_root == ROOT:
+            parser.error("An isolated snapshot must use a separate output directory")
+        OUT = os.path.join(snapshot_root, "db-graph-out")
+        DOCS = os.path.join(snapshot_root, "docs")
     if not (os.path.exists(os.path.join(OUT, "schema_tbls.json")) and
             os.path.exists(os.path.join(OUT, "catalog_extra.json"))):
         sys.exit("Missing db-graph-out/schema_tbls.json or catalog_extra.json — run tbls + the gap extract first (see tools/db-graph/README.md).")
@@ -70,7 +81,9 @@ def main():
     extra = _read("catalog_extra.json")
     sql_paths = glob.glob(os.path.join(ROOT, "Base de donnée DLL et API", "*.sql"))
     reference_paths = _reference_sql_paths(sql_paths)
-    g = build_graph(tbls, extra, sql_paths)
+    # The catalog is authoritative; incremental migrations supply source comments.
+    schema_paths = sql_paths + glob.glob(os.path.join(ROOT, "supabase", "migrations", "*.sql"))
+    g = build_graph(tbls, extra, schema_paths)
     seed_refs = _make_sources_relative(extract_reference_values(reference_paths))
     live_refs, live_note = _load_live_reference_extract(g, extra)
     refs = merge_reference_extracts(seed_refs, live_refs)

@@ -101,10 +101,14 @@ jobs:
           cat > "$RUNNER_TEMP/bertel-fresh/supabase/seed.sql" <<'SQL'
           CREATE SCHEMA IF NOT EXISTS api;
           -- Independent evidence of the disposable bootstrap, checked by fixtures.
-          CREATE SCHEMA bertel_ci_fixture;
-          REVOKE ALL ON SCHEMA bertel_ci_fixture FROM PUBLIC;
-          CREATE TABLE bertel_ci_fixture.bootstrap (purpose text NOT NULL);
-          INSERT INTO bertel_ci_fixture.bootstrap VALUES ('partner-contract-local-only');
+          DO $bootstrap$
+          BEGIN
+            CREATE SCHEMA bertel_ci_fixture;
+            REVOKE ALL ON SCHEMA bertel_ci_fixture FROM PUBLIC;
+            CREATE TABLE bertel_ci_fixture.bootstrap (purpose text NOT NULL);
+            INSERT INTO bertel_ci_fixture.bootstrap VALUES ('partner-contract-local-only');
+          END;
+          $bootstrap$;
           SQL
 
       - name: Start Supabase local database

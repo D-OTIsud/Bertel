@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, FileText, Trash2 } from 'lucide-react';
 import { Field, Input } from '../primitives';
 import { getSupabaseClient } from '../../../lib/supabase';
@@ -42,19 +42,28 @@ export function MenuPdfCartes({ objectId, canEdit, reloadToken = 0, hideUploader
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const current = useRef<CarteDocument[]>([]);
+  const generation = useRef(0);
+  const writes = useRef<Promise<void>>(Promise.resolve());
+  function show(next: CarteDocument[]) { current.current = next; setCartes(next); }
 
   async function reload() {
+    const epoch = generation.current;
     try {
-      setCartes(await listObjectCartes(objectId));
+      const rows = await listObjectCartes(objectId);
+      if (epoch !== generation.current) return;
+      show(rows);
       setError(null);
     } catch (err) {
+      if (epoch !== generation.current) return;
       setError(strictErrorMessage(err, 'Chargement des cartes impossible.'));
     } finally {
-      setLoading(false);
+      if (epoch === generation.current) setLoading(false);
     }
   }
 
   useEffect(() => {
+    generation.current += 1;
     let alive = true;
     const client = getSupabaseClient();
     if (client) {
@@ -63,41 +72,70 @@ export function MenuPdfCartes({ objectId, canEdit, reloadToken = 0, hideUploader
       });
     }
     void reload();
-    return () => { alive = false; };
+    return () => { alive = false; generation.current += 1; };
     // objectId + reloadToken drive reloads; reload is stable enough for this immediate-write surface.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [objectId, reloadToken]);
 
   function patchLocal(documentId: string, patch: Partial<CarteDocument>) {
-    setCartes((list) => list.map((c) => (c.documentId === documentId ? { ...c, ...patch } : c)));
+    show(current.current.map((c) => (c.documentId === documentId ? { ...c, ...patch } : c)));
   }
 
-  async function commit(documentId: string, patch: { title?: string; validFrom?: string; validTo?: string }) {
-    try {
-      await updateObjectCarte(objectId, documentId, patch);
+  function enqueue(action: () => Promise<void>) {
+    if (!canEdit) return;
+    const epoch = generation.current;
+    writes.current = writes.current.then(async () => {
+      if (epoch !== generation.current) return;
+      try { await action(); } catch (err) {
+        if (epoch === generation.current) setError(strictErrorMessage(err, 'Enregistrement impossible. Votre saisie est conservée.'));
+      }
+    });
+  }
+
+  function commit(documentId: string, patch: { title?: string; validFrom?: string; validTo?: string }) {
+    const epoch = generation.current;
+    enqueue(async () => {
+      const before = current.current.find(row => row.documentId === documentId);
+      const rows = await updateObjectCarte(objectId, documentId, patch, before);
+      if (epoch !== generation.current || !rows) return;
+      const server = rows.find(row => row.documentId === documentId);
+      if (!server) throw new Error('La carte a été retirée entre-temps. Rechargez les cartes ; votre saisie est conservée.');
+      const raw = before?.expected ?? {};
+      const doc = raw.document as Record<string, unknown> | undefined;
+      const old = { title: String(raw.title ?? doc?.title ?? ''), validFrom: String(raw.valid_from ?? ''), validTo: String(raw.valid_to ?? '') };
+      let conflict = false;
+      show(current.current.map(row => {
+        if (row.documentId !== documentId) return row;
+        const next = { ...row, expected: server.expected, readId: server.readId };
+        for (const key of ['title', 'validFrom', 'validTo'] as const) {
+          if (row[key] === patch[key] || row[key] === old[key]) next[key] = server[key];
+          else if (server[key] !== old[key] && server[key] !== row[key] && server[key] !== patch[key]) conflict = true;
+        }
+        return conflict ? { ...next, expected: row.expected, readId: row.readId } : next;
+      }));
+      if (conflict) throw new Error('Une autre modification concerne votre saisie. Rechargez les cartes pour la vérifier ; votre texte est conservé.');
       setError(null);
-    } catch (err) {
-      setError(strictErrorMessage(err, 'Enregistrement impossible.'));
-      void reload();
-    }
+    });
   }
 
   async function onUploaded(documentId: string) {
-    try {
-      await linkObjectCarte(objectId, documentId, cartes.length + 1);
-      await reload();
-    } catch (err) {
-      setError(strictErrorMessage(err, 'Rattachement de la carte impossible.'));
-    }
+    const epoch = generation.current;
+    enqueue(async () => {
+      const rows = await linkObjectCarte(objectId, documentId);
+      if (epoch !== generation.current) return;
+      show([...current.current, ...rows.filter(row => !current.current.some(local => local.documentId === row.documentId))]);
+      setError(null);
+    });
   }
 
   async function remove(documentId: string) {
-    try {
-      await unlinkObjectCarte(objectId, documentId);
-      await reload();
-    } catch (err) {
-      setError(strictErrorMessage(err, 'Suppression impossible.'));
-    }
+    const epoch = generation.current;
+    enqueue(async () => {
+      await unlinkObjectCarte(objectId, documentId, current.current.find(row => row.documentId === documentId));
+      if (epoch !== generation.current) return;
+      show(current.current.filter(row => row.documentId !== documentId));
+      setError(null);
+    });
   }
 
   return (

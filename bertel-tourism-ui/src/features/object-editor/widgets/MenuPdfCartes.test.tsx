@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 jest.mock('../../../services/object-cartes', () => ({
   listObjectCartes: jest.fn(),
@@ -37,7 +37,7 @@ describe('MenuPdfCartes (§06 P3)', () => {
     expect(screen.getByRole('link', { name: /Voir le PDF Carte midi/ })).toHaveAttribute('href', 'https://x.test/c.pdf');
 
     fireEvent.click(screen.getByRole('button', { name: /Supprimer la carte Carte midi/ }));
-    await waitFor(() => expect(mockUnlink).toHaveBeenCalledWith('o1', 'd1'));
+    await waitFor(() => expect(mockUnlink).toHaveBeenCalledWith('o1', 'd1', expect.objectContaining({ documentId: 'd1' })));
   });
 
   it('commits a validity edit on blur', async () => {
@@ -48,7 +48,38 @@ describe('MenuPdfCartes (§06 P3)', () => {
     const from = await screen.findByLabelText('Valide du');
     fireEvent.change(from, { target: { value: '2026-03-01' } });
     fireEvent.blur(from);
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith('o1', 'd1', { validFrom: '2026-03-01' }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith('o1', 'd1', { validFrom: '2026-03-01' }, expect.objectContaining({ documentId: 'd1' })));
+  });
+
+  it('keeps typed values and the original baseline after a conflict', async () => {
+    const expected = { object_id: 'o1', document_id: 'd1', title: 'Carte' };
+    mockList.mockResolvedValue([{ documentId: 'd1', url: 'u', title: 'Carte', validFrom: '', validTo: '', position: 1, expected }]);
+    mockUpdate.mockRejectedValue(new Error('La carte a changé.'));
+    render(<MenuPdfCartes objectId="o1" canEdit />);
+    const title = await screen.findByDisplayValue('Carte');
+    fireEvent.change(title, { target: { value: 'Mon texte conservé' } });
+    fireEvent.blur(title);
+    expect(await screen.findByRole('alert')).toHaveTextContent('La carte a changé');
+    expect(title).toHaveValue('Mon texte conservé');
+    expect(mockList).toHaveBeenCalledTimes(1);
+    expect(mockUpdate.mock.calls[0][3].expected).toEqual(expected);
+  });
+
+  it('does not overwrite typing that continues while a save is in flight', async () => {
+    const initial = { documentId: 'd1', url: 'u', title: 'Carte', validFrom: '', validTo: '', position: 1,
+      expected: { object_id: 'o1', document_id: 'd1', title: 'Carte', valid_from: null, valid_to: null } };
+    mockList.mockResolvedValue([initial]);
+    let finish!: (rows: typeof initial[]) => void;
+    mockUpdate.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+    render(<MenuPdfCartes objectId="o1" canEdit />);
+    const title = await screen.findByDisplayValue('Carte');
+    fireEvent.change(title, { target: { value: 'Envoyé' } });
+    fireEvent.blur(title);
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    fireEvent.change(title, { target: { value: 'Encore en rédaction' } });
+    await act(async () => { finish([{ ...initial, title: 'Envoyé', expected: { ...initial.expected, title: 'Envoyé' } }]); });
+    expect(title).toHaveValue('Encore en rédaction');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('hides edit controls when read-only', async () => {

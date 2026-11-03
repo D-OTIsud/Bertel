@@ -28,7 +28,7 @@ def sql(source, expected_error=None):
                             capture_output=True, env=env, timeout=30)
     if expected_error is not None:
         if result.returncode == 0 or expected_error not in result.stderr:
-            raise RuntimeError("Expected preparation rejection was not observed: " + expected_error)
+            raise RuntimeError("Expected guarded rejection was not observed: " + expected_error)
     elif result.returncode:
         raise RuntimeError(result.stderr.strip())
     return result.stdout.strip()
@@ -70,12 +70,57 @@ REVOKE EXECUTE ON FUNCTION api.publish_portal_menus(text,jsonb,uuid),
 COMMIT;
 """
 
+
+def cutover_rejects_definition_drift(signature, transform):
+    original = sql("SELECT pg_get_functiondef('" + signature + "'::regprocedure);")
+    try:
+        sql(transform(original))
+        sql(preparation, "M preparation source/attributes drift: " + signature)
+        sql(m_cutover, "M cutover source/attributes drift: " + signature)
+        sql(off + closed_dml)
+    finally:
+        sql(original)
+
+
+def change_publication_body(original):
+    if original.count("\nBEGIN\n") != 1:
+        raise RuntimeError("Unexpected publication façade shape in drift fixture")
+    return original.replace("\nBEGIN\n", "\nBEGIN\n  -- m-cutover-publication-drift fixture\n", 1)
+
+
+def change_publication_default(original):
+    expected = "p_extraction_operation_id uuid DEFAULT NULL::uuid"
+    if original.count(expected) != 1:
+        raise RuntimeError("Unexpected publication default in drift fixture")
+    return original.replace(expected,
+                            "p_extraction_operation_id uuid DEFAULT '10000000-0000-4000-8000-000000000001'::uuid", 1)
+
+
 # No outer BEGIN: both real cutover files own and COMMIT their transactions.
 sql(off)
 original_definition = None
 try:
     sql(r4_cutover)
     sql(closed_dml)
+    # A later code, configuration or privilege change cannot bypass preparation's proof.
+    cutover_rejects_definition_drift("api.publish_portal_menus(text,jsonb,uuid)", change_publication_body)
+    cutover_rejects_definition_drift("api.publish_portal_menus(text,jsonb,uuid)", change_publication_default)
+    publication_definition = sql("SELECT pg_get_functiondef('api.publish_portal_menus(text,jsonb,uuid)'::regprocedure);")
+    try:
+        sql("ALTER FUNCTION api.publish_portal_menus(text,jsonb,uuid) SET lock_timeout='10s';")
+        sql(m_cutover, "M cutover source/attributes drift: api.publish_portal_menus(text,jsonb,uuid)")
+        sql(off + closed_dml)
+    finally:
+        sql(publication_definition)
+    try:
+        sql("GRANT EXECUTE ON FUNCTION internal.apply_object_menus_patch(text,jsonb) TO authenticated;")
+        sql(m_cutover, "M cutover ACL drift: internal.apply_object_menus_patch(text,jsonb)")
+        sql(off + closed_dml)
+    finally:
+        sql("REVOKE EXECUTE ON FUNCTION internal.apply_object_menus_patch(text,jsonb) FROM authenticated;")
+    sql(m_cutover)
+    sql(active + closed_dml)
+    # Repeating an exact activation also checks all nine sources/attributes/ACL.
     sql(m_cutover)
     sql(active + closed_dml)
     sql(preparation, "Do not replay M preparation after activation")
@@ -101,4 +146,4 @@ finally:
     sql(deactivate)
     sql(off + closed_dml)
 
-print("PASS M real cutover, OFF restoration, active replay guard and source drift guard")
+print("PASS M real cutover, OFF restoration, activation source/attribute/ACL guards and exact replay")

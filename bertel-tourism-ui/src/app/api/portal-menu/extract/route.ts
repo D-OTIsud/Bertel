@@ -18,13 +18,14 @@ const request=z.object({
  targetMenuId:z.string().uuid().nullable().default(null),menuTitle:z.string().max(180).default(''),lang:z.string().regex(/^[a-zA-Z-]{2,10}$/).default('fr'),
 }).strict();
 const terminal=['started','uncertain','succeeded','failed','cancelled'];
+const MIN_PROVIDER_BUDGET_MS=30_000;
 export async function POST(req:NextRequest){
  const deadline=Date.now()+55_000;
  const auth=await authenticated(req);if(!auth.ok)return auth.response;
  let body:z.infer<typeof request>;
  try{body=request.parse(await readBoundedJson(req,128*1024));}
  catch(error){return json({error:error instanceof BodyTooLargeError?'request_body_too_large':'invalid_fields'},error instanceof BodyTooLargeError?413:400);}
- let claimId:string|null=null,paid=false;
+ let claimId:string|null=null,paid=false,startAttempted=false;
  const meta={menuTitle:body.menuTitle,lang:body.lang};
  let lease:ReturnType<typeof acquireLease>|null=null;
  try{
@@ -53,12 +54,22 @@ export async function POST(req:NextRequest){
   const claim=record(await extractionRpc(auth,'claim_menu_extraction',{p_request_id:body.requestId,p_claim_id:claimId}));
   if(claim?.claimed!==true)return json(claim?.operation??{state:'preparing',requestId:body.requestId},202);
   if(!sources)sources=await reloadExtractionSources(auth,claim.sourceStats as SourceStat[]);
-  const images=await renderExtractionSources(sources,req.signal);
+  const renderBudget=deadline-Date.now()-MIN_PROVIDER_BUDGET_MS;
+  if(req.signal.aborted||renderBudget<=0)throw new CarteRouteError('preparation_timeout',503);
+  const renderController=new AbortController(),cancelRender=()=>renderController.abort();
+  req.signal.addEventListener('abort',cancelRender,{once:true});
+  const renderTimer=setTimeout(cancelRender,renderBudget);
+  let images:Awaited<ReturnType<typeof renderExtractionSources>>;
+  try{images=await renderExtractionSources(sources,renderController.signal);}
+  catch(error){if(renderController.signal.aborted)throw new CarteRouteError('preparation_timeout',503);throw error;}
+  finally{clearTimeout(renderTimer);req.signal.removeEventListener('abort',cancelRender);}
   // Recheck current provider, ownership, M activation and source immediately before dispatch.
   provider=await resolveActiveAiProvider(auth.server);
   if(!provider||provider.config.apiKind!=='openai_compatible')throw new CarteRouteError('provider_unavailable',503);
-  if(req.signal.aborted||deadline-Date.now()<5_000)throw new CarteRouteError('preparation_timeout',503);
+  if(req.signal.aborted||deadline-Date.now()<MIN_PROVIDER_BUDGET_MS)throw new CarteRouteError('preparation_timeout',503);
   await extractionRpc(auth,'assert_menu_extraction_dispatch',{p_request_id:body.requestId,p_claim_id:claimId});
+  if(req.signal.aborted||deadline-Date.now()<MIN_PROVIDER_BUDGET_MS)throw new CarteRouteError('preparation_timeout',503);
+  startAttempted=true;
   const started=record(await extractionRpc(auth,'mark_menu_extraction_started',{p_request_id:body.requestId,p_claim_id:claimId}));
   if(started?.started!==true)throw new CarteRouteError(String(started?.error||'extraction_disabled'),409);
   paid=true;
@@ -74,6 +85,14 @@ export async function POST(req:NextRequest){
   }finally{clearTimeout(timeout);}
   return json(await extractionRpc(auth,'get_menu_extraction',{p_request_id:body.requestId}));
  }catch(error){
+  if(claimId&&!paid&&startAttempted){
+   // This process has not invoked the provider. If the start receipt committed,
+   // close that exact claim definitively, retaining its conservative quota debit.
+   await extractionServiceRpc(auth,'finish_menu_extraction',{p_request_id:body.requestId,p_claim_id:claimId,
+    p_result:null,p_error:'non_dispatch'}).catch(()=>undefined);
+   const confirmed=record(await extractionRpc(auth,'get_menu_extraction',{p_request_id:body.requestId}).catch(()=>null));
+   if(confirmed?.state==='failed'&&confirmed.error==='non_dispatch')return json(confirmed);
+  }
   if(claimId&&!paid){
    await extractionServiceRpc(auth,'cancel_menu_extraction_before_dispatch',{p_request_id:body.requestId,p_claim_id:claimId,
     p_error:error instanceof Error?error.message.slice(0,80):'preparation_failed'}).catch(()=>undefined);

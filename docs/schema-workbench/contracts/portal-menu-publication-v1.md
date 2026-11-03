@@ -31,6 +31,8 @@ Les suppressions sont explicites, les identifiants restent stables, et une erreu
 
 Avec une opération E, `p_payload.extraction_draft_version` est obligatoire et appartient à l’intention exacte. E compare cette version sous son verrou avant toute écriture : une publication prise avant la correction d’un autre onglet est refusée. Ce champ est retiré avant le writer R4. Un reçu de publication déjà réussie est réconcilié avant les nouvelles vérifications de version/source et ne réécrit rien.
 
+Une publication E ne peut supprimer aucun menu. Les plats à supprimer sont résolus en base et doivent appartenir à sa cible exacte ; un `menu_id` fourni par le client ne suffit pas. Cette vérification précède le writer partagé, afin qu’un menu indépendant et ses plats restent intacts.
+
 Le parent menu ne possède pas de prix/devise de formule dans ce contrat. Le backend ne crée aucun faux plat pour représenter une formule tarifée. Une formule non représentable doit être signalée dans le résultat E, conservée comme telle pour revue, et rester hors publication structurée jusqu’à une décision de contrat. Aucune propriété publique supplémentaire ni suppression silencieuse n’est retenue ici.
 
 ## Validation et activation
@@ -38,3 +40,5 @@ Le parent menu ne possède pas de prix/devise de formule dans ce contrat. Le bac
 Ordre : R4 corrigé → préparation M → préparation E → recettes isolées M puis E. La recette M réexécute l’acceptation R4 après le partage du writer, dont ajout/retrait/ajout d’un allergène, limites de prix, échec atomique et réponse perdue.
 
 Le cutover M est séparé et refuse l’activation tant que les anciennes permissions DML menus subsistent. La validation de l’interface et les décisions sur formules précèdent toute activation produit. Les appels au service M ne sont actuellement branchés à aucun écran.
+
+Juste avant tout grant, le cutover recontrôle les neuf empreintes de source, propriétaire, langage, mode de sécurité, volatilité, arguments/retour, expression canonique des paramètres par défaut, configuration et ACL. Une dérive depuis la préparation bloque l’activation. Sa recette réelle vérifie aussi les dérives de source, de valeur par défaut, de configuration et de privilège, puis la restauration OFF sans réouverture du DML.

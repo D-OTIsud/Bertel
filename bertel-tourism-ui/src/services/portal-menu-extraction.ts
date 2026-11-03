@@ -46,3 +46,12 @@ export async function listPortalMenuExtractions(objectId:string){
 export async function savePortalMenuExtractionDraft(requestId:string,expectedVersion:number,draft:Record<string,unknown>){
  return request('/api/portal-menu/extract/draft',{requestId,expectedVersion,draft},requestId);
 }
+/** Names/IDs only, including old published operations; no AI result or private file pointer. */
+export async function getPortalMenuExtractionSourceImpact(objectId:string,kind:'carte'|'upload',sourceId:string){
+ const client=getApiClient();if(!client)throw new MenuExtractionError('unavailable',null,503);
+ const result=await client.schema('api').rpc('get_menu_extraction_source_impact',{p_object_id:objectId,p_source_kind:kind,p_source_id:sourceId});
+ if(result.error)throw new MenuExtractionError(result.error.code==='42501'?'forbidden':'unavailable',null,result.error.code==='42501'?403:503);
+ const data=result.data as {menus?:unknown}|null;
+ if(!Array.isArray(data?.menus)||data.menus.some(v=>!v||typeof v!=='object'||typeof v.id!=='string'||typeof v.name!=='string'))throw new MenuExtractionError('unavailable',null,503);
+ return data.menus.map(v=>({id:v.id as string,name:v.name as string}));
+}

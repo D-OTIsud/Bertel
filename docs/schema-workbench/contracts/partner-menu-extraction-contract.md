@@ -45,7 +45,11 @@ La publication conserve le format HTTPS Storage public et le schéma public exis
 
 E accepte un dépôt C personnel finalisé ou une carte publique encore liée avec sa baseline exacte. Le serveur compte les pages, scelle empreintes Storage/hash/source/cible et recontrôle avant dispatch et publication. La cible existante doit être un menu public de cette fiche, actif ou inactif ; les menus office privés/partners/NULL restent hors périmètre. Avec cible, seul cet ID peut être associé au résultat. Sans cible, la publication réutilise l’UUID `result.menu.recordId` généré par le serveur.
 
+Le passage canonique du même dépôt privé de `staged` à `copied`, puis la création de son premier lien public C, ne change pas la version de son contenu. La comparaison autorise seulement cette transition, avec mêmes identifiants, hash, taille, type, chemins et cible. Un lien déjà présent modifié, des octets différents, un document non public ou une autre cible restent des conflits. Une extraction déjà commencée n’est donc pas perdue simplement parce que sa carte a été publiée entre-temps.
+
 Le résultat est un brouillon. La publication utilise le writer M/R4 sous une transaction commune : fiche → opération E → source/document/Storage → menus et enfants. Source, pages, unique ID de menu confirmé, reçu et `request_id` sont associés atomiquement ; un échec tardif annule aussi le DML menus.
+
+`api.get_menu_extraction_source_impact(object_id,source_kind,source_id)` lit l’impact d’une carte remplacée/retirée, avec `source_kind='carte'` et ID document, ou `'upload'` et ID reçu C. Le reçu résout les deux formes du même fichier. La lecture couvre toutes les opérations publiées de la fiche, même anciennes ou produites par un autre auteur, et leurs seuls `published_menu_ids` encore existants. Elle retourne uniquement `{menus:[{id,name}]}` : aucun résultat IA, auteur, hash ou chemin privé. L’acteur doit passer la garde C courante, ses masques/realm et la portée publique des menus/cartes ; un reçu privé reste personnel. Le correcteur canonique R3b de la fiche peut aussi lire les menus associés devenus privés. Les autres sources, fiches, menus manuels indépendants et menus supprimés ne sont pas projetés. Cette lecture n’a aucun effet sur les menus ; le futur écran proposera leur vérification.
 
 ## Limites techniques et quota à décider
 
@@ -55,11 +59,13 @@ Le résultat est un brouillon. La publication utilise le writer M/R4 sous une tr
 | Sources E | 1 à 8 sources, ≤10 Mio chacune ; PDF/JPEG/PNG/WebP reconnus par signature. Une image compte pour une page. |
 | PDF E | Au plus 200 pages par PDF ; **8 pages sélectionnées au total** par opération, limite technique de l’adaptateur, distincte du quota quotidien. Au-delà, sélection explicite obligatoire ; aucune troncature silencieuse. |
 | Rendu | PDF rasterisé au serveur, bord ≤2000 px, garde image PDF 16 mégapixels ; réencodage Sharp et suppression des métadonnées avant fournisseur. |
-| Durée | Route Node `maxDuration=60`, deadline applicative 55 s ; moins de 5 s restantes ou requête annulée avant dispatch : arrêt de préparation. L’appel fournisseur reçoit le temps restant, une tentative, sans réparation payante automatique. Les RPC mutatrices bornent l’attente de verrou à 5 s. |
+| Durée | Route Node `maxDuration=60`, deadline applicative 55 s ; **au moins 30 s doivent rester avant la marque de dispatch**, sinon préparation annulée sans appel fournisseur. Le rendu a un signal composé déconnexion/deadline sur le budget de préparation restant, y compris le chargement PDF. L’appel fournisseur reçoit le temps restant, une tentative, sans réparation payante automatique. Les RPC mutatrices bornent l’attente de verrou à 5 s. |
 | Corps/brouillon | Requête E 128 Kio ; brouillon ≤1 Mio en base et corps HTTP ≤1 Mio +2 Kio. Liste de reprise limitée aux 30 opérations personnelles les plus récentes de la fiche. |
 | Quota E | Pages sélectionnées **par compte utilisateur authentifié et jour Réunion**, toutes ses fiches réunies. Valeur livrée NULL ; la borne SQL 1–1000 n’est pas un budget choisi. Cinq pages reste une proposition de produit, pas un réglage activé. |
 
 Réservation et consommation sont durables, atomiques et indépendantes du quota photo. Le serveur calcule `resetAt` avec `Indian/Reunion`. Une préparation arrivée au jour suivant est annulée et sa réservation ancienne libérée ; une nouvelle intention explicite doit gagner le budget du nouveau jour. Un dispatch marqué consomme ses pages, même si le fournisseur échoue ou si son résultat devient incertain. Ce comptage conservateur doit être inclus dans les conditions d’activation et le budget mesuré.
+
+Les annulations du rendu sont coopératives : PDF.js observe le signal et détruit sa tâche, mais le travail synchrone de PDF.js/Sharp/canvas ne peut pas être préempté au milieu d’une exécution. Les bornes de taille/pages/pixels restent nécessaires ; la deadline n’est pas une preuve de limite CPU stricte du processus standalone. Un besoin de préemption forte demanderait des mesures puis une évolution ciblée, pas une promesse de reprise automatique.
 
 Le montant du quota, le fournisseur/modèle et son coût effectif, la recette de ce fournisseur et l’accord UI bloquent uniquement **l’ouverture E**. Ils ne bloquent pas la livraison du backend OFF, la carte C ou la saisie manuelle M autorisée. Les formules structurées non représentables restent une décision distincte.
 
@@ -69,9 +75,15 @@ Conserver le même UUID et la requête exacte tant que son résultat n’est pas
 
 Après marque de dispatch ou réponse ambiguë, lire le reçu : ni nouvel appel fournisseur automatique, ni remboursement automatique, ni suppression de fichier. Il n’existe pas de worker qui promettrait de reprendre un traitement après crash. Avant dispatch confirmé, l’échec de préparation peut libérer la réservation.
 
+Cas particulier : si la réponse à `mark_menu_extraction_started` est perdue alors que **ce processus n’a pas encore appelé le fournisseur**, il termine le même claim avec `state='failed'`, `error='non_dispatch'`. Le débit conservateur reste conservé ; il n’est pas recrédité implicitement. Si cette fin ne peut pas être confirmée, la reprise passe par le reçu, jamais par un nouvel appel automatique. Une sauvegarde de draft déjà publié retourne un conflit `PT409`/HTTP409.
+
 `result` conserve la sortie d’extraction ; `draft` porte les corrections avec CAS `draftVersion`. Un retry identique d’une sauvegarde retrouve la version ; une autre correction concurrente reçoit `PT409`. La publication M porte obligatoirement `p_payload.extraction_draft_version` quand elle indique une opération E. La version est vérifiée sous verrou E avant DML, en plus des empreintes de source/cible. Cette précondition appartient à l’intention exacte et est retirée avant R4. Une publication déjà réussie est réconciliée avant de revalider une source devenue ancienne ; une nouvelle intention sur la même opération publiée est refusée. Une correction suivante devient manuelle.
 
-Le menu parent n’a pas de prix/devise de formule dans ce contrat. E demande au moteur de séparer les offres non représentables et conserve `result.warnings` avec libellé/prix source et code `formula_price_not_modelled`. Le futur écran doit montrer cet avertissement et la source avant validation, même si le brouillon a été corrigé. La formule ne devient ni faux plat, ni prix réparti entre plats, ni prix ajouté artificiellement au titre. L’avertissement rappelle la vérification des formules même lorsque le moteur n’en a signalé aucune ; l’exhaustivité d’un moteur n’est pas démontrée. Les régimes suggérés restent séparés et les allergènes ne sont jamais inférés pour publication.
+Le menu parent n’a pas de prix/devise de formule dans ce contrat. E demande au moteur de séparer les offres non représentables et conserve `result.warnings` avec libellé/prix source et code `formula_price_not_modelled`. Ces avertissements sont parsés séparément : prix NULL, libellé trop long ou plus de cinquante signalements ne font pas perdre des plats valides ni provoquer une nouvelle tentative payante. Les textes sont bornés, les compteurs `omittedOffers`/`adjustedOffers` et le message signalent toute omission/abréviation. Les plats restent soumis au schéma strict ; le mode office par défaut n’est pas assoupli.
+
+Le futur écran doit montrer l’avertissement et la source avant validation, même si le brouillon a été corrigé. La formule ne devient ni faux plat, ni prix réparti entre plats, ni prix ajouté artificiellement au titre. L’avertissement rappelle la vérification des formules même lorsque le moteur n’en a signalé aucune ; l’exhaustivité d’un moteur n’est pas démontrée. Les régimes suggérés restent séparés et les allergènes ne sont jamais inférés pour publication.
+
+Contrat du futur adaptateur draft → module M : les prix extraits restent du texte source jusqu’à validation. Une valeur simple comme `12 €` doit devenir `12` EUR, `12,50 €` doit devenir `12.50`, tandis que vide reste non renseigné (`null` au writer) et `0` reste zéro. Toute formule, devise ou syntaxe ambiguë exige correction explicite ; ne jamais utiliser `parseFloat` permissif ni transformer un échec de conversion en vide/zéro. Cet adaptateur n’est pas branché à un nouvel écran avant accord UI.
 
 ## Recettes et preuves
 
@@ -82,6 +94,7 @@ Dans la base jetable initialisée par le workflow, avec le marqueur `bertel_ci_f
 ```sh
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_portal_menus_guarded_publication.sql"
 psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_menu_extraction_operations.sql"
+psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_menu_extraction_source_continuity_and_impact.sql"
 python tools/partner-api/test-menu-cutover.py "$DB_URL"
 python tools/partner-api/test-extraction-concurrency.py "$DB_URL"
 ```

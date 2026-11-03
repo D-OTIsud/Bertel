@@ -163,7 +163,7 @@ export function useEditorSave(objectId: string) {
           }
         }
         const writes = await Promise.allSettled(
-          plan.writable.map((module) => saveWorkspaceModule(objectId, buildSaveArg(module, draft, permissions), compatibility)),
+          plan.writable.map(async (module) => saveWorkspaceModule(objectId, buildSaveArg(module, draft, permissions), compatibility)),
         );
         writes.forEach((result, index) => {
           const module = plan.writable[index];
@@ -179,7 +179,9 @@ export function useEditorSave(objectId: string) {
         });
 
         const submissions = await Promise.allSettled(
-          plan.proposals.map((module) => submitPendingChange(buildContributorSubmission(objectId, module, baseline, draft))),
+          // Preparation can reject a stale/missing baseline synchronously. Keep that
+          // failure in its module result so other proposals and the draft survive.
+          plan.proposals.map(async (module) => submitPendingChange(buildContributorSubmission(objectId, module, baseline, draft))),
         );
         submissions.forEach((result, index) => {
           const module = plan.proposals[index];

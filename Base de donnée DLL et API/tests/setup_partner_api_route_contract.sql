@@ -1,5 +1,6 @@
 -- Persistent fixture ONLY for the disposable Supabase CI database. The known
 -- credential is intentionally not secret and must never be installed in PROD.
+\ir assert_partner_api_ephemeral.sql
 DO $ephemeral_only$
 BEGIN
   IF current_setting('bertel.ephemeral_ci', true) IS DISTINCT FROM 'on' THEN

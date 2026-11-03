@@ -125,14 +125,15 @@ RESET ROLE;
 DO $test$ BEGIN
  ASSERT (SELECT is_published FROM public.media WHERE id='00000000-0000-4000-a503-000000000001'),'old photo withdrawn before B approval';
 END; $test$;
+SELECT set_config('bertel.r5_submission_c503',(SELECT id::text FROM public.fiche_submission WHERE object_id='HOTRUN999999C503' AND status='pending'),true);
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-a000-00000000c512","role":"authenticated","app_metadata":{"sandbox_discovery":true}}',true);
 SET LOCAL ROLE authenticated;
-SELECT api.prepare_portal_photo_approval((SELECT id FROM public.fiche_submission WHERE object_id='HOTRUN999999C503' AND status='pending'),true,'00000000-0000-4000-a000-00000000c561');
+SELECT api.prepare_portal_photo_approval(current_setting('bertel.r5_submission_c503')::uuid,true,'00000000-0000-4000-a000-00000000c561');
 RESET ROLE;
 UPDATE public.ref_document SET extra=extra||'{"publication_ready":true,"public_url":"https://example.test/photo-stock/approved.jpg"}'::jsonb WHERE id='00000000-0000-4000-a000-00000000c551';
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-a000-00000000c512","role":"authenticated","app_metadata":{"sandbox_discovery":true}}',true);
 SET LOCAL ROLE authenticated;
-SELECT api.approve_fiche_submission((SELECT id FROM public.fiche_submission WHERE object_id='HOTRUN999999C503' AND status='pending'));
+SELECT api.approve_fiche_submission(current_setting('bertel.r5_submission_c503')::uuid);
 RESET ROLE;
 DO $test$ BEGIN
  ASSERT NOT (SELECT is_published FROM public.media WHERE id='00000000-0000-4000-a503-000000000001');
@@ -189,9 +190,10 @@ SELECT api.submit_actor_fiche('HOTRUN999999C502',jsonb_build_array(jsonb_build_o
 RESET ROLE;
 UPDATE public.ref_document SET extra=extra||jsonb_build_object('slot_reserved_until',now()-interval '1 second') WHERE id='00000000-0000-4000-a502-000000000001';
 DO $test$ BEGIN ASSERT internal.gallery_photo_usage('HOTRUN999999C502')=1,'pending slot expired while awaiting office'; END; $test$;
+SELECT set_config('bertel.r5_submission_c502',(SELECT id::text FROM public.fiche_submission WHERE object_id='HOTRUN999999C502' AND status='pending'),true);
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-4000-a000-00000000c512","role":"authenticated","app_metadata":{"sandbox_discovery":true}}',true);
 SET LOCAL ROLE authenticated;
-SELECT api.reject_fiche_submission((SELECT id FROM public.fiche_submission WHERE object_id='HOTRUN999999C502' AND status='pending'),'CI refusal');
+SELECT api.reject_fiche_submission(current_setting('bertel.r5_submission_c502')::uuid,'CI refusal');
 RESET ROLE;
 DO $test$ BEGIN
  ASSERT internal.gallery_photo_usage('HOTRUN999999C502')=0,'resolved slot still held';

@@ -9,7 +9,7 @@ export const PHOTO_ISSUE_CODES = [
 ] as const;
 
 const text = z.string().trim().min(1).max(500);
-const assessmentSchema = z.object({
+export const photoAssessmentSchema = z.object({
   score: z.number().finite().min(0).max(10),
   summary: text,
   strengths: z.array(text).max(5),
@@ -20,7 +20,7 @@ const assessmentSchema = z.object({
   }).strict()).max(8),
 }).strict();
 
-export type PhotoAssessment = z.infer<typeof assessmentSchema>;
+export type PhotoAssessment = z.infer<typeof photoAssessmentSchema>;
 export type PhotoAssessmentOutcome =
   | { state: 'assessed'; assessment: PhotoAssessment; publication: 'office_review' }
   | { state: 'unavailable' | 'uncertain'; assessment: null; publication: 'office_review' };
@@ -35,7 +35,7 @@ export function parsePhotoAssessment(raw: string): PhotoAssessmentOutcome {
   let value: unknown;
   try { value = JSON.parse(raw); }
   catch { throw new InvalidPhotoAssessment(); }
-  const result = assessmentSchema.safeParse(value);
+  const result = photoAssessmentSchema.safeParse(value);
   if (!result.success) throw new InvalidPhotoAssessment();
   return { state: 'assessed', assessment: result.data, publication: 'office_review' };
 }

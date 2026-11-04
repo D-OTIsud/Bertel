@@ -193,7 +193,7 @@ export function PortalRubricScreen({
         {rubric.id !== 'hours' && rubric.id !== 'welcome' ? <PortalHelp key={rubric.id} label={rubric.title}>{RUBRIC_HELP[rubric.id]}</PortalHelp> : null}
       </div>
 
-      {waiting ? (
+      {waiting && rubric.id !== 'photos' ? (
         <div className="notice">
           <Clock size={18} aria-hidden />
           <span>
@@ -205,7 +205,7 @@ export function PortalRubricScreen({
         </div>
       ) : null}
 
-      {approved && !waiting ? (
+      {approved && !waiting && rubric.id !== 'photos' ? (
         // `approved` est la forme DOMINANTE (5 rubriques sur 7) : l'office accepte, puis
         // recopie À LA MAIN. Entre les deux, la rubrique montre l'ANCIENNE valeur publiée —
         // sans cette phrase, le partenaire croit son envoi perdu et ressaisit.

@@ -24,14 +24,17 @@ BEGIN
   ('internal.portal_photo_workspace_json(text,uuid)','8dfdc1baa12f0f1ce3160a1ff33a1302'),
   ('api.reserve_portal_photo_upload(text,uuid,uuid)','a5fce4c520cbde65eba79ad79606f1b8'),
   ('api.cancel_portal_photo_upload(text,uuid)','7e3c23242d2facfa131986db2c6908c7'),
-  ('api.complete_portal_photo_upload(uuid,uuid,text,text,integer,integer)','9547ed89070d14006643207c3b68ab91')
+  ('api.complete_portal_photo_upload(uuid,uuid,text,text,integer,integer)','9547ed89070d14006643207c3b68ab91'),
+  ('api.portal_photo_preview(uuid)','6a616a0f060a8026ce6398c4159222ee'),
+  ('api.list_portal_message_documents(uuid)','6f6940df421ddb25985f4c0ce0887236'),
+  ('internal.portal_photo_appeal_document(uuid)','07845634e2fc3240ae127f63adf39617')
  ) t(signature,hash) LOOP
   IF to_regprocedure(v.signature) IS NULL OR (SELECT md5(replace(p.prosrc,E'\r\n',E'\n'))
    FROM pg_proc p WHERE p.oid=to_regprocedure(v.signature)) IS DISTINCT FROM v.hash
    OR NOT EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid=to_regprocedure(v.signature)
     AND pg_get_userbyid(p.proowner)='postgres'
     AND p.prosecdef=(v.signature NOT IN('internal.update_portal_photo_texts(text,uuid,boolean,jsonb,text,text)',
-     'internal.portal_photo_workspace_json(text,uuid)'))) THEN
+     'internal.portal_photo_workspace_json(text,uuid)','internal.portal_photo_appeal_document(uuid)'))) THEN
    RAISE EXCEPTION 'Actor album: install the reviewed R5/R6/album source before activation (%)',v.signature;
   END IF;
  END LOOP;
@@ -43,6 +46,7 @@ BEGIN
   ('api.get_my_portal_photo_workspace(text)',true,'search_path=pg_catalog,public,api,internal,auth,pg_temp'),
   ('internal.update_portal_photo_texts(text,uuid,boolean,jsonb,text,text)',false,'search_path=pg_catalog,public,api,internal,auth,pg_temp'),
   ('internal.portal_photo_workspace_json(text,uuid)',false,'search_path=pg_catalog,public,api,internal,auth'),
+  ('internal.portal_photo_appeal_document(uuid)',false,'search_path=pg_catalog,public,api,internal'),
   ('internal.gallery_capture_photo_proposal_usage()',true,'search_path=pg_catalog,public,internal,pg_temp')
  ) t(signature,definer,config) LOOP
   IF NOT EXISTS(SELECT 1 FROM pg_proc p WHERE p.oid=to_regprocedure(v.signature)

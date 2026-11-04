@@ -12,6 +12,8 @@ MIGRATION = ROOT / 'supabase/migrations/20261104151051_partner_photo_actor_works
 CANONICAL = ROOT / 'Base de donnée DLL et API/migration_actor_portal_media.sql'
 STOCK = ROOT / 'supabase/migrations/20261103072105_partner_portal_photo_stock_and_gallery_contract.sql'
 ASSESSMENT = ROOT / 'supabase/migrations/20261103084816_partner_portal_photo_assessment_foundation_off.sql'
+OFFICE = ROOT / 'supabase/migrations/20261104161843_partner_photo_refusal_office_private_preview.sql'
+MESSAGING = ROOT / 'Base de donnée DLL et API/migration_actor_portal_message.sql'
 
 
 def source(text: str, name: str) -> str:
@@ -55,6 +57,18 @@ def current_sources() -> dict[str, str]:
     return result
 
 
+def office_sources() -> dict[str, str]:
+    preview = source(CANONICAL.read_text(encoding='utf-8'), 'api.portal_photo_preview')
+    assessment = ASSESSMENT.read_text(encoding='utf-8')
+    preview = apply(preview, [(
+        re.search(r'\$preview_before\$([\s\S]*?)\$preview_before\$', assessment)[1],
+        re.search(r'\$preview_after\$([\s\S]*?)\$preview_after\$', assessment)[1],
+    )])
+    assert md5(preview) == '177a6144c5303763d48207b109f1ea3b'
+    return {'api.portal_photo_preview': preview,
+        'api.list_portal_message_documents': source(MESSAGING.read_text(encoding='utf-8'), 'api.list_portal_message_documents')}
+
+
 def main() -> None:
     from pglast import parse_sql
     # The installed pglast JSON decoder cannot decode its own trigger NEW/OLD
@@ -91,6 +105,24 @@ def main() -> None:
         definition = re.search(r'CREATE(?: OR REPLACE)? FUNCTION\s+' + re.escape(name)
             + r'\s*\([\s\S]*?\bAS\s+(\$\w*\$)[\s\S]*?\1\s*;', original, re.I)[0]
         parse_plpgsql(definition.replace(source(original, name), after))
+    office = OFFICE.read_text(encoding='utf-8')
+    for name, tag in [('api.portal_photo_preview', 'office_preview'), ('api.list_portal_message_documents', 'office_message')]:
+        old = office_sources()[name]
+        tags = [tag, 'office_p'] if name == 'api.portal_photo_preview' else [tag]
+        pairs = [(re.search(rf'\${part}_before\$([\s\S]*?)\${part}_before\$', office)[1],
+            re.search(rf'\${part}_after\$([\s\S]*?)\${part}_after\$', office)[1]) for part in tags]
+        after = apply(old, pairs)
+        assert md5(old) in office and md5(after) in office
+        patched[name] = after
+        original = (CANONICAL if name == 'api.portal_photo_preview' else MESSAGING).read_text(encoding='utf-8')
+        definition = re.search(r'CREATE(?: OR REPLACE)? FUNCTION\s+' + re.escape(name)
+            + r'\s*\([\s\S]*?\bAS\s+(\$\w*\$)[\s\S]*?\1\s*;', original, re.I)[0]
+        parse_plpgsql(definition.replace(source(original, name), after))
+        print(f'{name}: {md5(old)} -> {md5(after)} ({len(pairs)} exact office anchors)')
+    parse_sql(office)
+    parse_sql(source(office, 'internal.portal_photo_appeal_document'))
+    for match in re.finditer(r'DO (\$\w*\$)[\s\S]*?\1;', office):
+        parse_plpgsql(match[0])
     parse_sql(sql)
     for match in re.finditer(r'CREATE FUNCTION [\s\S]*?\bAS (\$\w*\$)([\s\S]*?)\1;', sql):
         if re.search(r'LANGUAGE plpgsql', match[0], re.I):
@@ -109,12 +141,12 @@ def main() -> None:
         name = signature.split('(')[0]
         if name in {'api.approve_pending_change', 'api.reject_pending_change'}:
             continue  # R6 hashes are independently reviewed; not rebuilt here.
-        actual = patched[name] if name in patched else source(sql, name)
+        actual = patched[name] if name in patched else source(office if name == 'internal.portal_photo_appeal_document' else sql, name)
         assert md5(actual) == expected, f'Stale cutover source hash: {signature}'
     # Parse the reviewable recipes too, without executing psql meta commands or
     # using their placeholder pilot identifiers as real data.
     test_dir = ROOT / 'Base de donnée DLL et API/tests'
-    paths = set(test_dir.glob('*photo_actor_album*.sql')) | set(test_dir.glob('*actor_photo_album*.sql'))
+    paths = set(test_dir.glob('*photo_actor_album*.sql')) | set(test_dir.glob('*actor_photo_album*.sql')) | set(test_dir.glob('*photo_office_appeal*.sql'))
     for path in sorted(paths):
         lines = []
         for line in path.read_text(encoding='utf-8').splitlines():

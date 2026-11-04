@@ -58,6 +58,11 @@ export interface PortalMessageAttachment {
   id: string;
   title: string;
 }
+/** A server-verified relation to this CRM exchange, never free-form message metadata. */
+export interface PortalMessagePhotoReview {
+  documentId: string;
+  title: string;
+}
 export interface PortalMessage {
   id: string;
   subject: string;
@@ -145,7 +150,7 @@ export async function listMyPortalMessages(
 }
 export async function listPortalMessageDocuments(
   interactionId: string,
-): Promise<{documents:PortalMessageAttachment[];replyTo:string}> {
+): Promise<{documents:PortalMessageAttachment[];replyTo:string;photoReview?:PortalMessagePhotoReview|null}> {
   const data = await rpc("list_portal_message_documents", {
     p_interaction_id: interactionId,
   });
@@ -154,7 +159,11 @@ export async function listPortalMessageDocuments(
     .map(rec)
     .filter((x) => str(x.id))
     .map((x) => ({ id: str(x.id), title: str(x.title) || "Pièce jointe" }));
-  return {documents,replyTo:str(record.replyTo)};
+  const photo=rec(record.photoReview);
+  const documentId=str(photo.documentId);
+  const photoReview=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId)
+    ? {documentId,title:str(photo.title)} : null;
+  return {documents,replyTo:str(record.replyTo),photoReview};
 }
 async function token(): Promise<string> {
   const { data, error } = await client().auth.getSession();

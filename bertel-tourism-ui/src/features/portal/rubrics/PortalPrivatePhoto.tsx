@@ -6,9 +6,14 @@ import { getPortalPhotoPreview } from "../../../services/portal-photos";
 export function PortalPrivatePhoto({
   documentId,
   title,
+  description,
+  retry = true,
 }: {
   documentId: string;
   title: string;
+  description?: string;
+  /** Album tiles are already native buttons; their preview cannot contain another. */
+  retry?: boolean;
 }) {
   const [url, setUrl] = useState(""),
     [failed, setFailed] = useState(false),
@@ -30,40 +35,42 @@ export function PortalPrivatePhoto({
   }, [documentId, attempt]);
   if (failed)
     return (
-      <div className="portal-photo-placeholder">
+      <span className="portal-photo-placeholder">
         <ImageIcon aria-hidden />
-        <p>Aperçu indisponible.</p>
-        <button
+        <span>Aperçu indisponible.</span>
+        {retry ? <button
           className="ghost-button"
           type="button"
           onClick={() => setAttempt((a) => a + 1)}
         >
           Réessayer
-        </button>
-      </div>
+        </button> : null}
+      </span>
     );
   return url ? (
     <img
       src={url}
-      alt={title}
+      alt={description || title}
       onError={() => {
         setUrl("");
         setFailed(true);
       }}
     />
   ) : (
-    <div className="portal-photo-placeholder" role="status">
+    <span className="portal-photo-placeholder" role="status">
       Chargement de la photo…
-    </div>
+    </span>
   );
 }
 
 export function PortalLocalPhoto({
   file,
   name,
+  description,
 }: {
   file: File | null;
   name: string;
+  description?: string;
 }) {
   const [url, setUrl] = useState("");
   useEffect(() => {
@@ -73,11 +80,11 @@ export function PortalLocalPhoto({
     return () => URL.revokeObjectURL(value);
   }, [file]);
   return url ? (
-    <img src={url} alt={name} />
+    <img src={url} alt={description || name} />
   ) : (
-    <div className="portal-photo-placeholder">
+    <span className="portal-photo-placeholder">
       <ImageIcon aria-hidden />
-      <p>Choisissez à nouveau {name}.</p>
-    </div>
+      <span>Choisissez à nouveau {name}.</span>
+    </span>
   );
 }

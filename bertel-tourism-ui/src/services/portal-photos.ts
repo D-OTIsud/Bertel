@@ -5,12 +5,15 @@ import type {
 } from "./object-workspace-parser";
 import type { SubmitPendingChangeInput } from "./moderation";
 import { assertWorkspaceSaveAvailable } from "./object-workspace-safety";
+import { reconcilePortalPhotoOrder, type PortalPhotoOrderEntry } from "./portal-photo-workspace";
+export { getPortalPhotoWorkspace, updatePortalPhotoTexts, appealPortalPhotoReview, type PortalPhotoWorkspace } from "./portal-photo-workspace";
 
 export interface PortalPublishedPhoto {
   id: string;
   url: string;
   title: string;
   credit: string;
+  description?: string;
   position: number;
   isMain: boolean;
   portalDocumentId: string | null;
@@ -70,21 +73,25 @@ export const listMyPortalPhotos = (objectId: string) =>
   rpc("list_my_portal_photos", { p_object_id: objectId });
 export const withdrawPortalPhoto = (objectId: string, mediaId: string) =>
   rpc("withdraw_portal_photo", { p_object_id: objectId, p_media_id: mediaId });
-export const reorderPortalPhotos = (objectId: string, mediaIds: string[]) =>
-  rpc("reorder_portal_photos", {
+export async function reorderPortalPhotos(objectId: string, mediaIds: string[], expected?: PortalPhotoOrderEntry[]): Promise<PortalPublishedPhoto[]> {
+  if (expected) return (await reconcilePortalPhotoOrder(objectId, mediaIds, expected)).published;
+  return rpc("reorder_portal_photos", {
     p_object_id: objectId,
     p_media_ids: mediaIds,
   });
+}
 async function request(
   path: string,
-  body: BodyInit,
+  body?: BodyInit,
 ): Promise<Record<string, unknown>> {
+  const token = await portalPhotoToken();
   let response: Response;
   try {
     response = await fetch(path, {
-      method: "POST",
+      method: body === undefined ? "GET" : "POST",
+      cache: "no-store",
       headers: {
-        Authorization: `Bearer ${await portalPhotoToken()}`,
+        Authorization: `Bearer ${token}`,
         ...(typeof body === "string"
           ? { "Content-Type": "application/json" }
           : {}),
@@ -99,7 +106,9 @@ async function request(
   const data = rec(await response.json().catch(() => ({})));
   if (!response.ok)
     throw new Error(
-      data.error === "photo_limit"
+      data.error === "analysis_disabled" ? "L’analyse photo est actuellement désactivée."
+        : response.status === 429 ? "La limite de demandes est atteinte. Réessayez plus tard."
+        : data.error === "photo_limit"
         ? "Votre galerie peut contenir vingt photos. Retirez une photo ou choisissez un remplacement."
         : data.error === "upload_expired"
           ? "Ce dépôt a expiré. Annulez cet ajout puis choisissez de nouveau la photo."
@@ -114,6 +123,15 @@ async function request(
             : "L’opération n’a pas pu être confirmée. Actualisez la fiche avant de réessayer.",
     );
   return data;
+}
+export const analyzePortalPhoto = (input: { objectId: string; documentId: string; requestId: string }) =>
+  request("/api/portal-photo/analyze", JSON.stringify(input));
+export const getPortalPhotoAnalysis = (requestId: string) =>
+  request("/api/portal-photo/analyze?requestId=" + encodeURIComponent(requestId));
+export async function appealPortalPhotoAnalysis(input: { requestId: string; body: string; clientId: string }) {
+  const data = await request("/api/portal-photo/analyze/appeal", JSON.stringify(input));
+  if (!text(data.interactionId)) throw new Error("La demande de révision n’a pas pu être confirmée.");
+  return text(data.interactionId);
 }
 export async function uploadPortalPhoto(
   objectId: string,
@@ -261,6 +279,7 @@ export function mergePortalPublishedPhotos(
       ...clean,
       id: photo.id,
       title: photo.title,
+      description: photo.description ?? clean.description,
       url: photo.url,
       credit: photo.credit,
       position: String(photo.position),
@@ -279,8 +298,9 @@ export function buildPortalPhotoSubmission(
 ): SubmitPendingChangeInput {
   assertWorkspaceSaveAvailable("media", baseline);
   assertWorkspaceSaveAvailable("media", draft);
+  const submittedIds = new Set(baseline.objectItems.map((item) => item.portalUploadId).filter(Boolean));
   const additions = draft.objectItems
-    .filter((item) => item.portalUploadId)
+    .filter((item) => item.portalUploadId && !submittedIds.has(item.portalUploadId))
     .map((item) => ({
       upload_id: item.portalUploadId!,
       credit: item.credit,

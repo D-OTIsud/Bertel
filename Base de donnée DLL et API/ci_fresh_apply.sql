@@ -694,6 +694,9 @@ ROLLBACK;
 \ir ../supabase/migrations/20261103080731_partner_menu_extraction_operations.sql
 \echo '== P backend preparation: durable photo assessment and human appeal remain OFF =='
 \ir ../supabase/migrations/20261103084816_partner_portal_photo_assessment_foundation_off.sql
+\echo '== Actor album preparation: read-only until explicit compatible-client cutover =='
+\ir ../supabase/migrations/20261104151051_partner_photo_actor_workspace_texts.sql
+\ir tests/test_partner_photo_actor_album_preparation.sql
 \endif
 
 -- The upgrade CI scenario stops before the reader patches, then reconstructs the
@@ -714,3 +717,23 @@ REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
 
 \echo '== Fresh apply complete =='
+
+-- Opt-in recipe wiring only. No workflow invokes this flag for the current
+-- integration; do NOT execute this manifest on the existing production project.
+-- The historical independent fixture guard is never weakened or bypassed.
+\if :{?partner_portal_verify_album_contract}
+\ir tests/assert_partner_api_ephemeral.sql
+\ir ../supabase/cutovers/partner_photo_stock_and_gallery.sql
+\ir ../supabase/cutovers/partner_photo_actor_album.sql
+-- Reapplication is explicit: must preserve predicates/ACLs and stay safe.
+\ir ../supabase/cutovers/partner_photo_actor_album.sql
+\ir tests/setup_partner_photo_stock.sql
+\ir tests/test_partner_photo_actor_album.sql
+\ir ../supabase/cutovers/close_partner_photo_actor_album.sql
+\ir ../supabase/cutovers/close_partner_photo_actor_album.sql
+-- Replaying old cutover grants must not bypass the new guards in the bodies.
+\ir ../supabase/cutovers/partner_photo_stock_and_gallery.sql
+\ir tests/test_partner_photo_actor_album_closed.sql
+\ir ../supabase/cutovers/close_partner_photo_actor_album.sql
+\ir tests/cleanup_partner_photo_stock.sql
+\endif

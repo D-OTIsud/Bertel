@@ -25,3 +25,14 @@ test('un échec de lecture de la galerie interdit de préparer l’envoi depuis 
  const base=media(),draft={...base,objectItems:[portalPhotoDraft({id:UPLOAD,title:'Nouvelle',width:1,height:1},'',null,base)]};
  expect(()=>buildPortalPhotoSubmission('HOT1',{...base,unavailableReason:'Load failed'},draft)).toThrow();
 });
+test('une deuxième proposition conserve les reçus précédents sans les soumettre à nouveau', () => {
+  const baseline = media();
+  const sent = portalPhotoDraft({id:UPLOAD,title:'Déjà envoyée',width:1,height:1},'',null,baseline);
+  baseline.objectItems = [sent];
+  const next = portalPhotoDraft({id:'nouvelle',title:'À envoyer',width:1,height:1},'',null,baseline);
+  const draft = {...baseline,objectItems:[sent,next]};
+  expect(buildPortalPhotoSubmission('HOT1',baseline,draft).payload).toEqual({
+    additions:[{upload_id:'nouvelle',credit:'',replace_media_id:null}],
+  });
+  expect(() => buildPortalPhotoSubmission('HOT1',baseline,baseline)).toThrow('Aucune nouvelle photo');
+});

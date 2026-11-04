@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PhotosEditorRubric } from "./PhotosEditorRubric";
+import { photoAppealStatus } from "./portal-photo-album";
 import { fakeEditor, portalModules } from "../__fixtures__/portal-fixtures";
 import { PORTAL_RUBRICS, type BuiltPortalRubric } from "../portal-rubrics";
 import * as service from "../../../services/portal-photos";
@@ -320,6 +321,12 @@ test("refus humain sans IA : reprise idempotente, demande locale et seconde cart
   await userEvent.click(screen.getByRole("button", { name: "Voir ma demande" }));
   expect(screen.getByRole("dialog", { name: "Jardin" })).toHaveTextContent("En cours de révision");
 });
+
+test.each([["awaiting_provider", "Attente prestataire"], ["closed", "Clôturée"], ["canceled", "Annulée"]])(
+  "le recours affiche le véritable statut CRM %s", (status, label) => {
+    expect(photoAppealStatus({reviewAppeal:{interactionId:"office",status}})).toBe(label);
+  },
+);
 
 test("consultation : galerie et détails lisibles, aucune mutation proposée", async () => {
   current.writesEnabled = false; current.analysisEnabled = true;

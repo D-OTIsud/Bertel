@@ -1,3 +1,4 @@
+import { interactionStatusLabel } from "../../crm/crm-status";
 import type { PortalPhotoWorkspace } from "../../../services/portal-photos";
 
 export type AlbumPhotoStatus = "online" | "draft" | "pending" | "refused";
@@ -47,9 +48,12 @@ export interface AlbumPhoto {
 
 export const photoName = (photo: Pick<AlbumPhoto, "title">) => photo.title || "Photo sans titre";
 export const photoAppealId = (photo: AlbumPhoto) => photo.reviewAppeal?.interactionId ?? photo.analysis?.appealInteractionId ?? null;
-export function photoAppealStatus(photo: AlbumPhoto): string {
+export function photoAppealStatus(photo: Pick<AlbumPhoto, "reviewAppeal" | "analysis">): string {
   const state = photo.reviewAppeal?.status ?? photo.analysis?.appealStatus;
-  return ({ new: "Envoyée à l’office", in_progress: "En cours de révision", resolved: "Traitée par l’office", rejected: "Demande de révision non retenue" } as Record<string, string>)[state ?? ""] ?? "Envoyée à l’office";
+  if (state === "new") return "Envoyée à l’office";
+  if (state === "in_progress") return "En cours de révision";
+  if (state === "resolved") return "Traitée par l’office";
+  return interactionStatusLabel(state) ?? "Statut indisponible";
 }
 
 export function albumPhotoStatus(photo: AlbumPhoto): string {

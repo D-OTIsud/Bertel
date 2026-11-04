@@ -697,6 +697,8 @@ ROLLBACK;
 \echo '== Actor album preparation: read-only until explicit compatible-client cutover =='
 \ir ../supabase/migrations/20261104151051_partner_photo_actor_workspace_texts.sql
 \ir tests/test_partner_photo_actor_album_preparation.sql
+\echo '== Office appeal reader: real B/P receipt, private preview and existing CRM attachment block =='
+\ir ../supabase/migrations/20261104161843_partner_photo_refusal_office_private_preview.sql
 \endif
 
 -- The upgrade CI scenario stops before the reader patches, then reconstructs the
@@ -729,6 +731,7 @@ REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
 \ir ../supabase/cutovers/partner_photo_actor_album.sql
 \ir tests/setup_partner_photo_stock.sql
 \ir tests/test_partner_photo_actor_album.sql
+\ir tests/test_partner_photo_office_appeal.sql
 \ir ../supabase/cutovers/close_partner_photo_actor_album.sql
 \ir ../supabase/cutovers/close_partner_photo_actor_album.sql
 -- Replaying old cutover grants must not bypass the new guards in the bodies.

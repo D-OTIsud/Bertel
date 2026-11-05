@@ -1,6 +1,8 @@
 jest.mock('server-only', () => ({}));
+jest.mock('./supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 
-import { extractPartnerKey, hashPartnerKey } from './partner-auth';
+import { admitPartner, extractPartnerKey, hashPartnerKey } from './partner-auth';
+import { getServerSupabaseClient } from './supabase-server';
 import { PUBLIC_RPC_ALLOWLIST, callPublicRpc } from './public-api';
 
 const VALID = 'bk_live_' + 'a'.repeat(48);
@@ -50,5 +52,58 @@ describe('partner-auth', () => {
     expect(r.ok).toBe(false);
     expect(r.status).toBe(400);
     expect(r.body).toEqual({ error: 'unknown_endpoint' });
+  });
+});
+
+describe('admitPartner', () => {
+  const rpc = jest.fn();
+  const identity = { ok: true, id: '6e585305-3ced-4660-964a-062173a3ea46', label: 'Partner', scopes: ['read'] };
+  const verdict = { allowed: true, retry_after: 60, limit: 120, remaining: 119 };
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (getServerSupabaseClient as jest.Mock).mockReturnValue({ schema: jest.fn().mockReturnValue({ rpc }) });
+    rpc.mockResolvedValue({ data: { ...identity, rate: verdict }, error: null });
+  });
+  test.each([null, undefined, '', 'Bearer broken'])('rejects absent/malformed key %s before RPC', async (header) => {
+    expect(await admitPartner(header)).toBeNull();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  test('uses one RPC with only the hash and quota parameters', async () => {
+    expect(await admitPartner(`Bearer ${VALID}`)).toEqual({
+      partner: { keyId: identity.id, label: identity.label, scopes: ['read'] },
+      rate: { allowed: true, retryAfter: 60, limit: 120, remaining: 119 },
+    });
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('partner_admit', { p_key_hash: hashPartnerKey(VALID), p_limit: 120, p_window_seconds: 60 });
+  });
+  test('preserves denied quota verdict and custom limits', async () => {
+    rpc.mockResolvedValue({ data: { ...identity, rate: { allowed: false, retry_after: 7, limit: 2, remaining: 0 } } });
+    expect((await admitPartner(VALID, 2, 10))?.rate).toEqual({ allowed: false, retryAfter: 7, limit: 2, remaining: 0 });
+  });
+  test.each([{ ok: false }, null, [], { ...identity, id: 1 }, { ...identity, scopes: [1] }, { ...identity, label: null }])(
+    'fails closed for rejected or malformed identities %p', async (data) => {
+      rpc.mockResolvedValue({ data, error: null });
+      expect(await admitPartner(VALID)).toBeNull();
+    },
+  );
+  test.each([null, {}, { ...verdict, remaining: NaN }, { ...verdict, remaining: -1 }, { ...verdict, allowed: 'true' }])(
+    'fails open for malformed quota only after verified identity %p', async (rate) => {
+      rpc.mockResolvedValue({ data: { ...identity, rate }, error: null });
+      expect((await admitPartner(VALID))?.rate).toEqual({ allowed: true, retryAfter: 0, limit: 120, remaining: 120 });
+    },
+  );
+  test('fails closed for RPC errors and missing server', async () => {
+    rpc.mockResolvedValue({ data: { ...identity, rate: verdict }, error: { message: 'auth failed' } });
+    expect(await admitPartner(VALID)).toBeNull();
+    rpc.mockRejectedValue(new Error('network'));
+    expect(await admitPartner(VALID)).toBeNull();
+    (getServerSupabaseClient as jest.Mock).mockReturnValue(null);
+    expect(await admitPartner(VALID)).toBeNull();
+  });
+  test('rechecks identity on each request, including immediate revocation/expiry', async () => {
+    expect(await admitPartner(VALID)).not.toBeNull();
+    rpc.mockResolvedValue({ data: { ok: false }, error: null });
+    expect(await admitPartner(VALID)).toBeNull();
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 });

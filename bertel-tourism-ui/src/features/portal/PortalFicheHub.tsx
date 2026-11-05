@@ -70,6 +70,7 @@ const APPROVED_BADGE = { label: 'Accepté — en cours de report', className: 'b
 
 /** Le geste attendu, à l'impératif : « Indiquez vos horaires », pas « Horaires ». */
 const TODO_LABEL: Record<PortalRubricId, string> = {
+  photos: 'Ajoutez des photos',
   contacts: 'Indiquez vos coordonnées',
   presentation: 'Présentez votre établissement',
   hours: 'Indiquez vos horaires',
@@ -219,7 +220,7 @@ export function PortalFicheHub({
   // mais rien ne peut partir tant que l'office n'a pas répondu. Sans ce comptage, « Valider »
   // n'a AUCUN effet visible et la phrase prévue pour ce cas est inatteignable.
   const held = rubrics.filter((rubric) => rubric.state === 'pending' && editor.dirtySections[rubric.module]);
-  const todo = rubrics.filter((rubric) => rubric.state === 'todo');
+  const todo = rubrics.filter((rubric) => rubric.state === 'todo' && rubric.id !== 'photos');
   const countable = rubrics.filter((rubric) => rubric.state !== 'unavailable');
   const done = countable.filter((rubric) => rubric.state !== 'todo').length;
   const photos = countPortalPhotos(media);
@@ -446,6 +447,7 @@ export function PortalFicheHub({
           ) : (
             <>
               <PhotosRubric
+                onEdit={rubrics.some(rubric => rubric.id === 'photos' && rubric.state !== 'unavailable') ? () => onNavigate(rubricHref('photos')) : undefined}
                 ref={photosRef}
                 media={media}
                 ficheName={fiche.name}

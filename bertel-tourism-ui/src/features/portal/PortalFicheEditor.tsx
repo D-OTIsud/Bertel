@@ -88,8 +88,14 @@ export function PortalFicheEditor({
     editor,
     onStorageFailure: reportStorageFailure,
   });
+  const mergeSavedModule = useCallback<ObjectEditorState['mergeSavedModule']>((key, update) => {
+    editor.mergeSavedModule(key, update);
+    void queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] });
+    void queryClient.invalidateQueries({ queryKey: ['portal-fiches'] });
+  }, [editor.mergeSavedModule, queryClient, objectId]);
   const portalEditor: ObjectEditorState = {
     ...editor,
+    mergeSavedModule,
     replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => {
       editor.replaceModule(key, value);
       const module = (Object.keys(MODULE_KEY_MAP) as WorkspaceModuleId[]).find((entry) => MODULE_KEY_MAP[entry] === key);

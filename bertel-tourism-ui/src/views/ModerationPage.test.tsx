@@ -5,6 +5,7 @@ import * as rpc from '../services/rpc';
 import type { PendingChangeItem } from '../types/domain';
 
 jest.mock('../services/rpc');
+jest.mock('../features/portal/PortalPhotoReview',()=>({PortalPhotoReview:()=> <div>Aperçu privé des photos</div>}));
 const mock = rpc as jest.Mocked<typeof rpc>;
 
 // 18a/D9 — la page lit `?object=` (Task 19 y enverra l'agent depuis le kanban CRM).
@@ -84,6 +85,15 @@ beforeEach(() => {
 });
 
 describe('ModerationPage (P2.1)', () => {
+  it('publie les nouveaux dépôts par le serveur avant l’approbation de l’envoi',async()=>{
+    mock.listPendingChanges.mockResolvedValue([{...AUTO_ITEMS[0],targetTable:'media',field:'Vos photos'}]);
+    renderPage();
+    expect(await screen.findByText('Aperçu privé des photos')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:/Tout approuver/}));
+    const dialog=await screen.findByRole('dialog',{name:/Approuver l’envoi/});
+    fireEvent.click(within(dialog).getByRole('button',{name:/^Approuver$/}));
+    await waitFor(()=>expect(mock.approveFicheSubmission).toHaveBeenCalledWith('sub-2',null,false,true));
+  });
   it('renders the pending suggestion (before / after / object / author)', async () => {
     renderPage();
     expect(await screen.findByText('Bras-Long')).toBeInTheDocument();
@@ -395,6 +405,8 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     fireEvent.click(within(first).getByRole('button', { name: /Certifier et valider/ }));
     await waitFor(() => expect(mock.approvePendingChange).toHaveBeenCalledWith('pc-a', null, true));
 
+    // The shared dialog keeps the underlying page inaccessible until its exit transition ends.
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Approuver la suggestion/ })).not.toBeInTheDocument());
     fireEvent.click(screen.getAllByRole('button', { name: /^Approuver$/ })[1]);
     const next = await screen.findByRole('dialog', { name: /Approuver la suggestion/ });
     expect(within(next).getByRole('checkbox', { name: /j.ai reporté ces modifications/i })).not.toBeChecked();

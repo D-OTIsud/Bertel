@@ -243,9 +243,16 @@ const BANNED = /\b(canonique|mod[ée]ration|soumission|module|section|workspace|
 
 describe('vocabulaire et intégrité du registre', () => {
 
+  it('Photos reste fermé par le plancher historique et s’ouvre seulement si media est autorisé', () => {
+    expect(build().some(rubric => rubric.id === 'photos')).toBe(false);
+    expect(build({ floor: floor.filter(module => module !== 'media') }).find(rubric => rubric.id === 'photos')?.state).toBe('todo');
+    expect(build({ floor: floor.filter(module => module !== 'media'), masked: ['media'] }).some(rubric => rubric.id === 'photos')).toBe(false);
+  });
+
   it('chaque rubrique porte un module hors plancher et un titre sans jargon', () => {
     for (const rubric of PORTAL_RUBRICS) {
-      expect(floor).not.toContain(rubric.module);
+      // The legacy server floor includes media; Photos remains an explicit opt-in.
+      expect(floor.filter(module => module !== 'media')).not.toContain(rubric.module);
       expect(rubric.title).not.toMatch(BANNED);
       expect(rubric.title.length).toBeGreaterThan(3);
     }

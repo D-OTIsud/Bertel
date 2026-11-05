@@ -116,3 +116,15 @@ outputs/
 
 # Diagnostics, captures et copies locales de validation : jamais publies
 /scratch/
+
+# Private audit evidence and real-contact import captures (local only).
+/docs/audits/2026-11-05-global/
+/docs/audits/get-object-resource-map/
+/docs/import-candidates/audit-2026-10-26/
+/docs/import-candidates/preparation-2026-10-26/
+/docs/import-candidates/import-2026-10-26/
+/docs/import-candidates/import-couverture-2026-10-26/
+/docs/remediation/2026-10-26-insee/
+/docs/releases/2026-10-30-filtre-prestataire-verification.json
+/docs/design/Modales-proposition-source.html
+/.tmp-jest-gor-review/

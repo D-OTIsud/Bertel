@@ -112,6 +112,8 @@ export interface PortalFicheHubProps {
   /** Modules acceptés par l'office mais pas encore recopiés sur la fiche. */
   approvedModules: Set<string>;
   media: ObjectWorkspaceMediaModule | undefined;
+  /** Confirmed by the caller-scoped photo workspace; unknown means consultation. */
+  photoWritesEnabled?: boolean;
   note: string;
   onNoteChange: (value: string) => void;
   savedAt: string | null;
@@ -147,6 +149,7 @@ export function PortalFicheHub({
   rejections,
   approvedModules,
   media,
+  photoWritesEnabled = false,
   note,
   onNoteChange,
   savedAt,
@@ -448,6 +451,7 @@ export function PortalFicheHub({
             <>
               <PhotosRubric
                 onEdit={rubrics.some(rubric => rubric.id === 'photos' && rubric.state !== 'unavailable') ? () => onNavigate(rubricHref('photos')) : undefined}
+                writesEnabled={photoWritesEnabled}
                 ref={photosRef}
                 media={media}
                 ficheName={fiche.name}

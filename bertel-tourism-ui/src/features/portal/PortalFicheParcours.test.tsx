@@ -157,7 +157,7 @@ beforeEach(() => {
   useSessionStore.setState({ userId: USER, role: 'actor', demoMode: false } as never);
 });
 
-test('Photos seul ouvre le nouvel album et rebase la galerie sans modifier les autres rubriques', async () => {
+test.each([false, true])('Photos ouvre le bon accès au workspace writesEnabled=%s sans modifier les autres rubriques', async writesEnabled => {
   primeServices();
   mockedPortal.getPortalSectionVisibility.mockResolvedValue({ floorModules: FLOOR.filter(module => module !== 'media'), maskedModules: [] });
   jest.mocked(getPortalPhotoWorkspace).mockResolvedValue({
@@ -165,13 +165,23 @@ test('Photos seul ouvre le nouvel album et rebase la galerie sans modifier les a
       position: 1, isMain: true, portalDocumentId: null, textSnapshot: { revision: 'text-1', title: 'Façade', description: null, title_i18n: {}, description_i18n: {} } }],
     proposals: [], capacity: { limit: 20, used: 1, published: 1, reserved: 0, remaining: 19 },
     orderSnapshot: [{ id: '00000000-0000-4000-a000-00000000f301', position: 1, isMain: true, revision: 'order-1' }],
-    orderNeedsNormalization: false, writesEnabled: false, analysisEnabled: false,
+    orderNeedsNormalization: false, writesEnabled, analysisEnabled: false,
   });
   renderRouted();
-  await userEvent.click(await screen.findByRole('button', { name: 'Gérer vos photos' }));
+  const open = await screen.findByRole('button', { name: writesEnabled ? 'Gérer vos photos' : 'Voir vos photos' });
+  if (writesEnabled) {
+    expect(screen.getByText(/Vous pouvez retirer et réordonner/)).toBeInTheDocument();
+  } else {
+    expect(screen.queryByText(/Vous pouvez retirer et réordonner/)).not.toBeInTheDocument();
+    expect(screen.getByText('Contactez votre office de tourisme.')).toBeInTheDocument();
+  }
+  await userEvent.click(open);
   expect(await screen.findByRole('button', { name: 'Détails de Façade' })).toBeInTheDocument();
-  expect(screen.getByText('La galerie est actuellement en consultation.')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Ajouter' })).toBeDisabled();
+  if (writesEnabled) expect(screen.getByRole('button', { name: 'Ajouter' })).toBeEnabled();
+  else {
+    expect(screen.getByText('La galerie est actuellement en consultation.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajouter' })).toBeDisabled();
+  }
   expect(screen.queryByRole('button', { name: 'Envoyer à l’office' })).not.toBeInTheDocument();
   expect(jest.mocked(getPortalPhotoWorkspace)).toHaveBeenCalledWith(OBJ);
   expect(mockedQueries.loadObjectWorkspace.mock.calls.length).toBeLessThan(4);

@@ -5,7 +5,7 @@ _The §101/§103 invariant: any **authorable** object-attached table MUST be emi
 > ⚠️ **Reads are regex-inferred — false negatives exist** (e.g. `save_object_places` writes `object_zone` but the edge wasn't detected). A table flagged ‘no consumer detected’ is a **candidate** gap to verify in the function body or live, not a proven one. Confirmed exposure gaps belong in the decision log (§101/§103).
 
 ## Summary
-- authorable object-attached tables: **67** — emitted by a detected consumer read: **65** — candidate gaps: **2**
+- authorable object-attached tables: **75** — emitted by a detected consumer read: **73** — candidate gaps: **2**
 - system-ledger object-attached tables (out of §101 scope): **9** (`audit_session`, `incident_report`, `org_config`, `org_permission`, `pending_change`, `promotion_object`, `promotion_usage`, `publication_object`, `user_org_membership`)
 
 ## Candidate authorable gaps (verify before trusting)
@@ -15,11 +15,16 @@ _The §101/§103 invariant: any **authorable** object-attached table MUST be emi
 
 ## Covered authorable tables
 
-- `actor_object_role` ← `current_user_crm_actor_ids`, `current_user_extended_object_ids`, `current_user_portal_object_ids`, `export_actor_capabilities`, `export_actor_contacts`, `get_actor_data` …
+- `gallery_write_receipt` ← `get_gallery_write_receipt`, `save_object_gallery`
+- `portal_photo_analysis` ← `appeal_portal_photo_analysis`, `appeal_portal_photo_review`, `finish_portal_photo_analysis`, `get_portal_photo_analysis`, `photo_analysis_envelope`, `photo_analysis_json` …
+- `actor` ← `actor_in_current_realm`, `capture_dashboard_realm_snapshots`, `complete_portal_photo_upload`, `current_user_actor_id`, `current_user_crm_actor_ids`, `current_user_test_realm` …
+- `actor_document` ← `appeal_portal_photo_review`, `cancel_portal_photo_upload`, `complete_portal_photo_upload`, `gallery_bind_photo_proposal`, `get_portal_photo_review`, `list_actor_support` …
+- `actor_object_role` ← `complete_portal_photo_upload`, `current_user_crm_actor_ids`, `current_user_extended_object_ids`, `current_user_portal_object_ids`, `export_actor_capabilities`, `export_actor_contacts` …
 - `contact_channel` ← `get_object_jsonld`, `get_object_resource`, `get_object_resource_adapted`, `get_objects_with_deep_data`, `get_organization_data`, `interop_object_core` …
-- `crm_interaction` ← `capture_dashboard_realm_snapshots`, `current_user_crm_actor_ids`, `dashboard_crm_interactions`, `delete_crm_interaction`, `list_actor_crm`, `list_crm_directory` …
+- `crm_interaction` ← `appeal_portal_photo_analysis`, `appeal_portal_photo_review`, `capture_dashboard_realm_snapshots`, `current_user_crm_actor_ids`, `dashboard_crm_interactions`, `delete_crm_interaction` …
 - `crm_task` ← `claim_unmailed_notifications`, `crm_backfill_assignees_from_owner`, `get_dashboard_crm_open`, `get_dashboard_provider_crm_open`, `list_crm_tasks`, `list_my_notifications` …
-- `media` ← `commit_staging_to_public`, `export_publication_indesign`, `get_filtered_object_ids`, `get_media_for_web`, `get_object_resource`, `get_object_room_types` …
+- `fiche_submission` ← `approve_fiche_submission`, `approve_pending_change`, `list_my_portal_fiches`, `list_my_submissions`, `list_pending_changes`, `portal_photo_appeal_document` …
+- `media` ← `commit_staging_to_public`, `export_publication_indesign`, `gallery_photo_usage`, `gallery_published_photo_count`, `get_filtered_object_ids`, `get_gallery_write_receipt` …
 - `meeting_room_equipment` ← `get_filtered_object_ids`, `get_object_resource`
 - `object_accommodation_unit_type` ← `get_filtered_object_ids`
 - `object_act` ← `get_object_resource`, `seed_test_facets`
@@ -56,7 +61,7 @@ _The §101/§103 invariant: any **authorable** object-attached table MUST be emi
 - `object_menu_item_cuisine_type` ← `get_object_resource`, `search_events_by_restaurant_cuisine`, `search_restaurants_by_cuisine`
 - `object_menu_item_dietary_tag` ← `get_object_resource`, `refresh_object_filter_caches`
 - `object_menu_item_media` ← `get_object_resource`, `seed_test_media`
-- `object_org_link` ← `auto_attach_object_to_creator_org`, `current_user_crm_object_ids`, `current_user_extended_object_ids`, `export_actor_contacts`, `get_object_i18n_all`, `get_object_resource` …
+- `object_org_link` ← `auto_attach_object_to_creator_org`, `complete_portal_photo_upload`, `current_user_crm_object_ids`, `current_user_extended_object_ids`, `export_actor_contacts`, `get_object_i18n_all` …
 - `object_origin` ← `get_object_resource`
 - `object_payment_method` ← `get_object_resource`, `refresh_object_filter_caches`, `save_object_commercial`
 - `object_pet_policy` ← `get_filtered_object_ids`, `get_object_resource`, `save_object_commercial`
@@ -77,6 +82,9 @@ _The §101/§103 invariant: any **authorable** object-attached table MUST be emi
 - `object_web_channel` ← `get_object_jsonld`, `get_object_resource`, `interop_object_core`
 - `object_zone` ← `get_object_resource`, `save_object_places`
 - `opening_period` ← `build_opening_period_json`, `compute_open_status`, `get_object_resource`, `is_object_open_now`, `save_object_openings`, `seed_test_corpus`
+- `org_actor_module_visibility` ← `complete_portal_photo_upload`, `get_actor_section_visibility`, `get_portal_section_visibility`
 - `org_branding_settings` ← `get_app_branding`, `get_org_branding`, `get_org_smtp`, `get_org_smtp_secret`, `upsert_org_branding`
+- `org_role_permission` ← `grant_test_org_permissions`, `list_object_verifier_ids`, `rpc_list_org_members`, `rpc_list_role_permissions`, `user_can_moderate_pending_object`, `user_has_permission`
+- `org_smtp_settings` ← `count_notifications_blocked_no_smtp`, `delete_org_smtp`, `get_org_smtp`, `get_org_smtp_secret`, `list_org_smtp_status`, `upsert_org_smtp`
 - `promotion` ← `get_object_resource`, `validate_promotion_code`
 - `ref_trail_manager` ← `get_public_trail`, `get_trail`, `list_public_trails`, `list_trails`, `trail_sync_apply`

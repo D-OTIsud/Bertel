@@ -1,4 +1,5 @@
 import type { WorkspaceReferenceOption, WorkspaceTranslatableField } from './common';
+import type { GalleryWriteBaseline } from '../media-write-contract';
 
 export interface ObjectWorkspaceDescriptionScope {
   recordId: string | null;
@@ -92,6 +93,9 @@ export interface ObjectWorkspaceLegalModule {
 }
 
 export interface ObjectWorkspaceMediaItem {
+  /** Private partner receipt, never a canonical media ID. */
+  portalUploadId?: string;
+  portalReplaceMediaId?: string | null;
   id: string;
   scope: 'object' | 'place';
   placeId: string | null;
@@ -117,6 +121,8 @@ export interface ObjectWorkspaceMediaItem {
 }
 
 export interface ObjectWorkspaceMediaModule {
+  /** Raw baseline for the office CAS writer; no public API field. */
+  galleryWriteBaseline?: GalleryWriteBaseline;
   typeOptions: WorkspaceReferenceOption[];
   tagOptions: WorkspaceReferenceOption[];
   objectItems: ObjectWorkspaceMediaItem[];

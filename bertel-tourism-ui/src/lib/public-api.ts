@@ -62,11 +62,21 @@ export async function callPublicRpc(rpcName: string, params: Record<string, unkn
   if (!server) {
     return { ok: false, status: 500, body: { error: 'server_misconfigured' } };
   }
+  const startedAt = performance.now();
   const { data, error } = await server.schema('api').rpc(rpcName, params);
   if (error) {
-    // Le message Postgres brut (noms de fonctions/enums/tables internes) est journalisé
-    // côté serveur pour le diagnostic mais JAMAIS renvoyé au partenaire (fuite de schéma).
-    console.error(`[public-api] upstream RPC error (${rpcName}):`, error.message);
+    // Explicit safe fields only: upstream messages/details can contain request data.
+    const pagination: { page_size?: number; view?: 'card' | 'full' } = {};
+    if (typeof params.p_page_size === 'number' && Number.isSafeInteger(params.p_page_size) && params.p_page_size > 0) {
+      pagination.page_size = params.p_page_size;
+    }
+    if (params.p_view === 'card' || params.p_view === 'full') pagination.view = params.p_view;
+    console.error('[public-api] upstream RPC error', {
+      rpc: rpcName,
+      duration_ms: Math.round(performance.now() - startedAt),
+      code: typeof error.code === 'string' && /^(?:[0-9A-Z]{5}|PGRST\d{3})$/.test(error.code) ? error.code : null,
+      ...pagination,
+    });
     return { ok: false, status: 502, body: { error: 'upstream_error', detail: 'upstream error' } };
   }
   return { ok: true, status: 200, body: data ?? null };

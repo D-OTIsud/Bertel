@@ -5,6 +5,20 @@ import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 
 /** §84 — §13 redesigned: modal-driven tariff lines + discounts, no inline grid, no write-trap policy block. */
 describe('SectionPricing (§84 modal redesign)', () => {
+  it.each([
+    { amount: '0', amountMax: '', expected: 'Gratuit' },
+    { amount: '', amountMax: '', expected: '—' },
+    { amount: '0', amountMax: '12', expected: '0 – 12 €' },
+  ])('renders tariff amount $amount / $amountMax as $expected', ({ amount, amountMax, expected }) => {
+    const modules = fullModulesFixture();
+    modules.pricing.prices[0] = { ...modules.pricing.prices[0], amount, amountMax };
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionPricing editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByText(expected, { exact: true })).toBeInTheDocument();
+    if (expected !== 'Gratuit') expect(screen.queryByText('Gratuit', { exact: true })).toBeNull();
+  });
+
   it('opens the add modal and appends a tariff line on save', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<SectionPricing editor={result.current} permissions={allowAll} />);

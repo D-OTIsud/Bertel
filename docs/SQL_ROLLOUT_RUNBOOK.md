@@ -2281,3 +2281,24 @@ vérifie les destinataires, la déduplication, le cycle de modération, les cont
 cloche/e-mail et la non-régression du portail. Le workflow SQL le rejoue après
 l'installation complète. Les soumissions simultanées et la résolution concurrente
 doivent aussi être vérifiées avec deux connexions sur une base de test.
+
+
+## Consolidation SQL partenaire — 2026-11-05
+
+La consolidation sur master conserve ses évolutions récentes (notifications Listes 19f, documents 19g/19h, propositions internes 19i, dashboard/realm et historique). Trois migrations partenaires qui manquaient au dépôt sont ajoutées avec leurs inverses et tests :
+
+- **R2a** : `supabase/migrations/20261019145445_partner_admission.sql`, immédiatement après `migration_partner_rate_limit.sql`. `api.partner_admit` réunit authentification et quota dans une courte transaction INVOKER service-role-only. L'authentification reste fail-closed ; seule la panne du quota reprend la politique fail-open existante. Les lectures lourdes restent hors de cette transaction. Test : `tests/test_partner_admission.sql`.
+- **19j** : `supabase/migrations/20261019142132_partner_api_identity_initplan.sql`, après les dernières définitions portail et actor realm. Courriel évalué une fois et sortie anticipée seulement si uid ET e-mail sont absents. Maintient les chemins email-only/uid-only, le realm et les ACL. Test : `tests/test_partner_identity_gate.sql`. Le corps canonique portail porte aussi cette sortie anticipée.
+- **19k** : `supabase/migrations/20261019151241_partner_resource_render_reuse.sql`. Neuf substitutions gardées dans `get_object_resource`, réutilisation locale des lignes contacts/médias/capacités/équipements, sans cache inter-requêtes ni raccourci d'autorisation. La source canonique master reçoit ces neuf fragments seulement. Test : `tests/test_render_reuse.sql`.
+
+Le numéro 19f de l'ancien document partenaire est remplacé par 19j pour ne pas réutiliser le créneau déjà affecté aux notifications Listes. Les fichiers de migrations gardent leurs versions historiques. Le contenu historique de `docs/PARTNER_API_IDENTITY_PERFORMANCE_ROLLOUT.md` rapporte des mesures et applications antérieures ; cette consolidation ne prétend ni les rejouer ni établir l'état actuel de production.
+
+**Fresh bootstrap uniquement** : 19k restaure le prédécesseur par l'inverse, capture un oracle `pg_temp` dans la même session, applique l'optimisation puis compare les JSON et fixtures. Ne jamais utiliser cette séquence inverse/capture/forward sur une API vivante. L'oracle conserve les autres évolutions du builder master ; ce n'est pas une copie ancienne complète.
+
+**Installation incrémentale** : respecter l'historique Supabase de la cible ; ne pas rejouer une migration déjà enregistrée. Admission SQL doit précéder le nouveau gateway ; pour un rollback, restaurer d'abord l'ancien gateway puis `rollback_partner_admission.sql`. Identité et render possèdent leurs scripts inverse gardés dans `Base de donnée DLL et API/rollback/`. Toute définition plus récente doit être rapprochée avant un inverse. Après un rejeu manuel de sources anciennes portail/realm/RLS, remettre les migrations finales dans l'ordre documenté.
+
+**Déjà master, non recopié** : les préparations places/rooms v1 `20261026102125`/`20261026102949` sont présentes et identiques aux copies locales récentes. Ne pas remplacer SURF2/SURF3 par ces scripts upgrade-only : ils portent des gardes du catalogue vivant et de nouveaux contrats ; les tests historiques de surface gardent l'ancien régime. La présente consolidation ne les applique pas et ne valide pas leur déploiement. Aucune donnée d'import privée, candidat expérimental ni ancien graphe DB n'est intégré ici.
+
+**Validation et limites** : aucune connexion production. Parsing SQL/PLpgSQL local, cohérence des neuf fragments et des inverses, existence/ordre des includes ; l'exécution de toutes les fixtures et d'un fresh bootstrap PostgreSQL isolé reste à réaliser avant de certifier la convergence runtime. Les nouveaux constats d'audit des droits sont consignés séparément, sans correctif ajouté à ce lot.
+
+Résultat local de la consolidation : pglast 8.4 valide le SQL des 12 fichiers ajoutés/modifiés, les fonctions procédurales modifiées et les quatre blocs DO d'admission séparément ; 224 includes existent et l'ordre des dépendances est vérifié ; les neuf fragments inverses restaurent exactement la définition master initiale du builder après normalisation LF ; `git diff --check` passe. Aucun exécutable PostgreSQL/Docker local n'était disponible. Ces contrôles de source ne remplacent pas les tests d'exécution.

@@ -5,6 +5,7 @@ import type {
   WorkspaceReferenceOption,
 } from '../../../services/object-workspace-parser';
 import { formatPriceAmount, summarizePricingLine } from './pricing-row';
+import { isFreeAmount } from './pricing-presets';
 
 const labelByCode = (options: WorkspaceReferenceOption[], code: string): string =>
   code ? options.find((option) => option.code === code)?.label ?? code : '';
@@ -40,7 +41,7 @@ export function PriceList({ pricing, onAdd, onEdit, onDelete }: PriceListProps) 
           const publicLabel = price.kindLabel || labelByCode(pricing.priceKindOptions, price.kindCode);
           const unitLabel = price.unitLabel || labelByCode(pricing.priceUnitOptions, price.unitCode);
           const seasonLabel = labelByCode(pricing.priceSeasonOptions, price.seasonCode);
-          const amount = formatPriceAmount(price);
+          const amount = isFreeAmount(price) ? 'Gratuit' : formatPriceAmount(price);
           const detail = [seasonLabel, summarizePricingLine(price)].filter(Boolean).join(' · ');
           const rowLabel = publicLabel || `Ligne ${index + 1}`;
           return (

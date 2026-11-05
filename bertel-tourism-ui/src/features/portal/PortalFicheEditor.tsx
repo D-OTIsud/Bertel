@@ -15,7 +15,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PortalFicheHub, type PortalRejection } from './PortalFicheHub';
 import { PortalSendModal } from './PortalSendModal';
 import { buildPortalRubrics, portalTypeLabel, PORTAL_RUBRICS } from './portal-rubrics';
@@ -27,6 +27,7 @@ import {
   type PortalSentSnapshot,
 } from './usePortalDraft';
 import { readPublicContact } from './portal-bindings';
+import { getPortalPhotoWorkspace } from '../../services/portal-photos';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 import { useObjectEditorState } from '../object-editor/useObjectEditorState';
 import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
@@ -212,6 +213,16 @@ export function PortalFicheEditor({
     [archetype, editor.draft, editor.dirtySections, visibility, pendingModules, rejectedModules],
   );
 
+  // Reuse the album's caller-scoped cache. Unknown/failed reads never promise writes.
+  const photoRubric = rubrics.find(rubric => rubric.id === 'photos');
+  const photoWorkspace = useQuery({
+    queryKey: ['portal-photo-workspace', userId, objectId],
+    queryFn: () => getPortalPhotoWorkspace(objectId),
+    enabled: !activeRubricId && Boolean(photoRubric && photoRubric.state !== 'unavailable' && !photoRubric.readOnlyReason)
+      && !editor.baseline.media.unavailableReason,
+    refetchOnWindowFocus: true,
+  });
+
   const rejections = useMemo<PortalRejection[]>(() => {
     const seen = new Set<string>();
     const list: PortalRejection[] = [];
@@ -357,6 +368,7 @@ export function PortalFicheEditor({
         storageFailed={storageFailed}
         formCache={formCache}
         media={resource.modules.media as ObjectWorkspaceMediaModule}
+        photoWritesEnabled={photoWorkspace.data?.writesEnabled === true && !photoWorkspace.isError}
         note={draft.note}
         onNoteChange={draft.setNote}
         savedAt={draft.savedAt}

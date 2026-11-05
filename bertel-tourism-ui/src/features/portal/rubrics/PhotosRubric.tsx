@@ -44,9 +44,11 @@ export const PhotosRubric = forwardRef<
     officeEmail: string | null;
     officePhone: string | null;
     onEdit?:()=>void;
+    writesEnabled?: boolean;
   }
->(function PhotosRubric({ media, ficheName, officeEmail, officePhone,onEdit }, ref) {
+>(function PhotosRubric({ media, ficheName, officeEmail, officePhone, onEdit, writesEnabled = false }, ref) {
   const photos = (media?.objectItems ?? []).filter((item) => onEdit ? isPublishedPortalPhoto(item) : isPhoto(item.typeCode, item.kind)&&item.isPublished!==false&&!['private','partners'].includes(item.visibility));
+  const canManage = Boolean(onEdit && writesEnabled);
 
   return (
     <section className="portal-card portal-photos" aria-labelledby="portal-photos-title" ref={ref} tabIndex={-1}>
@@ -69,7 +71,7 @@ export const PhotosRubric = forwardRef<
         </ul>
       )}
 
-      {onEdit?<><p className="muted">Seuls les ajouts sont relus. Vous pouvez retirer et réordonner vos photos directement.</p><button className="primary-button" type="button" onClick={onEdit}>Gérer vos photos</button></>:<>
+      {canManage?<><p className="muted">Seuls les ajouts sont relus. Vous pouvez retirer et réordonner vos photos directement.</p><button className="primary-button" type="button" onClick={onEdit}>Gérer vos photos</button></>:<>
       <div className="notice">
         <Mail size={18} aria-hidden />
         <span>
@@ -106,6 +108,7 @@ export const PhotosRubric = forwardRef<
       ) : (
         <p className="muted">Contactez votre office de tourisme.</p>
       )}
+      {onEdit ? <button className="ghost-button" type="button" onClick={onEdit}>Voir vos photos</button> : null}
       </>}
     </section>
   );

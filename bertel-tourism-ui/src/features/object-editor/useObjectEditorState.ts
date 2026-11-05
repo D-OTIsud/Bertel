@@ -52,6 +52,7 @@ export interface ObjectEditorState {
   patchModule: <K extends keyof ObjectWorkspaceModules>(key: K, patch: Partial<ObjectWorkspaceModules[K]>) => void;
   replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => void;
   resetModule: (key: keyof ObjectWorkspaceModules) => void;
+  mergeSavedModule: <K extends keyof ObjectWorkspaceModules>(key: K, update: (current: ObjectWorkspaceModules[K]) => ObjectWorkspaceModules[K]) => void;
   commitModules: (keys: (keyof ObjectWorkspaceModules)[], options?: { canonicalRooms?: boolean; canonicalPlaces?: boolean; canonicalModules?: WorkspaceSaveResult; sentModules?: ObjectWorkspaceModules }) => void;
   /** Sets object.status in BOTH draft and baseline (the new saved truth) without
    *  touching other fields — used after a successful status-lifecycle mutation so
@@ -244,6 +245,18 @@ export function useObjectEditorState(
     });
   }, [freshSnapshot, identityKey]);
 
+  const mergeSavedModule = useCallback(<K extends keyof ObjectWorkspaceModules>(key: K, update: (current: ObjectWorkspaceModules[K]) => ObjectWorkspaceModules[K]) => {
+    setEditorState((prev) => {
+      // Une réponse d’une ancienne fiche/session ne doit pas réactiver son état.
+      if (prev.identityKey !== identityKey) return prev;
+      const current = prev.snapshot;
+      return { ...prev, identityKey, snapshot: { ...current,
+        baseline: { ...current.baseline, [key]: update(current.baseline[key]) },
+        draft: { ...current.draft, [key]: update(current.draft[key]) },
+      }, recoveryConflicts: prev.identityKey === identityKey ? prev.recoveryConflicts : [] };
+    });
+  }, [freshSnapshot, identityKey]);
+
   const setSavedStatus = useCallback((status: string) => {
     setEditorState((prev) => {
       const current = prev.identityKey === identityKey ? prev.snapshot : freshSnapshot;
@@ -271,5 +284,5 @@ export function useObjectEditorState(
   const dirtySections = useMemo(() => getDirtySections(snapshot, nonApplicableModules), [snapshot, nonApplicableModules]);
   const isDirty = useMemo(() => Object.values(dirtySections).some(Boolean), [dirtySections]);
 
-  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, setSavedStatus };
+  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, mergeSavedModule, setSavedStatus };
 }

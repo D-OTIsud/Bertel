@@ -22,7 +22,7 @@ Les onze fichiers qui définissent et exécutent les routes publiques sont ident
 
 Les treize lecteurs SQL conservent leurs définitions et attributs. Les réponses brutes et les projections HTTP de fiches publiées couvrant les douze types disponibles ont été comparées avant installation, après installation et après activation : **mêmes clés, types, valeurs nulles, tableaux et valeurs**, sans exclusion. Les routes catalogue et objets sans clé renvoient toujours 401, `{"error":"unauthorized"}` et la version 1.0.0.
 
-Le journal prestataire a enregistré 42 appels réussis sur 42 sur 24 heures et 88 sur 88 sur 48 heures. Dernier HTTP 200 : **08 h 00 min 37 s**, après l'installation SQL et avant le déploiement de l'album. Au relevé de 08 h 13, aucun appel prestataire n'était journalisé depuis le déploiement final. Aucun nouveau GET avec clé n'est donc revendiqué pour cette dernière fenêtre.
+Le journal prestataire a enregistré 42 appels réussis sur 42 sur 24 heures et 88 sur 88 sur 48 heures. Dernier HTTP 200 : **08 h 00 min 37 s**, après l'installation SQL et avant le déploiement de l'album. Aux relevés de 08 h 13 et 08 h 36, aucun appel prestataire n'était journalisé depuis le déploiement final. Aucun nouveau GET avec clé n'est donc revendiqué pour cette dernière fenêtre. À 08 h 37, les routes de santé et de disponibilité répondaient encore 200 en mode réel, et les routes publiques catalogue et objets sans clé renvoyaient le 401 attendu en version 1.0.0.
 
 ## Retour en production de la version de secours
 

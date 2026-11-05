@@ -1,32 +1,32 @@
-# Livraison galerie du 5 novembre 2026
+# Galerie prestataire : livraison du 5 novembre 2026
 
-Autorisation du responsable du projet reçue le 5 novembre. Choix d'une fiche existante, recette avec Claude, puis mise en production de la galerie et contrôle du contrat API inchangé.
+La galerie de photos est active en production sur [Bertel](https://bertel.otisud.re). L'application déployée est `8f8e3d91f47dc473ad84b004fdff70949f9568b3`, isolée du reste du chantier portail. L'ouverture des écritures a été confirmée à **08 h 11, heure de La Réunion**. La base Supabase existante a servi à toute la recette ; aucun Docker ni nouvelle base sur le poste.
 
-## Cible et méthode
-- Production relevée dans Coolify à 06 h 29, heure de La Réunion, sur `35564dc3c69afd33bbffd5f879e663cc87f9249f`.
-- Paquet isolé préparé depuis ce SHA dans `codex/album-production-20261105`.
-- Base Supabase Bertel existante uniquement. Aucun Docker local ni base neuve.
-- Fiche de recette existante avec quatre photos et un acteur test lié. Identifiants conservés dans les preuves opérateur.
-- Aucun profil de connexion acteur existant. Les scénarios SQL utilisent une liaison transitoire dans une transaction annulée. Cette vérification ne constitue pas une session HTTP acteur.
-- Analyse payante et relances désactivées. Aucun envoi de courriel prévu.
+## Comportement livré
 
-## Séquence
-1. Capturer santé, trafic API, empreintes des lecteurs et JSON de fiches publiques inchangées.
-2. Composer les prérequis Photos fermés et le client office avec contrôle de version. Corriger le retour de sauvegarde canonique pour deux sauvegardes successives.
-3. Faire relire le paquet exact par Claude Opus 5.5 Max. Répéter le SQL dans la base existante avec annulation intégrale.
-4. Installer le socle fermé avec la recette SQL dans une sous-transaction intégralement annulée. Déployer le client office compatible `75568b8` et vérifier son SHA et ses sondes.
-5. Déployer l'album encore fermé. Conserver l'image office compatible comme secours, puis appliquer les restrictions des anciens writers et ouvrir les écritures de l'album.
-6. Contrôler la fiche et comparer à nouveau le contrat API, les lecteurs, les références JSON et les appels journalisés.
+Cartes compactes, détails et édition des textes dans une seule modale, réorganisation des photos publiées par glisser-déposer ou au clavier ; la première est la photo principale. Le motif d'un refus, la demande de révision et le suivi restent associés à la photo concernée. La demande de révision humaine est active. La génération automatique d'analyses reste désactivée.
 
-## Preuves en cours
-- HTTP avant à 06 h 33. Santé et disponibilité 200, mode live, contrat client interne 1/1. Les deux routes publiques sondées sans clé conservent 401 et l'enveloppe `{"error":"unauthorized"}`, version API 1.0.0.
-- Trafic 24 h relevé à 06 h 31. 42 appels journalisés réussis, aucune erreur serveur dans ce journal incomplet. Dernier succès journalisé le 4 novembre à 08 h 00.
-- API HTTP de la branche d'intégration et de la production identique sur onze fichiers et quatre opérations OpenAPI. Le paquet de production sera comparé à nouveau après son commit.
-- Revue Claude Opus 5.5 Max du paquet SQL terminée : absence de remplacement des lecteurs publics et d'expédition de courriels confirmée. Corrections demandées : garde d'atomicité avant DDL, retrait du droit anonyme inutile sur le helper de correction, régénération de toutes les empreintes. La trace des entrées opérateur dans l'historique de migration doit rester hors du dépôt.
-- Revue croisée : correction de l'ordre de traitement des suppressions et des changements de photo principale dans le writer office. Les scénarios correspondants sont inclus dans la recette annulée.
-- Build de production local exact `75568b8` réussi. Ce contrôle ne vaut pas preuve de déploiement serveur.
-- Phase 2 applicative figée pour revue finale Claude et compilation exacte ; déploiement non encore effectué à ce stade.
+## Recette et déploiement
 
-## Retour arrière
-Avant ouverture, garder les écritures acteur fermées. Après fermeture des anciens writers R5, conserver l'image office compatible CAS. Ne pas revenir à l'image 1/1 avec les policies restrictives en place. Ne supprimer aucune donnée saisie par les utilisateurs.
+- Claude Opus 5.5 Max a relu le SQL et l'interface. Les corrections vérifiées portent sur le remplacement ou la suppression de la photo principale, la garde d'atomicité avant toute modification de schéma, la suppression d'un droit anonyme inutile, le focus de la modale et le texte du hub quand la galerie est en consultation. Claude a confirmé la résolution des deux dernières revues ciblées.
+- Installation fermée réussie à 07 h 50. La recette a exécuté les contrôles réels de droits sur une fiche test déjà liée à son acteur : titre/description, ordre et principale, conflits de sauvegarde, refus et recours associé à la bonne photo, limite de vingt photos, remplacement/retrait et refus d'accès à une autre fiche. Les changements de rôle, photos, propositions, messages, notifications et droits de recette ont été annulés dans la transaction.
+- [Client office compatible `75568b8`](https://coolify.otisud.re/project/qw40sk0s4w8sc0gkggokwso4/environment/mo4o40c8o8occs40o4cs0ks4/application/r48k844wg04kks848s00wco4/deployment/jwzceyyqoapd9ib0606bknq2) démarré à 07 h 53 min 48 s. Une réponse Bad Gateway a été observée pendant son remplacement ; santé et disponibilité répondaient 200 à 07 h 54. Contrat d'écriture interne 2/2.
+- [Version finale `8f8e3d9`](https://coolify.otisud.re/project/qw40sk0s4w8sc0gkggokwso4/environment/mo4o40c8o8occs40o4cs0ks4/application/r48k844wg04kks848s00wco4/deployment/noiwvewly8sfhmasgyqglumv) démarrée à 08 h 09 min 38 s. La compilation exacte, TypeScript et les 49 pages ont été vérifiés ; 135 tests ciblés pour l'album, puis 56 pour le correctif de consultation (lots distincts, sans additionner les tests communs).
+- Activation à 08 h 11 min 02 s. Les six règles de protection des écritures et les droits des fonctions ciblées ont été vérifiés ; l'ancien classement et l'expéditeur CRM générique restent fermés. Les contrôles HTTP après activation donnent santé et disponibilité 200 en mode live.
+- Dans le navigateur de production, le compte de découverte existant a ouvert la fiche test avec quatre photos. Une modification du crédit a été enregistrée, relue dans la base et restaurée par une seconde sauvegarde. L'essai a été répété après activation. La ligne finale est identique à l'initiale pour tous les champs hors horodatage de mise à jour.
+- Aucun compte prestataire de test connecté n'existait. Les opérations prestataire ont été exercées avec le rôle authentifié dans la transaction SQL et dans l'interface d'intégration. Aucun dépôt de vrais octets dans Storage depuis une session navigateur prestataire n'est attesté.
+
+## API prestataire
+
+Les onze fichiers qui définissent et exécutent les routes publiques sont identiques à la révision servie avant livraison (`35564dc`). Les quatre opérations OpenAPI v1.0.0 gardent leurs noms, paramètres, enveloppes et en-têtes. Aucun champ JSON n'a été ajouté.
+
+Les treize lecteurs SQL conservent leurs définitions et attributs. Les réponses brutes et les projections HTTP de fiches publiées couvrant les douze types disponibles ont été comparées avant installation, après installation et après activation : **mêmes clés, types, valeurs nulles, tableaux et valeurs**, sans exclusion. Les routes catalogue et objets sans clé renvoient toujours 401, `{"error":"unauthorized"}` et la version 1.0.0.
+
+Le journal prestataire a enregistré 42 appels réussis sur 42 sur 24 heures et 88 sur 88 sur 48 heures. Dernier HTTP 200 : **08 h 00 min 37 s**, après l'installation SQL et avant le déploiement de l'album. Au relevé de 08 h 13, aucun appel prestataire n'était journalisé depuis le déploiement final. Aucun nouveau GET avec clé n'est donc revendiqué pour cette dernière fenêtre.
+
+## Retour en production de la version de secours
+
+Le paquet SQL, ses empreintes et les contrôles après activation sont décrits dans [le dossier de livraison](../../supabase/releases/20261105_partner_photo_album/README.md). Pour suspendre les écritures acteur, appliquer `close.sql` et vérifier la fermeture. Conserver les règles protégeant les tables et les données déjà enregistrées.
+
+Si le client doit être remplacé, épingler `75568b8cd2e2da63306b4a9875fdbcd01f547df7` dans Git Source de Coolify puis redéployer. Ce commit compatible a réellement tourné en production. La page Rollback de cette ressource Compose n'a affiché aucune image de retour instantané : il s'agit d'une reconstruction, dont la durée observée était 2 min 44 s. Ne pas revenir au client 1/1 avec les nouvelles règles d'écriture.
 

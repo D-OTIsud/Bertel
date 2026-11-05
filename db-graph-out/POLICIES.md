@@ -66,6 +66,12 @@
 - **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
+## `audit.audit_log_2027_01`
+- **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
+  - `true`
+- **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+
 ## `audit.audit_log_default`
 - **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
   - `true`
@@ -254,10 +260,20 @@
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object_place p
   WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id))))))`
+- **DELETE RESTRICTIVE** `gallery_photo_no_direct_delete` — roles ['anon', 'authenticated']
+  - `(NOT ((object_id IS NOT NULL) AND (place_id IS NULL) AND (media_type_id IN ( SELECT ref_code_media_type.id
+   FROM ref_code_media_type
+  WHERE (ref_code_media_type.code = 'photo'::text)))))`
 - **INSERT** `canonical_ins_media` — roles ['public']
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object_place p
   WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id))))))`
+- **INSERT RESTRICTIVE** `gallery_photo_no_direct_insert` — roles ['anon', 'authenticated']
+  - `(NOT ((object_id IS NOT NULL) AND (place_id IS NULL) AND (media_type_id IN ( SELECT ref_code_media_type.id
+   FROM ref_code_media_type
+  WHERE (ref_code_media_type.code = 'photo'::text)))))`
+- **SELECT** `correction_read_root_gallery` — roles ['authenticated']
+  - `((place_id IS NULL) AND api.can_read_object_for_correction(object_id))`
 - **SELECT** `read_media` — roles ['public']
   - `(((is_published IS TRUE) AND ((visibility IS NULL) OR (visibility = 'public'::text)) AND (((object_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object o
@@ -270,6 +286,12 @@
   WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id)))))) | (((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object_place p
   WHE …[truncated — full text in catalog_extra.json or live pg_policies]`
+- **UPDATE RESTRICTIVE** `gallery_photo_no_direct_update` — roles ['anon', 'authenticated']
+  - `(NOT ((object_id IS NOT NULL) AND (place_id IS NULL) AND (media_type_id IN ( SELECT ref_code_media_type.id
+   FROM ref_code_media_type
+  WHERE (ref_code_media_type.code = 'photo'::text))))) | (NOT ((object_id IS NOT NULL) AND (place_id IS NULL) AND (media_type_id IN ( SELECT ref_code_media_type.id
+   FROM ref_code_media_type
+  WHERE (ref_code_media_type.code = 'photo'::text)))))`
 
 ## `public.media_tag`
 - **DELETE** `canonical_del_media_tag` — roles ['public']
@@ -1193,6 +1215,10 @@
 - **ALL** `admin_object_version` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
+## `public.object_version_2027_01`
+- **ALL** `admin_object_version` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+
 ## `public.object_version_default`
 - **ALL** `admin_object_version` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
@@ -1819,12 +1845,18 @@
 ## `public.ref_document`
 - **ALL** `Écriture admin des documents de référence` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+- **DELETE RESTRICTIVE** `portal_photo_receipt_no_direct_delete` — roles ['anon', 'authenticated']
+  - `(COALESCE((extra ->> 'source'::text), ''::text) <> 'portal_photo'::text)`
+- **INSERT RESTRICTIVE** `portal_photo_receipt_no_direct_insert` — roles ['anon', 'authenticated']
+  - `(COALESCE((extra ->> 'source'::text), ''::text) <> 'portal_photo'::text)`
 - **SELECT** `Lecture publique des documents de référence` — roles ['anon', 'authenticated']
   - `(access_scope = 'public'::text)`
 - **SELECT** `legal_document_metadata_read` — roles ['authenticated']
   - `((access_scope = 'legal_private'::text) AND (EXISTS ( SELECT 1
    FROM object_legal ol
   WHERE ((ol.document_id = ref_document.id) AND ( SELECT api.user_can_manage_object_legal(ol.object_id) AS user_can_manage_object_legal)))))`
+- **UPDATE RESTRICTIVE** `portal_photo_receipt_no_direct_update` — roles ['anon', 'authenticated']
+  - `(COALESCE((extra ->> 'source'::text), ''::text) <> 'portal_photo'::text) | (COALESCE((extra ->> 'source'::text), ''::text) <> 'portal_photo'::text)`
 
 ## `public.ref_facet_applicability`
 - **ALL** `admin_write_ref_facet_applicability` — roles ['public']

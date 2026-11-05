@@ -31,6 +31,27 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Function to add a legal record
 > =====================================================
 
+## `api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
+- writes `public.crm_interaction` _(high)_
+
+## `api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.crm_interaction` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.fiche_submission` _(high)_
@@ -40,6 +61,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `public.fiche_submission` _(high)_
 - reads `public.pending_change` _(high)_
 - writes `public.pending_change` _(high)_
 
@@ -152,6 +174,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > 1) Single source of truth for "is this object's data readable by the current caller".
 
+## `api.can_read_object_for_correction(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
 ## `api.can_read_object_private_notes(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 
@@ -163,6 +189,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Retourne TRUE si l'utilisateur courant peut écrire une note privée
 > pour l'objet dans le périmètre de son organisation active.
+
+## `api.cancel_portal_photo_upload(p_object_id text, p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
 
 ## `api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)`
 - returns: `integer` — SECURITY DEFINER
@@ -270,6 +304,20 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `staging.ref_classification_value_temp` _(high)_
 - writes `staging.ref_code_temp` _(high)_
 
+## `api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_actor_module_visibility` _(high)_
+- reads `public.ref_document` _(high)_
+- reads `public.ref_org_role` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `api.compose_object_resource_blocks(p_payload jsonb)`
 - returns: `jsonb`
 
@@ -279,6 +327,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_org_business_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - reads `public.user_permission` _(high)_
+- writes `internal.sandbox_discovery_identity` _(high)_
 - writes `public.app_user_profile` _(high)_
 - writes `public.user_org_business_role` _(high)_
 - writes `public.user_org_membership` _(high)_
@@ -286,6 +335,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.count_notifications_blocked_no_smtp()`
 - returns: `integer` — SECURITY DEFINER
 - reads `public.app_notification` _(high)_
+- reads `public.org_smtp_settings` _(high)_
 
 ## `api.create_crm_artifacts_from_incident()`
 - returns: `trigger`
@@ -518,7 +568,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.delete_org_smtp(p_org_object_id text)`
 - returns: `void` — SECURITY DEFINER
+- reads `public.org_smtp_settings` _(high)_
 - reads `vault.secrets` _(high)_
+- writes `public.org_smtp_settings` _(high)_
 - writes `vault.secrets` _(high)_
 
 ## `api.deliver_legal_document(p_legal_id uuid, p_document_id uuid, p_delivered_at timestamp with time zone DEFAULT now(), p_new_status text DEFAULT 'active'::text)`
@@ -642,6 +694,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > == 6. Violations report (ops/CI; legacy rows are NOT auto-deleted) =========
 
+## `api.finish_portal_photo_analysis(p_request_id uuid, p_claim_id uuid, p_outcome jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
+
 ## `api.generate_legal_expiry_notifications(p_days_ahead integer DEFAULT 30, p_object_types text[] DEFAULT NULL::text[])`
 - returns: `json`
 - reads `public.object` _(high)_
@@ -750,6 +807,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_dashboard_crm_activity()`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction_status_event` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
 
 > CRM age, topics, flow and net processing time in the caller real/test realm.
@@ -795,6 +853,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_dashboard_provider_crm_activity()`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction_status_event` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
 
 ## `api.get_dashboard_provider_crm_open()`
@@ -926,6 +985,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > (taxo6), PAS dans la migration phonetique : partir de la mauvaise source
 > ferait regresser 199 (dmetaphone) et 201 (types d unite).
 
+## `api.get_gallery_write_receipt(p_object_id text, p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gallery_write_receipt` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+
 ## `api.get_ingestor_metrics()`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `staging.import_batches` _(high)_
@@ -987,6 +1052,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `TABLE(bucket date, value numeric, denominator integer)` — SECURITY DEFINER
 - reads `public.metric_snapshot` _(high)_
 
+## `api.get_metric_snapshot_series_with_bounds(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)`
+- returns: `jsonb`
+- reads `public.metric_snapshot` _(high)_
+
+> Realm-scoped metric series plus exact first/last source snapshot dates. Weekly buckets never define history duration; legacy tabular reader stays compatible.
+
 ## `api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)`
 - returns: `TABLE(yr integer, mon integer, value numeric)` — SECURITY DEFINER
 - reads `public.metric_snapshot` _(high)_
@@ -998,6 +1069,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_code_contact_kind` _(high)_
 
 > 18a — profil de LA persona acteur courante (current_user_actor_id()), lecture seule v1. Ne constitue PAS une 5e formulation du périmètre PII can_read_actor_contacts : il ne lit jamais qu'UN acteur, le sien.
+
+## `api.get_my_portal_photo_workspace(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
 
 ## `api.get_object_amenity_codes_compact(p_object_id text)`
 - returns: `jsonb`
@@ -1474,11 +1548,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.app_branding_settings` _(high)_
 - reads `public.org_branding_settings` _(high)_
+- reads `public.org_smtp_settings` _(high)_
 
 ## `api.get_org_smtp_secret(p_org_object_id text)`
 - returns: `TABLE(host text, port integer, secure boolean, from_email text, from_name text, username text, password text)` — SECURITY DEFINER
 - reads `public.app_branding_settings` _(high)_
 - reads `public.org_branding_settings` _(high)_
+- reads `public.org_smtp_settings` _(high)_
 - reads `vault.decrypted_secrets` _(high)_
 
 ## `api.get_organization_data(p_object_id text)`
@@ -1521,6 +1597,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Function to get pending document requests in API format
 > =====================================================
 
+## `api.get_portal_photo_analysis(p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.crm_interaction` _(high)_
+
+## `api.get_portal_photo_review(p_change_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
 ## `api.get_portal_section_visibility(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
@@ -1558,12 +1645,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_ref_catalog(p_catalog_key text)`
 - returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 - reads `public.ref_code` _(high)_
 
 ## `api.get_sandbox_discovery_user()`
 - returns: `uuid` — SECURITY DEFINER
 - reads `auth.users` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
 - reads `public.app_user_profile` _(high)_
 - reads `public.org_config` _(high)_
 - reads `public.ref_org_business_role` _(high)_
@@ -1574,9 +1663,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_smtp_config()`
 - returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
 
 ## `api.get_smtp_config_secret()`
 - returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
 - reads `vault.decrypted_secrets` _(high)_
 
 ## `api.get_trail(p_trail_id uuid)`
@@ -1825,6 +1916,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
 - reads `public.crm_interaction` _(high)_
+- reads `public.crm_interaction_status_event` _(high)_
 
 > Journal des transitions de statut d'une demande CRM, ordonné du plus ancien au plus récent (manifeste 17g). Alimente l'encart « depuis quand » du sélecteur de statut. Périmètre §61 : la lisibilité du journal SUIT celle de son interaction (arme objet, à défaut arme acteur, à défaut la sonde d'écriture de notes). N'émet aucune coordonnée — seulement un libellé d'utilisateur via api.crm_user_label.
 
@@ -1927,6 +2019,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_org_role` _(high)_
 
 > 18a — accueil du portail : les fiches de la portée acteur, avec la soumission ouverte (le cas échéant), la dernière résolue, et les canaux PUBLICS de l'office publisher (office_email/office_phone, D11) — jamais un canal interne.
+
+## `api.list_my_portal_messages(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+
+## `api.list_my_portal_photos(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
 
 ## `api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2048,6 +2147,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.list_org_smtp_status()`
 - returns: `TABLE(org_object_id text, org_name text, host text, port integer, from_email text, is_enabled boolean, has_password boolean, last_test_at timestamp with time zone, last_test_ok boolean)` — SECURITY DEFINER
 - reads `public.object` _(high)_
+- reads `public.org_smtp_settings` _(high)_
 
 ## `api.list_partner_keys()`
 - returns: `TABLE(id uuid, label text, key_prefix text, scopes text[], is_active boolean, expires_at timestamp with time zone, revoked_at timestamp with time zone, last_used_at timestamp with time zone, created_at timestamp with time zone)` — SECURITY DEFINER
@@ -2065,6 +2165,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > P2.1 §120 + 18a/D9 — file de modération. Ajoute submission_id / submission_note / actor_label / manual_apply. Jointures soumission et acteur LEFT : une ligne sans soumission (§120/§122) doit rester listée.
 
+## `api.list_portal_message_documents(p_interaction_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_document` _(high)_
+
 ## `api.list_public_trails(p_status_code text DEFAULT NULL::text, p_simplify boolean DEFAULT true, p_tolerance numeric DEFAULT 0.0001, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
 - returns: `TABLE(id uuid, slug text, name text, status_code text, status_label text, not_guaranteed boolean, manager_labels text[], source_label text, source_website text, last_update timestamp with time zone, length_m numeric, geom jsonb)` — SECURITY DEFINER
 - reads `public.ref_code_iti_open_status` _(high)_
@@ -2076,6 +2181,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.list_ref_catalogs()`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 - reads `public.ref_code` _(high)_
 
@@ -2128,6 +2234,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.log_crm_interaction_status_event()`
 - returns: `trigger` — SECURITY DEFINER
+- writes `public.crm_interaction_status_event` _(high)_
 
 > Trigger AFTER INSERT OR UPDATE OF status sur crm_interaction : écrit une ligne de crm_interaction_status_event par transition RÉELLE (un UPDATE qui ne touche pas au statut n'écrit rien). from_status NULL = création. Manifeste 17g.
 
@@ -2253,6 +2360,43 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.pick_lang(p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
 - returns: `text`
 
+## `api.portal_message_document(p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.portal_message_upload_context(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.portal_photo_failed_approval(p_claim_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.portal_photo_preview(p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.portal_photo_upload_context(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `api.prevent_duplicate_actor_email()`
 - returns: `trigger`
 - reads `public.actor` _(high)_
@@ -2265,6 +2409,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `text[]`
 
 > Liste des domaines de référentiel exposés publiquement par api.list_catalog (whitelist default-deny). Audit API I1.
+
+## `api.publish_portal_photo_additions(p_object_id text, p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.media` _(high)_
+- writes `public.ref_document` _(high)_
 
 ## `api.purge_expired_staging_batches(p_limit integer DEFAULT 500)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2281,8 +2435,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.audit_result` _(high)_
 - writes `public.audit_session` _(high)_
 
+## `api.reconcile_portal_photo_order(p_object_id text, p_expected jsonb, p_media_ids jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+
 ## `api.record_org_smtp_test(p_org_object_id text, p_ok boolean, p_error text)`
 - returns: `void` — SECURITY DEFINER
+- writes `public.org_smtp_settings` _(high)_
 
 ## `api.ref_code_domain_is_editable(p_domain text)`
 - returns: `boolean`
@@ -2362,6 +2524,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.reject_pending_change(p_id uuid, p_review_note text)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
 - reads `public.pending_change` _(high)_
 - writes `public.pending_change` _(high)_
 
@@ -2389,6 +2552,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.render_format_time(p_time time without time zone, p_locale text)`
 - returns: `text`
 
+## `api.reorder_portal_photos(p_object_id text, p_media_ids jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+
 ## `api.request_legal_document(p_legal_id uuid, p_requested_at timestamp with time zone DEFAULT now())`
 - returns: `boolean`
 - writes `public.object_legal` _(high)_
@@ -2401,6 +2571,26 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `json` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
 - writes `public.object_list` _(high)_
+
+## `api.reserve_portal_photo_analysis(p_object_id text, p_document_id uuid, p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `internal.portal_photo_analysis_settings` _(high)_
+- reads `public.app_ai_provider_config` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
+
+## `api.reserve_portal_photo_upload(p_object_id text, p_upload_id uuid, p_replace_media_id uuid DEFAULT NULL::uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.ref_document` _(high)_
 
 ## `api.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)`
 - returns: `SETOF text` — SECURITY DEFINER
@@ -2543,6 +2733,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)`
 - returns: `void` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 
 ## `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2647,6 +2838,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)`
 - returns: `void` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_code` _(high)_
 
 > Réordonnancement. Sans cette RPC, absorber RefCodeEditor ferait disparaître les flèches
@@ -2824,6 +3016,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb)`
 - returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 
 ## `api.rpc_write_org_description(p_object_id text, p_payload jsonb)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2923,6 +3116,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_pet_policy` _(high)_
 - writes `public.object_price` _(high)_
 - writes `public.object_price_period` _(high)_
+
+## `api.save_object_gallery(p_object_id text, p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gallery_write_receipt` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- writes `internal.gallery_write_receipt` _(high)_
+- writes `public.media` _(high)_
 
 ## `api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
@@ -3078,6 +3279,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_menu_item_cuisine_type` _(high)_
 - reads `public.ref_code_cuisine_type` _(high)_
 
+## `api.send_portal_message(p_object_id text, p_subject text, p_body text, p_attachments jsonb DEFAULT '[]'::jsonb, p_reply_to text DEFAULT NULL::text, p_client_id uuid DEFAULT NULL::uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.app_notification` _(high)_
+- writes `public.crm_interaction` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `api.set_active_ai_provider(p_id uuid)`
 - returns: `void` — SECURITY DEFINER
 - reads `public.app_ai_provider_config` _(high)_
@@ -3135,6 +3346,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_list` _(high)_
 
 > 6.7 Partage : génère/rote le token, (dé)active le lien
+
+## `api.start_portal_photo_analysis(p_request_id uuid, p_claim_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `internal.portal_photo_analysis_settings` _(high)_
+- reads `public.app_ai_provider_config` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
 
 ## `api.strip_markdown(md text)`
 - returns: `text`
@@ -3295,6 +3515,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > 6.4 Mise à jour des métadonnées (patch whitelisté)
 
+## `api.update_portal_photo_proposal_texts(p_object_id text, p_document_id uuid, p_expected jsonb, p_title text, p_description text)`
+- returns: `jsonb` — SECURITY DEFINER
+
+## `api.update_portal_photo_texts(p_object_id text, p_media_id uuid, p_expected jsonb, p_title text, p_description text)`
+- returns: `jsonb` — SECURITY DEFINER
+
 ## `api.upsert_ai_provider(p_id uuid, p_label text, p_api_kind text, p_base_url text, p_model text, p_max_output_tokens integer, p_is_active boolean, p_extra jsonb DEFAULT '{}'::jsonb, p_api_key text DEFAULT NULL::text)`
 - returns: `uuid` — SECURITY DEFINER
 - reads `public.app_ai_provider_config` _(high)_
@@ -3319,12 +3545,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.upsert_org_smtp(p_org_object_id text, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text DEFAULT NULL::text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text, p_is_enabled boolean DEFAULT false, p_clear_password boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `public.org_smtp_settings` _(high)_
 - reads `vault.secrets` _(high)_
+- writes `public.org_smtp_settings` _(high)_
 - writes `vault.secrets` _(high)_
 
 ## `api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)`
 - returns: `void` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
 - reads `vault.secrets` _(high)_
+- writes `public.app_smtp_config` _(high)_
 - writes `vault.secrets` _(high)_
 
 ## `api.user_actor_ids()`
@@ -3540,6 +3770,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `staging.import_batches` _(high)_
 - writes `staging.import_batches` _(high)_
 
+## `api.withdraw_portal_photo(p_object_id text, p_media_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+
 ## `audit.attach_missing_triggers()`
 - returns: `void` — SECURITY DEFINER, dynamic SQL
 
@@ -3650,6 +3887,41 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `TABLE(object_id text)`
 - reads `public.object` _(high)_
 
+## `internal.gallery_arm_photo_reservation(p_object_id text, p_document_id uuid, p_replace_media_id uuid)`
+- returns: `void`
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `internal.gallery_assert_photo_capacity(p_object_id text, p_previous_usage integer, p_previous_published integer)`
+- returns: `void`
+
+## `internal.gallery_bind_photo_proposal()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `internal.gallery_capture_photo_proposal_usage()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+## `internal.gallery_photo_reservations(p_object_id text)`
+- returns: `TABLE(document_id uuid, replace_media_id uuid)`
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.gallery_photo_usage(p_object_id text)`
+- returns: `integer`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
+## `internal.gallery_published_photo_count(p_object_id text)`
+- returns: `integer`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
 ## `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object_classification` _(high)_
@@ -3718,6 +3990,75 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.pending_change` _(high)_
 
+## `internal.photo_analysis_assert_owner(p_object_id text, p_document_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.photo_analysis_envelope(p_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.photo_analysis_json(p_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.photo_analysis_local_day(p_at timestamp with time zone)`
+- returns: `date`
+
+## `internal.photo_analysis_reset_at(p_day date)`
+- returns: `timestamp with time zone`
+
+## `internal.photo_assessment_valid(p_value jsonb)`
+- returns: `boolean`
+
+## `internal.portal_photo_actor_writes_enabled()`
+- returns: `boolean`
+
+## `internal.portal_photo_appeal_document(p_interaction_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.portal_photo_assert_actor(p_object_id text)`
+- returns: `uuid` — SECURITY DEFINER
+
+## `internal.portal_photo_assert_writes_open()`
+- returns: `void`
+
+## `internal.portal_photo_order_snapshot(p_object_id text)`
+- returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
+## `internal.portal_photo_text_snapshot(p_title text, p_description text, p_title_i18n jsonb, p_description_i18n jsonb, p_revision text)`
+- returns: `jsonb`
+
+## `internal.portal_photo_workspace_json(p_object_id text, p_actor_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `internal.portal_photo_analysis_settings` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.app_ai_provider_config` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.media` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.portal_photos_json(p_object_id text)`
+- returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
 ## `internal.provider_crm_interactions()`
 - returns: `SETOF crm_interaction`
 - reads `public.actor_object_role` _(high)_
@@ -3746,6 +4087,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `internal.ref_catalog_access(p_catalog_key text)`
 - returns: `text`
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 
 > Accès EFFECTIF : DÉRIVÉ d'abord, registre ensuite. Les dérivés ne peuvent pas être
@@ -3761,6 +4103,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `internal.ref_catalog_label_column(p_catalog_key text)`
 - returns: `text`
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 
 > Cascade de libellé. Une déclaration par table serait la RÈGLE et non l'exception
@@ -3769,10 +4112,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `internal.ref_catalog_readonly_reason(p_catalog_key text)`
 - returns: `text`
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 
 ## `internal.ref_catalog_row_count(p_table text)`
 - returns: `bigint` — dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 
 ## `internal.resolve_fiche_submission(p_submission_id uuid)`
 - returns: `void` — SECURITY DEFINER
@@ -3975,6 +4320,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.trail_source_record` _(high)_
 - writes `public.trail_status_history` _(high)_
 
+## `internal.update_portal_photo_texts(p_object_id text, p_id uuid, p_private boolean, p_expected jsonb, p_title text, p_description text)`
+- returns: `jsonb`
+- reads `public.actor_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.media` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `auth.users` _(high)_
@@ -3989,6 +4345,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_org_business_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - reads `public.user_permission` _(high)_
+
+## `internal.validate_portal_photo_additions(p_object_id text, p_payload jsonb, p_user_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
 
 ## `internal.workspace_assert_can_write_object(p_object_id text)`
 - returns: `void` — SECURITY DEFINER

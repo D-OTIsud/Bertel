@@ -22,6 +22,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Function to add a legal record_
 
+### `api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/appeal_portal_photo_analysis`
+- **object types served:** **all object types**
+
+### `api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/appeal_portal_photo_review`
+- **object types served:** **all object types**
+
 ### `api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/approve_fiche_submission`
@@ -135,6 +145,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _1) Single source of truth for "is this object's data readable by the current caller"._
 
+### `api.can_read_object_for_correction(p_object_id text)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/can_read_object_for_correction`
+- **object types served:** **all object types**
+
 ### `api.can_read_object_private_notes(p_object_id text)` _(DEFINER)_
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/can_read_object_private_notes`
@@ -146,6 +161,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/can_write_object_private_notes`
 - **object types served:** —
 - _Retourne TRUE si l'utilisateur courant peut écrire une note privée_
+
+### `api.cancel_portal_photo_upload(p_object_id text, p_document_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/cancel_portal_photo_upload`
+- **object types served:** **all object types**
 
 ### `api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)` _(DEFINER)_
 - **returns:** `integer`
@@ -199,6 +219,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/commit_staging_to_public`
 - **object types served:** **all object types**
 
+### `api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/complete_portal_photo_upload`
+- **object types served:** **all object types**
+
 ### `api.compose_object_resource_blocks(p_payload jsonb)`
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/compose_object_resource_blocks`
@@ -212,7 +237,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.count_notifications_blocked_no_smtp()` _(DEFINER)_
 - **returns:** `integer`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/count_notifications_blocked_no_smtp`
-- **object types served:** —
+- **object types served:** **all object types**
 
 ### `api.create_crm_artifacts_from_incident()`
 - **returns:** `trigger`
@@ -257,7 +282,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.current_user_actor_id()` _(DEFINER)_
 - **returns:** `uuid`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/current_user_actor_id`
-- **object types served:** —
+- **object types served:** **all object types**
 - _18a portail acteur — actor_id EXPLICITE du compte (app_user_profile.actor_id, posé à l'invitation). Jamais le pont e-mail._
 
 ### `api.current_user_admin_rank()` _(DEFINER)_
@@ -386,7 +411,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.delete_org_smtp(p_org_object_id text)` _(DEFINER)_
 - **returns:** `void`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/delete_org_smtp`
-- **object types served:** —
+- **object types served:** **all object types**
 
 ### `api.deliver_legal_document(p_legal_id uuid, p_document_id uuid, p_delivered_at timestamp with time zone DEFAULT now(), p_new_status text DEFAULT 'active'::text)`
 - **returns:** `boolean`
@@ -472,6 +497,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/facet_applicability_violations`
 - **object types served:** **all object types**
 - _6. Violations report (ops/CI; legacy rows are NOT auto-deleted)_
+
+### `api.finish_portal_photo_analysis(p_request_id uuid, p_claim_id uuid, p_outcome jsonb)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/finish_portal_photo_analysis`
+- **object types served:** **all object types**
 
 ### `api.generate_legal_expiry_notifications(p_days_ahead integer DEFAULT 30, p_object_types text[] DEFAULT NULL::text[])`
 - **returns:** `json`
@@ -624,6 +654,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _4) get_filtered_object_ids : les deux cles de remplissage_
 
+### `api.get_gallery_write_receipt(p_object_id text, p_request_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_gallery_write_receipt`
+- **object types served:** **all object types**
+
 ### `api.get_ingestor_metrics()` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_ingestor_metrics`
@@ -674,6 +709,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_metric_snapshot_series`
 - **object types served:** —
 
+### `api.get_metric_snapshot_series_with_bounds(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_metric_snapshot_series_with_bounds`
+- **object types served:** —
+- _Realm-scoped metric series plus exact first/last source snapshot dates. Weekly buckets never define history duration; legacy tabular reader stays compatible._
+
 ### `api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)` _(DEFINER)_
 - **returns:** `TABLE(yr integer, mon integer, value numeric)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_metric_snapshot_yoy`
@@ -682,8 +723,13 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.get_my_actor_profile()` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_my_actor_profile`
-- **object types served:** —
+- **object types served:** **all object types**
 - _18a — profil de LA persona acteur courante (current_user_actor_id()), lecture seule v1. Ne constitue PAS une 5e formulation du périmètre PII can_read_actor_contacts : il ne lit jamais qu'UN acteur, le sien._
+
+### `api.get_my_portal_photo_workspace(p_object_id text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_my_portal_photo_workspace`
+- **object types served:** —
 
 ### `api.get_object_amenity_codes_compact(p_object_id text)`
 - **returns:** `jsonb`
@@ -921,6 +967,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _Function to get pending document requests in API format_
 
+### `api.get_portal_photo_analysis(p_request_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_portal_photo_analysis`
+- **object types served:** **all object types**
+
+### `api.get_portal_photo_review(p_change_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_portal_photo_review`
+- **object types served:** **all object types**
+
 ### `api.get_portal_section_visibility(p_object_id text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_portal_section_visibility`
@@ -1099,7 +1155,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.list_actor_support(p_actor_id uuid)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_actor_support`
-- **object types served:** —
+- **object types served:** **all object types**
 
 ### `api.list_ai_providers()` _(DEFINER)_
 - **returns:** `TABLE(id uuid, label text, api_kind text, base_url text, model text, max_output_tokens integer, is_active boolean, extra jsonb, has_key boolean, created_at timestamp with time zone, updated_at timestamp with time zone)`
@@ -1197,6 +1253,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _18a — accueil du portail : les fiches de la portée acteur, avec la soumission ouverte (le cas échéant), la dernière résolue, et les canaux PUBLICS de l'office publisher (office_email/office_phone, D11) — jamais un canal interne._
 
+### `api.list_my_portal_messages(p_object_id text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_my_portal_messages`
+- **object types served:** **all object types**
+
+### `api.list_my_portal_photos(p_object_id text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_my_portal_photos`
+- **object types served:** —
+
 ### `api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_my_submissions`
@@ -1285,6 +1351,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_pending_changes`
 - **object types served:** **all object types**
 - _P2.1 §120 + 18a/D9 — file de modération. Ajoute submission_id / submission_note / actor_label / manual_apply. Jointures soumission et acteur LEFT : une ligne sans soumission (§120/§122) doit rester listée._
+
+### `api.list_portal_message_documents(p_interaction_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_portal_message_documents`
+- **object types served:** **all object types**
 
 ### `api.list_public_trails(p_status_code text DEFAULT NULL::text, p_simplify boolean DEFAULT true, p_tolerance numeric DEFAULT 0.0001, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)` _(DEFINER)_
 - **returns:** `TABLE(id uuid, slug text, name text, status_code text, status_label text, not_guaranteed boolean, manager_labels text[], source_label text, source_website text, last_update timestamp with time zone, length_m numeric, geom jsonb)`
@@ -1455,10 +1526,40 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/pick_lang`
 - **object types served:** —
 
+### `api.portal_message_document(p_document_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/portal_message_document`
+- **object types served:** **all object types**
+
+### `api.portal_message_upload_context(p_object_id text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/portal_message_upload_context`
+- **object types served:** **all object types**
+
+### `api.portal_photo_failed_approval(p_claim_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/portal_photo_failed_approval`
+- **object types served:** **all object types**
+
+### `api.portal_photo_preview(p_document_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/portal_photo_preview`
+- **object types served:** **all object types**
+
+### `api.portal_photo_upload_context(p_object_id text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/portal_photo_upload_context`
+- **object types served:** **all object types**
+
+### `api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/prepare_portal_photo_approval`
+- **object types served:** **all object types**
+
 ### `api.prevent_duplicate_actor_email()`
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
-- **object types served:** —
+- **object types served:** **all object types**
 - _Unicité email cross-actors_
 
 ### `api.public_catalog_domains()`
@@ -1466,6 +1567,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/public_catalog_domains`
 - **object types served:** —
 - _Liste des domaines de référentiel exposés publiquement par api.list_catalog (whitelist default-deny). Audit API I1._
+
+### `api.publish_portal_photo_additions(p_object_id text, p_payload jsonb)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/publish_portal_photo_additions`
+- **object types served:** **all object types**
 
 ### `api.purge_expired_staging_batches(p_limit integer DEFAULT 500)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -1482,10 +1588,15 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
 
+### `api.reconcile_portal_photo_order(p_object_id text, p_expected jsonb, p_media_ids jsonb)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/reconcile_portal_photo_order`
+- **object types served:** **all object types**
+
 ### `api.record_org_smtp_test(p_org_object_id text, p_ok boolean, p_error text)` _(DEFINER)_
 - **returns:** `void`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/record_org_smtp_test`
-- **object types served:** —
+- **object types served:** **all object types**
 
 ### `api.ref_code_domain_is_editable(p_domain text)`
 - **returns:** `boolean`
@@ -1570,6 +1681,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/render_format_time`
 - **object types served:** —
 
+### `api.reorder_portal_photos(p_object_id text, p_media_ids jsonb)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/reorder_portal_photos`
+- **object types served:** **all object types**
+
 ### `api.request_legal_document(p_legal_id uuid, p_requested_at timestamp with time zone DEFAULT now())`
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/request_legal_document`
@@ -1579,6 +1695,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.request_list_feature(p_list_id uuid)` _(DEFINER)_
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/request_list_feature`
+- **object types served:** **all object types**
+
+### `api.reserve_portal_photo_analysis(p_object_id text, p_document_id uuid, p_request_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/reserve_portal_photo_analysis`
+- **object types served:** **all object types**
+
+### `api.reserve_portal_photo_upload(p_object_id text, p_upload_id uuid, p_replace_media_id uuid DEFAULT NULL::uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/reserve_portal_photo_upload`
 - **object types served:** **all object types**
 
 ### `api.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)` _(DEFINER)_
@@ -1864,7 +1990,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.save_actor_document(p_payload jsonb)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/save_actor_document`
-- **object types served:** —
+- **object types served:** **all object types**
 
 ### `api.save_crm_actor(p_payload jsonb)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -1887,6 +2013,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.save_object_commercial(p_object_id text, p_payload jsonb)`
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/save_object_commercial`
+- **object types served:** **all object types**
+
+### `api.save_object_gallery(p_object_id text, p_payload jsonb)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/save_object_gallery`
 - **object types served:** **all object types**
 
 ### `api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)`
@@ -1959,6 +2090,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/search_restaurants_by_cuisine`
 - **object types served:** **all object types**
 
+### `api.send_portal_message(p_object_id text, p_subject text, p_body text, p_attachments jsonb DEFAULT '[]'::jsonb, p_reply_to text DEFAULT NULL::text, p_client_id uuid DEFAULT NULL::uuid)` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/send_portal_message`
+- **object types served:** **all object types**
+
 ### `api.set_active_ai_provider(p_id uuid)` _(DEFINER)_
 - **returns:** `void`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/set_active_ai_provider`
@@ -2002,6 +2138,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/share_list`
 - **object types served:** **all object types**
 - _6.7 Partage : génère/rote le token, (dé)active le lien_
+
+### `api.start_portal_photo_analysis(p_request_id uuid, p_claim_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/start_portal_photo_analysis`
+- **object types served:** **all object types**
 
 ### `api.strip_markdown(md text)`
 - **returns:** `text`
@@ -2156,6 +2297,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _6.4 Mise à jour des métadonnées (patch whitelisté)_
 
+### `api.update_portal_photo_proposal_texts(p_object_id text, p_document_id uuid, p_expected jsonb, p_title text, p_description text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/update_portal_photo_proposal_texts`
+- **object types served:** —
+
+### `api.update_portal_photo_texts(p_object_id text, p_media_id uuid, p_expected jsonb, p_title text, p_description text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/update_portal_photo_texts`
+- **object types served:** —
+
 ### `api.upsert_ai_provider(p_id uuid, p_label text, p_api_kind text, p_base_url text, p_model text, p_max_output_tokens integer, p_is_active boolean, p_extra jsonb DEFAULT '{}'::jsonb, p_api_key text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `uuid`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/upsert_ai_provider`
@@ -2176,7 +2327,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.upsert_org_smtp(p_org_object_id text, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text DEFAULT NULL::text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text, p_is_enabled boolean DEFAULT false, p_clear_password boolean DEFAULT false)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/upsert_org_smtp`
-- **object types served:** —
+- **object types served:** **all object types**
 
 ### `api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `void`
@@ -2349,6 +2500,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/watchdog_mark_stale_batches`
 - **object types served:** —
 
+### `api.withdraw_portal_photo(p_object_id text, p_media_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/withdraw_portal_photo`
+- **object types served:** **all object types**
+
 ## schema `audit`
 
 ### `audit.attach_missing_triggers()` _(DEFINER, dyn-SQL)_
@@ -2400,7 +2556,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `internal.actor_in_current_realm(p_actor_id uuid)` _(DEFINER)_
 - **returns:** `boolean`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
-- **object types served:** —
+- **object types served:** **all object types**
 
 ### `internal.backfill_list_feature_notifications()` _(DEFINER)_
 - **returns:** `integer`
@@ -2441,6 +2597,41 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `internal.dashboard_object_ids()`
 - **returns:** `TABLE(object_id text)`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.gallery_arm_photo_reservation(p_object_id text, p_document_id uuid, p_replace_media_id uuid)`
+- **returns:** `void`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.gallery_assert_photo_capacity(p_object_id text, p_previous_usage integer, p_previous_published integer)`
+- **returns:** `void`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.gallery_bind_photo_proposal()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** **all object types**
+
+### `internal.gallery_capture_photo_proposal_usage()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** **all object types**
+
+### `internal.gallery_photo_reservations(p_object_id text)`
+- **returns:** `TABLE(document_id uuid, replace_media_id uuid)`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.gallery_photo_usage(p_object_id text)`
+- **returns:** `integer`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.gallery_published_photo_count(p_object_id text)`
+- **returns:** `integer`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
@@ -2498,6 +2689,76 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)` _(DEFINER)_
 - **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.photo_analysis_assert_owner(p_object_id text, p_document_id uuid)` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.photo_analysis_envelope(p_id uuid)`
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.photo_analysis_json(p_id uuid)`
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.photo_analysis_local_day(p_at timestamp with time zone)`
+- **returns:** `date`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.photo_analysis_reset_at(p_day date)`
+- **returns:** `timestamp with time zone`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.photo_assessment_valid(p_value jsonb)`
+- **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.portal_photo_actor_writes_enabled()`
+- **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.portal_photo_appeal_document(p_interaction_id uuid)`
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.portal_photo_assert_actor(p_object_id text)` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.portal_photo_assert_writes_open()`
+- **returns:** `void`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.portal_photo_order_snapshot(p_object_id text)`
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.portal_photo_text_snapshot(p_title text, p_description text, p_title_i18n jsonb, p_description_i18n jsonb, p_revision text)`
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.portal_photo_workspace_json(p_object_id text, p_actor_id uuid)`
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.portal_photos_json(p_object_id text)`
+- **returns:** `jsonb`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
@@ -2650,8 +2911,18 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
+### `internal.update_portal_photo_texts(p_object_id text, p_id uuid, p_private boolean, p_expected jsonb, p_title text, p_description text)`
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
 ### `internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)` _(DEFINER)_
 - **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.validate_portal_photo_additions(p_object_id text, p_payload jsonb, p_user_id uuid)` _(DEFINER)_
+- **returns:** `void`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
@@ -2760,7 +3031,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `public.seed_org_role_permission()` _(DEFINER)_
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
-- **object types served:** —
+- **object types served:** **all object types**
 - _2bis. Semer AUSSI les ORG créées plus tard._
 
 ### `public.sync_object_capacity_unit()`

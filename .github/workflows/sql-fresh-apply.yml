@@ -119,6 +119,16 @@ jobs:
         # suite after the complete fresh installation; no opt-in flag is needed.
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_album_fresh.sql"
 
+      - name: Current object rights (17 policies, explicit grants, portal and legacy-email denial)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_current_rights.sql"
+
+      - name: Current-rights private surfaces (history, docs, CRM, gallery receipts, portal preview/proposals)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_current_rights_surfaces.sql"
+
       - name: SP-1 structural assertions (canonical-write authorization)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -523,6 +533,14 @@ jobs:
             exit 1
           fi
           echo "RGPD mirror alignment OK."
+
+      # This final test intentionally crosses COMMIT boundaries to emulate new
+      # requests with the same claims. Its exact-ID synthetic fixtures are cleaned;
+      # append-only audit/version traces die with this disposable local database.
+      - name: Current rights after committed revocation (same claims, fresh requests)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -v current_rights_disposable=true -f "Base de donnée DLL et API/tests/test_object_current_rights_committed_revocation.sql"
 
       - name: Stop Supabase
         if: always()

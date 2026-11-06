@@ -554,7 +554,7 @@ ROLLBACK;
 \ir migration_actor_portal.sql
 
 \echo '== 18a-test garde permanente du portail acteur, prouvee ROUGE avant application (blocs A a I : persona et portee dediee, D7 ecriture canonique fermee aux acteurs, visibilite des rubriques par ORG, submit_actor_fiche transactionnel, lectures acteur, D9 approbation totale/partielle et manual_apply, resolution + notification + outbox, RGPD branche acteur dans les DEUX modes). AVERTISSEMENT DE PROVENANCE : le bloc F de ce fichier (lignes 1891-2399) n a ete execute par AUCUNE passe de validation avant deploiement — la contrainte MCP (un appel = une transaction, plafond ~120 Ko) a force un decoupage en deux passes et le bloc F est tombe entre les deux. La migration, elle, est prouvee (harnais de mutation + rejeu). Le rattrapage est une etape OBLIGATOIRE du runbook 18a, a jouer seule apres deploiement =='
-\ir tests/test_actor_portal.sql
+-- Final current-authority regression runs after overlay 20b: test_actor_portal.sql
 
 \echo '== 18b    migration_ref_amenity_visit_modes.sql  (seed ref_amenity : visite_libre / visite_guidee / audioguide, famille NEUVE visit_mediation. Arbitrage PO 2026-09-03 : ces trois codes n existaient dans AUCUN catalogue alors que VISIT_MODE_CODES (editor-completion.ts) et BlockVIS.tsx (§06) les ecrivent depuis leur mise en service — pas un orphelinat silencieux mais un blocage de sauvegarde : object_amenity.amenity_id est une FK NOT NULL vers ref_amenity(id), et le bras amenities de object_workspace_safe_write_rpcs.sql leve ERRCODE 23503 des qu un code ne resout a aucun ref_amenity.code, ce qui faisait echouer la sauvegarde ENTIERE du module characteristics (regle §48 single-owner : amenities + moyens de paiement + tags environnement dans le meme payload), pas seulement la rubrique Visite. Famille NEUVE (visit_mediation) et non accessibility : ce sont des modes de visite, pas des aides d accessibilite — le catalogue porte deja ce role sous des codes acc_* distincts (acc_flexible_visit, acc_visit_device), et le filtre public d accessibilite ne lit QUE la famille accessibility. Idempotente (ON CONFLICT DO NOTHING / DO UPDATE, aucun DROP) =='
 \ir migration_ref_amenity_visit_modes.sql
@@ -636,7 +636,7 @@ ROLLBACK;
 
 \echo '== 19j partner API identity InitPlan and empty-identity extended read fast path (after portal and actor realm) =='
 \ir ../supabase/migrations/20261019142132_partner_api_identity_initplan.sql
-\ir tests/test_partner_identity_gate.sql
+-- Final current-authority regression runs after overlay 20b: test_partner_identity_gate.sql
 
 \echo '== 19k render reuse: predecessor baseline versus optimized JSON, FRESH DATABASE ONLY =='
 -- Preserve every unrelated master change. These inverse/capture/forward steps are
@@ -669,6 +669,18 @@ ROLLBACK;
 \echo '== 20a-test photo-only contract: closed actors/AI, real CAS receipts and isolated actors =='
 \ir tests/test_partner_photo_album_fresh.sql
 \ir tests/test_partner_photo_album_catalog_rejections.sql
+
+\echo '== 20b current ORG/portal authority: capture unchanged public contract before final overlay =='
+-- Reuse the populated anonymous public-reader oracle. It cleans its synthetic
+-- fixtures and temporary state; no historical rollback is involved.
+\ir tests/fixtures/capture_partner_photo_album_public.sql
+\ir object_current_rights.sql
+\ir ../supabase/migrations/20261106100603_object_current_authorization.sql
+\ir tests/test_partner_photo_album_public.sql
+\ir tests/test_object_current_rights.sql
+\ir tests/test_object_current_rights_surfaces.sql
+\ir tests/test_partner_identity_gate.sql
+\ir tests/test_actor_portal.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

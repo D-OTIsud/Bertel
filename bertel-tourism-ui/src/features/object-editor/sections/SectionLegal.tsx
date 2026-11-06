@@ -268,6 +268,7 @@ export function SectionLegal({ editor, permissions, archetype, folded }: Section
                     <span className="mono">{formatLegalValidity(record)}</span>
                     {record.documentUrl && (
                       <ObjectDocumentLink
+                        accessContext="legal"
                         objectId={editor.objectId}
                         documentId={record.documentId}
                         href={record.documentUrl}

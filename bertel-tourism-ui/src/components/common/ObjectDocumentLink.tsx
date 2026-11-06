@@ -10,6 +10,7 @@ interface Props {
   documentId: string;
   href: string;
   requiresSigning?: boolean;
+  accessContext?: 'canonical' | 'legal';
   children: ReactNode;
   ariaLabel?: string;
   className?: string;
@@ -17,13 +18,13 @@ interface Props {
 }
 
 /** Same link presentation; private attachments open only after current server authorization. */
-export function ObjectDocumentLink({ objectId, documentId, href, requiresSigning, children, ariaLabel, className, style }: Props) {
+export function ObjectDocumentLink({ objectId, documentId, href, requiresSigning, accessContext = 'canonical', children, ariaLabel, className, style }: Props) {
   const userId = useSessionStore((state) => state.userId);
   const orgId = useSessionStore((state) => state.orgId);
   const status = useSessionStore((state) => state.status);
   const role = useSessionStore((state) => state.role);
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
-  const identity = JSON.stringify([userId, orgId, status, role, canEditObjects, objectId, documentId]);
+  const identity = JSON.stringify([userId, orgId, status, role, canEditObjects, objectId, documentId, accessContext]);
   const currentIdentity = useRef(identity);
   currentIdentity.current = identity;
   const generation = useRef(0);
@@ -70,7 +71,9 @@ export function ObjectDocumentLink({ objectId, documentId, href, requiresSigning
     const run = ++generation.current;
     setState('opening');
     try {
-      const url = await getObjectDocumentUrl(objectId, documentId, controller.signal);
+      const url = await (accessContext === 'legal'
+        ? getObjectDocumentUrl(objectId, documentId, controller.signal, 'legal')
+        : getObjectDocumentUrl(objectId, documentId, controller.signal));
       if (controller.signal.aborted || run !== generation.current || identity !== currentIdentity.current) { tab.close(); return; }
       if (!tab.closed) tab.location.replace(url);
       setState('idle');

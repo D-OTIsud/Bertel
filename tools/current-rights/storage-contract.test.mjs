@@ -104,7 +104,11 @@ test('real local Storage preserves private cross-bucket copy bytes and stored me
     const after = await result(await info(destination, copied[0]), 'after collision');
     assert.ok(after.id === before.id && after.etag === before.etag && after.size === before.size, 'collision must preserve existing destination metadata');
     const race = await Promise.all([copy(uploaded[0], copied[2]), copy(uploaded[0], copied[2])]);
-    assert.ok(race.filter((response) => response.ok).length === 1, 'two real concurrent copies must create one destination only');
+    const accepted = race.filter((response) => response.ok).length;
+    const outcomes = await Promise.all(race.map(async (response) => ({ status: response.status,
+      code: response.ok ? 'ok' : errorCode(await response.clone().json().catch(() => null)) })));
+    t.diagnostic(JSON.stringify({ concurrentCopyAccepted: accepted, outcomes }));
+    assert.equal(accepted, 1, 'two real concurrent copies must create one destination only');
     const raceInfo = await result(await info(destination, copied[2]), 'race destination');
     const raceAck = await race.find((response) => response.ok).json();
     assert.ok(raceAck.Id === raceInfo.id && raceAck.Key === `${destination}/${copied[2]}`);

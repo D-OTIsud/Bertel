@@ -10,7 +10,7 @@ DO $roles$ BEGIN
 END $roles$;
 -- Supabase's migration role is not a PostgreSQL superuser. Temporary membership
 -- permits CREATE OR REPLACE/ALTER OWNER for the NOLOGIN publisher, then is revoked.
-GRANT bertel_thesaurus_publisher TO CURRENT_USER;
+GRANT bertel_thesaurus_publisher TO CURRENT_USER WITH INHERIT TRUE,SET TRUE;
 GRANT USAGE ON SCHEMA thesaurus,public,api,extensions,auth,internal,audit TO bertel_thesaurus_publisher;
 
 CREATE TABLE IF NOT EXISTS thesaurus.instance (
@@ -625,6 +625,9 @@ BEGIN
     IF COALESCE(cardinality(domains),0)=0 THEN RAISE EXCEPTION 'Select public vocabularies to bootstrap' USING ERRCODE='PT400';END IF;
     RETURN thesaurus.activate('{}',domains,COALESCE(p_payload->>'idempotency_key','bootstrap:'||md5(array_to_string(domains,','))),(p_payload->>'expected_release_id')::bigint,'{}');
   ELSIF p_action='save_draft' THEN
+    -- Content updates use the same editorial path. Fence before every base read, then
+    -- serialize first-draft creation on the concept as well as updates of an existing draft.
+    PERFORM pg_advisory_xact_lock_shared(741126,1);
     PERFORM thesaurus.sync_sources(NULL);
     cid:=(p_payload->>'concept_id')::uuid;
     IF cid IS NULL THEN
@@ -636,13 +639,17 @@ BEGIN
       VALUES(v.domain,public.immutable_unaccent(lower(btrim(doc->>'code'))),CASE v.source_kind WHEN'classification_value'THEN COALESCE(doc#>>'{source_fields,scheme_id}','')WHEN'sustainability_action'THEN COALESCE(doc#>>'{source_fields,category_id}','')ELSE''END,v.source_kind,CASE WHEN v.source_kind='commune'THEN doc->>'code'ELSE gen_random_uuid()::text END)RETURNING concept_id INTO cid;
       base:='{}';
     ELSE
-      SELECT * INTO c FROM thesaurus.concept WHERE concept_id=cid;
+      SELECT * INTO c FROM thesaurus.concept WHERE concept_id=cid FOR UPDATE;
       IF NOT FOUND THEN RAISE EXCEPTION 'Unknown concept' USING ERRCODE='PT404';END IF;
       IF p_payload->>'domain' IS NOT NULL AND p_payload->>'domain'<>c.domain THEN RAISE EXCEPTION 'Concept domain is immutable' USING ERRCODE='PT400';END IF;
       IF p_payload#>>'{document,code}' IS NOT NULL AND p_payload#>>'{document,code}'<>c.code THEN RAISE EXCEPTION 'Code is immutable; create a new concept' USING ERRCODE='PT400';END IF;
       base:=thesaurus.concept_document(cid);
     END IF;
+    IF p_payload?'expected_source_fingerprint' AND p_payload->>'expected_source_fingerprint' IS DISTINCT FROM thesaurus.source_fingerprint(cid)THEN
+      RAISE EXCEPTION 'Canonical source changed; preserve local content and review the proposal' USING ERRCODE='PT409';
+    END IF;
     SELECT * INTO r FROM thesaurus.revision WHERE concept_id=cid AND status<>'published'FOR UPDATE;
+    IF FOUND AND COALESCE((p_payload->>'only_if_no_revision')::boolean,false)THEN RAISE EXCEPTION 'A local revision already exists; preserve it and review the content proposal' USING ERRCODE='PT409';END IF;
     IF FOUND AND COALESCE((p_payload->>'expected_version')::integer,-1)<>r.version THEN RAISE EXCEPTION 'Revision changed; reload before saving' USING ERRCODE='PT409';END IF;
     doc:=COALESCE(base,'{}')||COALESCE(p_payload->'document','{}');
     doc:=doc||jsonb_build_object('source_fields',COALESCE(base->'source_fields','{}')||COALESCE(p_payload#>'{document,source_fields}','{}'));
@@ -698,10 +705,11 @@ BEGIN
   ELSIF p_action='ack_outbox'THEN
     UPDATE thesaurus.outbox SET status=CASE WHEN p_payload->>'error'IS NULL THEN'completed'ELSE'failed'END,attempts=attempts+1,last_error=left(p_payload->>'error',500),completed_at=CASE WHEN p_payload->>'error'IS NULL THEN now()END WHERE id=(p_payload->>'id')::bigint AND status<>'completed'RETURNING to_jsonb(thesaurus.outbox.*)INTO result;RETURN result;
   ELSIF p_action<>'workspace'THEN RAISE EXCEPTION 'Unknown editorial action' USING ERRCODE='PT400';END IF;
-  PERFORM thesaurus.sync_sources(NULL);
+  IF COALESCE((p_payload->>'read_only')::boolean,false)IS NOT TRUE THEN PERFORM thesaurus.sync_sources(NULL);END IF;
   lim:=LEAST(200,GREATEST(1,COALESCE((p_payload->>'page_size')::integer,100)));off:=GREATEST(0,COALESCE((p_payload->>'offset')::integer,0));
   IF jsonb_typeof(p_payload->'concept_ids')='array'THEN SELECT array_agg(x::uuid)INTO ids FROM jsonb_array_elements_text(p_payload->'concept_ids')x;END IF;
   SELECT jsonb_build_object(
+    'capabilities',jsonb_build_object('content_proposal_preconditions',1,'read_only_workspace',1),
     'instance',(SELECT to_jsonb(i)FROM thesaurus.instance i WHERE singleton),
     'domains',COALESCE((SELECT jsonb_agg(to_jsonb(v)||jsonb_build_object('concept_count',(SELECT count(*)FROM thesaurus.concept c WHERE c.domain=v.domain))ORDER BY name,domain)FROM thesaurus.vocabulary v WHERE v.is_public),'[]'),
     'concepts',COALESCE((SELECT jsonb_agg(x.doc ORDER BY x.domain,x.code,x.concept_id)FROM(SELECT c.domain,c.code,c.concept_id,thesaurus.concept_document(c.concept_id)||jsonb_build_object('usage_count',(SELECT count(DISTINCT u.object_id)FROM thesaurus.usage_objects(ARRAY[c.concept_id])u),'revision',(SELECT to_jsonb(r)FROM thesaurus.revision r WHERE r.concept_id=c.concept_id AND status<>'published'))doc FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain) WHERE v.is_public AND(ids IS NULL OR c.concept_id=ANY(ids))AND(NULLIF(p_payload->>'domain','')IS NULL OR c.domain=p_payload->>'domain')AND(NULLIF(p_payload->>'query','')IS NULL OR(thesaurus.concept_document(c.concept_id)::text)ILIKE'%'||(p_payload->>'query')||'%')ORDER BY c.domain,c.code,c.concept_id LIMIT lim OFFSET off)x),'[]'),
@@ -808,14 +816,14 @@ END $$;
 CREATE OR REPLACE FUNCTION thesaurus.row_has_historical_reference(p_table oid,p_row jsonb,p_visited oid[]DEFAULT '{}',p_depth integer DEFAULT 0)RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path=pg_catalog,thesaurus,public AS $$
 #variable_conflict use_column
-DECLARE f record;k record;keyj jsonb;kind text;domain text;cond text;child jsonb;
+DECLARE f record;k record;keyj jsonb;kind text;source_domain text;cond text;child jsonb;
 BEGIN
   IF p_depth>8 OR p_table=ANY(p_visited)OR p_row IS NULL THEN RETURN false;END IF;
   FOR f IN SELECT con.conkey,con.confkey,con.confrelid,target.relname,target.relispartition,target.relpartbound FROM pg_constraint con JOIN pg_class target ON target.oid=con.confrelid WHERE con.conrelid=p_table AND con.contype='f'AND(target.relname IN('ref_code','ref_amenity','ref_classification_scheme','ref_classification_value','ref_language','ref_commune','ref_sustainability_action','ref_sustainability_action_category')OR EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhrelid=target.oid AND i.inhparent='public.ref_code'::regclass))LOOP
     kind:=CASE f.relname WHEN'ref_amenity'THEN'amenity'WHEN'ref_classification_scheme'THEN'classification_scheme'WHEN'ref_classification_value'THEN'classification_value'WHEN'ref_language'THEN'language'WHEN'ref_commune'THEN'commune'WHEN'ref_sustainability_action'THEN'sustainability_action'WHEN'ref_sustainability_action_category'THEN'sustainability_category'ELSE'ref_code'END;
-    domain:=CASE WHEN f.relispartition THEN substring(pg_get_expr(f.relpartbound,f.confrelid)FROM'''([^'']+)''')END;keyj:='{}';
+    source_domain:=CASE WHEN f.relispartition THEN substring(pg_get_expr(f.relpartbound,f.confrelid)FROM'''([^'']+)''')END;keyj:='{}';
     FOR k IN SELECT la.attname l,ra.attname r FROM unnest(f.conkey,f.confkey)WITH ORDINALITY u(l,r,ord)JOIN pg_attribute la ON la.attrelid=p_table AND la.attnum=u.l JOIN pg_attribute ra ON ra.attrelid=f.confrelid AND ra.attnum=u.r LOOP keyj:=keyj||jsonb_build_object(k.r,p_row->k.l);END LOOP;
-    IF EXISTS(SELECT 1 FROM thesaurus.concept c JOIN thesaurus.vocabulary v ON v.domain=c.domain AND v.is_governed JOIN thesaurus.source_rows s ON(s.source_kind,s.source_id,s.domain)=(c.source_kind,c.source_id,c.domain)WHERE c.source_kind=kind AND(domain IS NULL OR s.domain=domain)AND s.source_key@>keyj AND(c.lifecycle<>'active'OR NOT c.assignable OR NOT COALESCE((s.payload->>'is_active')::boolean,true)OR COALESCE((s.payload->>'valid_from')::date,current_date)>current_date OR COALESCE((s.payload->>'valid_to')::date,current_date)<current_date OR NOT EXISTS(SELECT 1 FROM thesaurus.release_concept rc WHERE rc.release_id=api.thesaurus_generation()AND rc.concept_id=c.concept_id)))THEN RETURN true;END IF;
+    IF EXISTS(SELECT 1 FROM thesaurus.concept c JOIN thesaurus.vocabulary v ON v.domain=c.domain AND v.is_governed JOIN thesaurus.source_rows s ON(s.source_kind,s.source_id,s.domain)=(c.source_kind,c.source_id,c.domain)WHERE c.source_kind=kind AND(source_domain IS NULL OR s.domain=source_domain)AND s.source_key@>keyj AND(c.lifecycle<>'active'OR NOT c.assignable OR NOT COALESCE((s.payload->>'is_active')::boolean,true)OR COALESCE((s.payload->>'valid_from')::date,current_date)>current_date OR COALESCE((s.payload->>'valid_to')::date,current_date)<current_date OR NOT EXISTS(SELECT 1 FROM thesaurus.release_concept rc WHERE rc.release_id=api.thesaurus_generation()AND rc.concept_id=c.concept_id)))THEN RETURN true;END IF;
   END LOOP;
   IF p_table='public.object_classification'::regclass AND thesaurus.is_governed('classification_value')AND EXISTS(SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(p_row->'subvalue_ids')='array'THEN p_row->'subvalue_ids'ELSE'[]'END)x JOIN thesaurus.concept c ON c.source_kind='classification_value'AND c.source_id=x.value WHERE c.lifecycle<>'active'OR NOT c.assignable)THEN RETURN true;END IF;
   FOR f IN SELECT con.conrelid,con.conkey,con.confkey FROM pg_constraint con JOIN pg_class child_tbl ON child_tbl.oid=con.conrelid JOIN pg_namespace ns ON ns.oid=child_tbl.relnamespace WHERE con.contype='f'AND con.confrelid=p_table AND ns.nspname='public'AND child_tbl.relname NOT LIKE'ref\_%'AND NOT con.conrelid=ANY(p_visited||p_table)LOOP
@@ -970,7 +978,10 @@ GRANT CREATE ON SCHEMA thesaurus TO bertel_thesaurus_publisher;
 ALTER FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)OWNER TO bertel_thesaurus_publisher;
 REVOKE CREATE ON SCHEMA thesaurus FROM bertel_thesaurus_publisher;
 GRANT EXECUTE ON FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)TO postgres;
-REVOKE bertel_thesaurus_publisher FROM CURRENT_USER;
+-- Preserve the creator's ADMIN-only management capability for future migrations,
+-- while revoking both privileges that would allow inherited writes or SET ROLE.
+REVOKE INHERIT OPTION FOR bertel_thesaurus_publisher FROM CURRENT_USER;
+REVOKE SET OPTION FOR bertel_thesaurus_publisher FROM CURRENT_USER;
 COMMENT ON FUNCTION api.thesaurus_admin(text,jsonb)IS'Thesaurus editorial actions, gated platform superuser, optimistic revisions and atomic publisher-role release.';
 COMMENT ON FUNCTION api.thesaurus_public(text,bigint,jsonb)IS'Partner-only immutable thesaurus release reader. No direct editorial table access.';
 NOTIFY pgrst,'reload schema';

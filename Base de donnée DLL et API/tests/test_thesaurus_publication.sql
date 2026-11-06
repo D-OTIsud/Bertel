@@ -18,14 +18,26 @@ INSERT INTO public.ref_sustainability_action(id,category_id,code,label,descripti
 INSERT INTO public.ref_commune(insee_code,name)VALUES('97499','Commune du test');
 INSERT INTO public.object(id,object_type,name,status)VALUES('HLORUNTHESAUR001','HLO','Fiche témoin thésaurus','draft');
 INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR001','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');
+-- The same vocabulary is shared across realms. Derive the sandbox marker through
+-- its canonical organization source instead of writing object.is_test directly.
+INSERT INTO public.object(id,object_type,name,status)VALUES
+ ('ORGRUNTHESAUR001','ORG','Organisation témoin bac à sable','draft'),
+ ('HLORUNTHESAUR003','HLO','Fiche témoin thésaurus bac à sable','draft');
+INSERT INTO public.org_config(org_object_id,access_scope,is_test_org)VALUES('ORGRUNTHESAUR001','own_objects_only',true);
+INSERT INTO public.ref_org_role(id,code,name)VALUES('b73e5000-0000-4000-8000-000000000001','thesaurus_test_publisher','Éditeur du test');
+INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)VALUES('HLORUNTHESAUR003','ORGRUNTHESAUR001','b73e5000-0000-4000-8000-000000000001',true);
+INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR003','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');
 
 DO $test$
 DECLARE workspace jsonb;res jsonb;doc jsonb;rev jsonb;rev_a jsonb;rev_b jsonb;prevw jsonb;pub jsonb;oldexport jsonb;cid uuid;child uuid;newcid uuid;rid uuid;v integer;first_release bigint;next_release bigint;count_before integer;before_time timestamptz;before_version integer;deny boolean;before_content jsonb;cache_projection jsonb;
+  before_test_time timestamptz;before_test_version integer;before_test_versions bigint;before_real_versions bigint;
 BEGIN
   ASSERT NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='bertel_thesaurus_publisher'AND(rolcanlogin OR rolsuper OR rolbypassrls OR rolcreaterole OR rolinherit)),'Publisher role must remain a restricted non-login identity';
   ASSERT NOT pg_has_role('anon','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('authenticated','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('service_role','bertel_thesaurus_publisher','SET'),'Application roles can assume publisher identity';
   ASSERT NOT has_column_privilege('bertel_thesaurus_publisher','public.object','name','UPDATE')AND has_column_privilege('bertel_thesaurus_publisher','public.object','updated_at','UPDATE'),'Publisher object privileges must be limited to projections';
   ASSERT NOT has_function_privilege('authenticated','thesaurus.refresh_affected_objects(text[])','EXECUTE')AND NOT has_function_privilege('service_role','thesaurus.refresh_affected_objects(text[])','EXECUTE'),'Private projection writer became callable by applications';
+  ASSERT has_function_privilege('bertel_thesaurus_publisher','api.current_user_test_realm()','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.current_user_extended_object_ids()','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.can_read_object(text)','EXECUTE'),'Publisher lacks the precise existing RLS helper grants';
+  ASSERT (SELECT is_test FROM public.object WHERE id='HLORUNTHESAUR003')AND NOT(SELECT is_test FROM public.object WHERE id='HLORUNTHESAUR001'),'Publication fixture must exercise both actual realms';
   ASSERT api.thesaurus_generation()IS NULL,'New installation must remain unactivated';
   BEGIN PERFORM api.thesaurus_public('manifest');RAISE EXCEPTION 'Missing release was accepted';EXCEPTION WHEN SQLSTATE'PT503'THEN NULL;END;
   res:=api.thesaurus_admin('configure_instance','{"base_uri":"https://example.invalid/api/public/thesaurus/concepts/","license":"test-fixture-only","attribution":"Fixture owner"}');
@@ -61,8 +73,11 @@ BEGIN
   rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rid,'expected_version',v));v:=(rev->>'version')::integer;
   ASSERT rev->>'status'='validated'AND jsonb_array_length(rev->'errors')=0,'Revision did not validate';
   prevw:=api.thesaurus_admin('preview',jsonb_build_object('revision_ids',jsonb_build_array(rid)));
-  ASSERT (prevw->>'affected_objects')::integer=1,'Ancestor impact preview missed its real child-assigned object';
+  ASSERT (prevw->>'affected_objects')::integer=2,'Ancestor impact preview must include real and sandbox child-assigned objects';
   SELECT updated_at,current_version INTO before_time,before_version FROM public.object WHERE id='HLORUNTHESAUR001';
+  SELECT updated_at,current_version INTO before_test_time,before_test_version FROM public.object WHERE id='HLORUNTHESAUR003';
+  SELECT count(*)INTO before_real_versions FROM public.object_version WHERE object_id='HLORUNTHESAUR001';
+  SELECT count(*)INTO before_test_versions FROM public.object_version WHERE object_id='HLORUNTHESAUR003';
   SELECT to_jsonb(o)-ARRAY['updated_at','cached_amenity_codes','cached_payment_codes','cached_environment_tags','cached_language_codes','cached_classification_codes','cached_taxonomy_codes','search_document','search_document_text','search_document_phonetic']INTO before_content FROM public.object o WHERE id='HLORUNTHESAUR001';
   BEGIN PERFORM api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rid),'idempotency_key','bad-preview','expected_revision_versions',jsonb_build_object(rid::text,v-1)));RAISE EXCEPTION 'Stale preview was accepted';EXCEPTION WHEN SQLSTATE'PT409'THEN NULL;END;
   pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rid),'idempotency_key','thesaurus-test-rename','expected_release_id',first_release,'expected_revision_versions',jsonb_build_object(rid::text,v),'preview_fingerprint',prevw->>'preview_fingerprint'));
@@ -71,7 +86,10 @@ BEGIN
   ASSERT (SELECT name FROM public.ref_code WHERE id='b73e1000-0000-4000-8000-000000000001'AND domain='taxonomy_hlo')='Racine renommée','Publication did not update source';
   ASSERT EXISTS(SELECT 1 FROM jsonb_array_elements(api.list_catalog('taxonomy_hlo','fr'))x WHERE x->>'code'='thesaurus_test_root'AND x->>'name'='Racine renommée'),'French legacy catalog kept the old i18n label';
   ASSERT (SELECT updated_at>before_time AND current_version=before_version FROM public.object WHERE id='HLORUNTHESAUR001'),'Affected object sync marker must advance without a fabricated canonical version';
+  ASSERT (SELECT updated_at>before_test_time AND current_version=before_test_version FROM public.object WHERE id='HLORUNTHESAUR003'),'Sandbox object sync marker must advance without a fabricated canonical version';
+  ASSERT(SELECT count(*)FROM public.object_version WHERE object_id='HLORUNTHESAUR001')=before_real_versions AND(SELECT count(*)FROM public.object_version WHERE object_id='HLORUNTHESAUR003')=before_test_versions,'Publication fabricated canonical object history in either realm';
   ASSERT (SELECT search_document_text LIKE'%synonyme%'FROM public.object WHERE id='HLORUNTHESAUR001'),'Validated alias was not indexed on descendant object';
+  ASSERT (SELECT search_document_text LIKE'%synonyme%'FROM public.object WHERE id='HLORUNTHESAUR003'),'Validated alias was not indexed on sandbox descendant object';
   ASSERT(SELECT to_jsonb(o)-ARRAY['updated_at','cached_amenity_codes','cached_payment_codes','cached_environment_tags','cached_language_codes','cached_classification_codes','cached_taxonomy_codes','search_document','search_document_text','search_document_phonetic']=before_content FROM public.object o WHERE id='HLORUNTHESAUR001'),'Projection publication changed canonical object content';
   SELECT jsonb_build_array(cached_amenity_codes,cached_payment_codes,cached_environment_tags,cached_language_codes,cached_classification_codes,cached_taxonomy_codes,search_document,search_document_text,search_document_phonetic)INTO cache_projection FROM public.object WHERE id='HLORUNTHESAUR001';
   PERFORM api.refresh_object_filter_caches('HLORUNTHESAUR001');
@@ -120,7 +138,7 @@ BEGIN
   rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
   pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev->>'revision_id'),'idempotency_key','thesaurus-test-retire','expected_revision_versions',jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer)));
   ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',child))#>>'{data,lifecycle}'='retired','Retired known concept no longer resolves';
-  ASSERT (api.thesaurus_admin('requalification')->>'total')::integer=1,'Retired usage was not put into requalification';
+  ASSERT (api.thesaurus_admin('requalification')->>'total')::integer=2,'Retired usage in both realms was not put into requalification';
   UPDATE public.object_taxonomy SET note='Conservation de la valeur historique'WHERE object_id='HLORUNTHESAUR001'AND domain='taxonomy_hlo';
   DELETE FROM public.object_taxonomy WHERE object_id='HLORUNTHESAUR001'AND domain='taxonomy_hlo';
   INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR001','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');

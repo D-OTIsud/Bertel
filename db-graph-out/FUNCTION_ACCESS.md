@@ -22,6 +22,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Function to add a legal record_
 
+### `api.admit_ai_request(p_user_id uuid, p_route text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/admit_ai_request`
+- **object types served:** —
+- _Service-only atomic 12/60s sliding AI request admission per verified user and route. No provider text/key stored. Local CPU leases remain separate._
+
 ### `api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)` _(DEFINER)_
 - **returns:** `uuid`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/appeal_portal_photo_analysis`
@@ -3250,13 +3256,13 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** thesaurus.assert_preparation_contract
 - **object types served:** —
 
-### `thesaurus.concept_document(p_id uuid, p_include_source_fingerprint boolean)`
+### `thesaurus.concept_document(p_id uuid)`
 - **returns:** `jsonb`
 - **access:** thesaurus.concept_document
 - **object types served:** —
 - _Editorial callers retain their semantic conflict fingerprint. Immutable public_
 
-### `thesaurus.concept_document(p_id uuid)`
+### `thesaurus.concept_document(p_id uuid, p_include_source_fingerprint boolean)`
 - **returns:** `jsonb`
 - **access:** thesaurus.concept_document
 - **object types served:** —

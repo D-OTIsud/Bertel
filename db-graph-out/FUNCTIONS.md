@@ -1695,10 +1695,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.is_platform_admin()`
 - returns: `boolean` — SECURITY DEFINER
-- reads `auth.users` _(high)_
 - reads `public.app_user_profile` _(high)_
 
-> Returns true when the current user can manage platform-level branding and UI theme settings, using app_user_profile or auth metadata.
+> Platform branding authority: authenticated owner/super_admin from app_user_profile, or the existing service_role/admin technical identity. Auth metadata never grants authority; missing auth context returns false.
 
 ## `api.is_platform_owner()`
 - returns: `boolean` — SECURITY DEFINER

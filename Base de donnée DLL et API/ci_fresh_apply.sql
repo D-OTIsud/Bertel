@@ -113,7 +113,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \ir ui_whitelabel_branding.sql
 
 \echo '== 9a platform branding canonical-profile authorization (folded into fresh source; standalone upgrade retained) =='
-\ir ../supabase/migrations/20261106053951_branding_admin_authorization.sql
+\ir ../supabase/migrations/20261106075113_branding_admin_authorization.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='
 \ir media_bucket.sql
 \echo '== 11/13 seeds_data.sql  (needs ref_sustainability_action_group from step 2) =='

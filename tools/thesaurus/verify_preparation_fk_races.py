@@ -5,6 +5,10 @@ the exact pure-preparation function after its test-only post-snapshot barrier.
 """
 from __future__ import annotations
 
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 import json
 from pathlib import Path

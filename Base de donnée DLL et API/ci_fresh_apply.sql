@@ -682,13 +682,16 @@ ROLLBACK;
 \echo '== DB08 initial publication and institutional creation authorization =='
 \ir ../supabase/migrations/20261106092254_object_initial_publication_guard.sql
 
+\echo '== public discovery: suppress external notification email, preserve in-app events =='
+\ir ../supabase/migrations/20261106101044_sandbox_external_effects_policy.sql
+
 \echo '== 20b current ORG/portal authority: capture unchanged public contract before final overlay =='
 -- Reuse the populated anonymous public-reader oracle. It cleans its synthetic
 -- fixtures and temporary state; no historical rollback is involved.
 \ir tests/fixtures/capture_partner_photo_album_public.sql
 \ir object_current_rights.sql
 \ir ../supabase/migrations/20261106100603_object_current_authorization.sql
--- Separate privileged-leaf hardening; preserve the malformed DB03 shadow witness.
+-- Separate privileged authority-source hardening; preserve the malformed DB03 shadow witness.
 \ir object_canonical_write_sources.sql
 \ir ../supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql
 \ir tests/test_partner_photo_album_public.sql

@@ -2,9 +2,21 @@ import type { UserRole } from '@/types/domain';
 
 /** Racine de l'Espace partenaire (18a) — tout le périmètre de la persona `actor`. */
 const PORTAL_ROOT = '/espace';
+const INTERNAL_ORIGIN = 'https://bertel.invalid';
+
+function resolveInternalPath(path: string | null | undefined): URL | null {
+  if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')
+    || /[\\\u0000-\u001f\u007f]/.test(path)) return null;
+  try {
+    const resolved = new URL(path, INTERNAL_ORIGIN);
+    return resolved.origin === INTERNAL_ORIGIN ? resolved : null;
+  } catch {
+    return null;
+  }
+}
 
 export function isSafeInternalPath(path: string | null | undefined): path is string {
-  return typeof path === 'string' && path.startsWith('/') && !path.startsWith('//');
+  return resolveInternalPath(path) !== null;
 }
 
 /**
@@ -13,9 +25,8 @@ export function isSafeInternalPath(path: string | null | undefined): path is str
  * être suivi d'une fin de chemin, d'un séparateur, d'une query ou d'un fragment.
  */
 export function isPortalPath(path: string): boolean {
-  if (!path.startsWith(PORTAL_ROOT)) return false;
-  const next = path.charAt(PORTAL_ROOT.length);
-  return next === '' || next === '/' || next === '?' || next === '#';
+  const pathname = resolveInternalPath(path)?.pathname;
+  return pathname === PORTAL_ROOT || Boolean(pathname?.startsWith(`${PORTAL_ROOT}/`));
 }
 
 export function getDefaultAppPath(role: UserRole | null): string {

@@ -2,6 +2,8 @@ import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
+import { isSandboxDiscoveryUser, SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { sendListEmail, MailNotConfiguredError } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import { renderListEmailHtml, listEmailSubject, type ListEmailItem } from '@/emails/ListEmail';
@@ -35,6 +37,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!jwt) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   const { data: userData, error: userErr } = await server.auth.getUser(jwt);
   if (userErr || !userData?.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  if (isSandboxDiscoveryUser(userData.user)) {
+    return NextResponse.json({ error: SANDBOX_EXTERNAL_EFFECTS_ERROR, detail: SANDBOX_EMAIL_DETAIL }, { status: 403 });
+  }
 
   // 2. Corps.
   let body: Rec;
@@ -66,6 +71,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (listErr) return NextResponse.json({ error: 'forbidden', detail: listErr.message }, { status: 403 });
   const list = asRec(listData);
   if (!list) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  const origin = getCanonicalAppOrigin();
+  if (!origin) return NextResponse.json({ error: 'app_origin_unavailable' }, { status: 503 });
 
   // 5. S'assurer d'un lien public pour le bouton « sélection complète » — en tant qu'appelant,
   // via ensure_list_share_link (contrat listes 2026-09-07) : génère le premier lien s'il n'existe
@@ -78,7 +85,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (shareErr) return NextResponse.json({ error: 'forbidden', detail: shareErr.message }, { status: 403 });
   const token = nstr(asRec(shareData)?.share_token);
   if (!token) return NextResponse.json({ error: 'share_failed' }, { status: 500 });
-  const origin = (process.env.NEXT_PUBLIC_APP_URL ?? '').trim() || req.nextUrl.origin;
   const publicUrl = `${origin}/l/${token}`;
 
   // 6. Données e-mail (langue de la liste).

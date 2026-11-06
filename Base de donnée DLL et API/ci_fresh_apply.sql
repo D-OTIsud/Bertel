@@ -568,11 +568,17 @@ ROLLBACK;
 \echo '== 18c   migration_test_org_isolation.sql  (organisation de test a donnees isolees). La dimension de cloisonnement : object.is_test entretenu par trigger depuis org_config.is_test_org, et UNE seule feuille de garde, api.current_user_test_realm(), appliquee partout sous la MEME forme o.is_test = (SELECT api.current_user_test_realm()) - une egalite, donc les DEUX sens a la fois : le corpus de test ne sort pas, et le compte de test ne voit pas la production. EN DERNIER dans le manifeste parce que sa reecriture generique des policies de lecture doit voir TOUTES les policies deja creees : can_read_object ne couvre que 15 policies sur 58, les 42 autres INLINENT le controle de publication depuis 35, et les patcher une par une a la main etait le chemin le plus sur vers une table fille oubliee (media, contact_channel, descriptions, tarifs, horaires). Le DO block REFUSE de valider s il reste une seule policy de lecture testant la publication sans predicat de realm. =='
 \ir migration_test_org_isolation.sql
 
+\echo '== 18c0 derived realm write guard (canonical source folded; incremental upgrade replay) =='
+\ir ../supabase/migrations/20261106083901_object_realm_derived_write_guard.sql
+
 \echo '== 18c1 migration_partner_tombstone_feed.sql (flux des suppressions partenaire, filtre le realm apres creation de object_deletion_log.is_test) =='
 \ir migration_partner_tombstone_feed.sql
 
 \echo '== 18c-test  la garde prouvee dans les DEUX sens, et sur la surface qui compte : l API partenaire =='
 \ir tests/test_test_org_isolation.sql
+
+\echo '== 18c0-test derived realm: direct contradictions denied, authorized source transitions retained =='
+\ir tests/test_object_realm_derived_write_guard.sql
 
 \echo '== 18d0  migration_test_org_facets.sql  (la profondeur PAR TYPE du corpus de test). 18d remplissait les tables COMMUNES et s arretait la : les 270 fiches n avaient AUCUNE ligne de facette. Un sentier sans distance, sans denivele, sans etape et sans trace ; une manifestation SANS DATE ; un hotel sans chambre ; un restaurant sans carte. Le corpus etait complet au sens du NOMBRE de fiches et vide au sens du METIER — et la garde de 18d ne le voyait pas, parce qu elle verifiait la profondeur COMMUNE, c est-a-dire exactement ce qui avait ete construit. Une garde qui n interroge que ce qu on a fait ne dit rien de ce qu on a oublie (meme motif que les 42 policies inlinees de 18c). Suit ref_facet_applicability a la lettre — 7 types (COM PCU PNA PRD PSV SPU VIL) n ont aucune facette et n en recoivent pas ; trg_assert_facet_applicable refuserait le reste. Piege releve : object_iti.open_status n accepte que 4 des 7 codes de ref_code_iti_open_status (not_managed, unknown, archived y sont REFUSES par le CHECK de la colonne). AVANT 18d, qui APPELLE cette fonction depuis seed_test_corpus — c est la seule facon que la remise a zero resseme aussi les facettes. =='
 \ir migration_test_org_facets.sql

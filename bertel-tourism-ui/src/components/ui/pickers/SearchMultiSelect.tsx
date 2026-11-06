@@ -17,6 +17,7 @@ import { ChevronDown } from 'lucide-react';
 import { fold } from './fold';
 import type { SearchSelectOption } from './SearchSelect';
 import { usePickerPopover } from './usePickerPopover';
+import { PickerPanel } from './PickerPanel';
 
 interface SearchMultiSelectProps {
   /** Codes sélectionnés. L'ordre d'affichage des puces suit celui des options. */
@@ -90,6 +91,7 @@ export function SearchMultiSelect({
       event.stopPropagation();
       event.preventDefault();
       setOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
       return;
     }
     if (event.key === 'ArrowDown') {
@@ -124,7 +126,10 @@ export function SearchMultiSelect({
         aria-controls={listId}
         aria-label={ariaLabel}
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          triggerRef.current?.focus({ preventScroll: true });
+          setOpen((o) => !o);
+        }}
       >
         <span className="picker__trigger-label">{triggerLabel}</span>
         <ChevronDown className="picker__chevron" size={20} strokeWidth={2} aria-hidden="true" />
@@ -150,7 +155,7 @@ export function SearchMultiSelect({
       )}
 
       {mounted && open && createPortal(
-        <div className="picker__panel" ref={panelRef} style={panelStyle}>
+        <PickerPanel panelRef={panelRef} triggerRef={triggerRef} searchRef={searchRef} style={panelStyle} onClose={close}>
           <input
             ref={searchRef}
             className="picker__search"
@@ -158,6 +163,8 @@ export function SearchMultiSelect({
             value={query}
             placeholder={searchPlaceholder}
             aria-label="Rechercher"
+            aria-controls={listId}
+            aria-activedescendant={active >= 0 && active < filtered.length ? `${listId}-option-${active}` : undefined}
             onChange={(event) => {
               setQuery(event.target.value);
               setActive(0);
@@ -170,6 +177,7 @@ export function SearchMultiSelect({
               return (
                 <button
                   key={option.code}
+                  id={`${listId}-option-${index}`}
                   type="button"
                   role="option"
                   aria-selected={checked}
@@ -183,7 +191,7 @@ export function SearchMultiSelect({
             })}
             {filtered.length === 0 && <p className="picker__empty">{emptyLabel}</p>}
           </div>
-        </div>,
+        </PickerPanel>,
         document.body,
       )}
     </div>

@@ -5,6 +5,7 @@ import { z } from '@/lib/zod';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { isSandboxDiscoveryUser, SANDBOX_AI_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { resolveActiveAiProvider } from '@/lib/ai-provider.server';
+import { admitAiRequest } from '@/lib/ai-admission.server';
 import { MediaProcessingError } from '../../media/upload/process-image';
 import { prepareVisionImage, MAX_VISION_IMAGES } from './media-prep';
 import { orchestrateExtraction } from './orchestrate';
@@ -60,22 +61,6 @@ const requestSchema = z.object({
   allowed_sections: z.array(refOption).max(MAX_REF_OPTIONS).default([]),
   allowed_dietary: z.array(refOption).max(MAX_REF_OPTIONS).default([]),
 });
-
-// Best-effort per-user, per-instance throttle (MVP; a DB-backed limiter is a documented follow-up).
-const RATE_LIMIT = 12;
-const RATE_WINDOW_MS = 60_000;
-const recentHits = new Map<string, number[]>();
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  const arr = (recentHits.get(userId) ?? []).filter((t) => now - t < RATE_WINDOW_MS);
-  if (arr.length >= RATE_LIMIT) {
-    recentHits.set(userId, arr);
-    return true;
-  }
-  arr.push(now);
-  recentHits.set(userId, arr);
-  return false;
-}
 
 /**
  * §06 carte extraction: image bytes (carte photos / client-rasterized PDF pages) → structured draft
@@ -145,8 +130,15 @@ async function handlePostAuthenticated(
     return NextResponse.json({ error: 'invalid_object_id' }, { status: 400 });
   }
 
-  if (isRateLimited(userId)) {
-    return NextResponse.json({ error: 'rate_limited', detail: 'trop de demandes, réessayez dans une minute' }, { status: 429 });
+  let admission;
+  try {
+    admission = await admitAiRequest(server, userId, 'menu_extract', req.signal);
+  } catch {
+    return NextResponse.json({ error: 'ai_admission_unavailable', detail: 'Analyse impossible (503)' }, { status: 503 });
+  }
+  if (!admission.allowed) {
+    return NextResponse.json({ error: 'rate_limited', detail: 'trop de demandes, réessayez dans une minute' },
+      { status: 429, headers: { 'Retry-After': String(admission.retryAfter) } });
   }
 
   // Authorize AS THE CALLER — same predicate as every canonical write policy. Fail-closed.
@@ -185,6 +177,7 @@ async function handlePostAuthenticated(
   const preparedImages: Awaited<ReturnType<typeof prepareVisionImage>>[] = [];
   try {
     for (const img of selected) {
+      if (req.signal?.aborted) break;
       const buf = Buffer.from(img.base64, 'base64');
       if (buf.byteLength > MAX_IMAGE_BYTES) {
         throw new MediaProcessingError('size', 'image trop volumineuse');
@@ -202,9 +195,13 @@ async function handlePostAuthenticated(
   // Re-read immediately before the provider request.  If an administrator has disabled
   // the service while images were being prepared, orchestration receives no stale config.
   const controller = new AbortController();
+  const abortFromCaller = () => controller.abort(req.signal?.reason);
+  req.signal?.addEventListener('abort', abortFromCaller, { once: true });
+  if (req.signal?.aborted) abortFromCaller();
   const getActiveProvider = () => resolveActiveAiProvider(server, controller.signal);
   const timeout = setTimeout(() => controller.abort(), 55_000);
   try {
+    controller.signal.throwIfAborted();
     const result = await orchestrateExtraction(
       {
         menuTitle: body.menu_title,
@@ -235,5 +232,6 @@ async function handlePostAuthenticated(
     );
   } finally {
     clearTimeout(timeout);
+    req.signal?.removeEventListener('abort', abortFromCaller);
   }
 }

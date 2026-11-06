@@ -66,22 +66,29 @@ export async function saveReceipt(filename, receipt) {
     await handle.sync();
     await handle.close(); handle = null;
     await rename(temporary, filename);
+    if (process.platform !== 'win32') {
+      const directory = await open(dirname(filename), 'r');
+      try { await directory.sync(); } finally { await directory.close(); }
+    }
   } catch {
     if (handle) await handle.close().catch(() => {});
     fail('receipt_write_failed');
   }
 }
 
-export async function withOperatorLocks(filename, inventory, action, lockDirectory = join(tmpdir(), 'bertel-db07-copy-locks')) {
+export async function withOperatorLocks(filename, inventory, action,
+  lockDirectory = join(tmpdir(), `bertel-db07-copy-locks-${process.getuid?.() ?? 'windows-user'}`)) {
   const canonical = join(await realpath(dirname(filename)), basename(filename));
   await mkdir(lockDirectory, { recursive: true, mode: 0o700 });
-  requireThat(!(await lstat(lockDirectory)).isSymbolicLink(), 'lock_directory');
+  const directory = await lstat(lockDirectory);
+  requireThat(directory.isDirectory() && !directory.isSymbolicLink(), 'lock_directory');
+  if (process.getuid) requireThat(directory.uid === process.getuid() && (directory.mode & 0o077) === 0, 'lock_directory_private');
   const operation = join(await realpath(lockDirectory), `${inventory.projectRef}.lock`);
   const held = []; let result; let originalError; let cleanupFailed = false;
   try {
     for (const path of [operation, `${canonical}.lock`]) {
       let handle;
-      try { handle = await open(path, 'wx', 0o600); } catch { fail('operator_locked'); }
+      try { handle = await open(path, 'wx', 0o600); } catch (error) { fail(error.code === 'EEXIST' ? 'operator_locked' : 'lock_io'); }
       held.push({ handle, path });
       await handle.writeFile(JSON.stringify({ pid: process.pid, host: hostname(), started_at: new Date().toISOString(),
         project_ref: inventory.projectRef, manifest_sha256: inventory.digest }));
@@ -211,8 +218,9 @@ function assertDestination(info, r, acknowledged) {
     && typeof info.etag === 'string' && info.etag.length > 0, 'destination_changed');
 }
 function initialReceipt(inventory, receipt) {
-  const state = receipt ?? { schema_version: 1, manifest_sha256: inventory.digest,
-    project_ref: inventory.projectRef, destination_bucket_private: true, attempts: [], copies: [], records: [] };
+  const state = receipt === undefined ? { schema_version: 1, manifest_sha256: inventory.digest,
+    project_ref: inventory.projectRef, destination_bucket_private: true, attempts: [], copies: [], records: [] } : receipt;
+  requireThat(state && typeof state === 'object' && !Array.isArray(state), 'receipt_scope');
   requireThat(state.schema_version === 1 && state.manifest_sha256 === inventory.digest && state.project_ref === inventory.projectRef
     && state.destination_bucket_private === true && Array.isArray(state.attempts)
     && Array.isArray(state.copies) && Array.isArray(state.records), 'receipt_scope');
@@ -272,6 +280,7 @@ export async function copyVerified(inventory, { transport, receipt, checkpoint, 
     if (!copy) {
       await checkBucket();
       assertSource(await transport.info(r.source_bucket, r.source_path, signal), r);
+      requireThat(!signal?.aborted, 'interrupted');
       state.attempts.push({ document_id: r.document_id, destination_path: r.destination_path,
         source_id: r.source_metadata.id, source_sha256: source.sha256, source_bytes: source.bytes,
         attempted_at: new Date().toISOString() });
@@ -321,10 +330,14 @@ async function run() {
   const manifestPath = await realpath(resolve(options['--manifest']));
   const repository = spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' });
   requireThat(repository.status === 0, 'repository');
-  const manifestRelative = relative(await realpath(repository.stdout.trim()), manifestPath);
-  if (!manifestRelative.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) && !isAbsolute(manifestRelative)) {
-    requireThat(spawnSync('git', ['check-ignore', '--quiet', '--', manifestPath]).status === 0, 'manifest_must_be_private');
-  }
+  const repositoryRoot = await realpath(repository.stdout.trim());
+  const privateArtifact = (path, code) => {
+    const local = relative(repositoryRoot, path);
+    if (!local.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) && !isAbsolute(local)) {
+      requireThat(spawnSync('git', ['check-ignore', '--quiet', '--', path]).status === 0, code);
+    }
+  };
+  privateArtifact(manifestPath, 'manifest_must_be_private');
   const inventory = inspectManifest(await readFile(manifestPath), options['--project-ref']);
   if (options['--expect-sha256']) requireThat(inventory.digest === options['--expect-sha256'], 'manifest_digest');
   if (!options['--execute']) { console.log(JSON.stringify(previewInventory(inventory))); return; }
@@ -332,7 +345,7 @@ async function run() {
   const requestedFilename = resolve(options['--receipt']);
   const filename = join(await realpath(dirname(requestedFilename)), basename(requestedFilename));
   for (const path of [filename, `${filename}.next`, `${filename}.lock`]) {
-    requireThat(spawnSync('git', ['check-ignore', '--quiet', '--', path]).status === 0, 'receipt_must_be_git_ignored');
+    privateArtifact(path, 'receipt_must_be_private');
   }
   const controller = new AbortController();
   const stop = () => controller.abort();

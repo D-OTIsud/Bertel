@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname, basename, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -56,6 +56,7 @@ async function storage(t, options = {}) {
       data.destination = { ...source, id: destinationId, name: record.destination_path, bucket_id: 'legal-documents', etag: 'dest-tag' };
       if (options.corrupt) data.targetBytes[0] ^= 1;
       if (options.sourceChange) source.etag = 'changed-after-copy';
+      if (options.abortOnCopy) options.abortOnCopy.abort();
       if (options.lostAck) { req.socket.destroy(); return; }
       if (options.badAck) return json({ Id: destinationId, Key: 'legal-documents/outside' });
       return json({ Id: destinationId, Key: `legal-documents/${record.destination_path}` });
@@ -135,7 +136,18 @@ test('lost server acknowledgement refuses automatic adoption of the existing des
   await assert.rejects(copyVerified(s.inventory, s), /copy_outcome_uncertain/);
   assert.equal(s.receipt.attempts.length, 1); assert.equal(s.receipt.copies.length, 0);
   assert.equal(s.data.posts, 1); assert.ok(s.data.destination);
+  const priorRequests = s.data.methods.length;
   await assert.rejects(copyVerified(s.inventory, { ...s, receipt: s.receipt }), /copy_attempt_requires_review/); assert.equal(s.data.posts, 1);
+  assert.equal(s.data.methods.length, priorRequests);
+});
+
+test('abort during POST preserves one attempt and refuses every new request on resume', async (t) => {
+  const controller = new AbortController(); const s = await storage(t, { abortOnCopy: controller });
+  await assert.rejects(copyVerified(s.inventory, { ...s, signal: controller.signal }), /copy_outcome_uncertain/);
+  assert.equal(s.receipt.attempts.length, 1); assert.equal(s.receipt.copies.length, 0); assert.equal(s.data.posts, 1);
+  const priorRequests = s.data.methods.length;
+  await assert.rejects(copyVerified(s.inventory, { ...s, receipt: s.receipt }), /copy_attempt_requires_review/);
+  assert.equal(s.data.methods.length, priorRequests);
 });
 
 test('wrong successful copy acknowledgement never creates a trusted receipt', async (t) => {
@@ -236,6 +248,12 @@ test('an already aborted execution emits no copy or byte request', async (t) => 
   assert.equal(s.data.posts, 0); assert.equal(s.data.reads, 0);
 });
 
+test('an existing null receipt is refused before any request instead of becoming a fresh receipt', async (t) => {
+  const s = await storage(t);
+  await assert.rejects(copyVerified(s.inventory, { ...s, receipt: null }), /receipt_scope/);
+  assert.equal(s.data.methods.length, 0);
+});
+
 test('atomic receipt checkpoint round trips and refuses an unreviewed leftover temporary file', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'db07-copy-'));
   try {
@@ -263,6 +281,13 @@ test('project operation lock prevents a parallel run with a different receipt pa
     release(); await first;
     await assert.rejects(withOperatorLocks(join(dir, 'receipt.json'), f.inventory, async () => { throw new Error('copy_outcome_uncertain'); }, locks), /copy_outcome_uncertain/);
     await withOperatorLocks(join(dir, 'receipt.json'), f.inventory, async () => {}, locks);
+    const projectLock = join(locks, `${project}.lock`);
+    await assert.rejects(withOperatorLocks(join(dir, 'receipt.json'), f.inventory, async () => {
+      await unlink(projectLock);
+    }, locks), /lock_cleanup_failed/);
+    await assert.rejects(withOperatorLocks(join(dir, 'receipt.json'), f.inventory, async () => {
+      await unlink(projectLock); throw new Error('copy_outcome_uncertain');
+    }, locks), /copy_outcome_uncertain/);
   } finally {
     release();
     assert.equal(dirname(resolve(dir)), resolve(tmpdir())); assert.match(basename(dir), /^db07-copy-/);
@@ -296,6 +321,18 @@ test('default CLI preview succeeds on a complete synthetic1710 manifest without 
     assert.equal(refused.status, 1); assert.match(refused.stderr, /execution_arguments/);
     const wrong = spawnSync(process.execPath, [...args, '--expect-sha256', sha256('other')], { encoding: 'utf8', timeout: 3000 });
     assert.equal(wrong.status, 1); assert.match(wrong.stderr, /manifest_digest/);
+    const receiptFile = join(dir, 'receipt.json');
+    const execute = [...args, '--expect-sha256', sha256(serialized), '--receipt', receiptFile, '--execute'];
+    await writeFile(`${receiptFile}.next`, 'unreviewed checkpoint');
+    const beforeKey = spawnSync(process.execPath, execute, { encoding: 'utf8', timeout: 10000,
+      env: { ...process.env, DB07_STORAGE_SERVICE_KEY: 'invalid-key-must-not-be-read' } });
+    assert.equal(beforeKey.status, 1); assert.match(beforeKey.stderr, /receipt_write_failed/); assert.doesNotMatch(beforeKey.stderr, /service_key/);
+    await unlink(`${receiptFile}.next`); await writeFile(receiptFile, 'null');
+    const nullReceipt = spawnSync(process.execPath, execute, { encoding: 'utf8', timeout: 10000 });
+    assert.equal(nullReceipt.status, 1); assert.match(nullReceipt.stderr, /receipt_scope/);
+    const unignored = spawnSync(process.execPath, [...args, '--expect-sha256', sha256(serialized), '--receipt',
+      resolve('tools/private-media/synthetic-unignored-receipt.json'), '--execute'], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(unignored.status, 1); assert.match(unignored.stderr, /receipt_must_be_private/);
   } finally {
     assert.equal(dirname(resolve(dir)), resolve(tmpdir())); assert.match(basename(dir), /^db07-copy-/);
     await rm(dir, { recursive: true, force: true });

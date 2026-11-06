@@ -13,8 +13,11 @@ provide a content hash. No real file content was read for this preparation.
 
 ## Preview and future execution
 
-Run from the repository root with Node22 or later. Paths, manifests and receipts
-must stay in an access-controlled, Git-ignored directory. Use the exact manifest
+Run from the repository root with Node22 or later. Manifests and receipts must
+stay in an access-controlled directory. Prefer durable storage outside disposable
+worktrees; inside the repository, every artifact and temporary sibling must be
+Git-ignored. Keep independent backups outside the worktree before execution.
+Use the exact manifest
 bytes that were reviewed; reformatting its JSON changes its SHA-256.
 
 ```text
@@ -30,7 +33,7 @@ against the selected Supabase project, then never used as request URLs.
 After the separately reviewed delivery/copy decision, the future command adds:
 
 ```text
---expect-sha256 <reviewed-manifest-sha256> --receipt <ignored-copy-receipt.json> --execute
+--expect-sha256 <reviewed-manifest-sha256> --receipt <private-copy-receipt.json> --execute
 ```
 
 The privileged credential must already exist only in the process environment as
@@ -87,11 +90,13 @@ an exclusive receipt `.lock` and a canonical project-wide lock under the current
 user's temporary directory prevent concurrent local CLI writers, including two
 receipt paths or manifest digests for the same project. Locks contain PID, host,
 start time and digest for diagnosis. Receipt parents are resolved before locking;
-all receipt siblings must be ignored. Locks do not coordinate other hosts or tools.
+all receipt siblings inside the repository must be ignored. POSIX lock directories
+must belong to the current user with mode0700. Locks do not coordinate other hosts or tools.
 A process crash can leave
 a lock or temporary file. Preserve and inspect them before any manual recovery;
 there is no automatic stale-lock deletion or receipt fabrication. Directory
-fsync/power-loss guarantees vary by filesystem; keep independent private backups
+The parent directory is also fsynced on POSIX after each rename. Power-loss
+guarantees still vary by filesystem; keep independent private backups
 of the reviewed manifest and receipts. File mode0600 is requested; Windows folder
 ACLs remain the operator's responsibility.
 
@@ -109,6 +114,19 @@ overwrite it to force a retry. A corrupt or changed acknowledged destination als
 stops the lot and remains intact. No existing receipt is trusted instead of byte
 verification. These receipts record operator observations, not a cryptographic
 attestation of the Storage server or an atomic transaction across DB and Storage.
+
+For an unresolved attempt, preserve the original receipt and its backup. Reconcile
+the exact attempted namespace with Storage operator logs and current source and
+destination IDs/metadata; independently stream both files and compare their real
+SHA-256/sizes against the attempt, preserving MIME/cache. Do not resolve while an
+earlier request may still complete. Prepare a private candidate receipt retaining
+the attempt and adding only its reviewed acknowledgement (`copies`, never a
+fabricated verified `records` entry), using the observed destination UUID. Review
+that candidate and evidence before use. The normal command then rechecks the exact
+IDs/metadata and both byte streams itself. An absent/changed source, foreign or
+corrupt destination, uncertain provenance, or mismatching hash remains refused;
+prepare a concrete recovery with the preserved copies rather than clearing an
+attempt or replacing bytes to force progress.
 
 ## Validation and delivery limits
 

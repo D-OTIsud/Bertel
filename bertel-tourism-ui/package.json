@@ -15,6 +15,10 @@
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "verify:maplibre": "node scripts/verify-maplibre-backport.mjs",
     "test:maplibre-backport": "node --test scripts/maplibre-backport.test.mjs",
+    "test:tooling-dependencies": "node --test scripts/tooling-dependencies.test.cjs",
+    "test:storybook-security": "node --test scripts/storybook-security.test.mjs",
+    "test:storybook-runtime": "node scripts/run-playwright.mjs test --config playwright.storybook.config.ts",
+    "test:webpack-middleware": "node --test scripts/webpack-middleware.test.cjs",
     "test": "jest --watch",
     "test:run": "jest",
     "playwright": "node scripts/run-playwright.mjs",
@@ -31,6 +35,8 @@
     "@hookform/resolvers": "^5.2.2",
     "@mapbox/mapbox-gl-draw": "^1.5.1",
     "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dismissable-layer": "1.1.11",
+    "@radix-ui/react-focus-scope": "1.1.7",
     "@radix-ui/react-slot": "^1.2.4",
     "@supabase/supabase-js": "^2.52.1",
     "@tanstack/query-sync-storage-persister": "^5.74.4",
@@ -67,13 +73,13 @@
     "tiptap-markdown": "0.9.0",
     "use-supercluster": "^1.2.0",
     "write-excel-file": "4.1.1",
-    "zod": "^3.24.2",
+    "zod": "4.6.7",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "@storybook/addon-a11y": "^10.4.0",
-    "@storybook/nextjs": "^10.4.0",
+    "@storybook/addon-a11y": "10.6.2",
+    "@storybook/nextjs": "10.6.2",
     "@storybook/test-runner": "^0.24.4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.3",
@@ -90,13 +96,16 @@
     "jest-environment-jsdom": "^29.7.0",
     "jsdom": "^26.0.0",
     "postcss": "8.5.28",
-    "storybook": "^10.4.0",
+    "storybook": "10.6.2",
     "supabase": "^2.99.0",
     "tailwindcss": "^3.4.19",
     "ts-node": "^10.9.2",
     "typescript": "5.7.3"
   },
   "overrides": {
+    "@storybook/builder-webpack5@10.6.2": {
+      "webpack-dev-middleware": "7.4.6"
+    },
     "next": {
       "postcss": "$postcss",
       "sharp": "$sharp"

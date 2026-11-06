@@ -1,0 +1,30 @@
+{
+  "status": "proposal_only_not_applied",
+  "bucket": "legal-documents",
+  "observed_precondition": {
+    "public": false,
+    "file_size_limit": 10485760,
+    "allowed_mime_types": ["application/pdf", "image/jpeg"]
+  },
+  "proposed_storage_api_update": {
+    "id": "legal-documents",
+    "name": "legal-documents",
+    "public": false,
+    "file_size_limit": 42305170,
+    "allowed_mime_types": [
+      "application/pdf",
+      "image/jpeg",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/png",
+      "image/heif"
+    ]
+  },
+  "bounds": {
+    "classified_files": 1710,
+    "above_previous_limit": 22,
+    "largest_metadata_bytes": 42305170,
+    "global_limit_must_be_verified_separately": true,
+    "visibility_change": false,
+    "applied_by_copy_tool": false
+  }
+}

@@ -40,3 +40,21 @@ test.each(["photo_main_conflict","photo_writes_closed","photo_order_conflict"])(
   rpc.mockResolvedValue({data:null,error:{code:"PT409",details}});
   await expect(reconcilePortalPhotoOrder("FICHE",["media-1"],order)).rejects.toMatchObject({code:"PT409",details});
 });
+
+test.each(['title_i18n', 'description_i18n'] as const)('refuse un snapshot incomplet sans %s', async key => {
+  const incomplete = { ...raw };
+  delete (incomplete as Partial<typeof raw>)[key];
+  rpc.mockResolvedValue({data:{...workspace,published:[{...workspace.published[0],textSnapshot:incomplete}]},error:null});
+  await expect(getPortalPhotoWorkspace('FICHE')).rejects.toThrow('La galerie reçue est incomplète. Actualisez avant de la modifier.');
+});
+
+test('préserve une proposition et son reçu analyse non vide sous Zod 4', async () => {
+  const proposal = {documentId:'doc-1',title:'Titre',description:'Description',status:'refused',replaceMediaId:null,changeId:'change-1',
+    submittedAt:'2026-11-06T00:00:00Z',reviewNote:'À vérifier',textSnapshot:raw,canAppeal:false,reviewAppeal:null,
+    analysis:{requestId:'request-1',state:'complete',assessment:{score:8,summary:' Sujet net ',strengths:[' Belle lumière '],issues:[]},
+      sourceCurrent:true,appealInteractionId:null,appealStatus:null}};
+  rpc.mockResolvedValue({data:{...workspace,proposals:[proposal]},error:null});
+  const result = await getPortalPhotoWorkspace('FICHE');
+  expect(result.proposals).toHaveLength(1);
+  expect(result.proposals[0]).toEqual({...proposal,analysis:{...proposal.analysis,assessment:{score:8,summary:'Sujet net',strengths:['Belle lumière'],issues:[]}}});
+});

@@ -209,6 +209,26 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const [saveErrors, setSaveErrors] = useState<Issue[]>([]);
   const [saveFeedback, setSaveFeedback] = useState<EditorActionFeedback>('idle');
   const [publishFeedback, setPublishFeedback] = useState<EditorActionFeedback>('idle');
+  const publicationGeneration = useRef(0);
+  const publicationMounted = useRef(false);
+  useEffect(() => {
+    publicationMounted.current = true;
+    publicationGeneration.current += 1;
+    setPublishFeedback('idle');
+    // Observe account transitions synchronously, including A -> B -> A batched
+    // into one React render. Returning to A must not revive its older request.
+    const unsubscribe = useSessionStore.subscribe((next, previous) => {
+      if (next.userId !== previous.userId) {
+        publicationGeneration.current += 1;
+        setPublishFeedback('idle');
+      }
+    });
+    return () => {
+      unsubscribe();
+      publicationMounted.current = false;
+      publicationGeneration.current += 1;
+    };
+  }, [objectId]);
   // Independent timer refs per channel: a shared ref would let a publish flash's clearTimeout
   // cancel the save flash's pending revert-to-idle timer (or vice versa) when save→publish (or
   // the reverse) happens within the 1.2s flash window, stranding that channel on "success".
@@ -405,7 +425,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   );
 
   /** Persist local draft modules to the database (shared by publish and draft-save). */
-  async function persistDirtyModules(): Promise<{ ok: boolean; saveErrors: Issue[]; changedDuringSave?: boolean }> {
+  async function persistDirtyModules(isCurrent?: () => boolean): Promise<{ ok: boolean; saveErrors: Issue[]; changedDuringSave?: boolean }> {
     if (editor.recoveryConflicts.length > 0) {
       const message = 'Des modifications locales et celles du serveur se chevauchent. Gardez votre brouillon ou choisissez les valeurs du serveur avant de sauvegarder.';
       setStatusMessage(message);
@@ -426,6 +446,9 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       baseline: editor.baseline,
       nonApplicableModules: resource.nonApplicableModules,
     });
+    // The request may settle after its editor/account has changed. Ignore the
+    // old continuation before acknowledgement, presence or status feedback.
+    if (isCurrent && !isCurrent()) return { ok: false, saveErrors: [] };
     // Check B against the latest visible C before acknowledgement attaches
     // server IDs/baselines. This never clones the shared gallery retry allocator.
     const changedDuringSave = changedSinceSave(sentModules, latestDraft.current, resource.nonApplicableModules);
@@ -490,6 +513,11 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   }
 
   async function handlePublish() {
+    const generation = publicationGeneration.current;
+    const isCurrent = () => publicationMounted.current
+      && publicationGeneration.current === generation
+      && useSessionStore.getState().userId === userId;
+    if (!isCurrent()) return;
     if (validation.blockers.length > 0) {
       setSaveErrors([]);
       setModalContext('publish');
@@ -500,7 +528,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
 
     setStatusMessage(null);
     setPublishFeedback('pending');
-    const { ok, saveErrors: errors, changedDuringSave } = await persistDirtyModules();
+    const { ok, saveErrors: errors, changedDuringSave } = await persistDirtyModules(isCurrent);
+    if (!isCurrent()) return;
     if (!ok) {
       setSaveErrors(errors);
       setModalContext('save');
@@ -518,11 +547,13 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
 
     try {
       await publishObject.mutateAsync(true);
+      if (!isCurrent()) return;
       editor.setSavedStatus('published');
       setSaveErrors([]);
       toast.success('Fiche enregistrée et publiée');
       flashSuccess(setPublishFeedback, publishFeedbackTimerRef);
     } catch (error) {
+      if (!isCurrent()) return;
       const issue = publishErrorToIssue(error);
       setSaveErrors([issue]);
       setPublishFeedback('error');

@@ -8,6 +8,10 @@ import {
 } from './useReferenceCatalogsQuery';
 
 const mockFetch = jest.fn();
+const mockGeneration = jest.fn<Promise<string | null>, []>();
+jest.mock('../services/thesaurus-generation', () => ({
+  fetchThesaurusGeneration: () => mockGeneration(),
+}));
 jest.mock('../services/reference-catalogs', () => ({
   fetchReferenceCatalogs: () => mockFetch(),
 }));
@@ -21,6 +25,7 @@ function makeWrapper(client: QueryClient) {
 describe('useReferenceCatalogsQuery', () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    mockGeneration.mockResolvedValue(null);
     mockFetch.mockResolvedValue({ refCodeByDomain: { bed_type: [] }, tables: {} });
   });
 
@@ -59,6 +64,7 @@ describe('ensureReferenceCatalogs — contrat de fraicheur', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     mockFetch.mockReset();
+    mockGeneration.mockResolvedValue(null);
     mockFetch.mockResolvedValue({ refCodeByDomain: { bed_type: [] }, tables: {} });
   });
 
@@ -88,5 +94,26 @@ describe('ensureReferenceCatalogs — contrat de fraicheur', () => {
     await ensureReferenceCatalogs(client);
 
     expect(mockFetch).toHaveBeenCalledTimes(2); // perime : recharge
+  });
+
+  test('une nouvelle publication ignore immédiatement un catalogue encore frais de l’ancienne génération', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mockGeneration.mockResolvedValue('11');
+    mockFetch.mockResolvedValueOnce({ refCodeByDomain: { bed_type: [{ code: 'old' }] }, tables: {}, vocabularyRelease: '11' });
+    const first = await ensureReferenceCatalogs(client);
+    mockGeneration.mockResolvedValue('12');
+    mockFetch.mockResolvedValueOnce({ refCodeByDomain: { bed_type: [{ code: 'new' }] }, tables: {}, vocabularyRelease: '12' });
+    const second = await ensureReferenceCatalogs(client);
+    expect(first.vocabularyRelease).toBe('11');
+    expect(second.vocabularyRelease).toBe('12');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('ne sert pas un cache persistant quand la génération ne peut pas être vérifiée', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    await ensureReferenceCatalogs(client);
+    mockGeneration.mockRejectedValueOnce(new Error('Vocabulaire indisponible'));
+    await expect(ensureReferenceCatalogs(client)).rejects.toThrow('Vocabulaire indisponible');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });

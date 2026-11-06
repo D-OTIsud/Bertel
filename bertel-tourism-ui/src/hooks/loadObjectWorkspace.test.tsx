@@ -5,6 +5,11 @@ import { useSessionStore } from '../store/session-store';
 const mockGetObjectResource = jest.fn();
 const mockGetWorkspaceResource = jest.fn();
 const mockFetchCatalogs = jest.fn();
+const mockFetchGeneration = jest.fn();
+
+jest.mock('../services/thesaurus-generation', () => ({
+  fetchThesaurusGeneration: () => mockFetchGeneration(),
+}));
 
 jest.mock('../services/rpc', () => ({
   ...jest.requireActual('../services/rpc'),
@@ -29,6 +34,7 @@ describe('loadObjectWorkspace', () => {
     mockGetObjectResource.mockReset().mockResolvedValue(DETAIL);
     mockGetWorkspaceResource.mockReset().mockResolvedValue({ id: 'o1', name: 'x', type: 'RES', detail: DETAIL, modules: {}, permissions: {} });
     mockFetchCatalogs.mockReset().mockResolvedValue({ refCodeByDomain: {}, tables: {} });
+    mockFetchGeneration.mockReset().mockResolvedValue(null);
   });
 
   function makeClient() {
@@ -87,5 +93,32 @@ describe('loadObjectWorkspace', () => {
     // deux demarrages precedent toute resolution, donc ils sont bien concurrents.
     expect(order).toHaveLength(2);
     expect(new Set(order)).toEqual(new Set(['detail:start', 'catalogs:start']));
+  });
+
+  test('ne reutilise pas une fiche fraiche de la publication precedente', async () => {
+    const client = makeClient();
+    client.setQueryData(['object-detail', 'o1', langPrefs, '1'], DETAIL);
+    mockFetchGeneration.mockResolvedValue('2');
+    mockFetchCatalogs.mockResolvedValue({ refCodeByDomain: {}, tables: {}, vocabularyRelease: '2' });
+    await loadObjectWorkspace(client, 'o1', langPrefs);
+    expect(mockGetObjectResource).toHaveBeenCalledTimes(1);
+    expect(client.getQueryData(['object-detail', 'o1', langPrefs, '2'])).toEqual(DETAIL);
+  });
+
+  test('recharge tout sous la nouvelle publication si elle change pendant le chargement', async () => {
+    const client = makeClient();
+    let current = '1';
+    mockFetchGeneration.mockImplementation(async () => current);
+    mockFetchCatalogs.mockImplementation(async () => ({ refCodeByDomain: {}, tables: {}, vocabularyRelease: current }));
+    mockGetWorkspaceResource.mockImplementation(async () => { current = '2'; return { id: 'o1' }; });
+    await loadObjectWorkspace(client, 'o1', langPrefs);
+    expect(mockGetObjectResource).toHaveBeenCalledTimes(2);
+    expect(mockGetWorkspaceResource).toHaveBeenCalledTimes(2);
+  });
+
+  test('refuse de rendre un assemblage de catalogues et fiche de versions differentes', async () => {
+    mockFetchGeneration.mockResolvedValue('2');
+    mockFetchCatalogs.mockResolvedValue({ refCodeByDomain: {}, tables: {}, vocabularyRelease: '1' });
+    await expect(loadObjectWorkspace(makeClient(), 'o1', langPrefs)).rejects.toThrow('Le vocabulaire a changé');
   });
 });

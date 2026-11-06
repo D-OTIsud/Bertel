@@ -8,7 +8,7 @@
 
 # API publique Bertel — Guide partenaires
 
-**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrat `1.0.0` · Guide mis à jour le 2026-07-31
+**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrat `1.0.0` · Guide mis à jour le 2026-11-06
 
 Bertel est le système d'information touristique de l'OTI du Sud. Son API publique donne aux partenaires un accès **en lecture seule** aux fiches touristiques **publiées** du territoire : hébergements, restaurants, activités, itinéraires, événements, patrimoine, sites naturels…
 
@@ -104,12 +104,18 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | `view` | `card` \| `full` | `card` | `full` = fiche complète par objet (voir §3.1.1) |
 | `track` | `gpx` \| `kml` | — | En `view=full` : ajoute le blob GPX/KML des itinéraires |
 | `types` | csv | tous | Filtre par types de fiche (codes ci-dessous) |
+| `taxonomy` | csv | — | Codes qualifiés `taxonomy_hlo:appartement`, avec descendants selon la hiérarchie publiée |
+| `include_equivalent_predecessors` | bool | `false` | Avec `taxonomy` uniquement : inclut les prédécesseurs déclarés exactement équivalents ; aucun élargissement implicite après une scission |
 | `search` | string | — | Recherche sur le **nom** de la fiche uniquement |
 | `lang` | code | `fr` | Langue de résolution des textes |
 | `format` | profil | — | Ajoute un document pivot par fiche (voir section 5) |
 | `variant` | `legacy-v1` \| `reunion-hebergement-v1` \| `reunion-regional-v1` | `legacy-v1` | Uniquement avec `format=tourinsoft` ; active explicitement le contrat Tourinsoft souhaité |
 
 **Pagination par curseur** : la réponse porte `meta.next_cursor`. Repassez cette valeur telle quelle dans `?cursor=` pour obtenir la page suivante ; `next_cursor` vaut `null` sur la dernière page. Arrêtez la boucle de pagination quand `next_cursor` vaut `null`. Le curseur est **opaque** — ne le construisez ni ne l'interprétez jamais. Les paramètres de filtre (`types`, `page_size`, `search`, `lang`, `view`, `track`) sont **figés par le curseur** : pour changer un filtre, repartez sans `cursor`.
+
+Après activation du thésaurus, les listes et détails de fiches portent aussi `meta.vocabulary_release`. Cette valeur et les libellés, chemins, traductions et documents pivots de la réponse proviennent du même état de lecture en base. Avant la première publication, cette métadonnée est absente. Deux requêtes successives peuvent légitimement annoncer des publications différentes : les fiches ne forment pas un instantané global du territoire.
+
+`include_equivalent_predecessors=true` exige au moins un code `taxonomy`. Il utilise la même règle d'équivalence validée que le back-office, sans élargir les droits de lecture. Une simple relation de remplacement ou un terme associé ne suffit pas. Gardez également ces deux paramètres identiques pendant un parcours de pagination.
 
 **Codes de type** (paramètre `types`, champ `type` des fiches) :
 
@@ -247,6 +253,63 @@ Les fiches référencent des codes (équipements, types de cuisine, labels…). 
 | `lang` | Langue des libellés (`fr` par défaut) |
 
 Réponse : `data` = `{ "domaine": [{ "code", "name", "icon_url", "parent_code", "domain" }] }`. Un domaine inconnu est ignoré silencieusement.
+
+### 3.5 Thésaurus versionné
+
+`/catalog` fournit les **choix actifs au jour de l'appel**. Le thésaurus fournit des **concepts stables et des publications immuables**, y compris les concepts dépréciés ou retirés. Une fiche peut donc porter un code absent du catalogue courant mais toujours résolvable dans le thésaurus.
+
+Ces routes utilisent la même clé partenaire et le même quota que les fiches. Aucun droit supplémentaire n'est implicitement exigé. Sans clé valide, même une URI de concept répond `401`.
+
+| Route | Usage |
+|---|---|
+| `GET /thesaurus` | Découvrir les vocabulaires et la publication courante |
+| `GET /thesaurus/releases/{releaseId}` | Lire le manifeste d'une publication |
+| `GET /thesaurus/releases/{releaseId}/concepts` | Parcourir les concepts de cette publication |
+| `GET /thesaurus/releases/{releaseId}/concepts/{conceptId}` | Lire un concept dans cette publication |
+| `GET /thesaurus/releases/{releaseId}/changes` | Lire les changements depuis sa publication précédente |
+| `GET /thesaurus/releases/{releaseId}/export?format=json` | Télécharger les concepts en JSON |
+| `GET /thesaurus/releases/{releaseId}/export?format=jsonld` | Télécharger le document RDF JSON-LD/SKOS |
+| `GET /thesaurus/concepts/{conceptId}` | Résoudre l'identité pérenne dans la publication courante |
+
+`contract_version` décrit le contrat HTTP ; `release_id` et `vocabulary_release` identifient les données. Le numéro de publication n'est pas un numéro de version du logiciel Bertel. Une publication conserve ses libellés, relations, états et dates : elle ne change pas parce que la date du jour ou le vocabulaire courant change.
+
+Pour les listes de concepts et de changements :
+
+| Paramètre | Description |
+|---|---|
+| `domains` | Domaines publics séparés par des virgules ; absent = périmètre public de la publication |
+| `status` | `active`, `deprecated`, `retired`, séparés par des virgules ; absent = tous les états |
+| `lang` | Langue demandée, `fr` par défaut ; le détail conserve aussi toutes les traductions réellement publiées |
+| `query` | Texte recherché, au plus 200 caractères |
+| `page_size` | Entier de 1 à 200, 100 par défaut |
+| `cursor` | Curseur opaque obtenu dans `meta.next_cursor` |
+
+La réponse reprend `{ "meta": { "contract_version", "release_id", "vocabulary_release", "as_of", "previous_release_id", "next_cursor", "total" }, "data": [...] }`. Les curseurs sont liés à une publication, aux filtres, à la langue et à la taille de page : conservez ces paramètres pendant le parcours. Une publication concurrente ne modifie pas les pages de la version que vous avez choisie. Un curseur malformé, altéré ou utilisé avec d'autres paramètres renvoie `400`.
+
+Un concept porte `concept_id`, `uri`, `domain`, `code`, les libellés préférés par langue, les définitions, les synonymes validés, les notes, les relations et les correspondances externes. Les relations utilisent des identités de concepts ; un code seul n'est pas une identité universelle. `requested_lang`, `effective_lang` et `definition_lang` rendent les replis linguistiques explicites. Une définition française utilisée comme repli n'est jamais présentée comme une traduction anglaise dans l'export SKOS.
+
+Certains catalogues réutilisent un même code dans plusieurs schémas ou catégories. `context_key` est le qualifiant opaque de cette portée : l'unicité d'un code est celle du triplet `(domain, context_key, code)`. Utilisez `concept_id` ou `uri` comme identité de synchronisation, jamais ce seul code. Le parent public dans `broader` décrit le contexte métier lorsqu'il existe. L'export SKOS conserve le code comme notation et sa portée dans `bertel:contextKey` ; il ne lui attribue pas une unicité globale.
+
+`lifecycle` et `assignable` sont distincts : un concept déprécié ou retiré reste résolvable avec `200`, même lorsqu'il n'est plus sélectionnable pour une nouvelle fiche. `replaced_by` signale ses successeurs éventuels ; plusieurs successeurs après une scission ne constituent pas une autorisation de choisir arbitrairement l'un d'eux. Un identifiant inconnu ou non publié renvoie `404`.
+
+Le flux `changes` est paginé et compare la publication demandée à `previous_release_id`. Il distingue `added`, `modified`, `deprecated` et `retired`, avec les représentations `before` et `after`. Un retrait conserve le concept historique ; il ne constitue pas une suppression physique. Pour passer plusieurs publications, enchaînez leurs différentiels ou téléchargez un nouvel export complet.
+
+Les réponses portent un `ETag` et `Cache-Control: private, no-cache`. Réutilisez l'ETag avec `If-None-Match` pour recevoir `304` sans corps si la représentation est identique. **Chaque requête conditionnelle vérifie encore la clé et consomme du quota** : une clé révoquée répond `401`, un quota dépassé `429`, même avec un ETag valide. Le JSON-LD est un document autonome `application/ld+json` ; sa publication est indiquée dans `X-Bertel-Vocabulary-Release`. Les autres réponses utilisent l'enveloppe JSON habituelle.
+
+Le manifeste contient la provenance, la licence effective et les attributions du vocabulaire publié. Les concepts externes et les classes utilisées pour un export ne sont pas supposés équivalents automatiquement. N'inférez pas une licence à partir du seul format JSON-LD.
+
+La licence du logiciel Bertel (MIT) est distincte de celle des données. Pour le vocabulaire produit par l'OTI du Sud, la politique publiée est la Licence Ouverte / Etalab 2.0, avec attribution à l'Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud). Les éventuelles restrictions et attributions de sources externes restent indiquées dans leur provenance ; une correspondance vers un référentiel externe n'en transfère pas les droits.
+
+Avant la première activation du thésaurus, ces routes répondent `503 {"error":"release_unavailable"}`. Les autres erreurs sont documentées dans OpenAPI. Un domaine inconnu ou non autorisé donne une erreur générique, sans divulguer les référentiels internes.
+
+### 3.6 Synchroniser les versions de vocabulaire
+
+1. Appelez `/thesaurus` et conservez le `release_id` courant.
+2. Téléchargez l'export de cette publication, ou parcourez ses concepts jusqu'à `next_cursor=null`.
+3. Conservez les concepts dépréciés ou retirés pour résoudre les anciennes fiches.
+4. Lors d'une nouvelle publication, appliquez ses changements dans l'ordre ou reprenez un export complet.
+
+Un changement d'ancêtre ou de libellé peut modifier les représentations publiques de nombreuses fiches à la fois. Bertel actualise alors leurs marqueurs de synchronisation ; prévoyez une reprise groupée et respectez le quota. La présence d'une nouvelle publication de vocabulaire n'est pas une garantie d'instantané global de toutes les fiches entre plusieurs requêtes.
 
 ---
 

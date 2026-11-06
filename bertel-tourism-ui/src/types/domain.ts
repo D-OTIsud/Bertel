@@ -226,6 +226,8 @@ export interface ExplorerCommonFilters {
    * bucket HOT — mêmes sémantiques que les sous-types).
    */
   taxonomyAny: TaxonomyRef[];
+  /** Include only explicitly approved exact-equivalence predecessors; off by default. */
+  includeEquivalentPredecessors?: boolean;
   /** Active §09 tag filters (click-to-filter on a card/map tag). Sent to the RPC as `tags_any`. */
   tagsAny: ExplorerTagFilter[];
   rankedLabelSchemeCode: string | null;
@@ -427,6 +429,7 @@ export interface CapacityBounds {
 export type CapacityBoundsByMetric = Record<string, Record<string, CapacityBounds>>;
 
 export interface ExplorerReferences {
+  vocabularyRelease?: string | number | null;
   accessibilityDisabilityTypes: ExplorerReferenceOption[];
   accessibilityAmenities: AccessibilityAmenityRef[];
   sustainabilityCategories: SustainabilityCategoryRef[];

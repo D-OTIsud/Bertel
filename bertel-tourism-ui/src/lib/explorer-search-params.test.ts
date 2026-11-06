@@ -2,6 +2,19 @@ import { buildSearchParams, parseSearchParams } from './explorer-search-params';
 import { DEFAULT_EXPLORER_FILTERS } from '../utils/facets';
 import type { ExplorerStatusFilter } from '../types/domain';
 
+describe('explorer-search-params — exact thesaurus predecessors', () => {
+  it('conserve le choix explicite lors du partage d’un filtre taxonomique', () => {
+    const filters = { ...DEFAULT_EXPLORER_FILTERS, common: { ...DEFAULT_EXPLORER_FILTERS.common,
+      taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'location_saisonniere' }], includeEquivalentPredecessors: true } };
+    const params = buildSearchParams(filters);
+    expect(params.get('includeEquivalentPredecessors')).toBe('true');
+    expect(parseSearchParams(params).common?.includeEquivalentPredecessors).toBe(true);
+  });
+  it('garde le comportement historique sans option explicite', () => {
+    expect(buildSearchParams(DEFAULT_EXPLORER_FILTERS).has('includeEquivalentPredecessors')).toBe(false);
+  });
+});
+
 describe('explorer-search-params — rankedLabelExact', () => {
   it('writes rankedLabelExact=true only when a scheme is set and equivalents excluded', () => {
     const filters = {

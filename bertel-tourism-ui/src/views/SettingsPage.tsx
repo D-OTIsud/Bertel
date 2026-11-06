@@ -28,6 +28,8 @@ import { SettingsRail } from './SettingsRail';
 import { buildSettingsNav, resolveSettingsSection } from './settings-nav';
 import TeamAdminPage from './TeamAdminPage';
 import { RefCatalogAdmin } from './RefCatalogAdmin';
+import { ThesaurusAdmin } from './ThesaurusAdmin';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { canAdministerTeam } from '@/store/session-selectors';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
@@ -91,10 +93,18 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<string>(() =>
     resolveSettingsSection(role, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('section'), settingsNavOptions),
   );
+  const [referenceManagementView, setReferenceManagementView] = useState<'catalogs' | 'thesaurus'>('catalogs');
+  const [thesaurusDirty, setThesaurusDirty] = useState(false);
+  const [pendingReferenceNavigation, setPendingReferenceNavigation] = useState<{ section?: string; view?: 'catalogs' | 'thesaurus' } | null>(null);
   useEffect(() => {
     setActiveSection((current) => resolveSettingsSection(role, current, settingsNavOptions));
   }, [role, settingsNavOptions]);
   function selectSection(id: string) {
+    if (thesaurusDirty && id !== activeSection) { setPendingReferenceNavigation({ section: id }); return; }
+    applySection(id);
+  }
+  function applySection(id: string) {
+    setThesaurusDirty(false);
     setActiveSection(id);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -718,7 +728,11 @@ export default function SettingsPage() {
               <p>Tous les catalogues de référence, rangés par famille. Les listes structurelles (taxonomies, registres, permissions) restent en lecture seule, avec leur motif.</p>
             </div>
           </div>
-          <RefCatalogAdmin />
+          <nav className="reference-management-switch" aria-label="Gestion des vocabulaires">
+            <button type="button" className={`ghost-button${referenceManagementView === 'catalogs' ? ' is-active' : ''}`} aria-pressed={referenceManagementView === 'catalogs'} onClick={() => { if (thesaurusDirty) setPendingReferenceNavigation({ view: 'catalogs' }); else setReferenceManagementView('catalogs'); }}>Catalogues</button>
+            <button type="button" className={`ghost-button${referenceManagementView === 'thesaurus' ? ' is-active' : ''}`} aria-pressed={referenceManagementView === 'thesaurus'} onClick={() => setReferenceManagementView('thesaurus')}>Thésaurus</button>
+          </nav>
+          {referenceManagementView === 'catalogs' ? <RefCatalogAdmin /> : <ThesaurusAdmin onDirtyChange={setThesaurusDirty} />}
         </article>
       )}
 
@@ -774,6 +788,7 @@ export default function SettingsPage() {
 
         </div>
       </div>
+      <ConfirmDialog open={Boolean(pendingReferenceNavigation)} title="Quitter le brouillon du thésaurus ?" message="Des modifications ne sont pas enregistrées. Quitter cette vue abandonnera votre saisie locale." confirmLabel="Quitter sans enregistrer" onCancel={() => setPendingReferenceNavigation(null)} onConfirm={() => { const next = pendingReferenceNavigation; setPendingReferenceNavigation(null); setThesaurusDirty(false); if (next?.section) applySection(next.section); if (next?.view) setReferenceManagementView(next.view); }} />
     </section>
   );
 }

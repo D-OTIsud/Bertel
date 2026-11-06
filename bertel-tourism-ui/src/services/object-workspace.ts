@@ -966,6 +966,7 @@ interface TaxonomyNodeRef {
   description: string;
   parentId: string | null;
   isAssignable: boolean;
+  isActive?: boolean;
   position: number;
   axis: 'famille' | 'nature' | 'sous_type' | 'type_unite' | 'positionnement' | null;
   family: string | null;
@@ -993,7 +994,8 @@ function normalizeTaxonomyNodeRef(row: Record<string, unknown>): TaxonomyNodeRef
     label: readString(row.name, readString(row.code)),
     description: readString(row.description),
     parentId: readString(row.parent_id) || null,
-    isAssignable: row.is_assignable == null ? true : readBoolean(row.is_assignable),
+    isAssignable: row.is_active !== false && (row.is_assignable == null || readBoolean(row.is_assignable)),
+    isActive: row.is_active !== false,
     position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
     axis: axis === 'famille' || axis === 'nature' || axis === 'sous_type'
       || axis === 'type_unite' || axis === 'positionnement' ? axis : null,
@@ -1067,6 +1069,7 @@ function buildTaxonomyNodeOptions(domainNodes: TaxonomyNodeRef[]): ObjectWorkspa
         parentCode: parent && parent.code !== 'root' ? parent.code : null,
         depth: Math.max(0, computeTaxonomyDepth(node.id, nodeById, depthCache) - 1),
         isAssignable: node.isAssignable,
+        isActive: node.isActive,
         position: node.position,
         axis: node.axis,
         family: node.family,
@@ -1115,6 +1118,7 @@ function reconcileTaxonomyAssignment(params: {
     description: node.description,
     parentId: node.parentId,
     isAssignable: node.isAssignable,
+    isActive: node.isActive,
     position: node.position,
     axis: node.axis ?? null,
     family: node.family ?? null,
@@ -1162,7 +1166,7 @@ function reconcileTaxonomyAssignment(params: {
   };
 }
 
-async function getObjectWorkspaceTaxonomyModule(
+export async function getObjectWorkspaceTaxonomyModule(
   objectId: string,
   baseModule: ObjectWorkspaceTaxonomyModule,
   catalogs: ReferenceCatalogs,
@@ -1199,12 +1203,13 @@ async function getObjectWorkspaceTaxonomyModule(
 
   const domainCodes = domainRefs.map((domain) => domain.domain);
   const [nodeRefsResult, assignmentsResult] = await Promise.all([
-    domainCodes.length > 0
+    catalogs.vocabularyRelease !== undefined
+      ? Promise.resolve({ data: domainCodes.flatMap((domain) => catalogs.refCodeByDomain[domain] ?? []), error: null })
+      : domainCodes.length > 0
       ? client
           .from('ref_code')
           .select('id, domain, code, name, description, parent_id, is_assignable, position, is_active, metadata')
           .in('domain', domainCodes)
-          .eq('is_active', true)
           .order('position', { ascending: true })
       : Promise.resolve({ data: [], error: null }),
     client
@@ -1222,6 +1227,12 @@ async function getObjectWorkspaceTaxonomyModule(
   }
 
   const nodeRefs = ((nodeRefsResult.data ?? []) as Record<string, unknown>[]).map(normalizeTaxonomyNodeRef);
+  const knownNodeIds = new Set(nodeRefs.map((node) => node.id));
+  const unresolvedAssignment = ((assignmentsResult.data ?? []) as Record<string, unknown>[])
+    .some((row) => domainCodes.includes(readString(row.domain)) && !knownNodeIds.has(readString(row.ref_code_id)));
+  if (unresolvedAssignment) {
+    return { ...baseModule, unavailableReason: 'Une nature existante est absente du catalogue chargé. Rechargez la fiche avant de modifier sa taxonomie.' };
+  }
   const nodesByDomain = new Map<string, TaxonomyNodeRef[]>();
   for (const node of nodeRefs) {
     const current = nodesByDomain.get(node.domain) ?? [];
@@ -1234,8 +1245,8 @@ async function getObjectWorkspaceTaxonomyModule(
       .map((row) => [readString(row.domain), row] as const),
   );
   const [unitTypes, positionings] = await Promise.all([
-    loadAccommodationUnitTypes(client, objectId, resolvedObjectType),
-    loadHotelPositionings(client, objectId, resolvedObjectType),
+    loadAccommodationUnitTypes(client, objectId, resolvedObjectType, catalogs),
+    loadHotelPositionings(client, objectId, resolvedObjectType, catalogs),
   ]);
 
   return {
@@ -1267,6 +1278,7 @@ async function loadAccommodationUnitTypes(
   client: NonNullable<ReturnType<typeof getSupabaseClient>>,
   objectId: string,
   objectType: string,
+  catalogs?: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceUnitTypes> {
   // L'axe ne concerne que l'hébergement : l'exposer ailleurs serait un contrôle
   // qui ne veut rien dire pour un restaurant ou un itinéraire.
@@ -1275,12 +1287,12 @@ async function loadAccommodationUnitTypes(
   }
 
   const [catalogResult, selectedResult] = await Promise.all([
-    client
+    catalogs?.vocabularyRelease !== undefined
+      ? Promise.resolve({ data: catalogs.refCodeByDomain.accommodation_unit_type ?? [], error: null })
+      : client
       .from('ref_code')
-      .select('id,code,name,description,position')
+      .select('id,code,name,description,position,is_active,is_assignable')
       .eq('domain', 'accommodation_unit_type')
-      .eq('is_active', true)
-      .eq('is_assignable', true)
       .order('position', { ascending: true }),
     client
       .from('object_accommodation_unit_type')
@@ -1302,14 +1314,18 @@ async function loadAccommodationUnitTypes(
     code: readString(row.code),
     label: readString(row.name),
     description: readString(row.description),
+    isAssignable: row.is_active !== false && row.is_assignable !== false,
   }));
   const codeById = new Map(options.map((option) => [option.id, option.code]));
+  if (((selectedResult.data ?? []) as Array<Record<string, unknown>>).some((row) => !codeById.has(readString(row.unit_type_id)))) {
+    return { ...EMPTY_UNIT_TYPES, unavailableReason: "Un type d'unité existant est absent du catalogue chargé. Son affectation est conservée." };
+  }
   const selectedCodes = ((selectedResult.data ?? []) as Array<Record<string, unknown>>)
     .map((row) => codeById.get(readString(row.unit_type_id)))
     .filter((code): code is string => Boolean(code));
 
   return {
-    options: options.map(({ code, label, description }) => ({ code, label, description })),
+    options: options.map(({ code, label, description, isAssignable }) => ({ code, label, description, isAssignable })),
     selectedCodes,
     unavailableReason: null,
   };
@@ -1320,18 +1336,19 @@ async function loadHotelPositionings(
   client: NonNullable<ReturnType<typeof getSupabaseClient>>,
   objectId: string,
   objectType: string,
+  catalogs?: ReferenceCatalogs,
 ): Promise<ObjectWorkspacePositionings> {
   if (objectType.toUpperCase() !== 'HOT') {
     return EMPTY_POSITIONINGS;
   }
 
   const [catalogResult, selectedResult] = await Promise.all([
-    client
+    catalogs?.vocabularyRelease !== undefined
+      ? Promise.resolve({ data: catalogs.refCodeByDomain.taxonomy_hot ?? [], error: null })
+      : client
       .from('ref_code')
-      .select('id,code,name,description,position,metadata')
+      .select('id,code,name,description,position,metadata,is_active,is_assignable')
       .eq('domain', 'taxonomy_hot')
-      .eq('is_active', true)
-      .eq('is_assignable', true)
       .order('position', { ascending: true }),
     client
       .from('object_hotel_positioning')
@@ -1353,14 +1370,18 @@ async function loadHotelPositionings(
       code: readString(row.code),
       label: readString(row.name),
       description: readString(row.description),
+      isAssignable: row.is_active !== false && row.is_assignable !== false,
     }));
   const codeById = new Map(options.map((option) => [option.id, option.code]));
+  if (((selectedResult.data ?? []) as Array<Record<string, unknown>>).some((row) => !codeById.has(readString(row.positioning_id)))) {
+    return { ...EMPTY_POSITIONINGS, unavailableReason: "Un positionnement existant est absent du catalogue chargé. Son affectation est conservée." };
+  }
   const selectedCodes = ((selectedResult.data ?? []) as Array<Record<string, unknown>>)
     .map((row) => codeById.get(readString(row.positioning_id)))
     .filter((code): code is string => Boolean(code));
 
   return {
-    options: options.map(({ code, label, description }) => ({ code, label, description })),
+    options: options.map(({ code, label, description, isAssignable }) => ({ code, label, description, isAssignable })),
     selectedCodes,
     unavailableReason: null,
   };
@@ -4395,7 +4416,7 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
     managedDomains.length > 0
       ? client
           .from('ref_code')
-          .select('id, domain, code, is_assignable')
+          .select('id, domain, code, is_assignable, is_active')
           .in('domain', managedDomains)
       : Promise.resolve({ data: [], error: null }),
     managedDomains.length > 0
@@ -4420,7 +4441,7 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
       id: readString(row.id),
       domain: readString(row.domain),
       code: readString(row.code),
-      isAssignable: row.is_assignable == null ? true : readBoolean(row.is_assignable),
+      isAssignable: row.is_active !== false && (row.is_assignable == null || readBoolean(row.is_assignable)),
     }));
   const nodeByDomainAndId = new Map(nodeRows.map((row) => [`${row.domain}:${row.id}`, row]));
   const nodeByDomainAndCode = new Map(nodeRows.map((row) => [`${row.domain}:${row.code.toLowerCase()}`, row]));
@@ -4448,11 +4469,17 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
       throw new Error(`Noeud de taxonomie inconnu pour le domaine ${domain.label || domain.domain}.`);
     }
 
-    if (!selectedNode.isAssignable) {
+    const existing = existingByDomain.get(domain.domain);
+    const isUnchanged = readString(existing?.ref_code_id) === selectedNode.id;
+    if (!selectedNode.isAssignable && !isUnchanged) {
       throw new Error(`Le noeud ${domain.assignment.label || domain.assignment.code} ne peut pas etre assigne.`);
     }
 
-    const existing = existingByDomain.get(domain.domain);
+    keptDomains.add(domain.domain);
+    // Retired references are preserved as-is; they are not a new assignment.
+    if (isUnchanged) {
+      continue;
+    }
     upsertRows.push({
       object_id: objectId,
       domain: domain.domain,
@@ -4460,7 +4487,6 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
       source: 'workspace_taxonomy',
       note: existing ? existing.note ?? null : null,
     });
-    keptDomains.add(domain.domain);
   }
 
   if (upsertRows.length > 0) {
@@ -4521,10 +4547,8 @@ async function saveAccommodationUnitTypes(
   const [catalogResult, existingResult] = await Promise.all([
     client
       .from('ref_code')
-      .select('id,code')
-      .eq('domain', 'accommodation_unit_type')
-      .eq('is_active', true)
-      .eq('is_assignable', true),
+      .select('id,code,is_active,is_assignable')
+      .eq('domain', 'accommodation_unit_type'),
     client
       .from('object_accommodation_unit_type')
       .select('unit_type_id')
@@ -4538,11 +4562,19 @@ async function saveAccommodationUnitTypes(
     throw mapMutationError(existingResult.error, "Impossible de lire les types d'unité actuels.");
   }
 
-  const idByCode = new Map(((catalogResult.data ?? []) as Array<Record<string, unknown>>)
-    .map((row) => [readString(row.code), readString(row.id)] as const));
+  const catalogRows = (catalogResult.data ?? []) as Array<Record<string, unknown>>;
+  const rowByCode = new Map(catalogRows.map((row) => [readString(row.code), row]));
   const existingIds = new Set(((existingResult.data ?? []) as Array<Record<string, unknown>>)
     .map((row) => readString(row.unit_type_id)));
-  const wantedIds = new Set(wanted.map((code: string) => idByCode.get(code)).filter((id): id is string => Boolean(id)));
+  const wantedIds = new Set(wanted.map((code) => {
+    const row = rowByCode.get(code);
+    const id = readString(row?.id);
+    if (!id) throw new Error(`Type d'unité inconnu : ${code}.`);
+    if (!existingIds.has(id) && (row?.is_active === false || row?.is_assignable === false)) {
+      throw new Error(`Le type d'unité ${code} ne peut plus être attribué.`);
+    }
+    return id;
+  }));
 
   const toInsert = [...wantedIds].filter((id) => !existingIds.has(id));
   const toDelete = [...existingIds].filter((id) => !wantedIds.has(id));
@@ -4588,10 +4620,8 @@ async function saveHotelPositionings(
   const [catalogResult, existingResult] = await Promise.all([
     client
       .from('ref_code')
-      .select('id,code,metadata')
-      .eq('domain', 'taxonomy_hot')
-      .eq('is_active', true)
-      .eq('is_assignable', true),
+      .select('id,code,metadata,is_active,is_assignable')
+      .eq('domain', 'taxonomy_hot'),
     client
       .from('object_hotel_positioning')
       .select('positioning_id')
@@ -4605,12 +4635,20 @@ async function saveHotelPositionings(
     throw mapMutationError(existingResult.error, "Impossible de lire les positionnements d'hôtel actuels.");
   }
 
-  const idByCode = new Map(((catalogResult.data ?? []) as Array<Record<string, unknown>>)
+  const rowByCode = new Map(((catalogResult.data ?? []) as Array<Record<string, unknown>>)
     .filter((row) => readString(readRecord(row.metadata).axis) === 'positionnement')
-    .map((row) => [readString(row.code), readString(row.id)] as const));
+    .map((row) => [readString(row.code), row] as const));
   const existingIds = new Set(((existingResult.data ?? []) as Array<Record<string, unknown>>)
     .map((row) => readString(row.positioning_id)));
-  const wantedIds = new Set(wanted.map((code) => idByCode.get(code)).filter((id): id is string => Boolean(id)));
+  const wantedIds = new Set(wanted.map((code) => {
+    const row = rowByCode.get(code);
+    const id = readString(row?.id);
+    if (!id) throw new Error(`Positionnement d'hôtel inconnu : ${code}.`);
+    if (!existingIds.has(id) && (row?.is_active === false || row?.is_assignable === false)) {
+      throw new Error(`Le positionnement ${code} ne peut plus être attribué.`);
+    }
+    return id;
+  }));
 
   const toInsert = [...wantedIds].filter((id) => !existingIds.has(id));
   const toDelete = [...existingIds].filter((id) => !wantedIds.has(id));

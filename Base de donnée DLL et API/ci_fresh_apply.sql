@@ -683,6 +683,12 @@ ROLLBACK;
 \ir ../supabase/migrations/20261106092254_object_initial_publication_guard.sql
 
 
+\echo '== Thesaurus governed editorial model and immutable partner releases =='
+\ir ../supabase/migrations/20261106112948_thesaurus_publication.sql
+\ir ../supabase/migrations/20261106113509_thesaurus_consumers.sql
+\ir tests/test_thesaurus_publication.sql
+\ir tests/test_thesaurus_consumers.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -16,8 +16,9 @@ Aucun réglage custom-build/start ni hook de déploiement n’est ajouté.
 Les neuf références explicites incluent SUPABASE_SERVICE_ROLE_KEY et
 THESAURUS_CURSOR_SECRET, runtime seulement. Les deux noms SERVICE_URL/FQDN générés
 par Coolify restent attachés au même service et au même mapping de domaine :
-ce fichier n’en ajoute pas et n’en remplace aucun. Les onze noms runtime attendus
-sont donc à conserver pendant la configuration opératoire ; ne pas vider ni
+ce fichier n’en ajoute pas et n’en remplace aucun. Ces onze noms sont à conserver,
+hors SOURCE_COMMIT automatique : avec lui, douze noms runtime sont ciblés. Ce
+décompte n’inventorie pas les variables système du conteneur. Ne pas vider ni
 régénérer le secret curseur pour cette livraison.
 
 Le garde CI exécute le vrai docker compose config avec un environnement synthétique
@@ -29,9 +30,10 @@ Ce rendu ne prouve ni la présence d’une image sur l’hôte ni un déploiemen
 
 ## Précondition : déploiements manuels seulement
 
-Avant chaque bascule, confirmer que seul Auto deploy est désactivé et que Coolify
-affiche « Manual deployments only ». Enregistrer, recharger, puis relire cet état
-sauvegardé. Un pin Git seul ne suffit pas : le
+Avant tout merge ou push sur la branche surveillée, puis avant chaque bascule,
+confirmer que seul Auto deploy est désactivé et que Coolify affiche « Manual
+deployments only ». Enregistrer, recharger, puis relire cet état sauvegardé.
+Un pin Git seul ne suffit pas : le
 [webhook transmet le commit du push](https://github.com/coollabsio/coolify/blob/0becfba9113063336b09860579627fd218cb3fc4/app/Http/Controllers/Webhook/Github.php#L447),
 et un [commit fourni à l’admission prime le pin](https://github.com/coollabsio/coolify/blob/0becfba9113063336b09860579627fd218cb3fc4/bootstrap/helpers/applications.php#L19).
 La [garde Auto deploy](https://github.com/coollabsio/coolify/blob/0becfba9113063336b09860579627fd218cb3fc4/app/Models/Application.php#L1448)

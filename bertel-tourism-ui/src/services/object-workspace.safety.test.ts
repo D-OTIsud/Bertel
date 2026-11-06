@@ -12,6 +12,7 @@ import {
 } from './object-workspace';
 import { LEGAL_SUMMARY_UNAVAILABLE, workspaceSaveBlockedReason } from './object-workspace-safety';
 import { saveWorkspaceModule } from '../hooks/useExplorerQueries';
+import { WRITE_CONTRACT_VERSION } from './write-compatibility';
 
 const catalogs = { refCodeByDomain: {}, tables: {} } as ReferenceCatalogs;
 const mockClient = getSupabaseClient as jest.Mock;
@@ -297,18 +298,38 @@ describe('write boundaries block unavailable snapshots before any backend call',
     expect(mockApi).not.toHaveBeenCalled();
     expect(mockClient).not.toHaveBeenCalled();
   });
-  it('fails closed at the direct dispatcher before any database writer when the app protocol is too new', async () => {
+  it.each([
+    { peer: 'a server requiring a newer client', minimum: WRITE_CONTRACT_VERSION + 1, server: WRITE_CONTRACT_VERSION + 1 },
+    { peer: 'a server older than this client', minimum: 1, server: WRITE_CONTRACT_VERSION - 1 },
+  ])('fails closed at the direct dispatcher before any database writer for $peer', async ({ minimum, server }) => {
     const originalFetch = global.fetch;
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ minimumClientVersion: 2, writeContractVersion: 2 }),
+      json: async () => ({ minimumClientVersion: minimum, writeContractVersion: server }),
     } as unknown as Response);
     try {
       await expect(saveWorkspaceModule('o1', { moduleId: 'openings', value: empty().openings }))
         .rejects.toThrow(/ne peut pas écrire sur le serveur actuel/);
       expect(global.fetch).toHaveBeenCalledWith('/api/app-version', expect.objectContaining({ cache: 'no-store', signal: expect.anything() }));
       expect(mockApi).not.toHaveBeenCalled();
+      expect(mockClient).not.toHaveBeenCalled();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+  it('allows the current matching protocol to reach the real dispatcher writer', async () => {
+    const originalFetch = global.fetch;
+    const rpc = jest.fn().mockResolvedValue({ data: { success: true }, error: null });
+    mockApi.mockReturnValue({ schema: () => ({ rpc }) });
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true, status: 200,
+      json: async () => ({ minimumClientVersion: WRITE_CONTRACT_VERSION, writeContractVersion: WRITE_CONTRACT_VERSION }),
+    } as unknown as Response);
+    try {
+      await expect(saveWorkspaceModule('o1', { moduleId: 'openings', value: empty().openings })).resolves.toBeUndefined();
+      expect(rpc).toHaveBeenCalledWith('save_object_openings', { p_object_id: 'o1', p_payload: { periods: [] } });
+      expect(rpc).toHaveBeenCalledTimes(1);
       expect(mockClient).not.toHaveBeenCalled();
     } finally {
       global.fetch = originalFetch;

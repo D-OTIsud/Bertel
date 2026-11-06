@@ -67,8 +67,9 @@ jest.mock('./sections/section-registry', () => ({ MODE_ESSENTIAL: new Set(), get
   },
 }] }));
 jest.mock('./shell/EditorTopbar', () => ({ EditorTopbar: (props: {
-  onSaveDraft: () => void; onPublish: () => void; saving: boolean; savingDraft: boolean;
+  onSaveDraft: () => void; onPublish: () => void; saving: boolean; savingDraft: boolean; statusMessage: string | null;
 }) => <>
+  <output data-testid="status-message">{props.statusMessage}</output>
   <button disabled={props.saving || props.savingDraft} onClick={props.onSaveDraft}>Save</button>
   <button disabled={props.saving || props.savingDraft} onClick={props.onPublish}>Publish</button>
 </> }));
@@ -81,13 +82,14 @@ jest.mock('./widgets/PeerSavedBanner', () => ({ PeerSavedBanner: () => null }));
 
 function deferred<T = void>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((yes) => { resolve = yes; });
-  return { promise, resolve };
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
 }
 
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return render(<QueryClientProvider client={client}><ObjectEditPage objectId="HOT-ACK" /></QueryClientProvider>);
+  return { ...render(<QueryClientProvider client={client}><ObjectEditPage objectId="HOT-ACK" /></QueryClientProvider>), client };
 }
 
 beforeEach(() => {
@@ -375,4 +377,105 @@ it.each([
   expect(mockEditor.baseline[key].items[0]).toMatchObject({ recordId: id, isNew: false });
   expect(mockEditor.isDirty).toBe(false);
   expect(screen.queryByRole('dialog', { name: 'publish-deferred' })).not.toBeInTheDocument();
+});
+
+it('a save settled after the editor unmounts cannot dispatch publication', async () => {
+  const saving = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(saving.promise);
+  const view = mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledTimes(1));
+  view.unmount();
+  await act(async () => { saving.resolve(); });
+  expect(mockPublish).not.toHaveBeenCalled();
+  expect(mockToast).not.toHaveBeenCalled();
+});
+
+it('a save settled after another object mounts cannot publish the old object', async () => {
+  const saving = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(saving.promise);
+  const view = mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledTimes(1));
+  mockResource = { ...mockResource, id: 'OTHER-ACK', modules: fullModulesFixture() };
+  view.rerender(<QueryClientProvider client={view.client}><ObjectEditPage objectId="OTHER-ACK" /></QueryClientProvider>);
+  await waitFor(() => expect(mockEditor.objectId).toBe('OTHER-ACK'));
+  await act(async () => { saving.resolve(); });
+  expect(mockPublish).not.toHaveBeenCalled();
+  expect(mockToast).not.toHaveBeenCalled();
+  expect(mockEditor.objectId).toBe('OTHER-ACK');
+  expect(screen.queryByRole('dialog', { name: 'publish-deferred' })).not.toBeInTheDocument();
+});
+
+it('a save settled after an account change neither publishes nor reports an edit to the new account', async () => {
+  const saving = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(saving.promise);
+  mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledTimes(1));
+  act(() => useSessionStore.setState({ userId: 'other-save-ack-user' }));
+  await waitFor(() => expect(mockEditor.draft.generalInfo.name).toBe('A'));
+  await act(async () => { saving.resolve(); });
+  expect(mockPublish).not.toHaveBeenCalled();
+  expect(mockToast).not.toHaveBeenCalled();
+  expect(mockEditor.draft.generalInfo.status).toBe('draft');
+  expect(screen.queryByRole('dialog', { name: 'publish-deferred' })).not.toBeInTheDocument();
+});
+
+it('account A to B to A invalidates the old save but permits a fresh publish attempt', async () => {
+  const saving = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(saving.promise);
+  mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledTimes(1));
+  act(() => {
+    useSessionStore.setState({ userId: 'other-save-ack-user' });
+    useSessionStore.setState({ userId: 'save-ack-user' });
+  });
+  await act(async () => { saving.resolve(); });
+  expect(mockPublish).not.toHaveBeenCalled();
+  expect(mockToast).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(mockPublish).toHaveBeenCalledWith(true));
+});
+
+it.each(['account', 'object'])('a stale preliminary save failure does not expose its status message after an %s change', async (change) => {
+  const saving = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(saving.promise);
+  const view = mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledTimes(1));
+  if (change === 'account') {
+    act(() => useSessionStore.setState({ userId: 'other-save-ack-user' }));
+    await waitFor(() => expect(mockEditor.draft.generalInfo.name).toBe('A'));
+  } else {
+    mockResource = { ...mockResource, id: 'OTHER-ACK', modules: fullModulesFixture() };
+    view.rerender(<QueryClientProvider client={view.client}><ObjectEditPage objectId="OTHER-ACK" /></QueryClientProvider>);
+    await waitFor(() => expect(mockEditor.objectId).toBe('OTHER-ACK'));
+  }
+  await act(async () => { saving.reject(new Error('Synthetic expired preliminary save failure')); });
+  expect(screen.getByTestId('status-message')).toBeEmptyDOMElement();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(mockPublish).not.toHaveBeenCalled();
+  expect(mockToast).not.toHaveBeenCalled();
+});
+
+it('a preliminary save failure in the current scope still reports its error and prevents publication', async () => {
+  const saving = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(saving.promise);
+  mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledTimes(1));
+  await act(async () => { saving.reject(new Error('Synthetic current preliminary save failure')); });
+  expect(screen.getByTestId('status-message')).toHaveTextContent('Synthetic current preliminary save failure');
+  expect(screen.getByRole('dialog', { name: 'save' })).toBeInTheDocument();
+  expect(mockPublish).not.toHaveBeenCalled();
+  expect(mockEditor.draft.generalInfo.name).toBe('B');
+  expect(mockEditor.isDirty).toBe(true);
 });

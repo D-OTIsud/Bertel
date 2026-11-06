@@ -8,6 +8,7 @@ DECLARE
  v_recipient uuid:='00000000-0000-4000-a000-000000003803';
  v_real text:='HOTRUN9999993801'; v_test text:='ORGRUN9999993801';
  v_task uuid:=gen_random_uuid(); v_test_task uuid:=gen_random_uuid(); v_discovery_task uuid:=gen_random_uuid();
+ v_removed_task uuid:=gen_random_uuid(); v_removed_notification uuid;
  v_ids uuid[]:=ARRAY[]::uuid[]; v_id uuid; v_real_notification uuid; v_blocked uuid[]; v_claim jsonb; v_denied boolean;
 BEGIN
  INSERT INTO auth.users(id,email,raw_app_meta_data,raw_user_meta_data) VALUES
@@ -21,6 +22,7 @@ BEGIN
  INSERT INTO public.crm_task(id,object_id,title,created_by) VALUES
   (v_task,v_real,'Real task',v_office),(v_test_task,v_test,'Test task',v_office),
   (v_discovery_task,v_real,'Discovery task',v_discovery);
+ INSERT INTO public.crm_task(id,object_id,title,created_by) VALUES(v_removed_task,v_real,'Removed source',v_office);
 
  INSERT INTO public.app_notification(recipient_id,created_by,task_id,kind)
   VALUES(v_recipient,v_discovery,v_task,'crm_task_assigned') RETURNING id INTO v_id;
@@ -39,6 +41,8 @@ BEGIN
  v_ids:=array_append(v_ids,v_id);
  INSERT INTO public.app_notification(recipient_id,created_by,task_id,payload,kind)
   VALUES(v_recipient,v_office,v_task,'{"sandbox_discovery":true}','crm_task_assigned') RETURNING id INTO v_real_notification;
+ INSERT INTO public.app_notification(recipient_id,created_by,task_id,kind)
+  VALUES(v_recipient,v_office,v_removed_task,'crm_task_assigned') RETURNING id INTO v_removed_notification;
  ASSERT cardinality(v_ids)=5 AND (SELECT count(*) FROM public.app_notification WHERE id=ANY(v_ids))=5;
  ASSERT (SELECT bool_and(email_effects_blocked AND email_sent_at IS NOT NULL
    AND email_error='sandbox_external_effects_disabled' AND email_claimed_at IS NULL)
@@ -54,8 +58,19 @@ BEGIN
  v_claim:=api.claim_unmailed_notifications(100);
  ASSERT v_claim @> jsonb_build_array(jsonb_build_object('notification_id',v_real_notification)),
    'ordinary real email remains claimable: positive control';
+ ASSERT v_claim @> jsonb_build_array(jsonb_build_object('notification_id',v_removed_notification));
  ASSERT NOT EXISTS(SELECT 1 FROM jsonb_array_elements(v_claim) item
    WHERE (item->>'notification_id')::uuid=ANY(v_ids)), 'blocked discovery events must never be claimed';
+ RESET ROLE;
+
+ -- The application may still hold an envelope after its notification/source
+ -- disappear. Missing provenance must fail closed, rather than mean "real".
+ DELETE FROM public.app_notification WHERE id=v_removed_notification;
+ DELETE FROM public.crm_task WHERE id=v_removed_task;
+ PERFORM set_config('request.jwt.claims',json_build_object('role','service_role')::text,true);
+ SET LOCAL ROLE service_role;
+ v_blocked:=api.suppress_sandbox_notification_emails(ARRAY[v_removed_notification]);
+ ASSERT v_blocked=ARRAY[v_removed_notification], 'deleted notification/source must suppress an already buffered envelope';
  RESET ROLE;
 
  -- A genuine pending envelope can become discovery-context AFTER it was claimed.

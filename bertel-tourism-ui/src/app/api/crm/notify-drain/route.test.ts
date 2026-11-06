@@ -99,6 +99,17 @@ describe('POST /api/crm/notify-drain', () => {
     expect(rpc).toHaveBeenCalledTimes(1);
   });
 
+  it('n’envoie pas une enveloppe bufferisée dont la notification a été supprimée avant le contrôle final', async () => {
+    const rpc = jest.fn().mockResolvedValueOnce({ data: [row('n-removed')], error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedEmailPolicy.mockResolvedValue({ data: ['n-removed'], error: null });
+    const response = await POST(req({ authorization: 'Bearer jwt' }));
+    await expect(response.json()).resolves.toEqual({ sent: 0, failed: 0 });
+    expect(mockedSend).not.toHaveBeenCalled();
+    expect(mockedRenderTask).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
   it('reste fermé si le contrôle de politique lève une exception', async () => {
     const rpc = jest.fn().mockResolvedValueOnce({ data: [row('n-real')], error: null });
     mockedServer.mockReturnValue(serverWith(rpc));

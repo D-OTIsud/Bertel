@@ -63,13 +63,14 @@ DECLARE v_blocked uuid[];
 BEGIN
   IF auth.role() IS DISTINCT FROM 'service_role' THEN RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE='42501'; END IF;
   IF cardinality(p_notification_ids)>1000 THEN RAISE EXCEPTION 'Too many notifications' USING ERRCODE='22023'; END IF;
-  SELECT COALESCE(array_agg(n.id ORDER BY n.id),ARRAY[]::uuid[]) INTO v_blocked
-  FROM public.app_notification n
-  WHERE n.id=ANY(p_notification_ids) AND (n.email_effects_blocked OR
-    internal.notification_has_sandbox_context(n.recipient_id,n.created_by,n.task_id,n.payload));
+  SELECT COALESCE(array_agg(requested.id ORDER BY requested.id),ARRAY[]::uuid[]) INTO v_blocked
+  FROM (SELECT DISTINCT unnest(p_notification_ids) AS id) requested
+  LEFT JOIN public.app_notification n ON n.id=requested.id
+  WHERE n.id IS NULL OR n.email_effects_blocked OR
+    internal.notification_has_sandbox_context(n.recipient_id,n.created_by,n.task_id,n.payload);
   UPDATE public.app_notification SET email_effects_blocked=true WHERE id=ANY(v_blocked);
-  -- Include previously terminated rows as well: an old claimant must still
-  -- suppress its buffered envelope after a concurrent drain handled the row.
+  -- Missing rows have unknown provenance and are never safe to send from a
+  -- buffered envelope. Include terminated rows and deleted rows alike.
   RETURN v_blocked;
 END;
 $fn$;

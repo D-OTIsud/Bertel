@@ -20,12 +20,16 @@ must match its expected canonical hash.
 `import-smoke-operation/` is exclusive and never adopted on retry. Its immutable
 JSON records and parent directories are fsynced. Smoke name, nonce and expected
 image are durable before `docker create`; the returned full container ID is
-durable before start. Missing/invalid acknowledgements, transport failures and
-interruptions stop the procedure. They leave records for read-only inspection,
+durable before an exact ID/name/nonce/image inspection, also durably recorded,
+permits start. A valid-looking foreign ID is refused outside the cleanup zone.
+Missing/invalid acknowledgements, every nonzero Docker.run result, transport
+failures and interruptions stop the procedure as an unknown outcome. They leave records for read-only inspection,
 with no automatic replay or cleanup of an uncertain request.
 
-Known start/probe failures may clean only a confirmed ID whose Docker metadata
-matches the exact ID, name, nonce label and image. Cleanup intent and acknowledgement
+An acknowledged negative read-only probe may clean only a confirmed ID whose
+Docker metadata still matches the exact ID, name, nonce label and image. A
+nonzero mutating CLI exit does not establish rejection and never triggers
+automatic cleanup. Cleanup intent and acknowledgement
 are also durable; a lost cleanup acknowledgement is not retried. The script
 does not roll back an imported image or tag automatically.
 
@@ -47,3 +51,7 @@ Tests use synthetic Docker effects and a real Node process with an in-process
 loopback HTTP fixture/fake fetch. The Linux guard job tests actual private file
 modes, exclusive records and fsync failure ordering as root in a disposable runner.
 It does not start a Docker container, build an image or contact production.
+
+Quarantine path/hash checks require exclusive trusted root ownership. They
+reopen paths across calls and are not an atomic file-descriptor snapshot; no
+concurrent root writer or path replacement is permitted during the operation.

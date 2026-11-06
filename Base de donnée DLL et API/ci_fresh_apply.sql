@@ -658,6 +658,9 @@ ROLLBACK;
 \ir ../supabase/migrations/20261030141523_restore_verified_completeness_history.sql
 \ir tests/test_completeness_history.sql
 
+\echo '== DB08 initial publication and institutional creation authorization =='
+\ir ../supabase/migrations/20261106092254_object_initial_publication_guard.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

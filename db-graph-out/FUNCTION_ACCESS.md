@@ -1053,7 +1053,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/is_platform_admin`
 - **object types served:** —
-- _Returns true when the current user can manage platform-level branding and UI theme settings, using app_user_profile or auth metadata._
+- _Platform branding authority: authenticated owner/super_admin from app_user_profile, or the existing service_role/admin technical identity. Auth metadata never grants authority; missing auth context returns false._
 
 ### `api.is_platform_owner()` _(DEFINER)_
 - **returns:** `boolean`

@@ -2,6 +2,7 @@ import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { isSandboxDiscoveryUser, SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { sendListEmail, MailNotConfiguredError } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import { renderListEmailHtml, listEmailSubject, type ListEmailItem } from '@/emails/ListEmail';
@@ -35,6 +36,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!jwt) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   const { data: userData, error: userErr } = await server.auth.getUser(jwt);
   if (userErr || !userData?.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  if (isSandboxDiscoveryUser(userData.user)) {
+    return NextResponse.json({ error: SANDBOX_EXTERNAL_EFFECTS_ERROR, detail: SANDBOX_EMAIL_DETAIL }, { status: 403 });
+  }
 
   // 2. Corps.
   let body: Rec;

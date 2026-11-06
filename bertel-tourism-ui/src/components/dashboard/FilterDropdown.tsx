@@ -171,8 +171,9 @@ export function FilterDropdown<T extends string>({
   useEffect(() => { setHighlight((index) => Math.max(-1, Math.min(index, rowCount - 1))); }, [rowCount]);
 
   useEffect(() => {
-    if (open && activeId) scrollOptionIntoView(document.getElementById(activeId), menuRef.current);
-  }, [open, activeId]);
+    if (open && activeId) scrollOptionIntoView(document.getElementById(activeId), menuRef.current,
+      searchable ? menuRef.current?.querySelector<HTMLElement>('.filter-dropdown__search-row') : null);
+  }, [open, activeId, searchable]);
 
   function activateHighlighted() {
     if (highlight < 0 || highlight >= rowCount) return;

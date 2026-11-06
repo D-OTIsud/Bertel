@@ -22,6 +22,8 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
 RUN apk add --no-cache libc6-compat
 
 COPY package.json package-lock.json ./
+# The reviewed file dependency is already patched; installation needs no hook.
+COPY vendor/ ./vendor/
 # Keep the same explicit lockfile installation option as CI.
 RUN npm ci --legacy-peer-deps
 

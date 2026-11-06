@@ -15,6 +15,7 @@
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "verify:maplibre": "node scripts/verify-maplibre-backport.mjs",
     "test:maplibre-backport": "node --test scripts/maplibre-backport.test.mjs",
+    "test:tooling-dependencies": "node --test scripts/tooling-dependencies.test.cjs",
     "test": "jest --watch",
     "test:run": "jest",
     "playwright": "node scripts/run-playwright.mjs",

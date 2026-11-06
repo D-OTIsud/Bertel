@@ -76,6 +76,7 @@ class FakeDocker(ops.Docker):
             return subprocess.CompletedProcess(args, 0, '' if self.failure == 'create_bad_ack' else CONTAINER, '')
         if args[1] == 'start':
             assert self.journal.records['31-create-ack.json']['container_id'] == CONTAINER
+            assert '34-created-identity-ack.json' in self.journal.records
             assert '40-start-intent.json' in self.journal.records
             if self.failure == 'start_unknown':
                 raise ops.UnknownOutcome('synthetic_ack_lost')
@@ -88,7 +89,7 @@ class FakeDocker(ops.Docker):
         if args[1] == 'inspect':
             owner = {'id': CONTAINER, 'image': EXPECTED['image_id'], 'name': '/' + self.name, 'nonce': NONCE}
             for key in ['id', 'image', 'nonce', 'name']:
-                if self.failure == 'wrong_' + key:
+                if self.failure == 'wrong_' + key or (self.failure == 'cleanup_wrong_' + key and self.count('inspect') >= 2):
                     owner[key] = 'wrong'
             return subprocess.CompletedProcess(args, 0, json.dumps(owner), '')
         if args[1] == 'rm':
@@ -174,33 +175,55 @@ class OperationTests(unittest.TestCase):
                 self.assertEqual(client.count('rm'), 0)
                 self.assertIn('42-start-unknown.json' if stage == 'start' else '52-probe-unknown.json', journal.records)
 
-    def test_known_start_or_probe_failure_only_cleans_confirmed_identity(self):
-        for stage in ['start', 'probe']:
-            with self.subTest(stage=stage):
-                journal, client, execute = self.execute(stage + '_failed')
-                with self.assertRaises(ops.Refused):
+    def test_start_nonzero_or_lost_ack_never_triggers_automatic_cleanup(self):
+        for failure in ['start_failed', 'start_unknown']:
+            with self.subTest(failure=failure):
+                journal, client, execute = self.execute(failure)
+                with self.assertRaises(ops.UnknownOutcome):
                     execute()
-                self.assertEqual(client.count('rm'), 1)
-                self.assertIn('63-cleanup-ack.json', journal.records)
+                self.assertEqual(client.count('rm'), 0)
+                self.assertIn('42-start-unknown.json', journal.records)
                 self.assertNotIn('70-complete.json', journal.records)
 
-    def test_cleanup_failure_and_lost_ack_are_journalled_without_second_rm(self):
+    def test_acknowledged_negative_readonly_probe_only_cleans_confirmed_identity(self):
+        journal, client, execute = self.execute('probe_failed')
+        with self.assertRaises(ops.Refused):
+            execute()
+        self.assertEqual(client.count('rm'), 1)
+        self.assertIn('52-probe-failed.json', journal.records)
+        self.assertIn('63-cleanup-ack.json', journal.records)
+        self.assertNotIn('70-complete.json', journal.records)
+
+    def test_cleanup_nonzero_and_lost_ack_are_unknown_without_second_rm(self):
         for failure in ['cleanup_failed', 'cleanup_unknown']:
             with self.subTest(failure=failure):
                 journal, client, execute = self.execute(failure)
                 with self.assertRaises(ops.Refused):
                     execute()
                 self.assertEqual(client.count('rm'), 1)
-                self.assertIn('62-cleanup-failed.json' if failure == 'cleanup_failed' else '62-cleanup-unknown.json', journal.records)
+                self.assertIn('62-cleanup-unknown.json', journal.records)
                 self.assertNotIn('70-complete.json', journal.records)
 
-    def test_wrong_id_nonce_image_or_name_forbids_rm(self):
+    def test_wrong_created_id_nonce_image_or_name_forbids_start_and_rm(self):
         for key in ['id', 'nonce', 'image', 'name']:
             with self.subTest(key=key):
                 journal, client, execute = self.execute('wrong_' + key)
+                with self.assertRaisesRegex(ops.Refused, 'created_identity'):
+                    execute()
+                self.assertEqual(client.count('start'), 0)
+                self.assertEqual(client.count('rm'), 0)
+                self.assertIn('35-created-identity-refused.json', journal.records)
+                self.assertNotIn('40-start-intent.json', journal.records)
+
+    def test_changed_cleanup_id_nonce_image_or_name_forbids_rm(self):
+        for key in ['id', 'nonce', 'image', 'name']:
+            with self.subTest(key=key):
+                journal, client, execute = self.execute('cleanup_wrong_' + key)
                 with self.assertRaisesRegex(ops.Refused, 'cleanup_identity'):
                     execute()
+                self.assertEqual(client.count('start'), 1)
                 self.assertEqual(client.count('rm'), 0)
+                self.assertIn('34-created-identity-ack.json', journal.records)
                 self.assertNotIn('61-cleanup-intent.json', journal.records)
 
     def test_divergent_tag_is_not_replaced_or_used_to_create(self):
@@ -228,6 +251,73 @@ class OperationTests(unittest.TestCase):
             child_env = call.call_args.kwargs['env']
             self.assertNotIn('DOCKER_HOST', child_env)
             self.assertNotIn('SUPABASE_ACCESS_TOKEN', child_env)
+
+    def nonzero_transport_after_effect(self, stage):
+        journal, fake, _ = self.execute()
+        client = ops.Docker('/synthetic/private-config')
+        effects = []
+        def transport(args, **kwargs):
+            self.assertEqual(args[:len(client.prefix)], client.prefix)
+            command = ['docker'] + args[len(client.prefix):]
+            outcome = fake.invoke(command, kwargs.get('timeout', 60))
+            if command[1] == stage:
+                effects.append(stage)  # The daemon effect preceded the failed CLI ACK.
+                return subprocess.CompletedProcess(args, 1, '', 'connection reset by peer')
+            return outcome
+        ticks = iter(range(0, 1000, 20))
+        observed = None
+        with mock.patch.object(ops.subprocess, 'run', side_effect=transport):
+            try:
+                ops.perform_operations(client, journal, EXPECTED, '/synthetic/quarantine', 'synthetic-current', PUBLIC,
+                                       clock=lambda: next(ticks), sleep=lambda _: None, nonce=NONCE)
+            except BaseException as error:
+                observed = error
+        self.assertEqual(effects, [stage])
+        marker = {'create': '32-create-unknown.json', 'start': '42-start-unknown.json',
+                  'rm': '62-cleanup-unknown.json'}[stage]
+        state = {'classification': type(observed).__name__, 'rm_calls': fake.count('rm'),
+                 'create_calls': fake.count('create'), 'unknown_record': marker in journal.records,
+                 'complete': '70-complete.json' in journal.records}
+        self.assertEqual(state, {'classification': 'UnknownOutcome', 'rm_calls': 1 if stage == 'rm' else 0,
+                                 'create_calls': 1, 'unknown_record': True, 'complete': False})
+
+    def test_actual_docker_run_create_nonzero_after_effect_is_unknown(self):
+        self.nonzero_transport_after_effect('create')
+
+    def test_actual_docker_run_start_nonzero_after_effect_never_triggers_rm(self):
+        self.nonzero_transport_after_effect('start')
+
+    def test_actual_docker_run_rm_nonzero_after_effect_never_retries_rm(self):
+        self.nonzero_transport_after_effect('rm')
+
+    def test_hex64_create_ack_for_foreign_container_never_starts_or_removes_it(self):
+        journal = MemoryJournal()
+        foreign_id = 'f' * 64
+        class ForeignAckDocker(FakeDocker):
+            def invoke(self, args, timeout=60):
+                if args[1] == 'create':
+                    super().invoke(args, timeout)
+                    return subprocess.CompletedProcess(args, 0, foreign_id, '')
+                if args[1] == 'inspect':
+                    self.calls.append(args)
+                    return subprocess.CompletedProcess(args, 0, json.dumps({
+                        'id': foreign_id, 'name': '/unrelated-container', 'nonce': 'unrelated-nonce',
+                        'image': 'sha256:' + 'e' * 64,
+                    }), '')
+                if args[1] == 'start':
+                    self.calls.append(args)
+                    return subprocess.CompletedProcess(args, 0, '', '')
+                return super().invoke(args, timeout)
+        client = ForeignAckDocker(journal)
+        ticks = iter(range(0, 1000, 20))
+        with self.assertRaises(ops.Refused):
+            ops.perform_operations(client, journal, EXPECTED, '/synthetic/quarantine', 'synthetic-current', PUBLIC,
+                                   clock=lambda: next(ticks), sleep=lambda _: None, nonce=NONCE)
+        self.assertEqual(journal.records['31-create-ack.json']['container_id'], foreign_id)
+        self.assertEqual(client.count('start'), 0)
+        self.assertEqual(client.count('rm'), 0)
+        self.assertIn('35-created-identity-refused.json', journal.records)
+        self.assertNotIn('40-start-intent.json', journal.records)
 
 
 class NodeProbeTests(unittest.TestCase):

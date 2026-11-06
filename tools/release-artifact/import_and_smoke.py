@@ -61,10 +61,6 @@ class UnknownOutcome(Refused):
     """A request may already have reached Docker: stop, inspect, never retry."""
 
 
-class KnownFailure(Refused):
-    """Docker returned a negative acknowledgement."""
-
-
 def require(value, code):
     if not value:
         raise Refused(code)
@@ -100,7 +96,8 @@ class Docker:
     def run(self, args, timeout=60):
         result = self.invoke(args, timeout)
         if result.returncode != 0:
-            raise KnownFailure('docker_negative_ack')
+            # Exit status alone does not prove that the daemon rejected a write.
+            raise UnknownOutcome('docker_nonzero_ack_unknown')
         return result.stdout.strip()
 
 
@@ -157,13 +154,17 @@ def image(client, target, expected):
     return actual
 
 
-def cleanup(client, journal, container, name, nonce, image_id):
-    journal.record('60-cleanup-check.json', {'container_id': container, 'name': name, 'nonce': nonce, 'image_id': image_id})
+def require_container_identity(client, container, name, nonce, image_id, code):
     try:
         owner = json.loads(client.run(['docker', 'inspect', '--format', OWNER_INSPECT, container]))
     except (ValueError, TypeError):
-        raise Refused('smoke_cleanup_identity') from None
-    require(owner == {'id': container, 'name': '/' + name, 'nonce': nonce, 'image': image_id}, 'smoke_cleanup_identity')
+        raise Refused(code) from None
+    require(owner == {'id': container, 'name': '/' + name, 'nonce': nonce, 'image': image_id}, code)
+
+
+def cleanup(client, journal, container, name, nonce, image_id):
+    journal.record('60-cleanup-check.json', {'container_id': container, 'name': name, 'nonce': nonce, 'image_id': image_id})
+    require_container_identity(client, container, name, nonce, image_id, 'smoke_cleanup_identity')
     journal.record('61-cleanup-intent.json', {'container_id': container, 'identity_checked': True})
     try:
         client.run(['docker', 'rm', '--force', container])
@@ -237,6 +238,19 @@ def perform_operations(client, journal, expected, folder, current, public, *, cl
         raise UnknownOutcome('created_container_ack_unknown')
     # A crash/failure before this durable ACK leaves intent only: no automatic rm.
     journal.record('31-create-ack.json', {'container_id': container, 'name': name, 'nonce': nonce, 'image_id': expected['image_id']})
+    # A syntactically valid ACK is not authority over the returned container.
+    # Validate outside the cleanup zone: a foreign ID must never start or be rm'd.
+    journal.record('33-created-identity-check.json', {'container_id': container, 'name': name,
+                                                   'nonce': nonce, 'image_id': expected['image_id']})
+    try:
+        require_container_identity(client, container, name, nonce, expected['image_id'], 'smoke_created_identity')
+    except UnknownOutcome:
+        journal.record('35-created-identity-unknown.json', {'status': 'unknown', 'action': 'inspect_readonly_no_start_no_cleanup'})
+        raise
+    except BaseException:
+        journal.record('35-created-identity-refused.json', {'status': 'unverified', 'action': 'inspect_readonly_no_start_no_cleanup'})
+        raise
+    journal.record('34-created-identity-ack.json', {'container_id': container, 'identity_checked': True})
     ambiguous = False
     try:
         journal.record('40-start-intent.json', {'container_id': container})

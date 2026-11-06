@@ -105,4 +105,3 @@ test('blind live rebind would delete unseen rows; stripping baseline alone block
     .rejects.toThrow('Rechargez la galerie');
   expect(rpc).not.toHaveBeenCalled();
 });
-

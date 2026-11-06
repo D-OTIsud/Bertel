@@ -715,6 +715,9 @@ ROLLBACK;
 \ir tests/test_org_link_reconcile_editor.sql
 
 
+\echo '== SEC05 distributed AI admission: exact per-user/per-route sliding 12/60s =='
+\ir ../supabase/migrations/20261106145451_distributed_ai_request_admission.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

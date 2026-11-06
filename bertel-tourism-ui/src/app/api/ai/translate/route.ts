@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { isSandboxDiscoveryUser, SANDBOX_AI_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { resolveActiveAiProvider } from '@/lib/ai-provider.server';
+import { admitAiRequest } from '@/lib/ai-admission.server';
 import {
   acquireLease,
   BodyTooLargeError,
@@ -20,19 +21,6 @@ import {
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-// As with menu extraction, this is a per-instance throttle; the shared AI lease also caps concurrency.
-const recentHits = new Map<string, number[]>();
-function rateLimited(userId: string): boolean {
-  const now = Date.now();
-  for (const [id, hits] of recentHits) {
-    if ((hits.at(-1) ?? 0) <= now - 60_000) recentHits.delete(id);
-  }
-  const hits = (recentHits.get(userId) ?? []).filter((at) => at > now - 60_000);
-  if (hits.length >= 12) return true;
-  recentHits.set(userId, [...hits, now]);
-  return false;
-}
 
 function errorResponse(error: string, detail: string, status: number): NextResponse {
   return NextResponse.json({ error, detail }, { status });
@@ -52,9 +40,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const { data, error } = await server.auth.getUser(jwt);
     if (error || !data?.user) return errorResponse('unauthenticated', 'Reconnectez-vous pour utiliser la traduction IA.', 401);
     if (isSandboxDiscoveryUser(data.user)) return errorResponse(SANDBOX_EXTERNAL_EFFECTS_ERROR, SANDBOX_AI_DETAIL, 403);
-    if (rateLimited(data.user.id)) {
+    let admission;
+    try {
+      admission = await admitAiRequest(server, data.user.id, 'translate', req.signal);
+    } catch {
+      return errorResponse('ai_admission_unavailable', 'La traduction a échoué. Réessayez dans un instant.', 503);
+    }
+    if (!admission.allowed) {
       return NextResponse.json({ error: 'rate_limited', detail: 'Trop de traductions demandées. Réessayez dans une minute.' },
-        { status: 429, headers: { 'Retry-After': '60' } });
+        { status: 429, headers: { 'Retry-After': String(admission.retryAfter) } });
     }
 
     const lease = acquireLease('ai');

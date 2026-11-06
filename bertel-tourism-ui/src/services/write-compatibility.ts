@@ -1,6 +1,6 @@
-/** Stable write protocol version shared by the UI bundle and the app-version endpoint. */
-export const WRITE_CONTRACT_VERSION = 1;
-export const MINIMUM_CLIENT_VERSION = 1;
+/** Internal editor protocol; independent of the public partner API contract (1.0.0). */
+export const WRITE_CONTRACT_VERSION = 2;
+export const MINIMUM_CLIENT_VERSION = 2;
 
 export interface WriteCompatibility {
   compatible: boolean;

@@ -7,6 +7,7 @@
  * application de courrier.
  */
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { PhotosRubric, PORTAL_PHOTO_TARGET, countPortalPhotos } from './PhotosRubric';
 import type { ObjectWorkspaceMediaModule } from '../../../services/object-workspace-parser';
 
@@ -46,6 +47,25 @@ function setup(over: Partial<React.ComponentProps<typeof PhotosRubric>> = {}) {
 }
 
 describe('PhotosRubric', () => {
+  it.each([false, undefined])('consultation writesEnabled=%s conserve le contact et permet de voir les photos', async writesEnabled => {
+    const onEdit = jest.fn();
+    setup({ onEdit, writesEnabled });
+    expect(screen.getByRole('link', { name: 'Envoyer mes photos par e-mail' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Gérer vos photos' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Vous pouvez retirer et réordonner/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Voir vos photos' }));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it('écritures confirmées : propose la gestion et sa vraie règle', async () => {
+    const onEdit = jest.fn();
+    setup({ onEdit, writesEnabled: true });
+    expect(screen.queryByRole('link', { name: 'Envoyer mes photos par e-mail' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Voir vos photos' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Vous pouvez retirer et réordonner/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Gérer vos photos' }));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
   it('n’offre AUCUN moyen d’ajouter une photo (la route refuse la persona acteur en 403)', () => {
     setup({ media: media({ objectItems: [photo()] }) });
 

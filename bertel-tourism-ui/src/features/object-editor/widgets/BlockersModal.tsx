@@ -6,7 +6,7 @@ interface BlockersModalProps {
   open: boolean;
   onClose: () => void;
   /** Drives the title/intro: a blocked publish vs a failed/partial save. */
-  context: 'publish' | 'save';
+  context: 'publish' | 'save' | 'publish-deferred';
   /** Required-field publication blockers (section = num). */
   requiredBlockers: Issue[];
   /** Save/permission/RPC errors (section = module label). */
@@ -33,13 +33,17 @@ export function BlockersModal({
   sectionLabels,
   onGoToSection,
 }: BlockersModalProps) {
-  const title = context === 'publish' ? 'Publication impossible' : 'Enregistrement incomplet';
+  const deferred = context === 'publish-deferred';
+  const title = deferred ? 'Publication reportée' : context === 'publish' ? 'Publication impossible' : 'Enregistrement incomplet';
   const intro =
-    context === 'publish'
+    deferred
+      ? 'Une modification a été saisie pendant l’enregistrement. Elle est conservée. Relancez la publication pour enregistrer et publier la dernière version.'
+      : context === 'publish'
       ? 'Corrigez les points suivants avant de publier la fiche.'
       : "Certaines sections n'ont pas pu être enregistrées.";
-  const blockerGroups = groupIssuesBySection(requiredBlockers, sectionLabels);
-  const warningGroups = groupIssuesBySection(warnings, sectionLabels);
+  const displayedErrors = deferred ? [] : saveErrors;
+  const blockerGroups = groupIssuesBySection(deferred ? [] : requiredBlockers, sectionLabels);
+  const warningGroups = groupIssuesBySection(deferred ? [] : warnings, sectionLabels);
 
   return (
     <Dialog open={open} onOpenChange={(next: boolean) => { if (!next) onClose(); }}>
@@ -50,7 +54,7 @@ export function BlockersModal({
         <div className="blockers-modal__body">
           <p className="blockers-modal__intro">{intro}</p>
 
-          {saveErrors.length > 0 && (
+          {displayedErrors.length > 0 && (
             <section className="blockers-group">
               <h4 className="blockers-group__head">Erreurs d'enregistrement</h4>
               {/* Chantier 2026-08-28 n°4, lot C — ce bloc était STATIQUE, sans bouton « Aller › »,
@@ -58,7 +62,7 @@ export function BlockersModal({
                   module. `issue.nums` fournit désormais la cible ; on saute à la première section
                   du module (plusieurs modules en couvrent légitimement plusieurs). Une erreur sans
                   numéro reste rendue en statique — lisible, simplement sans action. */}
-              {saveErrors.map((issue) => {
+              {displayedErrors.map((issue) => {
                 const target = issue.nums?.[0];
                 if (!target) {
                   return (

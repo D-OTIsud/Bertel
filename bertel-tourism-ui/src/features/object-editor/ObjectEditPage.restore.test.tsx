@@ -89,7 +89,7 @@ function mount() {
 }
 
 async function startRestore() {
-  fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Versions' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Restaurer la version 2' }));
   await waitFor(() => expect(restoreObjectVersion).toHaveBeenCalledTimes(1));
 }
@@ -238,7 +238,7 @@ it.each(['account', 'object'])('a restore response from the previous %s cannot a
 });
 
 async function queueOfflineRestore(view: ReturnType<typeof mount>) {
-  fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Versions' }));
   const restore = await screen.findByRole('button', { name: 'Restaurer la version 2' });
   act(() => onlineManager.setOnline(false));
   fireEvent.click(restore);

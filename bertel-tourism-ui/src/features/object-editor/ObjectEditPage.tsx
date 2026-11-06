@@ -69,7 +69,16 @@ function changedSinceSave(
 /** Full-page object editor. Fetches the workspace resource, then hands off to
  *  EditorReady so the editor hooks only run once data is present. */
 export function ObjectEditPage({ objectId }: { objectId: string }) {
-  const { data, isError, error, refetch, isFetching } = useObjectWorkspaceQuery(objectId);
+  const read = useObjectWorkspaceQuery(objectId);
+  const { isError, error, refetch, isFetching } = read;
+  const userId = useSessionStore((state) => state.userId);
+  const identity = JSON.stringify([objectId, userId]);
+  const previous = useRef<{ identity: string; data: ObjectWorkspaceResource } | null>(null);
+  if (read.data) previous.current = { identity, data: read.data };
+  // A vocabulary generation changes the query key while the draft still belongs
+  // to the same editor. Keep that editor mounted, including when local storage
+  // is unavailable; an object/account transition never reuses this fallback.
+  const data = read.data ?? (previous.current?.identity === identity ? previous.current.data : undefined);
   const loadError = isError ? (
       <div className="panel-card panel-card--warning" role="alert">
         <p>{(error as Error).message}</p>
@@ -98,8 +107,8 @@ export function ObjectEditPage({ objectId }: { objectId: string }) {
     <>
       {loadError}
       <EditorModalContext.Provider value={`${data.name} · ${data.type ? TYPE_LABEL[data.type as keyof typeof TYPE_LABEL] || data.type : meta.family}`}>
-      <div style={{ display: 'contents' }} inert={isError || undefined}>
-        <EditorReady resource={data} objectId={objectId} meta={meta} workspaceReadReady={!isError && !isFetching} />
+      <div style={{ display: 'contents' }} inert={isError || !read.data || undefined}>
+        <EditorReady resource={data} objectId={objectId} meta={meta} workspaceReadReady={Boolean(read.data) && !isError && !isFetching} />
       </div>
       </EditorModalContext.Provider>
     </>

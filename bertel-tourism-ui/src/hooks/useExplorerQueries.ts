@@ -1,6 +1,6 @@
 import type { WorkspaceSaveResult } from '../services/workspace-save-result';
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { assertWorkspaceSaveAvailable } from '../services/object-workspace-safety';
 import { assertWriteCompatible, readWriteCompatibility, type WriteCompatibility } from '../services/write-compatibility';
 import { useExplorerStore } from '../store/explorer-store';
@@ -779,23 +779,47 @@ export function useObjectVersionsQuery(objectId: string | null) {
 
 export function useRestoreObjectVersionMutation(objectId: string | null) {
   const queryClient = useQueryClient();
+  const actorEpoch = useRef(0);
+  useEffect(() => {
+    const unsubscribe = useSessionStore.subscribe((next, previous) => {
+      if (next.userId !== previous.userId || next.status !== previous.status
+        || next.orgId !== previous.orgId || next.role !== previous.role
+        || next.canEditObjects !== previous.canEditObjects) actorEpoch.current += 1;
+    });
+    return () => { unsubscribe(); actorEpoch.current += 1; };
+  }, []);
 
-  return useMutation({
-    mutationFn: async (versionNumber: number) => {
-      if (!objectId) {
+  const mutation = useMutation({
+    mutationFn: async (request: { objectId: string | null; versionNumber: number; userId: string | null; actorEpoch: number }) => {
+      if (!request.objectId) {
         throw new Error("Aucune fiche active pour restaurer une version.");
       }
-      return restoreObjectVersion(objectId, versionNumber);
-    },
-    onSuccess: async () => {
-      if (!objectId) {
-        return;
+      // TanStack can pause before mutationFn starts and replace its options on
+      // rerender. The target and account epoch belong to the original gesture.
+      if (request.actorEpoch !== actorEpoch.current || request.userId !== useSessionStore.getState().userId) {
+        throw new Error('Restauration impossible.');
       }
+      await restoreObjectVersion(request.objectId, request.versionNumber);
+      return request.objectId;
+    },
+    onSuccess: async (restoredObjectId) => {
+      // Mutation options may follow a new route while the old request is in
+      // flight. Invalidate the object actually restored, not the latest prop.
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['object-versions', objectId] }),
-        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
-        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-versions', restoredObjectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', restoredObjectId] }),
       ]);
+      // The workspace loader reuses object-detail. Mark/refetch that dependency
+      // first, otherwise a fresh cached A can rebuild the workspace after restore B.
+      await queryClient.invalidateQueries({ queryKey: ['object-workspace', restoredObjectId] });
     },
   });
+  const capture = (versionNumber: number) => ({
+    objectId, versionNumber, userId: useSessionStore.getState().userId, actorEpoch: actorEpoch.current,
+  });
+  return {
+    ...mutation,
+    mutate: (versionNumber: number) => mutation.mutate(capture(versionNumber)),
+    mutateAsync: (versionNumber: number) => mutation.mutateAsync(capture(versionNumber)),
+  };
 }

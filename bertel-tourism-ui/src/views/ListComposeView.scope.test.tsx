@@ -67,7 +67,7 @@ it('ack A updates only A cache and preserves the newer B draft', async () => {
   const view = page();
   const name = await screen.findByLabelText('Nom de la liste');
   fireEvent.change(name, { target: { value: 'Sent A' } }); fireEvent.blur(name);
-  await waitFor(() => expect(updateList).toHaveBeenCalledWith(A, { name: 'Sent A' }));
+  await waitFor(() => expect(updateList).toHaveBeenCalledWith(A, { name: 'Sent A' }, expect.objectContaining({ signal: expect.any(AbortSignal) })));
   view.navigate(B);
   const b = await screen.findByLabelText('Nom de la liste'); fireEvent.change(b, { target: { value: 'Draft B C' } });
   await act(async () => { ack.resolve(detail(A, { name: 'Acknowledged A' })); });
@@ -94,7 +94,7 @@ it('rejected items from A cannot remove the same object or its draft note from B
 it('a paused mutation retains target A after navigation B, rather than taking current mutationFn options', async () => {
   const view = page(); await pauseMetadata(view); view.navigate(B);
   await screen.findByLabelText('Nom de la liste'); await resume(view.client);
-  expect(updateList).toHaveBeenCalledTimes(1); expect(updateList).toHaveBeenCalledWith(A, { name: 'Sent A' });
+  expect(updateList).toHaveBeenCalledTimes(1); expect(updateList).toHaveBeenCalledWith(A, { name: 'Sent A' }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
   expect(view.client.getQueryData(listsQueryKeys.detail(A, 'user-A', 'ORG1'))).toMatchObject({ id: A, name: 'Sent A' });
   expect(view.client.getQueryData(listsQueryKeys.detail(B, 'user-A', 'ORG1'))).toMatchObject({ id: B, name: `Name ${B}` });
 });
@@ -122,7 +122,7 @@ it('a paused duplication keeps target A and cannot navigate the later B view', a
   fireEvent.click(await screen.findByRole('button', { name: /Dupliquer/ }));
   await waitFor(() => expect(view.client.getMutationCache().getAll().some((mutation) => mutation.state.isPaused)).toBe(true));
   view.navigate(B); await resume(view.client);
-  expect(duplicateList).toHaveBeenCalledWith(A); expect(mockPush).not.toHaveBeenCalled();
+  expect(duplicateList).toHaveBeenCalledWith(A, expect.objectContaining({ signal: expect.any(AbortSignal) })); expect(mockPush).not.toHaveBeenCalled();
 });
 
 it('late A failure cannot replace B error state or discard B input', async () => {

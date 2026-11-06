@@ -1,3 +1,6 @@
+import type { WorkspaceSaveResult } from './workspace-save-result';
+import { buildGalleryWritePayload, galleryBaseline, parseGalleryWriteSnapshot, withGalleryWriteSnapshot } from './media-write-contract';
+import { withPendingGalleryRequest } from './gallery-save-request';
 import {
   toNullableText,
   toNullableNumber,
@@ -263,7 +266,9 @@ async function callObjectWorkspaceRpc(
   });
 
   if (error) {
-    throw mapMutationError(error, fallback);
+    // Keep the database outcome for retry/idempotency decisions while retaining
+    // the existing translated message. A refusal is not an uncertain transport failure.
+    throw Object.assign(mapMutationError(error, fallback), { code: error.code });
   }
 
   const result = readRecord(data);
@@ -1622,14 +1627,14 @@ export async function getObjectWorkspaceMediaModule(
   const [objectMediaResult, placeMediaResult] = await Promise.allSettled([
     client
       .from('media')
-      .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind')
+      .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind, updated_at, extra')
       .eq('object_id', objectId)
       .order('is_main', { ascending: false })
       .order('position', { ascending: true }),
     placeIds.length > 0
       ? client
           .from('media')
-          .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind')
+          .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind, updated_at, extra')
           .in('place_id', placeIds)
           .order('position', { ascending: true })
       : Promise.resolve({ data: [], error: null }),
@@ -1704,7 +1709,7 @@ export async function getObjectWorkspaceMediaModule(
       ? null
       : 'Les medias de sous-lieu ne sont pas exposes completement par le live actuel.';
 
-  return {
+  const result: ObjectWorkspaceMediaModule = {
     ...baseModule,
     typeOptions,
     tagOptions,
@@ -1717,6 +1722,8 @@ export async function getObjectWorkspaceMediaModule(
     placeScopeUnavailableReason,
     unavailableReason: null,
   };
+  return { ...result, galleryWriteBaseline: galleryBaseline(result,
+    (objectMediaResult.value.data ?? []).filter(row => row.place_id == null) as Record<string, unknown>[]) };
 }
 
 function normalizeWorkspaceContactItem(params: {
@@ -3199,7 +3206,7 @@ export async function getObjectWorkspaceMenusModule(
   };
 }
 
-async function getObjectWorkspaceActivityModule(
+export async function getObjectWorkspaceActivityModule(
   objectId: string,
   baseModule: ObjectWorkspaceActivityModule,
   catalogs: ReferenceCatalogs,
@@ -3220,7 +3227,7 @@ async function getObjectWorkspaceActivityModule(
   const [dataResult] = await Promise.all([
     client
       .from('object_act')
-      .select('duration_min, min_participants, max_participants, difficulty_level, guide_required, min_age, equipment_provided, equipment_provided_details')
+      .select('duration_min, min_participants, max_participants, difficulty_level, guide_required, min_age, equipment_provided')
       .eq('object_id', objectId)
       .maybeSingle(),
   ]);
@@ -3249,7 +3256,7 @@ async function getObjectWorkspaceActivityModule(
     guideRequired: readBoolean(row.guide_required),
     minAge: readString(row.min_age),
     equipmentProvided: readBoolean(row.equipment_provided),
-    equipmentProvidedDetails: readString(row.equipment_provided_details),
+    equipmentProvidedDetails: '',
     difficultyOptions,
     unavailableReason: null,
   };
@@ -5375,6 +5382,11 @@ export async function saveObjectWorkspaceActivity(objectId: string, input: Objec
   if (input.unavailableReason) {
     throw new Error(input.unavailableReason);
   }
+  // The deployed object_act schema stores only the boolean. Do not silently
+  // discard unsupported free text from the office editor or a restored draft.
+  if (input.equipmentProvidedDetails.trim()) {
+    throw new Error('Le détail du matériel fourni ne peut pas être enregistré pour le moment. Votre saisie est conservée.');
+  }
 
   validateActivityModule(input);
 
@@ -5393,7 +5405,6 @@ export async function saveObjectWorkspaceActivity(objectId: string, input: Objec
     guide_required: input.guideRequired,
     min_age: toNullableInteger(input.minAge),
     equipment_provided: input.equipmentProvided,
-    equipment_provided_details: input.equipmentProvided ? toNullableText(input.equipmentProvidedDetails) : null,
   }, { onConflict: 'object_id' });
 
   if (error) {
@@ -6065,115 +6076,29 @@ export async function saveObjectWorkspaceLocation(objectId: string, input: Objec
 export async function saveObjectWorkspaceMedia(
   objectId: string,
   input: ObjectWorkspaceMediaModule,
-  options: { canEditPlaceMedia: boolean },
-): Promise<void> {
+  _options: { canEditPlaceMedia: boolean },
+): Promise<void | WorkspaceSaveResult> {
   const session = useSessionStore.getState();
-  if (session.demoMode) {
-    return;
-  }
-
-  // R1 no-clobber: a module whose load failed carries an empty objectItems list —
-  // reconciling against it would DELETE every media row of the object. The section
-  // hides its controls on unavailableReason; this throw is the defense-in-depth.
-  if (input.unavailableReason) {
-    throw new Error(input.unavailableReason);
-  }
-
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer les medias.');
-  }
-
-  const normalizedObjectItems = input.objectItems.map((item, index) => ({
-    ...item,
-    position: item.position || String(index),
-  }));
-
-  const [typeRefsResult, existingMediaResult] = await Promise.all([
-    client.from('ref_code').select('id, code, name').eq('domain', 'media_type'),
-    client.from('media').select('id').eq('object_id', objectId),
-  ]);
-
-  if (typeRefsResult.error) {
-    throw mapMutationError(typeRefsResult.error, 'Impossible de charger les types de media.');
-  }
-
-  if (existingMediaResult.error) {
-    throw mapMutationError(existingMediaResult.error, 'Impossible de charger les medias existants.');
-  }
-
-  const typeByCode = new Map(
-    (typeRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-  const existingIds = new Set((existingMediaResult.data ?? []).map((row) => readString((row as Record<string, unknown>).id)).filter(Boolean));
-
-  const unknownType = normalizedObjectItems.find((item) => !typeByCode.has(item.typeCode.toLowerCase()));
-  if (unknownType) {
-    throw new Error(`Type de media inconnu: ${unknownType.typeCode || 'vide'}.`);
-  }
-
-  const { error: clearMainError } = await client.from('media').update({ is_main: false }).eq('object_id', objectId);
-  if (clearMainError) {
-    throw mapMutationError(clearMainError, 'Impossible de preparer le media principal.');
-  }
-
-  const keptIds = new Set<string>();
-
-  for (const item of normalizedObjectItems) {
-    const payload = {
-      object_id: objectId,
-      media_type_id: typeByCode.get(item.typeCode.toLowerCase()) ?? null,
-      title: toNullableText(item.title),
-      title_i18n: Object.keys(item.titleTranslations).length > 0 ? item.titleTranslations : null,
-      description: toNullableText(item.description),
-      description_i18n: Object.keys(item.descriptionTranslations).length > 0 ? item.descriptionTranslations : null,
-      credit: toNullableText(item.credit),
-      url: item.url.trim(),
-      is_main: item.isMain,
-      is_published: item.isPublished,
-      position: toNullableInteger(item.position) ?? 0,
-      rights_expires_at: toNullableText(item.rightsExpiresAt),
-      // §04 fix class: an UPDATE preserves a NULL visibility (extended-only under the
-      // 8t gate) instead of silently widening it to 'public'; INSERTs default below.
-      visibility: toNullableText(item.visibility),
-      width: toNullableInteger(item.width),
-      height: toNullableInteger(item.height),
-      kind: toNullableText(item.kind),
-    };
-
-    let mediaId = item.id;
-    if (existingIds.has(item.id)) {
-      const { error } = await client.from('media').update(payload).eq('id', item.id);
-      if (error) {
-        throw mapMutationError(error, "Impossible d'enregistrer un media objet.");
-      }
-    } else {
-      // Editor-authored rows are public by design (the user can narrow via the select).
-      const insertPayload = { ...payload, visibility: payload.visibility ?? 'public' };
-      const { data, error } = await client.from('media').insert(insertPayload).select('id').single();
-      if (error) {
-        throw mapMutationError(error, "Impossible de creer un media objet.");
-      }
-      mediaId = readString((data as Record<string, unknown>).id);
-    }
-
-    keptIds.add(mediaId);
-    // media_tag is deliberately NOT written here: no tag UI exists, no live consumer
-    // reads the links, and the old delete+reinsert churn could wipe links after a
-    // partial load. Row deletes still cascade their links (FK ON DELETE CASCADE).
-  }
-
-  const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id));
-  if (idsToDelete.length > 0) {
-    const { error } = await client.from('media').delete().in('id', idsToDelete);
-    if (error) {
-      throw mapMutationError(error, "Impossible de supprimer les medias retires.");
-    }
-  }
-
-  if (options.canEditPlaceMedia) {
-    return;
-  }
+  if (session.demoMode) return;
+  if (input.unavailableReason) throw new Error(input.unavailableReason);
+  const payload = buildGalleryWritePayload(input);
+  const result = await withPendingGalleryRequest(session.userId, objectId, payload,
+    request => callObjectWorkspaceRpc('save_object_gallery', objectId, request,
+      'Impossible d’enregistrer la galerie. Votre saisie est conservée.'),
+    response => { parseGalleryWriteSnapshot(response.snapshot); },
+    {
+      baselineReadId: input.galleryWriteBaseline?.readId,
+      resolve: async requestId => {
+        const api = getApiClient();
+        if (!api) throw new Error('Le service est indisponible. Votre saisie est conservée.');
+        const response = await api.schema('api').rpc('get_gallery_write_receipt', {
+          p_object_id: objectId, p_request_id: requestId,
+        });
+        if (response.error) throw Object.assign(new Error('La dernière demande ne peut pas être vérifiée.'), { code: readRecord(response.error).code });
+        return response.data == null ? null : readRecord(response.data);
+      },
+    });
+  return { media: withGalleryWriteSnapshot(input, parseGalleryWriteSnapshot(result.snapshot)) };
 }
 
 export async function saveObjectWorkspaceContacts(objectId: string, input: ObjectWorkspaceContactsModule): Promise<void> {

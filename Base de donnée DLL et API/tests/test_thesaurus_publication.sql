@@ -34,6 +34,7 @@ DO $test$
 DECLARE workspace jsonb;res jsonb;doc jsonb;rev jsonb;rev_a jsonb;rev_b jsonb;prevw jsonb;pub jsonb;oldexport jsonb;cid uuid;child uuid;newcid uuid;rid uuid;v integer;first_release bigint;next_release bigint;count_before integer;before_time timestamptz;before_version integer;deny boolean;before_content jsonb;cache_projection jsonb;
   before_test_time timestamptz;before_test_version integer;before_test_versions bigint;before_real_versions bigint;
   original_timezone text;western_date date;dated_export jsonb;
+  native_row record;native_names jsonb:='{}';native_revisions jsonb:='[]';native_versions jsonb:='{}';native_name text;
 BEGIN
   ASSERT NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='bertel_thesaurus_publisher'AND(rolcanlogin OR rolsuper OR rolbypassrls OR rolcreaterole OR rolinherit)),'Publisher role must remain a restricted non-login identity';
   ASSERT NOT pg_has_role('anon','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('authenticated','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('service_role','bertel_thesaurus_publisher','SET'),'Application roles can assume publisher identity';
@@ -162,6 +163,33 @@ BEGIN
   ASSERT NOT has_function_privilege('authenticated','api.thesaurus_public(text,bigint,jsonb)','EXECUTE'),'Partner reader granted to authenticated';
   ASSERT NOT has_table_privilege('authenticated','thesaurus.revision','SELECT'),'Private revisions directly readable';
   ASSERT NOT pg_has_role('authenticated','bertel_thesaurus_publisher','MEMBER'),'Application can assume publisher';
+  -- Rendering eight adapters alone is insufficient: physically rename a native
+  -- row of each source kind through validated prepared publication.
+  FOR native_row IN SELECT concept_id,source_kind,source_id,domain FROM thesaurus.concept
+    WHERE(source_kind,source_id)IN(
+      ('ref_code','b73e1000-0000-4000-8000-000000000001'),
+      ('amenity','b73e2000-0000-4000-8000-000000000001'),
+      ('classification_scheme','b73e3000-0000-4000-8000-000000000001'),
+      ('classification_value','b73e3000-0000-4000-8000-000000000002'),
+      ('language','b73e6000-0000-4000-8000-000000000001'),
+      ('commune','97499'),
+      ('sustainability_action','b73e4000-0000-4000-8000-000000000002'),
+      ('sustainability_category','b73e4000-0000-4000-8000-000000000001'))LOOP
+    native_name:=(thesaurus.concept_document(native_row.concept_id)->>'name')||' contrôle natif préparé';
+    rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',native_row.concept_id,'expected_version',0,'document',thesaurus.concept_document(native_row.concept_id)||jsonb_build_object('name',native_name)));
+    rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
+    ASSERT rev->>'status'='validated',format('Native %s rename failed validation: %s',native_row.source_kind,rev);
+    native_revisions:=native_revisions||jsonb_build_array(rev->>'revision_id');
+    native_versions:=native_versions||jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer);
+    native_names:=native_names||jsonb_build_object(native_row.concept_id::text,native_name);
+  END LOOP;
+  ASSERT jsonb_array_length(native_revisions)=8,'Every native source kind must have a real rename revision';
+  PERFORM api.thesaurus_admin('publish',jsonb_build_object('revision_ids',native_revisions,'expected_revision_versions',native_versions,'expected_release_id',api.thesaurus_generation(),'idempotency_key','thesaurus-all-eight-native-renames'));
+  ASSERT NOT EXISTS(SELECT 1 FROM jsonb_each_text(native_names)expected
+    JOIN thesaurus.concept changed ON changed.concept_id=expected.key::uuid
+    JOIN thesaurus.source_rows source ON(source.source_kind,source.source_id,source.domain)=(changed.source_kind,changed.source_id,changed.domain)
+    WHERE COALESCE(source.payload->>'name',source.payload->>'label')IS DISTINCT FROM expected.value),'A prepared rename did not physically update its native adapter row';
+  ASSERT api.thesaurus_public('export',first_release,'{"lang":"en-US"}')=oldexport,'Eight native renames changed an earlier immutable export';
   ASSERT(SELECT count(DISTINCT c.source_kind)FROM thesaurus.concept c JOIN thesaurus.publication_documents()d USING(concept_id))=8,'Batch rendering must exercise every typed native source adapter';
   ASSERT NOT EXISTS(SELECT 1 FROM thesaurus.publication_documents()d WHERE d.document IS DISTINCT FROM(thesaurus.concept_document(d.concept_id,false)-'source_kind'-'source_key'-'source_fields'-'source_fingerprint'-'name_i18n'-'description_i18n')),'Batch release documents differ from the canonical per-concept public projection';
   PERFORM set_config('request.jwt.claims','{"sub":"b73e0000-0000-4000-8000-000000000099","role":"authenticated"}',true);

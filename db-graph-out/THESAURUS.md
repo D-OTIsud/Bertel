@@ -1,10 +1,10 @@
 # Thésaurus — complément du catalogue de schéma
 
-**État local validé le 6 novembre 2026 à 13:14 UTC ; pas encore appliqué en production.**
+**État du catalogue local au 6 novembre 2026 à 16:42 UTC ; pas encore appliqué en production.**
 Ce document complète le graphe historique ; il ne constitue ni une nouvelle extraction
 du catalogue de production, ni une régénération de `graph.json`/`dbdoc` à partir des anciens
 entrants. Les constats ci-dessous proviennent d'une introspection en lecture seule de
-`bertel_thesaurus_test`, PostgreSQL **17.10**, après application locale des deux migrations.
+`bertel_thesaurus_test` et `bertel_thesaurus_prepared_activate_test`, PostgreSQL **17.10**, après application locale des trois migrations.
 Les scénarios de test utilisent des transactions annulées ; ils ne constituent pas un
 corpus éditorial publié en production.
 
@@ -12,12 +12,13 @@ Sources canoniques :
 
 - [Modèle éditorial et publication](../supabase/migrations/20261106112948_thesaurus_publication.sql).
 - [Consommateurs et compatibilité des catalogues](../supabase/migrations/20261106113509_thesaurus_consumers.sql).
+- [Préparation et contrôle des mutations concurrentes](../supabase/migrations/20261106160017_thesaurus_prepared_publication.sql).
 - [Manifeste fresh-install et tests](<../Base de donnée DLL et API/ci_fresh_apply.sql>).
 - [Audit de réalisation et limites de recette](../docs/audits/2026-11-06-thesaurus-implementation.md).
 
 ## Tables privées et clés
 
-L'introspection trouve **16 tables** dans `thesaurus`, toutes avec RLS activée.
+L'introspection trouve **17 tables** dans `thesaurus`, toutes avec RLS activée.
 Les références à `concept` et `release` dans ce tableau désignent ce même schéma.
 
 | Table | Clé primaire | Relations et contraintes utiles |
@@ -38,6 +39,9 @@ Les références à `concept` et `release` dans ce tableau désignent ce même s
 | `outbox` | `id` | FK release ; unique `(release_id,type)` ; statut, tentatives, bail et jeton de réclamation. |
 | `assignment_retention` | `(transaction_id,table_oid,object_id,concept_id)` | FK concept ; conservation des affectations historiques lors d'une réconciliation dans la même transaction. |
 | `ownership_retention` | `(transaction_id,table_oid,row_key)` | Propriétaires conservés avant les suppressions en cascade ; cache transactionnel interne. |
+| `mutation_journal` | `(top_xid,owner_id)` | XID principal `xid8`, propriétaire `text`, sans FK pour conserver les propriétaires supprimés ; index `(owner_id,top_xid)`. Insertion par trigger de confiance uniquement ; rôle de publication limité à SELECT/DELETE. |
+
+La préparation calcule les neuf colonnes de cache dans un seul snapshot sans écrire ni verrouiller les fiches. Un verrou transactionnel de sources précède le verrou d'éditeur tardif ; le journal, les propriétaires actuels, le contrat de projection et l'autorité fraîche de l'opérateur sont vérifiés avant l'application atomique. L'introspection compte **113 relations possédées** et **74 relations de sources**, partitions comprises. Les tags polymorphes sont résolus explicitement. Le contrat refuse une dépendance de projection ou une garde non revue ; les tests comportementaux et les mesures de contention restent des preuves distinctes de ce catalogue.
 
 Les trois tables de publication sont protégées par `thesaurus.guard_immutable` : les
 instantanés terminés ne sont pas réécrits. Une correction crée une nouvelle publication.

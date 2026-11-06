@@ -5,11 +5,10 @@ import test from 'node:test';
 
 // Only disposable local test stacks, never a project DSN loaded from .env.
 const dsn = process.env.AI_QUOTA_TEST_DB_URL;
-const enabled = process.env.AI_QUOTA_DISPOSABLE === 'true' && Boolean(dsn);
-if (enabled) {
-  const url = new URL(dsn);
-  assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname) && ['/postgres'].includes(url.pathname), 'disposable loopback database required');
-}
+assert.equal(process.env.AI_QUOTA_DISPOSABLE, 'true', 'explicit disposable-database authorization required');
+assert.ok(dsn, 'AI_QUOTA_TEST_DB_URL must name the local disposable stack');
+const url = new URL(dsn);
+assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname) && ['/postgres'].includes(url.pathname), 'disposable loopback database required');
 
 class SqlSession {
   constructor() {
@@ -53,7 +52,7 @@ class SqlSession {
   }
 }
 
-test('two database consumers preserve the shared sliding budget, with clock and verdict after the lock', { skip: !enabled, timeout: 30000 }, async () => {
+test('two database consumers preserve the shared sliding budget, with clock and verdict after the lock', { timeout: 30000 }, async () => {
   const admin = new SqlSession();
   const holder = new SqlSession();
   const first = new SqlSession();

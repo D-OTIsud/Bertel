@@ -44,6 +44,7 @@
 -- Auto-portant + transactionnel : ROLLBACK final, rien ne persiste.
 \set ON_ERROR_STOP on
 BEGIN;
+\ir fixtures/current_canonical_permission.sql
 
 -- ---------------------------------------------------------------------
 -- S0. Le test peut-il seulement échouer ? (anti-vacuité du harnais lui-même)
@@ -388,16 +389,10 @@ END$$;
 RESET ROLE;
 
 -- ---------------------------------------------------------------------
--- H. LE JUMEAU `actors` — un appelant dont le SEUL titre est un lien acteur
--- ---------------------------------------------------------------------
--- `api.is_object_owner` est vrai pour qui detient sur la fiche un lien acteur PRIMAIRE dont
--- l'e-mail est le sien (api.user_actor_ids fait le pont par actor_channel[email]). La branche
--- `actors` etant elle aussi un delete-all + re-insert, un tel appelant voyait son propre droit
--- disparaitre avec le DELETE, puis le WITH CHECK de canonical_ins_actor_object_role refuser la
--- re-insertion : le MEME 42501 que sur `org_links`, dans une autre table.
--- Le persona porte un claim `email` : `api.current_user_email()` le lit dans le JWT, pas dans
--- auth.users — sans lui, `user_actor_ids()` rend vide et le bloc serait VACANT.
--- Il n'a NI membership NI permission : son unique titre est ce lien (asserte en H1).
+-- H. Reconcile actors under current explicit publisher authority.
+-- Retain the historical email/primary-link fixture, but grant the current
+-- membership and canonical permission explicitly. Neither contact nor link
+-- is an authorization source after DB02.
 DO $$
 DECLARE
   v_owner uuid := '16b00000-0000-4000-8000-000000000004';
@@ -417,9 +412,10 @@ BEGIN
   INSERT INTO actor (id, display_name) VALUES (v_act_b, 'Exploitant temoin 16x');
   INSERT INTO actor_channel (actor_id, kind_id, value, is_primary)
     VALUES (v_act_b, v_kind, 'proprio16x@test.local', TRUE);
-  -- Son lien PRIMAIRE sur la fiche : c'est TOUT son droit d'ecrire.
+  -- Historical primary contact link retained as data, not authority.
   INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
     VALUES (v_act_b, 'HOTRUN00000016V1', v_role, TRUE, 'public');
+  PERFORM pg_temp.grant_current_canonical_fixture(v_owner,'ORGRUN00000016V1',ARRAY['HOTRUN00000016V1']);
   PERFORM set_config('request.jwt.claims', NULL, true);
 END$$;
 
@@ -430,10 +426,10 @@ BEGIN
     '{"role":"authenticated","sub":"16b00000-0000-4000-8000-000000000004","email":"proprio16x@test.local"}', true);
   SET LOCAL ROLE authenticated;
 
-  ASSERT COALESCE(api.is_object_owner('HOTRUN00000016V1'), FALSE),
-    'H1a FAIL: le pont e-mail -> acteur -> lien primaire ne fonctionne pas — le bloc serait VACANT';
-  ASSERT NOT COALESCE(api.user_can_write_canonical('HOTRUN00000016V1'), FALSE),
-    'H1b FAIL: le temoin ne doit avoir AUCUN autre titre que son lien acteur';
+  ASSERT NOT COALESCE(api.is_object_owner('HOTRUN00000016V1'), FALSE),
+    'H1a FAIL: le pont e-mail ne doit plus accorder de droit owner';
+  ASSERT COALESCE(api.user_can_write_canonical('HOTRUN00000016V1'), FALSE),
+    'H1b FAIL: le témoin exige membership publisher et permission canonique actuels';
 
   -- Il conserve son propre lien et rattache un second prestataire, non principal.
   v := api.save_object_relations('HOTRUN00000016V1', jsonb_build_object(

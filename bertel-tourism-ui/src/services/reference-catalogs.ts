@@ -14,6 +14,8 @@ export type RefCodeRow = {
   is_assignable?: boolean | null;
   parent_id?: string | null;
   description?: string | null;
+  thesaurus_assignable?: boolean;
+  thesaurus_lifecycle?: 'active' | 'deprecated' | 'retired';
 };
 
 /**

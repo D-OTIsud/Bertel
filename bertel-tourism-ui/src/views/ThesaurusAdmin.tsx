@@ -8,6 +8,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { Modal } from '../components/common/Modal';
 import { REFERENCE_CATALOGS_QUERY_KEY } from '../hooks/useReferenceCatalogsQuery';
 import { ThesaurusConceptEditor, ThesaurusIssues, THESAURUS_LIFECYCLE_LABELS } from '../features/settings/ThesaurusConceptEditor';
+import { thesaurusDocumentValues } from '../features/settings/thesaurus-document-display';
 import {
   bootstrapThesaurus, configureThesaurusDomain, configureThesaurusInstance,
   fetchThesaurusWorkspace, normalizeThesaurusDocument, previewThesaurusPublication, publishThesaurus,
@@ -41,22 +42,8 @@ function conceptDepth(concept: ThesaurusConcept, concepts: ThesaurusConcept[]) {
 }
 
 function documentComparison(before: ThesaurusDocument | undefined, after: ThesaurusDocument, concepts: ThesaurusConcept[]) {
-  const conceptName = (id: string | null | undefined) => concepts.find((item) => item.concept_id === id)?.name ?? (id ? 'Concept lié' : '—');
-  const values = (document: ThesaurusDocument | undefined): Record<string, string> => document ? {
-    'Code': document.code, 'Libellé français': document.name, 'Définition française': document.description,
-    'Autres libellés': Object.entries(document.name_i18n).map(([lang, value]) => `${lang} : ${value}`).join('\n'),
-    'Autres définitions': Object.entries(document.description_i18n).map(([lang, value]) => `${lang} : ${value}`).join('\n'),
-    'État': THESAURUS_LIFECYCLE_LABELS[document.lifecycle],
-    'Parent': conceptName(document.parent_concept_id),
-    'Termes': document.labels.map((item) => `${item.lang} · ${item.kind === 'alt' ? 'Synonyme' : 'Caché'} : ${item.value}`).join('\n'),
-    'Notes et sources': document.notes.map((item) => `${item.lang} : ${item.value}${item.source ? ` (${item.source})` : ''}`).join('\n'),
-    'Relations': document.relations.map((item) => `${item.type === 'related' ? 'Associé' : 'Équivalent exact'} : ${conceptName(item.target_id)}`).join('\n'),
-    'Correspondances': document.mappings.map((item) => `${item.vocabulary} · ${item.type} · ${item.target_uri}${item.source ? ` (${item.source})` : ''}`).join('\n'),
-    'Successeurs': document.replaced_by.map(conceptName).join('\n'),
-    'Début de validité': String(document.source_fields?.valid_from ?? ''),
-    'Fin de validité': String(document.source_fields?.valid_to ?? ''),
-  } : {};
-  const previous = values(before); const next = values(after);
+  const previous = thesaurusDocumentValues(before, concepts);
+  const next = thesaurusDocumentValues(after, concepts);
   return Object.keys(next).filter((key) => (previous[key] ?? '') !== next[key]).map((key) => ({ field: key, before: previous[key] || '—', after: next[key] || '—' }));
 }
 
@@ -69,6 +56,7 @@ export function ThesaurusAdmin({ onDirtyChange: notifyDirty }: { onDirtyChange?:
   const [offset, setOffset] = useState(0);
   const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [creatingRevision, setCreatingRevision] = useState<ThesaurusRevision | null>(null);
   const [editorEpoch, setEditorEpoch] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<Navigation | null>(null);
@@ -118,7 +106,7 @@ export function ThesaurusAdmin({ onDirtyChange: notifyDirty }: { onDirtyChange?:
     if (next.pane !== undefined) setPane(next.pane);
     if (next.domain !== undefined) { setDomain(next.domain); setOffset(0); setSelectedConceptId(null); }
     if (next.conceptId !== undefined) setSelectedConceptId(next.conceptId);
-    if (next.create !== undefined) setCreating(next.create);
+    if (next.create !== undefined) { setCreating(next.create); setCreatingRevision(null); }
     else if (next.conceptId !== undefined || next.domain !== undefined || next.search !== undefined || next.offset !== undefined) setCreating(false);
     if (next.search !== undefined) { setSearch(next.search); setOffset(0); setSelectedConceptId(null); }
     if (next.offset !== undefined) { setOffset(next.offset); setSelectedConceptId(null); }
@@ -130,6 +118,7 @@ export function ThesaurusAdmin({ onDirtyChange: notifyDirty }: { onDirtyChange?:
   }
 
   function onSaved(revision: ThesaurusRevision) {
+    if (creating) setCreatingRevision(revision);
     if (revision.status === 'validated') setSelectedRevisions((current) => [...new Set([...current, revision.revision_id])]);
     void refresh();
   }
@@ -196,7 +185,7 @@ export function ThesaurusAdmin({ onDirtyChange: notifyDirty }: { onDirtyChange?:
           <div className="thesaurus__pagination"><button type="button" className="ghost-button" disabled={offset === 0 || workspaceQuery.isFetching} onClick={() => navigate({ offset: Math.max(0, offset - PAGE_SIZE) })}><ArrowLeft size={15} aria-hidden /> Précédents</button><span>{concepts.length ? `${offset + 1}–${offset + concepts.length}` : '0'}{total > 0 && ` / ${total}`}</span><button type="button" className="ghost-button" disabled={concepts.length < PAGE_SIZE || workspaceQuery.isFetching} onClick={() => navigate({ offset: offset + PAGE_SIZE })}>Suivants <ArrowRight size={15} aria-hidden /></button></div>
         </section>
         <div className="thesaurus__detail">
-          {activeDomain && (activeConcept || creating) ? <ThesaurusConceptEditor key={`${creating ? `new-${activeDomain.domain}` : activeConcept?.concept_id}-${editorEpoch}`} concept={creating ? null : activeConcept} initialRevision={creating ? null : activeRevision} domain={activeDomain} concepts={concepts} onSaved={onSaved} onDirtyChange={onDirtyChange} onReload={() => navigate({ reload: true })} onDiscarded={() => { setDirty(false); setCreating(false); setEditorEpoch((value) => value + 1); void refresh(); }} /> : <EmptyState mode="no-data" title="Choisissez un concept" description="Consultez sa définition, ses termes et ses relations avant de proposer une modification." />}
+          {activeDomain && (activeConcept || creating) ? <ThesaurusConceptEditor key={`${creating ? `new-${activeDomain.domain}` : activeConcept?.concept_id}-${editorEpoch}`} concept={creating ? null : activeConcept} initialRevision={creating ? creatingRevision : activeRevision} domain={activeDomain} concepts={concepts} onSaved={onSaved} onDirtyChange={onDirtyChange} onReload={() => navigate({ reload: true })} onDiscarded={() => { setDirty(false); setCreating(false); setEditorEpoch((value) => value + 1); void refresh(); }} /> : <EmptyState mode="no-data" title="Choisissez un concept" description="Consultez sa définition, ses termes et ses relations avant de proposer une modification." />}
         </div>
       </div>
     </>}
@@ -216,7 +205,7 @@ export function ThesaurusAdmin({ onDirtyChange: notifyDirty }: { onDirtyChange?:
 
     <ConfirmDialog open={Boolean(pendingNavigation)} title="Quitter les modifications ?" message="Votre saisie n’est pas enregistrée. Quitter cette vue abandonnera les modifications locales ; la version publiée reste inchangée." confirmLabel="Quitter sans enregistrer" onCancel={() => setPendingNavigation(null)} onConfirm={() => { if (pendingNavigation) applyNavigation(pendingNavigation); }} />
     <Modal open={previewOpen} title="Vérifier la publication du thésaurus" size="wide" onOpenChange={(open) => { if (busy !== 'publish') setPreviewOpen(open); }} footer={<><button type="button" className="ghost-button" disabled={busy === 'publish'} onClick={() => setPreviewOpen(false)}>Revenir aux brouillons</button><button type="button" className="primary-button" disabled={!preview || preview.errors.length > 0 || previewRevisions.length === 0 || Boolean(busy)} onClick={() => void publish()}>{busy === 'publish' ? 'Publication…' : 'Publier cette version'}</button></>}>
-      {preview && <><p><strong>{preview.changed_count} concept{preview.changed_count > 1 ? 's' : ''}</strong> seront publiés. <strong>{preview.affected_objects} fiche{preview.affected_objects > 1 ? 's' : ''}</strong> auront une représentation à resynchroniser chez les partenaires.</p><p className="pref__hint">La publication applique ensemble le vocabulaire et ses projections requises. Les anciennes versions restent consultables.</p><ThesaurusIssues errors={preview.errors} warnings={preview.warnings} />{actionError && <p role="alert" className="inline-alert inline-alert--danger">{actionError}</p>}{previewRevisions.map((revision) => { const serverChange = preview.changes.find((item) => item.revision_id === revision.revision_id); const previous = serverChange?.before ? normalizeThesaurusDocument(serverChange.before) : revision.base_document ?? concepts.find((item) => item.concept_id === revision.concept_id); const changes = documentComparison(previous, revision.document, concepts); return <section key={revision.revision_id} className="thesaurus__comparison"><h4>{revision.document.name}</h4>{changes.length === 0 ? <p>La vérification serveur porte sur cette révision validée.</p> : <table className="data-table"><thead><tr><th scope="col">Champ</th><th scope="col">Publié</th><th scope="col">Proposé</th></tr></thead><tbody>{changes.map((change) => <tr key={change.field}><th scope="row">{change.field}</th><td>{change.before}</td><td>{change.after}</td></tr>)}</tbody></table>}</section>; })}</>}
+      {preview && <><p><strong>{preview.changed_count} concept{preview.changed_count > 1 ? 's' : ''}</strong> {preview.changed_count === 1 ? 'sera publié' : 'seront publiés'}. <strong>{preview.affected_objects} fiche{preview.affected_objects > 1 ? 's' : ''}</strong> {preview.affected_objects === 1 ? 'aura' : 'auront'} une représentation à resynchroniser chez les partenaires.</p><p className="pref__hint">La publication applique ensemble le vocabulaire et ses projections requises. Les anciennes versions restent consultables.</p><ThesaurusIssues errors={preview.errors} warnings={preview.warnings} />{actionError && <p role="alert" className="inline-alert inline-alert--danger">{actionError}</p>}{previewRevisions.map((revision) => { const serverChange = preview.changes.find((item) => item.revision_id === revision.revision_id); const previous = serverChange?.before ? normalizeThesaurusDocument(serverChange.before) : revision.base_document ?? concepts.find((item) => item.concept_id === revision.concept_id); const changes = documentComparison(previous, revision.document, concepts); return <section key={revision.revision_id} className="thesaurus__comparison"><h4>{revision.document.name}</h4>{changes.length === 0 ? <p>La vérification serveur porte sur cette révision validée.</p> : <table className="data-table"><thead><tr><th scope="col">Champ</th><th scope="col">Publié</th><th scope="col">Proposé</th></tr></thead><tbody>{changes.map((change) => <tr key={change.field}><th scope="row">{change.field}</th><td>{change.before}</td><td>{change.after}</td></tr>)}</tbody></table>}</section>; })}</>}
     </Modal>
   </div>;
 }

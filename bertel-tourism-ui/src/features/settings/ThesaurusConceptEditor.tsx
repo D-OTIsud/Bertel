@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { thesaurusDocumentValues } from './thesaurus-document-display';
 import {
   discardThesaurusDraft, fetchThesaurusWorkspace, normalizeThesaurusDocument, rebaseThesaurusDraft, saveThesaurusDraft,
   thesaurusErrorMessage, validateThesaurusDraft,
@@ -164,12 +165,13 @@ export function ThesaurusConceptEditor({ concept, initialRevision, domain, conce
     {notice && <p role="status" className="inline-alert inline-alert--success">{notice}</p>}
     <ThesaurusIssues errors={errors} warnings={warnings} />
     {rebaseConflicts.length > 0 && <div className="inline-alert inline-alert--warning"><p>À comparer : {rebaseConflicts.map((key) => ({ name: 'libellé français', description: 'définition française', name_i18n: 'traductions des libellés', description_i18n: 'traductions des définitions', labels: 'termes', notes: 'notes et sources', relations: 'relations', mappings: 'correspondances', parent_concept_id: 'parent', source_fields: 'propriétés du catalogue', replaced_by: 'successeurs', lifecycle: 'état', code: 'code' }[key] ?? key)).join(', ')}.</p><label><input type="checkbox" onChange={(event) => { if (event.target.checked) setRebaseConflicts([]); }} /> J’ai comparé ces changements avec la publication courante.</label></div>}
+    {concept && Object.keys(concept.source_key).length > 0 && <details className="thesaurus__section"><summary>Version publiée actuelle · lecture seule</summary><div className="thesaurus__comparison"><table className="data-table"><thead><tr><th scope="col">Champ</th><th scope="col">Valeur publiée</th></tr></thead><tbody>{Object.entries(thesaurusDocumentValues(concept, concepts)).filter(([, value]) => value && value !== '—').map(([field, value]) => <tr key={field}><th scope="row">{field}</th><td>{value}</td></tr>)}</tbody></table></div></details>}
 
     <form onSubmit={(event) => { event.preventDefault(); void save(); }}>
       <fieldset disabled={Boolean(busy)} className="thesaurus__fieldset">
         <legend>Identité et sens</legend>
         <div className="thesaurus__two-fields">
-          <label htmlFor={`${formId}-code`}>Code stable<input id={`${formId}-code`} value={document.code} disabled={Boolean(concept)} required onChange={(event) => change({ code: event.target.value })} /></label>
+          <label htmlFor={`${formId}-code`}>Code stable<input id={`${formId}-code`} value={document.code} disabled={Boolean(concept || revision)} required onChange={(event) => change({ code: event.target.value })} /></label>
           <label htmlFor={`${formId}-lifecycle`}>État du concept<select id={`${formId}-lifecycle`} value={document.lifecycle} onChange={(event) => change({ lifecycle: event.target.value as ThesaurusDocument['lifecycle'] })}><option value="active">Actif</option><option value="deprecated">Déprécié — usage historique conservé</option><option value="retired">Retiré — fiches à requalifier</option></select></label>
         </div>
         {concept && <p className="pref__hint">Le code publié est conservé. Un changement de sens se traite par un nouveau concept et un remplacement.</p>}
@@ -180,7 +182,7 @@ export function ThesaurusConceptEditor({ concept, initialRevision, domain, conce
           <label htmlFor={`${formId}-name-${lang}`}>Libellé préféré ({lang})<input id={`${formId}-name-${lang}`} value={lang === 'fr' ? document.name : document.name_i18n[lang] ?? ''} required={lang === 'fr'} onChange={(event) => change(lang === 'fr' ? { name: event.target.value } : { name_i18n: { ...document.name_i18n, [lang]: event.target.value } })} /></label>
           <label htmlFor={`${formId}-definition-${lang}`}>Définition ({lang})<textarea id={`${formId}-definition-${lang}`} rows={3} value={lang === 'fr' ? document.description : document.description_i18n[lang] ?? ''} required={lang === 'fr' && domain.require_definition} onChange={(event) => change(lang === 'fr' ? { description: event.target.value } : { description_i18n: { ...document.description_i18n, [lang]: event.target.value } })} /></label>
         </div>)}
-        <div className="thesaurus__add-language"><label htmlFor={`${formId}-language`}>Ajouter une langue<input id={`${formId}-language`} value={language} placeholder="en, es, de…" onChange={(event) => setLanguage(event.target.value)} /></label><button type="button" className="ghost-button" onClick={() => { const lang = language.trim().toLowerCase(); if (!/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(lang)) { setError('Saisissez un code de langue valide, par exemple en ou es.'); return; } change({ name_i18n: { ...document.name_i18n, [lang]: document.name_i18n[lang] ?? '' } }); }}>Ajouter</button></div>
+        <div className="thesaurus__add-language"><label htmlFor={`${formId}-language`}>Ajouter une langue<input id={`${formId}-language`} value={language} placeholder="en, es, de…" onChange={(event) => setLanguage(event.target.value)} /></label><button type="button" className="ghost-button" onClick={() => { const lang = language.trim().toLowerCase(); if (!/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/.test(lang)) { setError('Saisissez un code de langue valide, par exemple en ou es.'); return; } if (languages.includes(lang)) { setError('Cette langue est déjà présente. Modifiez ses champs existants.'); return; } change({ name_i18n: { ...document.name_i18n, [lang]: '' } }); }}>Ajouter</button></div>
       </fieldset>
 
       <details className="thesaurus__section" open><summary>Synonymes et termes de recherche <span>{document.labels.length}</span></summary>

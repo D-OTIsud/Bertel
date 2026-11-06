@@ -10,7 +10,10 @@ DO $roles$ BEGIN
 END $roles$;
 -- Supabase's migration role is not a PostgreSQL superuser. Temporary membership
 -- permits CREATE OR REPLACE/ALTER OWNER for the NOLOGIN publisher, then is revoked.
-GRANT bertel_thesaurus_publisher TO CURRENT_USER WITH INHERIT TRUE,SET TRUE;
+DO $publisher_membership$BEGIN
+  -- Literal quoted role avoids the older Supabase supautils CURRENT_USER RoleSpec crash.
+  EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH INHERIT TRUE,SET TRUE',current_user);
+END $publisher_membership$;
 GRANT USAGE ON SCHEMA thesaurus,public,api,extensions,auth,internal,audit TO bertel_thesaurus_publisher;
 
 CREATE TABLE IF NOT EXISTS thesaurus.instance (
@@ -132,6 +135,8 @@ CREATE TABLE IF NOT EXISTS thesaurus.outbox (
   attempts integer NOT NULL DEFAULT 0,last_error text,created_at timestamptz NOT NULL DEFAULT now(),completed_at timestamptz,
   UNIQUE(release_id,type)
 );
+ALTER TABLE thesaurus.outbox ADD COLUMN IF NOT EXISTS claimed_at timestamptz;
+ALTER TABLE thesaurus.outbox ADD COLUMN IF NOT EXISTS claim_token uuid;
 CREATE TABLE IF NOT EXISTS thesaurus.assignment_retention (
   transaction_id bigint NOT NULL,table_oid oid NOT NULL,object_id text NOT NULL,concept_id uuid NOT NULL REFERENCES thesaurus.concept,
   PRIMARY KEY(transaction_id,table_oid,object_id,concept_id)
@@ -700,10 +705,27 @@ BEGIN
     RETURN thesaurus.activate(ids,NULL,p_payload->>'idempotency_key',(p_payload->>'expected_release_id')::bigint,COALESCE(p_payload->'expected_revision_versions','{}'));
   ELSIF p_action='requalification'THEN RETURN thesaurus.requalification();
   ELSIF p_action='retry_outbox'THEN
-    UPDATE thesaurus.outbox SET status='pending',last_error=NULL WHERE id=(p_payload->>'id')::bigint AND status IN('failed','pending')RETURNING to_jsonb(thesaurus.outbox.*)INTO result;
+    UPDATE thesaurus.outbox SET status='pending',last_error=NULL,claimed_at=NULL,claim_token=NULL WHERE id=(p_payload->>'id')::bigint AND(status IN('failed','pending')OR(status='processing'AND claimed_at<clock_timestamp()-interval'10 minutes'))RETURNING to_jsonb(thesaurus.outbox.*)INTO result;
     IF result IS NULL THEN RAISE EXCEPTION 'Unknown or completed event' USING ERRCODE='PT404';END IF;RETURN result;
+  ELSIF p_action='claim_outbox'THEN
+    WITH candidates AS(SELECT id FROM thesaurus.outbox WHERE status='pending'OR(status='processing'AND claimed_at<clock_timestamp()-interval'10 minutes')ORDER BY id LIMIT LEAST(20,GREATEST(1,COALESCE((p_payload->>'limit')::integer,20)))FOR UPDATE SKIP LOCKED),
+    claimed AS(UPDATE thesaurus.outbox o SET status='processing',attempts=o.attempts+1,claimed_at=clock_timestamp(),claim_token=gen_random_uuid()FROM candidates c WHERE o.id=c.id RETURNING o.*)
+    SELECT COALESCE(jsonb_agg(to_jsonb(claimed)ORDER BY id),'[]')INTO result FROM claimed;RETURN result;
+  ELSIF p_action='deliver_outbox'THEN
+    -- Delivery and acknowledgement share a transaction. A retry of the same receipt does
+    -- not emit a second event; a crash before this call is recovered by the claim lease.
+    SELECT to_jsonb(o)INTO result FROM thesaurus.outbox o WHERE id=(p_payload->>'id')::bigint AND claim_token=(p_payload->>'claim_token')::uuid FOR UPDATE;
+    IF result IS NULL OR result->>'status'NOT IN('processing','completed')THEN RAISE EXCEPTION 'Outbox claim changed' USING ERRCODE='PT409';END IF;
+    IF result->>'status'='completed'THEN RETURN result;END IF;
+    IF result->>'type'<>'invalidate_reference_generation'THEN RAISE EXCEPTION 'Unsupported event type' USING ERRCODE='PT400';END IF;
+    PERFORM pg_notify('bertel_thesaurus_generation',jsonb_build_object('event_id',result->>'id','release_id',result->>'release_id','type',result->>'type')::text);
+    UPDATE thesaurus.outbox SET status='completed',last_error=NULL,completed_at=clock_timestamp()WHERE id=(p_payload->>'id')::bigint RETURNING to_jsonb(thesaurus.outbox.*)INTO result;RETURN result;
   ELSIF p_action='ack_outbox'THEN
-    UPDATE thesaurus.outbox SET status=CASE WHEN p_payload->>'error'IS NULL THEN'completed'ELSE'failed'END,attempts=attempts+1,last_error=left(p_payload->>'error',500),completed_at=CASE WHEN p_payload->>'error'IS NULL THEN now()END WHERE id=(p_payload->>'id')::bigint AND status<>'completed'RETURNING to_jsonb(thesaurus.outbox.*)INTO result;RETURN result;
+    -- Successful delivery must pass through deliver_outbox: an arbitrary ack cannot
+    -- complete an event without its notification effect.
+    IF NULLIF(p_payload->>'error','')IS NULL THEN RAISE EXCEPTION 'Deliver the event before acknowledging success' USING ERRCODE='PT400';END IF;
+    UPDATE thesaurus.outbox SET status='failed',last_error='delivery_failed',completed_at=NULL WHERE id=(p_payload->>'id')::bigint AND claim_token=(p_payload->>'claim_token')::uuid AND status='processing'RETURNING to_jsonb(thesaurus.outbox.*)INTO result;
+    IF result IS NULL THEN RAISE EXCEPTION 'Outbox claim changed' USING ERRCODE='PT409';END IF;RETURN result;
   ELSIF p_action<>'workspace'THEN RAISE EXCEPTION 'Unknown editorial action' USING ERRCODE='PT400';END IF;
   IF COALESCE((p_payload->>'read_only')::boolean,false)IS NOT TRUE THEN PERFORM thesaurus.sync_sources(NULL);END IF;
   lim:=LEAST(200,GREATEST(1,COALESCE((p_payload->>'page_size')::integer,100)));off:=GREATEST(0,COALESCE((p_payload->>'offset')::integer,0));
@@ -980,8 +1002,10 @@ REVOKE CREATE ON SCHEMA thesaurus FROM bertel_thesaurus_publisher;
 GRANT EXECUTE ON FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)TO postgres;
 -- Preserve the creator's ADMIN-only management capability for future migrations,
 -- while revoking both privileges that would allow inherited writes or SET ROLE.
-REVOKE INHERIT OPTION FOR bertel_thesaurus_publisher FROM CURRENT_USER;
-REVOKE SET OPTION FOR bertel_thesaurus_publisher FROM CURRENT_USER;
+DO $publisher_membership$BEGIN
+  EXECUTE format('REVOKE INHERIT OPTION FOR bertel_thesaurus_publisher FROM %I',current_user);
+  EXECUTE format('REVOKE SET OPTION FOR bertel_thesaurus_publisher FROM %I',current_user);
+END $publisher_membership$;
 COMMENT ON FUNCTION api.thesaurus_admin(text,jsonb)IS'Thesaurus editorial actions, gated platform superuser, optimistic revisions and atomic publisher-role release.';
 COMMENT ON FUNCTION api.thesaurus_public(text,bigint,jsonb)IS'Partner-only immutable thesaurus release reader. No direct editorial table access.';
 NOTIFY pgrst,'reload schema';

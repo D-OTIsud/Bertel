@@ -66,6 +66,23 @@ it('preserves every unchanged inactive join without rewriting or deleting it', a
   expect(mutations).toEqual([]);
 });
 
+it('also preserves selected inactive terms on the legacy direct-catalog fallback', async () => {
+  const { from } = mockDatabase();
+  const loaded = await getObjectWorkspaceTaxonomyModule('o1', empty(), { ...catalogs, vocabularyRelease: undefined }, 'HOT');
+  expect(loaded.domains[0].assignment?.nodeId).toBe(nature.id);
+  expect(loaded.unitTypes.selectedCodes).toEqual([unit.code]);
+  expect(loaded.positionings?.selectedCodes).toEqual([positioning.code]);
+  expect(from.mock.calls.map(([table]) => table).filter((table) => table === 'ref_code')).toHaveLength(3);
+});
+
+it('retains missing unit joins when the nature catalog itself loaded correctly', async () => {
+  const { mutations } = mockDatabase();
+  const loaded = await getObjectWorkspaceTaxonomyModule('o1', empty(), { ...catalogs, refCodeByDomain: { taxonomy_hot: [nature, positioning] } }, 'HOT');
+  expect(loaded.unitTypes.unavailableReason).toMatch(/affectation est conservée/);
+  await saveObjectWorkspaceTaxonomy('o1', loaded);
+  expect(mutations).toEqual([]);
+});
+
 it('rejects a new inactive nature even if a forged UI payload contains it', async () => {
   mockDatabase();
   const loaded = await getObjectWorkspaceTaxonomyModule('o1', empty(), catalogs, 'HOT');

@@ -1,6 +1,6 @@
 import { useQuery, type QueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { fetchReferenceCatalogs, type ReferenceCatalogs } from '../services/reference-catalogs';
-import { fetchThesaurusGeneration } from '../services/thesaurus-generation';
+import { assertVocabularyGeneration, fetchThesaurusGeneration } from '../services/thesaurus-generation';
 import { generationQueryKey, THESAURUS_GENERATION_QUERY_KEY, useThesaurusGeneration } from './useThesaurusGeneration';
 
 export const REFERENCE_CATALOGS_QUERY_KEY = ['reference-catalogs', 2] as const;
@@ -29,7 +29,12 @@ export function useReferenceCatalogsQuery(): UseQueryResult<ReferenceCatalogs> {
   const generation = useThesaurusGeneration();
   return useQuery({
     queryKey: generationQueryKey(REFERENCE_CATALOGS_QUERY_KEY, generation),
-    queryFn: () => { if (generation.isError) throw generation.error; return fetchReferenceCatalogs(); },
+    queryFn: async () => {
+      if (generation.isError) throw generation.error;
+      const catalogs = await fetchReferenceCatalogs();
+      assertVocabularyGeneration(catalogs.vocabularyRelease, generation.data);
+      return catalogs;
+    },
     enabled: !generation.isPending,
     staleTime: CATALOGS_STALE_TIME_MS,
     gcTime: CATALOGS_GC_TIME_MS,
@@ -59,7 +64,11 @@ export async function ensureReferenceCatalogs(queryClient: QueryClient): Promise
     queryFn: fetchThesaurusGeneration, staleTime: 0, meta: { persist: false } });
   return queryClient.fetchQuery({
     queryKey: generation == null ? [...REFERENCE_CATALOGS_QUERY_KEY] : [...REFERENCE_CATALOGS_QUERY_KEY, generation],
-    queryFn: fetchReferenceCatalogs,
+    queryFn: async () => {
+      const catalogs = await fetchReferenceCatalogs();
+      assertVocabularyGeneration(catalogs.vocabularyRelease, generation);
+      return catalogs;
+    },
     staleTime: CATALOGS_STALE_TIME_MS,
     gcTime: CATALOGS_GC_TIME_MS,
     meta: { persist: true },

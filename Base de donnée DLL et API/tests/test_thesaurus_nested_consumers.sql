@@ -133,7 +133,7 @@ BEGIN
 END $$;
 
 DO $nested_test$
-DECLARE c record;usage_ids text[];before_hot timestamptz;before_res timestamptz;gen bigint;weekday uuid;copy jsonb;pair record;
+DECLARE c record;usage_ids text[];before_hot timestamptz;before_res timestamptz;before_hot_version bigint;before_res_version bigint;gen bigint;weekday uuid;copy jsonb;pair record;
   parent_copy jsonb;items_copy jsonb;a_copy jsonb;b_copy jsonb;c_copy jsonb;
 BEGIN
   ASSERT (SELECT count(*) FROM nested_sources)=15,'Non-vacuous source fixtures missing';
@@ -147,12 +147,14 @@ BEGIN
     ASSERT usage_ids=CASE WHEN c.domain IN('allergen','cuisine_type','dietary_tag')OR c.source_id='b73e9100-0000-4000-8000-000000000214'::uuid THEN ARRAY['RESRUNNESTED0003'] ELSE ARRAY['HOTRUNNESTED0001'] END,
       format('Nested source %s failed to resolve its exact owning fixture: %s',c.domain,usage_ids);
   END LOOP;
-  SELECT updated_at INTO before_hot FROM public.object WHERE id='HOTRUNNESTED0001';
-  SELECT updated_at INTO before_res FROM public.object WHERE id='RESRUNNESTED0003';
+  SELECT updated_at,current_version INTO before_hot,before_hot_version FROM public.object WHERE id='HOTRUNNESTED0001';
+  SELECT updated_at,current_version INTO before_res,before_res_version FROM public.object WHERE id='RESRUNNESTED0003';
   gen:=pg_temp.publish_nested(false);
   ASSERT gen=api.thesaurus_generation(),'Nested rename publication did not activate';
-  ASSERT (SELECT updated_at>before_hot FROM public.object WHERE id='HOTRUNNESTED0001'),'Nested hotel usages did not advance synchronization marker';
-  ASSERT (SELECT updated_at>before_res FROM public.object WHERE id='RESRUNNESTED0003'),'Nested menu usages did not advance synchronization marker';
+  -- Existing object triggers use transaction-stable now(): the timestamp can equal the
+  -- creation time of an uncommitted fixture. A version increment proves the real touch.
+  ASSERT (SELECT updated_at>=before_hot AND current_version>before_hot_version FROM public.object WHERE id='HOTRUNNESTED0001'),'Nested hotel usages did not advance synchronization marker/version';
+  ASSERT (SELECT updated_at>=before_res AND current_version>before_res_version FROM public.object WHERE id='RESRUNNESTED0003'),'Nested menu usages did not advance synchronization marker/version';
   gen:=pg_temp.publish_nested(true);
   ASSERT (api.thesaurus_admin('requalification')->>'total')::integer=15,'Requalification missed nested/array fixture usages';
 
@@ -172,6 +174,15 @@ BEGIN
   PERFORM pg_temp.assert_rejected($q$UPDATE public.object_classification SET subvalue_ids=ARRAY['b73e9300-0000-4000-8000-000000000203']::uuid[] WHERE id='b73ea700-0000-4000-8000-000000000202'$q$);
   PERFORM pg_temp.assert_rejected($q$INSERT INTO public.actor_channel(actor_id,kind_id,value)VALUES('b73ea800-0000-4000-8000-000000000202','b73e9100-0000-4000-8000-000000000214','Nouveau contact acteur interdit')$q$);
   PERFORM pg_temp.assert_rejected($q$INSERT INTO public.media_tag(media_id,tag_id)VALUES('b73ea400-0000-4000-8000-000000000202','b73e9100-0000-4000-8000-000000000215')$q$);
+
+  -- Keeping the same foreign-key value is historical retention only when ownership stays
+  -- with the same objects. Moving a row, its parent, or an actor bridge adds a new usage.
+  PERFORM pg_temp.assert_rejected($q$UPDATE public.media SET object_id='HOTRUNNESTED0002'WHERE id='b73ea400-0000-4000-8000-000000000201'$q$);
+  PERFORM pg_temp.assert_rejected($q$UPDATE public.contact_channel SET object_id='HOTRUNNESTED0002'WHERE id='b73ea500-0000-4000-8000-000000000201'$q$);
+  PERFORM pg_temp.assert_rejected($q$UPDATE public.object_classification SET object_id='HOTRUNNESTED0002'WHERE id='b73ea700-0000-4000-8000-000000000201'$q$);
+  PERFORM pg_temp.assert_rejected($q$UPDATE public.object_room_type SET object_id='HOTRUNNESTED0002'WHERE id='b73ea100-0000-4000-8000-000000000201'$q$);
+  PERFORM pg_temp.assert_rejected($q$UPDATE public.actor_channel SET actor_id='b73ea800-0000-4000-8000-000000000202'WHERE id='b73ea800-0000-4000-8000-000000000203'$q$);
+  PERFORM pg_temp.assert_rejected($q$INSERT INTO public.actor_object_role(actor_id,object_id,role_id)SELECT'b73ea800-0000-4000-8000-000000000201'::uuid,'HOTRUNNESTED0002',id FROM public.ref_actor_role WHERE code='operator'$q$);
 
   -- A parent deletion cascades after its own row disappears. Ownership retention must still
   -- recognize its historical children; no earlier child deletion has primed their retention.

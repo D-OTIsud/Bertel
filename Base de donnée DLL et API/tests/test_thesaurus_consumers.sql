@@ -9,7 +9,7 @@ SELECT set_config('request.jwt.claims','{"sub":"b73e0000-0000-4000-8000-00000000
 INSERT INTO public.ref_code_domain_registry(domain,name,object_type,is_hierarchical,is_taxonomy)
 VALUES('taxonomy_hlo','Hébergement témoin','HLO',true,true) ON CONFLICT(domain) DO NOTHING;
 INSERT INTO public.ref_code(id,domain,code,name,description,is_assignable) VALUES
-('b73e1000-0000-4000-8000-000000000101','taxonomy_hlo','consumer_root','Racine consommateur','Définition témoin',false);
+('b73e1000-0000-4000-8000-000000000101','taxonomy_hlo','consumer_root','Racine consommateur','Définition témoin',true);
 INSERT INTO public.ref_code(id,domain,code,name,description,parent_id,is_assignable) VALUES
 ('b73e1000-0000-4000-8000-000000000102','taxonomy_hlo','consumer_child','Enfant consommateur','Définition témoin','b73e1000-0000-4000-8000-000000000101',true);
 INSERT INTO public.object(id,object_type,name,status) VALUES

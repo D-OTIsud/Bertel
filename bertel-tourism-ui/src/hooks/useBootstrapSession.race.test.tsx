@@ -8,6 +8,7 @@ import { GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-stor
 import { useProviderScopeStore } from '../store/provider-scope-store';
 import { useDashboardExplorerStore, useExplorerStore } from '../store/explorer-store';
 import { bindSessionQueryCache } from '../app/session-query-cache';
+import { SANDBOX_MODE_KEY } from '../lib/sandbox-mode';
 
 jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn(), getApiClient: jest.fn() }));
 jest.mock('../services/user-profile', () => ({
@@ -93,7 +94,7 @@ beforeEach(() => {
   useSessionStore.setState({ demoMode: false, status: 'booting', errorMessage: null, langPrefs: ['fr', 'en'] });
 });
 
-it('bootstraps a real ready session, preserving sequential capabilities and provider preference', async () => {
+it('bootstraps a real ready session, preserving capabilities and provider preference', async () => {
   const auth = authHarness();
   renderHook(() => useBootstrapSession());
   await waitFor(() => expect(useSessionStore.getState().status).toBe('ready'));
@@ -103,6 +104,97 @@ it('bootstraps a real ready session, preserving sequential capabilities and prov
   });
   expect(auth.rpc.mock.calls.map(([name]) => name)).toEqual(PROBES);
   expect(useProviderScopeStore.getState()).toMatchObject({ userId: 'account-a', enabled: true });
+});
+
+it('starts all independent probes after the profile, without waiting for any earlier probe, and hydrates only the complete batch', async () => {
+  const auth = authHarness();
+  const pendingProfile = deferred<AppUserProfileRow>();
+  jest.mocked(getOrCreateUserProfile).mockReturnValueOnce(pendingProfile.promise);
+  const pending = new Map(PROBES.map((name) => [name, deferred<{ data: unknown; error: null }>()]));
+  const trace: string[] = [];
+  auth.rpc.mockImplementation((name) => {
+    trace.push(`start:${name}`);
+    return pending.get(name)!.promise;
+  });
+  renderHook(() => useBootstrapSession());
+  await waitFor(() => expect(getOrCreateUserProfile).toHaveBeenCalledTimes(1));
+  expect(auth.rpc).not.toHaveBeenCalled(); // The persona dependency remains sequential.
+  await finish(pendingProfile, profile('account-a'));
+  await waitFor(() => expect(auth.rpc).toHaveBeenCalledTimes(6));
+  expect(trace).toEqual(PROBES.map((name) => `start:${name}`));
+  expect(useSessionStore.getState().status).toBe('booting');
+  expect(useProviderScopeStore.getState().userId).toBeNull();
+
+  // Logical network trace: later requests can finish before the first. There is
+  // one dependency frontier, not six round trips accumulated by the client.
+  for (const name of PROBES.slice(1).reverse()) {
+    trace.push(`finish:${name}`);
+    await finish(pending.get(name)!, { data: auth.dataFor(name), error: null });
+    expect(useSessionStore.getState().status).toBe('booting');
+    expect(useProviderScopeStore.getState().userId).toBeNull();
+  }
+  trace.push(`finish:${PROBES[0]}`);
+  await finish(pending.get(PROBES[0])!, { data: true, error: null });
+  await waitFor(() => expect(useSessionStore.getState().status).toBe('ready'));
+  expect(useSessionStore.getState()).toMatchObject({ userId: 'account-a', orgId: 'ORG-account-a', canEditObjects: true, canCreateObjects: true });
+  expect(useProviderScopeStore.getState()).toMatchObject({ userId: 'account-a', enabled: true });
+  expect(trace.slice(0, 6).every((entry) => entry.startsWith('start:'))).toBe(true);
+});
+
+it.each(PROBES)('a failed parallel %s keeps its original neutral fallback and the other successful capability results', async (failedProbe) => {
+  const auth = authHarness();
+  const warning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  const pending = new Map(PROBES.map((name) => [name, deferred<{ data: unknown; error: null }>()]));
+  auth.rpc.mockImplementation((name) => pending.get(name)!.promise);
+  try {
+    renderHook(() => useBootstrapSession());
+    await waitFor(() => expect(auth.rpc).toHaveBeenCalledTimes(6));
+    await act(async () => { pending.get(failedProbe)!.reject(new Error('Synthetic probe unavailable')); });
+    expect(useSessionStore.getState().status).toBe('booting');
+    for (const name of PROBES.filter((probe) => probe !== failedProbe)) {
+      await finish(pending.get(name)!, { data: name === 'current_user_test_realm' ? true : auth.dataFor(name), error: null });
+    }
+    await waitFor(() => expect(useSessionStore.getState().status).toBe('ready'));
+    expect(useSessionStore.getState()).toMatchObject({
+      userId: 'account-a', role: 'tourism_agent',
+      canEditObjects: failedProbe !== 'current_user_can_edit_objects',
+      canCreateObjects: failedProbe !== 'user_can_create_object',
+      orgId: failedProbe === 'current_user_active_org' ? null : 'ORG-account-a',
+      adminRank: failedProbe === 'current_user_admin_rank' ? null : 10,
+      adminRoleCode: failedProbe === 'current_user_admin_role_code' ? null : 'TEAM_LEAD',
+      isTestRealm: failedProbe !== 'current_user_test_realm',
+    });
+    expect(warning).toHaveBeenCalledTimes(1);
+  } finally { warning.mockRestore(); }
+});
+
+it('the sandbox realm check still refuses a batch whose unrelated permissions succeeded', async () => {
+  const auth = authHarness();
+  window.sessionStorage.setItem(SANDBOX_MODE_KEY, 'true');
+  const realm = deferred<{ data: unknown; error: null }>();
+  auth.rpc.mockImplementation(async (name) => name === 'current_user_test_realm'
+    ? realm.promise : { data: auth.dataFor(name), error: null });
+  renderHook(() => useBootstrapSession());
+  await waitFor(() => expect(auth.rpc).toHaveBeenCalledTimes(6));
+  expect(useSessionStore.getState().status).toBe('booting');
+  await finish(realm, { data: false, error: null });
+  await waitFor(() => expect(useSessionStore.getState().status).toBe('error'));
+  expect(useSessionStore.getState().errorMessage).toContain('cloisonnement');
+  expect(useProviderScopeStore.getState().userId).toBeNull();
+});
+
+it.each(['sign-out', 'unmount'])('a whole pending batch cannot publish after %s', async (transition) => {
+  const auth = authHarness();
+  const pending = new Map(PROBES.map((name) => [name, deferred<{ data: unknown; error: null }>()]));
+  auth.rpc.mockImplementation((name) => pending.get(name)!.promise);
+  const view = renderHook(() => useBootstrapSession());
+  await waitFor(() => expect(auth.rpc).toHaveBeenCalledTimes(6));
+  if (transition === 'sign-out') act(() => { auth.emit('SIGNED_OUT', null); });
+  else view.unmount();
+  const status = useSessionStore.getState().status;
+  for (const name of PROBES) await finish(pending.get(name)!, { data: auth.dataFor(name), error: null });
+  expect(useSessionStore.getState()).toMatchObject({ status, userId: null });
+  expect(useProviderScopeStore.getState().userId).toBeNull();
 });
 
 it('SIGNED_OUT clears the session and populated cache immediately; a late profile cannot restore either', async () => {

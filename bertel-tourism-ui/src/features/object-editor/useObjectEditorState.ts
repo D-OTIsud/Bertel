@@ -23,14 +23,17 @@ function isModuleSnapshot(value: unknown, currentModules: ObjectWorkspaceModules
   });
 }
 
-function readLocalDraft(userId: string, objectId: string, currentModules: ObjectWorkspaceModules): { baseline: ObjectWorkspaceModules; draft: ObjectWorkspaceModules } | null {
+function readLocalDraft(userId: string, objectId: string, currentModules: ObjectWorkspaceModules): { baseline: ObjectWorkspaceModules; draft: ObjectWorkspaceModules; recoveryConflicts: string[] } | null {
   try {
     const raw = window.localStorage.getItem(localDraftKey(userId, objectId));
     if (!raw) return null;
     const record = JSON.parse(raw) as Record<string, unknown>;
     if (record.schemaVersion !== LOCAL_DRAFT_SCHEMA || record.objectId !== objectId
       || !isModuleSnapshot(record.baseline, currentModules) || !isModuleSnapshot(record.draft, currentModules)) return null;
-    return { baseline: record.baseline, draft: record.draft };
+    const recoveryConflicts = Array.isArray(record.recoveryConflicts) ? [...new Set(record.recoveryConflicts.filter((path): path is string =>
+      typeof path === 'string' && Object.keys(currentModules).some((key) => path === key || path.startsWith(`${key}.`) || path.startsWith(`${key}[`)),
+    ))] : [];
+    return { baseline: record.baseline, draft: record.draft, recoveryConflicts };
   } catch { return null; }
 }
 
@@ -64,6 +67,10 @@ export interface ObjectEditorState {
   resetModule: (key: keyof ObjectWorkspaceModules) => void;
   mergeSavedModule: <K extends keyof ObjectWorkspaceModules>(key: K, update: (current: ObjectWorkspaceModules[K]) => ObjectWorkspaceModules[K]) => void;
   commitModules: (keys: (keyof ObjectWorkspaceModules)[], options?: EditorCommitOptions) => void;
+  /** Explicit post-restore read; ordinary background refetches never call this. */
+  adoptRestoredModules: (modules: ObjectWorkspaceModules) => void;
+  /** Accept the retained local side of recovery conflicts; saving remains a separate action. */
+  keepRecoveredDraft: () => void;
   /** Sets object.status in BOTH draft and baseline (the new saved truth) without
    *  touching other fields — used after a successful status-lifecycle mutation so
    *  the UI reflects the change without a refetch (the snapshot is init-once). */
@@ -154,7 +161,7 @@ export function useObjectEditorState(
         key, restoreCatalogOptions(merged.value[key as keyof ObjectWorkspaceModules], module, key),
       ])) as unknown as ObjectWorkspaceModules;
       recoveredSnapshot = { objectId, baseline: cloneModules(modules), draft: restored };
-      conflicts = merged.conflicts;
+      conflicts = [...new Set([...stored.recoveryConflicts, ...merged.conflicts])];
     }
     setEditorState({ identityKey, snapshot: recoveredSnapshot, recoveryConflicts: conflicts });
     setHydratedKey(identityKey);
@@ -169,16 +176,17 @@ export function useObjectEditorState(
       // visible dirty/save state below excludes it. No hidden draft data is discarded.
       const isDirty = Object.values(getDirtySections(snapshot)).some(Boolean);
       const key = localDraftKey(userId, objectId);
-      if (!isDirty) window.localStorage.removeItem(key);
+      if (!isDirty && editorState.recoveryConflicts.length === 0) window.localStorage.removeItem(key);
       else window.localStorage.setItem(key, JSON.stringify({
         schemaVersion: LOCAL_DRAFT_SCHEMA,
         objectId,
         baseline: stripCatalogOptions(snapshot.baseline),
         draft: stripCatalogOptions(snapshot.draft),
+        recoveryConflicts: editorState.recoveryConflicts,
         savedAt: new Date().toISOString(),
       }));
     } catch { /* local storage can be unavailable or full; editing remains available */ }
-  }, [identityKey, objectId, snapshot, userId, hydratedKey, stateMatchesIdentity]);
+  }, [identityKey, objectId, snapshot, userId, hydratedKey, stateMatchesIdentity, editorState.recoveryConflicts]);
 
   const replaceModule = useCallback(<K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => {
     setEditorState((prev) => {
@@ -278,6 +286,37 @@ export function useObjectEditorState(
   // Keep its identity stable when a refetch only supplies a new gallery readId.
   }, [identityKey]);
 
+  const adoptRestoredModules = useCallback((restored: ObjectWorkspaceModules) => {
+    setEditorState((prev) => {
+      if (prev.identityKey !== identityKey) return prev;
+      const current = prev.snapshot;
+      // Match rpc_restore_object_version's exposed canonical fields. In particular,
+      // restoration does not replace status, media/CAS, prices or opening hours.
+      const restoredInfo = {
+        ...current.baseline.generalInfo,
+        name: restored.generalInfo.name,
+        nameTranslations: { ...restored.generalInfo.nameTranslations },
+        businessTimezone: restored.generalInfo.businessTimezone,
+        commercialVisibility: restored.generalInfo.commercialVisibility,
+        regionCode: restored.generalInfo.regionCode,
+        secondaryTypes: [...restored.generalInfo.secondaryTypes],
+      };
+      const merged = mergeDraftAgainstServer(
+        { generalInfo: current.baseline.generalInfo },
+        { generalInfo: current.draft.generalInfo },
+        { generalInfo: restoredInfo },
+      );
+      return { ...prev, snapshot: { ...current,
+        baseline: { ...current.baseline, generalInfo: restoredInfo },
+        draft: { ...current.draft, generalInfo: merged.value.generalInfo },
+      }, recoveryConflicts: [...new Set([...prev.recoveryConflicts, ...merged.conflicts])] };
+    });
+  }, [identityKey]);
+
+  const keepRecoveredDraft = useCallback(() => {
+    setEditorState((prev) => prev.identityKey !== identityKey ? prev : { ...prev, recoveryConflicts: [] });
+  }, [identityKey]);
+
   const setSavedStatus = useCallback((status: string) => {
     setEditorState((prev) => {
       if (prev.identityKey !== identityKey) return prev;
@@ -306,5 +345,5 @@ export function useObjectEditorState(
   const dirtySections = useMemo(() => getDirtySections(snapshot, nonApplicableModules), [snapshot, nonApplicableModules]);
   const isDirty = useMemo(() => Object.values(dirtySections).some(Boolean), [dirtySections]);
 
-  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, mergeSavedModule, setSavedStatus };
+  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, mergeSavedModule, adoptRestoredModules, keepRecoveredDraft, setSavedStatus };
 }

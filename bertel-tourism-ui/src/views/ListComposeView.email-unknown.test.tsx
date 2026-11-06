@@ -106,3 +106,16 @@ it('captures the context before the recipient prompt can change it, not after an
   expect(JSON.parse(calls('prepare')[0][1].body).expectedGeneration).toBe('4');
   expect(calls('dispatch')).toHaveLength(1);
 });
+
+it('known acceptance releases the view while its technical ACK is pending, with no replay',async()=>{
+  let release!: (value: ReturnType<typeof response>) => void;
+  const ack=new Promise<ReturnType<typeof response>>((done)=>{release=done;});
+  installFlow(({phase})=>phase==='ack'?ack:undefined);
+  await page();fireEvent.click(await screen.findByRole('button',{name:/^Envoyer$/}));
+  try {
+    await waitFor(()=>expect(calls('ack')).toHaveLength(1));
+    await waitFor(()=>expect(screen.getByRole('button',{name:/^Envoyer$/})).not.toBeDisabled());
+    expect(screen.getByText(/E-mail envoy/)).toBeInTheDocument();
+    expect(calls('prepare')).toHaveLength(1);expect(calls('dispatch')).toHaveLength(1);
+  } finally {await act(async()=>{release(response(200,{ok:true,phase:'acknowledged',acknowledged:true}));});}
+});

@@ -539,6 +539,19 @@ describe('sendListByEmail — existing mail errors and exact structured phases',
     await expect(testSend()).resolves.toEqual({ trackingUpdated: true });
     expect((global.fetch as jest.Mock).mock.calls.map(([, opts]) => JSON.parse(opts.body).phase)).toEqual(['prepare','dispatch','ack']);
   });
+  it('known acceptance does not wait for a pending technical ACK or replay prepare/dispatch', async () => {
+    const { waitFor } = require('@testing-library/dom');
+    let release!: (value: ReturnType<typeof mailReply>) => void;
+    const ack = new Promise<ReturnType<typeof mailReply>>((done) => { release = done; });
+    const positive = positiveMailFetch();
+    global.fetch = jest.fn((path: string, options: RequestInit) => JSON.parse(String(options.body)).phase === 'ack' ? ack : positive(path, options)) as unknown as typeof fetch;
+    const accepted = jest.fn(); const pending = testSend().then(accepted);
+    try {
+      await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(accepted).toHaveBeenCalledWith({ trackingUpdated: true }));
+      expect((global.fetch as jest.Mock).mock.calls.map(([,options]) => JSON.parse(options.body).phase)).toEqual(['prepare','dispatch','ack']);
+    } finally { release(mailReply(200, { ok: true, phase: 'acknowledged', operationId: MAIL_OPERATION, acknowledged: true })); await pending; }
+  });
   it('keeps exact case, stable identity and explicit predecessor confirmation', async () => {
     const previous = 'd2000000-0000-4000-8000-000000000002'; global.fetch = positiveMailFetch() as unknown as typeof fetch;
     await testSend('ExactCase@example.invalid', { confirmedPreviousOperationId: previous, confirmResend: true });

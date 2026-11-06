@@ -284,7 +284,7 @@ BEGIN
         OR EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhrelid=target.oid AND i.inhparent='public.ref_code'::regclass))
   LOOP
     IF NOT EXISTS(SELECT 1 FROM thesaurus.concept c WHERE c.concept_id=ANY(p_concepts)AND c.source_kind=f.kind AND(f.source_domain IS NULL OR c.domain=f.source_domain))THEN CONTINUE;END IF;
-    SELECT string_agg(format('t.%I::text = c.%I',la.attname,CASE WHEN ra.attname='domain'THEN'domain'ELSE'source_id'END),' AND ' ORDER BY u.ord)
+    SELECT string_agg(format('t.%I::text = c.%I',la.attname,CASE ra.attname WHEN'domain'THEN'domain'WHEN'code'THEN'code'ELSE'source_id'END),' AND ' ORDER BY u.ord)
     INTO cond FROM unnest(f.conkey,f.confkey)WITH ORDINALITY u(l,r,ord)
       JOIN pg_attribute la ON la.attrelid=f.conrelid AND la.attnum=u.l JOIN pg_attribute ra ON ra.attrelid=f.confrelid AND ra.attnum=u.r;
     sql:=format('SELECT DISTINCT unnest(thesaurus.object_ids_for_row(%s,to_jsonb(t)))FROM %I.%I t JOIN thesaurus.concept c ON c.source_kind=%L AND %s %s WHERE c.concept_id=ANY($1)',f.conrelid,f.nspname,f.relname,f.kind,cond,CASE WHEN f.source_domain IS NULL THEN''ELSE format('AND c.domain=%L',f.source_domain)END);
@@ -292,6 +292,20 @@ BEGIN
   END LOOP;
   RETURN QUERY SELECT DISTINCT oc.object_id::text FROM public.object_classification oc CROSS JOIN LATERAL unnest(oc.subvalue_ids)sub_id JOIN thesaurus.concept c ON c.source_kind='classification_value'AND c.source_id=sub_id::text WHERE c.concept_id=ANY(p_concepts);
 END $$;
+
+-- Natural source parents include typed standalone structures as well as ref_code
+-- hierarchies (amenity family, classification scheme and sustainability category).
+-- UNION deduplicates identities and terminates even if a legacy source is cyclic.
+CREATE OR REPLACE FUNCTION thesaurus.source_descendant_ids(p_concepts uuid[])RETURNS uuid[]LANGUAGE sql STABLE
+SET search_path=pg_catalog,thesaurus AS $$
+WITH RECURSIVE descendants(concept_id,source_kind,source_id,domain)AS(
+  SELECT c.concept_id,c.source_kind,c.source_id,c.domain FROM thesaurus.concept c WHERE c.concept_id=ANY(p_concepts)
+  UNION
+  SELECT child.concept_id,child.source_kind,child.source_id,child.domain FROM descendants parent
+  JOIN thesaurus.source_rows source ON(source.parent_kind,source.parent_source_id,source.parent_domain)=(parent.source_kind,parent.source_id,parent.domain)
+  JOIN thesaurus.concept child ON(child.source_kind,child.source_id,child.domain)=(source.source_kind,source.source_id,source.domain))
+SELECT COALESCE(array_agg(DISTINCT concept_id),'{}')FROM descendants
+$$;
 
 CREATE OR REPLACE FUNCTION thesaurus.concept_document(p_id uuid) RETURNS jsonb LANGUAGE plpgsql STABLE
 SET search_path=pg_catalog,thesaurus AS $$
@@ -535,8 +549,7 @@ BEGIN
   UPDATE thesaurus.vocabulary SET is_governed=true,updated_at=now() WHERE domain IN(SELECT c.domain FROM thesaurus.revision r JOIN thesaurus.concept c USING(concept_id)WHERE r.revision_id=ANY(COALESCE(p_revision_ids,'{}')));
   PERFORM thesaurus.ensure_parent_dependencies();
   -- Include descendants before AND after a re-parenting, so no old path is missed.
-  SELECT COALESCE(array_agg(DISTINCT x.concept_id),'{}')INTO ids FROM(
-    SELECT unnest(ids)concept_id UNION SELECT cc.concept_id FROM thesaurus.concept c JOIN public.ref_code_taxonomy_closure cl ON cl.ancestor_id::text=c.source_id AND cl.domain=c.domain JOIN thesaurus.concept cc ON cc.source_kind='ref_code' AND cc.source_id=cl.descendant_id::text AND cc.domain=cl.domain WHERE c.concept_id=ANY(ids))x;
+  ids:=thesaurus.source_descendant_ids(ids);
   SELECT COALESCE(array_agg(DISTINCT object_id),'{}')INTO affected FROM thesaurus.usage_objects(ids);
   prior_ids:=ids;
   FOR r IN SELECT * FROM thesaurus.revision WHERE revision_id=ANY(COALESCE(p_revision_ids,'{}')) ORDER BY concept_id LOOP
@@ -569,7 +582,7 @@ BEGIN
   FOR d IN SELECT DISTINCT c.domain FROM thesaurus.concept c WHERE c.concept_id=ANY(ids)AND c.source_kind='ref_code' LOOP
     IF EXISTS(SELECT 1 FROM public.ref_code_domain_registry WHERE domain=d AND is_taxonomy)THEN PERFORM api.refresh_ref_code_taxonomy_closure(d);END IF;
   END LOOP;
-  SELECT COALESCE(array_agg(DISTINCT x.concept_id),'{}')INTO ids FROM(SELECT unnest(ids)concept_id UNION SELECT cc.concept_id FROM thesaurus.concept c JOIN public.ref_code_taxonomy_closure cl ON cl.ancestor_id::text=c.source_id AND cl.domain=c.domain JOIN thesaurus.concept cc ON cc.source_kind='ref_code' AND cc.source_id=cl.descendant_id::text AND cc.domain=cl.domain WHERE c.concept_id=ANY(ids))x;
+  ids:=thesaurus.source_descendant_ids(ids);
   -- Assignments cannot change under the exclusive fence. Re-read only owners of
   -- descendants newly brought into scope by a hierarchy change, not all old ones.
   added_ids:=ARRAY(SELECT unnest(ids)EXCEPT SELECT unnest(prior_ids));
@@ -621,7 +634,7 @@ BEGIN
   END LOOP;
   IF cardinality(ids)<>cardinality(p_ids)THEN RAISE EXCEPTION 'Unknown revision' USING ERRCODE='PT404';END IF;
   SELECT md5(COALESCE(string_agg(revision_id::text||':'||version||':'||base_fingerprint,','ORDER BY revision_id),''))INTO fp FROM thesaurus.revision WHERE revision_id=ANY(p_ids);
-  SELECT COALESCE(array_agg(DISTINCT x.concept_id),'{}')INTO ids FROM(SELECT unnest(ids)concept_id UNION SELECT cc.concept_id FROM thesaurus.concept c JOIN public.ref_code_taxonomy_closure cl ON cl.ancestor_id::text=c.source_id AND cl.domain=c.domain JOIN thesaurus.concept cc ON cc.source_kind='ref_code' AND cc.source_id=cl.descendant_id::text AND cc.domain=cl.domain WHERE c.concept_id=ANY(ids))x;
+  ids:=thesaurus.source_descendant_ids(ids);
   RETURN jsonb_build_object('errors',errs,'warnings',warns,'changed_count',cardinality(p_ids),'affected_objects',(SELECT count(DISTINCT object_id)FROM thesaurus.usage_objects(ids)),'changes',changes,'preview_fingerprint',fp,'expected_revision_versions',(SELECT jsonb_object_agg(revision_id::text,version)FROM thesaurus.revision WHERE revision_id=ANY(p_ids)));
 END $$;
 
@@ -862,7 +875,7 @@ BEGIN
     kind:=CASE f.relname WHEN'ref_amenity'THEN'amenity'WHEN'ref_classification_scheme'THEN'classification_scheme'WHEN'ref_classification_value'THEN'classification_value'WHEN'ref_language'THEN'language'WHEN'ref_commune'THEN'commune'WHEN'ref_sustainability_action'THEN'sustainability_action'WHEN'ref_sustainability_action_category'THEN'sustainability_category'ELSE'ref_code'END;
     source_domain:=CASE WHEN f.relispartition THEN substring(pg_get_expr(f.relpartbound,f.confrelid)FROM'''([^'']+)''')END;keyj:='{}';
     FOR k IN SELECT la.attname l,ra.attname r FROM unnest(f.conkey,f.confkey)WITH ORDINALITY u(l,r,ord)JOIN pg_attribute la ON la.attrelid=p_table AND la.attnum=u.l JOIN pg_attribute ra ON ra.attrelid=f.confrelid AND ra.attnum=u.r LOOP keyj:=keyj||jsonb_build_object(k.r,p_row->k.l);END LOOP;
-    IF EXISTS(SELECT 1 FROM thesaurus.concept c JOIN thesaurus.vocabulary v ON v.domain=c.domain AND v.is_governed JOIN thesaurus.source_rows s ON(s.source_kind,s.source_id,s.domain)=(c.source_kind,c.source_id,c.domain)WHERE c.source_kind=kind AND(source_domain IS NULL OR s.domain=source_domain)AND s.source_key@>keyj AND(c.lifecycle<>'active'OR NOT c.assignable OR NOT COALESCE((s.payload->>'is_active')::boolean,true)OR COALESCE((s.payload->>'valid_from')::date,current_date)>current_date OR COALESCE((s.payload->>'valid_to')::date,current_date)<current_date OR NOT EXISTS(SELECT 1 FROM thesaurus.release_concept rc WHERE rc.release_id=api.thesaurus_generation()AND rc.concept_id=c.concept_id)))THEN RETURN true;END IF;
+    IF EXISTS(SELECT 1 FROM thesaurus.concept c JOIN thesaurus.vocabulary v ON v.domain=c.domain AND v.is_governed JOIN thesaurus.source_rows s ON(s.source_kind,s.source_id,s.domain)=(c.source_kind,c.source_id,c.domain)WHERE c.source_kind=kind AND(source_domain IS NULL OR s.domain=source_domain)AND s.payload@>keyj AND(c.lifecycle<>'active'OR NOT c.assignable OR NOT COALESCE((s.payload->>'is_active')::boolean,true)OR COALESCE((s.payload->>'valid_from')::date,current_date)>current_date OR COALESCE((s.payload->>'valid_to')::date,current_date)<current_date OR NOT EXISTS(SELECT 1 FROM thesaurus.release_concept rc WHERE rc.release_id=api.thesaurus_generation()AND rc.concept_id=c.concept_id)))THEN RETURN true;END IF;
   END LOOP;
   IF p_table='public.object_classification'::regclass AND thesaurus.is_governed('classification_value')AND EXISTS(SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(p_row->'subvalue_ids')='array'THEN p_row->'subvalue_ids'ELSE'[]'END)x JOIN thesaurus.concept c ON c.source_kind='classification_value'AND c.source_id=x.value WHERE c.lifecycle<>'active'OR NOT c.assignable)THEN RETURN true;END IF;
   FOR f IN SELECT con.conrelid,con.conkey,con.confkey FROM pg_constraint con JOIN pg_class child_tbl ON child_tbl.oid=con.conrelid JOIN pg_namespace ns ON ns.oid=child_tbl.relnamespace WHERE con.contype='f'AND con.confrelid=p_table AND ns.nspname='public'AND child_tbl.relname NOT LIKE'ref\_%'AND NOT con.conrelid=ANY(p_visited||p_table)LOOP
@@ -952,7 +965,7 @@ BEGIN
     END LOOP;
     IF EXISTS(SELECT 1 FROM jsonb_each(keyj)x WHERE x.value='null'::jsonb)THEN CONTINUE;END IF;
     IF TG_OP='UPDATE'AND keyj=oldkey AND objects<@oldobjects THEN CONTINUE;END IF;
-    FOR c IN SELECT c.*,s.payload FROM thesaurus.concept c JOIN thesaurus.source_rows s ON(s.source_kind,s.source_id,s.domain)=(c.source_kind,c.source_id,c.domain)JOIN thesaurus.vocabulary v ON v.domain=c.domain AND v.is_governed WHERE c.source_kind=f->>'kind'AND(f->>'domain'IS NULL OR c.domain=f->>'domain')AND s.source_key@>keyj LOOP
+    FOR c IN SELECT c.*,s.payload FROM thesaurus.concept c JOIN thesaurus.source_rows s ON(s.source_kind,s.source_id,s.domain)=(c.source_kind,c.source_id,c.domain)JOIN thesaurus.vocabulary v ON v.domain=c.domain AND v.is_governed WHERE c.source_kind=f->>'kind'AND(f->>'domain'IS NULL OR c.domain=f->>'domain')AND s.payload@>keyj LOOP
       FOREACH obj IN ARRAY objects LOOP
       IF TG_OP='UPDATE'AND keyj=oldkey AND obj=ANY(oldobjects)THEN CONTINUE;END IF;
       IF TG_OP='DELETE'THEN
@@ -1036,6 +1049,8 @@ DO $projection_writer$DECLARE body text;t text;rel regclass;normalized text;part
     END IF;
   END LOOP;
 END $projection_writer$;
+-- Also narrow an earlier development application when this migration is replayed.
+REVOKE UPDATE ON public.object FROM bertel_thesaurus_publisher;
 GRANT UPDATE(cached_amenity_codes,cached_payment_codes,cached_environment_tags,cached_language_codes,cached_classification_codes,cached_taxonomy_codes,search_document,search_document_text,search_document_phonetic,updated_at)ON public.object TO bertel_thesaurus_publisher;
 DROP POLICY IF EXISTS thesaurus_projection_update ON public.object;
 CREATE POLICY thesaurus_projection_update ON public.object FOR UPDATE TO bertel_thesaurus_publisher USING(true)WITH CHECK(true);

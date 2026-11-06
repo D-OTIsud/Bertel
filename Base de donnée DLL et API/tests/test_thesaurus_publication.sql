@@ -22,6 +22,10 @@ INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTH
 DO $test$
 DECLARE workspace jsonb;res jsonb;doc jsonb;rev jsonb;rev_a jsonb;rev_b jsonb;prevw jsonb;pub jsonb;oldexport jsonb;cid uuid;child uuid;newcid uuid;rid uuid;v integer;first_release bigint;next_release bigint;count_before integer;before_time timestamptz;before_version integer;deny boolean;before_content jsonb;cache_projection jsonb;
 BEGIN
+  ASSERT NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='bertel_thesaurus_publisher'AND(rolcanlogin OR rolsuper OR rolbypassrls OR rolcreaterole OR rolinherit)),'Publisher role must remain a restricted non-login identity';
+  ASSERT NOT pg_has_role('anon','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('authenticated','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('service_role','bertel_thesaurus_publisher','SET'),'Application roles can assume publisher identity';
+  ASSERT NOT has_column_privilege('bertel_thesaurus_publisher','public.object','name','UPDATE')AND has_column_privilege('bertel_thesaurus_publisher','public.object','updated_at','UPDATE'),'Publisher object privileges must be limited to projections';
+  ASSERT NOT has_function_privilege('authenticated','thesaurus.refresh_affected_objects(text[])','EXECUTE')AND NOT has_function_privilege('service_role','thesaurus.refresh_affected_objects(text[])','EXECUTE'),'Private projection writer became callable by applications';
   ASSERT api.thesaurus_generation()IS NULL,'New installation must remain unactivated';
   BEGIN PERFORM api.thesaurus_public('manifest');RAISE EXCEPTION 'Missing release was accepted';EXCEPTION WHEN SQLSTATE'PT503'THEN NULL;END;
   res:=api.thesaurus_admin('configure_instance','{"base_uri":"https://example.invalid/api/public/thesaurus/concepts/","license":"test-fixture-only","attribution":"Fixture owner"}');

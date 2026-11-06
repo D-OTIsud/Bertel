@@ -1,0 +1,42 @@
+[
+  {
+    "path": "dist/maplibre-gl.js",
+    "beforeSha256": "1fcd51e5935f54c7a9dcaf03f4bc3d557035cf43ed171c355942c953b45a1c48",
+    "afterSha256": "2f5feebd7e7ee49f80e63cd45b081377d42f0772516d28c8b1fd7b5ab6711a39",
+    "before": "for(const{name:t,value:i}of e.attributes)",
+    "after": "for(const{name:t,value:i}of Array.from(e.attributes))",
+    "sourceMap": "maplibre-gl.js.map"
+  },
+  {
+    "path": "dist/maplibre-gl-csp.js",
+    "beforeSha256": "4ab5ebdde13a545b1f9e3d95f2746abd6bb7a71eb7dca24fa71ed01fb579bc34",
+    "afterSha256": "7876dd50d2fe962272b08835060b565769114730e459d34757206455c8e466f8",
+    "before": "for(const{name:t,value:i}of e.attributes)",
+    "after": "for(const{name:t,value:i}of Array.from(e.attributes))",
+    "sourceMap": "maplibre-gl-csp.js.map"
+  },
+  {
+    "path": "dist/maplibre-gl-dev.js",
+    "beforeSha256": "e2c8e716d97077d616b64f0dda0ab8df887b91c4f934af1722f67153c246b445",
+    "afterSha256": "16cbed8ad43db61a2c08bc7453cdf338af7b4f83bcb4e5f8cfa2f7dab1baf902",
+    "before": "for (const { name, value } of elem.attributes) {",
+    "after": "for (const { name, value } of Array.from(elem.attributes)) {",
+    "sourceMap": "maplibre-gl-dev.js.map"
+  },
+  {
+    "path": "dist/maplibre-gl-csp-dev.js",
+    "beforeSha256": "7bac4f172af5ba3700bb282e4e03ce1942c8ce74d4df151fb1664f81673ff341",
+    "afterSha256": "58570678b02b6a0b7ec67ba1732d0ffef92e4158930cdcf7d645a9f36f3428f7",
+    "before": "for (const { name, value } of elem.attributes) {",
+    "after": "for (const { name, value } of Array.from(elem.attributes)) {",
+    "sourceMap": "maplibre-gl-csp-dev.js.map"
+  },
+  {
+    "path": "src/util/dom.ts",
+    "beforeSha256": "18352698c36a6d160c2b6a70b74260e555af15a4c7c493f5107ba34439969914",
+    "afterSha256": "7141995bba3c5afab612ba3ff16cf82d5edd2dab284215894a407d68a36d80e3",
+    "before": "for (const {name, value} of elem.attributes) {",
+    "after": "for (const {name, value} of Array.from(elem.attributes)) {",
+    "sourceMap": null
+  }
+]

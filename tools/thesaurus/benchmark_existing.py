@@ -36,6 +36,20 @@ def edit():
   x.commit();out['editor_wait_ms']=round((time.perf_counter()-t)*1000,2)
  except Exception as er:x.rollback();out['editor_error']=str(er)
  finally:x.close()
+reader_ready=threading.Event()
+def read():
+ x=con('thesaurus-existing-reader');x.autocommit=True;durations=[]
+ try:
+  with x.cursor()as q:
+   q.execute("select count(*) from internal.mv_filtered_objects");q.fetchone();reader_ready.set()
+   while not done.is_set():
+    t=time.perf_counter();q.execute("select count(*) from internal.mv_filtered_objects");q.fetchone();durations.append((time.perf_counter()-t)*1000)
+    time.sleep(.01)
+  out['reader_queries']=len(durations);out['reader_max_wait_ms']=round(max(durations,default=0),2)
+ except Exception as er:out['reader_error']=str(er);reader_ready.set()
+ finally:x.close()
+
+r=threading.Thread(target=read);r.start();reader_ready.wait(10)
 a=threading.Thread(target=pub);a.start();started.wait(10)
 observer=con('thesaurus-existing-observer');observer.autocommit=True
 while not done.is_set():
@@ -46,8 +60,10 @@ while not done.is_set():
 if out.get('observed_publication_fence'):
  b=threading.Thread(target=edit);b.start();b.join(120)
 a.join(120)
+r.join(10)
 if a.is_alive():raise SystemExit('Publication timed out')
 out['within_2s_editor_budget']=bool(out.get('observed_publication_fence'))and out.get('editor_wait_ms',float('inf'))<=2000
+out['within_2s_reader_budget']=bool(out.get('observed_publication_fence'))and out.get('reader_queries',0)>0 and out.get('reader_max_wait_ms',float('inf'))<=2000
 print(json.dumps(out,ensure_ascii=False,indent=2),flush=True)
 if args.output:args.output.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 observer.close();c.close()

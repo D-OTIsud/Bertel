@@ -10,6 +10,7 @@ INSERT INTO public.ref_code(id,domain,code,name,description,name_i18n,metadata)V
  ('b73e1000-0000-4000-8000-000000000001','taxonomy_hlo','thesaurus_test_root','Racine du test','Définition racine','{"en":"Test root"}','{"aliases":["Terme historique"]}'),
  ('b73e1000-0000-4000-8000-000000000003','amenity_family','thesaurus_test_family','Famille du test','Définition famille','{}','{}');
 INSERT INTO public.ref_code(id,domain,code,name,description,parent_id)VALUES('b73e1000-0000-4000-8000-000000000002','taxonomy_hlo','thesaurus_test_child','Enfant du test','Définition enfant','b73e1000-0000-4000-8000-000000000001');
+INSERT INTO public.ref_code(id,domain,code,name,description,valid_to)VALUES('b73e1000-0000-4000-8000-000000000004','taxonomy_hlo','thesaurus_test_date_boundary','Validité à la frontière de date','Définition témoin',(now()AT TIME ZONE'Etc/GMT+12')::date);
 INSERT INTO public.ref_amenity(id,code,name,family_id,description)VALUES('b73e2000-0000-4000-8000-000000000001','thesaurus_test_amenity','Équipement du test','b73e1000-0000-4000-8000-000000000003','Définition équipement');
 INSERT INTO public.ref_classification_scheme(id,code,name,description)VALUES('b73e3000-0000-4000-8000-000000000001','thesaurus_test_scheme','Classement du test','Définition schéma');
 INSERT INTO public.ref_classification_value(id,scheme_id,code,name)VALUES('b73e3000-0000-4000-8000-000000000002','b73e3000-0000-4000-8000-000000000001','same_code','Valeur du test');
@@ -31,13 +32,14 @@ INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTH
 DO $test$
 DECLARE workspace jsonb;res jsonb;doc jsonb;rev jsonb;rev_a jsonb;rev_b jsonb;prevw jsonb;pub jsonb;oldexport jsonb;cid uuid;child uuid;newcid uuid;rid uuid;v integer;first_release bigint;next_release bigint;count_before integer;before_time timestamptz;before_version integer;deny boolean;before_content jsonb;cache_projection jsonb;
   before_test_time timestamptz;before_test_version integer;before_test_versions bigint;before_real_versions bigint;
+  original_timezone text;western_date date;dated_export jsonb;
 BEGIN
   ASSERT NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='bertel_thesaurus_publisher'AND(rolcanlogin OR rolsuper OR rolbypassrls OR rolcreaterole OR rolinherit)),'Publisher role must remain a restricted non-login identity';
   ASSERT NOT pg_has_role('anon','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('authenticated','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('service_role','bertel_thesaurus_publisher','SET'),'Application roles can assume publisher identity';
   ASSERT NOT has_column_privilege('bertel_thesaurus_publisher','public.object','name','UPDATE')AND has_column_privilege('bertel_thesaurus_publisher','public.object','updated_at','UPDATE'),'Publisher object privileges must be limited to projections';
   ASSERT NOT has_function_privilege('authenticated','thesaurus.refresh_affected_objects(text[])','EXECUTE')AND NOT has_function_privilege('service_role','thesaurus.refresh_affected_objects(text[])','EXECUTE'),'Private projection writer became callable by applications';
   ASSERT(SELECT count(*)FROM pg_trigger WHERE tgrelid='public.object'::regclass AND tgname=ANY(ARRAY['trg_audit_object','trg_increment_object_version','trg_object_version','update_object_updated_at'])AND NOT tgisinternal AND tgenabled='O'AND pg_get_expr(tgqual,tgrelid)=$guard$(CURRENT_USER <> 'bertel_thesaurus_publisher'::name)$guard$)=4,'Canonical object trigger publisher guards drifted after the fresh manifest';
-  ASSERT has_function_privilege('bertel_thesaurus_publisher','api.current_user_test_realm()','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.current_user_extended_object_ids()','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.can_read_object(text)','EXECUTE'),'Publisher lacks the precise existing RLS helper grants';
+  ASSERT has_function_privilege('bertel_thesaurus_publisher','api.current_user_test_realm()','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.current_user_extended_object_ids()','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.can_read_object(text)','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.user_can_write_object_canonical(text)','EXECUTE'),'Publisher lacks the precise existing RLS helper grants';
   ASSERT (SELECT is_test FROM public.object WHERE id='HLORUNTHESAUR003')AND NOT(SELECT is_test FROM public.object WHERE id='HLORUNTHESAUR001'),'Publication fixture must exercise both actual realms';
   ASSERT api.thesaurus_generation()IS NULL,'New installation must remain unactivated';
   BEGIN PERFORM api.thesaurus_public('manifest');RAISE EXCEPTION 'Missing release was accepted';EXCEPTION WHEN SQLSTATE'PT503'THEN NULL;END;
@@ -61,6 +63,15 @@ BEGIN
   BEGIN PERFORM api.thesaurus_admin('bootstrap','{"domains":["taxonomy_hlo"],"idempotency_key":"thesaurus-test-bootstrap"}');RAISE EXCEPTION 'Reused idempotency key accepted different request';EXCEPTION WHEN SQLSTATE'PT409'THEN NULL;END;
   oldexport:=api.thesaurus_public('export',first_release,'{"domains":["taxonomy_hlo"],"lang":"en-US","domains":null,"status":null,"query":null,"after":null}');
   ASSERT jsonb_array_length(oldexport->'data')>=2,'Actual snapshot export omitted fixtures';
+  original_timezone:=current_setting('TimeZone');
+  PERFORM set_config('TimeZone','Etc/GMT+12',true);western_date:=current_date;
+  dated_export:=api.thesaurus_public('export',first_release,'{"lang":"en-US"}');
+  ASSERT EXISTS(SELECT 1 FROM jsonb_array_elements(api.list_catalog('taxonomy_hlo'))x WHERE x->>'code'='thesaurus_test_date_boundary'),'Date-boundary fixture is not valid on its last day';
+  PERFORM set_config('TimeZone','Etc/GMT-14',true);
+  ASSERT current_date>western_date,'Controlled timezone clock did not cross a date boundary';
+  ASSERT api.thesaurus_public('export',first_release,'{"lang":"en-US"}')=dated_export,'Stored export or as_of changed across a validity-date boundary';
+  ASSERT NOT EXISTS(SELECT 1 FROM jsonb_array_elements(api.list_catalog('taxonomy_hlo'))x WHERE x->>'code'='thesaurus_test_date_boundary'),'Legacy catalog must reevaluate current validity after the date boundary';
+  PERFORM set_config('TimeZone',original_timezone,true);
   BEGIN UPDATE public.ref_code SET name='Forbidden direct write'WHERE id='b73e1000-0000-4000-8000-000000000001'AND domain='taxonomy_hlo';RAISE EXCEPTION 'Canonical guard allowed owner role outside publication';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
   PERFORM set_config('app.thesaurus_publisher','true',true);
   BEGIN UPDATE public.ref_code SET name='Forged session capability'WHERE id='b73e1000-0000-4000-8000-000000000001'AND domain='taxonomy_hlo';RAISE EXCEPTION 'GUC bypassed canonical guard';EXCEPTION WHEN insufficient_privilege THEN NULL;END;

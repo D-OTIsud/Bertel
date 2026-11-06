@@ -1,9 +1,11 @@
 /** @jest-environment node */
 // POST /api/menu/extract — API-01 body bound + AI concurrency semaphore.
 import { POST } from './route';
+import { admitAiRequest } from '@/lib/ai-admission.server';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
+jest.mock('@/lib/ai-admission.server', () => ({ admitAiRequest: jest.fn() }));
 jest.mock('./media-prep', () => ({
   MAX_VISION_IMAGES: 8,
   prepareVisionImage: jest.fn(async (buf: Buffer, mime: string) => ({ mime, base64: buf.toString('base64') })),
@@ -57,6 +59,7 @@ function serverWithUser() {
 
 describe('POST /api/menu/extract', () => {
   beforeEach(() => {
+    jest.mocked(admitAiRequest).mockReset().mockResolvedValue({ allowed: true, remaining: 11, retryAfter: 0 });
     testUser += 1;
     mockedServer.mockReset();
     mockedCreate.mockReset();

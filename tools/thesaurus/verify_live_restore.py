@@ -5,6 +5,10 @@ installed on a database whose name starts with bertel_thesaurus_live_restore_.
 The publication deliberately renames a root on that disposable copy.
 """
 
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 import json
 from pathlib import Path

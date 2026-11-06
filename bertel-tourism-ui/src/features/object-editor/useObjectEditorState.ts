@@ -149,9 +149,9 @@ export function useObjectEditorState(
     !nonApplicableKeys.some((key) => path === key || path.startsWith(`${key}.`) || path.startsWith(`${key}[`)),
   ) : [];
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
-  const catalogSource = useRef({ identityKey, modules });
   const [localDraftFailure, setLocalDraftFailure] = useState<string | null>(null);
   const unreadLocalDraft = useRef<string | null>(null);
+  const catalogSource = useRef({ identityKey, modules });
 
   useEffect(() => {
     setHydratedKey(null);

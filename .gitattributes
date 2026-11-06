@@ -7,3 +7,7 @@
 /supabase/migrations/20261026104513_open_status_priority.sql -text
 /supabase/migrations/20261026102949_object_rooms_reconcile_v1.sql -text
 /supabase/migrations/20261026102125_object_places_reconcile_v1.sql -text
+
+# Preserve the actual reviewed request bytes and its separate fresh source.
+/supabase/migrations/20261106200353_distributed_ai_request_admission.sql -text
+"/Base de donnée DLL et API/ai_request_admission.sql" -text

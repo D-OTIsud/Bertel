@@ -15,6 +15,7 @@ INSERT INTO public.ref_classification_scheme(id,code,name,description)VALUES('b7
 INSERT INTO public.ref_classification_value(id,scheme_id,code,name)VALUES('b73e3000-0000-4000-8000-000000000002','b73e3000-0000-4000-8000-000000000001','same_code','Valeur du test');
 INSERT INTO public.ref_sustainability_action_category(id,code,name,description)VALUES('b73e4000-0000-4000-8000-000000000001','thesaurus_test_category','Durabilité du test','Définition catégorie');
 INSERT INTO public.ref_sustainability_action(id,category_id,code,label,description)VALUES('b73e4000-0000-4000-8000-000000000002','b73e4000-0000-4000-8000-000000000001','thesaurus_test_action','Action du test','Définition action');
+INSERT INTO public.ref_commune(insee_code,name)VALUES('97499','Commune du test');
 INSERT INTO public.object(id,object_type,name,status)VALUES('HLORUNTHESAUR001','HLO','Fiche témoin thésaurus','draft');
 INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR001','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');
 
@@ -78,6 +79,18 @@ BEGIN
   pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev->>'revision_id'),'idempotency_key','thesaurus-test-new','expected_revision_versions',jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer)));
   ASSERT EXISTS(SELECT 1 FROM thesaurus.source_link WHERE concept_id=newcid AND ref_code_domain='taxonomy_hlo'),'New publication did not establish its typed source FK';
   ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',newcid))#>>'{data,name}'='Nouveau concept','New concept snapshot missing';
+  -- Native tables without description/i18n columns use one semantic fallback authority.
+  SELECT concept_id INTO rid FROM thesaurus.concept WHERE source_kind='classification_value'AND source_id='b73e3000-0000-4000-8000-000000000002';
+  rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',rid,'expected_version',0,'document',thesaurus.concept_document(rid)||'{"description":"Définition de valeur","description_i18n":{"en":"Value definition"}}'::jsonb));
+  rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
+  pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev->>'revision_id'),'idempotency_key','thesaurus-test-class-definition','expected_revision_versions',jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer)));
+  ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid))#>>'{data,definitions,fr}'='Définition de valeur','Unsupported native description disappeared on publication';
+  ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid))#>>'{data,definitions,en}'='Value definition','Unsupported translated definition disappeared';
+  SELECT concept_id INTO rid FROM thesaurus.concept WHERE source_kind='commune'AND source_id='97499';
+  rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',rid,'expected_version',0,'document',thesaurus.concept_document(rid)||'{"description":"Définition commune","name_i18n":{"en":"Test town"}}'::jsonb));
+  rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
+  pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev->>'revision_id'),'idempotency_key','thesaurus-test-town-definition','expected_revision_versions',jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer)));
+  ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid,'lang','en'))#>>'{data,name}'='Test town','Unsupported native name_i18n disappeared';
   -- Shared semantic changes participate in the base fingerprint; rebase preserves an inbound edge.
   rev_a:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',child,'expected_version',0,'document',thesaurus.concept_document(child)||'{"name":"Enfant révisé"}'::jsonb));
   rev_b:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',newcid,'expected_version',0,'document',thesaurus.concept_document(newcid)||jsonb_build_object('relations',jsonb_build_array(jsonb_build_object('type','related','target_id',child)))));

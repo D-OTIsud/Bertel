@@ -9,12 +9,12 @@ const objectPath = (bucket, key) => `${component(bucket)}/${key.split('/').map(c
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const etag = (value) => typeof value === 'string' ? value.replace(/^"|"$/g, '') : null;
 const uuid = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+const errorCode = (error) => typeof error?.code === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(error.code) ? error.code : 'unknown';
 async function result(response, label) {
   if (!response.ok) {
     // Expose only the protocol's enum code; messages can contain locators.
     const error = await response.json().catch(() => null);
-    const code = typeof error?.code === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(error.code) ? error.code : 'unknown';
-    assert.fail(`${label} failed (${response.status}, ${code})`);
+    assert.fail(`${label} failed (${response.status}, ${errorCode(error)})`);
   }
   return response.json();
 }
@@ -40,16 +40,17 @@ test('real local Storage preserves private cross-bucket copy bytes and stored me
       const bucket = await result(await local.request(`/storage/v1/bucket/${id}`, local.service, undefined, 'GET'), 'private bucket confirmation');
       assert.ok(bucket.id === id && bucket.public === false);
     }
-    // Storage v1.41.8's isValidKey rejects Unicode. Preserve that real boundary
-    // rather than renaming an invalid fixture and claiming accented-key support.
-    const accented = await local.request(`/storage/v1/object/${objectPath(source, 'synthetic/résumé.pdf')}`, local.service, pdf, 'POST',
-      { 'content-type': 'application/pdf', 'cache-control': storedCache, 'x-upsert': 'false' });
-    const accentedError = await accented.json();
-    assert.ok(accented.status === 400 && accentedError.code === 'InvalidKey', 'this local Storage version must explicitly reject the accented key');
     for (const [index, bytes, mime] of [[0, pdf, 'application/pdf'], [1, png, 'image/png']]) {
       await result(await local.request(`/storage/v1/object/${objectPath(source, uploaded[index])}`, local.service, bytes, 'POST',
         { 'content-type': mime, 'cache-control': storedCache, 'x-upsert': 'false' }), 'synthetic byte upload');
     }
+    // First prove positive uploads, then distinguish Unicode validation from a
+    // general upload failure. v1.41.8's isValidKey explicitly rejects Unicode.
+    const accented = await local.request(`/storage/v1/object/${objectPath(source, 'synthetic/résumé.pdf')}`, local.service, pdf, 'POST',
+      { 'content-type': 'application/pdf', 'cache-control': storedCache, 'x-upsert': 'false' });
+    const accentedError = await accented.json();
+    assert.ok(accented.status === 400 && accentedError.code === 'InvalidKey',
+      `accented key validation differs from this version's contract (${accented.status}, ${errorCode(accentedError)})`);
     const missing = await info(source, 'synthetic/absent.pdf');
     assert.ok(!missing.ok, 'missing info must not be mistaken for an existing object');
     const absent = await missing.json();

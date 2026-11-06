@@ -1,4 +1,5 @@
 /** @jest-environment node */
+jest.mock('server-only', () => ({}));
 import { POST } from './route';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
@@ -65,9 +66,31 @@ const proposalRow = (id: string) => ({
 
 describe('POST /api/crm/notify-drain', () => {
   beforeEach(() => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://app.test';
     jest.clearAllMocks();
     mockedSmtp.mockResolvedValue(smtpOk);
     mockedEmailPolicy.mockReset().mockResolvedValue({ data: [], error: null });
+  });
+
+  it('sans origine canonique ne consomme pas de claim et ne dérive aucun lien des headers', async () => {
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    const rpc = jest.fn();
+    mockedServer.mockReturnValue(serverWith(rpc));
+    const response = await POST(req({ authorization: 'Bearer jwt', host: 'outside.example', origin: 'https://outside.example', forwarded: 'host=outside.example;proto=https' }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: 'app_origin_unavailable' });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(mockedSmtp).not.toHaveBeenCalled();
+    expect(mockedSend).not.toHaveBeenCalled();
+  });
+
+  it('les liens mail utilisent exclusivement l’origine configurée malgré des headers étrangers', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://bertel.example/';
+    const rpc = jest.fn().mockResolvedValueOnce({ data: [row('n-real')], error: null }).mockResolvedValueOnce({ data: 1, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    await POST(req({ authorization: 'Bearer jwt', host: 'outside.example', origin: 'https://outside.example', 'x-forwarded-host': 'outside.example' }));
+    expect(mockedSend.mock.calls[0][0].html).toContain('https://bertel.example/crm');
+    expect(mockedSend.mock.calls[0][0].html).not.toContain('outside.example');
   });
 
   it('supprime les enveloppes démo avant composition et SMTP, même drainées par un utilisateur réel', async () => {

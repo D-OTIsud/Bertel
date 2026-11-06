@@ -240,6 +240,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const toggleVisSubtype = useStore((state) => state.toggleVisSubtype);
   const toggleSrvSubtype = useStore((state) => state.toggleSrvSubtype);
   const toggleTaxonomy = useStore((state) => state.toggleTaxonomy);
+  const setIncludeEquivalentPredecessors = useStore((state) => state.setIncludeEquivalentPredecessors);
   const setHotCapacityFilter = useStore((state) => state.setHotCapacityFilter);
   const setResCapacityFilter = useStore((state) => state.setResCapacityFilter);
   const setHotMeetingRoom = useStore((state) => state.setHotMeetingRoom);
@@ -253,6 +254,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const setMissingEssentialsBuckets = useStore((state) => state.setMissingEssentialsBuckets);
   const setMissingEssentialsAny = useStore((state) => state.setMissingEssentialsAny);
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
+  const sessionRole = useSessionStore((state) => state.role);
   const showHot = isBucketSelected(selectedBuckets, 'HOT');
   const showRes = isBucketSelected(selectedBuckets, 'RES');
   const showIti = isBucketSelected(selectedBuckets, 'ITI');
@@ -975,6 +977,26 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </div>
           <ProviderScopeToggle useStore={useStore} />
         </FilterColumnGroup>
+
+        {taxonomyAny.length > 0 && (
+          <FilterColumnGroup label="Anciennes dénominations">
+            <label className="flex cursor-pointer items-start gap-2 text-sm leading-5 text-ink-2">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={common.includeEquivalentPredecessors === true}
+                onChange={(event) => setIncludeEquivalentPredecessors(event.target.checked)}
+              />
+              <span>Inclure les anciens termes exactement équivalents</span>
+            </label>
+            {!common.includeEquivalentPredecessors && (
+              <p className="mt-2 text-xs leading-5 text-ink-3">
+                Les fiches portant un ancien terme restent dans la liste de reprise du thésaurus.
+                {sessionRole === 'super_admin' && <>{' '}<a href="/settings?section=referentiels" className="font-semibold text-teal underline underline-offset-2">Consulter le thésaurus</a></>}
+              </p>
+            )}
+          </FilterColumnGroup>
+        )}
 
         {/* §205 — groupe réservé aux éditeurs et plus. Le masquage n'est PAS la
             garde : resolveExplorerStatuses force ['published'] pour un lecteur

@@ -10,9 +10,10 @@ const options = [
   { id: 'c', code: 'acc_adapted_bed_height', label: 'Lit adapté', disabilityTypes: ['motor'] },
   { id: 'd', code: 'acc_shower_seat', label: 'Siège de douche', disabilityTypes: ['motor'] },
 ];
-function mount(archetype: 'RES' | 'HEB' | 'ASC' = 'RES', labelled = false, callbacks: Partial<Pick<PortalRubricFormProps, 'onDone' | 'onCancel' | 'onDirtyChange' | 'formCache'>> = {}) {
+function mount(archetype: 'RES' | 'HEB' | 'ASC' = 'RES', labelled = false, callbacks: Partial<Pick<PortalRubricFormProps, 'onDone' | 'onCancel' | 'onDirtyChange' | 'formCache'>> = {}, retired = false) {
   const modules = portalModules();
-  modules.characteristics.amenityGroups = [{ familyCode: 'accessibility', familyLabel: 'Accessibilité', options }];
+  modules.characteristics.amenityGroups = [{ familyCode: 'accessibility', familyLabel: 'Accessibilité',
+    options: options.map((option) => ({ ...option, disabled: retired && ['acc_pmr_parking', 'acc_shower_seat'].includes(option.code) })) }];
   modules.characteristics.selectedAmenityCodes = ['wifi', 'acc_shower_seat', 'acc_unknown'];
   modules.characteristics.selectedPaymentCodes = ['visa'];
   modules.characteristics.selectedLanguages = [{ languageId: '', code: 'fr', label: 'Français', levelId: '', levelCode: '', levelLabel: '' }];
@@ -116,4 +117,29 @@ test('Retour sans changer reste un abandon local, sans écriture de caractérist
   expect(onCancel).toHaveBeenCalledTimes(1);
   expect(onDone).not.toHaveBeenCalled();
   expect(editor.replaceModule).not.toHaveBeenCalled();
+});
+
+test('un aménagement retiré déjà choisi reste conservable et supprimable, sans pouvoir être ajouté à nouveau', () => {
+  const editor = mount('HEB', false, {}, true);
+  const parking = screen.getByLabelText('Parking réservé');
+  const shower = screen.getByLabelText('Siège de douche');
+  expect(parking).toBeDisabled();
+  expect(shower).toBeChecked();
+  expect(shower).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+  expect(editor.replaceModule).toHaveBeenLastCalledWith('characteristics', {
+    ...editor.draft.characteristics,
+    selectedAmenityCodes: expect.arrayContaining(editor.draft.characteristics.selectedAmenityCodes),
+  });
+  const preserved = jest.mocked(editor.replaceModule).mock.calls.at(-1)?.[1] as typeof editor.draft.characteristics;
+  expect(preserved.selectedAmenityCodes).toHaveLength(3);
+  fireEvent.click(shower);
+  expect(shower).not.toBeChecked();
+  expect(shower).toBeDisabled();
+  (shower as HTMLInputElement).click();
+  expect(shower).not.toBeChecked();
+  fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+  expect(editor.replaceModule).toHaveBeenLastCalledWith('characteristics', expect.objectContaining({
+    selectedAmenityCodes: ['wifi', 'acc_unknown'],
+  }));
 });

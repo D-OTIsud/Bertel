@@ -41,11 +41,11 @@ export function ProviderEditModal({
     setDraft((current) => ({ ...current, ...patch }));
 
   // Keep the current role selectable even if the catalog no longer lists it (legacy code).
-  const roleSelectOptions = [
+  const roleSelectOptions: Array<{ v: string; l: string; disabled?: boolean }> = [
     ...(roleOptions.some((option) => option.code === draft.roleCode)
       ? []
       : [{ v: draft.roleCode, l: draft.roleLabel || draft.roleCode }]),
-    ...roleOptions.map((option) => ({ v: option.code, l: option.label })),
+    ...roleOptions.map((option) => ({ v: option.code, l: option.label, disabled: option.disabled })),
   ];
 
   function setRole(roleCode: string) {
@@ -72,6 +72,7 @@ export function ProviderEditModal({
             <Chip
               key={role.v}
               label={role.l}
+              disabled={role.disabled}
               on={draft.roleCode === role.v}
               onClick={() => setRole(role.v)}
             />

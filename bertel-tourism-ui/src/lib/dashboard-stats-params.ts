@@ -39,6 +39,8 @@ function transverseFilters(filters: ExplorerFilters): Record<string, unknown> {
   const allTaxonomy = normalized.common.taxonomyAny.map((t) => ({ domain: t.domain, code: t.code }));
   if (allTaxonomy.length > 0) payload.taxonomy_any = allTaxonomy;
   else delete payload.taxonomy_any;
+  if (allTaxonomy.length > 0 && normalized.common.includeEquivalentPredecessors === true) payload.include_equivalent_predecessors = true;
+  else delete payload.include_equivalent_predecessors;
   return payload;
 }
 

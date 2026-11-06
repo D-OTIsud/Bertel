@@ -147,7 +147,7 @@ export function BlockITI(props: SectionProps) {
         </Disclosure>
         <AssociatedObjectModal open={assocOpen} objectId={editor.objectId} roleOptions={itinerary.assocRoleOptions} trackGeojson={itinerary.trackGeojson} onSave={(assoc) => { patch({ associatedObjects: [...itinerary.associatedObjects, assoc] }); setAssocOpen(false); }} onClose={() => setAssocOpen(false)} />
         <EditorModal open={practicesOpen} title="Pratiques de l'itinéraire" onClose={() => setPracticesOpen(false)} onSave={() => { patch({ practiceCodes: practicesDraft }); setPracticesOpen(false); }}>
-          <ChipSet>{itinerary.practiceOptions.map((option) => <Chip key={option.code} label={option.label} on={practicesDraft.includes(option.code)} onClick={() => setPracticesDraft((previous) => previous.includes(option.code) ? previous.filter((code) => code !== option.code) : [...previous, option.code])} />)}</ChipSet>
+          <ChipSet>{itinerary.practiceOptions.map((option) => <Chip key={option.code} label={option.label} disabled={option.disabled} on={practicesDraft.includes(option.code)} onClick={() => setPracticesDraft((previous) => previous.includes(option.code) ? previous.filter((code) => code !== option.code) : [...previous, option.code])} />)}</ChipSet>
         </EditorModal>
       </>}
     </Fs>

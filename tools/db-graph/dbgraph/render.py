@@ -5,6 +5,7 @@ from collections import defaultdict
 import html as _html
 import json
 import re
+from .reference_extract import public_reference_rows
 
 
 def _by(nodes, kind):
@@ -30,7 +31,8 @@ def write_functions_md(g):
         for kind, target, conf in sorted(touched):
             out.append("- %s `%s` _(%s)_" % (kind, target, conf))
         if n["doc"]:
-            out.append("\n> " + n["doc"].replace("\n", "\n> "))
+            comment_lines = n["doc"].replace("\r", "").split("\n")
+            out.append("\n" + "\n".join("> " + line.rstrip() if line.strip() else ">" for line in comment_lines))
         out.append("")
     return "\n".join(out)
 
@@ -210,7 +212,7 @@ def render_api_db_reference_html(g, reference_extract=None, live_note="TBLS_DSN 
     reference_extract = reference_extract or {"rows": [], "derived_sources": []}
     live_meta = reference_extract.get("live") or {"status": "not_queried", "tables": []}
     seed_meta = reference_extract.get("seed") or {}
-    ref_rows = sorted(reference_extract.get("rows", []), key=lambda r: (r["table"], _reference_key(r), r["source"]))
+    ref_rows = sorted(public_reference_rows(reference_extract.get("rows", [])), key=lambda r: (r["table"], _reference_key(r), r["source"]))
     derived_sources = sorted(reference_extract.get("derived_sources", []), key=lambda r: (r["table"], r["source"]))
     nodes = {n["id"]: n for n in g["nodes"]}
 

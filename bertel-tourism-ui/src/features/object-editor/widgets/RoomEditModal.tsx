@@ -109,7 +109,7 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
         : /double|suite|familiale/.test(text)
           ? 'double'
           : '';
-      const bedType = module.bedTypeOptions.find((bed) => bed.code === bedCode);
+      const bedType = module.bedTypeOptions.find((bed) => bed.code === bedCode && !bed.disabled);
       if (bedType)
         patch.beds = [
           {
@@ -218,7 +218,7 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
         </div>
         <ChipSet>
           {module.roomTypeOptions.slice(0, 6).map((option) => <Chip key={option.id || option.code}
-            label={option.label} on={draft.roomTypeCode === option.code} onClick={() => selectRoomType(option.code)} />)}
+            label={option.label} disabled={option.disabled} on={draft.roomTypeCode === option.code} onClick={() => selectRoomType(option.code)} />)}
           <button type="button" className="chip room-more" aria-expanded={showOtherTypes}
             aria-controls={`${expansionId}-types`} onClick={() => setShowOtherTypes((value) => !value)}>Autre type…</button>
         </ChipSet>
@@ -289,7 +289,7 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
       <section className="room-section" aria-labelledby={`${expansionId}-equipment-title`}>
         <h3 id={`${expansionId}-equipment-title`}>Équipements de la chambre</h3>
         <ChipSet>
-          {visibleCompactAmenities.map((option) => <Chip key={option.code} label={option.label}
+          {visibleCompactAmenities.map((option) => <Chip key={option.code} label={option.label} disabled={option.disabled}
             on={draft.amenityCodes.includes(option.code)} sm onClick={() => toggleAmenity(option.code)} />)}
           <button type="button" className="chip size-sm room-more" aria-expanded={allEquipmentOpen}
             aria-controls={`${expansionId}-equipment`} onClick={() => {
@@ -301,7 +301,7 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
           <Input value={equipQuery} onChange={setEquipQuery} placeholder="Rechercher un équipement…"
             aria-label="Rechercher un équipement" prefix={<Search size={15} aria-hidden />} />
           {courantAmenities.length > 0 && <ChipSet>{courantAmenities.map((option) =>
-            <Chip key={option.code} label={option.label} sm onClick={() => toggleAmenity(option.code)} />)}</ChipSet>}
+            <Chip key={option.code} label={option.label} disabled={option.disabled} sm onClick={() => toggleAmenity(option.code)} />)}</ChipSet>}
           {dispoGroups.map((group) => {
             const expanded = searchingEquip || openFamilies.has(group.familyCode);
             return <div key={group.familyCode}>
@@ -311,7 +311,7 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
                 <span>{group.familyLabel}</span><small>{group.options.length}</small>
               </button>
               {expanded && <div className="room-equipment-family__body"><ChipSet>{group.options.map((option) =>
-                <Chip key={option.code} label={option.label} sm onClick={() => toggleAmenity(option.code)} />)}</ChipSet></div>}
+                <Chip key={option.code} label={option.label} disabled={option.disabled} sm onClick={() => toggleAmenity(option.code)} />)}</ChipSet></div>}
             </div>;
           })}
           {searchingEquip && visibleCompactAmenities.length + courantAmenities.length + dispoGroups.length === 0 &&

@@ -1,5 +1,10 @@
 # IA : source fraîche et préparation de transport MCP
 
+Photographie de préparation du gel 02b897b, conservée pour filiation. L'application
+effective est désormais attestée par le [record de production](2026-11-06-ai-admission-production.md) :
+le template décrit ci-dessous a été déplacé, octet pour octet, sous sa vraie
+version 20261106200353. Le texte de préparation ne décrit plus un candidat en attente.
+
 Cette préparation sépare le source frais inchangé de son enveloppe d’upgrade.
 Le manifeste inclut ai_request_admission.sql ; ses octets restent ceux du source
 initial 20261106145451 (SHA256 3d618baf364e2ad281393177bbebf118208ed1e196c207bd0e4626106373139b).

@@ -133,6 +133,7 @@ export function MenuEditModal({
               <button
                 type="button"
                 className="ed-catalog-link ed-menu-add"
+                disabled={sectionOptions.find((option) => option.code === group.code)?.disabled}
                 onClick={() => addDish(group.code, group.label)}
               >
                 <Plus size={13} aria-hidden />
@@ -153,6 +154,7 @@ export function MenuEditModal({
                   <Chip
                     key={option.code}
                     label={`+ ${option.label}`}
+                    disabled={option.disabled}
                     sm
                     onClick={() =>
                       setExtraSections((current) => [...current, { code: option.code, label: option.label }])

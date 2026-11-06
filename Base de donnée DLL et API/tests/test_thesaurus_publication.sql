@@ -1,0 +1,199 @@
+-- Transactional, non-vacuous thesaurus contract tests. All fixtures roll back.
+\set ON_ERROR_STOP on
+BEGIN;
+SET LOCAL statement_timeout='120s';
+INSERT INTO auth.users(id,email)VALUES('b73e0000-0000-4000-8000-000000000001','thesaurus-test@example.invalid')ON CONFLICT DO NOTHING;
+INSERT INTO public.app_user_profile(id,role,display_name)VALUES('b73e0000-0000-4000-8000-000000000001','super_admin','Thesaurus test')ON CONFLICT(id)DO UPDATE SET role='super_admin';
+SELECT set_config('request.jwt.claims','{"sub":"b73e0000-0000-4000-8000-000000000001","role":"authenticated"}',true);
+INSERT INTO public.ref_code_domain_registry(domain,name,object_type,is_hierarchical,is_taxonomy)VALUES('taxonomy_hlo','Test accommodation','HLO',true,true)ON CONFLICT(domain)DO NOTHING;
+INSERT INTO public.ref_code(id,domain,code,name,description,name_i18n,metadata)VALUES
+ ('b73e1000-0000-4000-8000-000000000001','taxonomy_hlo','thesaurus_test_root','Racine du test','Définition racine','{"en":"Test root"}','{"aliases":["Terme historique"]}'),
+ ('b73e1000-0000-4000-8000-000000000003','amenity_family','thesaurus_test_family','Famille du test','Définition famille','{}','{}');
+INSERT INTO public.ref_code(id,domain,code,name,description,parent_id)VALUES('b73e1000-0000-4000-8000-000000000002','taxonomy_hlo','thesaurus_test_child','Enfant du test','Définition enfant','b73e1000-0000-4000-8000-000000000001');
+INSERT INTO public.ref_code(id,domain,code,name,description,valid_to)VALUES('b73e1000-0000-4000-8000-000000000004','taxonomy_hlo','thesaurus_test_date_boundary','Validité à la frontière de date','Définition témoin',(now()AT TIME ZONE'Etc/GMT+12')::date);
+INSERT INTO public.ref_amenity(id,code,name,family_id,description)VALUES('b73e2000-0000-4000-8000-000000000001','thesaurus_test_amenity','Équipement du test','b73e1000-0000-4000-8000-000000000003','Définition équipement');
+INSERT INTO public.ref_classification_scheme(id,code,name,description)VALUES('b73e3000-0000-4000-8000-000000000001','thesaurus_test_scheme','Classement du test','Définition schéma');
+INSERT INTO public.ref_classification_value(id,scheme_id,code,name)VALUES('b73e3000-0000-4000-8000-000000000002','b73e3000-0000-4000-8000-000000000001','same_code','Valeur du test');
+INSERT INTO public.ref_sustainability_action_category(id,code,name,description)VALUES('b73e4000-0000-4000-8000-000000000001','thesaurus_test_category','Durabilité du test','Définition catégorie');
+INSERT INTO public.ref_sustainability_action(id,category_id,code,label,description)VALUES('b73e4000-0000-4000-8000-000000000002','b73e4000-0000-4000-8000-000000000001','thesaurus_test_action','Action du test','Définition action');
+INSERT INTO public.ref_commune(insee_code,name)VALUES('97499','Commune du test');
+INSERT INTO public.ref_language(id,code,name)VALUES('b73e6000-0000-4000-8000-000000000001','qaa','Langue privée du test');
+INSERT INTO public.object(id,object_type,name,status)VALUES('HLORUNTHESAUR001','HLO','Fiche témoin thésaurus','draft');
+INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR001','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');
+-- The same vocabulary is shared across realms. Derive the sandbox marker through
+-- its canonical organization source instead of writing object.is_test directly.
+INSERT INTO public.object(id,object_type,name,status)VALUES
+ ('ORGRUNTHESAUR001','ORG','Organisation témoin bac à sable','draft'),
+ ('HLORUNTHESAUR003','HLO','Fiche témoin thésaurus bac à sable','draft');
+INSERT INTO public.org_config(org_object_id,access_scope,is_test_org)VALUES('ORGRUNTHESAUR001','own_objects_only',true);
+INSERT INTO public.ref_org_role(id,code,name)VALUES('b73e5000-0000-4000-8000-000000000001','thesaurus_test_publisher','Éditeur du test');
+INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)VALUES('HLORUNTHESAUR003','ORGRUNTHESAUR001','b73e5000-0000-4000-8000-000000000001',true);
+INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR003','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');
+
+DO $test$
+DECLARE workspace jsonb;res jsonb;doc jsonb;rev jsonb;rev_a jsonb;rev_b jsonb;prevw jsonb;pub jsonb;oldexport jsonb;cid uuid;child uuid;newcid uuid;rid uuid;v integer;first_release bigint;next_release bigint;count_before integer;before_time timestamptz;before_version integer;deny boolean;before_content jsonb;cache_projection jsonb;
+  before_test_time timestamptz;before_test_version integer;before_test_versions bigint;before_real_versions bigint;
+  original_timezone text;western_date date;dated_export jsonb;
+  native_row record;native_names jsonb:='{}';native_revisions jsonb:='[]';native_versions jsonb:='{}';native_name text;
+BEGIN
+  ASSERT NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='bertel_thesaurus_publisher'AND(rolcanlogin OR rolsuper OR rolbypassrls OR rolcreaterole OR rolinherit)),'Publisher role must remain a restricted non-login identity';
+  ASSERT NOT pg_has_role('anon','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('authenticated','bertel_thesaurus_publisher','SET')AND NOT pg_has_role('service_role','bertel_thesaurus_publisher','SET'),'Application roles can assume publisher identity';
+  ASSERT NOT has_column_privilege('bertel_thesaurus_publisher','public.object','name','UPDATE')AND has_column_privilege('bertel_thesaurus_publisher','public.object','updated_at','UPDATE'),'Publisher object privileges must be limited to projections';
+  ASSERT NOT has_function_privilege('authenticated','thesaurus.refresh_affected_objects(text[])','EXECUTE')AND NOT has_function_privilege('service_role','thesaurus.refresh_affected_objects(text[])','EXECUTE'),'Private projection writer became callable by applications';
+  ASSERT(SELECT count(*)FROM pg_trigger WHERE tgrelid='public.object'::regclass AND tgname=ANY(ARRAY['trg_audit_object','trg_increment_object_version','trg_object_version','update_object_updated_at'])AND NOT tgisinternal AND tgenabled='O'AND pg_get_expr(tgqual,tgrelid)=$guard$(CURRENT_USER <> 'bertel_thesaurus_publisher'::name)$guard$)=4,'Canonical object trigger publisher guards drifted after the fresh manifest';
+  ASSERT has_function_privilege('bertel_thesaurus_publisher','api.current_user_test_realm()','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.current_user_extended_object_ids()','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.can_read_object(text)','EXECUTE')AND has_function_privilege('bertel_thesaurus_publisher','api.user_can_write_object_canonical(text)','EXECUTE'),'Publisher lacks the precise existing RLS helper grants';
+  ASSERT (SELECT is_test FROM public.object WHERE id='HLORUNTHESAUR003')AND NOT(SELECT is_test FROM public.object WHERE id='HLORUNTHESAUR001'),'Publication fixture must exercise both actual realms';
+  ASSERT api.thesaurus_generation()IS NULL,'New installation must remain unactivated';
+  BEGIN PERFORM api.thesaurus_public('manifest');RAISE EXCEPTION 'Missing release was accepted';EXCEPTION WHEN SQLSTATE'PT503'THEN NULL;END;
+  res:=api.thesaurus_admin('configure_instance','{"base_uri":"https://example.invalid/api/public/thesaurus/concepts/","license":"test-fixture-only","attribution":"Fixture owner"}');
+  workspace:=api.thesaurus_admin('workspace','{"domain":"taxonomy_hlo","page_size":200}');
+  SELECT concept_id INTO cid FROM thesaurus.concept WHERE source_id='b73e1000-0000-4000-8000-000000000001'AND domain='taxonomy_hlo';
+  SELECT concept_id INTO child FROM thesaurus.concept WHERE source_id='b73e1000-0000-4000-8000-000000000002'AND domain='taxonomy_hlo';
+  ASSERT cid IS NOT NULL AND child IS NOT NULL,'Typed source identities missing';
+  ASSERT EXISTS(SELECT 1 FROM thesaurus.source_link WHERE concept_id=cid AND ref_code_domain='taxonomy_hlo'),'Composite ref_code FK missing';
+  ASSERT EXISTS(SELECT 1 FROM thesaurus.source_link WHERE amenity_id='b73e2000-0000-4000-8000-000000000001'),'Standalone amenity adapter missing';
+  ASSERT EXISTS(SELECT 1 FROM thesaurus.source_link WHERE classification_value_id='b73e3000-0000-4000-8000-000000000002'),'Classification-value adapter missing';
+  ASSERT EXISTS(SELECT 1 FROM thesaurus.source_link WHERE sustainability_action_id='b73e4000-0000-4000-8000-000000000002'),'Sustainability adapter missing';
+  ASSERT thesaurus.concept_document(child)->>'parent_concept_id'=cid::text,'Real parent relation missing';
+  ASSERT (workspace#>>'{stats,matching_concepts}')::integer>=2,'Workspace filter omitted fixtures';
+  ASSERT EXISTS(SELECT 1 FROM thesaurus.concept WHERE concept_id=cid AND legacy_search_terms@>ARRAY['Terme historique']),'Legacy aliases were discarded';
+  ASSERT NOT EXISTS(SELECT 1 FROM thesaurus.label WHERE concept_id=cid),'Legacy aliases were incorrectly asserted as validated labels';
+  pub:=api.thesaurus_admin('bootstrap','{"domains":["taxonomy_hlo","amenity_family","amenity","classification_scheme","classification_value","language","commune","sustainability_category","sustainability_action"],"idempotency_key":"thesaurus-test-bootstrap"}');
+  first_release:=(pub->>'release_id')::bigint;
+  ASSERT first_release>0 AND api.thesaurus_generation()=first_release,'Bootstrap failed to activate a release';
+  ASSERT (api.thesaurus_admin('bootstrap','{"domains":["taxonomy_hlo","amenity_family","amenity","classification_scheme","classification_value","language","commune","sustainability_category","sustainability_action"],"idempotency_key":"thesaurus-test-bootstrap"}')->>'release_id')::bigint=first_release,'Bootstrap idempotency failed';
+  BEGIN PERFORM api.thesaurus_admin('bootstrap','{"domains":["taxonomy_hlo"],"idempotency_key":"thesaurus-test-bootstrap"}');RAISE EXCEPTION 'Reused idempotency key accepted different request';EXCEPTION WHEN SQLSTATE'PT409'THEN NULL;END;
+  oldexport:=api.thesaurus_public('export',first_release,'{"domains":["taxonomy_hlo"],"lang":"en-US","domains":null,"status":null,"query":null,"after":null}');
+  ASSERT jsonb_array_length(oldexport->'data')>=2,'Actual snapshot export omitted fixtures';
+  original_timezone:=current_setting('TimeZone');
+  PERFORM set_config('TimeZone','Etc/GMT+12',true);western_date:=current_date;
+  dated_export:=api.thesaurus_public('export',first_release,'{"lang":"en-US"}');
+  ASSERT EXISTS(SELECT 1 FROM jsonb_array_elements(api.list_catalog('taxonomy_hlo'))x WHERE x->>'code'='thesaurus_test_date_boundary'),'Date-boundary fixture is not valid on its last day';
+  PERFORM set_config('TimeZone','Etc/GMT-14',true);
+  ASSERT current_date>western_date,'Controlled timezone clock did not cross a date boundary';
+  ASSERT api.thesaurus_public('export',first_release,'{"lang":"en-US"}')=dated_export,'Stored export or as_of changed across a validity-date boundary';
+  ASSERT NOT EXISTS(SELECT 1 FROM jsonb_array_elements(api.list_catalog('taxonomy_hlo'))x WHERE x->>'code'='thesaurus_test_date_boundary'),'Legacy catalog must reevaluate current validity after the date boundary';
+  PERFORM set_config('TimeZone',original_timezone,true);
+  BEGIN UPDATE public.ref_code SET name='Forbidden direct write'WHERE id='b73e1000-0000-4000-8000-000000000001'AND domain='taxonomy_hlo';RAISE EXCEPTION 'Canonical guard allowed owner role outside publication';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+  PERFORM set_config('app.thesaurus_publisher','true',true);
+  BEGIN UPDATE public.ref_code SET name='Forged session capability'WHERE id='b73e1000-0000-4000-8000-000000000001'AND domain='taxonomy_hlo';RAISE EXCEPTION 'GUC bypassed canonical guard';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+  BEGIN UPDATE thesaurus.release SET checksum='tamper'WHERE release_id=first_release;RAISE EXCEPTION 'Published release was mutable';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+  BEGIN DELETE FROM thesaurus.release_concept WHERE release_id=first_release AND concept_id=cid;RAISE EXCEPTION 'Published concept was removable';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+  doc:=thesaurus.concept_document(cid)||'{"name":"Racine renommée","labels":[{"lang":"fr","kind":"alt","value":"Synonyme validé"}],"notes":[{"lang":"fr","type":"source","value":"Définition vérifiée","source":"https://example.invalid/source"}]}'::jsonb;
+  rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',cid,'domain','taxonomy_hlo','expected_version',0,'document',doc));rid:=(rev->>'revision_id')::uuid;v:=(rev->>'version')::integer;
+  ASSERT (SELECT name FROM public.ref_code WHERE id='b73e1000-0000-4000-8000-000000000001'AND domain='taxonomy_hlo')='Racine du test','Draft leaked into canonical source';
+  ASSERT api.thesaurus_public('export',first_release,'{"lang":"en-US"}')=oldexport,'Draft altered an immutable export';
+  BEGIN PERFORM api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',cid,'expected_version',v+99,'document',doc));RAISE EXCEPTION 'Optimistic conflict was ignored';EXCEPTION WHEN SQLSTATE'PT409'THEN NULL;END;
+  rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rid,'expected_version',v));v:=(rev->>'version')::integer;
+  ASSERT rev->>'status'='validated'AND jsonb_array_length(rev->'errors')=0,'Revision did not validate';
+  prevw:=api.thesaurus_admin('preview',jsonb_build_object('revision_ids',jsonb_build_array(rid)));
+  ASSERT (prevw->>'affected_objects')::integer=2,'Ancestor impact preview must include real and sandbox child-assigned objects';
+  SELECT updated_at,current_version INTO before_time,before_version FROM public.object WHERE id='HLORUNTHESAUR001';
+  SELECT updated_at,current_version INTO before_test_time,before_test_version FROM public.object WHERE id='HLORUNTHESAUR003';
+  SELECT count(*)INTO before_real_versions FROM public.object_version WHERE object_id='HLORUNTHESAUR001';
+  SELECT count(*)INTO before_test_versions FROM public.object_version WHERE object_id='HLORUNTHESAUR003';
+  SELECT to_jsonb(o)-ARRAY['updated_at','cached_amenity_codes','cached_payment_codes','cached_environment_tags','cached_language_codes','cached_classification_codes','cached_taxonomy_codes','search_document','search_document_text','search_document_phonetic']INTO before_content FROM public.object o WHERE id='HLORUNTHESAUR001';
+  BEGIN PERFORM api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rid),'idempotency_key','bad-preview','expected_revision_versions',jsonb_build_object(rid::text,v-1)));RAISE EXCEPTION 'Stale preview was accepted';EXCEPTION WHEN SQLSTATE'PT409'THEN NULL;END;
+  pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rid),'idempotency_key','thesaurus-test-rename','expected_release_id',first_release,'expected_revision_versions',jsonb_build_object(rid::text,v),'preview_fingerprint',prevw->>'preview_fingerprint'));
+  next_release:=(pub->>'release_id')::bigint;
+  ASSERT next_release>first_release,'Release IDs must be monotonic';
+  ASSERT (SELECT name FROM public.ref_code WHERE id='b73e1000-0000-4000-8000-000000000001'AND domain='taxonomy_hlo')='Racine renommée','Publication did not update source';
+  ASSERT EXISTS(SELECT 1 FROM jsonb_array_elements(api.list_catalog('taxonomy_hlo','fr'))x WHERE x->>'code'='thesaurus_test_root'AND x->>'name'='Racine renommée'),'French legacy catalog kept the old i18n label';
+  ASSERT (SELECT updated_at>before_time AND current_version=before_version FROM public.object WHERE id='HLORUNTHESAUR001'),'Affected object sync marker must advance without a fabricated canonical version';
+  ASSERT (SELECT updated_at>before_test_time AND current_version=before_test_version FROM public.object WHERE id='HLORUNTHESAUR003'),'Sandbox object sync marker must advance without a fabricated canonical version';
+  ASSERT(SELECT count(*)FROM public.object_version WHERE object_id='HLORUNTHESAUR001')=before_real_versions AND(SELECT count(*)FROM public.object_version WHERE object_id='HLORUNTHESAUR003')=before_test_versions,'Publication fabricated canonical object history in either realm';
+  ASSERT (SELECT search_document_text LIKE'%synonyme%'FROM public.object WHERE id='HLORUNTHESAUR001'),'Validated alias was not indexed on descendant object';
+  ASSERT (SELECT search_document_text LIKE'%synonyme%'FROM public.object WHERE id='HLORUNTHESAUR003'),'Validated alias was not indexed on sandbox descendant object';
+  ASSERT(SELECT to_jsonb(o)-ARRAY['updated_at','cached_amenity_codes','cached_payment_codes','cached_environment_tags','cached_language_codes','cached_classification_codes','cached_taxonomy_codes','search_document','search_document_text','search_document_phonetic']=before_content FROM public.object o WHERE id='HLORUNTHESAUR001'),'Projection publication changed canonical object content';
+  SELECT jsonb_build_array(cached_amenity_codes,cached_payment_codes,cached_environment_tags,cached_language_codes,cached_classification_codes,cached_taxonomy_codes,search_document,search_document_text,search_document_phonetic)INTO cache_projection FROM public.object WHERE id='HLORUNTHESAUR001';
+  PERFORM api.refresh_object_filter_caches('HLORUNTHESAUR001');
+  ASSERT(SELECT jsonb_build_array(cached_amenity_codes,cached_payment_codes,cached_environment_tags,cached_language_codes,cached_classification_codes,cached_taxonomy_codes,search_document,search_document_text,search_document_phonetic)=cache_projection FROM public.object WHERE id='HLORUNTHESAUR001'),'Bulk projection differs from the canonical helper';
+  ASSERT api.thesaurus_public('export',first_release,'{"lang":"en-US"}')=oldexport,'New publication rewrote old snapshot';
+  ASSERT (api.thesaurus_public('concept',next_release,jsonb_build_object('concept_id',cid,'lang','en-US'))#>>'{data,effective_lang}')='en','Language fallback mislabeled the value';
+  ASSERT EXISTS(SELECT 1 FROM jsonb_array_elements(api.thesaurus_public('changes',next_release)->'data')x WHERE x->>'concept_id'=cid::text AND x->>'change_type'='modified'),'Minimal release diff missing changed concept';
+  ASSERT EXISTS(SELECT 1 FROM thesaurus.outbox WHERE release_id=next_release AND status='pending'),'Durable outbox event missing';
+  -- A brand-new draft creates no canonical source until its validated publication.
+  rev:=api.thesaurus_admin('save_draft',jsonb_build_object('domain','taxonomy_hlo','expected_version',0,'document',jsonb_build_object('code','thesaurus_test_new','name','Nouveau concept','description','Définition nouvelle','parent_concept_id',cid,'lifecycle','active')));
+  newcid:=(rev->>'concept_id')::uuid;
+  ASSERT newcid IS NOT NULL AND NOT EXISTS(SELECT 1 FROM public.ref_code WHERE domain='taxonomy_hlo'AND code='thesaurus_test_new'),'New draft leaked its canonical source';
+  rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
+  pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev->>'revision_id'),'idempotency_key','thesaurus-test-new','expected_revision_versions',jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer)));
+  ASSERT EXISTS(SELECT 1 FROM thesaurus.source_link WHERE concept_id=newcid AND ref_code_domain='taxonomy_hlo'),'New publication did not establish its typed source FK';
+  ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',newcid))#>>'{data,name}'='Nouveau concept','New concept snapshot missing';
+  -- Native tables without description/i18n columns use one semantic fallback authority.
+  SELECT concept_id INTO rid FROM thesaurus.concept WHERE source_kind='classification_value'AND source_id='b73e3000-0000-4000-8000-000000000002';
+  rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',rid,'expected_version',0,'document',jsonb_set(thesaurus.concept_document(rid),'{source_fields,is_assignable}','false')||'{"description":"Définition de valeur","description_i18n":{"en":"Value definition"}}'::jsonb));
+  rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
+  pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev->>'revision_id'),'idempotency_key','thesaurus-test-class-definition','expected_revision_versions',jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer)));
+  ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid))#>>'{data,definitions,fr}'='Définition de valeur','Unsupported native description disappeared on publication';
+  PERFORM thesaurus.sync_sources(NULL);
+  ASSERT(SELECT NOT assignable FROM thesaurus.concept WHERE concept_id=rid)AND api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid))#>>'{data,assignable}'='false','Standalone non-assignability was lost on source resynchronization';
+  ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid))#>>'{data,definitions,en}'='Value definition','Unsupported translated definition disappeared';
+  SELECT concept_id INTO rid FROM thesaurus.concept WHERE source_kind='commune'AND source_id='97499';
+  rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',rid,'expected_version',0,'document',thesaurus.concept_document(rid)||'{"description":"Définition commune","name_i18n":{"en":"Test town"}}'::jsonb));
+  rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
+  pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev->>'revision_id'),'idempotency_key','thesaurus-test-town-definition','expected_revision_versions',jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer)));
+  ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid,'lang','en'))#>>'{data,name}'='Test town','Unsupported native name_i18n disappeared';
+  -- Shared semantic changes participate in the base fingerprint; rebase preserves an inbound edge.
+  rev_a:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',child,'expected_version',0,'document',thesaurus.concept_document(child)||'{"name":"Enfant révisé"}'::jsonb));
+  rev_b:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',newcid,'expected_version',0,'document',thesaurus.concept_document(newcid)||jsonb_build_object('relations',jsonb_build_array(jsonb_build_object('type','related','target_id',child)))));
+  rev_b:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev_b->>'revision_id','expected_version',(rev_b->>'version')::integer));
+  pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev_b->>'revision_id'),'idempotency_key','thesaurus-test-inbound','expected_revision_versions',jsonb_build_object(rev_b->>'revision_id',(rev_b->>'version')::integer)));
+  BEGIN PERFORM api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev_a->>'revision_id','expected_version',(rev_a->>'version')::integer));RAISE EXCEPTION 'Stale semantic base was accepted';EXCEPTION WHEN SQLSTATE'PT409'THEN NULL;END;
+  rev_a:=api.thesaurus_admin('rebase_draft',jsonb_build_object('revision_id',rev_a->>'revision_id','expected_version',(rev_a->>'version')::integer));
+  ASSERT EXISTS(SELECT 1 FROM jsonb_array_elements(rev_a#>'{document,relations}')x WHERE x->>'target_id'=newcid::text AND x->>'type'='related'),'Rebase lost incoming symmetric relation';
+  rev_a:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev_a->>'revision_id','expected_version',(rev_a->>'version')::integer));
+  pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev_a->>'revision_id'),'idempotency_key','thesaurus-test-rebased','expected_revision_versions',jsonb_build_object(rev_a->>'revision_id',(rev_a->>'version')::integer)));
+  ASSERT EXISTS(SELECT 1 FROM thesaurus.relation WHERE type='related'AND(concept_id=child AND target_id=newcid OR concept_id=newcid AND target_id=child)),'Publishing a rebased draft lost a shared edge';
+  BEGIN PERFORM api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',child,'expected_version',0,'document',thesaurus.concept_document(child)||'{"notes":[{"lang":"fr","type":"invalid","value":"bad"}]}'::jsonb));RAISE EXCEPTION 'Invalid note was validated';EXCEPTION WHEN SQLSTATE'PT400'THEN NULL;END;
+  BEGIN PERFORM api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',child,'expected_version',0,'document',thesaurus.concept_document(child)||jsonb_build_object('relations',jsonb_build_array(jsonb_build_object('type','related','target_id',cid)))));RAISE EXCEPTION 'Associative ancestor relation was accepted';EXCEPTION WHEN SQLSTATE'PT400'THEN NULL;END;
+  doc:=thesaurus.concept_document(child)||jsonb_build_object('lifecycle','retired','replaced_by',jsonb_build_array(cid));
+  rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',child,'domain','taxonomy_hlo','expected_version',0,'document',doc));
+  rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
+  pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev->>'revision_id'),'idempotency_key','thesaurus-test-retire','expected_revision_versions',jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer)));
+  ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',child))#>>'{data,lifecycle}'='retired','Retired known concept no longer resolves';
+  ASSERT (api.thesaurus_admin('requalification')->>'total')::integer=2,'Retired usage in both realms was not put into requalification';
+  UPDATE public.object_taxonomy SET note='Conservation de la valeur historique'WHERE object_id='HLORUNTHESAUR001'AND domain='taxonomy_hlo';
+  DELETE FROM public.object_taxonomy WHERE object_id='HLORUNTHESAUR001'AND domain='taxonomy_hlo';
+  INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR001','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');
+  INSERT INTO public.object(id,object_type,name,status)VALUES('HLORUNTHESAUR002','HLO','Nouvelle affectation interdite','draft');
+  BEGIN INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR002','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');RAISE EXCEPTION 'Retired value accepted as new assignment';EXCEPTION WHEN check_violation THEN NULL;END;
+  BEGIN PERFORM api.thesaurus_public('concepts',NULL,'{"domains":["crm_sentiment"]}');RAISE EXCEPTION 'Internal vocabulary was accepted';EXCEPTION WHEN SQLSTATE'PT400'THEN NULL;END;
+  BEGIN PERFORM api.thesaurus_public('concept',NULL,'{"concept_id":"b73effff-0000-4000-8000-000000000099"}');RAISE EXCEPTION 'Unknown concept resolved';EXCEPTION WHEN SQLSTATE'PT404'THEN NULL;END;
+  ASSERT NOT has_function_privilege('authenticated','api.thesaurus_public(text,bigint,jsonb)','EXECUTE'),'Partner reader granted to authenticated';
+  ASSERT NOT has_table_privilege('authenticated','thesaurus.revision','SELECT'),'Private revisions directly readable';
+  ASSERT NOT pg_has_role('authenticated','bertel_thesaurus_publisher','MEMBER'),'Application can assume publisher';
+  -- Rendering eight adapters alone is insufficient: physically rename a native
+  -- row of each source kind through validated prepared publication.
+  FOR native_row IN SELECT concept_id,source_kind,source_id,domain FROM thesaurus.concept
+    WHERE(source_kind,source_id)IN(
+      ('ref_code','b73e1000-0000-4000-8000-000000000001'),
+      ('amenity','b73e2000-0000-4000-8000-000000000001'),
+      ('classification_scheme','b73e3000-0000-4000-8000-000000000001'),
+      ('classification_value','b73e3000-0000-4000-8000-000000000002'),
+      ('language','b73e6000-0000-4000-8000-000000000001'),
+      ('commune','97499'),
+      ('sustainability_action','b73e4000-0000-4000-8000-000000000002'),
+      ('sustainability_category','b73e4000-0000-4000-8000-000000000001'))LOOP
+    native_name:=(thesaurus.concept_document(native_row.concept_id)->>'name')||' contrôle natif préparé';
+    rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',native_row.concept_id,'expected_version',0,'document',thesaurus.concept_document(native_row.concept_id)||jsonb_build_object('name',native_name)));
+    rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
+    ASSERT rev->>'status'='validated',format('Native %s rename failed validation: %s',native_row.source_kind,rev);
+    native_revisions:=native_revisions||jsonb_build_array(rev->>'revision_id');
+    native_versions:=native_versions||jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer);
+    native_names:=native_names||jsonb_build_object(native_row.concept_id::text,native_name);
+  END LOOP;
+  ASSERT jsonb_array_length(native_revisions)=8,'Every native source kind must have a real rename revision';
+  PERFORM api.thesaurus_admin('publish',jsonb_build_object('revision_ids',native_revisions,'expected_revision_versions',native_versions,'expected_release_id',api.thesaurus_generation(),'idempotency_key','thesaurus-all-eight-native-renames'));
+  ASSERT NOT EXISTS(SELECT 1 FROM jsonb_each_text(native_names)expected
+    JOIN thesaurus.concept changed ON changed.concept_id=expected.key::uuid
+    JOIN thesaurus.source_rows source ON(source.source_kind,source.source_id,source.domain)=(changed.source_kind,changed.source_id,changed.domain)
+    WHERE COALESCE(source.payload->>'name',source.payload->>'label')IS DISTINCT FROM expected.value),'A prepared rename did not physically update its native adapter row';
+  ASSERT api.thesaurus_public('export',first_release,'{"lang":"en-US"}')=oldexport,'Eight native renames changed an earlier immutable export';
+  ASSERT(SELECT count(DISTINCT c.source_kind)FROM thesaurus.concept c JOIN thesaurus.publication_documents()d USING(concept_id))=8,'Batch rendering must exercise every typed native source adapter';
+  ASSERT NOT EXISTS(SELECT 1 FROM thesaurus.publication_documents()d WHERE d.document IS DISTINCT FROM(thesaurus.concept_document(d.concept_id,false)-'source_kind'-'source_key'-'source_fields'-'source_fingerprint'-'name_i18n'-'description_i18n')),'Batch release documents differ from the canonical per-concept public projection';
+  PERFORM set_config('request.jwt.claims','{"sub":"b73e0000-0000-4000-8000-000000000099","role":"authenticated"}',true);
+  BEGIN PERFORM api.thesaurus_admin('workspace');RAISE EXCEPTION 'Ordinary user accessed global editorial data';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
+  RAISE NOTICE 'Thesaurus bootstrap, draft isolation, publication, history, language, security and retention tests passed.';
+END $test$;
+ROLLBACK;

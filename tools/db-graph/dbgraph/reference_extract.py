@@ -163,8 +163,23 @@ def _line_for(text, offset):
     return text.count("\n", 0, offset) + 1
 
 
+def canonical_reference_table(table):
+    """Normalize supported SQL identifiers before using a row's table identity.
+
+    Unquoted identifiers fold to lower case. Quoted lower-case identifiers are
+    supported; other quoted/ambiguous names fail closed rather than being
+    guessed into the document privacy boundary. This is not a full SQL parser.
+    """
+    ident = r'(?:[A-Za-z_][A-Za-z0-9_]*|"[a-z_][a-z0-9_]*")'
+    match = re.fullmatch(r'\s*(' + ident + r')\s*(?:\.\s*(' + ident + r')\s*)?', table) if isinstance(table, str) else None
+    if not match:
+        raise ValueError("Unsupported reference table identifier")
+    parts = [part.strip('"').lower() for part in match.groups() if part is not None]
+    return ".".join(parts if len(parts) == 2 else ["public", parts[0]])
+
+
 def _qualify(table):
-    return table if "." in table else "public." + table
+    return canonical_reference_table(table)
 
 
 def _split_qualname(table):
@@ -179,6 +194,22 @@ def _quote_ident(value):
 def _is_reference_target(table):
     name = table.split(".")[-1]
     return name.startswith("ref_") or name in {"tag_link"}
+
+
+def public_reference_rows(rows):
+    """Document rows are publishable only with an explicit public scope.
+
+    Schema, policy and source-function metadata remain complete. Fail closed for
+    legacy caches/seeds with no scope rather than exposing private file metadata.
+    """
+    public = []
+    for row in rows:
+        table = canonical_reference_table(row.get("table"))
+        if table.split(".")[1] == "ref_document" and (row.get("values") or {}).get("access_scope") != "public":
+            continue
+        # Do not return aliases or mutate a caller's cache while filtering it.
+        public.append({**row, "table": table})
+    return public
 
 
 def _rows_from_tuples(table, columns, tuples, path, line, source_kind):
@@ -250,7 +281,7 @@ def extract_reference_values(sql_paths):
                 "source": "%s:%d" % (path.replace("\\", "/"), _line_for(sql, match.start())),
                 "note": "INSERT derives values through SELECT/CTE; row values are not guessed.",
             })
-    return {"rows": rows, "derived_sources": derived_sources}
+    return {"rows": public_reference_rows(rows), "derived_sources": derived_sources}
 
 
 def live_reference_tables(graph, extra=None):
@@ -365,8 +396,9 @@ def extract_live_reference_values(dsn, graph, extra=None, max_rows_per_table=100
             order_sql = ""
             if order_cols:
                 order_sql = " ORDER BY " + ", ".join(_quote_ident(col) + " NULLS LAST" for col in order_cols)
-            sql = "SELECT %s FROM %s.%s%s LIMIT %s" % (
-                select_cols, _quote_ident(schema), _quote_ident(name), order_sql, int(max_rows_per_table) + 1,
+            where_sql = " WHERE \"access_scope\" = 'public'" if table == "public.ref_document" else ""
+            sql = "SELECT %s FROM %s.%s%s%s LIMIT %s" % (
+                select_cols, _quote_ident(schema), _quote_ident(name), where_sql, order_sql, int(max_rows_per_table) + 1,
             )
             try:
                 cur.execute(sql)
@@ -396,7 +428,7 @@ def extract_live_reference_values(dsn, graph, extra=None, max_rows_per_table=100
         except Exception:
             pass
 
-    return {"rows": rows, "derived_sources": [], "live": live}
+    return {"rows": public_reference_rows(rows), "derived_sources": [], "live": live}
 
 
 def _decode_mcp_payload(value):
@@ -432,6 +464,7 @@ def load_mcp_reference_values(path):
     data["live"].setdefault("tables", sorted({row.get("table") for row in data.get("rows", []) if row.get("table")}))
     data["live"].setdefault("errors", [])
     data["live"].setdefault("truncated", [])
+    data["rows"] = public_reference_rows(data.get("rows", []))
     for row in data.get("rows", []):
         row.setdefault("source", "mcp:%s" % row.get("table", "unknown"))
         row.setdefault("source_kind", "mcp_execute_sql")
@@ -441,11 +474,12 @@ def load_mcp_reference_values(path):
 def merge_reference_extracts(seed_refs, live_refs):
     """Prefer live rows for successfully queried tables, keep seeds for the rest."""
     live = (live_refs or {}).get("live") or {"status": "not_queried", "tables": []}
-    queried = set(live.get("tables") or [])
-    rows = list((live_refs or {}).get("rows") or [])
-    rows.extend(row for row in (seed_refs or {}).get("rows", []) if row.get("table") not in queried)
+    live = {**live, "tables": [canonical_reference_table(table) for table in live.get("tables") or []]}
+    queried = set(live["tables"])
+    rows = public_reference_rows((live_refs or {}).get("rows") or [])
+    rows.extend(row for row in public_reference_rows((seed_refs or {}).get("rows", [])) if row["table"] not in queried)
     return {
-        "rows": rows,
+        "rows": public_reference_rows(rows),
         "derived_sources": list((seed_refs or {}).get("derived_sources", [])) + list((live_refs or {}).get("derived_sources", [])),
         "live": live,
         "seed": {

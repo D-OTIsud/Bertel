@@ -31,6 +31,27 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Function to add a legal record
 > =====================================================
 
+## `api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
+- writes `public.crm_interaction` _(high)_
+
+## `api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.crm_interaction` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.fiche_submission` _(high)_
@@ -40,6 +61,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `public.fiche_submission` _(high)_
 - reads `public.pending_change` _(high)_
 - writes `public.pending_change` _(high)_
 
@@ -139,6 +161,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > SOURCE AUTORITAIRE (§208) de la règle « qui voit les coordonnées complètes d'un acteur » : superuser plateforme (lu dans app_user_profile.role — délibérément PAS api.is_platform_superuser(), dont le premier bras dirait TRUE à une clé service_role) OU membre d'une ORG publisher de la fiche (api.current_user_crm_object_ids). FALSE hors contexte HTTP et en service-role (auth.uid() NULL) : un export de PII est imputable à une personne. Forme PAR FICHE, appelée par api.export_actor_capabilities et par l'éditeur. DEUX autres formulations existent (tâche 7, 2026-08-08, mise à jour depuis « UNE seule ») : la forme ensembliste du périmètre dans api.export_actor_contacts (duplication délibérée §204), et le bras superuser de la cascade prestataire→fiche de api.list_selection_emails (migration_selection_emails.sql, §211 plié au régime §208) — faire évoluer les TROIS ensemble.
 
+## `api.can_read_exact_legal_document_metadata(p_document_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_legal` _(high)_
+
+> A policy must not traverse ref_document as the caller: it would recurse into
+> its own RLS. This boolean definer reveals no location and bypasses row policies
+> only while evaluating the existing legal right plus exact ownership mapping.
+
 ## `api.can_read_extended(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 
@@ -152,6 +182,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > 1) Single source of truth for "is this object's data readable by the current caller".
 
+## `api.can_read_object_for_correction(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
 ## `api.can_read_object_private_notes(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 
@@ -163,6 +197,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Retourne TRUE si l'utilisateur courant peut écrire une note privée
 > pour l'objet dans le périmètre de son organisation active.
+
+## `api.cancel_portal_photo_upload(p_object_id text, p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
 
 ## `api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)`
 - returns: `integer` — SECURITY DEFINER
@@ -270,6 +312,20 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `staging.ref_classification_value_temp` _(high)_
 - writes `staging.ref_code_temp` _(high)_
 
+## `api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_actor_module_visibility` _(high)_
+- reads `public.ref_document` _(high)_
+- reads `public.ref_org_role` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `api.compose_object_resource_blocks(p_payload jsonb)`
 - returns: `jsonb`
 
@@ -279,6 +335,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_org_business_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - reads `public.user_permission` _(high)_
+- writes `internal.sandbox_discovery_identity` _(high)_
 - writes `public.app_user_profile` _(high)_
 - writes `public.user_org_business_role` _(high)_
 - writes `public.user_org_membership` _(high)_
@@ -286,6 +343,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.count_notifications_blocked_no_smtp()`
 - returns: `integer` — SECURITY DEFINER
 - reads `public.app_notification` _(high)_
+- reads `public.org_smtp_settings` _(high)_
 
 ## `api.create_crm_artifacts_from_incident()`
 - returns: `trigger`
@@ -345,7 +403,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.actor` _(high)_
 - reads `public.app_user_profile` _(high)_
 
-> 18a portail acteur — actor_id EXPLICITE du compte (app_user_profile.actor_id, posé à l'invitation). Jamais le pont e-mail.
+> Current authenticated actor profile binding; demotion or unlink removes portal identity immediately.
 
 ## `api.current_user_admin_rank()`
 - returns: `integer` — SECURITY DEFINER
@@ -413,9 +471,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.actor_object_role` _(high)_
 - reads `public.crm_interaction` _(high)_
 
-> Acteurs du périmètre CRM : liés (actor_object_role) à un objet du périmètre publisher,
-> + arme défensive : acteurs portant une interaction sur un objet du périmètre (couvre un
-> acteur dont le lien aurait été retiré mais dont l'historique reste rattaché à l'ORG).
+> Prospects without object links remain scoped to the active CRM organisation.
 
 ## `api.current_user_crm_object_ids()`
 - returns: `SETOF text` — SECURITY DEFINER
@@ -436,7 +492,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.current_user_extended_object_ids()`
 - returns: `SETOF text` — SECURITY DEFINER
-- reads `public.actor_object_role` _(high)_
 - reads `public.object` _(high)_
 - reads `public.object_org_link` _(high)_
 - reads `public.org_config` _(high)_
@@ -514,11 +569,18 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_list` _(high)_
 - writes `public.object_list` _(high)_
 
-> 6.6 Suppression
+> =====================================================================
+> 12. Suppression — verrou AVANT décision (§5 revue architecte)
+> =====================================================================
+> Corps inchangé depuis migration_object_list.sql à part le verrou : cette
+> fonction n'avait jamais été touchée avant cette revue, mais son SENS change
+> avec is_featured (user_can_write_list en dépend désormais).
 
 ## `api.delete_org_smtp(p_org_object_id text)`
 - returns: `void` — SECURITY DEFINER
+- reads `public.org_smtp_settings` _(high)_
 - reads `vault.secrets` _(high)_
+- writes `public.org_smtp_settings` _(high)_
 - writes `vault.secrets` _(high)_
 
 ## `api.deliver_legal_document(p_legal_id uuid, p_document_id uuid, p_delivered_at timestamp with time zone DEFAULT now(), p_new_status text DEFAULT 'active'::text)`
@@ -538,6 +600,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_list_item` _(high)_
 - writes `public.object_list` _(high)_
 - writes `public.object_list_item` _(high)_
+
+> Duplication indépendante dans l'ORG active de l'appelant : nouveau
+> propriétaire, active, non proposée, non mise à la une, sans token ni
+> historique d'envoi ni destinataire personnel. Statique → copie items ;
+> dynamique → conserve les filtres (résolution vive, pas de figeage). Les
+> items copiés restent soumis au filtre published-only à la LECTURE (§4) sur
+> la copie comme sur l'original : aucun risque supplémentaire à ne pas
+> filtrer la copie elle-même.
 
 ## `api.enable_cache_triggers()`
 - returns: `void` — SECURITY DEFINER
@@ -582,6 +652,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `json` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
 - writes `public.object_list` _(high)_
+
+> =====================================================================
+> 16. Lien de partage — verrou AVANT décision, jamais un touch de l'horloge
+> =====================================================================
+> Accessible à tout utilisateur autorisé à UTILISER la liste (pas seulement
+> l'éditeur) : un lecteur d'une liste à la une peut obtenir/copier son lien.
+> Réutilise le lien actif SANS toucher son expiration. Peut générer le
+> PREMIER lien s'il n'en existe encore aucun. Un lien EXISTANT mais
+> désactivé/expiré n'est PAS réactivé ici, pour QUICONQUE : erreur claire
+> SHARE_NOT_AVAILABLE — un éditeur réactive via api.share_list, un geste
+> explicite et distinct. Verrou FOR UPDATE AVANT toute décision (§5 revue
+> architecte) : deux premiers partages concurrents doivent converger sur le
+> MÊME token, jamais sur deux tokens distincts qui s'écrasent l'un l'autre.
 
 ## `api.export_actor_capabilities(p_object_ids text[])`
 - returns: `jsonb` — SECURITY DEFINER
@@ -641,6 +724,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_facet_registry` _(high)_
 
 > == 6. Violations report (ops/CI; legacy rows are NOT auto-deleted) =========
+
+## `api.finish_portal_photo_analysis(p_request_id uuid, p_claim_id uuid, p_outcome jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
 
 ## `api.generate_legal_expiry_notifications(p_days_ahead integer DEFAULT 30, p_object_types text[] DEFAULT NULL::text[])`
 - returns: `json`
@@ -750,6 +838,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_dashboard_crm_activity()`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction_status_event` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
 
 > CRM age, topics, flow and net processing time in the caller real/test realm.
@@ -795,6 +884,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_dashboard_provider_crm_activity()`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction_status_event` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
 
 ## `api.get_dashboard_provider_crm_open()`
@@ -890,6 +980,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_sustainability_action_category` _(high)_
 - reads `public.ref_tag` _(high)_
 - reads `public.tag_link` _(high)_
+- reads `thesaurus.source_rows` _(medium)_
 
 > ---- 4) get_filtered_object_ids : les deux cles de remplissage ------------
 >
@@ -926,6 +1017,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > (taxo6), PAS dans la migration phonetique : partir de la mauvaise source
 > ferait regresser 199 (dmetaphone) et 201 (types d unite).
 
+## `api.get_gallery_write_receipt(p_object_id text, p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gallery_write_receipt` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+
 ## `api.get_ingestor_metrics()`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `staging.import_batches` _(high)_
@@ -954,10 +1051,20 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Simplified track for map display (lightweight GeoJSON)
 
+## `api.get_legal_object_document_file(p_object_id text, p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_legal` _(high)_
+- reads `public.ref_document` _(high)_
+
+> Only SectionLegal and its legal-document modal request this existing legal
+> context. The card and Classification keep the canonical RPC above.
+
 ## `api.get_list(p_list_id uuid)`
 - returns: `json` — SECURITY DEFINER
 
-> 6.2 Détail d'une liste (compose)
+> =====================================================================
+> 8. Détail public (authenticated) — inchangé en surface, corps factorisé
+> =====================================================================
 
 ## `api.get_local_now_for_timezone(p_business_timezone text)`
 - returns: `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
@@ -1004,6 +1111,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_code_contact_kind` _(high)_
 
 > 18a — profil de LA persona acteur courante (current_user_actor_id()), lecture seule v1. Ne constitue PAS une 5e formulation du périmètre PII can_read_actor_contacts : il ne lit jamais qu'UN acteur, le sien.
+
+## `api.get_my_portal_photo_workspace(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
 
 ## `api.get_object_amenity_codes_compact(p_object_id text)`
 - returns: `jsonb`
@@ -1069,6 +1179,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > for an all-published page; every downstream child CTE joins distinct_ids); and
 > (c) `main_description` re-applies the object_description visibility RLS this DEFINER body
 > bypasses (see the inline note there — the only field-level read gate among the tables read).
+
+## `api.get_object_document_file(p_object_id text, p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_document` _(high)_
 
 ## `api.get_object_environment_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
 - returns: `jsonb`
@@ -1480,11 +1594,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.app_branding_settings` _(high)_
 - reads `public.org_branding_settings` _(high)_
+- reads `public.org_smtp_settings` _(high)_
 
 ## `api.get_org_smtp_secret(p_org_object_id text)`
 - returns: `TABLE(host text, port integer, secure boolean, from_email text, from_name text, username text, password text)` — SECURITY DEFINER
 - reads `public.app_branding_settings` _(high)_
 - reads `public.org_branding_settings` _(high)_
+- reads `public.org_smtp_settings` _(high)_
 - reads `vault.decrypted_secrets` _(high)_
 
 ## `api.get_organization_data(p_object_id text)`
@@ -1510,6 +1626,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Helper: Get enriched parent object data
 > =====================================================
 
+## `api.get_partner_object_with_vocabulary(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_i18n_all boolean DEFAULT false)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+
+> Published real object, optional pivot and vocabulary release from one statement snapshot; service_role only.
+
 ## `api.get_pending_document_requests(p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])`
 - returns: `TABLE(legal_id uuid, object_id text, object_name text, object_type text, legal_type_code text, legal_type_name text, value jsonb, document_requested_at timestamp with time zone, days_since_requested integer, note text)`
 - reads `public.object` _(high)_
@@ -1526,6 +1648,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > =====================================================
 > Function to get pending document requests in API format
 > =====================================================
+
+## `api.get_portal_photo_analysis(p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.crm_interaction` _(high)_
+
+## `api.get_portal_photo_review(p_change_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
 
 ## `api.get_portal_section_visibility(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1564,12 +1697,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_ref_catalog(p_catalog_key text)`
 - returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 - reads `public.ref_code` _(high)_
 
 ## `api.get_sandbox_discovery_user()`
 - returns: `uuid` — SECURITY DEFINER
 - reads `auth.users` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
 - reads `public.app_user_profile` _(high)_
 - reads `public.org_config` _(high)_
 - reads `public.ref_org_business_role` _(high)_
@@ -1580,9 +1715,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_smtp_config()`
 - returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
 
 ## `api.get_smtp_config_secret()`
 - returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
 - reads `vault.decrypted_secrets` _(high)_
 
 ## `api.get_trail(p_trail_id uuid)`
@@ -1597,6 +1734,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.trail_source_record` _(high)_
 - reads `public.trail_status_history` _(high)_
 - reads `public.trail_status_override` _(high)_
+
+## `api.guard_object_initial_publication()`
+- returns: `trigger`
+
+## `api.guard_object_is_test()`
+- returns: `trigger` — SECURITY DEFINER
+
+> This is an invariant, not another authorization decision. Even privileged
+> writers must change the source organization/config rather than forge its copy.
+> VOLATILE is intentional: queries in a row trigger need a fresh snapshot after
+> waiting for another transaction's row update. No caller-controlled bypass GUC.
 
 ## `api.guard_object_status_change()`
 - returns: `trigger` — SECURITY DEFINER
@@ -1674,10 +1822,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.is_object_owner(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
-- reads `public.actor_object_role` _(high)_
-- reads `public.object` _(high)_
 
-> 18a/D7 — owner historique (lien primaire via pont e-mail) FERMÉ aux personas actor ; intact pour le reste.
+> Legacy name retained for technical/platform authority only. Canonical staff writes use current explicit publisher permissions.
 
 ## `api.is_opening_period_active_on_date(p_all_years boolean, p_date_start date, p_date_end date, p_local_date date)`
 - returns: `boolean`
@@ -1747,13 +1893,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_actor_role` _(high)_
 - writes `public.actor_object_role` _(high)_
 
-> Affecter un établissement à un acteur EXISTANT (demande PO 2026-06-14). Symétrique de la
-> création d'acteur de save_crm_actor (qui crée acteur + lien), mais ici l'acteur existe déjà
-> et on ajoute UNIQUEMENT le lien actor_object_role vers un objet. Gate = arme objet
-> user_can_write_crm (il faut gérer le CRM de l'établissement pour y rattacher un acteur ;
-> superuser bypasse via le helper). is_primary DÉRIVÉ comme save_crm_actor (uq_actor_object_role_primary
-> est UNIQUE (object_id, role_id) WHERE is_primary). Idempotent : ON CONFLICT DO NOTHING ⇒
-> linked=FOUND (true si une ligne a été insérée, false si le lien existait déjà).
+> Missing role_code inherits the actor's default role, then falls back to operator
+> for legacy actors created before this migration.
 
 ## `api.list_actor_crm(p_actor_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1787,15 +1928,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.list_catalog(p_domain text, p_lang text DEFAULT 'fr'::text)`
 - returns: `jsonb`
-- reads `public.ref_amenity` _(high)_
-- reads `public.ref_classification_scheme` _(high)_
-- reads `public.ref_code` _(high)_
-- reads `public.ref_commune` _(high)_
-- reads `public.ref_language` _(high)_
-- reads `public.ref_sustainability_action` _(high)_
-- reads `public.ref_sustainability_action_category` _(high)_
 
-> Un référentiel public résolu i18n, forme {code,name,icon_url,parent_code,domain}. Audit API I1.
+> ── Un référentiel, forme uniforme {code,name,icon_url,parent_code,domain} ───────
 
 ## `api.list_crm_assignees()`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1830,6 +1964,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
 - reads `public.crm_interaction` _(high)_
+- reads `public.crm_interaction_status_event` _(high)_
 
 > Journal des transitions de statut d'une demande CRM, ordonné du plus ancien au plus récent (manifeste 17g). Alimente l'encart « depuis quand » du sélecteur de statut. Périmètre §61 : la lisibilité du journal SUIT celle de son interaction (arme objet, à défaut arme acteur, à défaut la sonde d'écriture de notes). N'émet aucune coordonnée — seulement un libellé d'utilisateur via api.crm_user_label.
 
@@ -1885,6 +2020,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.app_user_profile` _(high)_
 - reads `public.object_list` _(high)_
 
+> À la une de l'organisation active : visible à TOUT membre ACTIF de l'ORG.
+
 ## `api.list_is_archived(p_is_featured boolean, p_last_activity_at timestamp with time zone)`
 - returns: `boolean`
 
@@ -1905,12 +2042,18 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.app_user_profile` _(high)_
 - reads `public.object_list` _(high)_
 
+> Propositions en attente de l'organisation active : réservé aux admins DE
+> CETTE ORG PRÉCISE (rang scopé, jamais current_user_admin_rank() global —
+> §2 revue architecte) ou superuser. Un appelant qui ne l'est pas obtient un
+> tableau VIDE (le filtre WHERE porte la garde), jamais une exception.
+
 ## `api.list_my_lists()`
 - returns: `json` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
 - reads `public.object_list` _(high)_
 
-> 6.1 Grille « Mes listes »
+> `status = 'shared'` records editorial history, not whether a live capability
+> link still exists.  Emit the actual state on all list-card payloads.
 
 ## `api.list_my_notifications(p_limit integer DEFAULT 50)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1932,6 +2075,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_org_role` _(high)_
 
 > 18a — accueil du portail : les fiches de la portée acteur, avec la soumission ouverte (le cas échéant), la dernière résolue, et les canaux PUBLICS de l'office publisher (office_email/office_phone, D11) — jamais un canal interne.
+
+## `api.list_my_portal_messages(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+
+## `api.list_my_portal_photos(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
 
 ## `api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2053,12 +2203,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.list_org_smtp_status()`
 - returns: `TABLE(org_object_id text, org_name text, host text, port integer, from_email text, is_enabled boolean, has_password boolean, last_test_at timestamp with time zone, last_test_ok boolean)` — SECURITY DEFINER
 - reads `public.object` _(high)_
+- reads `public.org_smtp_settings` _(high)_
 
 ## `api.list_partner_keys()`
 - returns: `TABLE(id uuid, label text, key_prefix text, scopes text[], is_active boolean, expires_at timestamp with time zone, revoked_at timestamp with time zone, last_used_at timestamp with time zone, created_at timestamp with time zone)` — SECURITY DEFINER
 - reads `internal.partner_api_key` _(high)_
 
 > Liste les clés (métadonnées seulement — JAMAIS le hash ni la clé).
+
+## `api.list_partner_objects_with_vocabulary(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_taxonomy_codes text[] DEFAULT NULL::text[], p_include_equivalent_predecessors boolean DEFAULT false)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+
+> Published real object page and vocabulary release from one snapshot; opt-in exact-equivalence taxonomy filters.
 
 ## `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
 - returns: `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone, submission_id uuid, submission_note text, actor_label text, manual_apply boolean)` — SECURITY DEFINER
@@ -2069,6 +2226,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.pending_change` _(high)_
 
 > P2.1 §120 + 18a/D9 — file de modération. Ajoute submission_id / submission_note / actor_label / manual_apply. Jointures soumission et acteur LEFT : une ligne sans soumission (§120/§122) doit rester listée.
+
+## `api.list_portal_message_documents(p_interaction_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_document` _(high)_
 
 ## `api.list_public_trails(p_status_code text DEFAULT NULL::text, p_simplify boolean DEFAULT true, p_tolerance numeric DEFAULT 0.0001, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
 - returns: `TABLE(id uuid, slug text, name text, status_code text, status_label text, not_guaranteed boolean, manager_labels text[], source_label text, source_website text, last_update timestamp with time zone, length_m numeric, geom jsonb)` — SECURITY DEFINER
@@ -2081,6 +2243,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.list_ref_catalogs()`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 - reads `public.ref_code` _(high)_
 
@@ -2133,6 +2296,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.log_crm_interaction_status_event()`
 - returns: `trigger` — SECURITY DEFINER
+- writes `public.crm_interaction_status_event` _(high)_
 
 > Trigger AFTER INSERT OR UPDATE OF status sur crm_interaction : écrit une ligne de crm_interaction_status_event par transition RÉELLE (un UPDATE qui ne touche pas au statut n'écrit rien). from_status NULL = création. Manifeste 17g.
 
@@ -2189,9 +2353,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_org_link` _(high)_
 - reads `public.org_config` _(high)_
 
-> Realm que la fiche DEVRAIT porter, d'apres son ORG primaire. Une fiche sans lien
-> d'ORG reste en production (false) — fail-closed du bon cote : une fiche orpheline
-> ne doit pas devenir invisible, elle doit rester visible et donc suspecte.
+> An ORG follows its own configuration. Other objects follow their primary
+> organization. A new/orphan object has no source yet and starts in production;
+> the existing AFTER INSERT auto-attachment stamps a test creator's object.
 
 ## `api.object_missing_essentials(p_object_ids text[])`
 - returns: `TABLE(object_id text, missing text[])` — SECURITY DEFINER
@@ -2258,18 +2422,68 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.pick_lang(p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
 - returns: `text`
 
+## `api.portal_message_document(p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.portal_message_upload_context(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+> Final function declarations, with SQL dependencies ordered before callers.
+
+## `api.portal_photo_failed_approval(p_claim_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.portal_photo_preview(p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.portal_photo_upload_context(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `api.prevent_duplicate_actor_email()`
 - returns: `trigger`
 - reads `public.actor` _(high)_
 - reads `public.actor_channel` _(high)_
 - reads `public.ref_code_contact_kind` _(high)_
 
-> Unicité email cross-actors
+> Duplicate-email detection must not reveal or depend on the other realm's actor identities.
 
 ## `api.public_catalog_domains()`
-- returns: `text[]`
+- returns: `text[]` — SECURITY DEFINER
+- reads `thesaurus.vocabulary` _(high)_
 
 > Liste des domaines de référentiel exposés publiquement par api.list_catalog (whitelist default-deny). Audit API I1.
+
+## `api.publish_portal_photo_additions(p_object_id text, p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.media` _(high)_
+- writes `public.ref_document` _(high)_
 
 ## `api.purge_expired_staging_batches(p_limit integer DEFAULT 500)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2286,8 +2500,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.audit_result` _(high)_
 - writes `public.audit_session` _(high)_
 
+## `api.reconcile_portal_photo_order(p_object_id text, p_expected jsonb, p_media_ids jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+
 ## `api.record_org_smtp_test(p_org_object_id text, p_ok boolean, p_error text)`
 - returns: `void` — SECURITY DEFINER
+- writes `public.org_smtp_settings` _(high)_
 
 ## `api.ref_code_domain_is_editable(p_domain text)`
 - returns: `boolean`
@@ -2367,6 +2589,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.reject_pending_change(p_id uuid, p_review_note text)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
 - reads `public.pending_change` _(high)_
 - writes `public.pending_change` _(high)_
 
@@ -2394,6 +2617,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.render_format_time(p_time time without time zone, p_locale text)`
 - returns: `text`
 
+## `api.reorder_portal_photos(p_object_id text, p_media_ids jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+
 ## `api.request_legal_document(p_legal_id uuid, p_requested_at timestamp with time zone DEFAULT now())`
 - returns: `boolean`
 - writes `public.object_legal` _(high)_
@@ -2406,6 +2636,31 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `json` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
 - writes `public.object_list` _(high)_
+
+> Proposal lifecycle: create recipients in the same transaction as the first
+> request; clear all pending alerts as soon as a review resolves it.  The
+> direct self-feature path can also close a pending request, so it removes the
+> same alerts.
+
+## `api.reserve_portal_photo_analysis(p_object_id text, p_document_id uuid, p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `internal.portal_photo_analysis_settings` _(high)_
+- reads `public.app_ai_provider_config` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
+
+## `api.reserve_portal_photo_upload(p_object_id text, p_upload_id uuid, p_replace_media_id uuid DEFAULT NULL::uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.ref_document` _(high)_
 
 ## `api.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)`
 - returns: `SETOF text` — SECURITY DEFINER
@@ -2451,6 +2706,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_list` _(high)_
 - writes `public.object_list` _(high)_
 
+> Réactivation explicite d'une liste personnelle ARCHIVÉE. NO-OP sur une
+> liste déjà active, et ne s'applique jamais à une liste à la une
+> (structurellement jamais archivée) — §3 revue architecte.
+
 ## `api.retry_failed_media_downloads(p_limit integer DEFAULT 200)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `staging.media_temp` _(high)_
@@ -2462,6 +2721,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_list` _(high)_
 - writes `public.app_notification` _(high)_
 - writes `public.object_list` _(high)_
+
+> Admin DE CETTE ORG : accepte (met à la une) ou refuse (retire la
+> proposition) une proposition. Verrou AVANT décision (§5). Ne touche jamais
+> last_activity_at.
 
 ## `api.rollback_staging_batch_compensate(p_batch_id text, p_force boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2548,6 +2811,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)`
 - returns: `void` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 
 ## `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2652,6 +2916,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)`
 - returns: `void` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_code` _(high)_
 
 > Réordonnancement. Sans cette RPC, absorber RefCodeEditor ferait disparaître les flèches
@@ -2829,6 +3094,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb)`
 - returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 
 ## `api.rpc_write_org_description(p_object_id text, p_payload jsonb)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2870,10 +3136,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.actor` _(high)_
 - writes `public.actor_object_role` _(high)_
 
-> Upsert acteur. INSERT : display_name + object_id requis — l'acteur ENTRE dans le périmètre
-> CRM PAR son lien actor_object_role (gate = arme objet user_can_write_crm) ; role_code
-> optionnel (défaut 'operator'). UPDATE : partiel display_name/first_name/last_name, gate =
-> arme acteur user_can_write_crm_actor (l'acteur est déjà dans le périmètre).
+> INSERT now accepts a missing object_id. default_role_id preserves the intended
+> business role until the first establishment is created/linked.
 
 ## `api.save_crm_interaction(p_payload jsonb)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2928,6 +3192,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_pet_policy` _(high)_
 - writes `public.object_price` _(high)_
 - writes `public.object_price_period` _(high)_
+
+## `api.save_object_gallery(p_object_id text, p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gallery_write_receipt` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- writes `internal.gallery_write_receipt` _(high)_
+- writes `public.media` _(high)_
 
 ## `api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
@@ -3083,6 +3355,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_menu_item_cuisine_type` _(high)_
 - reads `public.ref_code_cuisine_type` _(high)_
 
+## `api.send_portal_message(p_object_id text, p_subject text, p_body text, p_attachments jsonb DEFAULT '[]'::jsonb, p_reply_to text DEFAULT NULL::text, p_client_id uuid DEFAULT NULL::uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.app_notification` _(high)_
+- writes `public.crm_interaction` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `api.set_active_ai_provider(p_id uuid)`
 - returns: `void` — SECURITY DEFINER
 - reads `public.app_ai_provider_config` _(high)_
@@ -3110,6 +3392,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.app_notification` _(high)_
 - writes `public.object_list` _(high)_
 
+> Admin DE CETTE ORG : met directement SA PROPRE liste à la une (AUCUNE
+> exception superuser sur la propriété — 2e revue architecte §3), ou retire
+> une liste à la une de son ORG. Celle d'un collègue passe PAR
+> review_list_feature sur une proposition en attente — JAMAIS ici. Le retrait relance une période
+> active complète MAIS uniquement s'il agit réellement (idempotence : un
+> retrait répété sur une liste déjà non-featured est un NO-OP, ne relance pas
+> la rétention).
+
 ## `api.set_list_items(p_list_id uuid, p_items jsonb)`
 - returns: `json` — SECURITY DEFINER
 - reads `public.object` _(high)_
@@ -3118,12 +3408,28 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_list` _(high)_
 - writes `public.object_list_item` _(high)_
 
-> 6.5 Remplacement des items statiques (reconcile non-destructif — §40)
+> =====================================================================
+> 11. Items statiques — verrou, reconcile non-destructif, cible normalisée UNIQUE
+> =====================================================================
+> §4 (2e revue architecte) : v_after comparait un payload FILTRÉ tandis que
+> le DELETE comparait le payload BRUT — un id devenu non publié/hors corpus
+> mais toujours présent dans le payload restait alors stocké SANS être
+> retiré ni mis à jour (le DELETE le voyait "encore référencé", l'INSERT le
+> rejetait), pendant que v_after le considérait déjà absent : l'horloge
+> avançait à chaque appel identique sans qu'aucune ligne stockée ne change
+> réellement. Correction : UNE cible normalisée (v_target — DISTINCT ON
+> object_id, published ET bon corpus de test, §2), appliquée À L'IDENTIQUE
+> au DELETE et à l'UPSERT, puis l'état réel FINAL (relu après écriture) est
+> comparé à l'état INITIAL — jamais un état "prévu" qui peut diverger du
+> stockage réel.
 
 ## `api.set_provider_only_preference(p_enabled boolean)`
 - returns: `boolean`
 - reads `public.app_user_profile` _(high)_
 - writes `public.app_user_profile` _(high)_
+
+> Fusion atomique d'UNE clé ; ne remplace jamais les autres préférences.
+> INVOKER : la RLS du profil reste active, et aucun user_id n'est accepté.
 
 ## `api.set_publication_workflow_timestamps()`
 - returns: `trigger`
@@ -3139,7 +3445,20 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_list` _(high)_
 - writes `public.object_list` _(high)_
 
-> 6.7 Partage : génère/rote le token, (dé)active le lien
+> =====================================================================
+> 13. Partage (réglages) — verrou AVANT décision (§5 revue architecte)
+> =====================================================================
+> Corps inchangé depuis migration_object_list.sql à part le verrou, pour la
+> même raison que delete_list ci-dessus.
+
+## `api.start_portal_photo_analysis(p_request_id uuid, p_claim_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `internal.portal_photo_analysis_settings` _(high)_
+- reads `public.app_ai_provider_config` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
 
 ## `api.strip_markdown(md text)`
 - returns: `text`
@@ -3174,6 +3493,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Dépose une suggestion dans la file de modération (équipes internes). 18a : FERMÉE aux personas du portail acteur — elles ont leur propre porte, api.submit_actor_fiche, seule à appliquer le plancher de modules, la matrice de masquage, la whitelist de writers, le plafond de 40 changements et le verrou « une seule vérification ouverte ».
 
+## `api.suppress_sandbox_notification_emails(p_notification_ids uuid[])`
+- returns: `uuid[]` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
+- writes `public.app_notification` _(high)_
+
+> Service-only final check before SMTP: terminates discovery/test notification email, retaining in-app events and durable provenance.
+
 ## `api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT '{}'::jsonb, p_raw_app_meta_data jsonb DEFAULT '{}'::jsonb)`
 - returns: `void` — SECURITY DEFINER
 - writes `public.app_user_profile` _(high)_
@@ -3191,6 +3517,49 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger`
 
 > Tenue à jour de updated_at
+
+## `api.thesaurus_admin(p_action text, p_payload jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb`
+
+> Thesaurus editorial actions, gated platform superuser, optimistic revisions and atomic publisher-role release.
+
+## `api.thesaurus_expand_taxonomy_codes(p_codes text[])`
+- returns: `text[]` — SECURITY DEFINER
+- reads `thesaurus.release_concept` _(high)_
+
+## `api.thesaurus_generation()`
+- returns: `bigint` — SECURITY DEFINER
+- reads `thesaurus.instance` _(medium)_
+
+> These helpers deliberately expose only the generation, never private editorial data.
+
+## `api.thesaurus_object_release()`
+- returns: `bigint`
+
+## `api.thesaurus_public(p_action text, p_release_id bigint DEFAULT NULL::bigint, p_params jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb`
+
+> Partner-only immutable thesaurus release reader. No direct editorial table access.
+
+## `api.thesaurus_reference_snapshot(p_domains text[] DEFAULT NULL::text[])`
+- returns: `jsonb` — dynamic SQL
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.v_capacity_metric_bounds` _(high)_
+
+> Reference values and vocabulary generation from one statement snapshot; fixed reference allowlist, invoker RLS.
+
+## `api.thesaurus_reference_statuses()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+
+> Public-reference status only: no editorial documents or native-to-concept IDs.
+
+## `api.thesaurus_taxonomy_matches(p_cached text[], p_selected text[], p_filters jsonb)`
+- returns: `boolean`
 
 ## `api.to_base36(n bigint)`
 - returns: `text`
@@ -3251,13 +3620,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.trg_object_org_link_is_test()`
 - returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
 
 ## `api.trg_org_config_is_test()`
 - returns: `trigger` — SECURITY DEFINER
 - reads `public.object_org_link` _(high)_
-- writes `public.object` _(high)_
 
-> Bascule d'une ORG entiere (is_test_org modifie) : re-synchronise ses fiches.
+> A config insert, flag change, key move or deletion re-derives every affected
+> organization and current primary child. An absent source uses the same false
+> fallback as an object without a primary organization. No authorization changes.
 
 ## `api.trg_refresh_caches_from_menu_item_link()`
 - returns: `trigger` — SECURITY DEFINER
@@ -3282,7 +3653,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger` — SECURITY DEFINER
 
 ## `api.trg_refresh_ref_code_taxonomy_closure()`
-- returns: `trigger`
+- returns: `trigger` — SECURITY DEFINER
 - reads `public.ref_code_domain_registry` _(high)_
 
 ## `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT NULL::legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
@@ -3298,7 +3669,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_list` _(high)_
 - writes `public.object_list` _(high)_
 
-> 6.4 Mise à jour des métadonnées (patch whitelisté)
+> =====================================================================
+> 10. Mise à jour des métadonnées — verrou + bump SEULEMENT sur diff réel
+> =====================================================================
+
+## `api.update_portal_photo_proposal_texts(p_object_id text, p_document_id uuid, p_expected jsonb, p_title text, p_description text)`
+- returns: `jsonb` — SECURITY DEFINER
+
+## `api.update_portal_photo_texts(p_object_id text, p_media_id uuid, p_expected jsonb, p_title text, p_description text)`
+- returns: `jsonb` — SECURITY DEFINER
 
 ## `api.upsert_ai_provider(p_id uuid, p_label text, p_api_kind text, p_base_url text, p_model text, p_max_output_tokens integer, p_is_active boolean, p_extra jsonb DEFAULT '{}'::jsonb, p_api_key text DEFAULT NULL::text)`
 - returns: `uuid` — SECURITY DEFINER
@@ -3324,20 +3703,23 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.upsert_org_smtp(p_org_object_id text, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text DEFAULT NULL::text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text, p_is_enabled boolean DEFAULT false, p_clear_password boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `public.org_smtp_settings` _(high)_
 - reads `vault.secrets` _(high)_
+- writes `public.org_smtp_settings` _(high)_
 - writes `vault.secrets` _(high)_
 
 ## `api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)`
 - returns: `void` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
 - reads `vault.secrets` _(high)_
+- writes `public.app_smtp_config` _(high)_
 - writes `vault.secrets` _(high)_
 
 ## `api.user_actor_ids()`
 - returns: `SETOF uuid`
-- reads `public.actor_channel` _(high)_
-- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.app_user_profile` _(high)_
 
-> Acteurs liés à l'utilisateur via email dans actor_channel.kind='email'
+> Compatibility identity helper: current actor profile binding only; email never grants scope.
 
 ## `api.user_can_assign_crm(p_user uuid)`
 - returns: `boolean` — SECURITY DEFINER
@@ -3369,10 +3751,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
 
+> Capacité PRÉCISE affichée en carte : l'admin (ou superuser) peut-il faire
+> QUELQUE CHOSE sur CETTE ligne via set_list_featured/review_list_feature —
+> retirer une liste déjà à la une, featurer directement SA PROPRE liste, ou
+> revoir une proposition en attente. Ni "est admin de l'ORG" au sens large,
+> ni un droit d'édition général (§3 revue architecte).
+
 ## `api.user_can_manage_object_legal(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_org_link` _(high)_
 - reads `public.ref_org_role` _(high)_
+
+> Preserve the existing dedicated legal permission/publisher contract. Pin its
+> two table sources before making it a dependency of the document reader.
 
 ## `api.user_can_manage_org_branding(p_org_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
@@ -3424,9 +3815,20 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
 
+> Lecture : propriétaire actif, membre actif pour une liste à la une, admin de
+> l'ORG pour une proposition en attente (revue), reprise d'orpheline, ou
+> superuser plateforme (accès global, explicite). AUCUN accès général "tout
+> membre de l'ORG lit toute liste" (règle 2 du cadrage).
+
 ## `api.user_can_use_list(p_list_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
+
+> Utilisation (dupliquer, obtenir/générer le lien de partage) : propriétaire
+> actif, membre actif pour une liste à la une, reprise d'orpheline, ou
+> superuser. Volontairement PLUS ÉTROIT que la lecture : un admin qui voit
+> une proposition EN ATTENTE (bras revue de user_can_read_list) n'a pas de
+> droit d'usage tant qu'il ne l'a pas acceptée.
 
 ## `api.user_can_write_canonical(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
@@ -3507,6 +3909,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
 
+> « Est admin de l'ORG de cette liste » (rang >= 30 DANS CETTE ORG, ou
+> superuser). Indépendant de la propriété — c'est ce qui permet à un admin de
+> revoir la liste d'un collègue sans lui donner de droit d'édition général.
+
 ## `api.validate_audit_result_points()`
 - returns: `trigger`
 - reads `public.audit_criteria` _(high)_
@@ -3544,6 +3950,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - reads `staging.import_batches` _(high)_
 - writes `staging.import_batches` _(high)_
+
+## `api.withdraw_portal_photo(p_object_id text, p_media_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
 
 ## `audit.attach_missing_triggers()`
 - returns: `void` — SECURITY DEFINER, dynamic SQL
@@ -3584,8 +3997,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `integer` — SECURITY DEFINER
 - writes `audit.audit_log` _(high)_
 
-> Rédaction ciblée du journal d'audit : retire les clés PII d'un sujet (row_pk OU before_data->>key,
-> ce dernier capture les lignes DELETE dont la PK ne porte pas la FK). null::jsonb - text[] = null.
+> ---------------------------------------------------------------------
+> 2. audit.redact_subject — ajoute le matching after_data
+> ---------------------------------------------------------------------
 
 ## `internal.actor_in_current_realm(p_actor_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
@@ -3595,10 +4009,23 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `integer` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
 
+> Historical pending proposals become visible immediately after deployment.
+> The unique index makes this safe to rerun and avoids duplicate alerts.
+
 ## `internal.build_list_detail_json(p_list_id uuid)`
 - returns: `json` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
 - reads `public.object_list` _(high)_
+
+> =====================================================================
+> 7. Assemblage du détail (interne — jamais exposé à PostgREST)
+> =====================================================================
+> Factorisé hors de `api.get_list` pour que les RPC d'action (review/set
+> featured/restore) puissent, APRÈS leur propre mutation, rendre le détail
+> SI ENCORE LISIBLE ou `NULL` sinon — sans jamais lever une exception juste
+> parce que la visibilité a changé À CAUSE de l'action qu'on vient d'exécuter.
+> AUCUNE vérification d'autorisation ici : chaque appelant a déjà fait la
+> sienne avant d'appeler cette fonction.
 
 ## `internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)`
 - returns: `integer`
@@ -3615,6 +4042,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `storage.objects` _(medium)_
 - writes `public.metric_snapshot` _(high)_
 
+> Explicit realm argument for the scheduled writer: no JWT impersonation, no
+> reliance on the current account, and the same completeness rounding as the live KPI.
+
 ## `internal.compute_open_status(p_at timestamp with time zone)`
 - returns: `TABLE(object_id text, is_open boolean)`
 - reads `public.object` _(high)_
@@ -3624,16 +4054,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.opening_time_period` _(high)_
 - reads `public.opening_time_period_weekday` _(high)_
 - reads `public.ref_code_weekday` _(high)_
-
-> §157 — LE moteur d'ouverture, paramétré par l'instant demandé. Source UNIQUE :
-> api.refresh_open_status (cache « maintenant », cron) et le filtre « ouvert à … »
-> de get_filtered_object_ids sont deux lectures du MÊME calcul — plus de dérive
-> possible entre la pastille et le filtre. Publiés uniquement (parité stricte
-> avec le cache : un brouillon n'a jamais matché « Ouvert maintenant »).
-> TRI-ÉTAT préservé (§133) : NULL = aucune donnée (jamais matché par un filtre,
-> pas de pastille) ; TRUE = ouvert (dont « jour ouvert sans horaire », §93) ;
-> FALSE = a des horaires, fermé à cet instant. Pas de scan catalogue (§37).
-> La récurrence saisonnière (§92) est portée par is_opening_period_active_on_date.
 
 ## `internal.crm_backfill_assignees_from_owner()`
 - returns: `integer`
@@ -3654,6 +4074,41 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `internal.dashboard_object_ids()`
 - returns: `TABLE(object_id text)`
 - reads `public.object` _(high)_
+
+## `internal.gallery_arm_photo_reservation(p_object_id text, p_document_id uuid, p_replace_media_id uuid)`
+- returns: `void`
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `internal.gallery_assert_photo_capacity(p_object_id text, p_previous_usage integer, p_previous_published integer)`
+- returns: `void`
+
+## `internal.gallery_bind_photo_proposal()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `internal.gallery_capture_photo_proposal_usage()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+## `internal.gallery_photo_reservations(p_object_id text)`
+- returns: `TABLE(document_id uuid, replace_media_id uuid)`
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.gallery_photo_usage(p_object_id text)`
+- returns: `integer`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
+## `internal.gallery_published_photo_count(p_object_id text)`
+- returns: `integer`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
 
 ## `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -3683,14 +4138,60 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.actor` _(high)_
 - reads `public.object` _(high)_
 
+> A caller allowed to edit a production object must not attach a sandbox actor by UUID.
+> Table triggers cover every writer, including workspace RPCs and service-role routes.
+
+## `internal.guard_notification_external_email()`
+- returns: `trigger` — SECURITY DEFINER
+
 ## `internal.list_grid_summary(p_list_id uuid)`
 - returns: `TABLE(item_count integer, type_breakdown jsonb, cover_image text)` — SECURITY DEFINER
 - reads `public.object` _(high)_
+
+> =====================================================================
+> 6. Résumé de grille (compte/répartition/couverture) — résolu UNE FOIS
+> =====================================================================
+> §6 revue architecte : les 3 grilles appelaient auparavant 3 fois
+> api.list_effective_object_ids par ligne de liste (couverture, compte,
+> répartition). Ce helper le fait UNE fois (CTE MATERIALIZED) et dérive les
+> trois valeurs de la même résolution. TOUJOURS published ET du bon corpus
+> de test (§2/§4 revue architecte, via api.list_effective_object_ids) : un
+> item statique non publié OU hors corpus (brouillon ou fiche test, quelle
+> que soit son ORG) ne compte JAMAIS dans item_count/type_breakdown, et ne
+> peut JAMAIS devenir la couverture. Jamais exposé (ni grant PUBLIC, ni RPC dédiée) :
+> consommé uniquement par les grilles ci-dessous.
 
 ## `internal.list_sender_authorized(p_list_id uuid, p_user_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
 - reads `public.object_list` _(high)_
+
+> Vérifie que p_sender_id (fourni par la route serveur, PAS déduit d'un JWT —
+> service_role n'en a pas) est autorisé à UTILISER cette liste. §1 revue
+> architecte : `created_by` ne porte aucune FK et survit à la suppression
+> d'un compte — les bras propriétaire/à-la-une exigent désormais
+> EXPLICITEMENT `internal.org_membership_active(p_user_id, org)` (existence
+> ET adhésion active) AVANT d'être considérés, jamais un simple
+> `created_by = p_user_id`. Le bras orpheline revérifie déjà l'adhésion active
+> du SENDER via internal.org_is_admin (rang scopé §2). Le bras superuser
+> passe par app_user_profile.role (jamais auth.role(), qui vaudrait TRUE pour
+> la clé service_role elle-même).
+
+## `internal.lock_object_realm_sources(p_org_ids text[])`
+- returns: `void`
+- reads `public.object` _(high)_
+
+> Source transitions serialize by organization before touching derived object
+> rows. The object guard never takes these locks: it already owns an object row,
+> whereas a config transition owns its config row before updating objects.
+> A SHARE lock on the organization row also makes a stale REPEATABLE READ source
+> transition fail with 40001 instead of accepting a pre-flip snapshot.
+
+## `internal.notification_has_sandbox_context(p_recipient_id uuid, p_created_by uuid, p_task_id uuid, p_payload jsonb)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.object` _(high)_
 
 ## `internal.notify_list_feature_reviewers(p_list_id uuid)`
 - returns: `integer` — SECURITY DEFINER
@@ -3702,6 +4203,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_org_membership` _(high)_
 - writes `public.app_notification` _(high)_
 
+> Deliver to the same population allowed to review a list: active rank-30+
+> admins of its exact ORG, plus explicit platform superusers.  The helper is
+> internal because it takes an arbitrary list id and writes another user's
+> inbox.
+
+## `internal.object_document_matches_object(p_document_id uuid, p_object_id text)`
+- returns: `boolean`
+- reads `public.object_classification` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.ref_document` _(high)_
+
 ## `internal.object_in_current_realm(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object` _(high)_
@@ -3712,16 +4224,100 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_org_admin_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 
+> Rang admin de p_user_id DANS CETTE ORG PRÉCISE (jamais agrégé toutes ORG
+> confondues, à l'inverse de api.current_user_admin_rank()). NULL si aucune
+> adhésion active + rôle admin actif dans p_org_object_id.
+
 ## `internal.org_is_admin(p_user_id uuid, p_org_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
+
+> p_user_id est-il admin (rang >= 30) DE CETTE ORG PRÉCISE ? Implique déjà
+> une adhésion active (la jointure d'internal.org_admin_rank l'exige) —
+> aucun appelant n'a besoin de revérifier org_membership_active en plus.
 
 ## `internal.org_membership_active(p_user_id uuid, p_org_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.user_org_membership` _(high)_
 
+> Le créateur (ou tout p_user_id) est-il ACTIVEMENT membre de cette ORG ?
+> `user_org_membership.user_id` référence `users(id) ON DELETE CASCADE` : un
+> compte réellement supprimé n'a donc plus AUCUNE ligne ici, et cette
+> fonction rend FALSE pour lui — c'est ce qui couvre à la fois "ancien
+> membre" (adhésion désactivée) ET "compte supprimé" (adhésion disparue) en
+> un seul test.
+
 ## `internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.pending_change` _(high)_
+
+## `internal.photo_analysis_assert_owner(p_object_id text, p_document_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.photo_analysis_envelope(p_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.photo_analysis_json(p_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.photo_analysis_local_day(p_at timestamp with time zone)`
+- returns: `date`
+
+## `internal.photo_analysis_reset_at(p_day date)`
+- returns: `timestamp with time zone`
+
+## `internal.photo_assessment_valid(p_value jsonb)`
+- returns: `boolean`
+
+## `internal.portal_photo_actor_writes_enabled()`
+- returns: `boolean`
+
+## `internal.portal_photo_appeal_document(p_interaction_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.portal_photo_assert_actor(p_object_id text)`
+- returns: `uuid` — SECURITY DEFINER
+
+## `internal.portal_photo_assert_writes_open()`
+- returns: `void`
+
+## `internal.portal_photo_order_snapshot(p_object_id text)`
+- returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
+## `internal.portal_photo_text_snapshot(p_title text, p_description text, p_title_i18n jsonb, p_description_i18n jsonb, p_revision text)`
+- returns: `jsonb`
+
+## `internal.portal_photo_workspace_json(p_object_id text, p_actor_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `internal.portal_photo_analysis_settings` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.app_ai_provider_config` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.media` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.portal_photos_json(p_object_id text)`
+- returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
 
 ## `internal.provider_crm_interactions()`
 - returns: `SETOF crm_interaction`
@@ -3731,6 +4327,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `internal.provider_object_ids()`
 - returns: `TABLE(object_id text)`
 - reads `public.actor_object_role` _(high)_
+
+> Helpers privés : accessibles uniquement depuis les RPC autorisées ci-dessous.
 
 ## `internal.purge_expired_lists()`
 - returns: `integer` — SECURITY DEFINER
@@ -3751,6 +4349,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `internal.ref_catalog_access(p_catalog_key text)`
 - returns: `text`
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 
 > Accès EFFECTIF : DÉRIVÉ d'abord, registre ensuite. Les dérivés ne peuvent pas être
@@ -3766,6 +4365,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `internal.ref_catalog_label_column(p_catalog_key text)`
 - returns: `text`
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 
 > Cascade de libellé. Une déclaration par table serait la RÈGLE et non l'exception
@@ -3774,10 +4374,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `internal.ref_catalog_readonly_reason(p_catalog_key text)`
 - returns: `text`
+- reads `internal.v_ref_catalog` _(high)_
 - reads `public.ref_catalog_registry` _(high)_
 
 ## `internal.ref_catalog_row_count(p_table text)`
 - returns: `bigint` — dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
 
 ## `internal.resolve_fiche_submission(p_submission_id uuid)`
 - returns: `void` — SECURITY DEFINER
@@ -3825,8 +4427,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Chaque fiche est rattachee a l'ORG de test comme ORG PRIMAIRE : c'est CE lien
 > qui, via le trigger de migration_test_org_isolation.sql, la marque is_test. On
-> ne pose JAMAIS is_test a la main — l'organisation est la source de verite, et un
-> seed qui l'ecrirait directement pourrait diverger d'elle sans qu'on le voie.
+> ne choisit JAMAIS is_test independamment de cette source. Pour rejouer l UPSERT
+> d une fiche deja rattachee, l INSERT transmet la derivation canonique courante :
+> BEFORE INSERT s execute avant ON CONFLICT, meme si le flag ne sera pas modifie.
+> Une fiche neuve reste false puis le lien primaire la classe atomiquement.
 
 ## `internal.seed_test_crm()`
 - returns: `jsonb`
@@ -3953,6 +4557,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.app_notification` _(high)_
 - writes `public.app_notification` _(high)_
 
+> Deleting a list through its RPC, retention purge, or an administrative SQL
+> path must not leave an orphaned inbox item.  This is intentionally an AFTER
+> DELETE trigger: the payload has no FK by design and must not invent one.
+
 ## `internal.trail_expire_overrides()`
 - returns: `void`
 - reads `public.trail` _(high)_
@@ -3980,6 +4588,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.trail_source_record` _(high)_
 - writes `public.trail_status_history` _(high)_
 
+## `internal.update_portal_photo_texts(p_object_id text, p_id uuid, p_private boolean, p_expected jsonb, p_title text, p_description text)`
+- returns: `jsonb`
+- reads `public.actor_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.media` _(high)_
+- writes `public.ref_document` _(high)_
+
 ## `internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `auth.users` _(high)_
@@ -3994,6 +4613,21 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_org_business_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - reads `public.user_permission` _(high)_
+
+> Recipient form of api.user_can_moderate_object. No JWT substitution: the
+> caller remains the contributor throughout submission. This internal helper
+> mirrors the effective permission's two independent grants and the publisher
+> scope; administrative rank alone never grants moderation.
+
+## `internal.validate_portal_photo_additions(p_object_id text, p_payload jsonb, p_user_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
 
 ## `internal.workspace_assert_can_write_object(p_object_id text)`
 - returns: `void` — SECURITY DEFINER
@@ -4128,3 +4762,400 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `public.validate_org_object_type()`
 - returns: `trigger`
 - reads `public.object` _(high)_
+
+## `thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.ref_code_domain_registry` _(high)_
+- reads `thesaurus.assignment_retention` _(high)_
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.label` _(high)_
+- reads `thesaurus.localized_field` _(high)_
+- reads `thesaurus.mapping` _(high)_
+- reads `thesaurus.mutation_journal` _(high)_
+- reads `thesaurus.note` _(high)_
+- reads `thesaurus.ownership_retention` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.release` _(high)_
+- reads `thesaurus.release_change` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+- reads `thesaurus.revision` _(high)_
+- reads `thesaurus.source_link` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.assignment_retention` _(high)_
+- writes `thesaurus.concept` _(high)_
+- writes `thesaurus.instance` _(high)_
+- writes `thesaurus.label` _(high)_
+- writes `thesaurus.localized_field` _(high)_
+- writes `thesaurus.mapping` _(high)_
+- writes `thesaurus.mutation_journal` _(high)_
+- writes `thesaurus.note` _(high)_
+- writes `thesaurus.outbox` _(high)_
+- writes `thesaurus.ownership_retention` _(high)_
+- writes `thesaurus.relation` _(high)_
+- writes `thesaurus.release` _(high)_
+- writes `thesaurus.release_change` _(high)_
+- writes `thesaurus.release_concept` _(high)_
+- writes `thesaurus.revision` _(high)_
+- writes `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.admin_dispatch(p_action text, p_payload jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.outbox` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.release` _(high)_
+- reads `thesaurus.revision` _(high)_
+- reads `thesaurus.source_link` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.concept` _(high)_
+- writes `thesaurus.instance` _(high)_
+- writes `thesaurus.outbox` _(high)_
+- writes `thesaurus.revision` _(high)_
+- writes `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.apply_prepared_objects(p_stage jsonb, p_live_ids text[])`
+- returns: `void` — SECURITY DEFINER
+- writes `public.object` _(high)_
+
+## `thesaurus.apply_source(p_id uuid, p_doc jsonb)`
+- returns: `void` — dynamic SQL
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+
+## `thesaurus.assert_current_authority()`
+- returns: `void` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+## `thesaurus.assert_preparation_contract()`
+- returns: `void`
+
+## `thesaurus.concept_document(p_id uuid, p_include_source_fingerprint boolean)`
+- returns: `jsonb`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.label` _(high)_
+- reads `thesaurus.localized_field` _(high)_
+- reads `thesaurus.mapping` _(high)_
+- reads `thesaurus.note` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.revision` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+> Editorial callers retain their semantic conflict fingerprint. Immutable public
+> snapshots discard that private field and avoid computing it for every concept.
+
+## `thesaurus.concept_document(p_id uuid)`
+- returns: `jsonb`
+
+> Editorial callers retain their semantic conflict fingerprint. Immutable public
+> snapshots discard that private field and avoid computing it for every concept.
+
+## `thesaurus.current_actor()`
+- returns: `uuid` — SECURITY DEFINER
+
+> Supabase owns auth; delegate the actor lookup without granting its schema to the publisher.
+
+## `thesaurus.ensure_parent_dependencies()`
+- returns: `void`
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.filter_public_catalog(p_domain text, p_catalog jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.source_rows` _(high)_
+
+## `thesaurus.guard_assignment()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `thesaurus.assignment_retention` _(high)_
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.assignment_retention` _(high)_
+
+## `thesaurus.guard_classification_subvalues()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `thesaurus.assignment_retention` _(high)_
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+- writes `thesaurus.assignment_retention` _(high)_
+
+## `thesaurus.guard_immutable()`
+- returns: `trigger`
+- reads `thesaurus.release` _(high)_
+
+## `thesaurus.guard_ownership_transfer()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `thesaurus.ownership_retention` _(high)_
+
+## `thesaurus.guard_prepared_truncate()`
+- returns: `trigger`
+
+## `thesaurus.guard_source()`
+- returns: `trigger`
+
+## `thesaurus.is_ancestor(p_parent uuid, p_child uuid)`
+- returns: `boolean`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+
+## `thesaurus.is_governed(p_domain text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `thesaurus.vocabulary` _(medium)_
+
+## `thesaurus.legacy_list_catalog(p_domain text, p_lang text DEFAULT 'fr'::text)`
+- returns: `jsonb`
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_commune` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_sustainability_action_category` _(high)_
+
+> Un référentiel public résolu i18n, forme {code,name,icon_url,parent_code,domain}. Audit API I1.
+
+## `thesaurus.localized_document(p_doc jsonb, p_lang text)`
+- returns: `jsonb`
+
+## `thesaurus.object_ids_for_row(p_table oid, p_row jsonb, p_visited oid[] DEFAULT '{}'::oid[], p_depth integer DEFAULT 0)`
+- returns: `text[]` — SECURITY DEFINER, dynamic SQL
+- reads `public.actor_object_role` _(high)_
+- reads `public.tag_link` _(high)_
+- reads `thesaurus.ownership_retention` _(high)_
+
+## `thesaurus.owns_preparation_lock(p_key integer, p_exclusive boolean DEFAULT true)`
+- returns: `boolean`
+
+## `thesaurus.preparation_contract_registry()`
+- returns: `jsonb`
+
+## `thesaurus.preparation_owned_tables()`
+- returns: `TABLE(table_oid oid)`
+
+## `thesaurus.preparation_plain_key_columns(p_table oid)`
+- returns: `text[]`
+
+## `thesaurus.preparation_projection_dependencies()`
+- returns: `TABLE(table_oid oid)`
+
+> The immutable registry is source-controlled SQL, not editable application data.
+> A future function, view, partition or ownership shape change fails closed until
+> a migration reviews and reinstalls the preparation contract.
+
+## `thesaurus.preparation_sources()`
+- returns: `TABLE(table_oid oid)`
+
+## `thesaurus.prepare_affected_objects(p_object_ids text[])`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_cuisine_type` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_allergen` _(high)_
+- reads `public.object_menu_item_dietary_tag` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_allergen` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+- reads `public.ref_code_dietary_tag` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+
+> Both the MVCC snapshot and the nine-column objects are captured by this ONE
+> SQL statement. No public.object read, UPDATE, temporary table or FK is used.
+
+## `thesaurus.preview(p_ids uuid[])`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.revision` _(high)_
+
+## `thesaurus.prune_mutation_journal(p_limit integer DEFAULT 10000)`
+- returns: `integer` — SECURITY DEFINER
+- reads `thesaurus.mutation_journal` _(high)_
+- writes `thesaurus.mutation_journal` _(high)_
+
+> Private maintenance: nonblocking transaction shared K2, bounded deletion of snapshot-visible owner receipts; never locks the K1 editor fence.
+
+## `thesaurus.public_dispatch(p_action text, p_release_id bigint DEFAULT NULL::bigint, p_params jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.release` _(high)_
+- reads `thesaurus.release_change` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+
+## `thesaurus.publication_documents()`
+- returns: `TABLE(concept_id uuid, domain text, is_public boolean, document jsonb)`
+
+> Keep a full renderer as an independent oracle and for a first publication.
+
+## `thesaurus.publication_documents(p_concepts uuid[])`
+- returns: `TABLE(concept_id uuid, domain text, is_public boolean, document jsonb)`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.label` _(high)_
+- reads `thesaurus.localized_field` _(high)_
+- reads `thesaurus.mapping` _(high)_
+- reads `thesaurus.note` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.source_link` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+> Render a release in one relational pass. Native rows and semantic arrays are
+> materialized once instead of re-running the eight-source union per concept.
+> Editorial reads keep concept_document(uuid) and its conflict fingerprint.
+
+## `thesaurus.record_owner_mutation()`
+- returns: `trigger` — SECURITY DEFINER
+- writes `thesaurus.mutation_journal` _(high)_
+
+## `thesaurus.refresh_affected_object(p_object_id text)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.object` _(high)_
+
+## `thesaurus.refresh_affected_objects(p_object_ids text[])`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_cuisine_type` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_allergen` _(high)_
+- reads `public.object_menu_item_dietary_tag` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_allergen` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+- reads `public.ref_code_dietary_tag` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+- writes `public.object` _(high)_
+
+## `thesaurus.refresh_object_filter_caches(p_object_id text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_cuisine_type` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_allergen` _(high)_
+- reads `public.object_menu_item_dietary_tag` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_allergen` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+- reads `public.ref_code_dietary_tag` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+- writes `public.object` _(high)_
+
+## `thesaurus.remember_ownership()`
+- returns: `trigger` — SECURITY DEFINER
+- writes `thesaurus.ownership_retention` _(high)_
+
+## `thesaurus.requalification()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `thesaurus.concept` _(high)_
+
+## `thesaurus.row_has_historical_reference(p_table oid, p_row jsonb, p_visited oid[] DEFAULT '{}'::oid[], p_depth integer DEFAULT 0)`
+- returns: `boolean` — SECURITY DEFINER, dynamic SQL
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.source_descendant_ids(p_concepts uuid[])`
+- returns: `uuid[]`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+
+> Natural source parents include typed standalone structures as well as ref_code
+> hierarchies (amenity family, classification scheme and sustainability category).
+> UNION deduplicates identities and terminates even if a legacy source is cyclic.
+
+## `thesaurus.source_fingerprint(p_concept uuid)`
+- returns: `text`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.label` _(high)_
+- reads `thesaurus.localized_field` _(high)_
+- reads `thesaurus.mapping` _(high)_
+- reads `thesaurus.note` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.source_write_gate()`
+- returns: `trigger`
+
+## `thesaurus.sync_sources(p_domains text[] DEFAULT NULL::text[])`
+- returns: `integer`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.concept` _(high)_
+- writes `thesaurus.source_link` _(high)_
+
+## `thesaurus.take_source_gate()`
+- returns: `void`
+
+## `thesaurus.take_writer_gate()`
+- returns: `void`
+
+## `thesaurus.usage_objects(p_concepts uuid[])`
+- returns: `TABLE(object_id text)` — SECURITY DEFINER
+- reads `public.object_classification` _(high)_
+- reads `thesaurus.concept` _(high)_
+
+## `thesaurus.validate_document(p_concept uuid, p_doc jsonb)`
+- returns: `jsonb`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.write_fence()`
+- returns: `trigger`

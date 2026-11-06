@@ -1,0 +1,32 @@
+name: Private media operator tests
+
+on:
+  push:
+    paths:
+      - 'tools/private-media/**'
+      - 'docs/releases/2026-11-06-private-media-copy-operator.md'
+      - 'docs/releases/2026-11-06-legal-bucket-compatibility-proposal.md'
+      - '.github/workflows/private-media-operator.yml'
+  pull_request:
+    paths:
+      - 'tools/private-media/**'
+      - 'docs/releases/2026-11-06-private-media-copy-operator.md'
+      - 'docs/releases/2026-11-06-legal-bucket-compatibility-proposal.md'
+      - '.github/workflows/private-media-operator.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  operator-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Exercise offline preparation and loopback-only Storage copies
+        run: node --test tools/private-media/*.test.mjs

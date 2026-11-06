@@ -23,6 +23,7 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { buildContributorSubmission, isAutoDispatchModule } from '../object-editor/contributor-proposal';
+import { buildPortalPhotoSubmission } from '../../services/portal-photos';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 import { describePortalChange } from './portal-change-summary';
 import { clearPortalDraft, writePortalSent } from './usePortalDraft';
@@ -106,7 +107,13 @@ export function PortalSendModal({
     }
   }, [open]);
 
-  const modified = rubrics.filter((rubric) => rubric.state === 'dirty');
+  // Une seule ligne et une seule exclusion par module : ces deux vues sont envoyées
+  // ensemble, avec le payload complet qui préserve leurs données respectives.
+  const modified = Array.from(rubrics.filter((rubric) => rubric.state === 'dirty').reduce((groups, rubric) => {
+    const previous = groups.get(rubric.module);
+    groups.set(rubric.module, previous ? { ...previous, title: `${previous.title} · ${rubric.title}` } : rubric);
+    return groups;
+  }, new Map<WorkspaceModuleId, BuiltPortalRubric>()).values());
   const sending = modified.filter((rubric) => !excluded.has(rubric.module));
 
   async function handleSend() {
@@ -136,12 +143,13 @@ export function PortalSendModal({
     // l'appel, elle emprunterait le message du RÉSEAU, qui ne décrit pas ce qui s'est passé.
     try {
       for (const rubric of sending) {
-        // Deux rubriques ne partagent jamais un module POUR UN MÊME TYPE, mais une double
-        // enveloppe se marcherait dessus dans un seul envoi : on ferme la porte.
+        // Plusieurs rubriques peuvent partager un module, jamais une double enveloppe.
         if (seen.has(rubric.module)) continue;
         seen.add(rubric.module);
         modules.push(rubric.module);
-        const base = buildContributorSubmission(objectId, rubric.module, editor.baseline, editor.draft);
+        const base = rubric.module === 'media'
+          ? buildPortalPhotoSubmission(objectId, editor.baseline.media, editor.draft.media)
+          : buildContributorSubmission(objectId, rubric.module, editor.baseline, editor.draft);
         const readable = describePortalChange(rubric.module, editor.baseline, editor.draft, archetype);
         envelopes.push({ ...base, metadata: { ...base.metadata, ...readable } });
       }
@@ -165,7 +173,7 @@ export function PortalSendModal({
           ]),
         ),
       });
-      editor.commitModules(modules.map((module) => MODULE_KEY_MAP[module]));
+      editor.commitModules(modules.map((module) => MODULE_KEY_MAP[module]), { sentModules: editor.draft });
       clearPortalDraft(userId, objectId);
       onSent({ submissionId: result.submissionId, modules });
       onOpenChange(false);
@@ -210,7 +218,7 @@ export function PortalSendModal({
               <span className="muted">
                 {off
                   ? 'ne partira pas cette fois'
-                  : isAutoDispatchModule(rubric.module)
+                  : rubric.module === 'media' || isAutoDispatchModule(rubric.module)
                     ? // Il vient de cliquer « Valider » : « appliqué dès validation » lui
                       // ferait croire que c'est déjà en ligne.
                       'l’office les publiera tout de suite'

@@ -7,6 +7,10 @@ on:
       - 'bertel-tourism-ui/Dockerfile'
       - 'bertel-tourism-ui/.dockerignore'
       - 'bertel-tourism-ui/src/app/api/media/upload/process-image*'
+      - 'bertel-tourism-ui/src/app/api/document/upload/process-document*'
+      - 'bertel-tourism-ui/src/lib/pdf-rasterize.ts'
+      - 'bertel-tourism-ui/public/pdf.worker.min.mjs'
+      - 'bertel-tourism-ui/tests/e2e/pdf-runtime.spec.ts'
       - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
       - '.github/workflows/image-runtime.yml'
   pull_request:
@@ -15,6 +19,10 @@ on:
       - 'bertel-tourism-ui/Dockerfile'
       - 'bertel-tourism-ui/.dockerignore'
       - 'bertel-tourism-ui/src/app/api/media/upload/process-image*'
+      - 'bertel-tourism-ui/src/app/api/document/upload/process-document*'
+      - 'bertel-tourism-ui/src/lib/pdf-rasterize.ts'
+      - 'bertel-tourism-ui/public/pdf.worker.min.mjs'
+      - 'bertel-tourism-ui/tests/e2e/pdf-runtime.spec.ts'
       - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
       - '.github/workflows/image-runtime.yml'
 
@@ -42,6 +50,7 @@ jobs:
           run test:run -- --ci --runInBand
           src/app/api/media/upload/process-image.test.ts
           src/app/api/media/upload/process-image.decoding.test.ts
+          src/app/api/document/upload/process-document.test.ts
       - name: Build the production runtime
         run: docker build --build-arg NEXT_PUBLIC_ENABLE_DEMO_MODE=true -t bertel-image-runtime .
       - name: Verify native codecs in the final non-root image
@@ -49,17 +58,39 @@ jobs:
           docker run --rm --entrypoint node
           -v "$PWD/scripts/check-native-image-runtime.cjs:/app/check-native-image-runtime.cjs:ro"
           bertel-image-runtime check-native-image-runtime.cjs
-      - name: Start the final image and check HTTP health
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: bertel-tourism-ui/package-lock.json
+      - name: Install the locked browser proof dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Install Chromium for the real PDF worker proof
+        run: node scripts/run-playwright.mjs install --with-deps chromium
+      - name: Check HTTP health and the browser PDF worker against the final image
         shell: bash
         run: |
           set -euo pipefail
           docker run -d --name bertel-image-smoke -p 3000:3000 -e NEXT_PUBLIC_ENABLE_DEMO_MODE=true bertel-image-runtime
           trap 'docker logs bertel-image-smoke; docker rm -f bertel-image-smoke' EXIT
+          healthy=0
           for attempt in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:3000/api/health > /tmp/bertel-health.json; then
               node -e 'const h = require("/tmp/bertel-health.json"); if (h.ok !== true) process.exit(1)'
-              exit 0
+              healthy=1
+              break
             fi
             sleep 2
           done
-          exit 1
+          test "$healthy" = 1
+          PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 \
+            npm run playwright -- test tests/e2e/pdf-runtime.spec.ts --project=chromium --workers=1 --retries=0
+      - name: Upload browser proof diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-pdf-browser-proof
+          path: |
+            bertel-tourism-ui/test-results
+            bertel-tourism-ui/playwright-report
+          retention-days: 7

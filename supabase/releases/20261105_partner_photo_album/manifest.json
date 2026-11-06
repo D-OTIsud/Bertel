@@ -1,0 +1,92 @@
+{
+  "package": "partner_photo_album_20261105",
+  "status": "activated_production_sql_postchecks_passed",
+  "source_integration_revision": "2863ebb",
+  "served_application_revision": "8f8e3d91f47dc473ad84b004fdff70949f9568b3",
+  "project_ref": "ryycrdhlkmzpxwwwwupy",
+  "scope": "Private actor photo album, compatible office writer, photo moderation locks, shared CRM messages without mail dispatch, photo assessment foundation OFF",
+  "preparation": "prepare.sql",
+  "activation": "activate.sql",
+  "closure": "close.sql",
+  "rehearsal": "rehearsal.sql",
+  "operator_inputs": "Only from the operator evidence directory; no pilot identities in Git",
+  "public_api": "No public reader or HTTP contract change; exact SQL/JSON fingerprints before and after",
+  "deployment_order": [
+    "Review package, source hashes, baseline and transient pilot recipe",
+    "apply_migration once: closed preparation plus self-rolling-back pilot tests; any failure aborts schema migration",
+    "Deploy and verify the compatible office 2/2 application; retain its exact revision for a Coolify rebuild (no instant rollback image listed)",
+    "Deploy the actor album application and verify read-only mode",
+    "Apply targeted photo DML closure and actor activation only after root coordination"
+  ],
+  "excluded": [
+    "fresh database",
+    "Docker",
+    "public API reader patches",
+    "collection baseline rollout",
+    "stay/menu/privacy migrations",
+    "named-opening changes",
+    "new email dispatch",
+    "new reminder worker",
+    "photo provider activation"
+  ],
+  "minimal_moderation_hashes": {
+    "approve": "6b397ae9bf5c169c2d84f923b331966e",
+    "reject": "3326541c58555fc8c19b0463d50abc11"
+  },
+  "files": {
+    "prepare.sql": "b1b0b68e14e82387709f629f13733039d6822515582bed45a5cd4cf65f8cebf7",
+    "activate.sql": "4a37caabe3a8ab918e7200d993d701aeee4fa44b8a89100557461d454942331c",
+    "close.sql": "7b94f51726f5ec1424bdd2e85e299995fb08f2a34ed0a73978ff94d0eb6052e1",
+    "install.sql": "6e1b1177d1eb5af06ddb73d9b048d7185102f1923d9cf2802adbaa8c9fde941f",
+    "rehearsal.sql": "c23f2da7731b096d17cd1c21d85065782efe74cd985b15d80a80ba15f0867260",
+    "public-snapshot.sql": "14df784a8173f7cefa788c313b9990c3211c2a3ab9e010c5a8b3c8cb91709348",
+    "review-office-final.sql": "9880ca6e5567084fcb7b11256f3feb5d0988143df122acbd1d42fe512ccf9dac",
+    "postcheck.sql": "b851a63801c67566d8f7fa49f7d12d9fff1568f859d5722084dbce6c2aa5a776",
+    "README.md": "ad360cadf4ce56ec72ce43b6e996a8d2e203aa9dbb93bb424b648a38591ace5b"
+  },
+  "mail_overrides_included": false,
+  "installation": "install.sql",
+  "mandatory_rehearsal": true,
+  "public_json_baseline_captured": true,
+  "office_gallery_order_hashes": {
+    "before": "9debe21f65823fe57b3d1a5ed3818a5f",
+    "after": "408ea171ef9ec6c76e0afaaddbb23495"
+  },
+  "live_installation": {
+    "migration": "partner_photo_album_closed_20261105",
+    "finished_at": "2026-11-05T03:50:36.036Z",
+    "actor_writes_enabled": false,
+    "analysis_enabled": false,
+    "public_exact_comparison": true,
+    "rehearsal": "Existing is_test pilot, transient role binding and fixtures rolled back; no Storage or email call"
+  },
+  "postcheck": "postcheck.sql",
+  "baseline_application_revision": "35564dc3c69afd33bbffd5f879e663cc87f9249f",
+  "compatible_office_fallback_revision": "75568b8cd2e2da63306b4a9875fdbcd01f547df7",
+  "live_activation": {
+    "migration": "partner_photo_album_activate_20261105",
+    "finished_at": "2026-11-05T04:11:02.420Z",
+    "source_sha256": "4a37caabe3a8ab918e7200d993d701aeee4fa44b8a89100557461d454942331c",
+    "postcheck_at": "2026-11-05 04:11:30.564009+00",
+    "actor_writes_enabled": true,
+    "analysis_enabled": false,
+    "generic_crm_closed": true,
+    "six_targeted_policies": true,
+    "public_readers_exact": 13,
+    "public_json_types_exact": 12,
+    "ignored_json_paths": []
+  },
+  "traffic_validation": {
+    "application_logger": "incomplete_best_effort",
+    "calls_24h": 42,
+    "successes_24h": 42,
+    "server_errors_24h": 0,
+    "calls_48h": 88,
+    "successes_48h": 88,
+    "server_errors_48h": 0,
+    "last_success_utc": "2026-11-05T04:00:37.619726Z",
+    "last_success_status": 200,
+    "calls_since_album_deploy_at_observation": 0,
+    "new_authenticated_provider_get_proven": false
+  }
+}

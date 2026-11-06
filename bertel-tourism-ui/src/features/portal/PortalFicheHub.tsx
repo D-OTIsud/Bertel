@@ -70,11 +70,13 @@ const APPROVED_BADGE = { label: 'Accepté — en cours de report', className: 'b
 
 /** Le geste attendu, à l'impératif : « Indiquez vos horaires », pas « Horaires ». */
 const TODO_LABEL: Record<PortalRubricId, string> = {
+  photos: 'Ajoutez des photos',
   contacts: 'Indiquez vos coordonnées',
   presentation: 'Présentez votre établissement',
   hours: 'Indiquez vos horaires',
   season: 'Indiquez vos périodes d’ouverture',
   amenities: 'Indiquez vos équipements',
+  accessibility: 'Indiquez vos aménagements d’accessibilité',
   welcome: 'Indiquez votre capacité d’accueil',
   pricing: 'Indiquez un tarif',
   activity: 'Décrivez votre activité',
@@ -111,6 +113,8 @@ export interface PortalFicheHubProps {
   /** Modules acceptés par l'office mais pas encore recopiés sur la fiche. */
   approvedModules: Set<string>;
   media: ObjectWorkspaceMediaModule | undefined;
+  /** Confirmed by the caller-scoped photo workspace; unknown means consultation. */
+  photoWritesEnabled?: boolean;
   note: string;
   onNoteChange: (value: string) => void;
   savedAt: string | null;
@@ -146,6 +150,7 @@ export function PortalFicheHub({
   rejections,
   approvedModules,
   media,
+  photoWritesEnabled = false,
   note,
   onNoteChange,
   savedAt,
@@ -218,8 +223,8 @@ export function PortalFicheHub({
   // Une rubrique DÉJÀ partie en vérification et remodifiée depuis : sa saisie est au chaud
   // mais rien ne peut partir tant que l'office n'a pas répondu. Sans ce comptage, « Valider »
   // n'a AUCUN effet visible et la phrase prévue pour ce cas est inatteignable.
-  const held = rubrics.filter((rubric) => rubric.state === 'pending' && editor.dirtySections[rubric.module]);
-  const todo = rubrics.filter((rubric) => rubric.state === 'todo');
+  const held = rubrics.filter((rubric) => rubric.state === 'pending' && (rubric.hasChanges ?? editor.dirtySections[rubric.module]));
+  const todo = rubrics.filter((rubric) => rubric.state === 'todo' && rubric.id !== 'photos');
   const countable = rubrics.filter((rubric) => rubric.state !== 'unavailable');
   const done = countable.filter((rubric) => rubric.state !== 'todo').length;
   const photos = countPortalPhotos(media);
@@ -389,7 +394,7 @@ export function PortalFicheHub({
               approvedModules.has(rubric.module) && (rubric.state === 'filled' || rubric.state === 'todo');
             const badge = approvedPending ? APPROVED_BADGE : STATE_BADGE[rubric.state];
             const summary = rubric.summary(editor.draft, archetype);
-            const heldHere = rubric.state === 'pending' && editor.dirtySections[rubric.module];
+            const heldHere = rubric.state === 'pending' && (rubric.hasChanges ?? editor.dirtySections[rubric.module]);
             const body = (
               <>
                 <span className="portal-task__body">
@@ -446,6 +451,8 @@ export function PortalFicheHub({
           ) : (
             <>
               <PhotosRubric
+                onEdit={rubrics.some(rubric => rubric.id === 'photos' && rubric.state !== 'unavailable') ? () => onNavigate(rubricHref('photos')) : undefined}
+                writesEnabled={photoWritesEnabled}
                 ref={photosRef}
                 media={media}
                 ficheName={fiche.name}

@@ -29,6 +29,8 @@ import { ArrowLeft, Check, Clock } from 'lucide-react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { ActivityRubric } from './rubrics/ActivityRubric';
 import { AmenitiesRubric } from './rubrics/AmenitiesRubric';
+import { AccessibilityRubric } from './rubrics/AccessibilityRubric';
+import { PhotosEditorRubric } from './rubrics/PhotosEditorRubric';
 import { ContactsRubric } from './rubrics/ContactsRubric';
 import { HoursRubric } from './rubrics/HoursRubric';
 import { PresentationRubric } from './rubrics/PresentationRubric';
@@ -44,22 +46,26 @@ import type { PortalRubricFormProps } from './rubrics/types';
 
 /** Une phrase d'aide par rubrique, en français courant : ce que le visiteur en verra. */
 const RUBRIC_HELP: Record<PortalRubricId, string> = {
+  photos: 'Les ajouts sont relus par l’office. Les retraits et l’ordre des photos sont enregistrés directement.',
   contacts: 'Ces coordonnées sont affichées aux visiteurs.',
   presentation: 'Ce texte est lu par les visiteurs avant de venir chez vous.',
   hours: 'Indiquez vos jours et heures d’ouverture habituels.',
   season: 'Indiquez la période où vous accueillez des visiteurs, et vos fermetures.',
   amenities: 'Cochez ce que vous proposez. Les visiteurs filtrent souvent là-dessus.',
+  accessibility: 'Cochez les aménagements qui existent déjà. L’office les relira avant publication.',
   welcome: 'Ce que vous pouvez accueillir, et à quelles conditions.',
   pricing: 'Le tarif que les visiteurs verront en premier.',
   activity: 'Ce qu’il faut savoir avant de réserver votre activité.',
 };
 
 const FORMS: Record<PortalRubricId, (props: PortalRubricFormProps) => React.ReactElement> = {
+  photos: PhotosEditorRubric,
   contacts: ContactsRubric,
   presentation: PresentationRubric,
   hours: HoursRubric,
   season: SeasonRubric,
   amenities: AmenitiesRubric,
+  accessibility: AccessibilityRubric,
   welcome: WelcomeRubric,
   pricing: PricingRubric,
   activity: ActivityRubric,
@@ -102,6 +108,7 @@ export function PortalRubricScreen({
   onDirtyChange,
 }: PortalRubricScreenProps) {
   const [formDirty, setFormDirty] = useState(false);
+  const [formBusy, setFormBusy] = useState(false);
   const [askLeave, setAskLeave] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -116,9 +123,10 @@ export function PortalRubricScreen({
   // décide s'il faut demander ou laisser passer.
   useEffect(() => {
     if (!leaveRequested) return;
-    if (formDirty) setAskLeave(true);
+    if (formBusy) onLeaveResolved?.(false);
+    else if (formDirty) setAskLeave(true);
     else onLeaveResolved?.(true);
-  }, [leaveRequested, formDirty, onLeaveResolved]);
+  }, [leaveRequested, formDirty, formBusy, onLeaveResolved]);
 
   function reportDirty(dirty: boolean) {
     setFormDirty(dirty);
@@ -126,6 +134,7 @@ export function PortalRubricScreen({
   }
 
   function requestLeave() {
+    if (formBusy) return;
     if (formDirty) {
       setAskLeave(true);
       return;
@@ -157,12 +166,14 @@ export function PortalRubricScreen({
       <Link
         className="portal-back"
         href={hubHref}
+        aria-disabled={formBusy || undefined}
         scroll={false}
         onClick={(event) => {
           // TOUJOURS intercepté : laisser le lien naviguer nativement contournerait la
           // comptabilité d'historique de l'éditeur (`back` vs `push`) et empilerait une
           // entrée de plus à chaque retour.
           event.preventDefault();
+          if (formBusy) return;
           if (formDirty) {
             setAskLeave(true);
             return;
@@ -176,9 +187,9 @@ export function PortalRubricScreen({
       <h2 className="portal-h1" id="portal-rubric-title" tabIndex={-1} ref={headingRef}>
         {rubric.title}
       </h2>
-      <p className="portal-lead">{RUBRIC_HELP[rubric.id]}</p>
+      {rubric.id !== 'photos' ? <p className="portal-lead">{RUBRIC_HELP[rubric.id]}</p> : null}
 
-      {waiting ? (
+      {waiting && rubric.id !== 'photos' ? (
         <div className="notice">
           <Clock size={18} aria-hidden />
           <span>
@@ -190,7 +201,7 @@ export function PortalRubricScreen({
         </div>
       ) : null}
 
-      {approved && !waiting ? (
+      {approved && !waiting && rubric.id !== 'photos' ? (
         // `approved` est la forme DOMINANTE (5 rubriques sur 7) : l'office accepte, puis
         // recopie À LA MAIN. Entre les deux, la rubrique montre l'ANCIENNE valeur publiée —
         // sans cette phrase, le partenaire croit son envoi perdu et ressaisit.
@@ -226,6 +237,7 @@ export function PortalRubricScreen({
           }}
           onCancel={requestLeave}
           onDirtyChange={reportDirty}
+          onBusyChange={setFormBusy}
         />
       )}
 

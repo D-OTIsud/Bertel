@@ -744,7 +744,11 @@ export async function sendListByEmail(listId: string, toEmail: string, intent?: 
   // A result proof has a different type/value from the prepare permit. A missing
   // ACK never converts a known relay acceptance into a retryable mail failure.
   assertMailScope(intent);
-  try { await post({ phase: 'ack', resultToken: result!.resultToken }); } catch { /* known acceptance remains success */ }
+  // This independent best-effort receipt must not hold a known SMTP success or
+  // the view busy. Only the real server ACK can settle durable discovery; an
+  // unreturned/hung request leaves that receipt unresolved after reload.
+  try { void post({ phase: 'ack', resultToken: result!.resultToken }).catch(() => {}); }
+  catch { /* known acceptance remains success even if fetch throws synchronously */ }
   assertMailScope(intent);
   return { trackingUpdated: result!.trackingUpdated === true };
 }

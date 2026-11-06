@@ -153,7 +153,7 @@ export async function fetchThesaurusWorkspace(input: { domain?: string; query?: 
       const release = record(item);
       return {
         release_id: Number(release.release_id), previous_release_id: release.previous_release_id == null ? null : Number(release.previous_release_id),
-        created_at: String(release.created_at ?? release.published_at ?? release.as_of ?? ''), changed_count: Number(release.changed_count ?? 0), affected_objects: Number(release.affected_objects ?? 0),
+        created_at: String(release.created_at ?? release.published_at ?? release.as_of ?? ''), changed_count: Number(release.changed_count ?? record(release.manifest).changed_count ?? 0), affected_objects: Number(release.affected_objects ?? 0),
       } satisfies ThesaurusRelease;
     }),
     latest_release_id: data.latest_release_id == null ? null : Number(data.latest_release_id),

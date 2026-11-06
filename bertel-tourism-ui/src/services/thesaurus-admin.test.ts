@@ -68,6 +68,40 @@ describe('thesaurus administration network contract', () => {
     expect(rpc).toHaveBeenCalledWith('thesaurus_admin', { p_action: 'bootstrap', p_payload: { domains: ['taxonomy_hlo'] } });
   });
 
+  it('reads publication counts from the persisted SQL release manifests', async () => {
+    // workspace returns to_jsonb(thesaurus.release): changed_count belongs to
+    // its stored manifest, whereas a direct publish response has it at the top.
+    const releases = [15, 11, 1293].map((changedCount, index) => ({
+      release_id: index + 1,
+      previous_release_id: index || null,
+      as_of: '2026-11-06T18:00:00Z',
+      affected_objects: 0,
+      manifest: { release_id: index + 1, changed_count: changedCount },
+    }));
+    const rpc = jest.fn().mockResolvedValue({ data: { domains: [], concepts: [], releases, latest_release_id: 3 }, error: null });
+    getClient.mockReturnValue(rpcClient(rpc));
+
+    const result = await fetchThesaurusWorkspace();
+
+    expect(result.releases.map((release) => release.changed_count)).toEqual([15, 11, 1293]);
+  });
+
+  it('preserves explicit top-level counts including zero and defaults missing manifests to zero', async () => {
+    const releases = [
+      { release_id: 1, changed_count: 0, manifest: { changed_count: 15 } },
+      { release_id: 2, changed_count: 11 },
+      { release_id: 3, manifest: { changed_count: 1293 } },
+      { release_id: 4 },
+      { release_id: 5, manifest: null },
+    ];
+    const rpc = jest.fn().mockResolvedValue({ data: { domains: [], concepts: [], releases }, error: null });
+    getClient.mockReturnValue(rpcClient(rpc));
+
+    const result = await fetchThesaurusWorkspace();
+
+    expect(result.releases.map((release) => release.changed_count)).toEqual([0, 11, 1293, 0, 0]);
+  });
+
   it('refuses malformed success responses and explains a conflict without dropping user input', async () => {
     const rpc = jest.fn().mockResolvedValue({ data: {}, error: null });
     getClient.mockReturnValue(rpcClient(rpc));

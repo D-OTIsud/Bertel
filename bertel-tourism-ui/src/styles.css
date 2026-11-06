@@ -14557,6 +14557,14 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
 
 /* ---- Formulaires de rubrique ---- */
 .portal-form { display: grid; gap: 16px; }
+.portal-accessibility__families { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.portal-accessibility__families button { min-height: 64px; flex-direction: column; white-space: normal; }
+.portal-accessibility__families button[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 9%, var(--surface)); }
+.portal-tourism-handicap h3 { display: flex; align-items: center; gap: 8px; }
+.portal-accessibility__panel, .portal-tourism-handicap { padding: 20px; }
+.portal-accessibility__panel h3, .portal-tourism-handicap h3 { margin: 0 0 12px; font-size: 1.15rem; font-weight: 700; }
+.portal-accessibility__panel > p { margin: 12px 0; }
+@media (min-width: 1024px) { .portal-accessibility__families { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .portal-field { gap: 0.35rem; }
 .portal-input {
   width: 100%;

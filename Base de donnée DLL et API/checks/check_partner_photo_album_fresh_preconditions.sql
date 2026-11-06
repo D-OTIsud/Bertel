@@ -83,10 +83,12 @@ BEGIN
  END IF;
  -- These are the CURRENT canonical pre-photo shared bodies, not a public-reader
  -- snapshot or an operator identity. A changed predecessor needs a reviewed delta.
+ -- Fresh reject uses the canonical moderation file's accented error messages;
+ -- the historical pre-photo live snapshot had ASCII wording (a different hash).
  IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure('api.actor_portal_floor_modules()')) IS DISTINCT FROM '2bbe58646c2d56dc402bbede946e1511'
  OR (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure('api.submit_actor_fiche(text,jsonb,text)')) IS DISTINCT FROM '0861011392137effc9c7cb97bef6beab'
  OR (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure('api.approve_pending_change(uuid,text,boolean)')) IS DISTINCT FROM '78b171f997cd630da118ecc81382448d'
- OR (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure('api.reject_pending_change(uuid,text)')) IS DISTINCT FROM 'c125ebd25849243cf45f1b7a114960ed' THEN
+ OR (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure('api.reject_pending_change(uuid,text)')) IS DISTINCT FROM '5b328414dc0e0551504ab0b5aa2f7b6e' THEN
   RAISE EXCEPTION 'The canonical pre-photo moderation/submission contract changed; review before bootstrap. Actual source pins: %',
    (SELECT jsonb_object_agg(signature,(SELECT md5(replace(prosrc,E'\r\n',E'\n'))
       FROM pg_proc WHERE oid=to_regprocedure(signature))) FROM (VALUES

@@ -723,6 +723,7 @@ ROLLBACK;
 \ir tests/test_thesaurus_nested_consumers.sql
 \ir tests/test_thesaurus_editorial_tools.sql
 \ir tests/test_thesaurus_parent_impacts.sql
+\ir tests/test_thesaurus_incremental_snapshots.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

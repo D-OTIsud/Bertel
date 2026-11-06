@@ -10,11 +10,11 @@
 --       matche un AUTRE acteur ne voit pas les objets de cet autre acteur). Pour la persona
 --       acteur, current_user_extended_object_ids() ≡ portal_object_ids (bras 1b fermé : le
 --       rôle d'acteur sur une ORG ne donne PLUS les fiches de l'ORG). Pour un tourism_agent,
---       les 5 bras historiques sont inchangés (régression bloc I, Task 8).
+--       seuls les memberships actuels restent autorisés (régression bloc I, DB02).
 --   (C) D7 — api.is_object_owner(p_object_id) : un lien actor_object_role.is_primary=TRUE ne
 --       donne JAMAIS l'écriture canonique à une persona acteur (ni user_can_write_object_canonical,
---       qui en dérive) ; le chemin owner HISTORIQUE reste ouvert pour un non-acteur (tourism_agent)
---       dont l'e-mail matche un lien primaire — D7 ferme seulement la persona acteur, pas le reste.
+--       qui en dérive) ; DB02 ferme aussi l héritage e-mail pour un tourism_agent.
+--       Les droits canoniques actuels restent couverts par les témoins éditeur.
 --   (D1) DDL — fiche_submission, pending_change.submission_id et org_actor_module_visibility
 --       existent ; chk_app_notification_kind admet 'fiche_submission_reviewed' ; l'index unique
 --       partiel anti-doublon (uq_fiche_submission_open) existe ; et la RLS/REVOKE ferme les DEUX
@@ -158,7 +158,7 @@
 --       SILENCE, si bien qu'un bloc placé après le DELETE ne rapporterait aucun
 --       portal_user_id et laisserait l'opérateur sans le compte auth à supprimer ; l'accès
 --       portail est vérifié PRÉSENT avant et ABSENT après, dans les deux modes.
---   (I) RÉGRESSION — les personas historiques sont intactes. Les 5 bras de
+--   (I) RÉGRESSION DB02 — les contacts historiques sont sans droit ; les bras actuels de
 --       api.current_user_extended_object_ids() sont sondés un par un sur des témoins qui ne
 --       peuvent les obtenir QUE par ce bras. ⚠ Correction de revue : les témoins du bras 1a
 --       étaient v_objB et v_objC, tous deux rattachés à v_orgA par object_org_link — le bras
@@ -489,22 +489,17 @@ BEGIN
            'C: user_can_write_object_canonical doit suivre (aucun autre bras ne s''ouvre)';
   RESET ROLE;
 
-  -- Témoin de non-régression (renforcé, 2 objets, MÊME compte v_agent) : un tourism_agent
-  -- dont l'e-mail de session bridge vers un acteur titulaire d'un lien primaire GARDE le
-  -- chemin historique — D7 ne ferme QUE la persona acteur, jamais le mécanisme lui-même.
-  -- Deux e-mails de session DISTINCTS pour le MÊME v_agent (le trigger
-  -- prevent_duplicate_actor_email interdit qu'un seul e-mail bridge vers deux acteurs
-  -- différents — constaté empiriquement) : le premier prouve sur v_objE, le MÊME objet que
-  -- le refus ci-dessus (une fonction qui refuserait tout le monde échouerait ici) ; le second,
-  -- l'e-mail RÉEL de v_agent (auth.users), prouve sur v_objA (bloc B) comme témoin historique.
+  -- DB02: the same email/contact fixtures now deny inherited ownership for
+  -- an ordinary staff account as well as for the explicit portal account.
+  -- Current staff publisher permissions are exercised by the editor blocks.
   INSERT INTO actor_channel (actor_id, kind_id, value) VALUES
     (v_actor3, v_email_kind, 'portal_agent_1302_objE@test.local')
     ON CONFLICT DO NOTHING;
   PERFORM set_config('request.jwt.claims',
     json_build_object('sub', v_agent, 'role', 'authenticated', 'email', 'portal_agent_1302_objE@test.local')::text, true);
   SET LOCAL ROLE authenticated;
-    ASSERT api.is_object_owner(v_objE) = TRUE,
-           'C: le chemin owner HISTORIQUE reste ouvert pour un non-acteur, même objet que le refus D7';
+    ASSERT api.is_object_owner(v_objE) = FALSE,
+           'C: le lien primaire et l e-mail ne donnent aucun owner à un agent';
   RESET ROLE;
 
   INSERT INTO actor_channel (actor_id, kind_id, value) VALUES
@@ -513,8 +508,8 @@ BEGIN
   PERFORM set_config('request.jwt.claims',
     json_build_object('sub', v_agent, 'role', 'authenticated', 'email', 'portal_agent_1302@test.local')::text, true);
   SET LOCAL ROLE authenticated;
-    ASSERT api.is_object_owner(v_objA) = TRUE,
-           'C: le chemin owner HISTORIQUE reste ouvert pour un non-acteur (équipes internes)';
+    ASSERT api.is_object_owner(v_objA) = FALSE,
+           'C: le contact historique de l agent ne donne plus de droit owner';
   RESET ROLE;
 
   -- ---------- (D1) DDL : tables + contraintes clés ----------
@@ -2492,9 +2487,8 @@ BEGIN
       'F: RGPD delete — l''accès portail tombe immédiatement';
   RESET ROLE;
 
-  -- ---------- (I) régression : personas historiques inchangées ----------
-  -- Le témoin tourism_agent garde EXACTEMENT ses 5 bras. Son e-mail matche un canal de
-  -- v_actor1 (fixture G) : le pont e-mail joue donc PLEINEMENT pour lui — c'est le point.
+  -- ---------- (I) droits actuels : contacts hérités refusés, membership conservé ----------
+  -- L e-mail de v_agent correspond toujours à un contact ; il ne donne aucun droit.
   RESET ROLE;
   PERFORM set_config('request.jwt.claims', NULL, true);
   -- Fixture du bras 2C, autonome : une ORG à périmètre « tout le publié » et son membre.
@@ -2509,16 +2503,8 @@ BEGIN
     ON CONFLICT (org_object_id) DO UPDATE SET access_scope = EXCLUDED.access_scope;
   INSERT INTO user_org_membership (id, user_id, org_object_id, is_active)
   VALUES (gen_random_uuid(), v_user2c, v_orgC, TRUE) ON CONFLICT DO NOTHING;
-  -- Témoins EXCLUSIFS du bras 1a (correction de revue). v_objB et v_objC ne l'étaient PAS :
-  -- tous deux sont rattachés à v_orgA par object_org_link, et v_actor1 tient un rôle sur
-  -- v_orgA — le bras 1b, dont la sous-requête est AUTONOME et ne filtre aucune validité, les
-  -- rendait donc à lui seul. Le bras 1a pouvait recevoir le filtre de validité que la §1
-  -- écrit six lignes plus haut dans le MÊME fichier — l'édit le plus naturel du monde —
-  -- sans qu'aucune assertion ne rougisse, alors que c'est exactement la régression que ce
-  -- bloc existe pour attraper. Ces deux fiches-ci n'ont AUCUN object_org_link (1b ne rend
-  -- que des object_id d'object_org_link), sont en 'draft' (2C ne les rend pas), et v_agent
-  -- n'a aucun membership (2A/2B lui sont vides) : seul 1a peut les rendre. Leurs liens sont
-  -- volontairement INVALIDES — c'est ce qui rend l'assertion sensible au filtre.
+  -- Nonempty expired/future legacy actor links must supply no private scope.
+  -- These drafts have no ORG membership path.
   INSERT INTO object (id, object_type, name, status) VALUES
     (v_objM, 'HOT', 'Hôtel lien expiré hors ORG (bras 1a)', 'draft'),
     (v_objN, 'HOT', 'Hôtel lien futur hors ORG (bras 1a)',  'draft')
@@ -2531,30 +2517,10 @@ BEGIN
   PERFORM set_config('request.jwt.claims',
     json_build_object('sub', v_agent, 'role', 'authenticated', 'email', 'portal_agent_1302@test.local')::text, true);
   SET LOCAL ROLE authenticated;
-    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objD),
-           'I: bras 1b intact pour un non-acteur (fiches de l''ORG via rôle acteur)';
-    -- Témoin NON DISCRIMINANT, conservé DÉLIBÉRÉMENT. v_objB porte lui aussi un lien acteur
-    -- EXPIRÉ, mais il est rattaché à v_orgA par object_org_link et v_actor1 tient un rôle
-    -- sur v_orgA : le bras 1b, dont la sous-requête est autonome et ne filtre AUCUNE
-    -- validité, le rend à lui seul. Cette assertion ne prouve donc rien sur le bras 1a —
-    -- elle passerait encore si 1a recevait le filtre de validité, et même s'il était
-    -- SUPPRIMÉ. Elle reste ici pour que la raison de son insuffisance demeure lisible, et
-    -- pour qu'on ne « re-simplifie » pas v_objM/v_objN vers elle en croyant ne rien perdre.
-    -- Vérifié par mutation : avec le filtre posé sur 1a, celle-ci passe et la suivante tombe.
-    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objB),
-           'I: (NON DISCRIMINANT) v_objB est rendu par le bras 1b — ne prouve RIEN sur 1a';
-    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objM),
-           'I: pas de filtre valid_to pour un non-acteur (bras 1a, témoin EXCLUSIF hors ORG)';
-    -- Le pendant du précédent : le bras 1a historique ignore AUSSI valid_from. Les deux
-    -- ensemble ferment la régression « on a appliqué le filtre de validité à tout le monde »,
-    -- qu'une seule des deux laisserait passer à moitié.
-    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objN),
-           'I: pas de filtre valid_from pour un non-acteur (bras 1a, témoin EXCLUSIF hors ORG)';
-    -- Et la SUPPRESSION pure du bras 1a, que le filtre de validité seul ne couvre pas : un
-    -- objet ORG n'est jamais un object_id dans object_org_link, donc 1b ne peut pas le
-    -- rendre ; v_agent n'a aucun membership, donc 2A/2B non plus. v_orgA n'arrive que par 1a.
-    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_orgA),
-           'I: bras 1a intact — l''ORG sur laquelle l''acteur ponté tient un rôle est rendue par LUI seul';
+    ASSERT NOT EXISTS(SELECT 1 FROM api.current_user_extended_object_ids()),
+      'I: un agent sans membership ne récupère ni objet direct ni ORG via e-mail';
+    ASSERT NOT api.user_can_write_object_canonical(v_objA),
+      'I: le lien historique ne récupère pas l écriture canonique';
   RESET ROLE;
   -- Bras 2A et 2B : l'ORG elle-même et ses fiches, par membership. v_editor est membre de
   -- v_orgA (fixture E) et n'a AUCUN lien acteur — ces deux bras sont donc les seuls à

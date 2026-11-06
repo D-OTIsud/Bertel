@@ -2,14 +2,14 @@
 -- Proves migration_object_fma_write_policy.sql (§47, manifest 8n): object_fma gains a per-command
 -- canonical write triple (canonical_ins/upd/del_object_fma) -- before it, RLS was enabled with ONLY
 -- SELECT policies, so the editor's direct upsert was denied for every non-service role.
--- Owner persona is ACTOR-LINK based (api.is_object_owner = actor_object_role.is_primary on an actor
--- whose actor_channel email matches the JWT 'email' claim -- rls_policies.sql:202-213 / :110-118),
--- NOT created_by; the email claim is in the owner JWT so api.current_user_email() resolves it.
+-- Positive staff persona has current publisher membership and canonical permission.
+-- The historical email/contact fixture remains present without supplying authority.
 -- Fixture object is type FMA (the 8m trigger enforces object_fma only accepts FMA).
 -- Run AFTER the full manifest. Self-contained + transactional (ROLLBACK). Against a DB WITHOUT 8n,
 -- the structural per-command asserts go red (and the owner INSERT would be denied).
 \set ON_ERROR_STOP on
 BEGIN;
+\ir fixtures/current_canonical_permission.sql
 DO $$
 DECLARE
   v_owner_obj    text := 'FMARUN9999999801';  -- draft FMA, owned by the owner persona
@@ -55,12 +55,13 @@ BEGIN
     (v_pub,          'FMA','fma RLS published', 'published'),
     (v_stranger_obj, 'FMA','fma RLS stranger',  'draft');
   INSERT INTO object_fma (object_id) VALUES (v_pub);  -- published row for the anon read test
-  -- owner persona = actor linked by email + primary role on v_owner_obj
+  -- Contact fixture retained; current publisher grant below supplies authority
   INSERT INTO auth.users (id,email) VALUES (v_uid,v_email) ON CONFLICT (id) DO NOTHING;
   INSERT INTO app_user_profile (id,role) VALUES (v_uid,'tourism_agent') ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role;
   INSERT INTO actor (id,display_name) VALUES (v_actor,'FMA Owner');
   INSERT INTO actor_channel (actor_id,kind_id,value) VALUES (v_actor,v_kind,v_email);
   INSERT INTO actor_object_role (actor_id,object_id,role_id,is_primary) VALUES (v_actor,v_owner_obj,v_role,TRUE);
+  PERFORM pg_temp.grant_current_canonical_fixture(v_uid,'ORGRUN9999999801',ARRAY[v_owner_obj]);
   -- stranger persona = authenticated, no actor link, no membership
   INSERT INTO auth.users (id,email) VALUES (v_stranger_uid,'fma_stranger@test.local') ON CONFLICT (id) DO NOTHING;
   INSERT INTO app_user_profile (id,role) VALUES (v_stranger_uid,'tourism_agent') ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role;

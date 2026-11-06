@@ -24,6 +24,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Receiver guards (isolated Linux, synthetic fixtures only)
+        run: sudo -n "$(command -v python)" -I -m unittest discover -s tools/release-artifact -p 'test_receiver*.py' -v
       - run: node --test tools/release-artifact/candidate.test.mjs
       - name: Prebuilt Compose contract (config only, synthetic parameters)
         run: node --test tools/release-artifact/prebuilt-compose.test.mjs

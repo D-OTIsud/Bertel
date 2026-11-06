@@ -72,6 +72,7 @@ export function planSaveBatch(
 }
 
 export interface EditorSaveResult {
+  canonicalModules?: import('../../services/workspace-save-result').WorkspaceSaveResult;
   /** Modules persisted directly (canonical writer). */
   saved: WorkspaceModuleId[];
   /** P1.3 — modules submitted to the moderation queue as pending changes (contributor). */
@@ -145,6 +146,7 @@ export function useEditorSave(objectId: string) {
       const saved: WorkspaceModuleId[] = [];
       const submitted: WorkspaceModuleId[] = [];
       const failed: { module: WorkspaceModuleId; message: string }[] = [];
+      const canonicalModules: import('../../services/workspace-save-result').WorkspaceSaveResult = {};
       setSaving(true);
       try {
         let compatibility: WriteCompatibility | undefined;
@@ -161,12 +163,13 @@ export function useEditorSave(objectId: string) {
           }
         }
         const writes = await Promise.allSettled(
-          plan.writable.map((module) => saveWorkspaceModule(objectId, buildSaveArg(module, draft, permissions), compatibility)),
+          plan.writable.map(async (module) => saveWorkspaceModule(objectId, buildSaveArg(module, draft, permissions), compatibility)),
         );
         writes.forEach((result, index) => {
           const module = plan.writable[index];
           if (result.status === 'fulfilled') {
             saved.push(module);
+            if (result.value) Object.assign(canonicalModules, result.value);
           } else {
             failed.push({
               module,
@@ -176,7 +179,9 @@ export function useEditorSave(objectId: string) {
         });
 
         const submissions = await Promise.allSettled(
-          plan.proposals.map((module) => submitPendingChange(buildContributorSubmission(objectId, module, baseline, draft))),
+          // Preparation can reject a stale/missing baseline synchronously. Keep that
+          // failure in its module result so other proposals and the draft survive.
+          plan.proposals.map(async (module) => submitPendingChange(buildContributorSubmission(objectId, module, baseline, draft))),
         );
         submissions.forEach((result, index) => {
           const module = plan.proposals[index];
@@ -201,7 +206,8 @@ export function useEditorSave(objectId: string) {
         // Preserve the deployed one-shot notification for a settled proposal batch.
         void pingNotifyDrain();
       }
-      return { saved, submitted, failed, blocked: plan.blocked };
+      return { saved, submitted, failed, blocked: plan.blocked,
+        ...(Object.keys(canonicalModules).length ? { canonicalModules } : {}) };
     },
     [queryClient, objectId],
   );

@@ -39,6 +39,15 @@ Outputs: `dbdoc/` (committed), `db-graph-out/graph.json` + `*.md` (committed), `
 
 `TBLS_DSN` is still used by `tbls` and by the psql gap extract above. Direct live reference extraction from `TBLS_DSN` is intentionally opt-in only: set `DB_GRAPH_ALLOW_DIRECT_LIVE=1` if MCP is unavailable and you explicitly want that fallback.
 
+## Isolated release snapshot
+
+For an isolated release database, use the same tbls and catalog extraction into a
+separate directory, then run `python tools/db-graph/db_graph.py --snapshot-root PATH`.
+The inputs belong in `PATH/db-graph-out/`; tbls table documentation belongs in
+`PATH/dbdoc/`. This keeps the committed live catalog separate from a proposed schema.
+The SQL fresh-apply workflow exports this snapshot with its commit and scenario in
+`PROVENANCE.txt`, using tbls 1.96.1 from the official setup-tbls action.
+
 ## Viewer (`graph.html`)
 Open directly in a browser (no server needed). Features: dark theme by default (Light/Dark toggle),
 filter chips by node kind and table domain (with all/none shortcuts), search, wheel-zoom + drag-pan,

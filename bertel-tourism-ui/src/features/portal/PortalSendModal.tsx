@@ -7,10 +7,9 @@
  * `.portal-shell`, et aucune règle `.portal-shell …` ne l'atteint. D'où `className="portal-modal"`,
  * sous lequel la Task 12 a déjà posé le contrat de taille (48 px, 1.05 rem).
  *
- * D12 — la surcharge ne touche QUE `field` / `before` / `after`. `section`, `rpc`,
- * `manual_apply` et `payload` sortent de `buildContributorSubmission` et y restent
- * byte-identiques : ce sont les seules clés que le serveur valide, et que
- * `approve_pending_change` rejoue.
+ * D12 — les modules usuels gardent l'enveloppe du builder contributeur ; seule
+ * leur présentation change. Les photos utilisent un builder dédié qui ne transmet
+ * que les identifiants de dépôts privés, jamais une URL fournie par le partenaire.
  *
  * Seules les rubriques `dirty` sont proposées. `buildContributorSubmission` revérifie la
  * baseline et le brouillon avant de construire les enveloppes : une ancienne copie locale
@@ -23,6 +22,7 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { buildContributorSubmission, isAutoDispatchModule } from '../object-editor/contributor-proposal';
+import { buildPortalPhotoSubmission } from '../../services/portal-photos';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 import { describePortalChange } from './portal-change-summary';
 import { clearPortalDraft, writePortalSent } from './usePortalDraft';
@@ -38,6 +38,8 @@ import { useSessionStore } from '../../store/session-store';
 /** Les refus que le partenaire peut TRAITER, et ce qu'il doit faire de chacun. Le repli
  *  générique du service (« Rien n'est perdu ») ne dit aucune action : on comble ce blanc. */
 const SEND_ERRORS: Record<string, string> = {
+  PT412: 'L’office a modifié cette rubrique depuis votre lecture. Rechargez la fiche pour vérifier vos changements avant de les envoyer ; votre saisie est conservée.',
+  PT428: 'Rechargez cette rubrique pour vérifier son état de départ avant de l’envoyer ; votre saisie est conservée.',
   PT409:
     'L’office est déjà en train de vérifier cette fiche. Vous pourrez envoyer ces changements quand la vérification sera terminée.',
   '22023':
@@ -106,7 +108,12 @@ export function PortalSendModal({
     }
   }, [open]);
 
-  const modified = rubrics.filter((rubric) => rubric.state === 'dirty');
+  // Une ligne par module : retirer cette ligne garde ensemble toutes ses vues.
+  const groups = new Map<WorkspaceModuleId, BuiltPortalRubric[]>();
+  for (const rubric of rubrics.filter((entry) => entry.state === 'dirty')) {
+    groups.set(rubric.module, [...(groups.get(rubric.module) ?? []), rubric]);
+  }
+  const modified = [...groups.values()].map((views) => ({ ...views[0], title: views.map((view) => view.moduleLabels?.[view.module] ?? view.title).join(' · ') }));
   const sending = modified.filter((rubric) => !excluded.has(rubric.module));
 
   async function handleSend() {
@@ -136,12 +143,13 @@ export function PortalSendModal({
     // l'appel, elle emprunterait le message du RÉSEAU, qui ne décrit pas ce qui s'est passé.
     try {
       for (const rubric of sending) {
-        // Deux rubriques ne partagent jamais un module POUR UN MÊME TYPE, mais une double
-        // enveloppe se marcherait dessus dans un seul envoi : on ferme la porte.
+        // L’unicité porte sur le module, même si plusieurs vues ont été modifiées.
         if (seen.has(rubric.module)) continue;
         seen.add(rubric.module);
         modules.push(rubric.module);
-        const base = buildContributorSubmission(objectId, rubric.module, editor.baseline, editor.draft);
+        const base = rubric.module==='media'
+          ? buildPortalPhotoSubmission(objectId,editor.baseline.media,editor.draft.media)
+          : buildContributorSubmission(objectId, rubric.module, editor.baseline, editor.draft);
         const readable = describePortalChange(rubric.module, editor.baseline, editor.draft, archetype);
         envelopes.push({ ...base, metadata: { ...base.metadata, ...readable } });
       }
@@ -210,7 +218,7 @@ export function PortalSendModal({
               <span className="muted">
                 {off
                   ? 'ne partira pas cette fois'
-                  : isAutoDispatchModule(rubric.module)
+                  : rubric.module==='media'||isAutoDispatchModule(rubric.module)
                     ? // Il vient de cliquer « Valider » : « appliqué dès validation » lui
                       // ferait croire que c'est déjà en ligne.
                       'l’office les publiera tout de suite'

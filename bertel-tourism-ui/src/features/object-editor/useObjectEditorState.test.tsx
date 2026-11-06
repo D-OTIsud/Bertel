@@ -16,6 +16,28 @@ function fixtureModules(): ObjectWorkspaceModules {
 }
 
 describe('useObjectEditorState', () => {
+  it('ignores a late acknowledgement from the previous object', () => {
+    const modules = fullModulesFixture();
+    const { result, rerender } = renderHook(({ id }) => useObjectEditorState(id, modules), { initialProps: { id: 'HOT-FIRST' } });
+    const acknowledgeFirst = result.current.mergeSavedModule;
+    rerender({ id: 'HOT-SECOND' });
+    act(() => result.current.patchModule('generalInfo', { name: 'Travail seconde fiche' }));
+    act(() => acknowledgeFirst('generalInfo', (current) => ({ ...current, name: 'Ancienne réponse' })));
+    expect(result.current.objectId).toBe('HOT-SECOND');
+    expect(result.current.draft.generalInfo.name).toBe('Travail seconde fiche');
+  });
+  it('rebases saved fields without acknowledging other local edits to the same module', () => {
+    const modules = fullModulesFixture();
+    const { result } = renderHook(() => useObjectEditorState('HOT-REBASE', modules));
+    const oldPets = { ...modules.capacityPolicies.petPolicy };
+    act(() => result.current.patchModule('capacityPolicies', { petPolicy: { accepted: true, conditions: 'Demande locale' } }));
+    act(() => result.current.mergeSavedModule('capacityPolicies', (current) => ({ ...current, stayPolicy: { ...current.stayPolicy, checkInFrom: '15:00' } })));
+    expect(result.current.baseline.capacityPolicies.stayPolicy.checkInFrom).toBe('15:00');
+    expect(result.current.draft.capacityPolicies.stayPolicy.checkInFrom).toBe('15:00');
+    expect(result.current.baseline.capacityPolicies.petPolicy).toEqual(oldPets);
+    expect(result.current.draft.capacityPolicies.petPolicy.conditions).toBe('Demande locale');
+    expect(result.current.dirtySections['capacity-policies']).toBe(true);
+  });
   it('keeps stale hidden edits in recovery storage without blocking the itinerary', async () => {
     const modules = fullModulesFixture();
     const draft = cloneModules(modules);

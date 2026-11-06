@@ -1,3 +1,17 @@
+-- Fresh-install source ONLY. Never replay this historical aggregate on a served
+-- database: later migrations preserve reader contracts and ACLs that it predates.
+-- The whole file is atomic, so even a psql client without ON_ERROR_STOP cannot
+-- continue past this guard and overwrite the live reader or its helper functions.
+BEGIN;
+DO $fresh_only$
+BEGIN
+  IF to_regprocedure('api.get_object_resource(text,text[],text,jsonb)') IS NOT NULL
+    OR to_regprocedure('api.get_object_resource(text,text[],text,boolean,text)') IS NOT NULL THEN
+    RAISE EXCEPTION 'api_views_functions.sql is fresh-install only; use reviewed incremental migrations on an existing reader';
+  END IF;
+END;
+$fresh_only$;
+
 -- =====================================================
 -- Helper: check if an object is currently open using rich opening system
 -- =====================================================
@@ -11281,3 +11295,5 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION api.rpc_restore_object_version(text, int) FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.rpc_restore_object_version(text, int) TO authenticated, service_role;
+
+COMMIT;

@@ -658,8 +658,104 @@ ROLLBACK;
 \ir ../supabase/migrations/20261030141523_restore_verified_completeness_history.sql
 \ir tests/test_completeness_history.sql
 
+\echo '== office SMTP prerequisites (configuration and guarded RPCs; current notification queue preserved) =='
+\ir migration_org_smtp_settings.sql
+\ir tests/test_org_smtp_settings.sql
+
+\echo '== partner stay times: narrow immediate-write exception, accommodation and scope gates =='
+\ir ../supabase/migrations/20261031073734_partner_portal_stay_times.sql
+\ir tests/test_actor_portal_stay_times.sql
+
+\echo '== partner messages and private attachments =='
+\ir migration_actor_portal_message.sql
+\ir tests/test_actor_portal_message.sql
+\echo '== named reception and service schedules =='
+\ir migration_opening_schedule_type_named.sql
+\ir tests/test_opening_schedule_type_named.sql
+
+\echo '== private partner photo additions and immediate withdrawal/order =='
+\ir migration_actor_portal_media.sql
+\ir tests/test_actor_portal_media.sql
+
+\echo '== office launch console and one seven-day reminder =='
+\ir migration_actor_portal_invitation.sql
+\ir tests/test_actor_portal_invitation.sql
+
+\echo '== R2 preparation: atomic capacity/stay write and actor field CAS; actor activation remains closed until separate cutover =='
+\ir ../supabase/migrations/20261103065612_partner_stay_policy_cas.sql
+\ir tests/test_partner_stay_policy_cas.sql
+
+\echo '== R4 preparation: atomic menu reconciliation with stable identities; legacy DML closes separately =='
+\ir ../supabase/migrations/20261103070417_object_menus_atomic_reconcile.sql
+\ir tests/test_object_menus_atomic_reconcile.sql
+
+\echo '== R3b preparation: complete canonical correction reads; privacy cutover remains separate =='
+\if :{?partner_portal_defer_read_scope}
+\echo '== R3b deferred ONLY for disposable historical-policy verification =='
+\else
+\ir ../supabase/migrations/20261103083731_partner_portal_menu_stay_correction_read_scope.sql
+\endif
+
+\echo '== C preparation: private card staging and atomic publication; actor rollout and DML cutover remain separate =='
+\ir ../supabase/migrations/20261103072138_partner_restaurant_cartes_contract.sql
+
+-- Historical moderation fixtures run against their original envelopes first in CI.
+\if :{?partner_portal_defer_collection_guard}
+\echo '== R6 deferred ONLY for disposable historical-envelope verification =='
+\else
+\echo '== R6 collection preconditions and explicit manual handling of historical proposals =='
+\ir ../supabase/migrations/20261103073527_actor_collection_proposal_preconditions.sql
+\ir tests/test_actor_test_realm.sql
+\echo '== R5 photo stock reservations and gallery CAS preparation; activation remains separate =='
+\ir ../supabase/migrations/20261103072105_partner_portal_photo_stock_and_gallery_contract.sql
+\echo '== M/E backend preparation: shared menu writer and durable extraction; actor features remain OFF =='
+\ir ../supabase/migrations/20261103082027_portal_menus_guarded_publication.sql
+\ir ../supabase/migrations/20261103080731_partner_menu_extraction_operations.sql
+\echo '== P backend preparation: durable photo assessment and human appeal remain OFF =='
+\ir ../supabase/migrations/20261103084816_partner_portal_photo_assessment_foundation_off.sql
+\echo '== Actor album preparation: read-only until explicit compatible-client cutover =='
+\ir ../supabase/migrations/20261104151051_partner_photo_actor_workspace_texts.sql
+\ir tests/test_partner_photo_actor_album_preparation.sql
+\echo '== Office appeal reader: real B/P receipt, private preview and existing CRM attachment block =='
+\ir ../supabase/migrations/20261104161843_partner_photo_refusal_office_private_preview.sql
+\endif
+
+-- The upgrade CI scenario stops before the reader patches, then reconstructs the
+-- observed missing activity column and captures real responses before upgrading.
+\echo '== Package the already-live reader baseline before new corrections or upgrade capture =='
+\ir packaging_partner_resource_live_baseline.sql
+\if :{?partner_portal_skip_read_fixes}
+\echo '== Reader fixes deferred ONLY for disposable upgrade verification =='
+\else
+\echo '== R1/R3a/X1: preserve the public contract, correct public content, separate primary opening =='
+\ir ../supabase/migrations/20261103065333_partner_portal_activity_api_contract.sql
+\ir ../supabase/migrations/20261103065350_partner_portal_restaurant_public_read_contract.sql
+\ir ../supabase/migrations/20261103065411_partner_portal_regional_primary_openings.sql
+\endif
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
 
 \echo '== Fresh apply complete =='
+
+-- Opt-in recipe wiring only. No workflow invokes this flag for the current
+-- integration; do NOT execute this manifest on the existing production project.
+-- The historical independent fixture guard is never weakened or bypassed.
+\if :{?partner_portal_verify_album_contract}
+\ir tests/assert_partner_api_ephemeral.sql
+\ir ../supabase/cutovers/partner_photo_stock_and_gallery.sql
+\ir ../supabase/cutovers/partner_photo_actor_album.sql
+-- Reapplication is explicit: must preserve predicates/ACLs and stay safe.
+\ir ../supabase/cutovers/partner_photo_actor_album.sql
+\ir tests/setup_partner_photo_stock.sql
+\ir tests/test_partner_photo_actor_album.sql
+\ir tests/test_partner_photo_office_appeal.sql
+\ir ../supabase/cutovers/close_partner_photo_actor_album.sql
+\ir ../supabase/cutovers/close_partner_photo_actor_album.sql
+-- Replaying old cutover grants must not bypass the new guards in the bodies.
+\ir ../supabase/cutovers/partner_photo_stock_and_gallery.sql
+\ir tests/test_partner_photo_actor_album_closed.sql
+\ir ../supabase/cutovers/close_partner_photo_actor_album.sql
+\ir tests/cleanup_partner_photo_stock.sql
+\endif

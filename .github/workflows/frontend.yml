@@ -26,6 +26,33 @@ env:
   NEXT_PUBLIC_ENABLE_DEMO_MODE: 'true'
 
 jobs:
+  production-pdf-runtime:
+    # The deployed image uses Alpine/musl; Ubuntu success alone does not prove
+    # that its native canvas/Sharp packages and PDF assets are usable.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the actual production image without project credentials
+        run: docker build --build-arg NEXT_PUBLIC_ENABLE_DEMO_MODE=true --tag bertel-pdf-runtime:ci .
+
+      - name: Verify compiled PDF rendering in the non-root Alpine runtime
+        shell: bash
+        run: |
+          docker run --rm --network none --read-only \
+            --tmpfs /tmp:rw,nosuid,nodev,size=512m \
+            --mount "type=bind,source=$PWD/scripts/verify-menu-document-native.cjs,target=/tmp/verify-menu-document-native.cjs,readonly" \
+            --entrypoint node bertel-pdf-runtime:ci \
+            /tmp/verify-menu-document-native.cjs /app | tee "$RUNNER_TEMP/pdf-production-runtime.log"
+
+      - name: Upload the production runtime verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdf-production-runtime
+          path: ${{ runner.temp }}/pdf-production-runtime.log
+          retention-days: 7
+
   build-and-test:
     # Playwright 1.60.0 provides Chromium for Ubuntu 24.04.
     runs-on: ubuntu-24.04
@@ -48,6 +75,9 @@ jobs:
       - run: npm run test:run -- --ci --maxWorkers=2
 
       - run: npm run build
+
+      - name: Verify compiled standalone PDF rendering without checkout dependency fallback
+        run: node scripts/verify-menu-document-native.cjs .next/standalone
 
       - name: Install Playwright Chromium
         run: node scripts/run-playwright.mjs install --with-deps chromium

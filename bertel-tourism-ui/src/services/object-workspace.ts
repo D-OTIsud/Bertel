@@ -7,9 +7,15 @@ import {
   normalizeOpeningWeekdayCode,
   buildCodeIdMap,
   ensureKnownCodes,
-  workspaceNameForSave,
 } from './object-workspace-payloads/input';
 import { buildCharacteristicsRpcPayload } from './object-workspace-payloads/characteristics';
+import { buildStayPolicyPatch, parseStayPolicySnapshot, stayPolicySnapshot, withStayPolicySnapshot } from './stay-policy-contract';
+import type { WorkspaceSaveResult } from './workspace-save-result';
+import { buildMenusWritePayload, parseMenuWriteSnapshot, withMenusWriteSnapshot } from './menu-write-contract';
+import { withPendingMenuRequest } from './menu-save-request';
+import { buildGalleryWritePayload, galleryBaseline, parseGalleryWriteSnapshot, withGalleryWriteSnapshot } from './media-write-contract';
+import { withPendingGalleryRequest } from './gallery-save-request';
+import { loadProposalCollection } from './proposal-collection-baseline';
 export {
   ACCESSIBILITY_AMENITY_FAMILY,
   filterEstablishmentAmenityGroups,
@@ -263,7 +269,10 @@ async function callObjectWorkspaceRpc(
   });
 
   if (error) {
-    throw mapMutationError(error, fallback);
+    if (readRecord(error).code === 'PT409' && ['save_object_capacity_policies', 'save_object_menus'].includes(functionName)) {
+      throw Object.assign(new Error('Ces informations ont changé. Rechargez la fiche pour les vérifier ; votre saisie est conservée.'), { code: 'PT409' });
+    }
+    throw Object.assign(mapMutationError(error, fallback), { code: readRecord(error).code });
   }
 
   const result = readRecord(data);
@@ -603,17 +612,16 @@ async function getObjectWorkspaceCharacteristicsModule(
     objectEnvironmentsResult,
     objectAmenitiesResult,
   ] = await Promise.all([
-    client.from('object_language').select('language_id, level_id').eq('object_id', objectId),
-    client.from('object_payment_method').select('payment_method_id').eq('object_id', objectId),
-    client.from('object_environment_tag').select('environment_tag_id').eq('object_id', objectId),
-    client.from('object_amenity').select('amenity_id').eq('object_id', objectId),
+    client.from('object_language').select('language_id, level_id', { count: 'exact' }).eq('object_id', objectId),
+    client.from('object_payment_method').select('payment_method_id', { count: 'exact' }).eq('object_id', objectId),
+    client.from('object_environment_tag').select('environment_tag_id', { count: 'exact' }).eq('object_id', objectId),
+    client.from('object_amenity').select('amenity_id', { count: 'exact' }).eq('object_id', objectId),
   ]);
 
   if (
-    objectLanguagesResult.error
-    || objectPaymentsResult.error
-    || objectEnvironmentsResult.error
-    || objectAmenitiesResult.error
+    [objectLanguagesResult, objectPaymentsResult, objectEnvironmentsResult, objectAmenitiesResult].some(result =>
+      result.error || !Array.isArray(result.data) || result.data.some(row => !row || typeof row !== 'object' || Array.isArray(row))
+      || (typeof result.count === 'number' ? result.count !== result.data.length : result.data.length >= 1000))
   ) {
     return {
       ...baseModule,
@@ -664,6 +672,13 @@ async function getObjectWorkspaceCharacteristicsModule(
       .map((row) => amenityRefs.find((amenity) => amenity.id === readString(row.amenity_id))?.code ?? '')
       .filter(Boolean),
   );
+
+  if ((objectLanguagesResult.data ?? []).some(row => !languageById.has(readString(row.language_id)) || (row.level_id && !levelById.has(readString(row.level_id))))
+    || (objectPaymentsResult.data ?? []).some(row => !paymentById.has(readString(row.payment_method_id)))
+    || (objectEnvironmentsResult.data ?? []).some(row => !environmentById.has(readString(row.environment_tag_id)))
+    || (objectAmenitiesResult.data ?? []).some(row => !amenityRefs.some(ref => ref.id === readString(row.amenity_id)))) {
+    return { ...baseModule, unavailableReason: 'Certaines références des caractéristiques ne sont pas lisibles. Rechargez cette rubrique avant de préparer une modification.' };
+  }
 
   return {
     languageOptions,
@@ -793,6 +808,7 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
       checkOutUntil: toHm(readString(stayPolicy.check_out_until)),
       conditions: readString(stayPolicy.conditions),
     },
+    stayPolicySnapshot: stayPolicySnapshot(stayPolicyResult.data),
     unavailableReason: null,
   };
 }
@@ -1622,14 +1638,14 @@ export async function getObjectWorkspaceMediaModule(
   const [objectMediaResult, placeMediaResult] = await Promise.allSettled([
     client
       .from('media')
-      .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind')
+      .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind, updated_at, extra')
       .eq('object_id', objectId)
       .order('is_main', { ascending: false })
       .order('position', { ascending: true }),
     placeIds.length > 0
       ? client
           .from('media')
-          .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind')
+          .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind, updated_at, extra')
           .in('place_id', placeIds)
           .order('position', { ascending: true })
       : Promise.resolve({ data: [], error: null }),
@@ -1704,7 +1720,7 @@ export async function getObjectWorkspaceMediaModule(
       ? null
       : 'Les medias de sous-lieu ne sont pas exposes completement par le live actuel.';
 
-  return {
+  const result: ObjectWorkspaceMediaModule = {
     ...baseModule,
     typeOptions,
     tagOptions,
@@ -1717,6 +1733,8 @@ export async function getObjectWorkspaceMediaModule(
     placeScopeUnavailableReason,
     unavailableReason: null,
   };
+  return { ...result, galleryWriteBaseline: galleryBaseline(result,
+    (objectMediaResult.value.data ?? []).filter(row => row.place_id == null) as Record<string, unknown>[]) };
 }
 
 function normalizeWorkspaceContactItem(params: {
@@ -3000,7 +3018,7 @@ export async function getObjectWorkspaceMenusModule(
   };
 
   const [menusResult, mediaResult] = await Promise.allSettled([
-    client.from('object_menu').select('id, category_id, name, description, is_active, visibility, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('object_menu').select('*').eq('object_id', objectId).order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
@@ -3016,7 +3034,7 @@ export async function getObjectWorkspaceMenusModule(
   const [itemRowsResult] = await Promise.allSettled([menuIds.length > 0
     ? client
         .from('object_menu_item')
-        .select('id, menu_id, name, description, price, currency, kind_id, unit_id, media_id, is_available, position, section_id')
+        .select('*')
         .in('menu_id', menuIds)
         .order('position', { ascending: true })
     : Promise.resolve({ data: [], error: null })]);
@@ -3030,12 +3048,12 @@ export async function getObjectWorkspaceMenusModule(
     ? await Promise.allSettled([
         client
           .from('object_menu_item_media')
-          .select('menu_item_id, media_id, position')
+          .select('*')
           .in('menu_item_id', itemIds)
           .order('position', { ascending: true }),
-        client.from('object_menu_item_dietary_tag').select('menu_item_id, dietary_tag_id').in('menu_item_id', itemIds),
-        client.from('object_menu_item_allergen').select('menu_item_id, allergen_id').in('menu_item_id', itemIds),
-        client.from('object_menu_item_cuisine_type').select('menu_item_id, cuisine_type_id').in('menu_item_id', itemIds),
+        client.from('object_menu_item_dietary_tag').select('*').in('menu_item_id', itemIds),
+        client.from('object_menu_item_allergen').select('*').in('menu_item_id', itemIds),
+        client.from('object_menu_item_cuisine_type').select('*').in('menu_item_id', itemIds),
       ])
     : [
         { status: 'fulfilled' as const, value: { data: [], error: null } },
@@ -3169,7 +3187,7 @@ export async function getObjectWorkspaceMenusModule(
     return { ...baseModule, unavailableReason: 'Certaines données associées aux plats ont changé ou ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
   }
 
-  return {
+  return withMenusWriteSnapshot({
     categoryOptions,
     dietaryTagOptions,
     allergenOptions,
@@ -3196,7 +3214,11 @@ export async function getObjectWorkspaceMenusModule(
       };
     }),
     unavailableReason: null,
-  };
+  }, {
+    menus, items: itemRows,
+    media: workspaceReadRows(mediaLinksResult)!, dietary: workspaceReadRows(dietaryLinksResult)!,
+    allergens: workspaceReadRows(allergenLinksResult)!, cuisines: workspaceReadRows(cuisineLinksResult)!,
+  });
 }
 
 async function getObjectWorkspaceActivityModule(
@@ -4142,7 +4164,7 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions, catalogs, detail.type ?? ''),
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
     getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),
-    getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings, catalogs),
+    loadProposalCollection(objectId, 'openings', () => getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings, catalogs)),
     getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships, catalogs),
     getObjectWorkspaceLegalModule(objectId, parsedModules.legal, catalogs),
     getObjectWorkspaceSustainabilityModule(parsedModules.sustainability, catalogs),
@@ -4158,7 +4180,7 @@ export async function getObjectWorkspaceResource(
     // database, not just the object's existing values (which is all get_object_resource carries).
     // Without this, §10 accessibility equipment panels showed "0 / 0" and nothing was selectable.
     // See lot1_mapping_decisions §32.
-    getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics, catalogs),
+    loadProposalCollection(objectId, 'characteristics', () => getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics, catalogs)),
     // Zones (communes desservies): ref_commune catalog (public read) + the object's object_zone
     // (can_read_object). Enriched unconditionally like contacts/characteristics (§41).
     getObjectWorkspaceZonesModule(objectId, parsedModules.location),
@@ -4809,10 +4831,10 @@ export async function saveObjectWorkspaceCharacteristics(objectId: string, input
   );
 }
 
-export async function saveObjectWorkspaceCapacityPolicies(objectId: string, input: ObjectWorkspaceCapacityPoliciesModule): Promise<void> {
+export async function saveObjectWorkspaceCapacityPolicies(objectId: string, input: ObjectWorkspaceCapacityPoliciesModule): Promise<WorkspaceSaveResult> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
-    return;
+    return { capacityPolicies: input };
   }
 
   // §07 review no-clobber guard (§28/§40/§05 precedent): the capacities leg is a
@@ -4822,7 +4844,9 @@ export async function saveObjectWorkspaceCapacityPolicies(objectId: string, inpu
     throw new Error(input.unavailableReason);
   }
 
-  await callObjectWorkspaceRpc('save_object_commercial', objectId, {
+  const stayPatch = buildStayPolicyPatch(input.stayPolicy, input.stayPolicySnapshot);
+  const result = await callObjectWorkspaceRpc('save_object_capacity_policies', objectId, {
+    stay_policy: stayPatch,
     capacities: input.capacityItems.map((item) => ({
       id: toRpcUuid(item.recordId),
       metric_id: toRpcUuid(item.metricId),
@@ -4847,26 +4871,7 @@ export async function saveObjectWorkspaceCapacityPolicies(objectId: string, inpu
         },
   }, 'Impossible d enregistrer capacites et politiques.');
 
-  // §85 stay policy (heure d'arrivée / départ) — direct PostgREST write, gated by the
-  // canonical_* RLS on object_stay_policy (§40/§41 child-write precedent). All-empty ⇒ delete
-  // the row (so an untouched form never materialises an empty policy).
-  const client = getSupabaseClient();
-  if (client) {
-    const sp = input.stayPolicy;
-    const stayEmpty = ![sp.checkInFrom, sp.checkInUntil, sp.checkOutUntil, sp.conditions].some((value) => value.trim().length > 0);
-    const { error } = stayEmpty
-      ? await client.from('object_stay_policy').delete().eq('object_id', objectId)
-      : await client.from('object_stay_policy').upsert({
-          object_id: objectId,
-          check_in_from: sp.checkInFrom.trim() || null,
-          check_in_until: sp.checkInUntil.trim() || null,
-          check_out_until: sp.checkOutUntil.trim() || null,
-          conditions: sp.conditions.trim() || null,
-        });
-    if (error) {
-      throw new Error('Impossible d enregistrer la politique de séjour.');
-    }
-  }
+  return { capacityPolicies: withStayPolicySnapshot(input, parseStayPolicySnapshot(result.stay_policy)) };
 }
 
 export async function saveObjectWorkspacePricing(objectId: string, input: ObjectWorkspacePricingModule): Promise<void> {
@@ -5179,192 +5184,22 @@ export async function saveObjectWorkspaceCuisine(objectId: string, input: Object
   }
 }
 
-export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWorkspaceMenusModule): Promise<void> {
+export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWorkspaceMenusModule): Promise<void | WorkspaceSaveResult> {
   const session = useSessionStore.getState();
-  if (session.demoMode) {
-    return;
-  }
-  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  if (session.demoMode) return;
   assertWorkspaceSaveAvailable('menus', input);
-
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer les menus.');
-  }
-
-  const [
-    categoryRefsResult,
-    dietaryRefsResult,
-    allergenRefsResult,
-    cuisineRefsResult,
-    kindRefsResult,
-    unitRefsResult,
-    existingMenusResult,
-  ] = await Promise.all([
-    client.from('ref_code').select('id, code').eq('domain', 'menu_category'),
-    client.from('ref_code').select('id, code').eq('domain', 'dietary_tag'),
-    client.from('ref_code').select('id, code').eq('domain', 'allergen'),
-    client.from('ref_code').select('id, code').eq('domain', 'cuisine_type'),
-    client.from('ref_code').select('id, code').eq('domain', 'price_kind'),
-    client.from('ref_code').select('id, code').eq('domain', 'price_unit'),
-    client.from('object_menu').select('id').eq('object_id', objectId),
-  ]);
-
-  if (categoryRefsResult.error) {
-    throw mapMutationError(categoryRefsResult.error, 'Impossible de charger les categories de menu.');
-  }
-  if (dietaryRefsResult.error) {
-    throw mapMutationError(dietaryRefsResult.error, 'Impossible de charger les tags alimentaires.');
-  }
-  if (allergenRefsResult.error) {
-    throw mapMutationError(allergenRefsResult.error, 'Impossible de charger les allergenes.');
-  }
-  if (cuisineRefsResult.error) {
-    throw mapMutationError(cuisineRefsResult.error, 'Impossible de charger les cuisines.');
-  }
-  if (kindRefsResult.error) {
-    throw mapMutationError(kindRefsResult.error, 'Impossible de charger les types de prix.');
-  }
-  if (unitRefsResult.error) {
-    throw mapMutationError(unitRefsResult.error, 'Impossible de charger les unites de prix.');
-  }
-  if (existingMenusResult.error) {
-    throw mapMutationError(existingMenusResult.error, 'Impossible de charger les menus existants.');
-  }
-
-  const categoryIdByCode = buildCodeIdMap(categoryRefsResult.data ?? []);
-  const dietaryIdByCode = buildCodeIdMap(dietaryRefsResult.data ?? []);
-  const allergenIdByCode = buildCodeIdMap(allergenRefsResult.data ?? []);
-  const cuisineIdByCode = buildCodeIdMap(cuisineRefsResult.data ?? []);
-  const kindIdByCode = buildCodeIdMap(kindRefsResult.data ?? []);
-  const unitIdByCode = buildCodeIdMap(unitRefsResult.data ?? []);
-  ensureKnownCodes(input.items.map((menu) => menu.categoryCode).filter(Boolean), categoryIdByCode, 'Categorie de menu');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.map((item) => item.kindCode).filter(Boolean)), kindIdByCode, 'Type de prix');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.map((item) => item.unitCode).filter(Boolean)), unitIdByCode, 'Unite de prix');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.dietaryTagCodes)), dietaryIdByCode, 'Tag alimentaire');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.allergenCodes)), allergenIdByCode, 'Allergene');
-  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.cuisineTypeCodes)), cuisineIdByCode, 'Cuisine');
-
-  const existingMenuIds = (existingMenusResult.data ?? [])
-    .map((row) => readString((row as Record<string, unknown>).id))
-    .filter(Boolean);
-  if (existingMenuIds.length > 0) {
-    const existingItems = await client.from('object_menu_item').select('id').in('menu_id', existingMenuIds);
-    if (existingItems.error) {
-      throw mapMutationError(existingItems.error, 'Impossible de charger les lignes de menu existantes.');
-    }
-    const existingItemIds = (existingItems.data ?? [])
-      .map((row) => readString((row as Record<string, unknown>).id))
-      .filter(Boolean);
-    if (existingItemIds.length > 0) {
-      const [deleteMedia, deleteDietary, deleteAllergens, deleteCuisine] = await Promise.all([
-        client.from('object_menu_item_media').delete().in('menu_item_id', existingItemIds),
-        client.from('object_menu_item_dietary_tag').delete().in('menu_item_id', existingItemIds),
-        client.from('object_menu_item_allergen').delete().in('menu_item_id', existingItemIds),
-        client.from('object_menu_item_cuisine_type').delete().in('menu_item_id', existingItemIds),
-      ]);
-      if (deleteMedia.error) {
-        throw mapMutationError(deleteMedia.error, 'Impossible de reinitialiser les medias de menu.');
-      }
-      if (deleteDietary.error) {
-        throw mapMutationError(deleteDietary.error, 'Impossible de reinitialiser les tags alimentaires.');
-      }
-      if (deleteAllergens.error) {
-        throw mapMutationError(deleteAllergens.error, 'Impossible de reinitialiser les allergenes.');
-      }
-      if (deleteCuisine.error) {
-        throw mapMutationError(deleteCuisine.error, 'Impossible de reinitialiser les cuisines.');
-      }
-    }
-    const { error: deleteItemsError } = await client.from('object_menu_item').delete().in('menu_id', existingMenuIds);
-    if (deleteItemsError) {
-      throw mapMutationError(deleteItemsError, 'Impossible de reinitialiser les lignes de menu.');
-    }
-  }
-  const { error: deleteMenusError } = await client.from('object_menu').delete().eq('object_id', objectId);
-  if (deleteMenusError) {
-    throw mapMutationError(deleteMenusError, 'Impossible de reinitialiser les menus.');
-  }
-
-  for (const menu of input.items) {
-    const menuPayload = {
-      object_id: objectId,
-      category_id: menu.categoryCode ? categoryIdByCode.get(menu.categoryCode.toLowerCase()) ?? null : null,
-      name: workspaceNameForSave(menu.name, menu.rawName) ?? '',
-      description: toNullableText(menu.description),
-      is_active: menu.active,
-      visibility: toNullableText(menu.visibility) ?? (menu.rawVisibility === null ? null : 'public'),
-      position: toNullableInteger(menu.position),
-    };
-    const { data: menuData, error: menuError } = await client.from('object_menu').insert(menuPayload).select('id').single();
-    if (menuError) {
-      throw mapMutationError(menuError, 'Impossible de sauvegarder un menu.');
-    }
-    const menuId = readString((menuData as Record<string, unknown>).id);
-    for (const item of menu.items) {
-      const mediaIds = Array.from(new Set(item.mediaIds ?? [])).filter((mediaId) => isUuid(mediaId));
-      const itemPayload = {
-        menu_id: menuId,
-        name: toNullableText(item.name) ?? 'Ligne',
-        description: toNullableText(item.description),
-        price: toNullableNumber(item.price),
-        currency: toNullableText(item.currency) ?? 'EUR',
-        kind_id: item.kindCode ? kindIdByCode.get(item.kindCode.toLowerCase()) ?? null : null,
-        unit_id: item.unitCode ? unitIdByCode.get(item.unitCode.toLowerCase()) ?? null : null,
-        media_id: mediaIds[0] ?? null,
-        is_available: item.available,
-        position: toNullableInteger(item.position),
-        // §06 P2b — section du plat (menu_category) ; même catalogue que la catégorie de menu.
-        section_id: item.sectionCode ? categoryIdByCode.get(item.sectionCode.toLowerCase()) ?? null : null,
-      };
-      const { data: itemData, error: itemError } = await client.from('object_menu_item').insert(itemPayload).select('id').single();
-      if (itemError) {
-        throw mapMutationError(itemError, 'Impossible de sauvegarder une ligne de menu.');
-      }
-      const itemId = readString((itemData as Record<string, unknown>).id);
-      const dietaryRows = Array.from(new Set(item.dietaryTagCodes)).map((code) => ({
-        menu_item_id: itemId,
-        dietary_tag_id: dietaryIdByCode.get(code.toLowerCase()) as string,
-      }));
-      const allergenRows = Array.from(new Set(item.allergenCodes)).map((code) => ({
-        menu_item_id: itemId,
-        allergen_id: allergenIdByCode.get(code.toLowerCase()) as string,
-      }));
-      const cuisineRows = Array.from(new Set(item.cuisineTypeCodes)).map((code) => ({
-        menu_item_id: itemId,
-        cuisine_type_id: cuisineIdByCode.get(code.toLowerCase()) as string,
-      }));
-      const mediaRows = mediaIds.map((mediaId, mediaIndex) => ({
-        menu_item_id: itemId,
-        media_id: mediaId,
-        position: mediaIndex + 1,
-      }));
-      if (mediaRows.length > 0) {
-        const { error } = await client.from('object_menu_item_media').insert(mediaRows);
-        if (error) {
-          throw mapMutationError(error, 'Impossible de sauvegarder les medias de menu.');
-        }
-      }
-      if (dietaryRows.length > 0) {
-        const { error } = await client.from('object_menu_item_dietary_tag').insert(dietaryRows);
-        if (error) {
-          throw mapMutationError(error, 'Impossible de sauvegarder les tags alimentaires.');
-        }
-      }
-      if (allergenRows.length > 0) {
-        const { error } = await client.from('object_menu_item_allergen').insert(allergenRows);
-        if (error) {
-          throw mapMutationError(error, 'Impossible de sauvegarder les allergenes.');
-        }
-      }
-      if (cuisineRows.length > 0) {
-        const { error } = await client.from('object_menu_item_cuisine_type').insert(cuisineRows);
-        if (error) {
-          throw mapMutationError(error, 'Impossible de sauvegarder les cuisines.');
-        }
-      }
-    }
-  }
+  const payload = buildMenusWritePayload(input);
+  const result = await withPendingMenuRequest(session.userId,objectId,payload,
+    request=>callObjectWorkspaceRpc('save_object_menus',objectId,request,'Impossible d’enregistrer les menus. Votre saisie est conservée.'),
+    response=>{ parseMenuWriteSnapshot(response.snapshot); }, {
+      baselineReadId: input.menuWriteBaseline?.readId,
+      resolve: async requestId => {
+        const receipt = await callObjectWorkspaceRpc('get_object_menu_write_receipt', objectId, { request_id: requestId }, 'Impossible de vérifier l’ancien enregistrement. Rechargez les menus ; votre saisie est conservée.');
+        return receipt.known === true ? receipt : null;
+      },
+    });
+  const snapshot = parseMenuWriteSnapshot(result.snapshot);
+  return { menus: withMenusWriteSnapshot(input, snapshot) };
 }
 
 export async function saveObjectWorkspaceActivity(objectId: string, input: ObjectWorkspaceActivityModule): Promise<void> {
@@ -6065,115 +5900,29 @@ export async function saveObjectWorkspaceLocation(objectId: string, input: Objec
 export async function saveObjectWorkspaceMedia(
   objectId: string,
   input: ObjectWorkspaceMediaModule,
-  options: { canEditPlaceMedia: boolean },
-): Promise<void> {
+  _options: { canEditPlaceMedia: boolean },
+): Promise<void | WorkspaceSaveResult> {
   const session = useSessionStore.getState();
-  if (session.demoMode) {
-    return;
-  }
-
-  // R1 no-clobber: a module whose load failed carries an empty objectItems list —
-  // reconciling against it would DELETE every media row of the object. The section
-  // hides its controls on unavailableReason; this throw is the defense-in-depth.
-  if (input.unavailableReason) {
-    throw new Error(input.unavailableReason);
-  }
-
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer les medias.');
-  }
-
-  const normalizedObjectItems = input.objectItems.map((item, index) => ({
-    ...item,
-    position: item.position || String(index),
-  }));
-
-  const [typeRefsResult, existingMediaResult] = await Promise.all([
-    client.from('ref_code').select('id, code, name').eq('domain', 'media_type'),
-    client.from('media').select('id').eq('object_id', objectId),
-  ]);
-
-  if (typeRefsResult.error) {
-    throw mapMutationError(typeRefsResult.error, 'Impossible de charger les types de media.');
-  }
-
-  if (existingMediaResult.error) {
-    throw mapMutationError(existingMediaResult.error, 'Impossible de charger les medias existants.');
-  }
-
-  const typeByCode = new Map(
-    (typeRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
-  );
-  const existingIds = new Set((existingMediaResult.data ?? []).map((row) => readString((row as Record<string, unknown>).id)).filter(Boolean));
-
-  const unknownType = normalizedObjectItems.find((item) => !typeByCode.has(item.typeCode.toLowerCase()));
-  if (unknownType) {
-    throw new Error(`Type de media inconnu: ${unknownType.typeCode || 'vide'}.`);
-  }
-
-  const { error: clearMainError } = await client.from('media').update({ is_main: false }).eq('object_id', objectId);
-  if (clearMainError) {
-    throw mapMutationError(clearMainError, 'Impossible de preparer le media principal.');
-  }
-
-  const keptIds = new Set<string>();
-
-  for (const item of normalizedObjectItems) {
-    const payload = {
-      object_id: objectId,
-      media_type_id: typeByCode.get(item.typeCode.toLowerCase()) ?? null,
-      title: toNullableText(item.title),
-      title_i18n: Object.keys(item.titleTranslations).length > 0 ? item.titleTranslations : null,
-      description: toNullableText(item.description),
-      description_i18n: Object.keys(item.descriptionTranslations).length > 0 ? item.descriptionTranslations : null,
-      credit: toNullableText(item.credit),
-      url: item.url.trim(),
-      is_main: item.isMain,
-      is_published: item.isPublished,
-      position: toNullableInteger(item.position) ?? 0,
-      rights_expires_at: toNullableText(item.rightsExpiresAt),
-      // §04 fix class: an UPDATE preserves a NULL visibility (extended-only under the
-      // 8t gate) instead of silently widening it to 'public'; INSERTs default below.
-      visibility: toNullableText(item.visibility),
-      width: toNullableInteger(item.width),
-      height: toNullableInteger(item.height),
-      kind: toNullableText(item.kind),
-    };
-
-    let mediaId = item.id;
-    if (existingIds.has(item.id)) {
-      const { error } = await client.from('media').update(payload).eq('id', item.id);
-      if (error) {
-        throw mapMutationError(error, "Impossible d'enregistrer un media objet.");
-      }
-    } else {
-      // Editor-authored rows are public by design (the user can narrow via the select).
-      const insertPayload = { ...payload, visibility: payload.visibility ?? 'public' };
-      const { data, error } = await client.from('media').insert(insertPayload).select('id').single();
-      if (error) {
-        throw mapMutationError(error, "Impossible de creer un media objet.");
-      }
-      mediaId = readString((data as Record<string, unknown>).id);
-    }
-
-    keptIds.add(mediaId);
-    // media_tag is deliberately NOT written here: no tag UI exists, no live consumer
-    // reads the links, and the old delete+reinsert churn could wipe links after a
-    // partial load. Row deletes still cascade their links (FK ON DELETE CASCADE).
-  }
-
-  const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id));
-  if (idsToDelete.length > 0) {
-    const { error } = await client.from('media').delete().in('id', idsToDelete);
-    if (error) {
-      throw mapMutationError(error, "Impossible de supprimer les medias retires.");
-    }
-  }
-
-  if (options.canEditPlaceMedia) {
-    return;
-  }
+  if (session.demoMode) return;
+  if (input.unavailableReason) throw new Error(input.unavailableReason);
+  const payload = buildGalleryWritePayload(input);
+  const result = await withPendingGalleryRequest(session.userId, objectId, payload,
+    request => callObjectWorkspaceRpc('save_object_gallery', objectId, request,
+      'Impossible d’enregistrer la galerie. Votre saisie est conservée.'),
+    response => { parseGalleryWriteSnapshot(response.snapshot); },
+    {
+      baselineReadId: input.galleryWriteBaseline?.readId,
+      resolve: async requestId => {
+        const api = getApiClient();
+        if (!api) throw new Error('Le service est indisponible. Votre saisie est conservée.');
+        const response = await api.schema('api').rpc('get_gallery_write_receipt', {
+          p_object_id: objectId, p_request_id: requestId,
+        });
+        if (response.error) throw Object.assign(new Error('La dernière demande ne peut pas être vérifiée.'), { code: readRecord(response.error).code });
+        return response.data == null ? null : readRecord(response.data);
+      },
+    });
+  return { media: withGalleryWriteSnapshot(input, parseGalleryWriteSnapshot(result.snapshot)) };
 }
 
 export async function saveObjectWorkspaceContacts(objectId: string, input: ObjectWorkspaceContactsModule): Promise<void> {

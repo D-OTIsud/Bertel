@@ -45,7 +45,7 @@ export function MenuEditModal({
   const usedCodes = new Set(groups.map((group) => group.code));
   const availableSections = sectionOptions.filter((option) => !usedCodes.has(option.code));
   const selected = selectedIndex === null ? null : (items[selectedIndex] ?? null);
-  const unnamedNew = items.filter((item) => !item.recordId && !item.name.trim()).length;
+  const unnamedNew = items.filter((item) => (item.isNew ?? !item.recordId) && !item.name.trim()).length;
 
   function addDish(sectionCode: string, sectionLabel: string) {
     setItems((current) => [...current, createMenuItem(current.length, sectionCode, sectionLabel)]);
@@ -67,10 +67,10 @@ export function MenuEditModal({
       open={open}
       size="xl"
       className="ed-menu-modal"
-      title={menu.recordId ? 'Modifier le menu' : 'Ajouter un menu'}
+      title={(menu.isNew ?? !menu.recordId) ? 'Ajouter un menu' : 'Modifier le menu'}
       onClose={onClose}
       onSave={saveMenu}
-      saveLabel={menu.recordId ? 'Appliquer le menu' : 'Ajouter le menu'}
+      saveLabel={(menu.isNew ?? !menu.recordId) ? 'Ajouter le menu' : 'Appliquer le menu'}
       saveDisabled={unnamedNew > 0}
       footerNote={
         unnamedNew

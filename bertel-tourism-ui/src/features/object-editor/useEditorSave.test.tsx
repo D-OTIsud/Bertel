@@ -99,6 +99,7 @@ function makeModules(): ObjectWorkspaceModules {
   return {
     ...parseObjectWorkspace({ id: 'HOTRUN0000000001', name: 'Test', raw: {} }, ['fr']),
     characteristics: {
+      proposalCollectionBaseline: { contract: 'actor-collection-baseline-v1', object_id: 'HOTRUN0000000001', domain: 'characteristics', digest: 'a'.repeat(64) },
       selectedLanguages: [],
       selectedPaymentCodes: ['cash'],
       selectedEnvironmentCodes: [],
@@ -289,6 +290,26 @@ describe('useEditorSave.save — fork routing', () => {
     // The auto-dispatch section carries its whitelisted RPC; the manual one carries a null rpc.
     const submittedRpcs = mockSubmit.mock.calls.map((call) => (call[0].metadata as Record<string, unknown>).rpc);
     expect(submittedRpcs).toEqual(['save_object_commercial', null]);
+  });
+
+  it('contains a local preparation failure, keeps the draft and submits independent modules', async () => {
+    const draft = makeModules();
+    const baseline = makeModules();
+    delete baseline.characteristics.proposalCollectionBaseline;
+    draft.characteristics.selectedAmenityCodes = ['wifi', 'parking'];
+    const before = JSON.stringify(draft);
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
+    let outcome!: Awaited<ReturnType<typeof result.current.save>>;
+    await act(async () => {
+      outcome = await result.current.save(['characteristics', 'contacts'], {} as ObjectWorkspacePermissions, draft, {
+        canWriteCanonicalDirect: false, baseline,
+      });
+    });
+    expect(outcome.submitted).toEqual(['contacts']);
+    expect(outcome.failed).toEqual([{ module: 'characteristics', message: expect.stringMatching(/Rechargez.*saisie est conservée/) }]);
+    expect(mockSubmit).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(draft)).toBe(before);
+    expect(result.current.saving).toBe(false);
   });
 
   it('a failed submission stays in failed; the others still submit (partial success)', async () => {

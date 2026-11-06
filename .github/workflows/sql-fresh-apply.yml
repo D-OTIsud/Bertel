@@ -16,6 +16,14 @@ on:
     paths:
       - 'Base de donnée DLL et API/**.sql'
       - 'supabase/migrations/**.sql'
+      - 'supabase/cutovers/**.sql'
+      - 'tools/partner-api/**'
+      - 'bertel-tourism-ui/src/app/api/public/**'
+      - 'bertel-tourism-ui/src/lib/public-api.ts'
+      - 'bertel-tourism-ui/src/lib/partner-auth.ts'
+      - 'bertel-tourism-ui/src/lib/**'
+      - 'bertel-tourism-ui/src/services/**'
+      - 'bertel-tourism-ui/src/types/**'
       - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
@@ -25,6 +33,14 @@ on:
     paths:
       - 'Base de donnée DLL et API/**.sql'
       - 'supabase/migrations/**.sql'
+      - 'supabase/cutovers/**.sql'
+      - 'tools/partner-api/**'
+      - 'bertel-tourism-ui/src/app/api/public/**'
+      - 'bertel-tourism-ui/src/lib/public-api.ts'
+      - 'bertel-tourism-ui/src/lib/partner-auth.ts'
+      - 'bertel-tourism-ui/src/lib/**'
+      - 'bertel-tourism-ui/src/services/**'
+      - 'bertel-tourism-ui/src/types/**'
       - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
@@ -35,9 +51,19 @@ on:
 jobs:
   fresh-apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        contract-scenario: [fresh, upgrade]
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: bertel-tourism-ui/package-lock.json
 
       - name: Validate Tourinsoft Reunion contract inventory
         run: |
@@ -62,6 +88,28 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/bertel-fresh/supabase"
           cp supabase/config.toml "$RUNNER_TEMP/bertel-fresh/supabase/config.toml"
+          # Only the disposable API exposes the application's API schema here.
+          # Production configuration is untouched.
+          cat >> "$RUNNER_TEMP/bertel-fresh/supabase/config.toml" <<'TOML'
+
+          [api]
+          port = 54321
+          schemas = ["public", "storage", "graphql_public", "api"]
+          TOML
+          # PostgREST validates exposed schemas before the application manifest
+          # runs. Seed only the empty namespace during the CLI bootstrap.
+          cat > "$RUNNER_TEMP/bertel-fresh/supabase/seed.sql" <<'SQL'
+          CREATE SCHEMA IF NOT EXISTS api;
+          -- Independent evidence of the disposable bootstrap, checked by fixtures.
+          DO $bootstrap$
+          BEGIN
+            CREATE SCHEMA bertel_ci_fixture;
+            REVOKE ALL ON SCHEMA bertel_ci_fixture FROM PUBLIC;
+            CREATE TABLE bertel_ci_fixture.bootstrap (purpose text NOT NULL);
+            INSERT INTO bertel_ci_fixture.bootstrap VALUES ('partner-contract-local-only');
+          END;
+          $bootstrap$;
+          SQL
 
       - name: Start Supabase local database
         # Boots the Supabase-flavoured Postgres (DB image provides the auth/storage
@@ -72,7 +120,13 @@ jobs:
       - name: Apply the canonical fresh-install manifest (aborts on first error)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
+          CONTRACT_SCENARIO: ${{ matrix.contract-scenario }}
+        run: |
+          if [ "$CONTRACT_SCENARIO" = upgrade ]; then
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -v partner_portal_defer_collection_guard=1 -v partner_portal_defer_read_scope=1 -v partner_portal_skip_read_fixes=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
+          else
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -v partner_portal_defer_collection_guard=1 -v partner_portal_defer_read_scope=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
+          fi
 
       - name: Smoke — assert the manifest produced the expected schema
         env:
@@ -515,6 +569,204 @@ jobs:
             exit 1
           fi
           echo "RGPD mirror alignment OK."
+
+      # Closing legacy DML is a separate release operation. Exercise it only after
+      # the historical/preparation assertions above, in this disposable database.
+      - name: Partner stay cutover and old-client rejection
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/partner_stay_policy_cas.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_stay_policy_cutover.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/object_menus_atomic_reconcile.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_menus_atomic_cutover.sql"
+          python tools/partner-api/test-write-concurrency.py "$DB_URL"
+
+      - name: Restaurant card receipts, publication and targeted cutover
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_restaurant_cartes_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/restaurant_cartes_atomic.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_restaurant_cartes_cutover.sql"
+
+      - name: Collection proposals and genuine historical envelopes
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          mkdir -p "$RUNNER_TEMP/partner-api-evidence"
+          psql "$DB_URL" -At -v ON_ERROR_STOP=1 > "$RUNNER_TEMP/partner-api-evidence/r6-source-functions.jsonl" <<'SQL'
+          SELECT jsonb_build_object('signature',p.oid::regprocedure::text,'hash',md5(replace(p.prosrc,E'\r\n',E'\n')),
+            'definition',pg_get_functiondef(p.oid),'owner',pg_get_userbyid(p.proowner),'acl',p.proacl,'config',p.proconfig)
+          FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='api'
+            AND p.proname IN ('approve_pending_change','approve_fiche_submission','reject_pending_change','list_pending_changes','save_object_commercial','save_object_openings') ORDER BY 1;
+          SQL
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_actor_collection_history.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103073527_actor_collection_proposal_preconditions.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_test_realm.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_collection_preconditions.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_actor_collection_history.sql"
+          python tools/partner-api/test-collection-concurrency.py "$DB_URL"
+
+      - name: Photo reservations, gallery CAS and actual stock contention
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/capture_partner_photo_moderation_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103072105_partner_portal_photo_stock_and_gallery_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_stock_preparation.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c 'DROP TABLE internal.r5_unchanged_functions'
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/partner_photo_stock_and_gallery.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_photo_stock.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_stock_and_gallery.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_stock_reactivation.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_gallery_url_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_photo_stock.sql"
+          python tools/partner-api/test-photo-stock-concurrency.py "$DB_URL"
+
+      - name: Menu privacy and complete canonical correction reads
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103083731_partner_portal_menu_stay_correction_read_scope.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/cutovers/partner_menu_read_privacy.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_menu_stay_correction_read.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_menu_cuisine_invoker_read.sql"
+
+      - name: Guarded partner menus and durable extraction remain OFF after acceptance
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103082027_portal_menus_guarded_publication.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103080731_partner_menu_extraction_operations.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_portal_menus_guarded_publication.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_menu_extraction_operations.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_menu_extraction_source_continuity_and_impact.sql"
+          python tools/partner-api/test-menu-cutover.py "$DB_URL"
+          python tools/partner-api/test-extraction-concurrency.py "$DB_URL"
+
+      - name: Photo assessment and human appeal remain OFF after acceptance
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103084816_partner_portal_photo_assessment_foundation_off.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_photo_stock.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_assessment_foundation.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_photo_stock.sql"
+          python tools/partner-api/test-photo-assessment-concurrency.py "$DB_URL"
+
+      - name: Reconstruct observed pre-R1 activity schema (upgrade scenario only)
+        if: matrix.contract-scenario == 'upgrade'
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          # This is the disposable local DB, never a remote project or production clone.
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c 'ALTER TABLE public.object_act DROP COLUMN equipment_provided_details'
+
+      - name: Capture real public SQL reference and apply the guarded upgrade
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+          CONTRACT_SCENARIO: ${{ matrix.contract-scenario }}
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_portal_api_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_api_full_benchmark.sql"
+          if [ "$CONTRACT_SCENARIO" = upgrade ]; then
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -v benchmark_phase=before -f "Base de donnée DLL et API/tests/measure_partner_api_full_benchmark.sql"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103065333_partner_portal_activity_api_contract.sql"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_activity_api_contract.sql"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103065350_partner_portal_restaurant_public_read_contract.sql"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/20261103065411_partner_portal_regional_primary_openings.sql"
+          fi
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_activity_api_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_public_read_contract.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_restaurant_carte_public_projection.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_reader_safe_restore.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_portal_regional_primary_openings.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -v benchmark_phase=after -f "Base de donnée DLL et API/tests/measure_partner_api_full_benchmark.sql"
+          python tools/partner-api/test-reader-replay-guard.py "$DB_URL"
+
+      - name: Install route test dependencies
+        working-directory: bertel-tourism-ui
+        run: npm ci --legacy-peer-deps
+
+      - name: Exercise actual Next routes with ephemeral service-role SQL and partner auth
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/setup_partner_api_route_contract.sql"
+          supabase status --workdir "$RUNNER_TEMP/bertel-fresh" -o json > "$RUNNER_TEMP/bertel-local-status.json"
+          node tools/partner-api/run-ephemeral-route-tests.mjs "$RUNNER_TEMP/bertel-local-status.json"
+          node tools/partner-api/test-carte-storage.mjs "$RUNNER_TEMP/bertel-local-status.json"
+          mkdir -p "$RUNNER_TEMP/partner-api-evidence"
+          psql "$DB_URL" -At -v ON_ERROR_STOP=1 -c 'SELECT row_to_json(b) FROM internal.portal_api_contract_baseline b' > "$RUNNER_TEMP/partner-api-evidence/synthetic-api-reference.jsonl"
+          psql "$DB_URL" -At -v ON_ERROR_STOP=1 -c 'SELECT row_to_json(b) FROM internal.partner_api_full_benchmark b ORDER BY phase,sample' > "$RUNNER_TEMP/partner-api-evidence/full100-benchmark.jsonl"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_api_full_benchmark.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/cleanup_partner_portal_api_contract.sql"
+          # Inventory exception: the sandbox reset is a guarded DEFINER chain that
+          # still seeds menu/stay rows. Prove it survives the targeted DML cutovers.
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_test_org_seed.sql"
+
+      - name: Install schema documentation tool
+        if: matrix.contract-scenario == 'fresh'
+        uses: k1LoW/setup-tbls@7399c439510bac2907bc5d25da371b8b9875f3ee # v1
+        with:
+          version: v1.96.1
+
+      - name: Rebuild the isolated schema knowledge graph
+        if: matrix.contract-scenario == 'fresh'
+        env:
+          TBLS_DSN: postgres://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          PGOPTIONS: '-c bertel.ephemeral_ci=on'
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/assert_partner_api_ephemeral.sql"
+          SNAPSHOT="$RUNNER_TEMP/partner-api-evidence/schema-isolated"
+          mkdir -p "$SNAPSHOT/db-graph-out"
+          sed "s|^docPath: dbdoc$|docPath: $SNAPSHOT/dbdoc|" tools/db-graph/.tbls.yml > "$RUNNER_TEMP/tbls-isolated.yml"
+          tbls doc -c "$RUNNER_TEMP/tbls-isolated.yml"
+          tbls out -t json -o "$SNAPSHOT/db-graph-out/schema_tbls.json" -c "$RUNNER_TEMP/tbls-isolated.yml"
+          psql "$DB_URL" -tA -v ON_ERROR_STOP=1 -f tools/db-graph/db_supplement_extract.sql > "$SNAPSHOT/db-graph-out/catalog_extra.json"
+          python tools/db-graph/db_graph.py --snapshot-root "$SNAPSHOT"
+          cat > "$SNAPSHOT/PROVENANCE.txt" <<EOF
+          Source: disposable Supabase 17, canonical manifest plus tested cutovers.
+          Commit: $GITHUB_SHA
+          Scenario: fresh
+          This is the proposed release schema, not the production catalog.
+          EOF
+
+      - name: Capture isolated reader definition and attributes for review
+        if: always()
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          mkdir -p "$RUNNER_TEMP/partner-api-evidence"
+          if pg_isready -d "$DB_URL" >/dev/null 2>&1; then
+            psql "$DB_URL" -At -v ON_ERROR_STOP=1 -c "SELECT pg_get_functiondef(p.oid) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='api' AND p.proname='get_object_resource'" > "$RUNNER_TEMP/partner-api-evidence/reader.sql"
+            psql "$DB_URL" -At -v ON_ERROR_STOP=1 > "$RUNNER_TEMP/partner-api-evidence/reader-metadata.json" <<'SQL'
+          SELECT jsonb_build_object('hash',md5(replace(p.prosrc,E'\r\n',E'\n')),
+            'signature',p.oid::regprocedure::text,'owner',pg_get_userbyid(p.proowner),
+            'acl',p.proacl,'config',p.proconfig,'definer',p.prosecdef)
+          FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+          WHERE n.nspname='api' AND p.proname='get_object_resource';
+          SQL
+          fi
+
+      - name: Upload isolated SQL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: partner-api-${{ matrix.contract-scenario }}
+          path: ${{ runner.temp }}/partner-api-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Stop Supabase
         if: always()

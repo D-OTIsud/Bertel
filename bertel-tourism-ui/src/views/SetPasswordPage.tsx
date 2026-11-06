@@ -93,7 +93,7 @@ export default function SetPasswordPage() {
   const isPartnerWelcome = isPartner && !isRecovery;
 
   return (
-    <AuthShell>
+    <AuthShell partner={isPartner}>
       <div className="auth-panel__head">
         <h2>
           {isRecovery

@@ -50,6 +50,7 @@ function formatWhen(value: string | null): string {
 
 /** Phrase d'une notification. Un émetteur inconnu se DIT, il ne se devine pas. */
 export function notificationLabel(notification: AppNotification): string {
+  if (notification.kind === 'portal_message') return `${notification.createdByName ?? 'Un partenaire'} a écrit à l’office depuis son espace partenaire`;
   if (notification.kind === 'pending_change_submitted') {
     return `${notification.createdByName ?? 'Un contributeur'} propose des modifications de « ${notification.objectName ?? 'une fiche'} »`;
   }
@@ -104,6 +105,10 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
     // d'un aller-retour réseau, et l'échec du marquage laisse simplement la ligne non lue.
     if (!notification.readAt) readOneMutation.mutate(notification.id);
     onOpenChange(false);
+    if (notification.kind === 'portal_message') {
+      router.push(notification.actorId ? `/crm?acteur=${encodeURIComponent(notification.actorId)}` : '/crm?tab=timeline');
+      return;
+    }
     if (notification.kind === 'pending_change_submitted') {
       void queryClient.invalidateQueries({ queryKey: ['pending-changes'] });
       router.push(notification.objectId ? `/moderation?object=${encodeURIComponent(notification.objectId)}` : '/moderation');

@@ -13,6 +13,7 @@ import {
   type SubmissionReviewedEmailData,
 } from '@/emails/SubmissionReviewedEmail';
 import { isSubmissionOutcome } from '@/lib/submission-outcome';
+import { portalMessageEmail } from '@/emails/PortalMessageEmail';
 import {
   pendingChangeSubmittedEmailSubject,
   renderPendingChangeSubmittedEmailHtml,
@@ -103,13 +104,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // pour empêcher. Le `continue` d'un bras d'échec reste valide depuis un `try`.
     try {
       const kind = str(row.kind) || 'crm_task_assigned';
-      if (kind !== 'crm_task_assigned' && kind !== 'fiche_submission_reviewed' && kind !== 'pending_change_submitted') {
+      if (kind !== 'crm_task_assigned' && kind !== 'fiche_submission_reviewed' && kind !== 'pending_change_submitted' && kind !== 'portal_message') {
         failed.push({ id, error: 'unsupported_kind' });
         continue;
       }
 
       let mail: { subject: string; html: string; sender?: MailSender };
-      if (kind === 'pending_change_submitted') {
+      if (kind === 'portal_message') {
+        const actorId = nstr(row.actor_id);
+        if (!actorId) { failed.push({ id, error: 'missing_actor_id' }); continue; }
+        mail = portalMessageEmail({objectName:str(row.object_name)||'Votre fiche',partnerName:str(row.assigner_name)||'Un partenaire',appUrl:`${origin}/crm?acteur=${encodeURIComponent(actorId)}`});
+      } else if (kind === 'pending_change_submitted') {
         const objectId = nstr(row.object_id);
         if (!objectId) {
           failed.push({ id, error: 'missing_object_id' });

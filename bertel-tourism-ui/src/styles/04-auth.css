@@ -12,6 +12,22 @@
   padding: 1.5rem;
 }
 
+.auth-partner-brand { display: none; }
+/* Le portail a son entrée dédiée. Sous 1024 px, la présentation d'authentification
+   déjà éprouvée reste inchangée ; la variante ordinateur suit la maquette partenaire. */
+@media (min-width: 1024px) {
+  .auth-page--partner { background: var(--bg); }
+  .auth-page--partner .auth-frame { width: min(520px, 100%); min-height: 0; display: block; }
+  .auth-page--partner .auth-hero { display: none; }
+  .auth-page--partner .auth-panel { padding: 32px; }
+  .auth-page--partner .auth-panel input,
+  .auth-page--partner .auth-panel button[type='submit'] { min-height: 48px; font-size: 1rem; }
+  .auth-page--partner .auth-partner-brand { display: flex; align-items: center; gap: 12px; }
+  .auth-partner-brand img { object-fit: contain; border-radius: var(--radius-sm); }
+  .auth-partner-brand h1 { font-family: var(--font-display), sans-serif; font-size: 1rem; margin: 0 0 3px; }
+  .auth-partner-brand span { color: var(--teal); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
+}
+
 /* Pied légal discret des pages hors-shell (/login, /set-password) — ton --ink-3 (AA). */
 .auth-legal {
   display: flex;

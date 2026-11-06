@@ -6,6 +6,7 @@
 // metadata->>'rpc' (whitelisté). Le front ne dispatche RIEN — il dépose juste l'enveloppe
 // (payload + metadata.rpc) via submit, puis approuve/rejette par id.
 import { getApiClient } from '../lib/supabase';
+import { approvePortalPhotos } from './portal-photos';
 import { readNullableString, readStrictString as readString } from '../lib/json-read';
 import { mapDatabaseError } from './api-error';
 import { useSessionStore } from '../store/session-store';
@@ -128,7 +129,9 @@ export async function approvePendingChange(
   id: string,
   reviewNote: string | null = null,
   appliedManually = false,
+  portalPhotos = false,
 ): Promise<void> {
+  if(portalPhotos){await approvePortalPhotos({id,batch:false,reviewNote,manual:appliedManually});return;}
   const client = requireApiClient();
   const { error } = await client.schema('api').rpc('approve_pending_change', {
     p_id: id,
@@ -136,6 +139,8 @@ export async function approvePendingChange(
     p_applied_manually: appliedManually,
   });
   if (error) {
+    if (error.code === 'PT412') throw new Error('La fiche a changé depuis cette proposition. Vérifiez les différences et demandez une nouvelle proposition ; rien n’a été appliqué.');
+    if (error.code === 'PT428') throw new Error('Cette proposition historique nécessite un report manuel dans l’éditeur, puis votre attestation avec un motif.');
     throw mapDatabaseError(error, 'Approbation impossible.');
   }
 }
@@ -172,7 +177,12 @@ export async function approveFicheSubmission(
   submissionId: string,
   reviewNote: string | null = null,
   includeManual = false,
+  portalPhotos = false,
 ): Promise<FicheSubmissionApproval> {
+  if(portalPhotos){
+    const row=await approvePortalPhotos({id:submissionId,batch:true,reviewNote,manual:includeManual});
+    return{appliedCount:readCount(row.applied_count),approvedManualCount:readCount(row.approved_manual_count),skippedManualCount:readCount(row.skipped_manual_count),submissionStatus:readNullableString(row.submission_status)};
+  }
   const client = requireApiClient();
   const { data, error } = await client.schema('api').rpc('approve_fiche_submission', {
     p_submission_id: submissionId,
@@ -180,6 +190,8 @@ export async function approveFicheSubmission(
     p_include_manual: includeManual,
   });
   if (error) {
+    if (error.code === 'PT412') throw new Error('La fiche a changé depuis cette proposition. Vérifiez les différences et demandez une nouvelle proposition ; rien n’a été appliqué.');
+    if (error.code === 'PT428') throw new Error('Cette proposition historique nécessite un report manuel dans l’éditeur, puis votre attestation avec un motif.');
     throw mapDatabaseError(error, 'Approbation de l’envoi impossible.');
   }
   const row = (data ?? {}) as GenericRecord;

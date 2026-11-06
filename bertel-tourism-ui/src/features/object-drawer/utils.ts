@@ -629,16 +629,16 @@ function flattenOpeningSchedules(period: Record<string, unknown>): OpeningItem[]
   }
 
   return schedules.map((schedule, index) => {
-    const timePeriods = readArray(schedule.time_periods ?? schedule.opening_time_periods);
+    const timePeriods = readArray(schedule.time_periods ?? schedule.opening_time_periods).filter(entry=>entry.closed!==true);
     const frames = timePeriods.flatMap((timePeriod) => {
       const periodFrames = readArray(timePeriod.time_frames ?? timePeriod.frames ?? timePeriod.opening_time_frames);
-      return periodFrames.map((frame) => formatOpeningSlotRange(
+      return periodFrames.length ? periodFrames.map((frame) => formatOpeningSlotRange(
         frame.time_start ?? frame.start_time ?? '00:00',
         frame.time_end ?? frame.end_time ?? '23:59',
-      ));
+      )) : ['Ouvert, sans horaires fixes'];
     });
     const weekdays = timePeriods.flatMap((timePeriod) =>
-      readArray(timePeriod.weekdays ?? timePeriod.opening_time_period_weekdays).map((weekday) => readNamedValue(weekday.weekday ?? weekday, readString(weekday.code))),
+      readArray(timePeriod.weekdays ?? timePeriod.opening_time_period_weekdays).map((weekday) => humanizeWeekday(readNamedValue(weekday.weekday ?? weekday, readString(weekday.weekday_code,readString(weekday.code))))),
     ).filter(Boolean);
     const weekdaySlots = timePeriods.flatMap((timePeriod) => {
       const periodFrames = readArray(timePeriod.time_frames ?? timePeriod.frames ?? timePeriod.opening_time_frames)
@@ -647,16 +647,16 @@ function flattenOpeningSchedules(period: Record<string, unknown>): OpeningItem[]
           frame.time_end ?? frame.end_time ?? '23:59',
         ));
       return readArray(timePeriod.weekdays ?? timePeriod.opening_time_period_weekdays)
-        .map((weekday) => readNamedValue(weekday.weekday ?? weekday, readString(weekday.code)))
+        .map((weekday) => humanizeWeekday(readNamedValue(weekday.weekday ?? weekday, readString(weekday.weekday_code,readString(weekday.code)))))
         .filter(Boolean)
-        .map((weekday) => ({ weekday, slots: periodFrames }));
+        .map((weekday) => ({ weekday, slots: periodFrames.length ? periodFrames : ['Ouvert, sans horaires fixes'] }));
     });
 
     const allYears = isOpeningPeriodAllYears(period);
     const { startDate, endDate } = readOpeningPeriodDates(period);
 
     return {
-      label: readString(schedule.label, `${getOpeningPeriodLabel(period, allYears)} / ${readNamedValue(schedule.schedule_type, `Planning ${index + 1}`)}`),
+      label: readString(schedule.name,readString(schedule.label, `${getOpeningPeriodLabel(period, allYears)} / ${readNamedValue(schedule.schedule_type, `Planning ${index + 1}`)}`)),
       slots: frames,
       weekdays,
       weekdaySlots,
@@ -770,8 +770,8 @@ function normalizeCanonicalOpenings(value: unknown): OpeningItem[] {
   );
 
   return [
-    ...currentPeriods.map((period) => flattenCanonicalOpeningPeriod(period, 'Annee en cours')),
-    ...nextPeriods.map((period) => flattenCanonicalOpeningPeriod(period, 'Annee suivante')),
+    ...currentPeriods.flatMap((period) => Array.isArray(period.schedules) && period.schedules.length ? flattenOpeningSchedules(period).map(item=>({...item,season:'Annee en cours'})) : [flattenCanonicalOpeningPeriod(period, 'Annee en cours')]),
+    ...nextPeriods.flatMap((period) => Array.isArray(period.schedules) && period.schedules.length ? flattenOpeningSchedules(period).map(item=>({...item,season:'Annee suivante'})) : [flattenCanonicalOpeningPeriod(period, 'Annee suivante')]),
   ];
 }
 

@@ -65,6 +65,7 @@ export function buildExtractionPrompt(inp: {
   allowedSections: AllowedOption[];
   allowedDietary: AllowedOption[];
   lang?: string;
+  reportUnsupportedOffers?: boolean;
 }): { system: string; user: string } {
   const sections = inp.allowedSections.map((s) => s.label).filter(Boolean);
   const dietary = inp.allowedDietary.map((d) => d.label).filter(Boolean);
@@ -79,6 +80,10 @@ export function buildExtractionPrompt(inp: {
     "N'invente jamais de régime. Et surtout : n'inclus JAMAIS d'allergènes — ne devine pas les allergènes, ils sont saisis par un humain.",
     '"price" est une chaîne telle qu\'affichée (ex. "12 €", "15.50"), ou "" si absent.',
     `Langue des libellés et descriptions : ${lang}.`,
+    ...(inp.reportUnsupportedOffers ? [
+      'Les prix globaux de formules ou menus composés ne sont pas représentables comme prix de plat. Ne crée pas de faux plat, ne répartis pas ce prix entre les plats et ne mets pas le prix dans le titre.',
+      'Conserve ces offres séparément dans "unsupported_offers": [{"label": string, "price": string, "reason": string}]. Recopie leur libellé et prix affichés, avec reason="formula_price_not_modelled". Extrais les vrais plats sans leur attribuer le prix de la formule.',
+    ] : []),
   ].join('\n');
 
   const user =
@@ -87,8 +92,24 @@ export function buildExtractionPrompt(inp: {
   return { system, user };
 }
 
-/** Strip an optional code fence, JSON.parse, validate against the schema. */
-export function parseExtraction(raw: string): { ok: true; data: ExtractedMenu } | { ok: false; error: string } {
+export interface UnsupportedOffer { label:string;price:string;reason:string }
+function readUnsupportedOffers(value:unknown) {
+  const offers:UnsupportedOffer[]=[];let omitted=0,adjusted=0;
+  if(value===undefined)return{offers,omitted,adjusted};
+  if(!Array.isArray(value))return{offers,omitted,adjusted:1};
+  omitted=Math.max(0,value.length-50);
+  for(const entry of value.slice(0,50)){
+    if(!entry||typeof entry!=='object'||Array.isArray(entry)||typeof entry.label!=='string'||!entry.label.trim()){omitted++;continue;}
+    const label=entry.label.trim(),price=typeof entry.price==='string'?entry.price.trim():typeof entry.price==='number'&&Number.isFinite(entry.price)?String(entry.price):'';
+    const reason=typeof entry.reason==='string'?entry.reason.trim():'formula_price_not_modelled';
+    if(label.length>240||price.length>80||reason.length>240)adjusted++;
+    offers.push({label:label.slice(0,240),price:price.slice(0,80),reason:reason.slice(0,240)||'formula_price_not_modelled'});
+  }
+  return{offers,omitted,adjusted};
+}
+/** Core dishes stay strict. E warning metadata is parsed separately and never invalidates them. */
+export function parseExtraction(raw: string, reportUnsupportedOffers=false):
+  { ok:true;data:ExtractedMenu;unsupported?:ReturnType<typeof readUnsupportedOffers> } | {ok:false;error:string} {
   const cleaned = raw
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
@@ -109,7 +130,8 @@ export function parseExtraction(raw: string): { ok: true; data: ExtractedMenu } 
   }
   const parsed = extractedMenuSchema.safeParse(json);
   if (!parsed.success) return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
-  return { ok: true, data: parsed.data };
+  return {ok:true,data:parsed.data,...(reportUnsupportedOffers?{unsupported:readUnsupportedOffers(
+    json&&typeof json==='object'&&!Array.isArray(json)?(json as Record<string,unknown>).unsupported_offers:undefined)}:{})};
 }
 
 function priceToString(price: string | number | undefined): string {
@@ -133,7 +155,7 @@ export function mapExtractionToMenu(data: ExtractedMenu, inp: ExtractionInputs):
     suggestedDietaryByDish.push([...new Set(suggested)]);
 
     return {
-      recordId: null,
+      recordId: crypto.randomUUID(), isNew: true,
       name: dish.name.trim(),
       description: (dish.description ?? '').trim(),
       price: priceToString(dish.price),
@@ -159,7 +181,7 @@ export function mapExtractionToMenu(data: ExtractedMenu, inp: ExtractionInputs):
   const name = inp.menuTitle.trim() || (data.title ?? '').trim() || 'Carte';
 
   const menu: ObjectWorkspaceMenu = {
-    recordId: null,
+    recordId: crypto.randomUUID(), isNew: true,
     categoryId: '',
     categoryCode: '',
     categoryLabel: '',

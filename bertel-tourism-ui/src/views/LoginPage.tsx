@@ -150,7 +150,7 @@ export default function LoginPage() {
 
   if (forgotMode && !demoMode) {
     return (
-      <AuthShell>
+      <AuthShell partner={isPartnerEntry}>
         <div className="auth-panel__head">
           <h2>Mot de passe oublié</h2>
           <p>Recevez par e-mail un lien pour réinitialiser votre mot de passe.</p>
@@ -202,7 +202,7 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell>
+    <AuthShell partner={isPartnerEntry}>
       <div className="auth-panel__head">
         <h2>Connexion</h2>
         <p>{isPartnerEntry ? 'Connectez-vous pour mettre à jour votre fiche.' : 'Accédez à votre espace de travail.'}</p>

@@ -4,7 +4,7 @@ describe('menu-items helpers (§06 P2)', () => {
   it('createMenuItem returns an empty 1-based dish with EUR + available + empty codes', () => {
     const item = createMenuItem(2);
     expect(item).toMatchObject({
-      recordId: null,
+      recordId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       name: '',
       price: '',
       currency: 'EUR',

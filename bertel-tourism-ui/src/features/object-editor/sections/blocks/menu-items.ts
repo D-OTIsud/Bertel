@@ -9,7 +9,8 @@ import type { ObjectWorkspaceMenuItem } from '../../../../services/object-worksp
 /** A fresh, empty dish row in a given section. `position` is 1-based; codes blank (saver tolerates empties). */
 export function createMenuItem(index: number, sectionCode = '', sectionLabel = ''): ObjectWorkspaceMenuItem {
   return {
-    recordId: null,
+    recordId: crypto.randomUUID(),
+    isNew: true,
     name: '',
     description: '',
     price: '',

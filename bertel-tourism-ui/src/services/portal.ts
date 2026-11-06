@@ -18,6 +18,9 @@
  * disent systématiquement si quelque chose a été perdu.
  */
 import { getApiClient } from '../lib/supabase';
+export { sendPortalMessage } from './portal-message';
+import { isClockTime } from '../lib/clock-time';
+import { buildStayPolicyPatch, parseStayPolicySnapshot, stayPolicyForm, type StayPolicySnapshot } from './stay-policy-contract';
 import {
   readStrictString as readString,
   readNullableString,
@@ -54,11 +57,32 @@ function requireApiClient() {
  * une liste de codes ici se désynchroniserait du SQL au premier `RAISE` ajouté.
  */
 function portalRpcError(error: unknown, fallback: string): Error & { code?: string } {
+  if (['PT412', 'PT428'].includes(String(readRecord(error)?.code))) {
+    return Object.assign(new Error('Cette rubrique a changé ou son état de départ doit être vérifié. Rechargez-la avant de l’envoyer ; votre saisie est conservée.'), { code: String(readRecord(error)?.code) });
+  }
   const wrapped = mapDatabaseError(error, fallback) as Error & { code?: string };
   const record = readRecord(error);
   const code = record ? readNullableString(record.code) : null;
   if (code) wrapped.code = code;
   return wrapped;
+}
+
+export interface PortalStayTimes { checkInFrom: string; checkInUntil: string; checkOutUntil: string }
+
+/** Exception D7 approuvée : trois heures seulement, contrôlées aussi par le serveur. */
+export async function savePortalStayTimes(objectId: string, times: PortalStayTimes, snapshot?: StayPolicySnapshot): Promise<PortalStayTimes & { snapshot: StayPolicySnapshot }> {
+  if (!Object.values(times).every(isClockTime)) throw new Error('Saisissez une heure valide entre 00:00 et 23:59.');
+  const payload = buildStayPolicyPatch({ ...times, conditions: snapshot?.values.conditions ?? '' }, snapshot,
+    ['check_in_from', 'check_in_until', 'check_out_until']);
+  const { data, error } = await requireApiClient().schema('api').rpc('patch_portal_stay_times', {
+    p_object_id: objectId, p_payload: payload,
+  });
+  if (readRecord(error)?.code === 'PT409') throw Object.assign(new Error('Les heures ont changé. Rechargez la fiche pour les vérifier ; votre saisie est conservée.'), { code: 'PT409' });
+  if (error) throw portalRpcError(error, 'Les heures n’ont pas pu être enregistrées. Réessayez ; votre saisie est conservée.');
+  const row = readRecord(data);
+  const saved = parseStayPolicySnapshot(row?.stay_policy);
+  const form = stayPolicyForm(saved);
+  return { checkInFrom: form.checkInFrom, checkInUntil: form.checkInUntil, checkOutUntil: form.checkOutUntil, snapshot: saved };
 }
 
 /**

@@ -13,7 +13,8 @@ import { MenuExtractModal } from '../../widgets/MenuExtractModal';
 /** A fresh, empty menu (titled container — no category; sections live on its dishes since §06 P2b). */
 function createMenu(index: number): ObjectWorkspaceMenu {
   return {
-    recordId: null,
+    recordId: crypto.randomUUID(),
+    isNew: true,
     categoryId: '',
     categoryCode: '',
     categoryLabel: '',

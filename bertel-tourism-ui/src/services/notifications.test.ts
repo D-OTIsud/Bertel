@@ -32,6 +32,9 @@ beforeEach(() => {
 });
 
 describe('parsing défensif', () => {
+  it('reconnaît le message portail et son contexte fourni par le payload SQL', () => {
+    expect(parseAppNotification({id:'n-portal',kind:'portal_message',payload:{object_id:'HOT1',actor_id:'actor-1'}})).toEqual(expect.objectContaining({kind:'portal_message',objectId:'HOT1',actorId:'actor-1'}));
+  });
   it('parse une notification complète', () => {
     expect(
       parseAppNotification({

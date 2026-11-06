@@ -160,6 +160,8 @@ export interface ObjectWorkspaceMeetingRoomsModule {
 }
 
 export interface ObjectWorkspaceMenuItem {
+  /** Stable local ID exists before persistence; this flag retains the existing create UX. */
+  isNew?: boolean;
   recordId: string | null;
   name: string;
   description: string;
@@ -184,6 +186,7 @@ export interface ObjectWorkspaceMenuItem {
 }
 
 export interface ObjectWorkspaceMenu {
+  isNew?: boolean;
   recordId: string | null;
   categoryId: string;
   categoryCode: string;
@@ -199,6 +202,8 @@ export interface ObjectWorkspaceMenu {
 }
 
 export interface ObjectWorkspaceMenusModule {
+  /** Office-only exact read baseline, never sent through the public resource reader. */
+  menuWriteBaseline?: import('../menu-write-contract').MenuWriteBaseline;
   categoryOptions: WorkspaceReferenceOption[];
   dietaryTagOptions: WorkspaceReferenceOption[];
   allergenOptions: WorkspaceReferenceOption[];

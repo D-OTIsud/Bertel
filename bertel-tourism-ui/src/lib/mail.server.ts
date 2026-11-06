@@ -3,6 +3,8 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import { z } from 'zod';
 import type { SmtpConfig } from './env.server';
 import { resolveSmtpConfig } from './smtp-settings.server';
+import { readOrgSmtpConfig } from './org-smtp.server';
+import { safeSmtpError } from './smtp-error';
 
 interface MailContent { to: string; subject: string; html: string }
 /** Server-derived identity only: never take this from a notification request body. */
@@ -10,12 +12,11 @@ export interface MailSender { address: string; name: string }
 const senderEmailSchema = z.string().email();
 
 export class MailNotConfiguredError extends Error {
-  constructor() {
-    super('Envoi d’e-mails désactivé ou SMTP non configuré dans les paramètres.');
+  constructor(orgId?: string | null) {
+    super(orgId ? 'Envoi d’e-mails désactivé ou SMTP non configuré pour cet office.' : 'Envoi d’e-mails désactivé ou SMTP non configuré dans les paramètres.');
     this.name = 'MailNotConfiguredError';
   }
 }
-
 /**
  * Transport RÉUTILISÉ entre les appels, et POOLÉ.
  *
@@ -41,14 +42,16 @@ export class MailNotConfiguredError extends Error {
  * chaque envoi : les inclure ferait jeter le pool pour un simple changement de libellé.
  */
 type TransportEntry = { config: SmtpConfig; transport: Transporter; inFlight: number; retired: boolean };
-let cached: TransportEntry | null = null;
+const transports = new Map<string, TransportEntry>();
+const MAX_TRANSPORTS = 10;
 
 function sameTransportConfig(a: SmtpConfig, b: SmtpConfig): boolean {
   return a.host === b.host && a.port === b.port && a.secure === b.secure
     && a.user === b.user && a.pass === b.pass;
 }
 
-function getTransport(cfg: SmtpConfig): TransportEntry {
+function getTransport(cfg: SmtpConfig, scope: string): TransportEntry {
+  const cached = transports.get(scope);
   if (cached && sameTransportConfig(cached.config, cfg)) return cached;
   // Une config qui change ferme l'ancien pool : le laisser vivre garderait des sockets
   // ouvertes vers un relais qu'on n'utilise plus, à la charge du VPS et du relais.
@@ -57,7 +60,7 @@ function getTransport(cfg: SmtpConfig): TransportEntry {
     // A settings save can happen while messages are queued. Closing an occupied pool rejects
     // those messages; retire it now, then close it after its last send settles.
     if (cached.inFlight === 0) cached.transport.close();
-    cached = null;
+    transports.delete(scope);
   }
   const transport = nodemailer.createTransport({
     host: cfg.host,
@@ -72,8 +75,19 @@ function getTransport(cfg: SmtpConfig): TransportEntry {
     maxMessages: 100,
     ...(cfg.user && cfg.pass ? { auth: { user: cfg.user, pass: cfg.pass } } : {}),
   });
-  cached = { config: cfg, transport, inFlight: 0, retired: false };
-  return cached;
+  const entry = { config: cfg, transport, inFlight: 0, retired: false };
+  transports.set(scope, entry);
+  // Une organisation ne ferme jamais les messages en cours d'une autre. Même à
+  // l'éviction, le pool attend sa dernière réponse avant de fermer ses connexions.
+  while (transports.size > MAX_TRANSPORTS) {
+    const oldest = transports.entries().next().value;
+    if (!oldest) break;
+    const [key, evicted] = oldest;
+    evicted.retired = true;
+    if (evicted.inFlight === 0) evicted.transport.close();
+    transports.delete(key);
+  }
+  return entry;
 }
 
 /**
@@ -83,9 +97,13 @@ function getTransport(cfg: SmtpConfig): TransportEntry {
  * Lève MailNotConfiguredError si non configuré ⇒ l'appelant renvoie 503 sans jamais faire
  * échouer le partage par lien / le PDF / le drain de l'outbox.
  */
-export async function sendMail(opts: MailContent & { sender?: MailSender }): Promise<void> {
-  const cfg = await resolveSmtpConfig();
-  if (!cfg) throw new MailNotConfiguredError();
+export async function sendMail(opts: MailContent & { sender?: MailSender; orgId?: string | null }): Promise<void> {
+  // La présence de la clé engage l'envoi PAR OFFICE, y compris si sa valeur est
+  // absente : une invitation ne doit jamais retomber sur le relais général.
+  // Les appelants historiques gardent leur contrat pendant la transition de l'outbox.
+  const byOffice = Object.prototype.hasOwnProperty.call(opts, 'orgId');
+  const cfg = byOffice ? await readOrgSmtpConfig(opts.orgId) : await resolveSmtpConfig();
+  if (!cfg) throw new MailNotConfiguredError(opts.orgId);
 
   // Sender belongs to the message, never to the cached SMTP transport. Task notifications
   // may use their creator's address while the next list keeps the configured address.
@@ -100,7 +118,7 @@ export async function sendMail(opts: MailContent & { sender?: MailSender }): Pro
   // Le pool est partagé avec les envois concurrents : le fermer dans un finally de message
   // les interromprait. Nodemailer gère les sockets en erreur ; les délais bornent chaque
   // connexion et getTransport ferme le pool lorsqu'on change de configuration.
-  const entry = getTransport(cfg);
+  const entry = getTransport(cfg, byOffice ? `org:${opts.orgId}` : 'platform');
   entry.inFlight += 1;
   try {
     await entry.transport.sendMail({
@@ -120,8 +138,10 @@ export async function sendMail(opts: MailContent & { sender?: MailSender }): Pro
 }
 
 /** Lists always use the configured sender, even if an extra sender property is supplied. */
-export function sendListEmail({ to, subject, html }: MailContent): Promise<void> {
-  return sendMail({ to, subject, html });
+export function sendListEmail(opts: MailContent & { orgId?: string | null }): Promise<void> {
+  return sendMail({ to: opts.to, subject: opts.subject, html: opts.html,
+    ...(Object.prototype.hasOwnProperty.call(opts, 'orgId') ? { orgId: opts.orgId } : {}),
+  });
 }
 
 /** Separate, unpooled connection: verification never sends mail or closes the shared send pool. */
@@ -140,13 +160,4 @@ export async function verifySmtpConnection(): Promise<{ ok: boolean; detail: str
     // SMTP servers may echo credentials in their response: expose only known, safe diagnostics.
     return { ok: false, detail: safeSmtpError(error) };
   } finally { transport.close(); }
-}
-
-function safeSmtpError(error: unknown): string {
-  const code = (error as { code?: string } | null)?.code;
-  return code === 'EAUTH' ? 'Authentification refusée. Vérifiez l’identifiant et le mot de passe.'
-    : code === 'EDNS' || code === 'ENOTFOUND' ? 'Serveur SMTP introuvable. Vérifiez son nom.'
-      : code === 'ETIMEDOUT' || code === 'ECONNECTION' ? 'Le serveur SMTP ne répond pas. Vérifiez l’hôte, le port et les accès réseau.'
-        : code === 'ESOCKET' ? 'Connexion sécurisée impossible. Vérifiez le port et le mode TLS.'
-          : 'L’opération SMTP a échoué. Vérifiez les paramètres et l’accès au relais.';
 }

@@ -5,10 +5,10 @@
 --   * B : période « toute l'année », jour = aujourd'hui, SANS horaire   -> TRUE  (ouvert sans horaire, §93)
 --   * C : période « toute l'année », horaires un AUTRE jour             -> FALSE (a des données, fermé maintenant)
 -- Deux couches d'assertion :
---   * STRUCTURAL  — le moteur internal.compute_open_status (§157) porte la garde tri-état
---                   (aucun opening_period → NULL) et refresh_open_status lui délègue.
+--   * STRUCTURAL  — le moteur internal.compute_open_status (§157) existe et
+--                   refresh_open_status lui délègue.
 --                   Contre une base SANS la migration, l'ASSERT est FALSE/NULL -> rouge.
---   * BEHAVIOURAL — après refresh, A IS NULL, B IS TRUE, C IS FALSE.
+--   * BEHAVIOURAL — dans le moteur puis après refresh, A IS NULL, B IS TRUE, C IS FALSE.
 -- Cas B/C indépendants de l'heure (B = sans horaire ; C = mauvais jour de la semaine).
 -- Self-contained + transactionnel (ROLLBACK ; rien ne persiste). Miroir de test_open_status_timezone.sql.
 \set ON_ERROR_STOP on
@@ -29,15 +29,14 @@ DECLARE
   v_B_val  boolean;
   v_C_val  boolean;
 BEGIN
-  -- ---------- STRUCTURAL : la branche tri-état NULL est présente (migration appliquée) ----------
+  -- ---------- STRUCTURAL : le moteur existe et refresh lui délègue ----------
   -- §157 : le moteur d'ouverture est internal.compute_open_status(at) ; refresh_open_status
   -- n'est plus que son write-back « maintenant ». La garde tri-état doit vivre dans le moteur,
   -- et refresh doit bien lui déléguer (sinon la sémantique §133 est perdue).
-  ASSERT (
-    SELECT p.prosrc ILIKE '%p2.object_id = o.id%'
-    FROM pg_proc p
-    WHERE p.proname = 'compute_open_status' AND p.pronamespace = 'internal'::regnamespace
-  ), 'compute_open_status doit porter la garde tri-état (aucun opening_period → NULL) — migration §157 non appliquée';
+  -- La référence vive emploie l’alias « obj » au lieu de « o » : le tri-état
+  -- est vérifié sur les résultats ci-dessous, sans dépendre du texte du corps.
+  ASSERT to_regprocedure('internal.compute_open_status(timestamptz)') IS NOT NULL,
+    'internal.compute_open_status absent — migration §157 non appliquée';
   ASSERT (
     SELECT p.prosrc ILIKE '%compute_open_status%'
     FROM pg_proc p
@@ -91,6 +90,15 @@ BEGIN
     VALUES (gen_random_uuid(), v_tp, '08:00'::time, '18:00'::time);
 
   -- ---------- Exécution ----------
+  SELECT bool_or(object_id = v_A AND is_open IS NULL),
+         bool_or(object_id = v_B AND is_open IS TRUE),
+         bool_or(object_id = v_C AND is_open IS FALSE)
+    INTO v_A_null, v_B_val, v_C_val
+    FROM internal.compute_open_status(CURRENT_TIMESTAMP)
+    WHERE object_id = ANY(ARRAY[v_A, v_B, v_C]);
+  ASSERT v_A_null AND v_B_val AND v_C_val,
+    'le moteur doit rendre A=NULL, B=TRUE, C=FALSE avant le rafraîchissement';
+
   PERFORM api.refresh_open_status();
 
   SELECT cached_is_open_now, cached_is_open_now IS NULL INTO v_A_val, v_A_null FROM object WHERE id = v_A;

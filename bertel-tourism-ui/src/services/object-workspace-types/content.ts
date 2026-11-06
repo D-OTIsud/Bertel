@@ -1,4 +1,5 @@
 import type { WorkspaceReferenceOption, WorkspaceTranslatableField } from './common';
+import type { GalleryWriteBaseline } from '../media-write-contract';
 
 export interface ObjectWorkspaceDescriptionScope {
   recordId: string | null;
@@ -92,6 +93,9 @@ export interface ObjectWorkspaceLegalModule {
 }
 
 export interface ObjectWorkspaceMediaItem {
+  /** Private partner upload awaiting review; never a canonical media identifier. */
+  portalUploadId?: string;
+  portalReplaceMediaId?: string | null;
   id: string;
   scope: 'object' | 'place';
   placeId: string | null;
@@ -117,6 +121,8 @@ export interface ObjectWorkspaceMediaItem {
 }
 
 export interface ObjectWorkspaceMediaModule {
+  /** Internal office mutation baseline; never part of the partner-facing object API. */
+  galleryWriteBaseline?: GalleryWriteBaseline;
   typeOptions: WorkspaceReferenceOption[];
   tagOptions: WorkspaceReferenceOption[];
   objectItems: ObjectWorkspaceMediaItem[];

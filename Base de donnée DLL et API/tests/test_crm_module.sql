@@ -96,8 +96,14 @@ BEGIN
   -- ---------- A. Vocabulaires / renommages (état post-migration ; superuser, RLS bypass) ----------
   ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'crm_demand_topic_oti') = 0,
          'fusion: il reste des codes sous crm_demand_topic_oti';
-  ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'demand_topic') = 20,
-         'fusion: demand_topic doit contenir exactement les 20 sujets OTI';
+  ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'demand_topic'
+            AND code NOT IN ('conseils','evenement_nouveaute')) = 20,
+         'fusion: les 20 sujets OTI historiques doivent rester présents';
+  IF to_regprocedure('api.send_portal_message(text,text,text,jsonb,text,uuid)') IS NOT NULL THEN
+    ASSERT (SELECT count(*) FROM ref_code WHERE domain='demand_topic'
+              AND code IN ('conseils','evenement_nouveaute'))=2,
+           'portail: les deux sujets supplémentaires doivent être présents';
+  END IF;
   ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'demand_subtopic') = 0,
          'retrait: demand_subtopic doit être vide';
   ASSERT (SELECT count(*) FROM ref_code WHERE domain = 'crm_sentiment') = 6,

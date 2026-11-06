@@ -913,6 +913,11 @@ opening_slots AS (
   FROM public.opening_period op
   JOIN base b ON b.id = op.object_id
   LEFT JOIN public.opening_schedule schedule ON schedule.period_id = op.id
+    AND NOT EXISTS (
+      SELECT 1 FROM public.ref_code_opening_schedule_type schedule_type
+      WHERE schedule_type.id = schedule.schedule_type_id
+        AND schedule_type.code IN ('reception', 'service')
+    )
   LEFT JOIN public.opening_time_period time_period
     ON time_period.schedule_id = schedule.id AND time_period.closed IS NOT TRUE
   LEFT JOIN public.opening_time_period_weekday period_weekday ON period_weekday.time_period_id = time_period.id

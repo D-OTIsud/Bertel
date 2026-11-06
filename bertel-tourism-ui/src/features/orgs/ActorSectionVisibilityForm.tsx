@@ -30,6 +30,7 @@ import { PORTAL_RUBRICS, resolvePortalArchetype } from '../portal/portal-rubrics
 import { TYPE_ARCHETYPES, TYPE_LABEL } from '../object-editor/archetypes';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { strictErrorMessage } from '../../lib/strict-error-message';
+import type { WorkspaceModuleId } from '../../services/object-workspace';
 
 /**
  * Les types de fiche qu'un partenaire peut se voir confier — ceux, et seulement ceux, pour
@@ -56,7 +57,14 @@ export function ActorSectionVisibilityForm({ orgId }: { orgId: string }) {
 
   const archetype = resolvePortalArchetype(objectType);
   const rubrics = useMemo(
-    () => (archetype ? PORTAL_RUBRICS.filter((rubric) => rubric.archetypes.includes(archetype)) : []),
+    () => {
+      const views = archetype ? PORTAL_RUBRICS.filter((rubric) => rubric.archetypes.includes(archetype)) : [];
+      const labels = new Map<WorkspaceModuleId, string[]>();
+      const add = (module: WorkspaceModuleId, title: string) => labels.set(module, [...new Set([...(labels.get(module) ?? []), title])]);
+      for (const view of views) add(view.module, view.moduleLabels?.[view.module] ?? view.title);
+      for (const view of views) for (const module of view.relatedModules ?? []) add(module, view.moduleLabels?.[module] ?? view.title);
+      return [...labels].map(([module, titles]) => ({ id: module, module, title: titles.join(' · ') }));
+    },
     [archetype],
   );
 

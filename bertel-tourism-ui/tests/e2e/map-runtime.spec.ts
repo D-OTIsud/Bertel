@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
 
 test.use({ launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } });
+test.describe.configure({ retries: 0 });
 
 for (const webgl1Only of [false, true]) {
   test(`the installed map renders and zooms with ${webgl1Only ? 'WebGL1 fallback' : 'WebGL2'}`, async ({ page }, testInfo) => {
@@ -83,11 +84,19 @@ for (const webgl1Only of [false, true]) {
           }
           fiber = fiber.return;
         }
-        throw new Error('The real map adapter ref was not found');
+        return null; // React may have inserted the canvas before committing its ref.
       }, webgl1Only);
     }
-    await expect.poll(async () => (await readRuntime()).drawable, { timeout: 20_000 }).toBe(true);
-    const initial = await readRuntime();
+    // Only ref/canvas absence is pending. Context errors propagate, and a null
+    // or lost GL context fails the strict assertion immediately after readiness.
+    await expect.poll(async () => (await readRuntime()) !== null, { timeout: 20_000 }).toBe(true);
+    async function requireRuntime() {
+      const runtime = await readRuntime();
+      if (runtime === null) throw new Error('The map adapter ref disappeared after readiness');
+      return runtime;
+    }
+    const initial = await requireRuntime();
+    expect(initial.drawable).toBe(true);
     expect(initial.glVersion).toMatch(webgl1Only ? /^WebGL 1\.0/ : /^WebGL 2\.0/);
     expect(initial.hasOverscale).toBe(true);
     expect(initial.overscaleUndefined).toBe(true);
@@ -105,13 +114,13 @@ for (const webgl1Only of [false, true]) {
     const beforeZoom = pixels;
     await page.locator('.map-panel .maplibregl-ctrl-zoom-in').click();
     await expect.poll(countFill).not.toBe(beforeZoom);
-    await expect.poll(async () => (await readRuntime()).zoom).toBeGreaterThan(initial.zoom);
+    await expect.poll(async () => (await requireRuntime()).zoom).toBeGreaterThan(initial.zoom);
     await expect(page.getByRole('toolbar', { name: 'Outils carte' })).toBeVisible();
     expect(styleLoads).toBeGreaterThan(0);
     expect(workers.some((url) => url.startsWith(`blob:${origin}/`))).toBe(true);
     expect(unexpectedRequests).toEqual([]);
     expect(errors).toEqual([]);
-    const proof = { webgl1Only, initial, final: await readRuntime(), beforeZoom, afterZoom: pixels,
+    const proof = { webgl1Only, initial, final: await requireRuntime(), beforeZoom, afterZoom: pixels,
       workers, styleLoads, errors, unexpectedRequests };
     console.log(JSON.stringify({ mapRuntimeProof: proof }));
     await testInfo.attach('map-runtime-proof', { body: JSON.stringify(proof), contentType: 'application/json' });

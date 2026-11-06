@@ -135,7 +135,7 @@ export function OpeningPeriodEditModal({
 
   const typeSelectOptions = [
     { v: '', l: '— Aucun —' },
-    ...periodTypeOptions.map((option) => ({ v: option.code, l: option.label })),
+    ...periodTypeOptions.map((option) => ({ v: option.code, l: option.label, disabled: option.disabled })),
   ];
 
   // The TYPE is now purely a label; it no longer drives dates/allYears/recurrence.

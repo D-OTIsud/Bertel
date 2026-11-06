@@ -19,7 +19,7 @@ export const ROOM_COMMON_AMENITY_CODES = [
   'hairdryer', 'safe', 'balcony', 'desk',
 ];
 
-type AmenityOpt = { id: string; code: string; label: string };
+type AmenityOpt = { id: string; code: string; label: string; disabled?: boolean };
 type AmenityGroup = { familyCode: string; familyLabel: string; options: AmenityOpt[] };
 
 /**

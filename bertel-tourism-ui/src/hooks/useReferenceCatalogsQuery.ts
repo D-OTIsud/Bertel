@@ -1,5 +1,7 @@
 import { useQuery, type QueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { fetchReferenceCatalogs, type ReferenceCatalogs } from '../services/reference-catalogs';
+import { assertVocabularyGeneration, fetchThesaurusGeneration } from '../services/thesaurus-generation';
+import { generationQueryKey, THESAURUS_GENERATION_QUERY_KEY, useThesaurusGeneration } from './useThesaurusGeneration';
 
 export const REFERENCE_CATALOGS_QUERY_KEY = ['reference-catalogs', 2] as const;
 
@@ -24,9 +26,16 @@ const CATALOGS_STALE_TIME_MS = 60 * 60 * 1000;
 const CATALOGS_GC_TIME_MS = 24 * 60 * 60 * 1000;
 
 export function useReferenceCatalogsQuery(): UseQueryResult<ReferenceCatalogs> {
+  const generation = useThesaurusGeneration();
   return useQuery({
-    queryKey: [...REFERENCE_CATALOGS_QUERY_KEY],
-    queryFn: fetchReferenceCatalogs,
+    queryKey: generationQueryKey(REFERENCE_CATALOGS_QUERY_KEY, generation),
+    queryFn: async () => {
+      if (generation.isError) throw generation.error;
+      const catalogs = await fetchReferenceCatalogs();
+      assertVocabularyGeneration(catalogs.vocabularyRelease, generation.data);
+      return catalogs;
+    },
+    enabled: !generation.isPending,
     staleTime: CATALOGS_STALE_TIME_MS,
     gcTime: CATALOGS_GC_TIME_MS,
     meta: { persist: true },
@@ -51,9 +60,15 @@ export function useReferenceCatalogsQuery(): UseQueryResult<ReferenceCatalogs> {
  * revenir a `ensureQueryData` fait tomber le second.
  */
 export async function ensureReferenceCatalogs(queryClient: QueryClient): Promise<ReferenceCatalogs> {
+  const generation = await queryClient.fetchQuery({ queryKey: THESAURUS_GENERATION_QUERY_KEY,
+    queryFn: fetchThesaurusGeneration, staleTime: 0, meta: { persist: false } });
   return queryClient.fetchQuery({
-    queryKey: [...REFERENCE_CATALOGS_QUERY_KEY],
-    queryFn: fetchReferenceCatalogs,
+    queryKey: generation == null ? [...REFERENCE_CATALOGS_QUERY_KEY] : [...REFERENCE_CATALOGS_QUERY_KEY, generation],
+    queryFn: async () => {
+      const catalogs = await fetchReferenceCatalogs();
+      assertVocabularyGeneration(catalogs.vocabularyRelease, generation);
+      return catalogs;
+    },
     staleTime: CATALOGS_STALE_TIME_MS,
     gcTime: CATALOGS_GC_TIME_MS,
     meta: { persist: true },

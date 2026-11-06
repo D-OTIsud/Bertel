@@ -3,11 +3,12 @@ interface ToggleProps {
   sub?: string;
   on: boolean;
   onChange: (next: boolean) => void;
+  disabled?: boolean;
 }
 
-export function Toggle({ label, sub, on, onChange }: ToggleProps) {
+export function Toggle({ label, sub, on, onChange, disabled }: ToggleProps) {
   return (
-    <button type="button" aria-label={label} className={`tog${on ? ' is-on' : ''}`} onClick={() => onChange(!on)}>
+    <button type="button" aria-label={label} disabled={disabled && !on} className={`tog${on ? ' is-on' : ''}`} onClick={() => onChange(!on)}>
       <div>
         {label}
         {sub && <small>{sub}</small>}

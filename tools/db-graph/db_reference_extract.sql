@@ -23,7 +23,7 @@ WITH live_rows AS (
   UNION ALL SELECT 'public.ref_code_taxonomy_closure', to_jsonb(t) FROM public.ref_code_taxonomy_closure t
   UNION ALL SELECT 'public.ref_commune', to_jsonb(t) FROM public.ref_commune t
   UNION ALL SELECT 'public.ref_contact_role', to_jsonb(t) FROM public.ref_contact_role t
-  UNION ALL SELECT 'public.ref_document', to_jsonb(t) FROM public.ref_document t
+  UNION ALL SELECT 'public.ref_document', to_jsonb(t) FROM public.ref_document t WHERE t.access_scope = 'public'
   UNION ALL SELECT 'public.ref_facet_applicability', to_jsonb(t) FROM public.ref_facet_applicability t
   UNION ALL SELECT 'public.ref_facet_registry', to_jsonb(t) FROM public.ref_facet_registry t
   UNION ALL SELECT 'public.ref_iti_assoc_role', to_jsonb(t) FROM public.ref_iti_assoc_role t

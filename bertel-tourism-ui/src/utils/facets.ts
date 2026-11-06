@@ -108,6 +108,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   accommodationPositioningsAny: [],
   amenityFamiliesAny: [],
   taxonomyAny: [],
+  includeEquivalentPredecessors: false,
   tagsAny: [],
   rankedLabelSchemeCode: null,
   rankedLabelIncludeEquivalents: true,
@@ -179,6 +180,7 @@ export function normalizeExplorerFilters(
       accommodationPositioningsAny: common.accommodationPositioningsAny ?? [],
       amenityFamiliesAny: common.amenityFamiliesAny ?? [],
       taxonomyAny: common.taxonomyAny ?? [],
+      includeEquivalentPredecessors: common.includeEquivalentPredecessors === true,
       tagsAny: common.tagsAny ?? [],
       rankedLabelSchemeCode: cleanString(common.rankedLabelSchemeCode) || null,
       rankedLabelIncludeEquivalents: common.rankedLabelIncludeEquivalents ?? true,
@@ -719,6 +721,7 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   const bucketTaxonomy = common.taxonomyAny.filter((item) => bucketForTaxonomyDomain(item.domain) === bucket);
   if (bucketTaxonomy.length > 0) {
     payload.taxonomy_any = bucketTaxonomy.map((item) => ({ domain: item.domain, code: item.code }));
+    if (common.includeEquivalentPredecessors === true) payload.include_equivalent_predecessors = true;
   }
 
   // §159 — services & équipements (familles d'aménités), transverse.

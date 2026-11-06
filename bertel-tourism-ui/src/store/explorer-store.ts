@@ -31,6 +31,7 @@ interface ExplorerState extends ExplorerFilters {
 
   toggleBucket: (bucket: ExplorerBucketKey) => void;
   setSearch: (search: string) => void;
+  setIncludeEquivalentPredecessors: (enabled: boolean) => void;
   setProviderOnly: (enabled: boolean) => void;
   setCities: (cities: string[]) => void;
   setLieuDit: (lieuDit: string) => void;
@@ -245,6 +246,7 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
       }
     }),
   setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
+  setIncludeEquivalentPredecessors: (enabled) => set((state) => ({ common: { ...state.common, includeEquivalentPredecessors: enabled } })),
   // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters).
   setEnvironmentTags: (codes) => set((state) => ({ common: { ...state.common, environmentTagsAny: codes } })),
   // §201 — types d'unité d'hébergement (axe multi-valué, table de liaison).

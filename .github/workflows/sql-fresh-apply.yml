@@ -594,6 +594,10 @@ jobs:
           node --test tools/current-rights/storage-refusals.test.mjs
           node --test tools/current-rights/postgrest-rights.test.mjs
 
+      - name: PostgreSQL diagnostics on failure
+        if: failure()
+        run: docker ps -aq --filter name=supabase_db_ | xargs -r -n1 docker logs --tail 120
+
       - name: Stop Supabase
         if: always()
         run: supabase stop --workdir "$RUNNER_TEMP/bertel-fresh"

@@ -10,7 +10,7 @@ function createCapacityItem(
 ): ObjectWorkspaceCapacityItem | null {
   // First UNUSED metric only — the old `?? options[0]` fallback duplicated a used
   // metric and guaranteed a UNIQUE(object_id, metric_id) failure at save time.
-  const option = options.find((candidate) => !items.some((item) => item.metricCode === candidate.code));
+  const option = options.find((candidate) => !candidate.disabled && !items.some((item) => item.metricCode === candidate.code));
   if (!option) {
     return null;
   }
@@ -82,7 +82,7 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
 
   const filledMetrics = capacity.capacityItems.filter((item) => item.value.trim()).length;
   const hasUnusedMetric = capacity.metricOptions.some(
-    (option) => !capacity.capacityItems.some((item) => item.metricCode === option.code),
+    (option) => !option.disabled && !capacity.capacityItems.some((item) => item.metricCode === option.code),
   );
 
   return (
@@ -144,7 +144,7 @@ export function SectionCapacity({ editor, folded }: SectionProps) {
                       (other, otherIndex) => otherIndex !== index && other.metricCode === option.code,
                     ),
                 )
-                .map((option) => ({ v: option.code, l: option.label }))}
+                .map((option) => ({ v: option.code, l: option.label, disabled: option.disabled }))}
               onChange={(metricCode) => update(index, { metricCode })}
             />
             <Input value={item.value} type="number" mono onChange={(value) => update(index, { value })} />

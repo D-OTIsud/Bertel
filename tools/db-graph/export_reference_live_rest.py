@@ -14,7 +14,7 @@ import urllib.request
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from dbgraph.reference_extract import live_reference_tables  # noqa: E402
+from dbgraph.reference_extract import canonical_reference_table, live_reference_tables, public_reference_rows  # noqa: E402
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -51,7 +51,12 @@ def _audit_counts(audit):
         return out
     for row in audit.get("reference_table_counts") or []:
         if row.get("table"):
-            out[row["table"]] = int(row.get("rows") or 0)
+            table = canonical_reference_table(row["table"])
+            if table.split(".")[1] == "ref_document":
+                if "public_rows" in row:
+                    out[table] = int(row["public_rows"] or 0)
+                continue
+            out[table] = int(row.get("rows") or 0)
     return out
 
 
@@ -81,9 +86,14 @@ def _request_json(url, key, path, params=None, page=0):
 
 
 def _fetch_table(url, key, table, columns):
+    table = canonical_reference_table(table)
+    if not table.startswith("public."):
+        raise ValueError("Only public reference tables can use the REST extractor")
     name = table.split(".", 1)[1]
     order = ",".join("%s.asc.nullslast" % col for col in _order_columns(columns))
     params = {"select": "*"}
+    if table == "public.ref_document":
+        params["access_scope"] = "eq.public"
     if order:
         params["order"] = order
 
@@ -91,7 +101,7 @@ def _fetch_table(url, key, table, columns):
     page = 0
     while True:
         batch = _request_json(url, key, name, params=params, page=page)
-        rows.extend(batch)
+        rows.extend(value for value in batch if table != "public.ref_document" or value.get("access_scope") == "public")
         if len(batch) < PAGE_SIZE:
             break
         page += 1
@@ -247,7 +257,7 @@ def main():
         "errors": errors,
         "truncated": [],
     }
-    out = {"rows": rows, "derived_sources": [], "live": live}
+    out = {"rows": public_reference_rows(rows), "derived_sources": [], "live": live}
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, "reference_live.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1, sort_keys=True)

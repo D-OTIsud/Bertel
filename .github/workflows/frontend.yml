@@ -47,6 +47,9 @@ jobs:
           npm run verify:maplibre
           npm run test:maplibre-backport
 
+      - name: Exercise the corrected build dependency APIs
+        run: npm run test:tooling-dependencies
+
       - run: npm run typecheck
 
       - run: npm run test:run -- --ci --maxWorkers=2

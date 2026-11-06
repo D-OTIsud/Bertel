@@ -83,6 +83,8 @@ for (const width of [320, 390, 768, 1180]) {
     // Start from the actual pin, then use keyboard events for the preview flow.
     await page.mouse.move(1, 1);
     await pin.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
     await expect(open).toBeFocused();
     await page.mouse.move(1, 1);
     if (width === 1180) {
@@ -166,7 +168,9 @@ test('an unfinished hover of B preserves the displayed A preview focus owner', a
       element.setAttribute('data-ui06-leave-trusted', String(event.isTrusted));
     }, { once: true });
   });
-  await page.mouse.move(boxB.x + boxB.width / 2, yB);
+  // One input command crosses the pin centre and exits on its right, avoiding
+  // a runner round-trip between the trusted enter and leave events.
+  await page.mouse.move(boxB.x + boxB.width + 8, yB, { steps: 2 });
   await page.mouse.move(1, 1);
   const marks = await b.evaluate(element => ({ enter: element.getAttribute('data-ui06-enter'), leave: element.getAttribute('data-ui06-leave'),
     enterTrusted: element.getAttribute('data-ui06-enter-trusted'), leaveTrusted: element.getAttribute('data-ui06-leave-trusted') }));

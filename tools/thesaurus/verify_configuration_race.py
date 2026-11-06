@@ -1,4 +1,8 @@
 """Prove first publication serializes a competing URI-prefix configuration."""
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 import json
 from pathlib import Path
@@ -16,11 +20,13 @@ args=parser.parse_args()
 if not args.database.startswith("bertel_thesaurus_config_race_"):
     raise SystemExit("Only an isolated local configuration-race database is allowed")
 common=dict(host="127.0.0.1",port=55439,user="postgres")
+migration=Path(__file__).resolve().parents[2]/"supabase/migrations/20261106160017_thesaurus_prepared_publication.sql"
 admin=psycopg2.connect(dbname="postgres",**common);admin.autocommit=True
 with admin.cursor()as cursor:
     cursor.execute("SELECT 1 FROM pg_database WHERE datname=%s",(args.database,))
-    if cursor.fetchone()is None:
-        cursor.execute(sql.SQL("CREATE DATABASE {} TEMPLATE bertel_thesaurus_test").format(sql.Identifier(args.database)))
+    if cursor.fetchone()is not None:
+        raise SystemExit("Choose a new fixture database; existing databases are never modified")
+    cursor.execute(sql.SQL("CREATE DATABASE {} TEMPLATE bertel_thesaurus_test").format(sql.Identifier(args.database)))
 admin.close()
 user_id=str(uuid.uuid4())
 claims=json.dumps(dict(sub=user_id,role="authenticated"))
@@ -37,6 +43,8 @@ def rpc(connection,action,payload):
         return cursor.fetchone()[0]
 publisher=connect()
 with publisher.cursor()as cursor:
+    cursor.execute("SELECT set_config('request.jwt.claims','{}',false)")
+    cursor.execute(migration.read_text(encoding="utf-8"))
     cursor.execute("SELECT api.thesaurus_generation()")
     if cursor.fetchone()[0]is not None:raise SystemExit("Template must be unactivated")
     cursor.execute("SELECT set_config('request.jwt.claims','{}',false)")
@@ -46,12 +54,13 @@ with publisher.cursor()as cursor:
     cursor.execute("INSERT INTO public.app_user_profile(id,role)VALUES(%s,'super_admin')ON CONFLICT(id)DO UPDATE SET role='super_admin'",(user_id,))
     cursor.execute("INSERT INTO public.ref_language(code,name)VALUES('qaa','Configuration race fixture')ON CONFLICT(code)DO NOTHING")
     cursor.execute("SELECT set_config('request.jwt.claims',%s,false)",(claims,))
+    cursor.execute("SET LOCAL ROLE authenticated")
 rpc(publisher,"configure_instance",dict(base_uri="https://first.invalid/concepts/",license="fixture-only",attribution="Configuration race fixture"))
 publisher.commit()
 with publisher.cursor()as cursor:
     cursor.execute("SET LOCAL ROLE authenticated")
-    cursor.execute("SELECT pg_advisory_xact_lock(741126,1)")
-result={}
+    cursor.execute("SELECT pg_advisory_xact_lock(741126,2)")
+result=dict(database=args.database,applied_migration=migration.name,actual_role="authenticated")
 ready=threading.Event()
 def configure():
     connection=connect()
@@ -69,7 +78,7 @@ observer=connect();observer.autocommit=True
 deadline=time.monotonic()+5
 while time.monotonic()<deadline:
     with observer.cursor()as cursor:
-        cursor.execute("SELECT EXISTS(SELECT 1 FROM pg_locks WHERE pid=%s AND locktype='advisory'AND classid=741126 AND objid=1 AND mode='ShareLock'AND NOT granted)",(result["configuration_pid"],))
+        cursor.execute("SELECT EXISTS(SELECT 1 FROM pg_locks WHERE pid=%s AND locktype='advisory'AND classid=741126 AND objid=2 AND mode='ShareLock'AND NOT granted)",(result["configuration_pid"],))
         if cursor.fetchone()[0]:
             result["observed_configuration_wait"]=True;break
     time.sleep(.005)

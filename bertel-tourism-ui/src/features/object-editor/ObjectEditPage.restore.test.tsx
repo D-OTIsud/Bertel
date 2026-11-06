@@ -6,27 +6,25 @@ import { cloneModules } from './editor-state';
 import { fullModulesFixture, allowAll } from './sections/section-fixture.test-utils';
 import { useSessionStore } from '../../store/session-store';
 import { getObjectResource } from '../../services/rpc';
+import { fetchThesaurusGeneration } from '../../services/thesaurus-generation';
+import { ensureReferenceCatalogs } from '../../hooks/useReferenceCatalogsQuery';
 import { getObjectVersions, restoreObjectVersion } from '../../services/object-versions';
 import { getObjectWorkspaceResource, saveObjectWorkspaceGeneralInfo, type ObjectWorkspaceResource } from '../../services/object-workspace';
-import { fetchThesaurusGeneration } from '../../services/thesaurus-generation';
 
 let mockEditor: ObjectEditorState;
-let mockVocabularyGeneration: string | null = null;
-jest.mock('../../services/thesaurus-generation', () => ({
-  ...jest.requireActual('../../services/thesaurus-generation'), fetchThesaurusGeneration: jest.fn(),
-}));
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 jest.mock('../../lib/supabase', () => ({ getApiClient: jest.fn(() => null), getSupabaseClient: jest.fn(() => null) }));
 jest.mock('../../services/rpc', () => ({ ...jest.requireActual('../../services/rpc'), getObjectResource: jest.fn() }));
+jest.mock('../../services/thesaurus-generation', () => ({
+  ...jest.requireActual('../../services/thesaurus-generation'), fetchThesaurusGeneration: jest.fn(),
+}));
 jest.mock('../../services/object-versions', () => ({
   ...jest.requireActual('../../services/object-versions'), getObjectVersions: jest.fn(), restoreObjectVersion: jest.fn(),
 }));
 jest.mock('../../services/object-workspace', () => ({
   ...jest.requireActual('../../services/object-workspace'), getObjectWorkspaceResource: jest.fn(), saveObjectWorkspaceGeneralInfo: jest.fn(),
 }));
-jest.mock('../../hooks/useReferenceCatalogsQuery', () => ({
-  ensureReferenceCatalogs: jest.fn(async () => ({ vocabularyRelease: mockVocabularyGeneration })),
-}));
+jest.mock('../../hooks/useReferenceCatalogsQuery', () => ({ ensureReferenceCatalogs: jest.fn(async () => ({})) }));
 jest.mock('../../services/notification-delivery', () => ({ pingNotifyDrain: jest.fn() }));
 jest.mock('../../services/write-compatibility', () => ({
   ...jest.requireActual('../../services/write-compatibility'),
@@ -69,7 +67,9 @@ function deferred<T = void>() {
   return { promise, resolve, reject };
 }
 
-function mount() {
+function mount(vocabularyRelease: string | null = null) {
+  jest.mocked(fetchThesaurusGeneration).mockResolvedValue(vocabularyRelease);
+  jest.mocked(ensureReferenceCatalogs).mockResolvedValue({ vocabularyRelease } as never);
   const modules = fullModulesFixture();
   modules.generalInfo.name = 'A';
   modules.generalInfo.status = 'draft';
@@ -81,9 +81,15 @@ function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   clients.push(client);
   const initial = resource();
-  const generationKey = mockVocabularyGeneration == null ? [] : [mockVocabularyGeneration];
-  client.setQueryData(['object-detail', ID, ['fr'], ...generationKey], initial);
-  client.setQueryData(['object-workspace', ID, ['fr'], ...generationKey], initial);
+  client.setQueryData(['object-detail', ID, ['fr']], initial);
+  client.setQueryData(['object-workspace', ID, ['fr']], initial);
+  const workspaceKey = vocabularyRelease === null ? ['object-workspace', ID, ['fr']]
+    : ['object-workspace', ID, ['fr'], vocabularyRelease];
+  if (vocabularyRelease !== null) {
+    // Retain inactive legacy data A: it must not acknowledge a pending fresh B.
+    client.setQueryData(['object-detail', ID, ['fr'], vocabularyRelease], initial);
+    client.setQueryData(workspaceKey, initial);
+  }
   jest.mocked(getObjectResource).mockImplementation(async (id) => resource(id) as never);
   jest.mocked(getObjectWorkspaceResource).mockImplementation(async (_id, _langs, _catalogs, detail) => detail as unknown as ObjectWorkspaceResource);
   jest.mocked(getObjectVersions).mockResolvedValue([
@@ -93,7 +99,7 @@ function mount() {
   jest.mocked(restoreObjectVersion).mockImplementation(async () => { server.generalInfo.name = 'B'; });
   jest.mocked(saveObjectWorkspaceGeneralInfo).mockImplementation(async (_id, input) => { server.generalInfo = { ...input }; });
   const page = (id = ID) => <QueryClientProvider client={client}><ObjectEditPage objectId={id} /></QueryClientProvider>;
-  return { ...render(page()), client, server, resource, page };
+  return { ...render(page()), client, server, resource, page, workspaceKey };
 }
 
 async function startRestore() {
@@ -114,8 +120,6 @@ function saveButton() { return screen.getByRole('button', { name: 'Enregistrer' 
 beforeEach(() => {
   window.localStorage.clear();
   jest.clearAllMocks();
-  mockVocabularyGeneration = null;
-  jest.mocked(fetchThesaurusGeneration).mockImplementation(async () => mockVocabularyGeneration);
   useSessionStore.setState({ demoMode: false, userId: USER, langPrefs: ['fr'] });
 });
 afterEach(() => {
@@ -124,9 +128,8 @@ afterEach(() => {
   for (const client of clients.splice(0)) client.clear();
 });
 
-it.each([null, '3'])('the real page restores B, observes B, then a visibility save sends B rather than the pre-restore A (vocabulary %s)', async (generation) => {
-  mockVocabularyGeneration = generation;
-  const view = mount();
+it.each([null, '3'])('the real page restores B and a visibility save sends B with vocabulary generation %s', async (generation) => {
+  const view = mount(generation);
   await startRestore();
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(screen.getByLabelText('Synthetic name')).toHaveValue('B');
@@ -182,8 +185,8 @@ it.each(['Garder mes modifications', 'Utiliser les valeurs du serveur'])('C stay
   }
 });
 
-it('cache B alone cannot release Save while the page still observes prop A', async () => {
-  const view = mount();
+it.each([null, '3'])('cache B alone cannot release Save while the page observes A with vocabulary generation %s', async (generation) => {
+  const view = mount(generation);
   const rpc = deferred();
   jest.mocked(restoreObjectVersion).mockImplementation(async () => { await rpc.promise; view.server.generalInfo.name = 'B'; });
   await startRestore();
@@ -191,7 +194,7 @@ it('cache B alone cannot release Save while the page still observes prop A', asy
   const notifications: Array<() => void> = [];
   notifyManager.setScheduler((callback) => { notifications.push(callback); });
   await act(async () => { rpc.resolve(); });
-  await waitFor(() => expect(view.client.getQueryData<ObjectWorkspaceResource>(['object-workspace', ID, ['fr']])?.name).toBe('B'));
+  await waitFor(() => expect(view.client.getQueryData<ObjectWorkspaceResource>(view.workspaceKey)?.name).toBe('B'));
   expect(mockEditor.baseline.generalInfo.name).toBe('A');
   expect(saveButton()).toBeDisabled();
   await act(async () => { while (notifications.length) notifications.shift()!(); });

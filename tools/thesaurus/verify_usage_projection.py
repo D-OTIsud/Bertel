@@ -1,4 +1,8 @@
 """Compare candidate usage resolution with the existing complete FK walker."""
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 import json
 from pathlib import Path

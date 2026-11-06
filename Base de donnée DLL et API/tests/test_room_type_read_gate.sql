@@ -11,13 +11,14 @@
 --   * api.get_object_room_types (SECURITY INVOKER) returns [] to anon for the draft object
 -- B) WRITE-BINDING REPAIR: the 8o link-table policies bound the unqualified room_type_id to
 --    the INNER object_room_type.room_type_id ref-code column (rt.id = rt.room_type_id —
---    never true ⇒ deny-all). Post-8v a +CREATEDBY writer can INSERT/DELETE link rows; a
+--    never true ⇒ deny-all). Post-8v a current canonical writer can INSERT/DELETE link rows; a
 --    foreign member still cannot; and no policy text carries the self-binding anymore.
 -- Against a DB without 8v: the draft-leak assertions and the link-write probes fail -> red.
 -- Self-contained + transactional (ROLLBACK; nothing persists).
 -- Mirrors test_media_description_read_gate.sql fixture mechanics.
 \set ON_ERROR_STOP on
 BEGIN;
+\ir fixtures/current_canonical_permission.sql
 DO $$
 DECLARE
   v_orgA    text := 'ORGRUN9999990501';
@@ -55,7 +56,7 @@ BEGIN
     (v_userA, 'tourism_agent'), (v_userB, 'tourism_agent')
     ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 
-  -- created_by = user A so the +CREATEDBY write leg is probeable without permission grants
+  -- created_by = user A retained as provenance; explicit current permission is granted below
   INSERT INTO object (id, object_type, name, status, created_by) VALUES
     (v_orgA,   'ORG', 'Org A',   'published', NULL),
     (v_orgB,   'ORG', 'Org B',   'published', NULL),
@@ -87,6 +88,8 @@ BEGIN
 
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES
     (v_userA, v_orgA, TRUE), (v_userB, v_orgB, TRUE);
+
+  PERFORM pg_temp.grant_current_canonical_fixture(v_userA,v_orgA,ARRAY[v_pubA,v_draftA]);
 
   -- ---------- Structural: no 8o self-binding left on the link tables ----------
   ASSERT NOT EXISTS (
@@ -141,7 +144,7 @@ BEGIN
             (v_rt_pub_on, v_rt_pub_off, v_rt_dr_on, v_rt_dr_off)) = 4,
            'user A MUST read ALL media links incl. unpublished rooms (link ext arm — §05 loader)';
 
-    -- WRITE probe (the 8v §B repair): +CREATEDBY room insert, then LINK insert/delete —
+    -- WRITE probe (the 8v §B repair): current canonical room insert, then LINK insert/delete —
     -- pre-8v the link WITH CHECK was rt.id = rt.room_type_id ⇒ deny-all and this raised 42501.
     INSERT INTO object_room_type (object_id, code, name, is_published)
       VALUES (v_draftA, 'RT-W', 'Write probe', FALSE) RETURNING id INTO v_rt_new;
@@ -149,7 +152,7 @@ BEGIN
     INSERT INTO object_room_type_media   (room_type_id, media_id)   VALUES (v_rt_new, v_media);
     DELETE FROM object_room_type_amenity WHERE room_type_id = v_rt_new;
     ASSERT (SELECT count(*) FROM object_room_type_amenity WHERE room_type_id = v_rt_new) = 0,
-           'creator DELETE of own amenity link must actually delete (deny-all USING would no-op)';
+           'current publisher DELETE of own amenity link must actually delete (deny-all USING would no-op)';
     DELETE FROM object_room_type_media WHERE room_type_id = v_rt_new;
     DELETE FROM object_room_type WHERE id = v_rt_new;
   RESET ROLE;

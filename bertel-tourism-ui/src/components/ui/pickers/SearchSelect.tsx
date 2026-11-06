@@ -118,9 +118,9 @@ export function SearchSelect({
     if (open && activeId) scrollOptionIntoView(document.getElementById(activeId), panelRef.current?.querySelector('[role="listbox"]') ?? null);
   }, [open, activeId, panelRef]);
 
-  // Focus the search + seed the open groups on the OPEN transition; clear the query on close.
+  // Seed the open groups on the OPEN transition; clear the query on close.
   // Keyed on `open` only (NOT defaultExpanded): if the caller's `options` identity changes
-  // while the popover is open, re-running this would steal focus / reset ArrowDown navigation.
+  // while the popover is open, re-running this would reset ArrowDown navigation.
   // defaultExpanded is read fresh at open time. (§71 E review)
   useEffect(() => {
     if (open) {

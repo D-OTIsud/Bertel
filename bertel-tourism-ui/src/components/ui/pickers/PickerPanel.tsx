@@ -6,13 +6,14 @@ import { DismissableLayer } from '@radix-ui/react-dismissable-layer';
 import { dialogFocusables } from '../dialog-focus';
 
 /** Reveal an active row without scrolling the document behind a portal. */
-export function scrollOptionIntoView(option: HTMLElement | null, viewport: HTMLElement | null) {
+export function scrollOptionIntoView(option: HTMLElement | null, viewport: HTMLElement | null, stickyHeader?: HTMLElement | null) {
   if (!option || !viewport) return;
   const row = option.getBoundingClientRect();
   const bounds = viewport.getBoundingClientRect();
   const scale = viewport.offsetHeight ? bounds.height / viewport.offsetHeight : 1;
-  const top = bounds.top + viewport.clientTop * scale;
-  const bottom = top + viewport.clientHeight * scale;
+  const contentTop = bounds.top + viewport.clientTop * scale;
+  const top = Math.max(contentTop, stickyHeader?.getBoundingClientRect().bottom ?? contentTop);
+  const bottom = contentTop + viewport.clientHeight * scale;
   // WebKit rounds scrollTop to whole CSS pixels. Round outward so a fractional
   // last row cannot remain clipped; account for a zoomed/scaled host as well.
   if (row.top < top) viewport.scrollTop += Math.floor((row.top - top) / scale);
@@ -58,10 +59,14 @@ export function PopupLayer({ children, panelRef, triggerRef, focusRef, onClose }
         if (!panel || !trigger) return;
         const inside = dialogFocusables(panel);
         const nextInside = inside.indexOf(document.activeElement as HTMLElement) + (event.shiftKey ? -1 : 1);
-        // Let native Tab visit the popup's buttons without the host recovering
-        // focus from this portalled DOM subtree.
+        // Visit every popup button explicitly: native Tab may skip buttons
+        // depending on the browser's keyboard navigation setting.
         event.stopPropagation();
-        if (nextInside >= 0 && nextInside < inside.length) return;
+        if (nextInside >= 0 && nextInside < inside.length) {
+          event.preventDefault();
+          inside[nextInside].focus();
+          return;
+        }
 
         const dialog = trigger.closest<HTMLElement>('[role="dialog"],[role="alertdialog"]');
         const outside = dialogFocusables(dialog ?? document.body).filter((node) =>

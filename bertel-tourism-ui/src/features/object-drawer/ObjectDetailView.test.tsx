@@ -697,7 +697,7 @@ describe('ObjectDetailView', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByText('Sophie A.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /close/i }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Fermer', exact: true }));
     expect(screen.getByRole('button', { name: /ajouter une note/i })).toBeInTheDocument();
     expect(screen.getByTestId('detail-map')).toBeInTheDocument();
     expect(screen.getByTestId('detail-map-zoom')).toBeInTheDocument();

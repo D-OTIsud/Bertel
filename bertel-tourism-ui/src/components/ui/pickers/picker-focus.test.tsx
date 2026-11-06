@@ -98,3 +98,14 @@ test.each([false, true])('Tab leaves the last popup control at the next host con
   expect(screen.getByRole('button', { name: 'Avant' })).toHaveFocus();
   expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 });
+
+test.each([false, true])('Tab explicitly visits popup options without relying on native button tabbing, multi=%s', (multi) => {
+  render(picker(multi));
+  fireEvent.click(screen.getByRole('combobox', { name: 'Cible' }));
+  const search = screen.getByRole('combobox', { name: 'Rechercher' });
+  const first = screen.getAllByRole('option')[0];
+  expect(fireEvent.keyDown(search, { key: 'Tab' })).toBe(false);
+  expect(first).toHaveFocus();
+  expect(fireEvent.keyDown(first, { key: 'Tab', shiftKey: true })).toBe(false);
+  expect(search).toHaveFocus();
+});

@@ -20,7 +20,7 @@ INSERT INTO public.object(id,object_type,name,status)VALUES('HLORUNTHESAUR001','
 INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR001','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');
 
 DO $test$
-DECLARE workspace jsonb;res jsonb;doc jsonb;rev jsonb;rev_a jsonb;rev_b jsonb;prevw jsonb;pub jsonb;oldexport jsonb;cid uuid;child uuid;newcid uuid;rid uuid;v integer;first_release bigint;next_release bigint;count_before integer;before_time timestamptz;before_version integer;deny boolean;
+DECLARE workspace jsonb;res jsonb;doc jsonb;rev jsonb;rev_a jsonb;rev_b jsonb;prevw jsonb;pub jsonb;oldexport jsonb;cid uuid;child uuid;newcid uuid;rid uuid;v integer;first_release bigint;next_release bigint;count_before integer;before_time timestamptz;before_version integer;deny boolean;before_content jsonb;cache_projection jsonb;
 BEGIN
   ASSERT api.thesaurus_generation()IS NULL,'New installation must remain unactivated';
   BEGIN PERFORM api.thesaurus_public('manifest');RAISE EXCEPTION 'Missing release was accepted';EXCEPTION WHEN SQLSTATE'PT503'THEN NULL;END;
@@ -59,14 +59,19 @@ BEGIN
   prevw:=api.thesaurus_admin('preview',jsonb_build_object('revision_ids',jsonb_build_array(rid)));
   ASSERT (prevw->>'affected_objects')::integer=1,'Ancestor impact preview missed its real child-assigned object';
   SELECT updated_at,current_version INTO before_time,before_version FROM public.object WHERE id='HLORUNTHESAUR001';
+  SELECT to_jsonb(o)-ARRAY['updated_at','cached_amenity_codes','cached_payment_codes','cached_environment_tags','cached_language_codes','cached_classification_codes','cached_taxonomy_codes','search_document','search_document_text','search_document_phonetic']INTO before_content FROM public.object o WHERE id='HLORUNTHESAUR001';
   BEGIN PERFORM api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rid),'idempotency_key','bad-preview','expected_revision_versions',jsonb_build_object(rid::text,v-1)));RAISE EXCEPTION 'Stale preview was accepted';EXCEPTION WHEN SQLSTATE'PT409'THEN NULL;END;
   pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rid),'idempotency_key','thesaurus-test-rename','expected_release_id',first_release,'expected_revision_versions',jsonb_build_object(rid::text,v),'preview_fingerprint',prevw->>'preview_fingerprint'));
   next_release:=(pub->>'release_id')::bigint;
   ASSERT next_release>first_release,'Release IDs must be monotonic';
   ASSERT (SELECT name FROM public.ref_code WHERE id='b73e1000-0000-4000-8000-000000000001'AND domain='taxonomy_hlo')='Racine renommée','Publication did not update source';
   ASSERT EXISTS(SELECT 1 FROM jsonb_array_elements(api.list_catalog('taxonomy_hlo','fr'))x WHERE x->>'code'='thesaurus_test_root'AND x->>'name'='Racine renommée'),'French legacy catalog kept the old i18n label';
-  ASSERT (SELECT updated_at>=before_time AND current_version>before_version FROM public.object WHERE id='HLORUNTHESAUR001'),'Affected object sync/version marker was not updated';
+  ASSERT (SELECT updated_at>before_time AND current_version=before_version FROM public.object WHERE id='HLORUNTHESAUR001'),'Affected object sync marker must advance without a fabricated canonical version';
   ASSERT (SELECT search_document_text LIKE'%synonyme%'FROM public.object WHERE id='HLORUNTHESAUR001'),'Validated alias was not indexed on descendant object';
+  ASSERT(SELECT to_jsonb(o)-ARRAY['updated_at','cached_amenity_codes','cached_payment_codes','cached_environment_tags','cached_language_codes','cached_classification_codes','cached_taxonomy_codes','search_document','search_document_text','search_document_phonetic']=before_content FROM public.object o WHERE id='HLORUNTHESAUR001'),'Projection publication changed canonical object content';
+  SELECT jsonb_build_array(cached_amenity_codes,cached_payment_codes,cached_environment_tags,cached_language_codes,cached_classification_codes,cached_taxonomy_codes,search_document,search_document_text,search_document_phonetic)INTO cache_projection FROM public.object WHERE id='HLORUNTHESAUR001';
+  PERFORM api.refresh_object_filter_caches('HLORUNTHESAUR001');
+  ASSERT(SELECT jsonb_build_array(cached_amenity_codes,cached_payment_codes,cached_environment_tags,cached_language_codes,cached_classification_codes,cached_taxonomy_codes,search_document,search_document_text,search_document_phonetic)=cache_projection FROM public.object WHERE id='HLORUNTHESAUR001'),'Bulk projection differs from the canonical helper';
   ASSERT api.thesaurus_public('export',first_release,'{"lang":"en-US"}')=oldexport,'New publication rewrote old snapshot';
   ASSERT (api.thesaurus_public('concept',next_release,jsonb_build_object('concept_id',cid,'lang','en-US'))#>>'{data,effective_lang}')='en','Language fallback mislabeled the value';
   ASSERT EXISTS(SELECT 1 FROM jsonb_array_elements(api.thesaurus_public('changes',next_release)->'data')x WHERE x->>'concept_id'=cid::text AND x->>'change_type'='modified'),'Minimal release diff missing changed concept';

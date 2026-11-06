@@ -284,10 +284,10 @@ BEGIN
         OR EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhrelid=target.oid AND i.inhparent='public.ref_code'::regclass))
   LOOP
     IF NOT EXISTS(SELECT 1 FROM thesaurus.concept c WHERE c.concept_id=ANY(p_concepts)AND c.source_kind=f.kind AND(f.source_domain IS NULL OR c.domain=f.source_domain))THEN CONTINUE;END IF;
-    SELECT string_agg(format('to_jsonb(t)->%L = s.source_key->%L',la.attname,ra.attname),' AND ' ORDER BY u.ord)
+    SELECT string_agg(format('t.%I::text = c.%I',la.attname,CASE WHEN ra.attname='domain'THEN'domain'ELSE'source_id'END),' AND ' ORDER BY u.ord)
     INTO cond FROM unnest(f.conkey,f.confkey)WITH ORDINALITY u(l,r,ord)
       JOIN pg_attribute la ON la.attrelid=f.conrelid AND la.attnum=u.l JOIN pg_attribute ra ON ra.attrelid=f.confrelid AND ra.attnum=u.r;
-    sql:=format('SELECT DISTINCT unnest(thesaurus.object_ids_for_row(%s,to_jsonb(t)))FROM %I.%I t JOIN thesaurus.source_rows s ON s.source_kind=%L AND %s %s JOIN thesaurus.concept c ON(c.source_kind,c.source_id,c.domain)=(s.source_kind,s.source_id,s.domain) WHERE c.concept_id=ANY($1)',f.conrelid,f.nspname,f.relname,f.kind,cond,CASE WHEN f.source_domain IS NULL THEN''ELSE format('AND s.domain=%L',f.source_domain)END);
+    sql:=format('SELECT DISTINCT unnest(thesaurus.object_ids_for_row(%s,to_jsonb(t)))FROM %I.%I t JOIN thesaurus.concept c ON c.source_kind=%L AND %s %s WHERE c.concept_id=ANY($1)',f.conrelid,f.nspname,f.relname,f.kind,cond,CASE WHEN f.source_domain IS NULL THEN''ELSE format('AND c.domain=%L',f.source_domain)END);
     RETURN QUERY EXECUTE sql USING p_concepts;
   END LOOP;
   RETURN QUERY SELECT DISTINCT oc.object_id::text FROM public.object_classification oc CROSS JOIN LATERAL unnest(oc.subvalue_ids)sub_id JOIN thesaurus.concept c ON c.source_kind='classification_value'AND c.source_id=sub_id::text WHERE c.concept_id=ANY(p_concepts);
@@ -496,9 +496,16 @@ END $$;
 CREATE OR REPLACE FUNCTION thesaurus.activate(p_revision_ids uuid[],p_bootstrap_domains text[],p_key text,p_expected bigint DEFAULT NULL,p_versions jsonb DEFAULT '{}') RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,thesaurus,public,api,internal,extensions,auth AS $$
 #variable_conflict use_column
-DECLARE prev bigint;rid bigint;r record;doc jsonb;quality jsonb;affected text[]:='{}';a text;ids uuid[]:='{}';n integer;v_manifest jsonb;checksum text;inst thesaurus.instance%ROWTYPE;d text;parent uuid;rec jsonb;count_changes integer;request_fp text;
+DECLARE prev bigint;rid bigint;r record;doc jsonb;quality jsonb;affected text[]:='{}';a text;ids uuid[]:='{}';prior_ids uuid[];added_ids uuid[];n integer;v_manifest jsonb;checksum text;inst thesaurus.instance%ROWTYPE;d text;parent uuid;rec jsonb;count_changes integer;request_fp text;
 BEGIN
   IF NULLIF(btrim(p_key),'')IS NULL OR length(p_key)>200 THEN RAISE EXCEPTION 'Idempotency key required' USING ERRCODE='PT400';END IF;
+  -- Warm query plans before serializing writers. These results are discarded;
+  -- source fingerprints, assignments and documents are read again under the fence.
+  -- The empty projection UPDATE touches no row and only its private publisher
+  -- skips the statement fence. It cannot update canonical object columns.
+  PERFORM thesaurus.refresh_affected_objects('{}');
+  PERFORM thesaurus.concept_document(r.concept_id)FROM thesaurus.revision r WHERE r.revision_id=ANY(COALESCE(p_revision_ids,'{}'));
+  PERFORM 1 FROM thesaurus.usage_objects(ARRAY(SELECT r.concept_id FROM thesaurus.revision r WHERE r.revision_id=ANY(COALESCE(p_revision_ids,'{}'))));
   PERFORM pg_advisory_xact_lock(741126,1);
   request_fp:=md5(jsonb_build_object('revisions',COALESCE((SELECT jsonb_agg(x ORDER BY x)FROM unnest(COALESCE(p_revision_ids,'{}'))x),'[]'),'domains',COALESCE((SELECT jsonb_agg(x ORDER BY x)FROM unnest(COALESCE(p_bootstrap_domains,'{}'))x),'[]'),'versions',COALESCE(p_versions,'{}'),'expected_release_id',p_expected)::text);
   SELECT * INTO r FROM thesaurus.release WHERE idempotency_key=p_key;
@@ -531,6 +538,7 @@ BEGIN
   SELECT COALESCE(array_agg(DISTINCT x.concept_id),'{}')INTO ids FROM(
     SELECT unnest(ids)concept_id UNION SELECT cc.concept_id FROM thesaurus.concept c JOIN public.ref_code_taxonomy_closure cl ON cl.ancestor_id::text=c.source_id AND cl.domain=c.domain JOIN thesaurus.concept cc ON cc.source_kind='ref_code' AND cc.source_id=cl.descendant_id::text AND cc.domain=cl.domain WHERE c.concept_id=ANY(ids))x;
   SELECT COALESCE(array_agg(DISTINCT object_id),'{}')INTO affected FROM thesaurus.usage_objects(ids);
+  prior_ids:=ids;
   FOR r IN SELECT * FROM thesaurus.revision WHERE revision_id=ANY(COALESCE(p_revision_ids,'{}')) ORDER BY concept_id LOOP
     doc:=r.document;
     UPDATE thesaurus.concept SET lifecycle=COALESCE(doc->>'lifecycle','active'),assignable=COALESCE((doc#>>'{source_fields,is_assignable}')::boolean,assignable)WHERE concept_id=r.concept_id;
@@ -555,7 +563,6 @@ BEGIN
     SELECT r.concept_id,newrel->>'type',(newrel->>'target_id')::uuid FROM jsonb_array_elements(COALESCE(doc->'relations','[]')||COALESCE((SELECT jsonb_agg(jsonb_build_object('type','replaced_by','target_id',x))FROM jsonb_array_elements_text(COALESCE(doc->'replaced_by','[]'))x),'[]'))newrel
     WHERE NOT EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(r.base_document->'relations','[]')||COALESCE((SELECT jsonb_agg(jsonb_build_object('type','replaced_by','target_id',x))FROM jsonb_array_elements_text(COALESCE(r.base_document->'replaced_by','[]'))x),'[]'))oldrel WHERE oldrel->>'type'=newrel->>'type'AND oldrel->>'target_id'=newrel->>'target_id')ON CONFLICT DO NOTHING;
   END LOOP;
-  PERFORM thesaurus.sync_sources(NULL);
   PERFORM thesaurus.ensure_parent_dependencies();
   IF EXISTS(SELECT 1 FROM thesaurus.relation r WHERE r.type='related'AND(thesaurus.is_ancestor(r.concept_id,r.target_id)OR thesaurus.is_ancestor(r.target_id,r.concept_id)))THEN RAISE EXCEPTION 'Associative and hierarchical relations must be disjoint' USING ERRCODE='PT400';END IF;
   IF EXISTS(WITH RECURSIVE chain AS(SELECT concept_id,target_id,ARRAY[concept_id,target_id]path,concept_id=target_id cycle FROM thesaurus.relation WHERE type='replaced_by' UNION ALL SELECT c.concept_id,r.target_id,c.path||r.target_id,r.target_id=ANY(c.path)FROM chain c JOIN thesaurus.relation r ON r.concept_id=c.target_id AND r.type='replaced_by' WHERE NOT c.cycle)SELECT 1 FROM chain WHERE cycle)THEN RAISE EXCEPTION 'Replacement cycle forbidden' USING ERRCODE='PT400';END IF;
@@ -563,21 +570,21 @@ BEGIN
     IF EXISTS(SELECT 1 FROM public.ref_code_domain_registry WHERE domain=d AND is_taxonomy)THEN PERFORM api.refresh_ref_code_taxonomy_closure(d);END IF;
   END LOOP;
   SELECT COALESCE(array_agg(DISTINCT x.concept_id),'{}')INTO ids FROM(SELECT unnest(ids)concept_id UNION SELECT cc.concept_id FROM thesaurus.concept c JOIN public.ref_code_taxonomy_closure cl ON cl.ancestor_id::text=c.source_id AND cl.domain=c.domain JOIN thesaurus.concept cc ON cc.source_kind='ref_code' AND cc.source_id=cl.descendant_id::text AND cc.domain=cl.domain WHERE c.concept_id=ANY(ids))x;
-  SELECT COALESCE(array_agg(DISTINCT x),'{}')INTO affected FROM(SELECT unnest(affected)x UNION SELECT object_id FROM thesaurus.usage_objects(ids))a;
-  FOREACH a IN ARRAY affected LOOP
-    PERFORM thesaurus.refresh_affected_object(a);
-  END LOOP;
+  -- Assignments cannot change under the exclusive fence. Re-read only owners of
+  -- descendants newly brought into scope by a hierarchy change, not all old ones.
+  added_ids:=ARRAY(SELECT unnest(ids)EXCEPT SELECT unnest(prior_ids));
+  IF cardinality(added_ids)>0 THEN SELECT COALESCE(array_agg(DISTINCT x),'{}')INTO affected FROM(SELECT unnest(affected)x UNION SELECT object_id FROM thesaurus.usage_objects(added_ids))a;END IF;
+  PERFORM thesaurus.refresh_affected_objects(affected);
   IF COALESCE(cardinality(p_revision_ids),0)>0 THEN
     IF to_regclass('internal.mv_ref_data_json')IS NOT NULL THEN REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;END IF;
     IF to_regclass('internal.mv_filtered_objects')IS NOT NULL THEN REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;END IF;
   END IF;
   INSERT INTO thesaurus.release(previous_release_id,created_by,idempotency_key,affected_objects,request_fingerprint)VALUES(prev,thesaurus.current_actor(),p_key,cardinality(affected),request_fp)RETURNING release_id INTO rid;
+  WITH documents AS MATERIALIZED(
+    SELECT c.concept_id,c.domain,v.is_public,thesaurus.concept_document(c.concept_id)-'source_kind'-'source_key'-'source_fields'-'source_fingerprint'-'name_i18n'-'description_i18n' document
+    FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain)JOIN thesaurus.source_link sl USING(concept_id)WHERE v.is_governed)
   INSERT INTO thesaurus.release_concept(release_id,concept_id,domain,is_public,document,checksum)
-  SELECT rid,c.concept_id,c.domain,v.is_public,
-    doc.d-'source_kind'-'source_key'-'source_fields'-'source_fingerprint'-'name_i18n'-'description_i18n',
-    md5((doc.d-'source_kind'-'source_key'-'source_fields'-'source_fingerprint'-'name_i18n'-'description_i18n')::text)
-  FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain)JOIN thesaurus.source_link sl USING(concept_id)
-  CROSS JOIN LATERAL(SELECT thesaurus.concept_document(c.concept_id)d)doc WHERE v.is_governed;
+  SELECT rid,concept_id,domain,is_public,document,md5(document::text)FROM documents;
   -- Monotonic historical identity, including tombstones of no-longer-public vocabularies.
   INSERT INTO thesaurus.release_concept(release_id,concept_id,domain,is_public,document,checksum)
   SELECT rid,p.concept_id,p.domain,p.is_public,p.document,p.checksum FROM thesaurus.release_concept p WHERE p.release_id=prev AND NOT EXISTS(SELECT 1 FROM thesaurus.release_concept n WHERE n.release_id=rid AND n.concept_id=p.concept_id);
@@ -828,7 +835,7 @@ GRANT EXECUTE ON FUNCTION api.public_catalog_domains()TO anon,authenticated,serv
 
 CREATE OR REPLACE FUNCTION thesaurus.write_fence()RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER
 SET search_path=pg_catalog AS $$
-BEGIN PERFORM pg_advisory_xact_lock_shared(741126,1);RETURN NULL;END $$;
+BEGIN IF current_user<>'bertel_thesaurus_publisher'THEN PERFORM pg_advisory_xact_lock_shared(741126,1);END IF;RETURN NULL;END $$;
 
 CREATE OR REPLACE FUNCTION thesaurus.remember_ownership()RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,thesaurus AS $$
@@ -1000,10 +1007,26 @@ GRANT EXECUTE ON FUNCTION api.refresh_ref_code_taxonomy_closure(text),api.is_ref
 -- than maintaining a second search definition. Exact body equality is an invariant.
 -- Its owner can UPDATE only derived columns: bypassing business-version triggers
 -- here cannot bypass canonical content auditing or grant an application role access.
-DO $projection_writer$DECLARE body text;t text;rel regclass;BEGIN
+DO $projection_writer$DECLARE body text;t text;rel regclass;normalized text;part text[];expressions text:='';columns text[]:='{}';search_sql text;bulk_sql text;assignments text;BEGIN
   SELECT prosrc INTO STRICT body FROM pg_proc WHERE oid='api.refresh_object_filter_caches(text)'::regprocedure;
   EXECUTE format('CREATE OR REPLACE FUNCTION thesaurus.refresh_object_filter_caches(p_object_id text)RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,auth,extensions AS %L',body);
   IF(SELECT prosrc FROM pg_proc WHERE oid='thesaurus.refresh_object_filter_caches(text)'::regprocedure)IS DISTINCT FROM body THEN RAISE EXCEPTION 'Canonical search projection body drift';END IF;
+  normalized:=replace(body,E'\r','');
+  FOR part IN SELECT regexp_matches(normalized,E'  SELECT (COALESCE\\(\\(.*?)\\n  INTO v_(cached_[a-z_]+);','gs')LOOP
+    expressions:=expressions||CASE WHEN expressions=''THEN''ELSE','END||'('||replace(part[1],'p_object_id','w.id')||') AS '||quote_ident(part[2]);columns:=array_append(columns,part[2]);
+  END LOOP;
+  IF columns IS DISTINCT FROM ARRAY['cached_amenity_codes','cached_payment_codes','cached_environment_tags','cached_language_codes','cached_classification_codes','cached_taxonomy_codes']THEN RAISE EXCEPTION 'Canonical cache helper shape changed: review bulk projection extraction';END IF;
+  IF strpos(normalized,'  WITH doc AS (')=0 OR strpos(normalized,'  FROM norm doc;')=0 THEN RAISE EXCEPTION 'Canonical search CTE changed: review bulk projection extraction';END IF;
+  search_sql:=substring(normalized FROM strpos(normalized,'  WITH doc AS (')FOR strpos(normalized,'  FROM norm doc;')+length('  FROM norm doc')-strpos(normalized,'  WITH doc AS ('));
+  search_sql:=replace(search_sql,E'  INTO v_search_document, v_search_document_text, v_search_document_phonetic\n','');
+  IF strpos(search_sql,'INTO v_')>0 THEN RAISE EXCEPTION 'Canonical projection output changed';END IF;
+  -- Materialization changes evaluation frequency only: the exact canonical
+  -- expressions feed all three search representations, once per owning object.
+  search_sql:=replace(replace(replace(search_sql,'p_object_id','w.id'),'WITH doc AS (','WITH doc AS MATERIALIZED ('),'norm AS (','norm AS MATERIALIZED (');
+  columns:=columns||ARRAY['search_document','search_document_text','search_document_phonetic'];
+  SELECT string_agg(format('%I=p.%I',x,x),',')INTO assignments FROM unnest(columns)x;
+  bulk_sql:='WITH projected AS MATERIALIZED(SELECT w.id,'||expressions||',d.* FROM unnest(p_object_ids)w(id)CROSS JOIN LATERAL('||search_sql||')d(search_document,search_document_text,search_document_phonetic))UPDATE public.object o SET '||assignments||',updated_at=clock_timestamp()FROM projected p WHERE o.id=p.id;';
+  EXECUTE format('CREATE OR REPLACE FUNCTION thesaurus.refresh_affected_objects(p_object_ids text[])RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,extensions SET jit=off SET plan_cache_mode=force_generic_plan AS %L','BEGIN '||bulk_sql||' END');
   FOREACH t IN ARRAY ARRAY['object','object_amenity','ref_amenity','object_payment_method','ref_code_payment_method','object_environment_tag','ref_code_environment_tag','object_language','ref_language','object_classification','ref_classification_scheme','ref_classification_value','object_taxonomy','ref_code_taxonomy_closure','ref_code','tag_link','ref_tag','object_cuisine_type','ref_code_cuisine_type','object_menu','object_menu_item','object_menu_item_dietary_tag','ref_code_dietary_tag','object_menu_item_allergen','ref_code_allergen','object_description']LOOP
     rel:=format('public.%I',t)::regclass;
     EXECUTE format('GRANT SELECT ON %s TO bertel_thesaurus_publisher',rel);
@@ -1040,6 +1063,7 @@ GRANT CREATE ON SCHEMA thesaurus TO bertel_thesaurus_publisher;
 ALTER FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)OWNER TO bertel_thesaurus_publisher;
 ALTER FUNCTION thesaurus.refresh_object_filter_caches(text)OWNER TO bertel_thesaurus_publisher;
 ALTER FUNCTION thesaurus.refresh_affected_object(text)OWNER TO bertel_thesaurus_publisher;
+ALTER FUNCTION thesaurus.refresh_affected_objects(text[])OWNER TO bertel_thesaurus_publisher;
 REVOKE CREATE ON SCHEMA thesaurus FROM bertel_thesaurus_publisher;
 GRANT EXECUTE ON FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)TO postgres;
 -- Preserve the creator's ADMIN-only management capability for future migrations,

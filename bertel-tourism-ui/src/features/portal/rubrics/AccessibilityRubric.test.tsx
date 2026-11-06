@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { AccessibilityRubric } from './AccessibilityRubric';
 import { buildPortalRubrics } from '../portal-rubrics';
+import type { PortalRubricFormProps } from './types';
 import { fakeEditor, portalModules } from '../__fixtures__/portal-fixtures';
 
 const options = [
@@ -9,7 +10,7 @@ const options = [
   { id: 'c', code: 'acc_adapted_bed_height', label: 'Lit adapté', disabilityTypes: ['motor'] },
   { id: 'd', code: 'acc_shower_seat', label: 'Siège de douche', disabilityTypes: ['motor'] },
 ];
-function mount(archetype: 'RES' | 'HEB' | 'ASC' = 'RES', labelled = false, retired = false) {
+function mount(archetype: 'RES' | 'HEB' | 'ASC' = 'RES', labelled = false, callbacks: Partial<Pick<PortalRubricFormProps, 'onDone' | 'onCancel' | 'onDirtyChange' | 'formCache'>> = {}, retired = false) {
   const modules = portalModules();
   modules.characteristics.amenityGroups = [{ familyCode: 'accessibility', familyLabel: 'Accessibilité',
     options: options.map((option) => ({ ...option, disabled: retired && ['acc_pmr_parking', 'acc_shower_seat'].includes(option.code) })) }];
@@ -20,7 +21,7 @@ function mount(archetype: 'RES' | 'HEB' | 'ASC' = 'RES', labelled = false, retir
   if (labelled) modules.distinctions = { accessibilityLabels: [{ schemeCode: 'LBL_TOURISME_HANDICAP', status: 'granted', validUntil: '2099-12-31' }] } as never;
   const editor = fakeEditor(modules);
   const rubric = buildPortalRubrics({ archetype, draft: modules, dirty: {}, masked: [], floor: [], pendingModules: new Set(), rejectedModules: new Set() }).find((entry) => entry.id === 'accessibility')!;
-  render(<AccessibilityRubric rubric={rubric} archetype={archetype} editor={editor} formKey="accessibility" onDone={jest.fn()} onCancel={jest.fn()} onDirtyChange={jest.fn()} />);
+  render(<AccessibilityRubric rubric={rubric} archetype={archetype} editor={editor} formKey="accessibility" onDone={jest.fn()} onCancel={jest.fn()} onDirtyChange={jest.fn()} {...callbacks} />);
   return editor;
 }
 
@@ -72,8 +73,54 @@ test('le label déjà attribué est annoncé ; aucun faux lien PDF en attendant 
   expect(screen.queryByRole('link', { name: /PDF/ })).not.toBeInTheDocument();
 });
 
+test('les compteurs de la conception approuvée suivent un choix partagé sans écrire avant Valider', () => {
+  const onDone = jest.fn();
+  const onDirtyChange = jest.fn();
+  const formCache = new Map<string, unknown>();
+  const editor = mount('HEB', false, { onDone, onDirtyChange, formCache });
+  expect(screen.getByText('Votre fiche répond à 1 famille de besoins sur 4.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^Vue/ })).toHaveTextContent('Rien d’indiqué');
+  expect(screen.getByText('Être accessible, ce n’est pas seulement le fauteuil roulant.')).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText('Chien guide accueilli'));
+  expect(screen.getByText('Votre fiche répond à 2 familles de besoins sur 4.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^Mobilité/ })).toHaveTextContent('2 indiqués');
+  expect(screen.getByRole('button', { name: /^Vue/ })).toHaveTextContent('1 indiqué');
+  expect(formCache.get('accessibility')).toEqual({ codes: ['acc_shower_seat', 'acc_guide_dog_welcome'] });
+  expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+  expect(editor.replaceModule).not.toHaveBeenCalled();
+  expect(onDone).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: /^Vue/ }));
+  expect(screen.getByLabelText('Chien guide accueilli')).toBeChecked();
+  expect(screen.getByRole('button', { name: /^Vue/ })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+  expect(editor.replaceModule).toHaveBeenCalledTimes(1);
+  expect(editor.replaceModule).toHaveBeenCalledWith('characteristics', {
+    ...editor.draft.characteristics,
+    selectedAmenityCodes: ['wifi', 'acc_unknown', 'acc_shower_seat', 'acc_guide_dog_welcome'],
+  });
+  expect(onDone).toHaveBeenCalledTimes(1);
+});
+
+test('l’encart du label demeure une information en lecture seule', () => {
+  const editor = mount('HEB', true);
+  const label = screen.getByRole('complementary', { name: 'Labellisé Tourisme & Handicap' });
+  expect(label.querySelectorAll('input, button, a, select')).toHaveLength(0);
+  expect(editor.replaceModule).not.toHaveBeenCalled();
+});
+
+test('Retour sans changer reste un abandon local, sans écriture de caractéristiques', () => {
+  const onCancel = jest.fn();
+  const onDone = jest.fn();
+  const editor = mount('HEB', false, { onCancel, onDone });
+  fireEvent.click(screen.getByLabelText('Parking réservé'));
+  fireEvent.click(screen.getByRole('button', { name: 'Retour sans changer' }));
+  expect(onCancel).toHaveBeenCalledTimes(1);
+  expect(onDone).not.toHaveBeenCalled();
+  expect(editor.replaceModule).not.toHaveBeenCalled();
+});
+
 test('un aménagement retiré déjà choisi reste conservable et supprimable, sans pouvoir être ajouté à nouveau', () => {
-  const editor = mount('HEB', false, true);
+  const editor = mount('HEB', false, {}, true);
   const parking = screen.getByLabelText('Parking réservé');
   const shower = screen.getByLabelText('Siège de douche');
   expect(parking).toBeDisabled();

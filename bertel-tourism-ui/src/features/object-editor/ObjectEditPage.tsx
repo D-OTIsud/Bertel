@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUiStore } from '../../store/ui-store';
 import { useSessionStore } from '../../store/session-store';
+import { sessionQueryScopeKey } from '../../app/session-query-cache';
 import { useToast } from '../../hooks/useToast';
 import { loadObjectWorkspace, useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation, useSetObjectStatusMutation, useObjectVersionsQuery, useRestoreObjectVersionMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
@@ -102,14 +103,15 @@ export function ObjectEditPage({ objectId }: { objectId: string }) {
     );
   }
   // Keep the editor mounted after a failed background refresh: its unsaved draft
-  // lives in component state. Pause interaction until the permissions reload succeeds.
+  // lives in component state. Pause editing until the permissions reload succeeds;
+  // the memory-only draft export remains available without a server read or write.
   return (
     <>
       {loadError}
       <EditorModalContext.Provider value={`${data.name} · ${data.type ? TYPE_LABEL[data.type as keyof typeof TYPE_LABEL] || data.type : meta.family}`}>
-      <div style={{ display: 'contents' }} inert={isError || !read.data || undefined}>
-        <EditorReady resource={data} objectId={objectId} meta={meta} workspaceReadReady={Boolean(read.data) && !isError && !isFetching} />
-      </div>
+        <EditorReady resource={data} objectId={objectId} meta={meta}
+          workspaceReadReady={Boolean(read.data) && !isError && !isFetching}
+          workspaceReadFailed={isError || !read.data} />
       </EditorModalContext.Provider>
     </>
   );
@@ -192,7 +194,7 @@ function buildHistoryItems(draft: ObjectWorkspaceModules): HistoryRailItem[] {
     .slice(0, 5);
 }
 
-function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta; workspaceReadReady: boolean }) {
+function EditorReady({ resource, objectId, meta, workspaceReadReady, workspaceReadFailed }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta; workspaceReadReady: boolean; workspaceReadFailed: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const openDrawer = useUiStore((state) => state.openDrawer);
@@ -303,7 +305,11 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
 
   useEffect(() => {
     if (!restoring || !pendingRestore?.awaitingRead || !workspaceReadReady || resource.id !== objectId) return;
-    const current = queryClient.getQueryState<ObjectWorkspaceResource>(['object-workspace', objectId, langPrefs]);
+    // The current observer's key also carries the vocabulary generation. An
+    // inactive older-generation cache must never acknowledge the observed prop.
+    const current = queryClient.getQueryCache().findAll({
+      queryKey: ['object-workspace', objectId, langPrefs], type: 'active',
+    }).find((query) => query.state.data === resource)?.state;
     // invalidateQueries can resolve before the observer delivers its fresh prop,
     // and can also resolve after a failed/paused refetch. Adopt only the exact
     // successful cache value that the page now observes, including after Retry.
@@ -318,6 +324,27 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
   // §E Import / export — frontend-only tool (no backend, no object creation).
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const exportScope = { objectId, userId, sessionScope: sessionQueryScopeKey(useSessionStore.getState()),
+    resourceId: resource.id, editorObjectId: editor.objectId, type: resource.type ?? '', draft: editor.draft };
+  const latestExportScope = useRef(exportScope);
+  latestExportScope.current = exportScope;
+
+  function handleExportLocalDraft() {
+    const current = latestExportScope.current;
+    const liveSession = useSessionStore.getState();
+    if (!userId || liveSession.userId !== userId || current.sessionScope !== sessionQueryScopeKey(liveSession)
+      || current.userId !== userId || current.objectId !== objectId
+      || current.resourceId !== objectId || current.editorObjectId !== objectId) {
+      setStatusMessage('Export impossible.');
+      return;
+    }
+    try {
+      const ioMeta: ObjectIoMeta = { objectId, type: current.type, name: current.draft.generalInfo.name };
+      downloadTextFile(`${objectId}-brouillon.json`, 'application/json', serializeObjectJson(stripCatalogOptions(current.draft), ioMeta));
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? `Export impossible : ${error.message}` : 'Export impossible.');
+    }
+  }
 
   async function handleExportJson() {
     try {
@@ -658,6 +685,7 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
 
   return (
     <div className={`edit-flat object-editor ${meta.accent}`}>
+      <div style={{ display: 'contents' }} inert={workspaceReadFailed || undefined}>
       <EditorTopbar
         objectName={resource.name}
         archetypeCodeName={typeLabel}
@@ -692,6 +720,17 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
           elles sont soumises à la modération de l’organisation avant publication.
         </div>
       )}
+      </div>
+      {editor.localDraftUnavailable && (
+        <div className="contributor-banner" role="alert">
+          <strong>Brouillon local indisponible</strong> — Vos modifications restent dans cet onglet. Enregistrez ou exportez-les avant de fermer.
+          <button type="button" className="btn" onClick={handleExportLocalDraft}
+            disabled={!userId || resource.id !== objectId || editor.objectId !== objectId}>
+            Exporter le brouillon JSON
+          </button>
+        </div>
+      )}
+      <div style={{ display: 'contents' }} inert={workspaceReadFailed || undefined}>
       {editor.recoveryConflicts.length > 0 && (
         <div className="contributor-banner" role="alert">
           <strong>Brouillon à vérifier</strong> — vos modifications locales sont conservées, mais certaines données ont aussi changé sur le serveur. La sauvegarde est bloquée jusqu’à votre choix.
@@ -806,6 +845,7 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
         onImportFile={(file) => void handleImportFile(file)}
         importError={importError}
       />
+      </div>
     </div>
   );
 }

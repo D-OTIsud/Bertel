@@ -4,10 +4,12 @@ import { POST } from './route';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
 import { acquireLease } from '@/lib/request-body.server';
+import { admitAiRequest } from '@/lib/ai-admission.server';
 import { translateFields, TranslationError, MAX_TRANSLATION_BODY_BYTES } from './translation';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
+jest.mock('@/lib/ai-admission.server', () => ({ admitAiRequest: jest.fn() }));
 jest.mock('./translation', () => ({ ...jest.requireActual('./translation'), translateFields: jest.fn() }));
 
 const body = { objectId: 'HOTRUN0000000001', sourceLanguage: 'fr', targetLanguage: 'en', fields: { description: 'Bienvenue' } };
@@ -29,6 +31,7 @@ function req(value: unknown = body, headers: Record<string, string> = { Authoriz
 describe('POST /api/ai/translate', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(admitAiRequest).mockReset().mockResolvedValue({ allowed: true, remaining: 11, retryAfter: 0 });
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon';
     user = jest.fn().mockResolvedValue({ data: { user: { id: `translation-user-${++userIndex}` } }, error: null });
@@ -151,12 +154,13 @@ describe('POST /api/ai/translate', () => {
     } finally { lease?.release(); }
   });
 
-  it('bounds repeated translation requests per user', async () => {
-    for (let i = 0; i < 12; i++) expect((await POST(req())).status).toBe(200);
+  it('preserves the shared admission refusal and Retry-After before accessing the provider', async () => {
+    jest.mocked(admitAiRequest).mockResolvedValueOnce({ allowed: false, remaining: 0, retryAfter: 17 });
     const result = await POST(req());
     expect(result.status).toBe(429);
-    expect(result.headers.get('Retry-After')).toBe('60');
-    expect(mockedTranslate).toHaveBeenCalledTimes(12);
+    expect(result.headers.get('Retry-After')).toBe('17');
+    expect(mockedTranslate).not.toHaveBeenCalled();
+    expect(providerRpc).not.toHaveBeenCalled();
   });
 
   it('aborts a slow provider and releases the lease', async () => {

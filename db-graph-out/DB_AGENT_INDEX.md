@@ -12,6 +12,10 @@ Extraction complète du catalogue de production PostgreSQL 17.6 par le connecteu
 Voir [THESAURUS.md](THESAURUS.md) pour les garanties et gardes. Le catalogue décrit le schéma installé ; la recette HTTP et la validation du contenu sont des preuves distinctes. Les valeurs `ref_document` sont limitées au scope explicite `public` : 246 lignes exportées sur 1 975 références documentaires au total. Les schémas, relations et comptes complets restent documentés.
 
 ## Artifacts
+
+Targeted source/local-catalog supplement: [AI_REQUEST_ADMISSION.md](AI_REQUEST_ADMISSION.md)
+describes the service-only distributed AI admission migration of 6 November 2026.
+It is not a full production-catalog refresh.
 - `dbdoc/` — per-table docs + ER (tbls)
 - `db-graph-out/FUNCTIONS.md` · `POLICIES.md` · `TYPES.md` — the glue (functions/policies/enums)
 - `db-graph-out/OBJECT_TYPES.md` — per object-type map (label · archetype · facet tables · common tables)

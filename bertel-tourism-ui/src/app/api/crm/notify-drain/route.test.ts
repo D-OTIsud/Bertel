@@ -1,4 +1,5 @@
 /** @jest-environment node */
+jest.mock('server-only', () => ({}));
 import { POST } from './route';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
@@ -35,10 +36,13 @@ function req(headers: Record<string, string>): never {
   } as never;
 }
 
+const mockedEmailPolicy = jest.fn();
+
 function serverWith(rpc: jest.Mock) {
   return {
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u-1' } }, error: null }) },
-    schema: () => ({ rpc }),
+    schema: () => ({ rpc: (name: string, args: unknown) => name === 'suppress_sandbox_notification_emails'
+      ? mockedEmailPolicy(args) : rpc(name, args) }),
   } as never;
 }
 
@@ -61,7 +65,83 @@ const proposalRow = (id: string) => ({
 });
 
 describe('POST /api/crm/notify-drain', () => {
-  beforeEach(() => { jest.clearAllMocks(); mockedSmtp.mockResolvedValue(smtpOk); });
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://app.test';
+    jest.clearAllMocks();
+    mockedSmtp.mockResolvedValue(smtpOk);
+    mockedEmailPolicy.mockReset().mockResolvedValue({ data: [], error: null });
+  });
+
+  it('sans origine canonique ne consomme pas de claim et ne dérive aucun lien des headers', async () => {
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    const rpc = jest.fn();
+    mockedServer.mockReturnValue(serverWith(rpc));
+    const response = await POST(req({ authorization: 'Bearer jwt', host: 'outside.example', origin: 'https://outside.example', forwarded: 'host=outside.example;proto=https' }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: 'app_origin_unavailable' });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(mockedSmtp).not.toHaveBeenCalled();
+    expect(mockedSend).not.toHaveBeenCalled();
+  });
+
+  it('les liens mail utilisent exclusivement l’origine configurée malgré des headers étrangers', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://bertel.example/';
+    const rpc = jest.fn().mockResolvedValueOnce({ data: [row('n-real')], error: null }).mockResolvedValueOnce({ data: 1, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    await POST(req({ authorization: 'Bearer jwt', host: 'outside.example', origin: 'https://outside.example', 'x-forwarded-host': 'outside.example' }));
+    expect(mockedSend.mock.calls[0][0].html).toContain('https://bertel.example/crm');
+    expect(mockedSend.mock.calls[0][0].html).not.toContain('outside.example');
+  });
+
+  it('supprime les enveloppes démo avant composition et SMTP, même drainées par un utilisateur réel', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [row('n-demo'), row('n-real')], error: null })
+      .mockResolvedValueOnce({ data: 1, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedEmailPolicy.mockResolvedValue({ data: ['n-demo'], error: null });
+    const response = await POST(req({ authorization: 'Bearer jwt' }));
+    await expect(response.json()).resolves.toEqual({ sent: 1, failed: 0 });
+    expect(mockedEmailPolicy).toHaveBeenCalledWith({ p_notification_ids: ['n-demo', 'n-real'] });
+    expect(mockedSend).toHaveBeenCalledTimes(1);
+    expect(mockedRenderTask).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', { p_sent: ['n-real'], p_failed: [] });
+  });
+
+  it.each([
+    { data: [], error: { message: 'private SQL details' } },
+    { data: null, error: null },
+    { data: [42], error: null },
+  ])('n’envoie rien si la politique ne peut pas être vérifiée : %j', async (result) => {
+    const rpc = jest.fn().mockResolvedValueOnce({ data: [row('n-real')], error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedEmailPolicy.mockResolvedValue(result);
+    const response = await POST(req({ authorization: 'Bearer jwt' }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: 'email_policy_unavailable' });
+    expect(mockedSend).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('n’envoie pas une enveloppe bufferisée dont la notification a été supprimée avant le contrôle final', async () => {
+    const rpc = jest.fn().mockResolvedValueOnce({ data: [row('n-removed')], error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedEmailPolicy.mockResolvedValue({ data: ['n-removed'], error: null });
+    const response = await POST(req({ authorization: 'Bearer jwt' }));
+    await expect(response.json()).resolves.toEqual({ sent: 0, failed: 0 });
+    expect(mockedSend).not.toHaveBeenCalled();
+    expect(mockedRenderTask).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('reste fermé si le contrôle de politique lève une exception', async () => {
+    const rpc = jest.fn().mockResolvedValueOnce({ data: [row('n-real')], error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedEmailPolicy.mockRejectedValue(new Error('private network details'));
+    const response = await POST(req({ authorization: 'Bearer jwt' }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: 'email_policy_unavailable' });
+    expect(mockedSend).not.toHaveBeenCalled();
+  });
 
   it('401 sans Bearer', async () => {
     mockedServer.mockReturnValue(serverWith(jest.fn()));

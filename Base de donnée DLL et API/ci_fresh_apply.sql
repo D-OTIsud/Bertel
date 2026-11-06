@@ -364,7 +364,7 @@ ROLLBACK;
 \ir migration_accommodation_unit_type.sql
 
 \echo '== taxo6-test garde permanente §201 lot 5 (multi-valeur, doublon refuse, personas anon/proprietaire/etranger sur les 4 commandes, GRANT anon borne a SELECT, cascade, filtre Explorer non vacant, reprise des 7 unites) =='
-\ir tests/test_accommodation_unit_type.sql
+-- Final current-authority regression runs after overlay 20b: test_accommodation_unit_type.sql
 
 \echo '== taxo6b migration_accommodation_unit_type_catalog_v2.sql (§201 lot 5B : 22 types de logement, Insolite court + Autre distinct, extraction maison/appartement/studio/bungalow/chalet/roulotte hors taxonomy_hlo) =='
 \ir migration_accommodation_unit_type_catalog_v2.sql
@@ -463,7 +463,7 @@ ROLLBACK;
 \ir migration_org_link_reconcile.sql
 
 \echo '== 16x-test garde permanente 214 (personas reels par request.jwt.claims + SET LOCAL ROLE. Temoin editeur ne portant QUE edit_canonical_when_publisher : B il enregistre le module relationships et le lien publisher SURVIT / B2 deux enregistrements de suite / C le superuser ecrit toujours / D un authentifie sans membership reste refuse 42501 / E un lien omis du payload est bien supprime / F la bascule du principal ne heurte pas uq_object_primary_org / G un doublon payload leve toujours 23505. Temoin proprietaire PAR LIEN ACTEUR (claim email -> user_actor_ids) : H il enregistre et le lien qui porte son droit survit. I le report de note 208/T13b survit au reconcile. Verifie ROUGE contre le corps delete-all, sur les DEUX tables : 42501 object_org_link (bloc B) et 42501 actor_object_role (bloc H)) =='
-\ir tests/test_org_link_reconcile_editor.sql
+-- Final current-authority regression runs after overlay 20b: test_org_link_reconcile_editor.sql
 
 \echo '== 16b    migration_ref_code_admin_rpcs.sql  (Phase 7.5 editeur de referentiels ref_code : api.ref_code_domain_is_editable + rpc_upsert/set_active/reorder/delete_ref_code + list_ref_code_domains + ref_code_usage_count(s). DOCUMENTEE au runbook depuis sa creation mais JAMAIS declaree ici : trou d integrite de deploiement preexistant, revele par la tache 5 de 211 dont l etape 16y delegue a ces fonctions et echouerait donc sur base fraiche. Depend de rls_policies.sql (is_platform_superuser) et de schema_unified.sql (ref_code, ref_code_domain_registry)) =='
 \ir migration_ref_code_admin_rpcs.sql
@@ -554,7 +554,7 @@ ROLLBACK;
 \ir migration_actor_portal.sql
 
 \echo '== 18a-test garde permanente du portail acteur, prouvee ROUGE avant application (blocs A a I : persona et portee dediee, D7 ecriture canonique fermee aux acteurs, visibilite des rubriques par ORG, submit_actor_fiche transactionnel, lectures acteur, D9 approbation totale/partielle et manual_apply, resolution + notification + outbox, RGPD branche acteur dans les DEUX modes). AVERTISSEMENT DE PROVENANCE : le bloc F de ce fichier (lignes 1891-2399) n a ete execute par AUCUNE passe de validation avant deploiement — la contrainte MCP (un appel = une transaction, plafond ~120 Ko) a force un decoupage en deux passes et le bloc F est tombe entre les deux. La migration, elle, est prouvee (harnais de mutation + rejeu). Le rattrapage est une etape OBLIGATOIRE du runbook 18a, a jouer seule apres deploiement =='
-\ir tests/test_actor_portal.sql
+-- Final current-authority regression runs after overlay 20b: test_actor_portal.sql
 
 \echo '== 18b    migration_ref_amenity_visit_modes.sql  (seed ref_amenity : visite_libre / visite_guidee / audioguide, famille NEUVE visit_mediation. Arbitrage PO 2026-09-03 : ces trois codes n existaient dans AUCUN catalogue alors que VISIT_MODE_CODES (editor-completion.ts) et BlockVIS.tsx (§06) les ecrivent depuis leur mise en service — pas un orphelinat silencieux mais un blocage de sauvegarde : object_amenity.amenity_id est une FK NOT NULL vers ref_amenity(id), et le bras amenities de object_workspace_safe_write_rpcs.sql leve ERRCODE 23503 des qu un code ne resout a aucun ref_amenity.code, ce qui faisait echouer la sauvegarde ENTIERE du module characteristics (regle §48 single-owner : amenities + moyens de paiement + tags environnement dans le meme payload), pas seulement la rubrique Visite. Famille NEUVE (visit_mediation) et non accessibility : ce sont des modes de visite, pas des aides d accessibilite — le catalogue porte deja ce role sous des codes acc_* distincts (acc_flexible_visit, acc_visit_device), et le filtre public d accessibilite ne lit QUE la famille accessibility. Idempotente (ON CONFLICT DO NOTHING / DO UPDATE, aucun DROP) =='
 \ir migration_ref_amenity_visit_modes.sql
@@ -645,7 +645,7 @@ ROLLBACK;
 
 \echo '== 19j partner API identity InitPlan and empty-identity extended read fast path (after portal and actor realm) =='
 \ir ../supabase/migrations/20261019142132_partner_api_identity_initplan.sql
-\ir tests/test_partner_identity_gate.sql
+-- Final current-authority regression runs after overlay 20b: test_partner_identity_gate.sql
 
 \echo '== 19k render reuse: predecessor baseline versus optimized JSON, FRESH DATABASE ONLY =='
 -- Preserve every unrelated master change. These inverse/capture/forward steps are
@@ -681,6 +681,33 @@ ROLLBACK;
 
 \echo '== DB08 initial publication and institutional creation authorization =='
 \ir ../supabase/migrations/20261106092254_object_initial_publication_guard.sql
+
+\echo '== public discovery: suppress external notification email, preserve in-app events =='
+\ir ../supabase/migrations/20261106101044_sandbox_external_effects_policy.sql
+
+\echo '== 20b current ORG/portal authority: capture unchanged public contract before final overlay =='
+-- Reuse the populated anonymous public-reader oracle. It cleans its synthetic
+-- fixtures and temporary state; no historical rollback is involved.
+\ir tests/fixtures/capture_partner_photo_album_public.sql
+\ir object_current_rights.sql
+\ir ../supabase/migrations/20261106100603_object_current_authorization.sql
+-- Separate privileged authority-source hardening; preserve the malformed DB03 shadow witness.
+\ir object_canonical_write_sources.sql
+\ir ../supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql
+\ir tests/test_partner_photo_album_public.sql
+\ir tests/test_object_current_rights.sql
+\ir tests/test_object_canonical_write_sources.sql
+\ir tests/test_object_current_rights_surfaces.sql
+
+\echo '== 20b-test existing regressions against final current-authority policy =='
+\ir tests/test_accommodation_unit_type.sql
+\ir tests/test_rls_initplan_sweep.sql
+\ir tests/test_object_fma_rls.sql
+\ir tests/test_write_policy_percommand.sql
+\ir tests/test_room_type_read_gate.sql
+\ir tests/test_partner_identity_gate.sql
+\ir tests/test_actor_portal.sql
+\ir tests/test_org_link_reconcile_editor.sql
 
 
 \echo '== MV refresh (non-concurrent) =='

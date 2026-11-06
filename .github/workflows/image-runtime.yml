@@ -11,6 +11,9 @@ on:
       - 'bertel-tourism-ui/src/lib/pdf-rasterize.ts'
       - 'bertel-tourism-ui/public/pdf.worker.min.mjs'
       - 'bertel-tourism-ui/tests/e2e/pdf-runtime.spec.ts'
+      - 'bertel-tourism-ui/tests/e2e/map-runtime.spec.ts'
+      - 'bertel-tourism-ui/vendor/**'
+      - 'bertel-tourism-ui/scripts/*maplibre*'
       - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
       - '.github/workflows/image-runtime.yml'
   pull_request:
@@ -23,6 +26,9 @@ on:
       - 'bertel-tourism-ui/src/lib/pdf-rasterize.ts'
       - 'bertel-tourism-ui/public/pdf.worker.min.mjs'
       - 'bertel-tourism-ui/tests/e2e/pdf-runtime.spec.ts'
+      - 'bertel-tourism-ui/tests/e2e/map-runtime.spec.ts'
+      - 'bertel-tourism-ui/vendor/**'
+      - 'bertel-tourism-ui/scripts/*maplibre*'
       - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
       - '.github/workflows/image-runtime.yml'
 
@@ -44,6 +50,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build the actual Alpine builder
         run: docker build --target builder --build-arg NEXT_PUBLIC_ENABLE_DEMO_MODE=true -t bertel-image-builder .
+      - name: Reproduce and exercise the installed backport on Node 22 Alpine
+        run: docker run --rm --entrypoint npm bertel-image-builder run test:maplibre-backport
       - name: Exercise the real upload decoder on Alpine
         run: >-
           docker run --rm --entrypoint npm bertel-image-builder
@@ -65,9 +73,9 @@ jobs:
           cache-dependency-path: bertel-tourism-ui/package-lock.json
       - name: Install the locked browser proof dependencies
         run: npm ci --legacy-peer-deps
-      - name: Install Chromium for the real PDF worker proof
+      - name: Install Chromium for the real PDF and map worker proofs
         run: node scripts/run-playwright.mjs install --with-deps chromium
-      - name: Check HTTP health and the browser PDF worker against the final image
+      - name: Check health, PDF pixels and WebGL1/WebGL2 maps against the final image
         shell: bash
         run: |
           set -euo pipefail
@@ -84,12 +92,12 @@ jobs:
           done
           test "$healthy" = 1
           PLAYWRIGHT_SKIP_WEBSERVER=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 \
-            npm run playwright -- test tests/e2e/pdf-runtime.spec.ts --project=chromium --workers=1 --retries=0
+            npm run playwright -- test tests/e2e/pdf-runtime.spec.ts tests/e2e/map-runtime.spec.ts --project=chromium --workers=1 --retries=0
       - name: Upload browser proof diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: image-pdf-browser-proof
+          name: image-browser-proof
           path: |
             bertel-tourism-ui/test-results
             bertel-tourism-ui/playwright-report

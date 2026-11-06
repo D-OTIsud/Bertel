@@ -44,6 +44,16 @@ describe('parseExtraction', () => {
     expect(parseExtraction('désolé, je ne peux pas').ok).toBe(false);
   });
 
+  it('rejects a JSON numeric overflow through the existing extraction failure contract', () => {
+    const overflow = '{"dishes":[{"name":"Synthetic dish","price":1e309}]}';
+    expect(JSON.parse(overflow).dishes[0].price).toBe(Infinity);
+    expect(parseExtraction(overflow)).toEqual({ ok: false, error: 'Invalid input' });
+    expect(parseExtraction('{"dishes":[{"name":"Synthetic dish","price":false}]}'))
+      .toEqual({ ok: false, error: 'Invalid input' });
+    expect(parseExtraction('{"dishes":[{"name":"Synthetic dish","price":12.5}]}'))
+      .toEqual({ ok: true, data: { dishes: [{ name: 'Synthetic dish', price: 12.5 }] } });
+  });
+
   it('returns ok:false when a dish has no name (schema)', () => {
     expect(parseExtraction('{"dishes":[{"description":"sans nom"}]}').ok).toBe(false);
   });

@@ -9,7 +9,11 @@ const objectPath = (bucket, key) => `${component(bucket)}/${key.split('/').map(c
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const etag = (value) => typeof value === 'string' ? value.replace(/^"|"$/g, '') : null;
 const uuid = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-const errorCode = (error) => typeof error?.code === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(error.code) ? error.code : 'unknown';
+const protocolErrors = new Set(['InvalidKey', 'InvalidRequest', 'InvalidMimeType', 'invalid_mime_type', 'NoSuchKey', 'NoSuchObject',
+  'not_found', 'AccessDenied', 'KeyAlreadyExists', 'ResourceAlreadyExists', 'Duplicate', 'InternalError']);
+// v1.41.8's response schema strips `code` on some routes; its legacy `error`
+// field still carries an explicit identity. Never print a free-form message.
+const errorCode = (error) => [error?.code, error?.error].find((value) => protocolErrors.has(value)) ?? 'unknown';
 async function result(response, label) {
   if (!response.ok) {
     // Expose only the protocol's enum code; messages can contain locators.
@@ -49,13 +53,13 @@ test('real local Storage preserves private cross-bucket copy bytes and stored me
     const accented = await local.request(`/storage/v1/object/${objectPath(source, 'synthetic/résumé.pdf')}`, local.service, pdf, 'POST',
       { 'content-type': 'application/pdf', 'cache-control': storedCache, 'x-upsert': 'false' });
     const accentedError = await accented.json();
-    assert.ok(accented.status === 400 && accentedError.code === 'InvalidKey',
+    assert.ok(accented.status === 400 && errorCode(accentedError) === 'InvalidKey',
       `accented key validation differs from this version's contract (${accented.status}, ${errorCode(accentedError)})`);
     const missing = await info(source, 'synthetic/absent.pdf');
     assert.ok(!missing.ok, 'missing info must not be mistaken for an existing object');
     const absent = await missing.json();
     assert.ok((missing.status === 404 || (missing.status === 400 && Number(absent.statusCode) === 404))
-      && ['NoSuchKey', 'NoSuchObject', 'not_found'].includes(absent.code), 'missing info must carry an explicit not-found identity');
+      && ['NoSuchKey', 'NoSuchObject', 'not_found'].includes(errorCode(absent)), 'missing info must carry an explicit not-found identity');
 
     const transportCache = [];
     for (const [index, bytes, mime] of [[0, pdf, 'application/pdf'], [1, png, 'image/png']]) {
@@ -63,6 +67,7 @@ test('real local Storage preserves private cross-bucket copy bytes and stored me
       assert.ok(uuid(original.id) && original.name === uploaded[index] && original.bucket_id === source
         && original.size === bytes.length && original.content_type === mime && typeof original.cache_control === 'string'
         && typeof original.etag === 'string', 'info must expose the actual flat operator contract');
+      assert.ok(original.cache_control === storedCache, 'positive upload must store the exact requested cache metadata');
       const originalHead = await head(source, uploaded[index]);
       assert.ok(originalHead.ok && /^"[^"\r\n]+"$/.test(originalHead.headers.get('etag') ?? '')
         && !originalHead.headers.get('etag').startsWith('W/'), 'authenticated HEAD must carry a strong ETag');

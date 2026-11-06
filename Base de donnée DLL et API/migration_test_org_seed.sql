@@ -114,8 +114,10 @@ $fn$;
 
 -- Chaque fiche est rattachee a l'ORG de test comme ORG PRIMAIRE : c'est CE lien
 -- qui, via le trigger de migration_test_org_isolation.sql, la marque is_test. On
--- ne pose JAMAIS is_test a la main — l'organisation est la source de verite, et un
--- seed qui l'ecrirait directement pourrait diverger d'elle sans qu'on le voie.
+-- ne choisit JAMAIS is_test independamment de cette source. Pour rejouer l UPSERT
+-- d une fiche deja rattachee, l INSERT transmet la derivation canonique courante :
+-- BEFORE INSERT s execute avant ON CONFLICT, meme si le flag ne sera pas modifie.
+-- Une fiche neuve reste false puis le lien primaire la classe atomiquement.
 CREATE OR REPLACE FUNCTION internal.seed_test_corpus(p_per_type integer DEFAULT 15)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -172,9 +174,10 @@ BEGIN
       v_id   := internal.test_corpus_id(v_type, v_i);
       v_name := internal.test_corpus_name(v_type, v_i);
 
-      INSERT INTO object (id, object_type, name, status, region_code, extra)
+      INSERT INTO object (id, object_type, name, status, region_code, extra, is_test)
       VALUES (v_id, v_type::object_type, v_name, 'published', 'RUN',
-              jsonb_build_object('test_corpus', true, 'seeded_at', now()))
+              jsonb_build_object('test_corpus', true, 'seeded_at', now()),
+              api.object_expected_is_test(v_id))
       ON CONFLICT (id) DO UPDATE
         SET name = EXCLUDED.name, status = EXCLUDED.status, extra = EXCLUDED.extra;
 
@@ -353,9 +356,10 @@ COMMIT;
 
 BEGIN;
 
-INSERT INTO object (id, object_type, name, status, region_code, extra)
+INSERT INTO object (id, object_type, name, status, region_code, extra, is_test)
 VALUES (internal.test_org_id(), 'ORG', 'Bac a sable (organisation de test)',
-        'published', 'RUN', jsonb_build_object('test_corpus', true))
+        'published', 'RUN', jsonb_build_object('test_corpus', true),
+        api.object_expected_is_test(internal.test_org_id()))
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, extra = EXCLUDED.extra;
 
 -- is_test_org = TRUE : le trigger de migration_test_org_isolation.sql marque

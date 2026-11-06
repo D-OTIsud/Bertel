@@ -10,7 +10,12 @@ const digest = (value) => createHash('sha256').update(value).digest('hex');
 const etag = (value) => typeof value === 'string' ? value.replace(/^"|"$/g, '') : null;
 const uuid = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 async function result(response, label) {
-  assert.ok(response.ok, `${label} failed (${response.status})`);
+  if (!response.ok) {
+    // Expose only the protocol's enum code; messages can contain locators.
+    const error = await response.json().catch(() => null);
+    const code = typeof error?.code === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(error.code) ? error.code : 'unknown';
+    assert.fail(`${label} failed (${response.status}, ${code})`);
+  }
   return response.json();
 }
 const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n');
@@ -19,8 +24,8 @@ const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 test('real local Storage preserves private cross-bucket copy bytes and stored metadata; transport cache is observed separately', { timeout: 45000 }, async (t) => {
   const source = `rights-src-${randomUUID()}`, destination = `rights-dst-${randomUUID()}`;
   const buckets = [];
-  const uploaded = ['synthetic/résumé l\'apostrophe.pdf', 'synthetic/point.png'];
-  const copied = ['copied/résumé l\'apostrophe.pdf', 'copied/point.png', 'copied/race.pdf', 'rejected/direct.png'];
+  const uploaded = ['synthetic/resume l\'apostrophe.pdf', 'synthetic/point.png'];
+  const copied = ['copied/resume l\'apostrophe.pdf', 'copied/point.png', 'copied/race.pdf', 'rejected/direct.png'];
   const storedCache = 'max-age=60';
   const info = (bucket, key) => local.request(`/storage/v1/object/info/${objectPath(bucket, key)}`, local.service, undefined, 'GET');
   const head = (bucket, key, who = local.service, route = 'authenticated') => local.request(
@@ -35,6 +40,12 @@ test('real local Storage preserves private cross-bucket copy bytes and stored me
       const bucket = await result(await local.request(`/storage/v1/bucket/${id}`, local.service, undefined, 'GET'), 'private bucket confirmation');
       assert.ok(bucket.id === id && bucket.public === false);
     }
+    // Storage v1.41.8's isValidKey rejects Unicode. Preserve that real boundary
+    // rather than renaming an invalid fixture and claiming accented-key support.
+    const accented = await local.request(`/storage/v1/object/${objectPath(source, 'synthetic/résumé.pdf')}`, local.service, pdf, 'POST',
+      { 'content-type': 'application/pdf', 'cache-control': storedCache, 'x-upsert': 'false' });
+    const accentedError = await accented.json();
+    assert.ok(accented.status === 400 && accentedError.code === 'InvalidKey', 'this local Storage version must explicitly reject the accented key');
     for (const [index, bytes, mime] of [[0, pdf, 'application/pdf'], [1, png, 'image/png']]) {
       await result(await local.request(`/storage/v1/object/${objectPath(source, uploaded[index])}`, local.service, bytes, 'POST',
         { 'content-type': mime, 'cache-control': storedCache, 'x-upsert': 'false' }), 'synthetic byte upload');
@@ -91,7 +102,7 @@ test('real local Storage preserves private cross-bucket copy bytes and stored me
     const raceInfo = await result(await info(destination, copied[2]), 'race destination');
     const raceAck = await race.find((response) => response.ok).json();
     assert.ok(raceAck.Id === raceInfo.id && raceAck.Key === `${destination}/${copied[2]}`);
-    t.diagnostic(`Synthetic Storage PDF/PNG contract passed; stored-cache/transport-cache differ=${transportCache.some((cache) => cache.stored !== cache.authenticated)}. Local image/version is not a production attestation.`);
+    t.diagnostic(`Synthetic Storage PDF/PNG contract passed; apostrophe/space keys exact, accented upload rejected InvalidKey; stored-cache/transport-cache differ=${transportCache.some((cache) => cache.stored !== cache.authenticated)}. Local image/version is not a production attestation.`);
   } finally {
     let cleanupOk = true;
     for (const bucket of buckets.reverse()) {

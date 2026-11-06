@@ -15,11 +15,12 @@ async function fixture() {
     const admin = open(), first = open(), second = open(), holder = open();
     const user = randomUUID(), foreign = randomUUID(), list = randomUUID();
     const org = `ORGM${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
-    await admin.query(`INSERT INTO public.object(id,object_type,name,status) VALUES('${org}','ORG','Synthetic mail ORG','draft');
-      INSERT INTO auth.users(id,email) VALUES('${user}','mail-concurrent@example.invalid'),('${foreign}','mail-foreign@example.invalid');
+    await admin.query(`BEGIN; SET LOCAL "request.jwt.claims"='{"role":"service_role"}';
+      INSERT INTO public.object(id,object_type,name,status) VALUES('${org}','ORG','Synthetic mail ORG','draft');
+      INSERT INTO auth.users(id,email) VALUES('${user}','mail-${user}@example.invalid'),('${foreign}','mail-${foreign}@example.invalid');
       INSERT INTO public.app_user_profile(id,role) VALUES('${user}','tourism_agent') ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role;
       INSERT INTO public.user_org_membership(user_id,org_object_id,is_active) VALUES('${user}','${org}',true);
-      INSERT INTO public.object_list(id,org_object_id,created_by,kind,name) VALUES('${list}','${org}','${user}','static','Synthetic mail list')`);
+      INSERT INTO public.object_list(id,org_object_id,created_by,kind,name) VALUES('${list}','${org}','${user}','static','Synthetic mail list'); COMMIT;`);
     for (const worker of [first, second, holder]) await worker.query('SET ROLE service_role');
     const context = (worker) => worker.query(`SELECT api.get_list_email_context('${user}','${list}')`).then(JSON.parse);
     const prepare = (worker, operation, generation = 0, confirm = false, parents = [], recipient = 'b') => worker.query(
@@ -34,7 +35,24 @@ async function fixture() {
         let cleanupError;
         try {
           await holder.query('ROLLBACK').catch(() => {});
-          await admin.query(`DELETE FROM public.object_list WHERE id='${list}'; DELETE FROM public.object WHERE id='${org}'; DELETE FROM auth.users WHERE id IN ('${user}','${foreign}'); DELETE FROM internal.list_email_metric WHERE user_id='${user}'`);
+          // The real membership FK is NO ACTION: remove its owned children
+          // before the ORG, and never swallow a cleanup failure again.
+          await admin.query(`BEGIN; SET LOCAL "request.jwt.claims"='{"role":"service_role"}';
+            DELETE FROM public.object_list WHERE id='${list}';
+            DELETE FROM public.user_org_membership WHERE user_id IN ('${user}','${foreign}');
+            DELETE FROM auth.users WHERE id IN ('${user}','${foreign}');
+            DELETE FROM public.object WHERE id='${org}';
+            DELETE FROM internal.list_email_metric WHERE user_id='${user}'; COMMIT;`);
+          assert.equal(await admin.query(`SELECT
+            (SELECT count(*) FROM auth.users WHERE id IN ('${user}','${foreign}'))+
+            (SELECT count(*) FROM public.app_user_profile WHERE id IN ('${user}','${foreign}'))+
+            (SELECT count(*) FROM public.user_org_membership WHERE user_id IN ('${user}','${foreign}'))+
+            (SELECT count(*) FROM public.object_list WHERE id='${list}')+
+            (SELECT count(*) FROM public.object WHERE id='${org}')+
+            (SELECT count(*) FROM internal.list_email_intent WHERE list_id='${list}')+
+            (SELECT count(*) FROM internal.list_email_scope WHERE list_id='${list}')+
+            (SELECT count(*) FROM internal.list_email_metric WHERE user_id='${user}')`), '0',
+          'owned synthetic mail fixtures must be cleaned; append-only traces die with the disposable stack');
         } catch (error) { cleanupError = error; }
         const closed = await Promise.allSettled([admin, first, second, holder].map((client) => client.close()));
         if (cleanupError) throw cleanupError;

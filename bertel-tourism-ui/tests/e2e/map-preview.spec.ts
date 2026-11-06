@@ -1,12 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 
 test.use({ launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } });
 test.describe.configure({ retries: 0 });
 
-for (const width of [320, 390, 768, 1180]) {
-  test(`map preview opens the same object with mouse and keyboard at ${width}px`, async ({ page }, testInfo) => {
-    test.setTimeout(90_000);
-    await page.setViewportSize({ width, height: 900 });
+async function offlineExplorer(page: Page, testInfo: TestInfo, pathname = '/explorer') {
     const origin = new URL(testInfo.project.use.baseURL as string).origin;
     const unexpected: string[] = [];
     const errors: string[] = [];
@@ -28,11 +25,19 @@ for (const width of [320, 390, 768, 1180]) {
     });
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto('/explorer');
+    await page.goto(pathname);
+    await page.locator('time[datetime]').first().waitFor({ state: 'attached' });
+    return { errors, unexpected };
+}
+
+for (const width of [320, 390, 768, 1180]) {
+  test(`map preview opens the same object with mouse and keyboard at ${width}px`, async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width, height: 900 });
+    const { errors, unexpected } = await offlineExplorer(page, testInfo);
     // The datetime attribute appears after the real layout hydrates. Filter via
     // the real search control to a demo object with a complete drawer fixture,
     // rather than a marker-only draft whose existing demo detail is unknown.
-    await page.locator('time[datetime]').first().waitFor({ state: 'attached' });
     await page.getByRole('combobox', { name: 'Rechercher une fiche' }).fill('Hotel Basalte');
     await expect(page.locator('.explorer-result-card')).toHaveCount(1);
     await page.getByRole('button', { name: 'Carte', exact: true }).click();
@@ -109,3 +114,78 @@ for (const width of [320, 390, 768, 1180]) {
     expect(errors).toEqual([]);
   });
 }
+
+test('an unfinished hover of B preserves the displayed A preview focus owner', async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1180, height: 900 });
+  // The real URL accessibility filter selects exactly two existing demo cards.
+  const { errors, unexpected } = await offlineExplorer(page, testInfo, '/explorer?pmr=true');
+  await expect(page.locator('.explorer-result-card')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  const pins = page.locator('.map-marker-pin');
+  await expect(pins).toHaveCount(2, { timeout: 20_000 });
+  const a = pins.first();
+  const nameA = (await a.getAttribute('aria-label'))!.replace(/^Ouvrir /, '');
+  await page.mouse.move(1, 1);
+  // Enter the pin through real Tab/Shift+Tab, then wait for keyboard focus on A's
+  // actual primary action before introducing the unrelated pointer excursion.
+  await a.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  const previewA = page.getByRole('article', { name: nameA, exact: true });
+  const actionA = previewA.getByRole('button', { name: `Ouvrir la fiche ${nameA}`, exact: true });
+  await expect(actionA).toBeFocused();
+  await expect(actionA).toHaveCSS('outline-width', '2px');
+  await expect(actionA).toHaveCSS('outline-offset', '2px');
+  const bounds = (await previewA.boundingBox())!;
+  let b = pins.nth(1);
+  let found = false;
+  for (let index = 1; index < await pins.count(); index += 1) {
+    const candidate = pins.nth(index);
+    const box = await candidate.boundingBox();
+    if (!box) continue;
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    if (box.x > 16 && box.x + box.width < 1164 && y > 0 && y < 900
+      && !(x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height)) {
+      b = candidate; found = true; break;
+    }
+  }
+  expect(found).toBe(true);
+  const nameB = (await b.getAttribute('aria-label'))!.replace(/^Ouvrir /, '');
+  expect(nameB).not.toBe(nameA);
+  const boxB = (await b.boundingBox())!;
+  const yB = boxB.y + boxB.height / 2;
+  await page.mouse.move(boxB.x - 8, yB);
+  await b.evaluate(element => {
+    element.addEventListener('pointerenter', event => {
+      element.setAttribute('data-ui06-enter', String(event.timeStamp));
+      element.setAttribute('data-ui06-enter-trusted', String(event.isTrusted));
+    }, { once: true });
+    element.addEventListener('pointerleave', event => {
+      element.setAttribute('data-ui06-leave', String(event.timeStamp));
+      element.setAttribute('data-ui06-leave-trusted', String(event.isTrusted));
+    }, { once: true });
+  });
+  await page.mouse.move(boxB.x + boxB.width / 2, yB);
+  await page.mouse.move(1, 1);
+  const marks = await b.evaluate(element => ({ enter: element.getAttribute('data-ui06-enter'), leave: element.getAttribute('data-ui06-leave'),
+    enterTrusted: element.getAttribute('data-ui06-enter-trusted'), leaveTrusted: element.getAttribute('data-ui06-leave-trusted') }));
+  expect(marks.enter).not.toBeNull();
+  expect(marks.leave).not.toBeNull();
+  expect(marks.enterTrusted).toBe('true');
+  expect(marks.leaveTrusted).toBe('true');
+  const dwell = Number(marks.leave) - Number(marks.enter);
+  expect(dwell).toBeGreaterThanOrEqual(0);
+  expect(dwell).toBeLessThan(250);
+  // Cross the existing hover-intent threshold: B must never become displayed.
+  await page.waitForTimeout(300);
+  await expect(actionA).toBeFocused();
+  await expect(page.getByRole('article', { name: nameB, exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(previewA).toHaveCount(0);
+  const returned = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
+  console.log(JSON.stringify({ mapPreviewTriggerProof: { nameA, nameB, dwell, returned } }));
+  await expect(a).toBeFocused();
+  expect(unexpected).toEqual([]);
+  expect(errors).toEqual([]);
+});

@@ -204,13 +204,14 @@ export function PortalFicheEditor({
       buildPortalRubrics({
         archetype,
         draft: editor.draft,
+        baseline: editor.baseline,
         dirty: editor.dirtySections,
         masked: visibility.maskedModules,
         floor: visibility.floorModules,
         pendingModules,
         rejectedModules,
       }),
-    [archetype, editor.draft, editor.dirtySections, visibility, pendingModules, rejectedModules],
+    [archetype, editor.draft, editor.baseline, editor.dirtySections, visibility, pendingModules, rejectedModules],
   );
 
   // Reuse the album's caller-scoped cache. Unknown/failed reads never promise writes.
@@ -233,14 +234,14 @@ export function PortalFicheEditor({
       // « une seule vérification ouverte » refuse (PT409).
       if (pendingModules.has(change.section as WorkspaceModuleId)) continue;
       seen.add(change.section);
-      const rubric =
-        PORTAL_RUBRICS.find((entry) => entry.module === change.section && entry.archetypes.includes(archetype)) ?? null;
+      const candidates = PORTAL_RUBRICS.filter((entry) => entry.module === change.section && entry.archetypes.includes(archetype));
+      const rubric = candidates.find((entry) => entry.title === change.field) ?? candidates[0] ?? null;
       list.push({
         module: change.section,
         rubricId: rubric?.id ?? null,
         // Le libellé du registre d'abord : `field` porte désormais la projection lisible
         // du portail, mais un envoi ANCIEN peut encore porter le libellé de l'éditeur.
-        title: rubric?.title ?? change.field,
+        title: change.field === candidates.map((entry) => entry.title).join(' · ') ? change.field : rubric?.title ?? change.field,
         note: change.reviewNote,
       });
     }
@@ -264,8 +265,8 @@ export function PortalFicheEditor({
       draft.discardedModules
         .map(
           (module) =>
-            PORTAL_RUBRICS.find((entry) => entry.module === module && entry.archetypes.includes(archetype))?.title ??
-            null,
+            PORTAL_RUBRICS.filter((entry) => entry.module === module && entry.archetypes.includes(archetype))
+              .map((entry) => entry.title).join(' · ') || null,
         )
         .filter((title): title is string => Boolean(title)),
     [draft.discardedModules, archetype],

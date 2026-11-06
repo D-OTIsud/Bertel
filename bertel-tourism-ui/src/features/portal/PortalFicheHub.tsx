@@ -76,6 +76,7 @@ const TODO_LABEL: Record<PortalRubricId, string> = {
   hours: 'Indiquez vos horaires',
   season: 'Indiquez vos périodes d’ouverture',
   amenities: 'Indiquez vos équipements',
+  accessibility: 'Indiquez vos aménagements d’accessibilité',
   welcome: 'Indiquez votre capacité d’accueil',
   pricing: 'Indiquez un tarif',
   activity: 'Décrivez votre activité',
@@ -222,7 +223,7 @@ export function PortalFicheHub({
   // Une rubrique DÉJÀ partie en vérification et remodifiée depuis : sa saisie est au chaud
   // mais rien ne peut partir tant que l'office n'a pas répondu. Sans ce comptage, « Valider »
   // n'a AUCUN effet visible et la phrase prévue pour ce cas est inatteignable.
-  const held = rubrics.filter((rubric) => rubric.state === 'pending' && editor.dirtySections[rubric.module]);
+  const held = rubrics.filter((rubric) => rubric.state === 'pending' && (rubric.hasChanges ?? editor.dirtySections[rubric.module]));
   const todo = rubrics.filter((rubric) => rubric.state === 'todo' && rubric.id !== 'photos');
   const countable = rubrics.filter((rubric) => rubric.state !== 'unavailable');
   const done = countable.filter((rubric) => rubric.state !== 'todo').length;
@@ -393,7 +394,7 @@ export function PortalFicheHub({
               approvedModules.has(rubric.module) && (rubric.state === 'filled' || rubric.state === 'todo');
             const badge = approvedPending ? APPROVED_BADGE : STATE_BADGE[rubric.state];
             const summary = rubric.summary(editor.draft, archetype);
-            const heldHere = rubric.state === 'pending' && editor.dirtySections[rubric.module];
+            const heldHere = rubric.state === 'pending' && (rubric.hasChanges ?? editor.dirtySections[rubric.module]);
             const body = (
               <>
                 <span className="portal-task__body">

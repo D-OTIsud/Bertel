@@ -73,6 +73,13 @@ jobs:
           [api]
           schemas = ["public", "graphql_public", "api"]
           TOML
+          # PostgREST checks exposed namespaces before the canonical manifest
+          # can run. Bootstrap only this empty namespace, no Bertel objects.
+          supabase migration new bootstrap_empty_api --workdir "$RUNNER_TEMP/bertel-fresh"
+          for bootstrap_file in "$RUNNER_TEMP/bertel-fresh/supabase/migrations/"*_bootstrap_empty_api.sql; do
+            test -f "$bootstrap_file"
+            printf 'CREATE SCHEMA IF NOT EXISTS api;\n' > "$bootstrap_file"
+          done
 
       - name: Start Supabase local database
         # Boots the Supabase-flavoured Postgres (DB image provides the auth/storage

@@ -785,19 +785,20 @@ export function useRestoreObjectVersionMutation(objectId: string | null) {
       if (!objectId) {
         throw new Error("Aucune fiche active pour restaurer une version.");
       }
-      return restoreObjectVersion(objectId, versionNumber);
+      const restoredObjectId = objectId;
+      await restoreObjectVersion(restoredObjectId, versionNumber);
+      return restoredObjectId;
     },
-    onSuccess: async () => {
-      if (!objectId) {
-        return;
-      }
+    onSuccess: async (restoredObjectId) => {
+      // Mutation options may follow a new route while the old request is in
+      // flight. Invalidate the object actually restored, not the latest prop.
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['object-versions', objectId] }),
-        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-versions', restoredObjectId] }),
+        queryClient.invalidateQueries({ queryKey: ['object-detail', restoredObjectId] }),
       ]);
       // The workspace loader reuses object-detail. Mark/refetch that dependency
       // first, otherwise a fresh cached A can rebuild the workspace after restore B.
-      await queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] });
+      await queryClient.invalidateQueries({ queryKey: ['object-workspace', restoredObjectId] });
     },
   });
 }

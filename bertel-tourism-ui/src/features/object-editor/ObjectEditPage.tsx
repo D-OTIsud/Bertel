@@ -99,7 +99,7 @@ export function ObjectEditPage({ objectId }: { objectId: string }) {
       {loadError}
       <EditorModalContext.Provider value={`${data.name} · ${data.type ? TYPE_LABEL[data.type as keyof typeof TYPE_LABEL] || data.type : meta.family}`}>
       <div style={{ display: 'contents' }} inert={isError || undefined}>
-        <EditorReady resource={data} objectId={objectId} meta={meta} />
+        <EditorReady resource={data} objectId={objectId} meta={meta} workspaceReadReady={!isError && !isFetching} />
       </div>
       </EditorModalContext.Provider>
     </>
@@ -183,7 +183,7 @@ function buildHistoryItems(draft: ObjectWorkspaceModules): HistoryRailItem[] {
     .slice(0, 5);
 }
 
-function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta }) {
+function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta; workspaceReadReady: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const openDrawer = useUiStore((state) => state.openDrawer);
@@ -264,6 +264,32 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const versionsQuery = useObjectVersionsQuery(objectId);
   const restoreVersion = useRestoreObjectVersionMutation(objectId);
   const [versionsModalOpen, setVersionsModalOpen] = useState(false);
+  const restoreIdentity = JSON.stringify([userId, objectId]);
+  const restoreScope = useRef({ identity: restoreIdentity, generation: 0, pending: false });
+  if (restoreScope.current.identity !== restoreIdentity) {
+    restoreScope.current = { identity: restoreIdentity, generation: restoreScope.current.generation + 1, pending: false };
+  }
+  const [pendingRestore, setPendingRestore] = useState<{
+    identity: string; generation: number; versionNumber: number; awaitingRead: boolean;
+  } | null>(null);
+  const restoring = pendingRestore !== null && pendingRestore.identity === restoreIdentity
+    && pendingRestore.generation === restoreScope.current.generation;
+
+  useEffect(() => () => { restoreScope.current.generation += 1; restoreScope.current.pending = false; }, []);
+
+  useEffect(() => {
+    if (!restoring || !pendingRestore?.awaitingRead || !workspaceReadReady || resource.id !== objectId) return;
+    const current = queryClient.getQueryState<ObjectWorkspaceResource>(['object-workspace', objectId, langPrefs]);
+    // invalidateQueries can resolve before the observer delivers its fresh prop,
+    // and can also resolve after a failed/paused refetch. Adopt only the exact
+    // successful cache value that the page now observes, including after Retry.
+    if (current?.status !== 'success' || current.fetchStatus !== 'idle' || current.isInvalidated || current.data !== resource) return;
+    editor.adoptRestoredModules(resource.modules);
+    restoreScope.current.pending = false;
+    setVersionsModalOpen(false);
+    setStatusMessage(`Version v${pendingRestore.versionNumber} restaurée — une nouvelle version a été créée.`);
+    setPendingRestore(null);
+  }, [restoring, pendingRestore, workspaceReadReady, resource, objectId, langPrefs, queryClient, editor.adoptRestoredModules]);
 
   // §E Import / export — frontend-only tool (no backend, no object creation).
   const [importExportOpen, setImportExportOpen] = useState(false);
@@ -335,12 +361,20 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       : null;
 
   async function handleRestoreVersion(versionNumber: number) {
+    if (restoreScope.current.pending || saving || savingDraft || publishObject.isPending) return;
+    const attempt = { identity: restoreIdentity, generation: ++restoreScope.current.generation, versionNumber, awaitingRead: false };
+    restoreScope.current.pending = true;
+    setPendingRestore(attempt);
+    const isCurrent = () => restoreScope.current.identity === attempt.identity && restoreScope.current.generation === attempt.generation;
     try {
       await restoreVersion.mutateAsync(versionNumber);
-      setVersionsModalOpen(false);
-      setStatusMessage(`Version v${versionNumber} restaurée — une nouvelle version a été créée.`);
+      if (isCurrent()) setPendingRestore({ ...attempt, awaitingRead: true });
     } catch (error) {
-      setStatusMessage(strictErrorMessage(error, 'Restauration impossible.'));
+      if (isCurrent()) {
+        restoreScope.current.pending = false;
+        setPendingRestore(null);
+        setStatusMessage(strictErrorMessage(error, 'Restauration impossible.'));
+      }
     }
   }
 
@@ -491,6 +525,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
 
   /** Persist work-in-progress without publishing and without the blocker gate. */
   async function handleSaveDraft() {
+    if (restoreScope.current.pending) return;
     setStatusMessage(null);
     setSavingDraft(true);
     setSaveFeedback('pending');
@@ -513,6 +548,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   }
 
   async function handlePublish() {
+    if (restoreScope.current.pending) return;
     const generation = publicationGeneration.current;
     const isCurrent = () => publicationMounted.current
       && publicationGeneration.current === generation
@@ -608,7 +644,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         blockerCount={validation.blockers.length}
         warningCount={validation.warnings.length}
         publishing={publishObject.isPending}
-        saving={saving}
+        saving={saving || restoring}
         savingDraft={savingDraft}
         saveFeedback={saveFeedback}
         publishFeedback={publishFeedback}
@@ -635,9 +671,13 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       {editor.recoveryConflicts.length > 0 && (
         <div className="contributor-banner" role="alert">
           <strong>Brouillon à vérifier</strong> — vos modifications locales sont conservées, mais certaines données ont aussi changé sur le serveur. La sauvegarde est bloquée jusqu’à votre choix.
+          <button type="button" className="ghost-button" disabled={restoring} onClick={editor.keepRecoveredDraft}>
+            Garder mes modifications
+          </button>
           <button
             type="button"
             className="ghost-button"
+            disabled={restoring}
             onClick={() => {
               const keys = new Set(editor.recoveryConflicts.map((path) => path.split('.')[0].split('[')[0] as keyof ObjectWorkspaceModules));
               for (const key of keys) {
@@ -703,7 +743,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         restoreDisabledReason={
           resource.permissions.publication.disabledReason ?? 'Vos droits ne permettent pas de restaurer une version.'
         }
-        restoringVersion={restoreVersion.isPending ? (restoreVersion.variables ?? null) : null}
+        restoringVersion={restoring ? pendingRestore.versionNumber : null}
         onRestore={(versionNumber) => void handleRestoreVersion(versionNumber)}
       />
       <ConfirmDialog

@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { notifyManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ObjectEditPage } from './ObjectEditPage';
 import type { ObjectEditorState } from './useObjectEditorState';
 import { cloneModules } from './editor-state';
@@ -103,6 +103,7 @@ beforeEach(() => {
   useSessionStore.setState({ demoMode: false, userId: USER, langPrefs: ['fr'] });
 });
 afterEach(() => {
+  onlineManager.setOnline(true);
   notifyManager.setScheduler((callback) => setTimeout(callback, 0));
   for (const client of clients.splice(0)) client.clear();
 });
@@ -233,5 +234,82 @@ it.each(['account', 'object'])('a restore response from the previous %s cannot a
   expect(mockEditor.draft.generalInfo.name).toBe('New identity draft');
   expect(mockEditor.baseline.generalInfo.name).toBe('A');
   expect(mockEditor.recoveryConflicts).toEqual([]);
+  expect(saveObjectWorkspaceGeneralInfo).not.toHaveBeenCalled();
+});
+
+async function queueOfflineRestore(view: ReturnType<typeof mount>) {
+  fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
+  const restore = await screen.findByRole('button', { name: 'Restaurer la version 2' });
+  act(() => onlineManager.setOnline(false));
+  fireEvent.click(restore);
+  await waitFor(() => expect(view.client.getMutationCache().getAll().some((m) => m.state.isPaused)).toBe(true));
+  expect(restoreObjectVersion).not.toHaveBeenCalled();
+  closeHistory();
+}
+
+it('a paused restore keeps the object/version captured at the gesture when the route changes before dispatch', async () => {
+  const view = mount();
+  await queueOfflineRestore(view);
+  const next = view.resource('HOT-RESTORE-OTHER');
+  view.client.setQueryData(['object-workspace', next.id, ['fr']], next);
+  view.rerender(view.page(next.id));
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'New object draft' } });
+  await act(async () => onlineManager.setOnline(true));
+  await waitFor(() => expect(restoreObjectVersion).toHaveBeenCalledTimes(1));
+  expect(restoreObjectVersion).toHaveBeenCalledWith(ID, 2);
+  expect(mockEditor.objectId).toBe(next.id);
+  expect(mockEditor.draft.generalInfo.name).toBe('New object draft');
+  expect(mockEditor.baseline.generalInfo.name).toBe('A');
+});
+
+it.each(['other account', 'A→B→A'])('a paused restore never dispatches after %s replaces the gesture identity', async (transition) => {
+  const view = mount();
+  await queueOfflineRestore(view);
+  act(() => {
+    useSessionStore.setState({ userId: 'restore-page-other-user' });
+    if (transition === 'A→B→A') useSessionStore.setState({ userId: USER });
+  });
+  await act(async () => onlineManager.setOnline(true));
+  await waitFor(() => expect(view.client.getMutationCache().getAll()[0].state.status).toBe('error'));
+  expect(restoreObjectVersion).not.toHaveBeenCalled();
+  expect(mockEditor.baseline.generalInfo.name).toBe('A');
+});
+
+it('a paused restore with an unchanged gesture identity resumes and adopts the requested version', async () => {
+  const view = mount();
+  await queueOfflineRestore(view);
+  await act(async () => onlineManager.setOnline(true));
+  await waitFor(() => expect(mockEditor.baseline.generalInfo.name).toBe('B'));
+  expect(restoreObjectVersion).toHaveBeenCalledWith(ID, 2);
+  expect(mockEditor.isDirty).toBe(false);
+});
+
+it.each(['RPC', 'reread'])('an account A→B→A transition without an intermediate render invalidates an old restore during %s', async (phase) => {
+  const view = mount();
+  const rpc = deferred();
+  const read = deferred<ObjectWorkspaceResource>();
+  jest.mocked(restoreObjectVersion).mockImplementation(async () => {
+    if (phase === 'RPC') await rpc.promise;
+    view.server.generalInfo.name = 'B';
+  });
+  if (phase === 'reread') jest.mocked(getObjectWorkspaceResource).mockReturnValueOnce(read.promise);
+  await startRestore();
+  closeHistory();
+  if (phase === 'reread') await waitFor(() => expect(getObjectWorkspaceResource).toHaveBeenCalledTimes(1));
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C' } });
+  act(() => {
+    useSessionStore.setState({ userId: 'restore-page-other-user' });
+    useSessionStore.setState({ userId: USER });
+  });
+  expect(mockEditor.baseline.generalInfo.name).toBe('A');
+  await act(async () => {
+    if (phase === 'RPC') rpc.resolve();
+    else read.resolve(view.resource());
+  });
+  await waitFor(() => expect(view.client.getQueryData<ObjectWorkspaceResource>(['object-workspace', ID, ['fr']])?.name).toBe('B'));
+  expect(mockEditor.baseline.generalInfo.name).toBe('A');
+  expect(mockEditor.draft.generalInfo.name).toBe('C');
+  expect(mockEditor.recoveryConflicts).toEqual([]);
+  expect(saveButton()).toBeEnabled();
   expect(saveObjectWorkspaceGeneralInfo).not.toHaveBeenCalled();
 });

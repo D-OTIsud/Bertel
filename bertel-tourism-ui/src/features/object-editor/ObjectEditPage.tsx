@@ -275,7 +275,22 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
   const restoring = pendingRestore !== null && pendingRestore.identity === restoreIdentity
     && pendingRestore.generation === restoreScope.current.generation;
 
-  useEffect(() => () => { restoreScope.current.generation += 1; restoreScope.current.pending = false; }, []);
+  useEffect(() => {
+    // Store notifications are synchronous even when React batches A -> B -> A
+    // into one render. Returning to A must not revive A's older restoration.
+    const unsubscribe = useSessionStore.subscribe((next, previous) => {
+      if (next.userId !== previous.userId) {
+        restoreScope.current.generation += 1;
+        restoreScope.current.pending = false;
+        setPendingRestore(null);
+      }
+    });
+    return () => {
+      unsubscribe();
+      restoreScope.current.generation += 1;
+      restoreScope.current.pending = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!restoring || !pendingRestore?.awaitingRead || !workspaceReadReady || resource.id !== objectId) return;

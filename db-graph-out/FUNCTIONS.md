@@ -31,6 +31,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Function to add a legal record
 > =====================================================
 
+## `api.admit_ai_request(p_user_id uuid, p_route text)`
+- returns: `jsonb`
+- reads `internal.ai_request_rate_state` _(high)_
+- writes `internal.ai_request_rate_state` _(high)_
+
+> Service-only atomic 12/60s sliding AI request admission per verified user and route. No provider text/key stored. Local CPU leases remain separate.
+
 ## `api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)`
 - returns: `uuid` — SECURITY DEFINER
 - reads `internal.portal_photo_analysis` _(high)_
@@ -4833,6 +4840,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `thesaurus.assert_preparation_contract()`
 - returns: `void`
 
+## `thesaurus.concept_document(p_id uuid)`
+- returns: `jsonb`
+
+> Editorial callers retain their semantic conflict fingerprint. Immutable public
+> snapshots discard that private field and avoid computing it for every concept.
+
 ## `thesaurus.concept_document(p_id uuid, p_include_source_fingerprint boolean)`
 - returns: `jsonb`
 - reads `thesaurus.concept` _(high)_
@@ -4845,12 +4858,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `thesaurus.revision` _(high)_
 - reads `thesaurus.source_rows` _(high)_
 - reads `thesaurus.vocabulary` _(high)_
-
-> Editorial callers retain their semantic conflict fingerprint. Immutable public
-> snapshots discard that private field and avoid computing it for every concept.
-
-## `thesaurus.concept_document(p_id uuid)`
-- returns: `jsonb`
 
 > Editorial callers retain their semantic conflict fingerprint. Immutable public
 > snapshots discard that private field and avoid computing it for every concept.

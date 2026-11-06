@@ -1,6 +1,20 @@
 import { getDefaultAppPath, getLoginPath, getPostLoginPath, isSafeInternalPath } from './auth-routing';
 
 describe('auth routing', () => {
+  it.each(['/\\outside.example', '/\t/outside.example', '/\n/outside.example', '/\r/outside.example', '//outside.example'])('rejects an external or ambiguous return %p at both boundaries', (path) => {
+    expect(isSafeInternalPath(path)).toBe(false);
+    expect(getLoginPath(path)).toBe('/login');
+    expect(getPostLoginPath('tourism_agent', path)).toBe('/explorer');
+    expect(getPostLoginPath('owner', path)).toBe('/dashboard');
+    expect(getPostLoginPath('actor', path)).toBe('/espace');
+  });
+
+  it.each(['/explorer?q=grand%20hôtel&sort=name#résultats', '/crm?value=two words#task', '/%09/outside.example'])('preserves an internal URL and its parameters exactly %p', (path) => {
+    expect(isSafeInternalPath(path)).toBe(true);
+    expect(getPostLoginPath('tourism_agent', path)).toBe(path);
+    expect(getLoginPath(path)).toBe(`/login?from=${encodeURIComponent(path)}`);
+  });
+
   it('defaults tourism users to the explorer', () => {
     expect(getDefaultAppPath(null)).toBe('/explorer');
     expect(getDefaultAppPath('tourism_agent')).toBe('/explorer');
@@ -35,6 +49,9 @@ describe('auth routing', () => {
 });
 
 describe('auth-routing — persona actor (portail)', () => {
+  it.each(['/espace/../crm', '/espace/%2e%2e/crm', '/espace/./../explorer'])('refuses a portal return that normalizes outside its scope %p', (path) => {
+    expect(getPostLoginPath('actor', path)).toBe('/espace');
+  });
   it("envoie l'acteur vers /espace par défaut", () => {
     expect(getDefaultAppPath('actor')).toBe('/espace');
   });

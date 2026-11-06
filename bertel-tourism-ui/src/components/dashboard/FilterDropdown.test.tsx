@@ -137,7 +137,8 @@ describe('open/close', () => {
     );
     fireEvent.click(screen.getByRole('button'));
     // menu is open
-    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('listbox')).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('listbox'), { key: 'Escape' });
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 

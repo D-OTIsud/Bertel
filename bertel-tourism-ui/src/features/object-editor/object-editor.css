@@ -2599,6 +2599,7 @@
   color: var(--ink);
 }
 .md-editor__content:focus { outline: none; }
+.md-editor__content:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 /* ============================================================================
    §19 Suivi prestataire — provider cards, CRM CTA, confirm dialog

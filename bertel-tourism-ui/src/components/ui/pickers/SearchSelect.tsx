@@ -15,6 +15,7 @@ import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { fold } from './fold';
 import { usePickerPopover } from './usePickerPopover';
+import { PickerPanel } from './PickerPanel';
 
 export interface SearchSelectOption {
   code: string;
@@ -107,6 +108,7 @@ export function SearchSelect({
     return map;
   }, [flatVisible, allowClear]);
   const rowCount = flatVisible.length + (allowClear ? 1 : 0);
+  const activeId = active >= 0 && active < rowCount ? `${listId}-option-${active}` : undefined;
   const showEmpty = isGrouped ? searching && flatVisible.length === 0 : filtered.length === 0;
 
   // Focus the search + seed the open groups on the OPEN transition; clear the query on close.
@@ -127,6 +129,7 @@ export function SearchSelect({
   function commit(code: string) {
     onChange(code);
     setOpen(false);
+    triggerRef.current?.focus({ preventScroll: true });
   }
 
   function toggleGroup(name: string) {
@@ -140,6 +143,7 @@ export function SearchSelect({
       event.stopPropagation();
       event.preventDefault();
       setOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
       return;
     }
     if (event.key === 'ArrowDown') {
@@ -164,6 +168,7 @@ export function SearchSelect({
     return (
       <button
         key={option.code}
+        id={`${listId}-option-${rowIndex}`}
         type="button"
         role="option"
         aria-selected={option.code === value}
@@ -186,14 +191,17 @@ export function SearchSelect({
         aria-expanded={open}
         aria-controls={listId}
         aria-label={ariaLabel}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          triggerRef.current?.focus({ preventScroll: true });
+          setOpen((o) => !o);
+        }}
       >
         <span className="picker__trigger-label">{triggerLabel}</span>
         <ChevronDown className="picker__chevron" size={20} strokeWidth={2} aria-hidden="true" />
       </button>
 
       {mounted && open && createPortal(
-        <div className="picker__panel" ref={panelRef} style={panelStyle}>
+        <PickerPanel panelRef={panelRef} triggerRef={triggerRef} searchRef={searchRef} style={panelStyle} onClose={close}>
           <input
             ref={searchRef}
             className="picker__search"
@@ -201,6 +209,8 @@ export function SearchSelect({
             value={query}
             placeholder={searchPlaceholder}
             aria-label="Rechercher"
+            aria-controls={listId}
+            aria-activedescendant={activeId}
             onChange={(event) => {
               setQuery(event.target.value);
               setActive(0);
@@ -210,6 +220,7 @@ export function SearchSelect({
           <div className="picker__options" role="listbox" id={listId}>
             {allowClear && (
               <button
+                id={`${listId}-option-0`}
                 type="button"
                 role="option"
                 aria-selected={value === ''}
@@ -240,7 +251,7 @@ export function SearchSelect({
               : filtered.map(renderOption)}
             {showEmpty && <p className="picker__empty">Aucun résultat</p>}
           </div>
-        </div>,
+        </PickerPanel>,
         document.body,
       )}
     </div>

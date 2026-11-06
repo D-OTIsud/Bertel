@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { notifyManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ObjectEditPage } from './ObjectEditPage';
 import type { ObjectEditorState } from './useObjectEditorState';
@@ -94,7 +94,13 @@ async function startRestore() {
   await waitFor(() => expect(restoreObjectVersion).toHaveBeenCalledTimes(1));
 }
 
-function closeHistory() { fireEvent.click(screen.getByRole('button', { name: 'Fermer' })); }
+function closeHistory() {
+  const history = screen.getByRole('dialog', { name: 'Versions / historique' });
+  const footerButton = within(history).getByText('Fermer', { selector: 'button.btn.primary' });
+  expect(footerButton).toHaveAccessibleName('Fermer');
+  fireEvent.click(footerButton);
+  expect(screen.queryByRole('dialog', { name: 'Versions / historique' })).not.toBeInTheDocument();
+}
 function saveButton() { return screen.getByRole('button', { name: 'Enregistrer' }); }
 
 beforeEach(() => {

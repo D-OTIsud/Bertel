@@ -1,13 +1,14 @@
 import 'server-only';
-import { z } from 'zod';
+import { z, integerTypeError } from '@/lib/zod';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const providerSchema = z.object({
   api_kind: z.literal('openai_compatible'),
   base_url: z.string().trim().url().refine((url) => /^https?:\/\//i.test(url)),
   model: z.string().trim().min(1),
-  max_output_tokens: z.number().int().min(256).max(32768),
-  extra: z.record(z.unknown()).nullable(),
+  // The explicit bounded integer check preserves the existing field-error precedence.
+  max_output_tokens: z.number({ error: integerTypeError }).refine(Number.isInteger, 'Expected integer, received float').min(256).max(32768),
+  extra: z.record(z.string(), z.unknown()).nullable(),
   // Local providers such as Ollama deliberately support operation without a key.
   api_key: z.string().nullable(),
 });

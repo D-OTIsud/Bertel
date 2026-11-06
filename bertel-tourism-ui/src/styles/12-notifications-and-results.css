@@ -179,11 +179,13 @@
 }
 
 .range-slider__thumb:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px var(--teal-tint);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .range-slider__thumb:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px var(--teal-tint);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 @media (max-width: 760px) {

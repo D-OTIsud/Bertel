@@ -2,6 +2,7 @@ import { act, fireEvent, render, renderHook, screen } from '@testing-library/rea
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionLegal } from './SectionLegal';
 import { readLegalScalar } from './legal-edit';
+import { LEGAL_SUMMARY_UNAVAILABLE, workspaceSaveBlockedReason } from '../../../services/object-workspace-safety';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 import type { ObjectWorkspaceLegalModule, ObjectWorkspaceModules } from '../../../services/object-workspace-parser';
 
@@ -194,5 +195,27 @@ describe('SectionLegal', () => {
     expect(screen.getByText(/Lecture seule/)).toBeInTheDocument();
     expect(screen.queryByLabelText('SIRET')).toBeNull();
     expect(screen.getByText('44851998300012')).toBeInTheDocument();
+  });
+
+  it('keeps loaded records editable and saveable when only the optional summary fails', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal({ unavailableReason: LEGAL_SUMMARY_UNAVAILABLE })));
+    render(<SectionLegal editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText('Résumé de conformité indisponible. Les données juridiques restent modifiables.')).toBeInTheDocument();
+    expect(screen.queryByText(/Lecture seule/)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('SIRET'), { target: { value: '12345678900012' } });
+    expect(readLegalScalar(result.current.draft.legal.records, 'siret')).toBe('12345678900012');
+    expect(result.current.dirtySections.legal).toBe(true);
+    expect(workspaceSaveBlockedReason('legal', result.current.draft.legal)).toBeNull();
+  });
+
+  it('keeps a current permission refusal read-only even when only the summary failed', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal({ unavailableReason: LEGAL_SUMMARY_UNAVAILABLE })));
+    render(<SectionLegal editor={result.current} permissions={{ ...allowAll, legal: {
+      ...allowAll.legal, canDirectWrite: false, disabledReason: 'Permission juridique refusée.',
+    } }} />);
+    expect(screen.getByText(/Lecture seule/)).toBeInTheDocument();
+    expect(screen.getByText(/Permission juridique refusée/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('SIRET')).not.toBeInTheDocument();
+    expect(screen.queryByText('Résumé de conformité indisponible. Les données juridiques restent modifiables.')).not.toBeInTheDocument();
   });
 });

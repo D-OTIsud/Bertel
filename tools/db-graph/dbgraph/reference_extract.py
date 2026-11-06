@@ -181,6 +181,16 @@ def _is_reference_target(table):
     return name.startswith("ref_") or name in {"tag_link"}
 
 
+def public_reference_rows(rows):
+    """Document rows are publishable only with an explicit public scope.
+
+    Schema, policy and source-function metadata remain complete. Fail closed for
+    legacy caches/seeds with no scope rather than exposing private file metadata.
+    """
+    return [row for row in rows if _qualify(row.get("table", "")) != "public.ref_document"
+            or (row.get("values") or {}).get("access_scope") == "public"]
+
+
 def _rows_from_tuples(table, columns, tuples, path, line, source_kind):
     rows = []
     for tup in tuples:
@@ -250,7 +260,7 @@ def extract_reference_values(sql_paths):
                 "source": "%s:%d" % (path.replace("\\", "/"), _line_for(sql, match.start())),
                 "note": "INSERT derives values through SELECT/CTE; row values are not guessed.",
             })
-    return {"rows": rows, "derived_sources": derived_sources}
+    return {"rows": public_reference_rows(rows), "derived_sources": derived_sources}
 
 
 def live_reference_tables(graph, extra=None):
@@ -365,8 +375,9 @@ def extract_live_reference_values(dsn, graph, extra=None, max_rows_per_table=100
             order_sql = ""
             if order_cols:
                 order_sql = " ORDER BY " + ", ".join(_quote_ident(col) + " NULLS LAST" for col in order_cols)
-            sql = "SELECT %s FROM %s.%s%s LIMIT %s" % (
-                select_cols, _quote_ident(schema), _quote_ident(name), order_sql, int(max_rows_per_table) + 1,
+            where_sql = " WHERE \"access_scope\" = 'public'" if table == "public.ref_document" else ""
+            sql = "SELECT %s FROM %s.%s%s%s LIMIT %s" % (
+                select_cols, _quote_ident(schema), _quote_ident(name), where_sql, order_sql, int(max_rows_per_table) + 1,
             )
             try:
                 cur.execute(sql)
@@ -396,7 +407,7 @@ def extract_live_reference_values(dsn, graph, extra=None, max_rows_per_table=100
         except Exception:
             pass
 
-    return {"rows": rows, "derived_sources": [], "live": live}
+    return {"rows": public_reference_rows(rows), "derived_sources": [], "live": live}
 
 
 def _decode_mcp_payload(value):
@@ -432,6 +443,7 @@ def load_mcp_reference_values(path):
     data["live"].setdefault("tables", sorted({row.get("table") for row in data.get("rows", []) if row.get("table")}))
     data["live"].setdefault("errors", [])
     data["live"].setdefault("truncated", [])
+    data["rows"] = public_reference_rows(data.get("rows", []))
     for row in data.get("rows", []):
         row.setdefault("source", "mcp:%s" % row.get("table", "unknown"))
         row.setdefault("source_kind", "mcp_execute_sql")
@@ -445,7 +457,7 @@ def merge_reference_extracts(seed_refs, live_refs):
     rows = list((live_refs or {}).get("rows") or [])
     rows.extend(row for row in (seed_refs or {}).get("rows", []) if row.get("table") not in queried)
     return {
-        "rows": rows,
+        "rows": public_reference_rows(rows),
         "derived_sources": list((seed_refs or {}).get("derived_sources", [])) + list((live_refs or {}).get("derived_sources", [])),
         "live": live,
         "seed": {

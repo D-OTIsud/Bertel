@@ -35,9 +35,41 @@ psql "%TBLS_DSN%" -tAf tools/db-graph/db_supplement_extract.sql > db-graph-out/c
 .tools/python/Scripts/python.exe tools/db-graph/db_graph.py
 ```
 
-Outputs: `dbdoc/` (committed), `db-graph-out/graph.json` + `*.md` (committed), `docs/api-db-reference.html` (committed API/DB reference with RPC/table/RLS/ref-code listings from the graph, live reference rows from Supabase MCP when `db-graph-out/reference_live.json` exists, and top-level non-temporary SQL seeds as fallback), `graph.html` + the JSON inputs (gitignored).
+Outputs: `dbdoc/` (generated locally and gitignored), `db-graph-out/graph.json` + `*.md` (committed), `docs/api-db-reference.html` (committed API/DB reference with RPC/table/RLS/ref-code listings from the graph, public live reference rows from Supabase MCP when `db-graph-out/reference_live.json` exists, and top-level non-temporary SQL seeds as fallback), `graph.html` + the JSON inputs (gitignored).
 
 `TBLS_DSN` is still used by `tbls` and by the psql gap extract above. Direct live reference extraction from `TBLS_DSN` is intentionally opt-in only: set `DB_GRAPH_ALLOW_DIRECT_LIVE=1` if MCP is unavailable and you explicitly want that fallback.
+
+## MCP fallback for slow or interrupted native connections
+
+`db_catalog_bulk_extract.sql` is a read-only PostgreSQL 17 catalogue query producing
+the JSON datasource accepted by tbls 1.94.5. It reads metadata, never table row data.
+Run it through Supabase `execute_sql`, advancing `params.page_offset` by
+`params.page_size` until every table is collected. Concatenate all `tables` and
+`relations` arrays before rendering; `functions` and `enums` occur on page zero.
+Validate the assembled counts against every `total_*` field in `_live_export` and
+reject duplicate table names or changed counts between pages.
+
+For a response too large for MCP, retrieve text chunks of at most 40,000 characters
+plus the complete payload's `md5` and character length. Use one fixed capture timestamp
+literal in place of `statement_timestamp()` for all chunks of a page, and require the
+same hash on every chunk. Never replace a missing live page with an older snapshot.
+Save the assembled datasource to the ignored `db-graph-out/schema_tbls.json`, then render
+locally without repeating remote introspection:
+
+```powershell
+tbls doc --dsn "json://db-graph-out/schema_tbls.json" --rm-dist -c tools/db-graph/.tbls.yml
+```
+
+Retrieve `db_supplement_extract.sql` through MCP as well. Reference row extraction
+uses `db_reference_extract.sql`, then `DB_GRAPH_MCP_REFERENCE_JSON` selects that fresh
+file for `db_graph.py`. Generated documentation must distinguish the live extraction
+timestamp from later publications or HTTP acceptance checks.
+
+Document references have a separate privacy boundary: only
+`public.ref_document.access_scope = 'public'` rows may appear in generated values.
+NULL, missing and all other scopes are excluded by the SQL/REST readers, cache loader,
+seed merge and final HTML renderer. The complete table schema and audit count remain
+available; the audit additionally reports `public_rows` for export reconciliation.
 
 ## Viewer (`graph.html`)
 Open directly in a browser (no server needed). Features: dark theme by default (Light/Dark toggle),

@@ -1,0 +1,27 @@
+name: Thesaurus tool archive boundary
+
+on:
+  push:
+    paths:
+      - 'tools/thesaurus/**'
+      - '.github/workflows/thesaurus-tool-archives.yml'
+  pull_request:
+    paths:
+      - 'tools/thesaurus/**'
+      - '.github/workflows/thesaurus-tool-archives.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  archived-tools:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14.3'
+      - name: Refuse archived tools before imports or mutation (synthetic sentinels only)
+        run: python -m unittest discover -s tools/thesaurus -p "test_archived_tools.py" -v

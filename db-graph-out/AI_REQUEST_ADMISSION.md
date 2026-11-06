@@ -1,36 +1,53 @@
-# AI admission — targeted production postflight, 6 November 2026 UTC
+# AI admission — production catalogue, ledger 192
 
-This targeted supplement describes the fresh source
-`Base de donnée DLL et API/ai_request_admission.sql`, originally reviewed as
-`20261106145451_distributed_ai_request_admission.sql`. Production received the
-guarded DO under real version `20261106200353`, observed by the postflight at
-20:05 UTC; its exact request bytes are now the upgrade file. The fresh source
-remains the original bytes.
+This supplement uses the fresh PostgreSQL 17.6 production catalogue captured
+between **2026-11-06 20:23:04 and 20:31:56 UTC**. Before/after checks find 192
+migration receipts, including **`20261106200353`**.
+
+The targeted production postflight at **20:05 UTC** observed the guarded DO under
+that real version; the version number is not an independently measured apply
+time. Its exact bytes are tracked in the
+[applied upgrade](../supabase/migrations/20261106200353_distributed_ai_request_admission.sql).
+The [fresh canonical source](<../Base de donnée DLL et API/ai_request_admission.sql>)
+remains the original reviewed bytes and is distinct from that DO envelope.
 See the [production record](../docs/releases/2026-11-06-ai-admission-production.md).
-This supplement is a targeted postflight, not a full schema extraction.
+The original `20261106145451` receipt is absent; neither source was replayed for
+this documentation refresh.
 
-- `internal.ai_request_rate_state`: primary key `(user_id, route)`;
-  `user_id uuid` FK `auth.users(id) ON DELETE CASCADE`;
-  `route text` allowlist `translate`, `menu_extract`;
-  `hits timestamptz[] NOT NULL`, cardinality at most 12 and no NULL element.
-- RLS enabled, no client policies/grants. `service_role` receives SELECT, INSERT,
-  UPDATE and schema USAGE; ordinary `anon`/`authenticated`/PUBLIC have no table
-  grants. Supabase's service role bypasses RLS; native tests use that actual role
-  attribute and explicitly assert `current_user=service_role`.
-- `api.admit_ai_request(p_user_id uuid,p_route text) RETURNS jsonb`:
-  SECURITY INVOKER, search_path `pg_catalog,pg_temp`, EXECUTE only service_role.
-  Reads/writes only the rate-state table; FK validates that the Auth user exists.
-  Returns `allowed`, `remaining`, `retry_after`. Atomic strict sliding12/60s.
-- Server callers: `/api/ai/translate` and `/api/menu/extract`, through
-  `src/lib/ai-admission.server.ts`, after verified Auth/sandbox checks.
-- No text/image/key/provider payload, email quota, ORG permission or notification
-  state is stored or modified by this component. Expired entries are filtered
-  when that key is next admitted; no retention/purge schedule is introduced.
+The complete schema graph is derived from the later production capture, rather
+than the earlier reduced local catalogue. The paginated capture is **not a
+single transaction snapshot**. A separate physical-RLS metadata extension was
+captured at **20:38:35 UTC**, guarded by the same schema fingerprint and ledger;
+it does not redate the earlier function/ACL capture.
 
-At 20:05 UTC, the real ledger contained 192 versions and the 191 earlier entries
-were unchanged. Body/signature, schema, RLS, role permissions and service access
-to both api/internal matched the reviewed target. No admission RPC or quota row
-was used for this postflight. The application rollout was still pending.
+## Physical metadata observed
 
-A complete live graph refresh is tracked separately. Do not replace the full
-graph with the reduced native test substrate.
+- `internal.ai_request_rate_state`, owned by `postgres`: primary key
+  `(user_id, route)`; non-null `user_id uuid`, `route text` and
+  `hits timestamptz[]`, with an empty-array default for `hits`.
+- FK `user_id → auth.users(id) ON DELETE CASCADE`; route constraint allows
+  `translate` and `menu_extract`; the array constraint permits at most 12
+  non-null elements.
+- RLS is **enabled**, FORCE RLS is off, and the table has **zero policies**.
+  As for all 433 relations, the graph uses the directly observed RLS flags
+  for this table, rather than inferring RLS from the presence of policies.
+- Table ACL: `service_role` has SELECT, INSERT and UPDATE; the recorded effective
+  privileges for `anon` and `authenticated` deny SELECT, INSERT, UPDATE, DELETE
+  and TRUNCATE. The owner is `postgres`; no PUBLIC table grant is present.
+- `api.admit_ai_request(p_user_id uuid, p_route text) RETURNS jsonb` is owned by
+  `postgres`, SECURITY INVOKER, VOLATILE, with fixed
+  `search_path=pg_catalog, pg_temp`. Its EXECUTE ACL grants `postgres` and
+  `service_role`; PUBLIC, `anon` and `authenticated` have no EXECUTE privilege.
+  Its body fingerprint and these relation/function/ACL attributes agree before
+  and after the catalogue capture.
+
+The source describes sliding-window admission for the two server routes
+`/api/ai/translate` and `/api/menu/extract`, via
+[`src/lib/ai-admission.server.ts`](../bertel-tourism-ui/src/lib/ai-admission.server.ts).
+Those source semantics and the observed catalogue are separate from runtime
+qualification: this refresh executed **no admission RPC**, read **no quota-state
+rows**, created no quota fixture and made no database mutation. It does not
+certify a new quota, concurrency, application or partner-API acceptance run.
+
+See [DB_AGENT_INDEX.md](DB_AGENT_INDEX.md) for the complete capture scope,
+reference-value privacy boundary and stability checks.

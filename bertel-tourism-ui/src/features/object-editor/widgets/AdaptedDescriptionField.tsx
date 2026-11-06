@@ -43,6 +43,7 @@ export function AdaptedDescriptionField({ editor, descriptions, objectScope, can
   }
 
   function save() {
+    if (!canEdit) return;
     editor.replaceModule('descriptions', {
       ...descriptions,
       object: { ...objectScope, adaptedDescription: draft },
@@ -101,9 +102,10 @@ export function AdaptedDescriptionField({ editor, descriptions, objectScope, can
       {/* Radix Dialog (inside EditorModal) owns visibility via `open`; it unmounts its content
           when closed, so the WYSIWYG (and TipTap) still load lazily on first open. No outer
           `open &&` guard — that double-gate caused a redundant mount + spurious act() warnings. */}
-      <EditorModal open={open} title="Description adaptée" size="lg" onClose={() => setOpen(false)} onSave={save}>
+      <EditorModal open={open} title="Description adaptée" size="lg" onClose={() => setOpen(false)} onSave={save} saveDisabled={!canEdit}>
         <LangTabs tabs={langTabs} active={activeLang} onSelect={setActiveLang} />
         <MarkdownEditorLazy
+          disabled={!canEdit}
           value={readTranslatableField(draft, activeLang, local)}
           ariaLabel={`Description adaptée — ${LANG_LABELS[activeLang] ?? activeLang.toUpperCase()}`}
           onChange={(md) => setDraft((d) => updateTranslatableField(d, activeLang, local, md))}

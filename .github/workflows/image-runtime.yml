@@ -15,6 +15,7 @@ on:
       - 'bertel-tourism-ui/vendor/**'
       - 'bertel-tourism-ui/scripts/*maplibre*'
       - 'bertel-tourism-ui/scripts/*tooling*'
+      - 'bertel-tourism-ui/scripts/*supabase-cli*'
       - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
       - '.github/workflows/image-runtime.yml'
   pull_request:
@@ -31,6 +32,7 @@ on:
       - 'bertel-tourism-ui/vendor/**'
       - 'bertel-tourism-ui/scripts/*maplibre*'
       - 'bertel-tourism-ui/scripts/*tooling*'
+      - 'bertel-tourism-ui/scripts/*supabase-cli*'
       - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
       - '.github/workflows/image-runtime.yml'
 
@@ -56,6 +58,8 @@ jobs:
         run: docker run --rm --entrypoint npm bertel-image-builder run test:maplibre-backport
       - name: Exercise corrected build dependency APIs on Alpine
         run: docker run --rm --entrypoint npm bertel-image-builder run test:tooling-dependencies
+      - name: Exercise the actual operator CLI platform binary on Node 22 Alpine without network
+        run: docker run --rm --network none --entrypoint npm bertel-image-builder run test:supabase-cli
       - name: Exercise the real upload decoder on Alpine
         run: >-
           docker run --rm --entrypoint npm bertel-image-builder

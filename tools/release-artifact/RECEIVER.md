@@ -34,6 +34,11 @@ reaping after a parent dies belongs to the host's reaper. Native tests use an
 isolated Linux subreaper and explicitly wait/reap every test process instead of
 assuming the runner's PID 1 does so.
 
+A failed result pipe is also guarded: reporting/closing it must not raise out of
+the worker and expose an original HTTP error through exception chaining. A
+synthetic raw-error plus broken-pipe witness exercises both the formatting branch
+and an actual Linux multiprocessing child; neither may emit a raw error/traceback.
+
 ## Disposable Linux qualification
 
 The release workflow's guard job runs Python 3.12 tests as disposable runner root:

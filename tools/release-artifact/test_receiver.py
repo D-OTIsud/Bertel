@@ -10,6 +10,7 @@ import stat
 import struct
 import sys
 import tempfile
+import traceback
 import unittest
 from unittest import mock
 import warnings
@@ -289,6 +290,35 @@ class OfflineTests(unittest.TestCase):
         combined = stdout.getvalue() + stderr.getvalue() + "".join(f.read_text() for f in self.folder.glob("*.json"))
         self.assertNotIn("DO_NOT_LOG", combined)
         self.assertNotIn(url, combined)
+
+    def test_broken_result_channel_cannot_expose_the_raw_error_chain(self):
+        sentinel = "SYNTHETIC_URL_SENTINEL_NOT_A_REAL_URL"
+        class BrokenChannel:
+            attempts = 0
+            def send(self, unused):
+                self.attempts += 1
+                raise BrokenPipeError("synthetic closed result channel")
+            def close(self):
+                pass
+        channel = BrokenChannel()
+        stderr = io.StringIO()
+        with tempfile.TemporaryFile() as output, \
+             mock.patch.object(r.signal, "SIGALRM", 14, create=True), \
+             mock.patch.object(r.signal, "SIG_UNBLOCK", 1, create=True), \
+             mock.patch.object(r.signal, "signal"), \
+             mock.patch.object(r.signal, "pthread_sigmask", create=True), \
+             mock.patch.object(r.signal, "setitimer", create=True), \
+             mock.patch.object(r.signal, "ITIMER_REAL", 0, create=True), \
+             mock.patch.object(r, "_http_to_file", side_effect=RuntimeError(sentinel)), \
+             contextlib.redirect_stderr(stderr):
+            try:
+                r._download_worker(channel, output.fileno(), {}, "synthetic-memory-only")
+            except BaseException as error:
+                # multiprocessing's unhandled-target reporting uses this chain.
+                traceback.print_exception(type(error), error, error.__traceback__)
+        self.assertGreater(channel.attempts, 0)
+        self.assertNotIn(sentinel, stderr.getvalue())
+        self.assertEqual(stderr.getvalue(), "")
 
     @unittest.skipUnless(sys.platform.startswith("linux"), "requires actual Linux fork; not qualified by Windows")
     def test_actual_linux_fork_deadline_stops_hung_worker(self):

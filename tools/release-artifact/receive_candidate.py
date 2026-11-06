@@ -250,9 +250,17 @@ def _download_worker(send, fd, p, url):
             _http_to_file(url, p, output)
         send.send("ok")
     except BaseException as error:
-        send.send(error.args[0] if type(error) is Refused else "download_failed")
+        try:
+            send.send(error.args[0] if type(error) is Refused else "download_failed")
+        except BaseException:
+            # A broken result pipe must not let multiprocessing print the raw
+            # original HTTP exception through implicit exception chaining.
+            pass
     finally:
-        send.close()
+        try:
+            send.close()
+        except BaseException:
+            pass
 
 
 def download(url, p, fd):

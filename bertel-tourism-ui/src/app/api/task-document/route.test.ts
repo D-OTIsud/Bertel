@@ -11,6 +11,8 @@ jest.mock('../actor-document/process-actor-document', () => ({
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
+import { acquireLease, SEMAPHORE_RETRY_AFTER_SECONDS } from '@/lib/request-body.server';
+import { processActorDocumentBuffer } from '../actor-document/process-actor-document';
 import { documentTable, linkTable } from './task-document.test-utils';
 
 const mockedServer = jest.mocked(getServerSupabaseClient);
@@ -34,14 +36,16 @@ function baseServer(overrides: Record<string, unknown> = {}) {
   } as never;
 }
 
-function multipartReq(taskId: string) {
+function multipartReq(taskId: string, amend?: (form: FormData) => void) {
   const form = new FormData();
   form.append('task_id', taskId);
   form.append('file', new File([Buffer.from('%PDF-x')], 'Devis.pdf', { type: 'application/pdf' }));
-  return {
-    headers: new Headers({ authorization: 'Bearer jwt' }),
-    formData: async () => form,
-  } as never;
+  amend?.(form);
+  return new Request('http://internal.invalid/api/task-document', {
+    method: 'POST',
+    headers: { authorization: 'Bearer jwt' },
+    body: form,
+  }) as never;
 }
 
 function deleteReq(body: unknown) {
@@ -121,6 +125,111 @@ describe('/api/task-document', () => {
     } as never);
     expect(res.status).toBe(401);
     expect(formData).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, '1'])('borne le flux réel sans taille fiable (%s) et annule sa lecture avant le gate', async (contentLength) => {
+    const upload = jest.fn();
+    const from = jest.fn();
+    const rpc = jest.fn();
+    mockedServer.mockReturnValue(baseServer({ storage: { from: () => ({ upload }) }, from }));
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+    const chunk = new Uint8Array(1024 * 1024);
+    const cancel = jest.fn();
+    let pulls = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1;
+        if (pulls <= 24) controller.enqueue(chunk);
+        else controller.close();
+      },
+      cancel,
+    }, { highWaterMark: 0 });
+    const headers = new Headers({
+      authorization: 'Bearer jwt',
+      'content-type': 'multipart/form-data; boundary=bounded-task',
+      ...(contentLength === undefined ? {} : { 'content-length': contentLength }),
+    });
+    const res = await POST({ headers, body } as never);
+    expect(res.status).toBe(413);
+    await expect(res.json()).resolves.toMatchObject({ error: 'request_body_too_large' });
+    expect(pulls).toBe(22); // 21 MiB accepted, the next chunk cancels; two remain unread.
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(processActorDocumentBuffer).not.toHaveBeenCalled();
+    expect(upload).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it.each(['duplicate_task', 'unknown_field', 'duplicate_file'])('refuse le multipart %s avant tout gate', async (shape) => {
+    const rpc = jest.fn();
+    const upload = jest.fn();
+    mockedServer.mockReturnValue(baseServer({ storage: { from: () => ({ upload }) } }));
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+    const res = await POST(multipartReq(TASK_ID, (form) => {
+      if (shape === 'duplicate_task') form.append('task_id', OTHER_TASK_ID);
+      if (shape === 'unknown_field') form.append('unread_payload', 'synthetic');
+      if (shape === 'duplicate_file') form.append('file', new File(['%PDF-x'], 'Autre.pdf', { type: 'application/pdf' }));
+    }));
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: 'bad_multipart' });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(upload).not.toHaveBeenCalled();
+    expect(processActorDocumentBuffer).not.toHaveBeenCalled();
+  });
+
+  it('partage le plafond upload, ne lit pas le corps refusé, puis libère sa place après interruption', async () => {
+    const upload = jest.fn().mockResolvedValue({ error: null });
+    const insertDoc = jest.fn().mockReturnValue({
+      select: () => ({ single: jest.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) }),
+    });
+    const insertLink = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(baseServer({
+      storage: { from: () => ({ upload, remove: jest.fn() }) },
+      from: (table: string) => (table === 'ref_document' ? { insert: insertDoc } : { insert: insertLink }),
+    }));
+    callerCan(true);
+    // Another upload already owns one of the two process-wide slots.
+    const otherUpload = acquireLease('upload');
+    expect(otherUpload).not.toBeNull();
+    const abort = new AbortController();
+    let onRead!: () => void;
+    const reading = new Promise<void>((resolve) => { onRead = resolve; });
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        abort.signal.addEventListener('abort', () => controller.error(new DOMException('Aborted', 'AbortError')), { once: true });
+      },
+      pull() { onRead(); },
+    }, { highWaterMark: 0 });
+    const pending = POST({
+      headers: new Headers({ authorization: 'Bearer jwt', 'content-type': 'multipart/form-data; boundary=interrupted' }),
+      body,
+      signal: abort.signal,
+    } as never);
+    try {
+      await reading;
+      const pull = jest.fn();
+      const rejected = await POST({
+        headers: new Headers({ authorization: 'Bearer jwt' }),
+        body: new ReadableStream({ pull }, { highWaterMark: 0 }),
+      } as never);
+      expect(rejected.status).toBe(429);
+      expect(rejected.headers.get('Retry-After')).toBe(String(SEMAPHORE_RETRY_AFTER_SECONDS));
+      expect(pull).not.toHaveBeenCalled();
+      expect(upload).not.toHaveBeenCalled();
+      abort.abort();
+      const interrupted = await pending;
+      expect(interrupted.status).toBe(400);
+      await expect(interrupted.json()).resolves.toEqual({ error: 'bad_multipart' });
+      // One slot is still held externally: this valid upload only succeeds if
+      // the interrupted route released its own slot in finally.
+      const retry = await POST(multipartReq(TASK_ID));
+      expect(retry.status).toBe(201);
+      expect(upload).toHaveBeenCalledTimes(1);
+    } finally {
+      abort.abort();
+      await pending;
+      otherUpload?.release();
+    }
   });
 
   it('POST refuse une forme UUID invalide (400) avant tout gate', async () => {

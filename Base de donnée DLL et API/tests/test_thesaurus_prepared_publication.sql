@@ -123,6 +123,13 @@ BEGIN
  ASSERT NOT EXISTS(SELECT 1 FROM thesaurus.mutation_journal WHERE owner_id='HLORUNPREPARE001'),'Rolled-back writer left a committed-looking receipt';
 END $savepoint$;
 
+-- Supabase's migration runner is not a superuser. It retains role ADMIN but
+-- production deliberately revokes SET. Borrow SET only inside this rolled-back
+-- fixture so the negative publisher-authority checks exercise the actual role.
+DO $publisher_fixture_membership$
+BEGIN
+ EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH INHERIT FALSE, SET TRUE',current_user);
+END $publisher_fixture_membership$;
 SET LOCAL ROLE bertel_thesaurus_publisher;
 SELECT set_config('bertel.thesaurus_publishing','true',true);
 DO $authority$

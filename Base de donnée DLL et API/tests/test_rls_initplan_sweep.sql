@@ -15,11 +15,12 @@
 --   STRUCTURAL  — NO object-family policy qual/with_check contains an UN-wrapped auth.x() call
 --                 (detected by removing the wrapped `SELECT auth.x()` occurrences, then checking for
 --                 a remaining bare `auth.x()`). Red before the migration (18 bare calls remain).
---   BEHAVIOURAL — on `object`: the creator may UPDATE its own row; an unrelated user may NOT
+--   BEHAVIOURAL — on `object`: a current publisher may UPDATE; an unrelated user may NOT
 --                 (owner_update_object still gates correctly after wrapping).
 -- Self-contained + transactional (ROLLBACK). Mirrors test_read_gate_setbased.sql mechanics.
 \set ON_ERROR_STOP on
 BEGIN;
+\ir fixtures/current_canonical_permission.sql
 DO $$
 DECLARE
   v_unwrapped int;
@@ -44,7 +45,7 @@ BEGIN
 
   -- ---------- BEHAVIOURAL: owner_update_object still gates correctly after the wrap ----------
   -- v_obj is PUBLISHED so it is SELECT-visible to BOTH users (UPDATE ... WHERE applies SELECT
-  -- policies too); this isolates the owner_update_object USING decision — creator allowed, stranger
+  -- policies too); this isolates the owner_update_object USING decision — current publisher allowed, stranger
   -- denied — rather than conflating it with draft SELECT-visibility (the extended set keys off
   -- org/actor links, not created_by, so a link-less draft would be invisible to its own creator).
   INSERT INTO auth.users (id,email) VALUES
@@ -54,12 +55,25 @@ BEGIN
   INSERT INTO object (id, object_type, name, status, created_by) VALUES
     (v_obj,'HOT','Initplan Owner Test','published', v_userA);
 
-  -- creator (user A) may UPDATE its own object (owner path: (select auth.uid()) = created_by)
+  PERFORM pg_temp.grant_current_canonical_fixture(v_userA,'ORGRUN9999990091',ARRAY[v_obj]);
+
+  -- Current publisher (also creator as provenance) may UPDATE via explicit grant.
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
     UPDATE object SET name = 'Renamed by owner' WHERE id = v_obj;
     GET DIAGNOSTICS v_rows = ROW_COUNT;
     ASSERT v_rows = 1, format('owner UPDATE should affect 1 row, affected %s', v_rows);
+  RESET ROLE;
+
+  -- Revoke the current membership while keeping creator provenance and the
+  -- exact same claims. Published SELECT stays nonempty; UPDATE must affect 0.
+  UPDATE public.user_org_membership SET is_active=false
+    WHERE user_id=v_userA AND org_object_id='ORGRUN9999990091';
+  SET LOCAL ROLE authenticated;
+    ASSERT EXISTS(SELECT 1 FROM public.object WHERE id=v_obj);
+    UPDATE public.object SET name='Historical creator attempt' WHERE id=v_obj;
+    GET DIAGNOSTICS v_rows=ROW_COUNT;
+    ASSERT v_rows=0, 'historical creator UPDATE survived current membership revocation';
   RESET ROLE;
 
   -- unrelated user (user B) may NOT UPDATE it (no canonical permission, not creator)

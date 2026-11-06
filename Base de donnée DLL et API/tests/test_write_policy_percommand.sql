@@ -1,14 +1,13 @@
 -- test_write_policy_percommand.sql
 -- Proves migration_write_policy_percommand.sql (§47, manifest 8o): every object-child write table
 -- carries a per-command triple (canonical_ins/upd/del_<t> -- class A tables use admin_ins/upd/del_<t>)
--- and NO FOR ALL write policy, while the effective write permissions are unchanged (owner can write,
--- stranger cannot, anon read gate intact). Owner persona is ACTOR-LINK based (api.is_object_owner;
--- rls_policies.sql:202-213) -- NOT created_by -- with the email JWT claim.
--- DO #2 (personas) tests behaviour that is INVARIANT across the restructure ⇒ it must pass BOTH
--- before and after 8o (it is the Task 12 pre/post probe). DO #1 (structural) is RED before 8o.
+-- and NO FOR ALL write policy. The positive staff fixture has current
+-- publisher membership + canonical permission; email/actor links are data.
+-- Stranger writes remain denied, and the anonymous read gate stays intact.
 -- Run AFTER the full manifest. Self-contained + transactional (ROLLBACK).
 \set ON_ERROR_STOP on
 BEGIN;
+\ir fixtures/current_canonical_permission.sql
 
 -- ============ DO #1 — structural: per-command coverage, zero FOR ALL, anon EXECUTE ============
 DO $$
@@ -94,7 +93,7 @@ END$$;
 -- ============ DO #2 — personas (INVARIANT behaviour; the Task 12 pre/post probe) ============
 DO $$
 DECLARE
-  v_owner_obj    text := 'HOTRUN9999999701';  -- draft HOT, owned (actor link)
+  v_owner_obj    text := 'HOTRUN9999999701';  -- draft HOT, current publisher grant
   v_pub          text := 'HOTRUN9999999702';  -- published HOT
   v_stranger_obj text := 'HOTRUN9999999703';  -- draft HOT, NOT owned
   v_uid          uuid := '00000000-0000-4000-a000-0000000000e1';
@@ -112,12 +111,13 @@ BEGIN
   -- published + draft opening_period for the anon read gate
   INSERT INTO opening_period (object_id, name) VALUES (v_pub,'pub period');
   INSERT INTO opening_period (object_id, name) VALUES (v_owner_obj,'draft period (owner)');
-  -- owner persona (actor-link)
+  -- Staff contact data plus explicit current publisher grant below
   INSERT INTO auth.users (id,email) VALUES (v_uid,v_email) ON CONFLICT (id) DO NOTHING;
   INSERT INTO app_user_profile (id,role) VALUES (v_uid,'tourism_agent') ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role;
   INSERT INTO actor (id,display_name) VALUES (v_actor,'Pcmd Owner');
   INSERT INTO actor_channel (actor_id,kind_id,value) VALUES (v_actor,v_kind,v_email);
   INSERT INTO actor_object_role (actor_id,object_id,role_id,is_primary) VALUES (v_actor,v_owner_obj,v_role,TRUE);
+  PERFORM pg_temp.grant_current_canonical_fixture(v_uid,'ORGRUN9999999701',ARRAY[v_owner_obj]);
   -- stranger persona (no link)
   INSERT INTO auth.users (id,email) VALUES (v_stranger_uid,'pcmd_stranger@test.local') ON CONFLICT (id) DO NOTHING;
   INSERT INTO app_user_profile (id,role) VALUES (v_stranger_uid,'tourism_agent') ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role;

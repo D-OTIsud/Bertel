@@ -1,4 +1,5 @@
 /** @jest-environment node */
+jest.mock('server-only', () => ({}));
 import { POST } from './route';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
@@ -52,7 +53,7 @@ function fromWithMembership(
 }
 
 describe('POST /api/admin/invite', () => {
-  beforeEach(() => { mockedServer.mockReset(); mockedCreate.mockReset(); process.env.NEXT_PUBLIC_SUPABASE_URL='https://x.supabase.co'; process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY='anon'; });
+  beforeEach(() => { mockedServer.mockReset(); mockedCreate.mockReset(); process.env.NEXT_PUBLIC_SUPABASE_URL='https://x.supabase.co'; process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY='anon'; process.env.NEXT_PUBLIC_APP_URL='https://bertel.otisud.re'; });
 
   it('401 when no bearer token', async () => {
     mockedServer.mockReturnValue({ auth: {} } as never);
@@ -81,10 +82,26 @@ describe('POST /api/admin/invite', () => {
       from: () => ({ upsert }),
     } as never);
     mockedCreate.mockReturnValue(superuserCaller() as never);
-    const res = await POST(req({ authorization: 'Bearer t', origin: 'https://bertel.otisud.re' }, { email: 'x@y.z' }));
+    const res = await POST(req({ authorization: 'Bearer t', origin: 'https://outside.example', host: 'outside.example', forwarded: 'host=outside.example;proto=https' }, { email: 'x@y.z' }));
     expect(res.status).toBe(201);
     expect(inviteUserByEmail).toHaveBeenCalledWith('x@y.z', { redirectTo: 'https://bertel.otisud.re/set-password' });
     expect((await res.json()).userId).toBe('new1');
+  });
+
+  it('503 sans origine canonique avant renvoi, suppression de compte ou invitation', async () => {
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    const inviteUserByEmail = jest.fn(); const deleteUser = jest.fn(); const listUsers = jest.fn();
+    mockedServer.mockReturnValue({ auth: {
+      getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin' } }, error: null }),
+      admin: { inviteUserByEmail, deleteUser, listUsers },
+    } } as never);
+    mockedCreate.mockReturnValue(superuserCaller() as never);
+    const response = await POST(req({ authorization: 'Bearer t', origin: 'https://outside.example' }, { email: 'x@y.z', resend: true }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: 'app_origin_unavailable' });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(listUsers).not.toHaveBeenCalled();
   });
 
   it('409 with neverSignedIn when the email already exists', async () => {

@@ -1,6 +1,6 @@
 import type { WorkspaceSaveResult } from '../../services/workspace-save-result';
 import { isPlainRecord as isRecord } from '../../lib/json-read';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import type { WorkspaceModuleId } from '../../services/object-workspace';
 import { cloneModules, getDirtySections, MODULE_KEY_MAP, type EditorSnapshot } from './editor-state';
@@ -24,8 +24,10 @@ function isModuleSnapshot(value: unknown, currentModules: ObjectWorkspaceModules
 }
 
 function readLocalDraft(userId: string, objectId: string, currentModules: ObjectWorkspaceModules): { baseline: ObjectWorkspaceModules; draft: ObjectWorkspaceModules; recoveryConflicts: string[] } | null {
+  // Storage access failure is distinct from an absent/malformed draft. The
+  // caller must not clean up a recovery copy it was unable to read.
+  const raw = window.localStorage.getItem(localDraftKey(userId, objectId));
   try {
-    const raw = window.localStorage.getItem(localDraftKey(userId, objectId));
     if (!raw) return null;
     const record = JSON.parse(raw) as Record<string, unknown>;
     if (record.schemaVersion !== LOCAL_DRAFT_SCHEMA || record.objectId !== objectId
@@ -62,6 +64,7 @@ export interface ObjectEditorState {
   dirtySections: Partial<Record<WorkspaceModuleId, boolean>>;
   isDirty: boolean;
   recoveryConflicts: string[];
+  localDraftUnavailable: boolean;
   patchModule: <K extends keyof ObjectWorkspaceModules>(key: K, patch: Partial<ObjectWorkspaceModules[K]>) => void;
   replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => void;
   resetModule: (key: keyof ObjectWorkspaceModules) => void;
@@ -146,12 +149,21 @@ export function useObjectEditorState(
     !nonApplicableKeys.some((key) => path === key || path.startsWith(`${key}.`) || path.startsWith(`${key}[`)),
   ) : [];
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
+  const [localDraftFailure, setLocalDraftFailure] = useState<string | null>(null);
+  const unreadLocalDraft = useRef<string | null>(null);
 
   useEffect(() => {
     setHydratedKey(null);
     let recoveredSnapshot = freshSnapshot;
     let conflicts: string[] = [];
-    const stored = userId ? readLocalDraft(userId, objectId, modules) : null;
+    let stored: ReturnType<typeof readLocalDraft> = null;
+    unreadLocalDraft.current = null;
+    try {
+      stored = userId ? readLocalDraft(userId, objectId, modules) : null;
+    } catch {
+      unreadLocalDraft.current = identityKey;
+      setLocalDraftFailure(identityKey);
+    }
     if (stored) {
       const cleanBase = stripCatalogOptions(modules);
       const merged = mergeDraftAgainstServer(stored.baseline, stored.draft, cleanBase);
@@ -176,16 +188,28 @@ export function useObjectEditorState(
       // visible dirty/save state below excludes it. No hidden draft data is discarded.
       const isDirty = Object.values(getDirtySections(snapshot)).some(Boolean);
       const key = localDraftKey(userId, objectId);
-      if (!isDirty && editorState.recoveryConflicts.length === 0) window.localStorage.removeItem(key);
-      else window.localStorage.setItem(key, JSON.stringify({
-        schemaVersion: LOCAL_DRAFT_SCHEMA,
-        objectId,
-        baseline: stripCatalogOptions(snapshot.baseline),
-        draft: stripCatalogOptions(snapshot.draft),
-        recoveryConflicts: editorState.recoveryConflicts,
-        savedAt: new Date().toISOString(),
-      }));
-    } catch { /* local storage can be unavailable or full; editing remains available */ }
+      if (!isDirty && editorState.recoveryConflicts.length === 0) {
+        // A failed initial read cannot establish that the previous copy is
+        // dispensable. Do not remove it or rehydrate it later over new typing.
+        if (unreadLocalDraft.current === identityKey) return;
+        window.localStorage.removeItem(key);
+      } else {
+        window.localStorage.setItem(key, JSON.stringify({
+          schemaVersion: LOCAL_DRAFT_SCHEMA,
+          objectId,
+          baseline: stripCatalogOptions(snapshot.baseline),
+          draft: stripCatalogOptions(snapshot.draft),
+          recoveryConflicts: editorState.recoveryConflicts,
+          savedAt: new Date().toISOString(),
+        }));
+        unreadLocalDraft.current = null;
+      }
+      setLocalDraftFailure(null);
+    } catch {
+      // Keep the in-memory draft and last stored recovery copy intact. Scope
+      // the warning to this account/object until a local operation succeeds.
+      setLocalDraftFailure(identityKey);
+    }
   }, [identityKey, objectId, snapshot, userId, hydratedKey, stateMatchesIdentity, editorState.recoveryConflicts]);
 
   const replaceModule = useCallback(<K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => {
@@ -345,5 +369,5 @@ export function useObjectEditorState(
   const dirtySections = useMemo(() => getDirtySections(snapshot, nonApplicableModules), [snapshot, nonApplicableModules]);
   const isDirty = useMemo(() => Object.values(dirtySections).some(Boolean), [dirtySections]);
 
-  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, mergeSavedModule, adoptRestoredModules, keepRecoveredDraft, setSavedStatus };
+  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, localDraftUnavailable: localDraftFailure === identityKey, patchModule, replaceModule, resetModule, commitModules, mergeSavedModule, adoptRestoredModules, keepRecoveredDraft, setSavedStatus };
 }

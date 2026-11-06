@@ -39,6 +39,10 @@ export async function translateWithAi(
   }
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
+    if (response.status === 503 && payload && typeof payload === 'object'
+      && 'error' in payload && payload.error === 'ai_admission_unavailable') {
+      throw new Error('La traduction a échoué. Réessayez dans un instant.');
+    }
     const messages: Record<number, string> = {
       401: 'Reconnectez-vous pour traduire ce texte.',
       403: 'Vos droits ne permettent pas de traduire cette fiche.',

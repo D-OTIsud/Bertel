@@ -175,3 +175,18 @@ describe('PortalRubricScreen — le brouillon de formulaire', () => {
     expect(screen.getByLabelText('Téléphone')).toHaveValue('0692 45 12 30');
   });
 });
+
+it('la présentation approuvée ne rouvre pas une rubrique Accessibilité en lecture seule', async () => {
+  const { editor, onBack } = setup({
+    rubric: rubric('accessibility', { state: 'pending', readOnlyReason: 'La relecture de cette rubrique est en cours.' }),
+    sentLines: ['Parking réservé'],
+  });
+  expect(screen.getByText('Ce que vous faites déjà pour accueillir tout le monde.')).toBeInTheDocument();
+  expect(screen.getByText('La relecture de cette rubrique est en cours.')).toBeInTheDocument();
+  expect(screen.getByText('Parking réservé')).toBeInTheDocument();
+  expect(screen.queryByRole('group', { name: 'Familles de besoins' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Valider' })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Retour à la fiche' }));
+  expect(onBack).toHaveBeenCalledTimes(1);
+  expect(editor.replaceModule).not.toHaveBeenCalled();
+});

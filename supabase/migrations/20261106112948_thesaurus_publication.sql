@@ -307,7 +307,7 @@ WITH RECURSIVE descendants(concept_id,source_kind,source_id,domain)AS(
 SELECT COALESCE(array_agg(DISTINCT concept_id),'{}')FROM descendants
 $$;
 
-CREATE OR REPLACE FUNCTION thesaurus.concept_document(p_id uuid) RETURNS jsonb LANGUAGE plpgsql STABLE
+CREATE OR REPLACE FUNCTION thesaurus.concept_document(p_id uuid,p_include_source_fingerprint boolean) RETURNS jsonb LANGUAGE plpgsql STABLE
 SET search_path=pg_catalog,thesaurus AS $$
 #variable_conflict use_column
 DECLARE c thesaurus.concept%ROWTYPE;s record;j jsonb;pref jsonb;defs jsonb;parent uuid;inst thesaurus.instance%ROWTYPE;
@@ -317,7 +317,7 @@ BEGIN
   SELECT * INTO inst FROM thesaurus.instance WHERE singleton;
   IF s.payload IS NULL THEN
     SELECT document INTO j FROM thesaurus.revision WHERE concept_id=p_id AND status<>'published' ORDER BY updated_at DESC LIMIT 1;
-    RETURN COALESCE(j,'{}')||jsonb_build_object('concept_id',c.concept_id,'domain',c.domain,'code',c.code,'source_fingerprint',thesaurus.source_fingerprint(p_id),'lifecycle',c.lifecycle,'assignable',c.assignable,'source_kind',c.source_kind);
+    RETURN COALESCE(j,'{}')||jsonb_build_object('concept_id',c.concept_id,'domain',c.domain,'code',c.code,'source_fingerprint',CASE WHEN p_include_source_fingerprint THEN thesaurus.source_fingerprint(p_id)END,'lifecycle',c.lifecycle,'assignable',c.assignable,'source_kind',c.source_kind);
   END IF;
   pref:=COALESCE((SELECT jsonb_object_agg(lang,value)FROM thesaurus.localized_field WHERE concept_id=p_id AND field='name'),'{}')||COALESCE(NULLIF(s.payload->'name_i18n','null'::jsonb),NULLIF(s.payload->'label_i18n','null'::jsonb),'{}')||jsonb_build_object('fr',COALESCE(s.payload->>'name',s.payload->>'label',c.code));
   defs:=COALESCE((SELECT jsonb_object_agg(lang,value)FROM thesaurus.localized_field WHERE concept_id=p_id AND field='description'),'{}')||COALESCE(NULLIF(s.payload->'description_i18n','null'::jsonb),'{}')||CASE WHEN NULLIF(s.payload->>'description','') IS NULL THEN '{}'::jsonb ELSE jsonb_build_object('fr',s.payload->>'description') END;
@@ -326,7 +326,7 @@ BEGIN
     'domain',c.domain,'code',c.code,'context_key',c.context_key,'qualified_code',c.domain||':'||CASE WHEN c.context_key<>''THEN c.context_key||':'ELSE''END||c.code,'name',pref->>'fr','description',defs->>'fr',
     'preferred_labels',pref,'definitions',defs,'name_i18n',pref,'description_i18n',defs,
     'source_kind',c.source_kind,'source_key',s.source_key,'source_fields',s.payload-'id'-'domain'-'code'-'created_at'-'updated_at'-'name'-'label'-'name_i18n'-'label_i18n'-'description'-'description_i18n',
-    'source_fingerprint',thesaurus.source_fingerprint(p_id),'parent_concept_id',parent,'lifecycle',c.lifecycle,
+    'source_fingerprint',CASE WHEN p_include_source_fingerprint THEN thesaurus.source_fingerprint(p_id)END,'parent_concept_id',parent,'lifecycle',c.lifecycle,
     'assignable',c.assignable AND c.lifecycle='active' AND COALESCE((s.payload->>'is_active')::boolean,true),
     'valid_from',s.payload->'valid_from','valid_to',s.payload->'valid_to',
     'labels',COALESCE((SELECT jsonb_agg(jsonb_build_object('lang',l.lang,'kind',l.kind,'value',l.value)ORDER BY l.lang,l.kind,l.value)FROM thesaurus.label l WHERE l.concept_id=p_id),'[]'),
@@ -339,6 +339,83 @@ BEGIN
     'replaced_by',COALESCE((SELECT jsonb_agg(target_id ORDER BY target_id)FROM thesaurus.relation WHERE concept_id=p_id AND type='replaced_by'),'[]'),
     'relations',COALESCE((SELECT jsonb_agg(jsonb_build_object('type',x.type,'target_id',x.target_id)ORDER BY x.type,x.target_id)FROM(SELECT type,target_id FROM thesaurus.relation WHERE concept_id=p_id UNION SELECT type,concept_id FROM thesaurus.relation WHERE target_id=p_id AND type IN('related','exact_equivalent'))x),'[]'));
 END $$;
+
+-- Editorial callers retain their semantic conflict fingerprint. Immutable public
+-- snapshots discard that private field and avoid computing it for every concept.
+CREATE OR REPLACE FUNCTION thesaurus.concept_document(p_id uuid)RETURNS jsonb LANGUAGE sql STABLE
+SET search_path=pg_catalog,thesaurus AS $$SELECT thesaurus.concept_document(p_id,true)$$;
+
+-- Render a release in one relational pass. Native rows and semantic arrays are
+-- materialized once instead of re-running the eight-source union per concept.
+-- Editorial reads keep concept_document(uuid) and its conflict fingerprint.
+CREATE OR REPLACE FUNCTION thesaurus.publication_documents()
+RETURNS TABLE(concept_id uuid,domain text,is_public boolean,document jsonb)
+LANGUAGE sql STABLE SET search_path=pg_catalog,thesaurus AS $documents$
+WITH sources AS MATERIALIZED(SELECT * FROM thesaurus.source_rows),
+governed AS MATERIALIZED(
+ SELECT c.*,v.is_public FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain)
+ JOIN thesaurus.source_link sl USING(concept_id)WHERE v.is_governed
+),
+localized AS(
+ SELECT concept_id,
+  jsonb_object_agg(lang,value)FILTER(WHERE field='name') names,
+  jsonb_object_agg(lang,value)FILTER(WHERE field='description') definitions
+ FROM thesaurus.localized_field GROUP BY concept_id
+),
+labels AS(
+ SELECT concept_id,jsonb_agg(jsonb_build_object('lang',lang,'kind',kind,'value',value)ORDER BY lang,kind,value) items
+ FROM thesaurus.label GROUP BY concept_id
+),
+notes AS(
+ SELECT concept_id,jsonb_agg(jsonb_build_object('lang',lang,'type',type,'value',value,'source',source)ORDER BY id) items
+ FROM thesaurus.note GROUP BY concept_id
+),
+mappings AS(
+ SELECT concept_id,jsonb_agg(jsonb_build_object('type',type,'target_uri',target_uri,'vocabulary',vocabulary,'version',version,'source',source)ORDER BY type,target_uri) items
+ FROM thesaurus.mapping GROUP BY concept_id
+),
+edges AS(
+ SELECT concept_id,type,target_id FROM thesaurus.relation
+ UNION SELECT target_id,type,concept_id FROM thesaurus.relation WHERE type IN('related','exact_equivalent')
+),
+relations AS(
+ SELECT concept_id,
+  jsonb_agg(target_id ORDER BY target_id)FILTER(WHERE type='related') related,
+  jsonb_agg(target_id ORDER BY target_id)FILTER(WHERE type='replaced_by') replaced_by,
+  jsonb_agg(jsonb_build_object('type',type,'target_id',target_id)ORDER BY type,target_id) items
+ FROM edges GROUP BY concept_id
+),
+children AS(
+ SELECT parent.concept_id,jsonb_agg(child.concept_id ORDER BY child.concept_id) items
+ FROM sources s JOIN governed child ON(child.source_kind,child.source_id,child.domain)=(s.source_kind,s.source_id,s.domain)AND child.is_public
+ JOIN thesaurus.concept parent ON(parent.source_kind,parent.source_id,parent.domain)=(s.parent_kind,s.parent_source_id,s.parent_domain)
+ GROUP BY parent.concept_id
+),
+documents AS(
+ SELECT c.*,s.payload,parent.concept_id parent,
+  COALESCE(localized.names,'{}')||COALESCE(NULLIF(s.payload->'name_i18n','null'::jsonb),NULLIF(s.payload->'label_i18n','null'::jsonb),'{}')||jsonb_build_object('fr',COALESCE(s.payload->>'name',s.payload->>'label',c.code)) preferred,
+  COALESCE(localized.definitions,'{}')||COALESCE(NULLIF(s.payload->'description_i18n','null'::jsonb),'{}')||CASE WHEN NULLIF(s.payload->>'description','')IS NULL THEN'{}'::jsonb ELSE jsonb_build_object('fr',s.payload->>'description')END definitions
+ FROM governed c JOIN sources s ON(s.source_kind,s.source_id,s.domain)=(c.source_kind,c.source_id,c.domain)
+ LEFT JOIN thesaurus.concept parent ON(parent.source_kind,parent.source_id,parent.domain)=(s.parent_kind,s.parent_source_id,s.parent_domain)
+ LEFT JOIN localized ON localized.concept_id=c.concept_id
+)
+SELECT d.concept_id,d.domain,d.is_public,jsonb_build_object(
+ 'concept_id',d.concept_id,'uri',rtrim(instance.base_uri,'/')||'/'||d.concept_id::text,
+ 'domain',d.domain,'code',d.code,'context_key',d.context_key,'qualified_code',d.domain||':'||CASE WHEN d.context_key<>''THEN d.context_key||':'ELSE''END||d.code,
+ 'name',d.preferred->>'fr','description',d.definitions->>'fr','preferred_labels',d.preferred,'definitions',d.definitions,
+ 'parent_concept_id',d.parent,'lifecycle',d.lifecycle,
+ 'assignable',d.assignable AND d.lifecycle='active'AND COALESCE((d.payload->>'is_active')::boolean,true),
+ 'valid_from',d.payload->'valid_from','valid_to',d.payload->'valid_to',
+ 'labels',COALESCE(labels.items,'[]'),'notes',COALESCE(notes.items,'[]'),'mappings',COALESCE(mappings.items,'[]'),
+ 'broader',CASE WHEN d.parent IS NULL THEN'[]'::jsonb ELSE jsonb_build_array(d.parent)END,
+ 'narrower',COALESCE(children.items,'[]'),'related',COALESCE(relations.related,'[]'),
+ 'replaced_by',COALESCE(relations.replaced_by,'[]'),'relations',COALESCE(relations.items,'[]'))
+FROM documents d CROSS JOIN thesaurus.instance instance
+LEFT JOIN labels ON labels.concept_id=d.concept_id LEFT JOIN notes ON notes.concept_id=d.concept_id
+LEFT JOIN mappings ON mappings.concept_id=d.concept_id LEFT JOIN children ON children.concept_id=d.concept_id
+LEFT JOIN relations ON relations.concept_id=d.concept_id
+WHERE instance.singleton
+$documents$;
 
 CREATE OR REPLACE FUNCTION thesaurus.is_ancestor(p_parent uuid,p_child uuid)RETURNS boolean LANGUAGE sql STABLE
 SET search_path=pg_catalog,thesaurus AS $$
@@ -600,8 +677,7 @@ BEGIN
   END IF;
   INSERT INTO thesaurus.release(previous_release_id,created_by,idempotency_key,affected_objects,request_fingerprint)VALUES(prev,thesaurus.current_actor(),p_key,cardinality(affected),request_fp)RETURNING release_id INTO rid;
   WITH documents AS MATERIALIZED(
-    SELECT c.concept_id,c.domain,v.is_public,thesaurus.concept_document(c.concept_id)-'source_kind'-'source_key'-'source_fields'-'source_fingerprint'-'name_i18n'-'description_i18n' document
-    FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain)JOIN thesaurus.source_link sl USING(concept_id)WHERE v.is_governed)
+    SELECT * FROM thesaurus.publication_documents())
   INSERT INTO thesaurus.release_concept(release_id,concept_id,domain,is_public,document,checksum)
   SELECT rid,concept_id,domain,is_public,document,md5(document::text)FROM documents;
   -- Monotonic historical identity, including tombstones of no-longer-public vocabularies.
@@ -651,6 +727,9 @@ DECLARE cid uuid;rid uuid;r thesaurus.revision%ROWTYPE;c thesaurus.concept%ROWTY
 BEGIN
   IF auth.uid()IS NULL OR api.is_platform_superuser()IS NOT TRUE THEN RAISE EXCEPTION 'Platform superuser required' USING ERRCODE='42501';END IF;
   IF jsonb_typeof(COALESCE(p_payload,'{}'))<>'object' THEN RAISE EXCEPTION 'Object payload required' USING ERRCODE='PT400';END IF;
+  IF p_action IN('configure_instance','configure_domain')THEN
+    PERFORM pg_advisory_xact_lock_shared(741126,1);
+  END IF;
   IF p_action='configure_instance' THEN
     IF p_payload?'base_uri' AND COALESCE(p_payload->>'base_uri','')!~'^https?://[^/ ]+/.+' THEN RAISE EXCEPTION 'Stable HTTP(S) URI prefix required' USING ERRCODE='PT400';END IF;
     IF EXISTS(SELECT 1 FROM thesaurus.release)AND p_payload?'base_uri' AND p_payload->>'base_uri'<>(SELECT base_uri FROM thesaurus.instance WHERE singleton)THEN RAISE EXCEPTION 'Published concept URI prefix is immutable' USING ERRCODE='PT409';END IF;

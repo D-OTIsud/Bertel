@@ -46,6 +46,9 @@ DECLARE
   v_role_admin uuid;
   v_role_pub   uuid;
 BEGIN
+  ASSERT current_user = 'postgres', 'Synthetic export fixtures require the maintenance test role';
+  PERFORM set_config('request.jwt.claims', '{}', true);
+  ASSERT auth.uid() IS NULL AND auth.role() IS NULL, 'No client identity during fixture setup';
   SELECT id INTO v_role_admin FROM ref_org_admin_role WHERE code = 'org_admin';
   SELECT id INTO v_role_pub   FROM ref_org_role       WHERE code = 'publisher';
   ASSERT v_role_admin IS NOT NULL, 'ref_org_admin_role[org_admin] introuvable';
@@ -94,6 +97,9 @@ DECLARE
   v_actor_role uuid := gen_random_uuid();
   v_emails     text[];
 BEGIN
+  ASSERT current_user = 'postgres', 'Synthetic selection fixtures require the maintenance test role';
+  PERFORM set_config('request.jwt.claims', '{}', true);
+  ASSERT auth.uid() IS NULL AND auth.role() IS NULL, 'No residual member claims during published fixture setup';
   SELECT id INTO v_kind_email FROM ref_code_contact_kind WHERE code = 'email';
   SELECT id INTO v_role_op    FROM ref_actor_role        WHERE code = 'operator';
   SELECT id INTO v_role_pub   FROM ref_org_role          WHERE code = 'publisher';
@@ -184,6 +190,10 @@ BEGIN
     ('EMLSEL9999999907', v_kind_email, 'principal07@example.test',  true, 1);
 
   -- ---------- A. Cascade ----------
+  PERFORM set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub', current_setting('test.user_id'))::text, true);
+  SET LOCAL ROLE authenticated;
+  ASSERT current_user = 'authenticated' AND auth.uid() = current_setting('test.user_id')::uuid AND auth.role() = 'authenticated', 'Cascade uses the real member identity';
+  ASSERT api.is_platform_superuser() IS FALSE AND api.current_user_can_edit_objects() IS TRUE, 'Cascade remains a non-platform editor probe';
   v_res := api.list_selection_emails(v_reason, ARRAY[
     'EMLSEL9999999901','EMLSEL9999999902','EMLSEL9999999903','EMLSEL9999999904',
     'EMLSEL9999999905','EMLSEL9999999906','EMLSEL9999999907','EMLSEL9999999908',
@@ -249,6 +259,7 @@ BEGIN
   -- ---------- C. Tableau vide = demande valide ----------
   v_res := api.list_selection_emails(v_reason, ARRAY[]::text[]);
   ASSERT json_array_length(v_res->'rows') = 0, 'un tableau vide rend un résultat vide';
+  RESET ROLE;
 END $$;
 
 -- ---------- D. Contrats d'erreur ----------
@@ -394,6 +405,9 @@ BEGIN
   -- H2. Liste DYNAMIQUE de plus de 200 membres : 205 témoins dans une commune
   -- inventée. `city_any` est une clé « vive » : sans elle, le résolveur lirait le
   -- MV et ne verrait aucun témoin transactionnel (le test serait vacant).
+  ASSERT current_user = 'postgres', 'Dynamic export fixture setup requires the maintenance test role';
+  PERFORM set_config('request.jwt.claims', '{}', true);
+  ASSERT auth.uid() IS NULL AND auth.role() IS NULL, 'Dynamic published fixtures have no client claims';
   INSERT INTO object (id, object_type, name, status, published_at)
   SELECT 'EMLBIG' || lpad(g::text, 10, '0'), 'HLO', 'Gros lot ' || g, 'published', now()
   FROM generate_series(1, 205) g;
@@ -418,6 +432,10 @@ BEGIN
           '{"buckets":[{"filters":{"city_any":["Zzgroslot"]}}]}'::jsonb)
   RETURNING id INTO v_list_dynamic;
 
+  PERFORM set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub', current_setting('test.user_id'))::text, true);
+  SET LOCAL ROLE authenticated;
+  ASSERT current_user = 'authenticated' AND auth.uid() = current_setting('test.user_id')::uuid AND auth.role() = 'authenticated', 'Dynamic export uses the real member identity';
+  ASSERT api.is_platform_superuser() IS FALSE AND api.current_user_can_edit_objects() IS TRUE, 'Dynamic export remains a non-platform editor probe';
   v_res := api.list_selection_emails(v_reason, NULL, v_list_dynamic);
   ASSERT json_array_length(v_res->'rows') = 205,
     format('l export doit dépasser le plafond de 200 des listes (obtenu %s)',
@@ -431,6 +449,7 @@ BEGIN
   SELECT json_array_length((api.get_list(v_list_dynamic))->'items') INTO v_n;
   ASSERT v_n = 200,
     format('api.get_list doit rester plafonné à 200 sur une liste dynamique (obtenu %s)', v_n);
+  RESET ROLE;
 
   -- H4. Liste statique portant une fiche `hidden` : exclue comme `archived` (D9).
   -- Le témoin NAÎT `hidden` (INSERT direct, plus haut) au lieu d'être basculé par
@@ -461,6 +480,9 @@ DECLARE
   v_res        json;
   v_row        record;
 BEGIN
+  ASSERT current_user = 'postgres', 'Journal fixture setup requires the maintenance test role';
+  PERFORM set_config('request.jwt.claims', '{}', true);
+  ASSERT auth.uid() IS NULL AND auth.role() IS NULL, 'Journal published fixtures have no client claims';
   SELECT id INTO v_kind_email FROM ref_code_contact_kind WHERE code = 'email';
   SELECT id INTO v_role_op    FROM ref_actor_role        WHERE code = 'operator';
   SELECT id INTO v_role_pub   FROM ref_org_role          WHERE code = 'publisher';
@@ -482,8 +504,13 @@ BEGIN
   INSERT INTO contact_channel (object_id, kind_id, value, is_primary)
   VALUES ('EMLJRN9999999902', v_kind_email, 'fiche.journal.j@example.test', true);
 
+  PERFORM set_config('request.jwt.claims', json_build_object('role', 'authenticated', 'sub', current_setting('test.user_id'))::text, true);
+  SET LOCAL ROLE authenticated;
+  ASSERT current_user = 'authenticated' AND auth.uid() = current_setting('test.user_id')::uuid AND auth.role() = 'authenticated', 'Journal RPC uses the real member identity';
+  ASSERT api.is_platform_superuser() IS FALSE AND api.current_user_can_edit_objects() IS TRUE, 'Journal export remains a non-platform editor probe';
   v_res := api.list_selection_emails(v_reason,
     ARRAY['EMLJRN9999999901', 'EMLJRN9999999902']);
+  RESET ROLE; -- Inspect synthetic journal metadata through the maintenance connection.
 
   ASSERT (v_res->'rows')::jsonb @> '[{"email":"gerant.journal.j@example.test","source":"actor"}]'::jsonb,
     'le bras acteur doit avoir emis sur EMLJRN9999999901';

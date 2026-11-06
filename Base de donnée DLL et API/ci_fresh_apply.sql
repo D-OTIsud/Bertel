@@ -679,6 +679,10 @@ ROLLBACK;
 \ir tests/test_partner_photo_album_fresh.sql
 \ir tests/test_partner_photo_album_catalog_rejections.sql
 
+\echo '== DB08 initial publication and institutional creation authorization =='
+\ir ../supabase/migrations/20261106092254_object_initial_publication_guard.sql
+
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -177,6 +177,7 @@ async function handlePostAuthenticated(
   const preparedImages: Awaited<ReturnType<typeof prepareVisionImage>>[] = [];
   try {
     for (const img of selected) {
+      if (req.signal?.aborted) break;
       const buf = Buffer.from(img.base64, 'base64');
       if (buf.byteLength > MAX_IMAGE_BYTES) {
         throw new MediaProcessingError('size', 'image trop volumineuse');
@@ -194,9 +195,13 @@ async function handlePostAuthenticated(
   // Re-read immediately before the provider request.  If an administrator has disabled
   // the service while images were being prepared, orchestration receives no stale config.
   const controller = new AbortController();
+  const abortFromCaller = () => controller.abort(req.signal?.reason);
+  req.signal?.addEventListener('abort', abortFromCaller, { once: true });
+  if (req.signal?.aborted) abortFromCaller();
   const getActiveProvider = () => resolveActiveAiProvider(server, controller.signal);
   const timeout = setTimeout(() => controller.abort(), 55_000);
   try {
+    controller.signal.throwIfAborted();
     const result = await orchestrateExtraction(
       {
         menuTitle: body.menu_title,
@@ -227,5 +232,6 @@ async function handlePostAuthenticated(
     );
   } finally {
     clearTimeout(timeout);
+    req.signal?.removeEventListener('abort', abortFromCaller);
   }
 }

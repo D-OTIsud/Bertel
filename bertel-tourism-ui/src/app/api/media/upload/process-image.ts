@@ -1,5 +1,9 @@
 import sharp from 'sharp';
 
+// SVG is outside the upload contract. Block its loader as defense in depth,
+// including when a caller disguises vector content with a raster Content-Type.
+sharp.block({ operation: ['VipsForeignLoadSvg'] });
+
 export const MAX_DIMENSION_PX = 2000;
 export const MAX_INPUT_BYTES = 20 * 1024 * 1024; // 20 MB
 export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -38,6 +42,13 @@ export class MediaProcessingError extends Error {
   }
 }
 
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+function hasSupportedRasterSignature(buffer: Buffer): boolean {
+  return (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff)
+    || (buffer.length >= 8 && buffer.subarray(0, 8).equals(PNG_SIGNATURE))
+    || (buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP');
+}
+
 /**
  * Validate MIME type and input size, then resize-down to fit MAX_DIMENSION_PX
  * on both axes, apply EXIF rotation, and strip all metadata (EXIF, IPTC, XMP)
@@ -61,6 +72,11 @@ export async function processImage({ buffer, mimeType, maxDimension = MAX_DIMENS
       'size',
       `Image trop volumineuse (max ${Math.round(MAX_INPUT_BYTES / (1024 * 1024))} Mo).`,
     );
+  }
+  // Check bytes before sharp/libvips selects a decoder. The declared MIME is
+  // not evidence of the encoded format. All three supported rasters remain valid.
+  if (!hasSupportedRasterSignature(buffer)) {
+    throw new MediaProcessingError('decode', "Cette image n'a pas pu être traitée. Réessayez avec un autre fichier.");
   }
   const maxDim = Number.isFinite(maxDimension) && maxDimension > 0 ? Math.floor(maxDimension) : MAX_DIMENSION_PX;
 

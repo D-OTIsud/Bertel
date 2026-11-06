@@ -1,5 +1,13 @@
 # Thésaurus Bertel — état d'implémentation au 6 novembre 2026
 
+### Clôture technique à 13:25 UTC — limite de réalisation de deux heures
+
+Le code produit est gelé. Cinq suites SQL réelles passent, dont usages imbriqués, parents typés et échec de projection avec rollback complet ; la couverture P03 des 40 tables passe après la condition explicite sur le rôle de publication. Deux courses à plusieurs connexions passent sur le main final. Sur 447 fiches synthétiques, la dernière mesure est **205,37 ms** de prévisualisation, **1 953,61 ms** de publication totale et **1 111,89 ms** d’attente éditeur, sous le budget de deux secondes. Ces résultats sont locaux et ne constituent pas une mesure de production.
+
+La CI frontend complète est verte sur le dernier code UI, et le build local final réussit. Le second Jest local termine à **575 suites / 5 916 tests réussis**, avec **3 suites / 5 tests en timeout sous charge** hors module ; leur reprise isolée passe ensuite à **3 suites / 65 tests réussis**, code de sortie nul, dans `jest-timeout-rerun-final.log`. Le contrôle Supabase complet après la dernière correction RLS reste en cours : [run 42224916815](https://github.com/D-OTIsud/Bertel/actions/runs/42224916815). Aucun contournement du gate de sécurité n’a été ajouté.
+
+**L’exécution du plan entier n’est pas déclarée achevée.** Restent la confirmation de cette CI, l’activation et la recette partenaire sur un environnement déployé, puis l’ouverture progressive. Aucune migration, publication, activation ou fusion de production n’a été effectuée. La vérification éditoriale des vocabulaires reste distincte de la complétude technique du logiciel. Les paragraphes historiques ci-dessous sont complétés par ce bilan de clôture.
+
 Livraison de la [PR 95](https://github.com/D-OTIsud/Bertel/pull/95), selon le [plan validé](../superpowers/plans/2026-11-06-thesaurus-api-partenaires-plan.md). **Aucune activation ni migration de production n'est revendiquée.** Les preuves ci-dessous portent sur le code, des tests locaux isolés et une interface à données simulées. Les critères encore en cours restent des conditions de livraison ; le responsable de recette complétera leurs résultats.
 
 Le socle est porté par les migrations [publication](../../supabase/migrations/20261106112948_thesaurus_publication.sql) et [consommateurs](../../supabase/migrations/20261106113509_thesaurus_consumers.sql). Elles sont ordonnées dans le [manifeste frais](<../../Base de donnée DLL et API/ci_fresh_apply.sql>). Le [runbook](../SQL_ROLLOUT_RUNBOOK.md) fixe la configuration URI, Licence Ouverte / Etalab 2.0, attribution OTI du Sud, le bootstrap explicite et la reprise d'incident.

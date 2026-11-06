@@ -18,6 +18,10 @@ INSERT INTO public.object(id,object_type,name,status) VALUES
 INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id) VALUES
 ('HLORUNTHESAUR101','taxonomy_hlo','b73e1000-0000-4000-8000-000000000102');
 UPDATE public.object SET status='published' WHERE id='HLORUNTHESAUR101';
+-- The fresh manifest intentionally leaves these WITH NO DATA until its final step.
+-- Populate the real fixture before exercising the canonical filtered-object reader.
+REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
+REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
 
 DO $test$
 DECLARE config jsonb; activation jsonb; snapshot jsonb; resource jsonb; page jsonb; rid bigint; legacy jsonb; direct jsonb;

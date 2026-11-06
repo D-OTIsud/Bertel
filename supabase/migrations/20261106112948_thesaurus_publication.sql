@@ -8,6 +8,9 @@ DO $roles$ BEGIN
     CREATE ROLE bertel_thesaurus_publisher NOLOGIN NOINHERIT;
   END IF;
 END $roles$;
+-- Supabase's migration role is not a PostgreSQL superuser. Temporary membership
+-- permits CREATE OR REPLACE/ALTER OWNER for the NOLOGIN publisher, then is revoked.
+GRANT bertel_thesaurus_publisher TO CURRENT_USER;
 GRANT USAGE ON SCHEMA thesaurus,public,api,extensions,auth,internal,audit TO bertel_thesaurus_publisher;
 
 CREATE TABLE IF NOT EXISTS thesaurus.instance (
@@ -327,6 +330,12 @@ SET search_path=pg_catalog,thesaurus AS $$
 DECLARE errors jsonb:='[]';warnings jsonb:='[]';req boolean;required_langs text[];lang text;l jsonb;n jsonb;target uuid;langs jsonb;d text;cid uuid;
 BEGIN
   SELECT c.domain,vv.require_definition,vv.required_languages INTO d,req,required_langs FROM thesaurus.concept c JOIN thesaurus.vocabulary vv USING(domain) WHERE c.concept_id=p_concept;
+  IF jsonb_typeof(p_doc)<>'object'OR jsonb_typeof(p_doc->'name')IS DISTINCT FROM'string'THEN RETURN jsonb_build_object('errors',jsonb_build_array('Le document et son libellé doivent être des textes structurés.'),'warnings',warnings);END IF;
+  FOREACH d IN ARRAY ARRAY['labels','notes','relations','mappings','replaced_by']LOOP
+    IF p_doc?d AND jsonb_typeof(p_doc->d)<>'array'THEN RETURN jsonb_build_object('errors',jsonb_build_array('La propriété '||d||' doit être une liste.'),'warnings',warnings);END IF;
+  END LOOP;
+  IF p_doc?'source_fields'AND jsonb_typeof(p_doc->'source_fields')<>'object'THEN RETURN jsonb_build_object('errors',jsonb_build_array('Les champs source doivent être un objet.'),'warnings',warnings);END IF;
+  SELECT domain INTO d FROM thesaurus.concept WHERE concept_id=p_concept;
   IF NULLIF(btrim(p_doc->>'name'),'') IS NULL THEN errors:=errors||jsonb_build_array('Le libellé français est requis.');END IF;
   IF COALESCE(p_doc->>'lifecycle','active') NOT IN('active','deprecated','retired') THEN errors:=errors||jsonb_build_array('État du concept invalide.');END IF;
   IF EXISTS(SELECT 1 FROM thesaurus.concept me WHERE me.concept_id=p_concept AND((me.source_kind='classification_value'AND p_doc#>>'{source_fields,scheme_id}'IS NOT NULL AND p_doc#>>'{source_fields,scheme_id}'<>me.context_key)OR(me.source_kind='sustainability_action'AND p_doc#>>'{source_fields,category_id}'IS NOT NULL AND p_doc#>>'{source_fields,category_id}'<>me.context_key)))THEN errors:=errors||jsonb_build_array('Le contexte du code est immuable : créer un nouveau concept pour changer de schéma ou catégorie.');END IF;
@@ -349,7 +358,7 @@ BEGIN
   END LOOP;END IF;
   IF jsonb_typeof(COALESCE(p_doc->'labels','[]'))<>'array' THEN errors:=errors||jsonb_build_array('Liste de libellés invalide.');
   ELSE FOR l IN SELECT * FROM jsonb_array_elements(COALESCE(p_doc->'labels','[]')) LOOP
-    IF COALESCE(l->>'lang','') !~ '^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$' OR l->>'kind' NOT IN('alt','hidden') OR NULLIF(btrim(l->>'value'),'') IS NULL THEN errors:=errors||jsonb_build_array('Libellé alternatif/caché invalide.');END IF;
+    IF COALESCE(l->>'lang','') !~ '^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$' OR COALESCE(l->>'kind','') NOT IN('alt','hidden') OR NULLIF(btrim(l->>'value'),'') IS NULL THEN errors:=errors||jsonb_build_array('Libellé alternatif/caché invalide.');END IF;
     IF lower(btrim(l->>'value'))=lower(btrim(CASE WHEN l->>'lang'='fr' THEN p_doc->>'name' ELSE p_doc->'name_i18n'->>(l->>'lang') END)) THEN errors:=errors||jsonb_build_array('Un synonyme ne peut être le libellé préféré de la même langue.');END IF;
   END LOOP; END IF;
   IF p_doc->>'parent_concept_id' IS NOT NULL THEN
@@ -358,14 +367,14 @@ BEGIN
     IF EXISTS(WITH RECURSIVE parents AS(SELECT target id,ARRAY[target]path UNION ALL SELECT (thesaurus.concept_document(p.id)->>'parent_concept_id')::uuid,p.path||(thesaurus.concept_document(p.id)->>'parent_concept_id')::uuid FROM parents p WHERE thesaurus.concept_document(p.id)->>'parent_concept_id' IS NOT NULL AND NOT((thesaurus.concept_document(p.id)->>'parent_concept_id')::uuid=ANY(p.path)))SELECT 1 FROM parents WHERE id=p_concept) THEN errors:=errors||jsonb_build_array('Cycle de hiérarchie interdit.');END IF;
   END IF;
   FOR l IN SELECT * FROM jsonb_array_elements(COALESCE(p_doc->'relations','[]')||COALESCE((SELECT jsonb_agg(jsonb_build_object('type','replaced_by','target_id',x))FROM jsonb_array_elements_text(COALESCE(p_doc->'replaced_by','[]'))x),'[]')) LOOP
-    IF l->>'type' NOT IN('related','exact_equivalent','replaced_by') THEN errors:=errors||jsonb_build_array('Relation invalide : la hiérarchie utilise le parent.');CONTINUE;END IF;
+    IF COALESCE(l->>'type','') NOT IN('related','exact_equivalent','replaced_by') THEN errors:=errors||jsonb_build_array('Relation invalide : la hiérarchie utilise le parent.');CONTINUE;END IF;
     target:=(l->>'target_id')::uuid;
     IF target=p_concept OR NOT EXISTS(SELECT 1 FROM thesaurus.concept WHERE concept_id=target)THEN errors:=errors||jsonb_build_array('Cible de relation absente ou identique.');END IF;
     IF l->>'type'='related'AND(thesaurus.is_ancestor(target,p_concept)OR thesaurus.is_ancestor(p_concept,target)OR target=(p_doc->>'parent_concept_id')::uuid OR thesaurus.is_ancestor(target,(p_doc->>'parent_concept_id')::uuid))THEN errors:=errors||jsonb_build_array('Un terme associé ne peut pas être un ancêtre ou descendant hiérarchique.');END IF;
     IF l->>'type'='replaced_by'AND EXISTS(WITH RECURSIVE path(id,visited)AS(SELECT target,ARRAY[target]UNION ALL SELECT r.target_id,p.visited||r.target_id FROM path p JOIN thesaurus.relation r ON r.concept_id=p.id AND r.type='replaced_by'WHERE NOT r.target_id=ANY(p.visited))SELECT 1 FROM path WHERE id=p_concept)THEN errors:=errors||jsonb_build_array('Cycle de remplacement interdit.');END IF;
   END LOOP;
   FOR l IN SELECT * FROM jsonb_array_elements(COALESCE(p_doc->'mappings','[]'))LOOP
-    IF l->>'type' NOT IN('exactMatch','closeMatch','broadMatch','narrowMatch','relatedMatch') OR COALESCE(l->>'target_uri','') !~ '^(https?://|urn:)' OR NULLIF(btrim(l->>'source'),'') IS NULL OR NULLIF(btrim(l->>'vocabulary'),'') IS NULL THEN errors:=errors||jsonb_build_array('Une correspondance exige type, URI, vocabulaire et source.');END IF;
+    IF COALESCE(l->>'type','') NOT IN('exactMatch','closeMatch','broadMatch','narrowMatch','relatedMatch') OR COALESCE(l->>'target_uri','') !~ '^(https?://|urn:)' OR NULLIF(btrim(l->>'source'),'') IS NULL OR NULLIF(btrim(l->>'vocabulary'),'') IS NULL THEN errors:=errors||jsonb_build_array('Une correspondance exige type, URI, vocabulaire et source.');END IF;
   END LOOP;
   RETURN jsonb_build_object('errors',errors,'warnings',warnings);
 EXCEPTION WHEN invalid_text_representation THEN RETURN jsonb_build_object('errors',jsonb_build_array('Identifiant de relation invalide.'),'warnings',warnings);
@@ -789,9 +798,53 @@ BEGIN
   objects:=thesaurus.object_ids_for_row(TG_RELID,to_jsonb(OLD));
   IF cardinality(objects)>0 THEN
     SELECT jsonb_object_agg(a.attname,to_jsonb(OLD)->a.attname)INTO keyj FROM pg_index i JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=ANY(i.indkey)WHERE i.indrelid=TG_RELID AND i.indisprimary;
+    IF to_jsonb(OLD)?'actor_id'THEN keyj:=keyj||jsonb_build_object('actor_id',to_jsonb(OLD)->'actor_id');END IF;
+    IF to_jsonb(OLD)?'object_id'THEN keyj:=keyj||jsonb_build_object('object_id',to_jsonb(OLD)->'object_id');END IF;
     IF keyj IS NOT NULL THEN INSERT INTO thesaurus.ownership_retention(transaction_id,table_oid,row_key,object_ids)VALUES(txid_current(),TG_RELID,keyj,objects)ON CONFLICT(transaction_id,table_oid,row_key)DO UPDATE SET object_ids=EXCLUDED.object_ids;END IF;
   END IF;
   RETURN OLD;
+END $$;
+
+CREATE OR REPLACE FUNCTION thesaurus.row_has_historical_reference(p_table oid,p_row jsonb,p_visited oid[]DEFAULT '{}',p_depth integer DEFAULT 0)RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path=pg_catalog,thesaurus,public AS $$
+#variable_conflict use_column
+DECLARE f record;k record;keyj jsonb;kind text;domain text;cond text;child jsonb;
+BEGIN
+  IF p_depth>8 OR p_table=ANY(p_visited)OR p_row IS NULL THEN RETURN false;END IF;
+  FOR f IN SELECT con.conkey,con.confkey,con.confrelid,target.relname,target.relispartition,target.relpartbound FROM pg_constraint con JOIN pg_class target ON target.oid=con.confrelid WHERE con.conrelid=p_table AND con.contype='f'AND(target.relname IN('ref_code','ref_amenity','ref_classification_scheme','ref_classification_value','ref_language','ref_commune','ref_sustainability_action','ref_sustainability_action_category')OR EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhrelid=target.oid AND i.inhparent='public.ref_code'::regclass))LOOP
+    kind:=CASE f.relname WHEN'ref_amenity'THEN'amenity'WHEN'ref_classification_scheme'THEN'classification_scheme'WHEN'ref_classification_value'THEN'classification_value'WHEN'ref_language'THEN'language'WHEN'ref_commune'THEN'commune'WHEN'ref_sustainability_action'THEN'sustainability_action'WHEN'ref_sustainability_action_category'THEN'sustainability_category'ELSE'ref_code'END;
+    domain:=CASE WHEN f.relispartition THEN substring(pg_get_expr(f.relpartbound,f.confrelid)FROM'''([^'']+)''')END;keyj:='{}';
+    FOR k IN SELECT la.attname l,ra.attname r FROM unnest(f.conkey,f.confkey)WITH ORDINALITY u(l,r,ord)JOIN pg_attribute la ON la.attrelid=p_table AND la.attnum=u.l JOIN pg_attribute ra ON ra.attrelid=f.confrelid AND ra.attnum=u.r LOOP keyj:=keyj||jsonb_build_object(k.r,p_row->k.l);END LOOP;
+    IF EXISTS(SELECT 1 FROM thesaurus.concept c JOIN thesaurus.vocabulary v ON v.domain=c.domain AND v.is_governed JOIN thesaurus.source_rows s ON(s.source_kind,s.source_id,s.domain)=(c.source_kind,c.source_id,c.domain)WHERE c.source_kind=kind AND(domain IS NULL OR s.domain=domain)AND s.source_key@>keyj AND(c.lifecycle<>'active'OR NOT c.assignable OR NOT COALESCE((s.payload->>'is_active')::boolean,true)OR COALESCE((s.payload->>'valid_from')::date,current_date)>current_date OR COALESCE((s.payload->>'valid_to')::date,current_date)<current_date OR NOT EXISTS(SELECT 1 FROM thesaurus.release_concept rc WHERE rc.release_id=api.thesaurus_generation()AND rc.concept_id=c.concept_id)))THEN RETURN true;END IF;
+  END LOOP;
+  IF p_table='public.object_classification'::regclass AND thesaurus.is_governed('classification_value')AND EXISTS(SELECT 1 FROM jsonb_array_elements_text(CASE WHEN jsonb_typeof(p_row->'subvalue_ids')='array'THEN p_row->'subvalue_ids'ELSE'[]'END)x JOIN thesaurus.concept c ON c.source_kind='classification_value'AND c.source_id=x.value WHERE c.lifecycle<>'active'OR NOT c.assignable)THEN RETURN true;END IF;
+  FOR f IN SELECT con.conrelid,con.conkey,con.confkey FROM pg_constraint con JOIN pg_class child_tbl ON child_tbl.oid=con.conrelid JOIN pg_namespace ns ON ns.oid=child_tbl.relnamespace WHERE con.contype='f'AND con.confrelid=p_table AND ns.nspname='public'AND child_tbl.relname NOT LIKE'ref\_%'AND NOT con.conrelid=ANY(p_visited||p_table)LOOP
+    cond:='';
+    FOR k IN SELECT la.attname l,ra.attname r FROM unnest(f.conkey,f.confkey)WITH ORDINALITY u(l,r,ord)JOIN pg_attribute la ON la.attrelid=f.conrelid AND la.attnum=u.l JOIN pg_attribute ra ON ra.attrelid=p_table AND ra.attnum=u.r ORDER BY u.ord LOOP cond:=cond||CASE WHEN cond=''THEN''ELSE' AND 'END||format('to_jsonb(c)->%L=$1->%L',k.l,k.r);END LOOP;
+    FOR child IN EXECUTE format('SELECT to_jsonb(c)FROM %s c WHERE %s',f.conrelid::regclass,cond)USING p_row LOOP
+      IF thesaurus.row_has_historical_reference(f.conrelid,child,p_visited||p_table,p_depth+1)THEN RETURN true;END IF;
+    END LOOP;
+  END LOOP;
+  RETURN false;
+END $$;
+
+CREATE OR REPLACE FUNCTION thesaurus.guard_ownership_transfer()RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,thesaurus,public AS $$
+#variable_conflict use_column
+DECLARE oldobjects text[];newobjects text[];actorrow jsonb;
+BEGIN
+  IF TG_TABLE_NAME='actor_object_role'AND(TG_OP='INSERT'OR to_jsonb(NEW)->'actor_id'IS DISTINCT FROM to_jsonb(OLD)->'actor_id'OR to_jsonb(NEW)->'object_id'IS DISTINCT FROM to_jsonb(OLD)->'object_id')THEN
+    IF NOT EXISTS(SELECT 1 FROM public.actor_object_role ar WHERE ar.actor_id=NEW.actor_id AND ar.object_id=NEW.object_id)
+      AND NOT EXISTS(SELECT 1 FROM thesaurus.ownership_retention own WHERE own.transaction_id=txid_current()AND own.table_oid=TG_RELID AND own.row_key->>'actor_id'=NEW.actor_id::text AND NEW.object_id=ANY(own.object_ids))THEN
+      SELECT to_jsonb(a)INTO actorrow FROM public.actor a WHERE a.id=NEW.actor_id;
+      IF thesaurus.row_has_historical_reference('public.actor'::regclass,actorrow)THEN RAISE EXCEPTION 'Actor with historical vocabulary references cannot be newly attached to this object' USING ERRCODE='23514';END IF;
+    END IF;
+  END IF;
+  IF TG_OP='UPDATE'THEN
+    oldobjects:=thesaurus.object_ids_for_row(TG_RELID,to_jsonb(OLD));newobjects:=thesaurus.object_ids_for_row(TG_RELID,to_jsonb(NEW));
+    IF NOT newobjects<@oldobjects AND thesaurus.row_has_historical_reference(TG_RELID,to_jsonb(NEW))THEN RAISE EXCEPTION 'Historical vocabulary references must be requalified before transferring ownership' USING ERRCODE='23514';END IF;
+  END IF;
+  RETURN NEW;
 END $$;
 
 DO $object_fences$DECLARE t record;BEGIN
@@ -803,6 +856,8 @@ DO $object_fences$DECLARE t record;BEGIN
     EXECUTE format('CREATE TRIGGER thesaurus_write_fence BEFORE INSERT OR UPDATE OR DELETE ON %s FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.write_fence()',t.rel);
     EXECUTE format('DROP TRIGGER IF EXISTS thesaurus_remember_ownership ON %s',t.rel);
     EXECUTE format('CREATE TRIGGER thesaurus_remember_ownership BEFORE DELETE ON %s FOR EACH ROW EXECUTE FUNCTION thesaurus.remember_ownership()',t.rel);
+    EXECUTE format('DROP TRIGGER IF EXISTS thesaurus_ownership_transfer_guard ON %s',t.rel);
+    EXECUTE format('CREATE TRIGGER thesaurus_ownership_transfer_guard BEFORE INSERT OR UPDATE ON %s FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_ownership_transfer()',t.rel);
   END LOOP;
 END $object_fences$;
 
@@ -834,10 +889,11 @@ CREATE TRIGGER thesaurus_subvalues_guard BEFORE INSERT OR UPDATE OR DELETE ON pu
 CREATE OR REPLACE FUNCTION thesaurus.guard_assignment()RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,thesaurus AS $$
 #variable_conflict use_column
-DECLARE f jsonb;j jsonb;oldj jsonb;keyj jsonb;oldkey jsonb;k jsonb;c record;obj text;objects text[];gen bigint;
+DECLARE f jsonb;j jsonb;oldj jsonb;keyj jsonb;oldkey jsonb;k jsonb;c record;obj text;objects text[];oldobjects text[];gen bigint;
 BEGIN
   j:=CASE WHEN TG_OP<>'DELETE'THEN to_jsonb(NEW)ELSE to_jsonb(OLD)END;
   oldj:=CASE WHEN TG_OP<>'INSERT'THEN to_jsonb(OLD)ELSE NULL END;objects:=thesaurus.object_ids_for_row(TG_RELID,j);
+  oldobjects:=CASE WHEN TG_OP='UPDATE'THEN thesaurus.object_ids_for_row(TG_RELID,oldj)ELSE'{}'::text[]END;
   IF COALESCE(cardinality(objects),0)=0 THEN RETURN CASE WHEN TG_OP='DELETE'THEN OLD ELSE NEW END;END IF;
   -- Even DELETE takes the shared fence before existing child triggers touch object rows.
   -- This preserves delete/reinsert semantics without reversing publication lock order.
@@ -848,9 +904,10 @@ BEGIN
       keyj:=keyj||jsonb_build_object(k->>'target',j->(k->>'local'));oldkey:=oldkey||jsonb_build_object(k->>'target',oldj->(k->>'local'));
     END LOOP;
     IF EXISTS(SELECT 1 FROM jsonb_each(keyj)x WHERE x.value='null'::jsonb)THEN CONTINUE;END IF;
-    IF TG_OP='UPDATE'AND keyj=oldkey THEN CONTINUE;END IF;
+    IF TG_OP='UPDATE'AND keyj=oldkey AND objects<@oldobjects THEN CONTINUE;END IF;
     FOR c IN SELECT c.*,s.payload FROM thesaurus.concept c JOIN thesaurus.source_rows s ON(s.source_kind,s.source_id,s.domain)=(c.source_kind,c.source_id,c.domain)JOIN thesaurus.vocabulary v ON v.domain=c.domain AND v.is_governed WHERE c.source_kind=f->>'kind'AND(f->>'domain'IS NULL OR c.domain=f->>'domain')AND s.source_key@>keyj LOOP
       FOREACH obj IN ARRAY objects LOOP
+      IF TG_OP='UPDATE'AND keyj=oldkey AND obj=ANY(oldobjects)THEN CONTINUE;END IF;
       IF TG_OP='DELETE'THEN
         INSERT INTO thesaurus.assignment_retention(transaction_id,table_oid,object_id,concept_id)VALUES(txid_current(),TG_RELID,obj,c.concept_id)ON CONFLICT DO NOTHING;
       ELSIF NOT EXISTS(SELECT 1 FROM thesaurus.assignment_retention ar WHERE ar.transaction_id=txid_current()AND ar.table_oid=TG_RELID AND ar.object_id=obj AND ar.concept_id=c.concept_id)THEN
@@ -898,7 +955,8 @@ GRANT SELECT ON public.ref_code_domain_registry TO bertel_thesaurus_publisher;
 GRANT SELECT,INSERT,UPDATE,DELETE ON public.ref_code_taxonomy_closure TO bertel_thesaurus_publisher;
 DROP POLICY IF EXISTS thesaurus_publisher ON public.ref_code_taxonomy_closure;
 CREATE POLICY thesaurus_publisher ON public.ref_code_taxonomy_closure FOR ALL TO bertel_thesaurus_publisher USING(true)WITH CHECK(true);
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA api TO bertel_thesaurus_publisher;
+GRANT EXECUTE ON FUNCTION api.refresh_ref_code_taxonomy_closure(text),api.is_ref_code_taxonomy_domain(text),api.thesaurus_generation(),api.thesaurus_object_release(),api.public_catalog_domains()TO bertel_thesaurus_publisher;
+GRANT EXECUTE ON FUNCTION auth.uid()TO bertel_thesaurus_publisher;
 DO $maintain$BEGIN
   IF to_regclass('internal.mv_ref_data_json')IS NOT NULL THEN GRANT MAINTAIN ON TABLE internal.mv_ref_data_json TO bertel_thesaurus_publisher;END IF;
   IF to_regclass('internal.mv_filtered_objects')IS NOT NULL THEN GRANT MAINTAIN ON TABLE internal.mv_filtered_objects TO bertel_thesaurus_publisher;END IF;
@@ -912,6 +970,7 @@ GRANT CREATE ON SCHEMA thesaurus TO bertel_thesaurus_publisher;
 ALTER FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)OWNER TO bertel_thesaurus_publisher;
 REVOKE CREATE ON SCHEMA thesaurus FROM bertel_thesaurus_publisher;
 GRANT EXECUTE ON FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)TO postgres;
+REVOKE bertel_thesaurus_publisher FROM CURRENT_USER;
 COMMENT ON FUNCTION api.thesaurus_admin(text,jsonb)IS'Thesaurus editorial actions, gated platform superuser, optimistic revisions and atomic publisher-role release.';
 COMMENT ON FUNCTION api.thesaurus_public(text,bigint,jsonb)IS'Partner-only immutable thesaurus release reader. No direct editorial table access.';
 NOTIFY pgrst,'reload schema';

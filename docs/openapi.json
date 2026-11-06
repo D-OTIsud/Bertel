@@ -24,7 +24,8 @@
   "tags": [
     { "name": "Objets", "description": "Fiches touristiques publiées (établissements, itinéraires, événements, …)." },
     { "name": "Synchronisation", "description": "Flux delta pour maintenir un miroir à jour." },
-    { "name": "Référentiels", "description": "Vocabulaires contrôlés (types, aménités, labels, …)." }
+    { "name": "Référentiels", "description": "Vocabulaires contrôlés (types, aménités, labels, …)." },
+    { "name": "Thésaurus", "description": "Concepts touristiques, publications immuables et changements." }
   ],
   "paths": {
     "/objects": {
@@ -39,6 +40,8 @@
           { "$ref": "#/components/parameters/View" },
           { "$ref": "#/components/parameters/Track" },
           { "$ref": "#/components/parameters/Types" },
+          { "name": "taxonomy", "in": "query", "description": "Codes taxonomiques CSV qualifiés, par exemple taxonomy_hlo:appartement. Inclut les descendants selon la hiérarchie publiée. Garder ce filtre identique pendant la pagination.", "schema": { "type": "string" } },
+          { "name": "include_equivalent_predecessors", "in": "query", "description": "Avec taxonomy uniquement : inclure les prédécesseurs déclarés exactement équivalents. Faux par défaut ; une scission ou un simple replaced_by ne provoque aucun élargissement.", "schema": { "type": "boolean", "default": false } },
           { "$ref": "#/components/parameters/Lang" },
           { "$ref": "#/components/parameters/Search" },
           { "$ref": "#/components/parameters/Format" },
@@ -69,7 +72,7 @@
             }
           },
           "400": {
-            "description": "Un code `types` est inconnu (hors enum `object_type`).",
+            "description": "Code types inconnu, filtre taxonomy malformé ou option d’équivalence invalide/sans taxonomy.",
             "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "bad_request", "detail": "unknown object type code(s): XXX" } } }
           },
@@ -632,6 +635,1204 @@
         }
       }
     },
+    "/thesaurus": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "getThesaurus",
+        "summary": "Découvrir les vocabulaires et la publication courante",
+        "description": "Surface de lecture partenaire. Une publication fixe ses valeurs/dates ; les concepts dépréciés et retirés restent résolvables. Aucun scope supplémentaire n’est exigé.",
+        "parameters": [
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "getThesaurusRelease",
+        "summary": "Lire le manifeste d’une publication",
+        "description": "Le manifeste contient le périmètre, as_of, previous_release_id, empreinte, provenance, licence effective et attribution.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}/concepts": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "listThesaurusConcepts",
+        "summary": "Parcourir les concepts d’une publication",
+        "description": "Pagination déterministe attachée à la publication. Une nouvelle publication concurrente ne modifie pas le parcours.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1500
+            },
+            "description": "Curseur signé lié à la publication, langue, filtres et taille de page. Ne pas modifier les paramètres pendant le parcours."
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}/concepts/{conceptId}": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "getThesaurusConcept",
+        "summary": "Lire un concept dans une publication",
+        "description": "Un concept retiré connu répond 200 avec lifecycle et ses remplacements ; un inconnu répond 404.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "conceptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Identité publique pérenne du concept, indépendante du code et du libellé."
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/concepts/{conceptId}": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "resolveThesaurusConcept",
+        "summary": "Résoudre une URI pérenne dans la publication courante",
+        "description": "Résolution réservée aux partenaires authentifiés ; sans clé 401. Le concept ne change pas d’identité après renommage ou dépréciation.",
+        "parameters": [
+          {
+            "name": "conceptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Identité publique pérenne du concept, indépendante du code et du libellé."
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}/changes": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "listThesaurusChanges",
+        "summary": "Lire les changements depuis la publication précédente",
+        "description": "added/modified/deprecated/retired avec before et after ; aucun retrait ne supprime physiquement le concept. Enchaîner les publications intermédiaires pour un delta éloigné.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1500
+            },
+            "description": "Curseur signé lié à la publication, langue, filtres et taille de page. Ne pas modifier les paramètres pendant le parcours."
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}/export": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "exportThesaurus",
+        "summary": "Exporter une publication en JSON ou JSON-LD/SKOS",
+        "description": "format=json utilise l’enveloppe habituelle ; format=jsonld renvoie un document RDF autonome application/ld+json, version dans X-Bertel-Vocabulary-Release. Les langues absentes ne sont jamais inventées.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "jsonld"
+              ],
+              "default": "json"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              },
+              "application/ld+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "@context",
+                    "@graph"
+                  ],
+                  "properties": {
+                    "@context": {
+                      "type": "object"
+                    },
+                    "@graph": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/catalog": {
       "get": {
         "tags": ["Référentiels"],
@@ -808,12 +2009,309 @@
       }
     },
     "schemas": {
+      "ThesaurusConcept": {
+        "type": "object",
+        "required": [
+          "concept_id",
+          "uri",
+          "domain",
+          "code",
+          "preferred_labels",
+          "definitions",
+          "lifecycle",
+          "assignable"
+        ],
+        "properties": {
+          "context_key": { "type": "string", "description": "Portée opaque du code (schéma ou catégorie). Le code n’est unique que dans (domain,context_key,code) ; utiliser concept_id/uri comme identité de synchronisation." },
+          "concept_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "preferred_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "definitions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "requested_lang": {
+            "type": "string"
+          },
+          "effective_lang": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "definition_lang": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "lang",
+                "kind",
+                "value"
+              ],
+              "properties": {
+                "lang": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "alt",
+                    "hidden"
+                  ]
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {}
+          },
+          "broader": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "narrower": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "related": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "replaced_by": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "lifecycle": {
+            "type": "string",
+            "enum": [
+              "active",
+              "deprecated",
+              "retired"
+            ]
+          },
+          "assignable": {
+            "type": "boolean"
+          },
+          "valid_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "valid_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "ThesaurusChange": {
+        "type": "object",
+        "required": [
+          "concept_id",
+          "change_type",
+          "before",
+          "after"
+        ],
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "added",
+              "modified",
+              "deprecated",
+              "retired"
+            ]
+          },
+          "before": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ThesaurusConcept"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "after": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ThesaurusConcept"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ThesaurusEnvelope": {
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "type": "object",
+            "required": [
+              "contract_version",
+              "release_id",
+              "vocabulary_release"
+            ],
+            "properties": {
+              "contract_version": {
+                "type": "string",
+                "const": "1.0.0"
+              },
+              "release_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "vocabulary_release": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "previous_release_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "as_of": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "page_size": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 200
+              },
+              "next_cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "total": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            }
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThesaurusConcept"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ThesaurusConcept"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ThesaurusChange"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "object",
+                "description": "Manifeste de publication : domaines, date, empreinte, provenance, licence et attribution."
+              }
+            ]
+          }
+        }
+      },
       "Meta": {
         "type": "object",
         "description": "Métadonnées de l'enveloppe.",
         "required": ["contract_version"],
         "properties": {
-          "contract_version": { "type": "string", "description": "Version semver du contrat public.", "example": "1.0.0" }
+          "contract_version": { "type": "string", "description": "Version semver du contrat public.", "example": "1.0.0" },
+          "vocabulary_release": { "type": "integer", "minimum": 1, "description": "Publication du vocabulaire lue dans le même état SQL que le contenu, traductions et pivots de cette réponse. Présente après activation du thésaurus ; absente avant bootstrap. Ne promet pas un instantané global de plusieurs requêtes objets." }
         },
         "additionalProperties": true
       },

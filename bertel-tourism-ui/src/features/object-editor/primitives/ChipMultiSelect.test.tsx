@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { ChipMultiSelect } from './ChipMultiSelect';
 
 const options = [
@@ -21,6 +21,27 @@ describe('ChipMultiSelect (inline)', () => {
     expect(screen.getByRole('button', { name: 'Piscine' })).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'Piscine' }));
     expect(onToggle).toHaveBeenCalledWith('pool');
+  });
+
+  it('blocks new historical choices while preserving a selected historical choice and its explicit removal', () => {
+    const onToggle = jest.fn();
+    render(<ChipMultiSelect options={options.map((option) => ({ ...option, disabled: true }))} selected={['wifi']} onToggle={onToggle} />);
+    const selected = screen.getByRole('button', { name: 'Wi-Fi — à requalifier' });
+    const unavailable = screen.getByRole('button', { name: 'Piscine — indisponible' });
+    expect(selected).toBeEnabled();
+    expect(selected).toHaveAttribute('aria-pressed', 'true');
+    expect(unavailable).toBeDisabled();
+    fireEvent.click(unavailable);
+    expect(onToggle).not.toHaveBeenCalled();
+    fireEvent.click(selected);
+    expect(onToggle).toHaveBeenCalledWith('wifi');
+  });
+
+  it('keeps an unknown historical selection visible and removable', () => {
+    const onToggle = jest.fn();
+    render(<ChipMultiSelect options={options} selected={['legacy']} onToggle={onToggle} />);
+    fireEvent.click(screen.getByRole('button', { name: 'legacy — à requalifier' }));
+    expect(onToggle).toHaveBeenCalledWith('legacy');
   });
 });
 
@@ -68,5 +89,33 @@ describe('ChipMultiSelect (modal mode)', () => {
     render(<ChipMultiSelect options={big} selected={['sea', 'mountain']} onChange={onChange} modalTitle="Choisir un cadre" />);
     fireEvent.click(screen.getByRole('button', { name: 'Bord de mer' }));
     expect(onChange).toHaveBeenCalledWith(['mountain']);
+  });
+
+  it('preserves a historical selection on validation but prevents reattaching it after removal', () => {
+    const onChange = jest.fn();
+    render(<ChipMultiSelect options={[{ code: 'old', label: 'Ancien', disabled: true }, ...big]}
+      selected={['old']} onChange={onChange} modalTitle="Choisir un cadre" />);
+    fireEvent.click(screen.getByRole('button', { name: /Choisir/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+    expect(onChange).toHaveBeenLastCalledWith(['old']);
+    fireEvent.click(screen.getByRole('button', { name: /Choisir/i }));
+    const dialog = within(screen.getByRole('dialog'));
+    fireEvent.click(dialog.getByRole('button', { name: 'Ancien — à requalifier' }));
+    const historical = dialog.getByRole('button', { name: 'Ancien — indisponible' });
+    expect(historical).toBeDisabled();
+    fireEvent.click(historical);
+    fireEvent.click(dialog.getByRole('button', { name: 'Valider' }));
+    expect(onChange).toHaveBeenLastCalledWith([]);
+  });
+
+  it('refuses a new choice that becomes unavailable while the picker is open', () => {
+    const onChange = jest.fn();
+    const { rerender } = render(<ChipMultiSelect options={big} selected={[]} onChange={onChange} modalTitle="Choisir un cadre" />);
+    fireEvent.click(screen.getByRole('button', { name: /Choisir/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Montagne' }));
+    rerender(<ChipMultiSelect options={big.map((option) => ({ ...option, disabled: option.code === 'mountain' }))}
+      selected={[]} onChange={onChange} modalTitle="Choisir un cadre" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+    expect(onChange).toHaveBeenCalledWith([]);
   });
 });

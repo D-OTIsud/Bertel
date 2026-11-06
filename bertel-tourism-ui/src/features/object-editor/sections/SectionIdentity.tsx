@@ -293,7 +293,7 @@ function TaxonomyModal({
           className={`taxo2-row${isSelectedPath ? ' is-selected-path' : ''}${isSelected ? ' is-selected' : ''}`}
           style={{ paddingLeft: 10 + depth * 18 }}
         >
-          {node.isAssignable ? (
+          {node.isAssignable || isCurrent ? (
             <label className="taxo2-opt">
               {/* checked reflects the whole selected PATH (ancestors + leaf), so picking a
                   child also marks its parent as selected. onClick (not onChange) so clicking
@@ -302,6 +302,7 @@ function TaxonomyModal({
                 type="radio"
                 className="taxo2-radio"
                 checked={isSelectedPath}
+                disabled={!node.isAssignable}
                 readOnly
                 onClick={() => setSelectedId(node.id)}
               />
@@ -314,6 +315,7 @@ function TaxonomyModal({
                 ) : null}
               </span>
               {isCurrent && <span className="taxo2-badge">Actuelle</span>}
+              {!node.isAssignable && <span className="taxo2-badge">À requalifier</span>}
             </label>
           ) : (
             <button
@@ -419,6 +421,7 @@ export function SectionIdentity({ editor, objectId, folded, archetype, typeCode 
   const canonicalId = objectId ?? '';
   const taxonomyDomain = taxonomy.domains[0] ?? null;
   const taxonomyPath = formatTaxonomyPath(taxonomyDomain?.assignment);
+  const assignmentNeedsRequalification = taxonomyDomain?.nodes.some((node) => node.id === taxonomyDomain.assignment?.nodeId && !node.isAssignable);
   function applyTaxonomyAssignment(assignment: ObjectWorkspaceTaxonomyAssignment) {
     if (!taxonomyDomain) {
       return;
@@ -470,6 +473,7 @@ export function SectionIdentity({ editor, objectId, folded, archetype, typeCode 
             </span>
             <span className="identity-taxo-trigger__caret" aria-hidden="true">▾</span>
           </button>
+          {assignmentNeedsRequalification ? <p className="identity-taxo__notice">Ce terme n’est plus attribuable. Il est conservé sur cette fiche et doit être requalifié.</p> : null}
         </Field>
       </div>
 
@@ -484,7 +488,8 @@ export function SectionIdentity({ editor, objectId, folded, archetype, typeCode 
                     key={option.code}
                     type="button"
                     aria-pressed={active}
-                    title={option.description || undefined}
+                    disabled={option.isAssignable === false && !active}
+                    title={option.isAssignable === false ? 'Ancien terme conservé sur cette fiche ; aucune nouvelle attribution possible.' : option.description || undefined}
                     onClick={() => editor.replaceModule('taxonomy', {
                       ...taxonomy,
                       positionings: taxonomy.positionings ? {
@@ -506,7 +511,7 @@ export function SectionIdentity({ editor, objectId, folded, archetype, typeCode 
                       fontWeight: 600,
                     }}
                   >
-                    {option.label}
+                    {option.label}{option.isAssignable === false ? active ? ' — à requalifier' : ' — indisponible' : ''}
                   </button>
                 );
               })}
@@ -529,7 +534,8 @@ export function SectionIdentity({ editor, objectId, folded, archetype, typeCode 
                       key={option.code}
                       type="button"
                       aria-pressed={active}
-                      title={option.description || undefined}
+                      disabled={option.isAssignable === false && !active}
+                      title={option.isAssignable === false ? 'Ancien terme conservé sur cette fiche ; aucune nouvelle attribution possible.' : option.description || undefined}
                       onClick={() => editor.replaceModule('taxonomy', {
                         ...taxonomy,
                         unitTypes: {
@@ -551,7 +557,7 @@ export function SectionIdentity({ editor, objectId, folded, archetype, typeCode 
                         fontWeight: 600,
                       }}
                     >
-                      {option.label}
+                      {option.label}{option.isAssignable === false ? active ? ' — à requalifier' : ' — indisponible' : ''}
                     </button>
                   );
                 })}

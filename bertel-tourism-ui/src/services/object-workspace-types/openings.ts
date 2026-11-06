@@ -75,6 +75,7 @@ export interface ObjectWorkspaceOpeningPeriod {
 export interface ObjectWorkspaceOpeningPeriodTypeOption {
   code: string;
   label: string;
+  disabled?: boolean;
   /** Ribbon/stripe colour (hex), from ref_code.metadata.color. '' when unset. */
   color: string;
   /** metadata.all_year = true ⇒ "open all year, no dates" (drives the modal's date UI). */

@@ -55,6 +55,8 @@ import {
 } from '../services/object-workspace';
 import { getObjectVersions, restoreObjectVersion } from '../services/object-versions';
 import { ensureReferenceCatalogs } from './useReferenceCatalogsQuery';
+import { generationQueryKey, useThesaurusGeneration } from './useThesaurusGeneration';
+import { assertVocabularyGeneration, fetchThesaurusGeneration } from '../services/thesaurus-generation';
 import { dedupeExplorerCards, refineCardsByPolygon, resolveExplorerStatuses, sortExplorerCards } from '../utils/facets';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
@@ -285,9 +287,16 @@ export function useExplorerSelectionCardsQuery(ids: string[]) {
 }
 
 export function useExplorerReferencesQuery() {
+  const generation = useThesaurusGeneration();
   return useQuery({
-    queryKey: ['explorer-references'],
-    queryFn: listExplorerReferences,
+    queryKey: generationQueryKey(['explorer-references'], generation),
+    queryFn: async () => {
+      if (generation.isError) throw generation.error;
+      const refs = await listExplorerReferences();
+      assertVocabularyGeneration(refs.vocabularyRelease, generation.data);
+      return refs;
+    },
+    enabled: !generation.isPending,
     staleTime: 5 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,
     meta: { persist: true },
@@ -307,11 +316,17 @@ const PREFETCH_INTENT_DELAY_MS = 200;
 
 export function useObjectDetailQuery(objectId: string | null) {
   const langPrefs = useSessionStore((state) => state.langPrefs);
+  const generation = useThesaurusGeneration();
 
   return useQuery({
-    queryKey: ['object-detail', objectId, langPrefs],
-    queryFn: () => getObjectResource(objectId ?? '', langPrefs),
-    enabled: Boolean(objectId),
+    queryKey: generationQueryKey(['object-detail', objectId, langPrefs], generation),
+    queryFn: async () => {
+      if (generation.isError) throw generation.error;
+      const detail = await getObjectResource(objectId ?? '', langPrefs);
+      if (await fetchThesaurusGeneration() !== generation.data) throw new Error('Le vocabulaire a changé pendant le chargement. Rechargez la fiche.');
+      return detail;
+    },
+    enabled: Boolean(objectId) && !generation.isPending,
     staleTime: OBJECT_DETAIL_STALE_TIME_MS,
   });
 }
@@ -346,8 +361,19 @@ export function usePrefetchObjectDetail(): (objectId: string) => () => void {
       const timer = setTimeout(() => {
         void queryClient
           .prefetchQuery({
-            queryKey: ['object-detail', objectId, langPrefs],
-            queryFn: () => getObjectResource(objectId, langPrefs),
+            queryKey: ['object-detail-prefetch-generation', objectId, langPrefs],
+            queryFn: async () => {
+              const generation = await fetchThesaurusGeneration();
+              return queryClient.fetchQuery({
+                queryKey: generation == null ? ['object-detail', objectId, langPrefs] : ['object-detail', objectId, langPrefs, generation],
+                queryFn: async () => {
+                  const detail = await getObjectResource(objectId, langPrefs);
+                  if (await fetchThesaurusGeneration() !== generation) throw new Error('Le vocabulaire a changé pendant le préchargement.');
+                  return detail;
+                },
+                staleTime: OBJECT_DETAIL_STALE_TIME_MS,
+              });
+            },
             staleTime: OBJECT_DETAIL_STALE_TIME_MS,
           })
           .catch(() => undefined);
@@ -386,16 +412,21 @@ export async function loadObjectWorkspace(
   objectId: string,
   langPrefs: string[],
 ): Promise<ObjectWorkspaceResource> {
-  const [detail, catalogs] = await Promise.all([
-    queryClient.fetchQuery({
-      queryKey: ['object-detail', objectId, langPrefs],
-      queryFn: () => getObjectResource(objectId, langPrefs),
-      staleTime: OBJECT_DETAIL_STALE_TIME_MS,
-    }),
-    ensureReferenceCatalogs(queryClient),
-  ]);
-
-  return getObjectWorkspaceResource(objectId, langPrefs, catalogs, detail);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const generation = await fetchThesaurusGeneration();
+    const [detail, catalogs] = await Promise.all([
+      queryClient.fetchQuery({
+        queryKey: generation == null ? ['object-detail', objectId, langPrefs] : ['object-detail', objectId, langPrefs, generation],
+        queryFn: () => getObjectResource(objectId, langPrefs),
+        staleTime: OBJECT_DETAIL_STALE_TIME_MS,
+      }),
+      ensureReferenceCatalogs(queryClient),
+    ]);
+    const workspace = await getObjectWorkspaceResource(objectId, langPrefs, catalogs, detail);
+    const after = await fetchThesaurusGeneration();
+    if (after === generation && (catalogs.vocabularyRelease == null ? generation == null : String(catalogs.vocabularyRelease) === generation)) return workspace;
+  }
+  throw new Error('Le vocabulaire a changé pendant le chargement. Rechargez l’éditeur.');
 }
 
 /**
@@ -416,8 +447,15 @@ export function usePrefetchObjectWorkspace(): (objectId: string) => void {
       }
       void queryClient
         .prefetchQuery({
-          queryKey: ['object-workspace', objectId, langPrefs],
-          queryFn: () => loadObjectWorkspace(queryClient, objectId, langPrefs),
+          queryKey: ['object-workspace-prefetch-generation', objectId, langPrefs],
+          queryFn: async () => {
+            const generation = await fetchThesaurusGeneration();
+            return queryClient.fetchQuery({
+              queryKey: generation == null ? ['object-workspace', objectId, langPrefs] : ['object-workspace', objectId, langPrefs, generation],
+              queryFn: () => loadObjectWorkspace(queryClient, objectId, langPrefs),
+              staleTime: OBJECT_WORKSPACE_STALE_TIME_MS,
+            });
+          },
           staleTime: OBJECT_WORKSPACE_STALE_TIME_MS,
         })
         .catch(() => undefined);
@@ -429,13 +467,23 @@ export function usePrefetchObjectWorkspace(): (objectId: string) => void {
 export function useObjectWorkspaceQuery(objectId: string | null) {
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const queryClient = useQueryClient();
+  const generation = useThesaurusGeneration();
+  const workspaceQueryKey = generationQueryKey(['object-workspace', objectId, langPrefs], generation);
 
-  return useQuery({
-    queryKey: ['object-workspace', objectId, langPrefs],
-    queryFn: () => loadObjectWorkspace(queryClient, objectId ?? '', langPrefs),
-    enabled: Boolean(objectId),
+  const query = useQuery({
+    queryKey: workspaceQueryKey,
+    queryFn: async () => {
+      if (generation.isError) throw generation.error;
+      const workspace = await loadObjectWorkspace(queryClient, objectId ?? '', langPrefs);
+      if (await fetchThesaurusGeneration() !== generation.data) throw new Error('Le vocabulaire a changé pendant le chargement. Rechargez l’éditeur.');
+      return workspace;
+    },
+    enabled: Boolean(objectId) && !generation.isPending,
     staleTime: OBJECT_WORKSPACE_STALE_TIME_MS,
   });
+  // Restoration must verify the cache value actually observed by the page,
+  // including its vocabulary release or pending/error generation marker.
+  return { ...query, workspaceQueryKey };
 }
 
 export function useLocationReferenceOptionsQuery() {

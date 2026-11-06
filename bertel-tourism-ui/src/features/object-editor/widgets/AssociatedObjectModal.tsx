@@ -96,7 +96,7 @@ export function AssociatedObjectModal({
             {/* ReferenceSelect matches on `code`; the payload needs the role UUID, so key options by id. */}
             <ReferenceSelect
               value={roleId}
-              options={roleOptions.map((option) => ({ id: option.id, code: option.id, label: option.label }))}
+              options={roleOptions.map((option) => ({ id: option.id, code: option.id, label: option.label, disabled: option.disabled }))}
               onChange={(next) => setRoleId(next)}
               allowEmpty
               emptyLabel="Choisir un rôle…"

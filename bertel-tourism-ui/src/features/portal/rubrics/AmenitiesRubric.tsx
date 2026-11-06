@@ -105,6 +105,7 @@ export function AmenitiesRubric({ archetype, editor, formKey, onDone, onCancel, 
             key={option.code}
             type="checkbox"
             checked={form.amenities.includes(option.code)}
+            disabled={option.disabled && !form.amenities.includes(option.code)}
             onChange={(checked) => setForm((previous) => ({ ...previous, amenities: toggle(previous.amenities, option.code, checked) }))}
           >
             {option.label}
@@ -124,6 +125,7 @@ export function AmenitiesRubric({ archetype, editor, formKey, onDone, onCancel, 
                     key={option.code}
                     type="checkbox"
                     checked={form.amenities.includes(option.code)}
+                    disabled={option.disabled && !form.amenities.includes(option.code)}
                     onChange={(checked) =>
                       setForm((previous) => ({ ...previous, amenities: toggle(previous.amenities, option.code, checked) }))
                     }
@@ -147,6 +149,7 @@ export function AmenitiesRubric({ archetype, editor, formKey, onDone, onCancel, 
             key={option.code}
             type="checkbox"
             checked={form.payments.includes(option.code)}
+            disabled={option.disabled && !form.payments.includes(option.code)}
             onChange={(checked) => setForm((previous) => ({ ...previous, payments: toggle(previous.payments, option.code, checked) }))}
           >
             {option.label}
@@ -164,6 +167,7 @@ export function AmenitiesRubric({ archetype, editor, formKey, onDone, onCancel, 
                   key={option.code}
                   type="checkbox"
                   checked={form.payments.includes(option.code)}
+                  disabled={option.disabled && !form.payments.includes(option.code)}
                   onChange={(checked) => setForm((previous) => ({ ...previous, payments: toggle(previous.payments, option.code, checked) }))}
                 >
                   {option.label}

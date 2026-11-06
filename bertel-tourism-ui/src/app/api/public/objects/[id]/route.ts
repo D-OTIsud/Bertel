@@ -3,14 +3,11 @@ import { type NextResponse, type NextRequest } from 'next/server';
 import { admitPartner } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
-import { isRegionalTourinsoftVariant, resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
+import { resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
 
 export const runtime = 'nodejs';
 
 const OBJECT_ID_SHAPE = /^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$/; // mirrors chk_object_id_shape
-
-/** Sector-interop profiles served by api.get_object_interop (I4b); 'jsonld' has its own RPC. */
-const INTEROP_FORMATS = new Set(['datatourisme', 'apidae', 'tourinsoft']);
 
 /**
  * GET /api/public/objects/{id} — partner-facing single PUBLISHED object resource (audit API R1b).
@@ -76,55 +73,39 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     return metrics.json({ error: 'not_found' }, { status: 404, headers });
   }
 
-  const result = await metrics.measure('detail_rpc', () => callPublicRpc('get_object_resource', {
+  const result = await metrics.measure('detail_rpc', () => callPublicRpc('get_partner_object_with_vocabulary', {
     p_object_id: id,
     p_lang_prefs: [baseLang],
-    p_track_format: 'none',
-    p_options: {},
+    p_format: format,
+    p_variant: tourinsoftVariant.variant,
+    p_i18n_all: wantAllLangs,
   }));
   metrics.audit(partner.keyId, 'GET /api/public/objects/{id}', result.status);
   if (!result.ok) return metrics.json(result.body, { status: result.status, headers });
 
+  // The RPC repeats the published/real gate in the same snapshot as the content.
+  // An object unpublished after the preliminary gate therefore cannot leak.
+  if (result.body == null) return metrics.json({ error: 'not_found' }, { status: 404, headers });
+  const snapshot = result.body as { meta?: Record<string, unknown>; data?: unknown };
+  const body = Object.prototype.hasOwnProperty.call(snapshot, 'data') ? snapshot.data : result.body;
+  if (body == null) return metrics.json({ error: 'not_found' }, { status: 404, headers });
+
   // Shallow copy so we can trim/augment without mutating the RPC result in place.
   const data: Record<string, unknown> | unknown =
-    result.body && typeof result.body === 'object' ? { ...(result.body as Record<string, unknown>) } : result.body;
+    body && typeof body === 'object' ? { ...(body as Record<string, unknown>) } : body;
 
   if (data && typeof data === 'object') {
     // Editor-only raw *_i18n legs — never exposed on the partner (third-party) path (§106/§112).
     delete (data as Record<string, unknown>).canonical_description;
     delete (data as Record<string, unknown>).org_description;
 
-    if (wantAllLangs) {
-      // Additive multi-language block. Best-effort: a failure here degrades to the base (FR)
-      // resource rather than failing the whole response — the object is still fully returned.
-      const i18n = await metrics.measure('i18n', () => callPublicRpc('get_object_i18n_all', { p_object_id: id }));
-      if (i18n.ok) (data as Record<string, unknown>).i18n = i18n.body ?? {};
-    }
-
-    if (format === 'jsonld') {
-      // Additive schema.org JSON-LD block (I4). Best-effort: a failure degrades to the base resource.
-      // Profile defaults to 'jsonld' (schema.org) in the RPC; @type comes from ref_interop_crosswalk.
-      const jsonld = await metrics.measure('pivot', () => callPublicRpc('get_object_jsonld', { p_object_id: id }));
-      if (jsonld.ok && jsonld.body != null) (data as Record<string, unknown>).jsonld = jsonld.body;
-    } else if (format === 'tourinsoft' && isRegionalTourinsoftVariant(tourinsoftVariant.variant)) {
-      // Regional, opt-in contract. The default/legacy path below remains byte-identical to I4b.
-      const tourinsoft = await metrics.measure('pivot', () => callPublicRpc('get_object_tourinsoft', {
-        p_object_id: id,
-        p_variant: tourinsoftVariant.variant,
-      }));
-      if (tourinsoft.ok && tourinsoft.body != null) {
-        (data as Record<string, unknown>).tourinsoft = tourinsoft.body;
-      }
-    } else if (INTEROP_FORMATS.has(format)) {
-      // Additive sector-interop block (I4b): datatourisme / apidae / tourinsoft. Merged under a key
-      // named after the profile (data.datatourisme, data.apidae, data.tourinsoft). Best-effort.
-      const interop = await metrics.measure('pivot', () => callPublicRpc('get_object_interop', { p_object_id: id, p_profile: format }));
-      if (interop.ok && interop.body != null) (data as Record<string, unknown>)[format] = interop.body;
-    }
+    // Optional i18n and pivot blocks are already attached inside the same SQL snapshot.
   }
 
   return metrics.json(
-    { meta: { contract_version: PUBLIC_API_CONTRACT_VERSION }, data },
+    { meta: { contract_version: PUBLIC_API_CONTRACT_VERSION,
+      ...(snapshot.meta?.vocabulary_release != null ? { vocabulary_release: snapshot.meta.vocabulary_release } : {}),
+    }, data },
     { status: 200, headers },
   );
 }

@@ -43,6 +43,21 @@ describe('PaymentChips', () => {
 });
 
 describe('SpokenLanguagesField', () => {
+  it('keeps a retired language selected while blocking a new retired language and level', () => {
+    const data = characteristics({
+      languageOptions: [{ id: 'de', code: 'de', label: 'Allemand', disabled: true }, { id: 'it', code: 'it', label: 'Italien', disabled: true }],
+      languageLevelOptions: [{ id: 'l-basic', code: 'basic', label: 'Débutant', disabled: true }],
+    });
+    const onChange = jest.fn();
+    render(<SpokenLanguagesField characteristics={data} onChange={onChange} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Choisir / modifier les langues' }));
+    expect(screen.getByText('Allemand — à requalifier')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Italien/ })).toBeDisabled();
+    expect(screen.getByRole('option', { name: /Débutant/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+    expect(onChange.mock.calls[0][0].selectedLanguages).toEqual(data.selectedLanguages);
+  });
+
   it('shows the unavailable notice when the module failed to load', () => {
     render(<SpokenLanguagesField characteristics={characteristics({ unavailableReason: 'KO' })} onChange={() => undefined} />);
     expect(screen.getByText('KO')).toBeInTheDocument();

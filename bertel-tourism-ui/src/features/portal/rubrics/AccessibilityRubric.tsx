@@ -96,7 +96,9 @@ export function AccessibilityRubric({ archetype, editor, formKey, formCache, onD
         {familyOptions.length > 0
           ? <div className="portal-a11y__chips">
             {familyOptions.map((option) => <label key={option.code} className="portal-a11y__chip">
-              <input type="checkbox" checked={form.codes.includes(option.code)} onChange={(event) => toggle(option.code, event.target.checked)} />
+              <input type="checkbox" checked={form.codes.includes(option.code)}
+                disabled={option.disabled && !form.codes.includes(option.code)}
+                onChange={(event) => toggle(option.code, event.target.checked)} />
               <span>{option.label}</span>
             </label>)}
           </div>

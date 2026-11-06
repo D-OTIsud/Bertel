@@ -567,6 +567,10 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -v current_rights_disposable=true -f "Base de donnée DLL et API/tests/test_object_current_rights_committed_revocation.sql"
 
+      - name: PostgreSQL diagnostics on failure
+        if: failure()
+        run: docker ps -aq --filter name=supabase_db_ | xargs -r -n1 docker logs --tail 120
+
       - name: Stop Supabase
         if: always()
         run: supabase stop --workdir "$RUNNER_TEMP/bertel-fresh"

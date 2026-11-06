@@ -13,17 +13,34 @@ DECLARE
   v_row      jsonb;
   v_bundle   jsonb;
 BEGIN
-  -- 1. The 3 functions exist with the expected signatures + are SECURITY INVOKER + anon-granted.
+  -- 1. Serializers remain SECURITY INVOKER. Only the policy reader is DEFINER:
+  -- it exposes a captured allowlist without granting callers private-table access.
   FOR v_def, v_secdef IN
     SELECT p.proname, p.prosecdef
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'api'
-      AND p.proname IN ('public_catalog_domains','list_catalog','list_reference_bundle')
+      AND p.proname IN ('list_catalog','list_reference_bundle')
   LOOP
     IF v_secdef THEN
       RAISE EXCEPTION 'api.% must be SECURITY INVOKER (ref_* are publicly readable; no DEFINER)', v_def;
     END IF;
   END LOOP;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p
+    WHERE p.oid='api.public_catalog_domains()'::regprocedure
+      AND p.prosecdef AND p.provolatile='s'
+      AND pg_get_userbyid(p.proowner)='postgres'
+      AND p.proconfig=ARRAY['search_path=pg_catalog, thesaurus']
+      AND regexp_replace(p.prosrc,'[[:space:]]+','','g')=
+        $body$SELECTCOALESCE(array_agg(domainORDERBYdomain),'{}')FROMthesaurus.vocabularyWHERElegacy_public$body$
+  ) THEN
+    RAISE EXCEPTION 'public_catalog_domains must be the fixed, trusted, read-only legacy policy reader';
+  END IF;
+  IF has_table_privilege('anon','thesaurus.vocabulary','SELECT')
+     OR has_table_privilege('authenticated','thesaurus.vocabulary','SELECT') THEN
+    RAISE EXCEPTION 'public allowlist discovery must not grant direct access to private vocabulary policy';
+  END IF;
 
   IF (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
       WHERE n.nspname='api' AND p.proname IN ('public_catalog_domains','list_catalog','list_reference_bundle')) <> 3 THEN
@@ -46,6 +63,27 @@ BEGIN
      OR 'demand_topic' = ANY(api.public_catalog_domains())
      OR 'mood' = ANY(api.public_catalog_domains()) THEN
     RAISE EXCEPTION 'internal/CRM domain leaked into the public catalog whitelist';
+  END IF;
+  -- Independent original I1 perimeter: neither new adapters nor newly discovered
+  -- internal domains enter /catalog merely because a vocabulary row exists.
+  IF (SELECT array_agg(d ORDER BY d) FROM unnest(api.public_catalog_domains())d)
+     IS DISTINCT FROM (SELECT array_agg(d ORDER BY d) FROM unnest(ARRAY[
+       'accommodation_type','activity_type','allergen','amenity_family','assistance_type',
+       'bed_type','contact_kind','cuisine_type','destination_type','dietary_tag',
+       'document_type','environment_tag','event_type','insurance_type','iti_difficulty',
+       'iti_open_status','iti_practice','iti_stage_kind','language_level','media_tag',
+       'media_type','meeting_equipment','menu_category','opening_period_type',
+       'opening_schedule_type','package_type','partnership_type','payment_method',
+       'price_kind','price_type','price_unit','promotion_type','room_type','season_type',
+       'service_type','social_network','tourism_type','transport_type','view_type','weekday',
+       'taxonomy_act','taxonomy_asc','taxonomy_camp','taxonomy_com','taxonomy_fma',
+       'taxonomy_hlo','taxonomy_hot','taxonomy_hpa','taxonomy_iti','taxonomy_loi',
+       'taxonomy_org','taxonomy_pcu','taxonomy_pna','taxonomy_prd','taxonomy_psv',
+       'taxonomy_res','taxonomy_rva','taxonomy_spu','taxonomy_vil',
+       'amenity','classification_scheme','language','commune',
+       'sustainability_action','sustainability_category'
+     ]::text[])d) THEN
+    RAISE EXCEPTION 'legacy public catalogue perimeter changed from its original 65-domain contract';
   END IF;
 
   -- 3. Uniform shape: every element carries exactly the 5 contract keys, names never null.

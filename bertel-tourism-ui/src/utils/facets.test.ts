@@ -763,6 +763,7 @@ describe('buildBucketRpcFilters — aucun critère muet', () => {
     statuses: 'passé en p_status par listExplorerPage',
     polygon: 'raffinement client exact (refineCardsByPolygon) — la bbox porte la part serveur',
     rankedLabelIncludeEquivalents: 'affine label_scheme_ranked, émis seulement à false',
+    includeEquivalentPredecessors: 'affine taxonomy_any, émis seulement avec un concept sélectionné',
     rankedLabelValueCodes: 'émis en classifications_any avec le scheme actif',
   };
 
@@ -787,6 +788,7 @@ describe('buildBucketRpcFilters — aucun critère muet', () => {
     environmentTagsAny: ['bord_de_mer'],
     amenityFamiliesAny: ['wellness'],
     taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'gite' }],
+    includeEquivalentPredecessors: true,
     tagsAny: [{ slug: 'spa', name: 'Spa' }],
     rankedLabelSchemeCode: 'hot_stars',
     rankedLabelIncludeEquivalents: false,
@@ -827,6 +829,17 @@ describe('buildBucketRpcFilters — aucun critère muet', () => {
 
   it('hasServerOnlyFilters voit tous les critères communs actifs', () => {
     expect(hasServerOnlyFilters({ ...DEFAULT_EXPLORER_FILTERS, common: ACTIVE_COMMON })).toBe(true);
+  });
+
+  it('transmet les prédécesseurs au moteur de taxonomie du bucket sélectionné', () => {
+    const filters = { ...DEFAULT_EXPLORER_FILTERS, common: { ...DEFAULT_EXPLORER_FILTERS.common,
+      taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'gite' }], includeEquivalentPredecessors: true } };
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      taxonomy_any: [{ domain: 'taxonomy_hlo', code: 'gite' }], include_equivalent_predecessors: true,
+    });
+    expect(buildBucketRpcFilters(filters, 'RES')).not.toHaveProperty('include_equivalent_predecessors');
+    expect(buildBucketRpcFilters({ ...filters, common: { ...filters.common, includeEquivalentPredecessors: false } }, 'HOT'))
+      .not.toHaveProperty('include_equivalent_predecessors');
   });
 });
 

@@ -2474,3 +2474,23 @@ La chaîne bornée est user_can_write_canonical → user_has_permission + curren
 Les prédicats, jointures, tests de rôle, LIMIT 1 et résultats NULL sont conservés. Les anciens corps live et frais sont épinglés séparément quand leurs commentaires diffèrent ; toute autre dérive du corps, du chemin ou des attributs contrôlés est refusée. L’upgrade valide les quatre prédécesseurs avant tout remplacement, puis compare chaque tuple pg_proc complet avant/après, sauf prosrc et proconfig qui sont les seules modifications voulues : OID, propriétaire, ACL et autres attributs doivent rester identiques. La transaction utilise les mêmes bornes courtes de verrouillage/durée que le noyau. Le manifeste applique la source finale puis vérifie le rejeu de ce nouvel upgrade avant les tests ; une cible existante utilise l’upgrade dédié après la migration de droits courants, sans rejouer les anciennes sources. Aucun déploiement n’est constaté ici.
 
 La preuve PostgreSQL 17 locale restaure chaque vrai prédécesseur indépendamment : les quatre fonctions échouent sur des ombres mal formées, puis chacune accepte une autorité contrefaite non vide dans le témoin de régression correspondant. Après correction, le test versionné `tests/test_object_canonical_write_sources.sql` garde un vrai writer courant et un vrai administrateur positifs, refuse les faux profils/grants/memberships et le faux publisher sur une ligne étrangère publiée réellement visible, puis refuse après révocation effective du rôle, de l’exception individuelle et du profil privilégié. Les variantes live/fraîche, le rejeu et le refus atomique de dérives de corps/chemin/parallel passent, avec tous les autres attributs pg_proc conservés. Le témoin DB03 existant reste requis en CI complète. Cette preuve est SQL sur un rôle de test local ; elle ne revendique aucune exploitation REST. Le harnais réduit ne remplace pas Supabase fresh-apply. Une récupération livre un delta sûr en avant, sans rétablir un chemin de résolution non fiable.
+
+## Admission IA : source fraîche et reçu de production
+
+Le manifeste frais inclut `ai_request_admission.sql`, dont les octets restent ceux
+du source relu initialement sous `20261106145451`. Le DO gardé a réellement été
+appliqué une fois sous la version `20261106200353`, puis réconcilié en lecture
+seule : 192 versions, 191 anciennes inchangées et catalogue/droits conformes.
+Voir le [record de production](releases/2026-11-06-ai-admission-production.md).
+Le fichier de cette version contient exactement la requête appliquée ; le source
+frais distinct reste inchangé et ne charge pas la garde liée au snapshot191.
+
+Le [record de préparation](releases/2026-11-06-ai-admission-mcp-preparation.md) conserve la filiation :
+contre-revue du payload exact, nouveau préflight, choix du transport, un seul
+essai et postflight en lecture seule sans appel d’admission ni compte de test.
+L’atomicité du corps DO n’établit pas un contrat général du reçu Management API.
+Le déplacement du blob sous sa vraie version et le retrait du fichier145451
+jamais appliqué ne rejouent aucun SQL ni ne modifient l’historique distant.
+Ne pas exécuter à nouveau cette garde, ni lancer un `db push` global. Un rollback
+applicatif conserve ce schéma additif ; la protection distribuée exige encore
+le déploiement du nouveau serveur sur toutes les répliques.

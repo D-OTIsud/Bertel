@@ -129,34 +129,24 @@ BEGIN
     'actor persona inherited organisation membership scope';
   RESET ROLE;
 
-  -- Historical email-only bridge is still supported. Direct INVOKER and nested
-  -- DEFINER calls must exclude the sandbox actor sharing the same email.
-  PERFORM set_config('request.jwt.claims', jsonb_build_object(
-    'role', 'authenticated', 'email', upper(v_email))::text, true);
-  SET LOCAL ROLE authenticated;
-  -- INVOKER observes actor_channel RLS; an email-only caller has no human
-  -- membership and need not receive a positive result here. The DEFINER path
-  -- below is the positive witness for the historical email bridge.
-  ASSERT NOT EXISTS (SELECT 1 FROM api.user_actor_ids() AS a(id) WHERE id = v_test_actor),
-    'email-only INVOKER lookup crossed the actor realm';
-  ASSERT api.can_read_extended(v_bridge) IS TRUE,
-    'email-only bridge lost its indirect DEFINER access';
-  SELECT jsonb_agg(id ORDER BY id) INTO v_before
-    FROM api.current_user_extended_object_ids() AS s(id);
-  v_payload := api.get_object_resource(v_bridge, ARRAY['fr'], 'none',
-    '{"render":false,"fields":["actors"]}'::jsonb)::jsonb;
-  RESET ROLE;
-  PERFORM set_config('request.jwt.claims', jsonb_build_object(
-    'role', 'authenticated', 'email', lower(v_email))::text, true);
-  SET LOCAL ROLE authenticated;
-  SELECT jsonb_agg(id ORDER BY id) INTO v_after
-    FROM api.current_user_extended_object_ids() AS s(id);
-  ASSERT v_after IS NOT DISTINCT FROM v_before, 'email case changed extended rights';
-  ASSERT api.get_object_resource(v_bridge, ARRAY['fr'], 'none',
-    '{"render":false,"fields":["actors"]}'::jsonb)::jsonb IS NOT DISTINCT FROM v_payload,
-    'email case changed final resource JSON';
-  RESET ROLE;
-  RAISE NOTICE 'partner identity gate: anonymous, UID-only, email-only, INVOKER/DEFINER and JSON checks passed';
+  -- An email claim, without a current authenticated UID/profile binding,
+  -- cannot recover the private bridge in INVOKER or nested DEFINER paths.
+  FOREACH v_claims IN ARRAY ARRAY[
+    jsonb_build_object('role','authenticated','email',upper(v_email)),
+    jsonb_build_object('role','authenticated','email',lower(v_email)),
+    jsonb_build_object('role','authenticated','sub',v_member,'email',upper(v_email))
+  ] LOOP
+    PERFORM set_config('request.jwt.claims',v_claims::text,true);
+    SET LOCAL ROLE authenticated;
+    ASSERT NOT EXISTS(SELECT 1 FROM api.user_actor_ids()), 'contact email supplied an actor identity';
+    ASSERT api.can_read_extended(v_bridge) IS FALSE, 'contact email recovered the private bridge';
+    ASSERT NOT EXISTS(SELECT 1 FROM public.object WHERE id=v_bridge), 'private email-only row leaked';
+    ASSERT EXISTS(SELECT 1 FROM public.object WHERE id=v_published), 'published read witness missing';
+    ASSERT EXISTS(SELECT 1 FROM api.current_user_extended_object_ids() s(id) WHERE id=v_bridge) IS FALSE,
+      'email claim added private extended scope';
+    RESET ROLE;
+  END LOOP;
+  RAISE NOTICE 'partner identity gate: anonymous, UID-only, email-only denial and INVOKER/DEFINER checks passed';
 END
 $test$;
 ROLLBACK;

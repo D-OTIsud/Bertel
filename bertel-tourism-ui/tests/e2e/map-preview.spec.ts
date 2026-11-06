@@ -189,3 +189,71 @@ test('an unfinished hover of B preserves the displayed A preview focus owner', a
   expect(unexpected).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('map preview actions remain clickable where the real legend overlaps', async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1706, height: 710 });
+  const { errors, unexpected } = await offlineExplorer(page, testInfo);
+  await page.getByRole('combobox', { name: 'Rechercher une fiche' }).fill('Hotel Basalte');
+  await expect(page.locator('.explorer-result-card')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  const pin = page.locator('.map-marker-pin').first();
+  await expect(pin).toBeVisible({ timeout: 20_000 });
+  const legend = page.getByRole('group', { name: 'Légende des types', exact: true });
+  const legendBounds = (await legend.boundingBox())!;
+  const canvasBounds = (await page.locator('.maplibregl-canvas').boundingBox())!;
+  // Pan the real MapLibre canvas, keeping the marker on screen. The preview
+  // then crosses the existing bottom-left legend, as observed in production.
+  const destination = { x: legendBounds.x + 135, y: legendBounds.y + 115 };
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const bounds = (await pin.boundingBox())!;
+    const dx = destination.x - (bounds.x + bounds.width / 2);
+    const dy = destination.y - (bounds.y + bounds.height / 2);
+    if (Math.abs(dx) < 3 && Math.abs(dy) < 3) break;
+    const start = {
+      x: dx < 0 ? canvasBounds.x + canvasBounds.width - 45 : canvasBounds.x + 45,
+      y: dy > 0 ? canvasBounds.y + 60 : canvasBounds.y + canvasBounds.height - 60,
+    };
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(start.x + dx, start.y + dy, { steps: 12 });
+    // Holding after the drag avoids a fling moving the marker after release.
+    await page.waitForTimeout(200);
+    await page.mouse.up();
+  }
+  await expect.poll(async () => {
+    const bounds = (await pin.boundingBox())!;
+    return Math.hypot(bounds.x + bounds.width / 2 - destination.x, bounds.y + bounds.height / 2 - destination.y);
+  }).toBeLessThan(5);
+  const name = (await pin.getAttribute('aria-label'))!.replace(/^Ouvrir /, '');
+  await pin.hover();
+  const preview = page.getByRole('article', { name, exact: true });
+  const open = preview.getByRole('button', { name: `Ouvrir la fiche ${name}`, exact: true });
+  const close = preview.getByRole('button', { name: `Fermer l’aperçu de ${name}`, exact: true });
+  await expect(open).toBeVisible();
+  const openBounds = (await open.boundingBox())!;
+  // Require a genuine overlap; a passing check elsewhere on the map is not
+  // evidence that the legend no longer intercepts the action's hit target.
+  expect(Math.min(openBounds.x + openBounds.width, legendBounds.x + legendBounds.width)
+    - Math.max(openBounds.x, legendBounds.x)).toBeGreaterThan(44);
+  expect(Math.min(openBounds.y + openBounds.height, legendBounds.y + legendBounds.height)
+    - Math.max(openBounds.y, legendBounds.y)).toBeGreaterThan(20);
+  for (const control of [open, close]) {
+    const hits = await control.evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      return [8, rect.width / 2, rect.width - 8].flatMap(x => [8, rect.height / 2, rect.height - 8].map(y => {
+        const top = document.elementFromPoint(rect.x + x, rect.y + y);
+        return top === element || element.contains(top);
+      }));
+    });
+    expect(hits).toEqual(Array(9).fill(true));
+  }
+  await page.screenshot({ path: testInfo.outputPath('map-preview-overlapping-legend.png') });
+  // This point was covered by the legend before the stacking correction.
+  await open.click({ position: { x: 8, y: openBounds.height - 8 } });
+  await expect(preview).toHaveCount(0);
+  const drawer = page.locator('.drawer-panel');
+  await expect(drawer.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
+  expect(unexpected).toEqual([]);
+  expect(errors).toEqual([]);
+});

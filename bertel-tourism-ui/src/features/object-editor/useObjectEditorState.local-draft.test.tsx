@@ -52,6 +52,52 @@ it('keeps editing when access to Storage itself is denied, and clears the warnin
   expect(JSON.parse(window.localStorage.getItem(key())!).draft.generalInfo.name).toBe('Now persisted');
 });
 
+it('does not remove an unreadable previous recovery copy when getItem fails but removeItem would work', () => {
+  const modules = fullModulesFixture();
+  modules.generalInfo.name = 'A';
+  const previous = renderHook(() => useObjectEditorState('storage-object', modules, 'storage-user'));
+  act(() => previous.result.current.patchModule('generalInfo', { name: 'Previous local B' }));
+  previous.unmount();
+  const read = Storage.prototype.getItem;
+  const stored = read.call(window.localStorage, key());
+  const get = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new DOMException('denied', 'SecurityError'); });
+  const remove = jest.spyOn(Storage.prototype, 'removeItem');
+  const view = renderHook(() => useObjectEditorState('storage-object', modules, 'storage-user'));
+  expect(read.call(window.localStorage, key())).toBe(stored);
+  expect(remove).not.toHaveBeenCalled();
+  expect(view.result.current.localDraftUnavailable).toBe(true);
+  expect(view.result.current.draft.generalInfo.name).toBe('A');
+  view.rerender();
+  expect(view.result.current.localDraftUnavailable).toBe(true);
+  get.mockRestore();
+  view.unmount();
+  const recovered = renderHook(() => useObjectEditorState('storage-object', modules, 'storage-user'));
+  expect(recovered.result.current.draft.generalInfo.name).toBe('Previous local B');
+  expect(recovered.result.current.localDraftUnavailable).toBe(false);
+});
+
+it('does not hydrate an initially unreadable B over C when Storage becomes readable later', () => {
+  const modules = fullModulesFixture();
+  modules.generalInfo.name = 'A';
+  const previous = renderHook(() => useObjectEditorState('storage-object', modules, 'storage-user'));
+  act(() => previous.result.current.patchModule('generalInfo', { name: 'Previous local B' }));
+  previous.unmount();
+  const stored = window.localStorage.getItem(key());
+  const get = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new DOMException('denied', 'SecurityError'); });
+  const write = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('full', 'QuotaExceededError'); });
+  const view = renderHook(() => useObjectEditorState('storage-object', modules, 'storage-user'));
+  act(() => view.result.current.patchModule('generalInfo', { name: 'Current local C' }));
+  get.mockRestore();
+  write.mockRestore();
+  view.rerender();
+  expect(view.result.current.draft.generalInfo.name).toBe('Current local C');
+  expect(view.result.current.localDraftUnavailable).toBe(true);
+  expect(window.localStorage.getItem(key())).toBe(stored);
+  act(() => view.result.current.patchModule('generalInfo', { name: 'Current local D' }));
+  expect(view.result.current.localDraftUnavailable).toBe(false);
+  expect(JSON.parse(window.localStorage.getItem(key())!).draft.generalInfo.name).toBe('Current local D');
+});
+
 it('a network acknowledgement does not hide a failed local removal, and a later successful existing removal clears it', () => {
   const modules = fullModulesFixture();
   const view = renderHook(() => useObjectEditorState('storage-object', modules, 'storage-user'));

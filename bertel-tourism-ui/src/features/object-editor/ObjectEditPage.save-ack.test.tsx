@@ -11,6 +11,9 @@ import {
 import { submitPendingChange } from '../../services/moderation';
 import { getApiClient } from '../../lib/supabase';
 import { galleryBaseline } from '../../services/media-write-contract';
+import { downloadTextFile } from './io/object-io-effects';
+import { parseImportedObjectJson } from './io/object-io-serialize';
+import { loadObjectWorkspace } from '../../hooks/useExplorerQueries';
 
 let mockResource: ObjectWorkspaceResource;
 let mockEditor: ObjectEditorState;
@@ -35,6 +38,7 @@ jest.mock('../../hooks/useExplorerQueries', () => {
   const { useQuery } = jest.requireActual('@tanstack/react-query');
   return {
     ...actual,
+    loadObjectWorkspace: jest.fn(),
     useObjectWorkspaceQuery: (id: string) => useQuery({
       queryKey: ['object-workspace', id], initialData: mockResource, staleTime: Infinity, queryFn: async () => mockResource,
     }),
@@ -42,6 +46,9 @@ jest.mock('../../hooks/useExplorerQueries', () => {
     useObjectVersionsQuery: () => ({ data: [] }),
   };
 });
+jest.mock('./io/object-io-effects', () => ({
+  ...jest.requireActual('./io/object-io-effects'), downloadTextFile: jest.fn(),
+}));
 jest.mock('../../hooks/useToast', () => ({ useToast: () => ({ success: mockToast }) }));
 jest.mock('./useUnsavedDraftGuard', () => ({ useUnsavedDraftGuard: () => ({ confirmLeave: () => true }) }));
 jest.mock('./presence/useEditorPresence', () => ({ useEditorPresence: () => ({
@@ -95,6 +102,8 @@ function mount() {
 beforeEach(() => {
   window.localStorage.clear();
   jest.clearAllMocks();
+  jest.mocked(downloadTextFile).mockReset();
+  jest.mocked(loadObjectWorkspace).mockReset().mockRejectedValue(new Error('Unexpected server read'));
   mockPublish.mockReset().mockResolvedValue(undefined);
   jest.mocked(saveObjectWorkspaceGeneralInfo).mockReset().mockResolvedValue(undefined);
   jest.mocked(saveObjectWorkspaceContacts).mockReset().mockResolvedValue(undefined);
@@ -103,12 +112,188 @@ beforeEach(() => {
   jest.mocked(saveObjectWorkspacePlaces).mockReset().mockResolvedValue(undefined);
   jest.mocked(getApiClient).mockReturnValue(null);
   jest.mocked(submitPendingChange).mockReset().mockResolvedValue('synthetic-proposal');
-  useSessionStore.setState({ demoMode: false, userId: 'save-ack-user', langPrefs: ['fr'] });
+  useSessionStore.setState({ status: 'ready', role: 'tourism_agent', orgId: null, isTestRealm: false,
+    demoMode: false, userId: 'save-ack-user', langPrefs: ['fr'] });
   const modules = fullModulesFixture();
   modules.generalInfo.name = 'A';
   modules.generalInfo.status = 'draft';
   modules.contacts.objectItems[0].value = 'contact-a@example.invalid';
   mockResource = { id: 'HOT-ACK', name: 'A', type: 'HOT', detail: {} as ObjectWorkspaceResource['detail'], modules, permissions: allowAll };
+});
+
+afterEach(() => { jest.restoreAllMocks(); });
+
+function failDraftStorage() {
+  return jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new DOMException('unavailable', 'QuotaExceededError');
+  });
+}
+
+it('exports the latest draft as reimportable JSON without acknowledging it or accessing server/storage', () => {
+  mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  const previousRecovery = window.localStorage.getItem('object-editor-draft:save-ack-user:HOT-ACK');
+  const write = failDraftStorage();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C' } });
+  const reads = jest.spyOn(Storage.prototype, 'getItem');
+  const removes = jest.spyOn(Storage.prototype, 'removeItem');
+  const writesBefore = write.mock.calls.length;
+  const baseline = mockEditor.baseline;
+  const warning = screen.getByRole('alert');
+  fireEvent.click(screen.getByRole('button', { name: 'Exporter le brouillon JSON' }));
+  expect(downloadTextFile).toHaveBeenCalledTimes(1);
+  const [filename, mime, raw] = jest.mocked(downloadTextFile).mock.calls[0];
+  expect(filename).toBe('HOT-ACK-brouillon.json');
+  expect(mime).toBe('application/json');
+  const envelope = JSON.parse(raw);
+  expect(envelope).toMatchObject({ format: 'bertel-object', version: 2, objectId: 'HOT-ACK', type: 'HOT' });
+  expect(envelope.modules.generalInfo.name).toBe('C');
+  expect(mockEditor.draft.contacts.kindOptions.length).toBeGreaterThan(0);
+  expect(envelope.modules.contacts.kindOptions).toEqual([]);
+  expect(envelope).not.toHaveProperty('baseline');
+  expect(raw).not.toContain('save-ack-user');
+  const imported = parseImportedObjectJson(raw);
+  expect(imported.ok).toBe(true);
+  if (imported.ok) expect(imported.modules.generalInfo?.name).toBe('C');
+  expect(reads).not.toHaveBeenCalled();
+  expect(removes).not.toHaveBeenCalled();
+  expect(write).toHaveBeenCalledTimes(writesBefore);
+  expect(loadObjectWorkspace).not.toHaveBeenCalled();
+  expect(saveObjectWorkspaceGeneralInfo).not.toHaveBeenCalled();
+  expect(mockEditor.baseline).toBe(baseline);
+  expect(mockEditor.isDirty).toBe(true);
+  expect(screen.getByRole('alert')).toBe(warning);
+  expect(screen.getByLabelText('Synthetic name')).toHaveValue('C');
+  reads.mockRestore();
+  expect(window.localStorage.getItem('object-editor-draft:save-ack-user:HOT-ACK')).toBe(previousRecovery);
+  write.mockRestore();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'D' } });
+  expect(screen.queryByText('Brouillon local indisponible')).not.toBeInTheDocument();
+});
+
+it('exports retained C while a restored baseline B still requires an explicit conflict choice', () => {
+  mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C' } });
+  failDraftStorage();
+  const restored = fullModulesFixture();
+  restored.generalInfo.name = 'B';
+  act(() => mockEditor.adoptRestoredModules(restored));
+  const baseline = mockEditor.baseline;
+  const conflicts = [...mockEditor.recoveryConflicts];
+  expect(conflicts).toContain('generalInfo.name');
+  fireEvent.click(screen.getByRole('button', { name: 'Exporter le brouillon JSON' }));
+  expect(JSON.parse(jest.mocked(downloadTextFile).mock.calls[0][2]).modules.generalInfo.name).toBe('C');
+  expect(mockEditor.baseline).toBe(baseline);
+  expect(mockEditor.baseline.generalInfo.name).toBe('B');
+  expect(mockEditor.recoveryConflicts).toEqual(conflicts);
+  expect(mockEditor.isDirty).toBe(true);
+  expect(screen.getByRole('button', { name: 'Garder mes modifications' })).toBeInTheDocument();
+  expect(screen.getByText('Brouillon local indisponible')).toBeInTheDocument();
+  expect(saveObjectWorkspaceGeneralInfo).not.toHaveBeenCalled();
+});
+
+it('keeps the current-draft export reachable after a background workspace read fails, with editing still blocked', async () => {
+  const view = mount();
+  failDraftStorage();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C — retained during read failure' } });
+  const baseline = mockEditor.baseline;
+  await act(async () => {
+    view.client.getQueryCache().find({ queryKey: ['object-workspace', 'HOT-ACK'], exact: true })!.setState({
+      status: 'error', error: new Error('Synthetic workspace verification failure'), fetchStatus: 'idle',
+    });
+  });
+  await screen.findByText('Synthetic workspace verification failure');
+  const button = screen.getByRole('button', { name: 'Exporter le brouillon JSON' });
+  expect(button.closest('[inert]')).toBeNull();
+  expect(screen.getByLabelText('Synthetic name').closest('[inert]')).not.toBeNull();
+  expect(screen.getByRole('button', { name: 'Save' }).closest('[inert]')).not.toBeNull();
+  fireEvent.click(button);
+  expect(JSON.parse(jest.mocked(downloadTextFile).mock.calls[0][2]).modules.generalInfo.name).toBe('C — retained during read failure');
+  expect(mockEditor.baseline).toBe(baseline);
+  expect(mockEditor.isDirty).toBe(true);
+  expect(screen.getByText('Brouillon local indisponible')).toBeInTheDocument();
+  expect(loadObjectWorkspace).not.toHaveBeenCalled();
+  expect(saveObjectWorkspaceGeneralInfo).not.toHaveBeenCalled();
+});
+
+it.each([null, 'another-account'])('does not export an old account when the session changes during the click to %s', (userId) => {
+  mount();
+  failDraftStorage();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'Private C' } });
+  const button = screen.getByRole('button', { name: 'Exporter le brouillon JSON' });
+  const changeAccount = () => { useSessionStore.setState({ userId }); };
+  document.addEventListener('click', changeAccount, { capture: true, once: true });
+  fireEvent.click(button);
+  document.removeEventListener('click', changeAccount, true);
+  expect(downloadTextFile).not.toHaveBeenCalled();
+  expect(loadObjectWorkspace).not.toHaveBeenCalled();
+});
+
+it.each([{ orgId: 'another-org' }, { isTestRealm: true }, { role: null }, { status: 'guest' as const }])(
+  'does not export the previous context when its observable session scope changes during the click: %j', (patch) => {
+    mount();
+    failDraftStorage();
+    fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'Private C' } });
+    const button = screen.getByRole('button', { name: 'Exporter le brouillon JSON' });
+    const changeScope = () => { useSessionStore.setState(patch); };
+    document.addEventListener('click', changeScope, { capture: true, once: true });
+    fireEvent.click(button);
+    document.removeEventListener('click', changeScope, true);
+    expect(downloadTextFile).not.toHaveBeenCalled();
+  },
+);
+
+it('does not export mismatched resource data under the displayed object filename', () => {
+  mockResource = { ...mockResource, id: 'OTHER-OBJECT' };
+  mount();
+  failDraftStorage();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C' } });
+  const button = screen.getByRole('button', { name: 'Exporter le brouillon JSON' });
+  expect(button).toBeDisabled();
+  fireEvent.click(button);
+  expect(downloadTextFile).not.toHaveBeenCalled();
+});
+
+it('keeps the warning and edits after a failed download and can retry with the newest text', () => {
+  mount();
+  failDraftStorage();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C' } });
+  jest.mocked(downloadTextFile).mockImplementationOnce(() => { throw new Error('Synthetic download failure'); });
+  fireEvent.click(screen.getByRole('button', { name: 'Exporter le brouillon JSON' }));
+  expect(screen.getByText('Brouillon local indisponible')).toBeInTheDocument();
+  expect(mockEditor.isDirty).toBe(true);
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'D' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Exporter le brouillon JSON' }));
+  expect(downloadTextFile).toHaveBeenCalledTimes(2);
+  expect(JSON.parse(jest.mocked(downloadTextFile).mock.calls[1][2]).modules.generalInfo.name).toBe('D');
+  expect(screen.getByText('Brouillon local indisponible')).toBeInTheDocument();
+  expect(saveObjectWorkspaceGeneralInfo).not.toHaveBeenCalled();
+});
+
+it.each(['QuotaExceededError', 'SecurityError'])('keeps the durable local-draft warning, typing and real Save available after %s', async (errorName) => {
+  const pending = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(pending.promise);
+  mount();
+  expect(screen.queryByText('Brouillon local indisponible')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  const previousRecovery = window.localStorage.getItem('object-editor-draft:save-ack-user:HOT-ACK');
+  jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('unavailable', errorName); });
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C' } });
+  const warning = screen.getByRole('alert');
+  expect(warning).toHaveTextContent('Brouillon local indisponible — Vos modifications restent dans cet onglet. Enregistrez ou exportez-les avant de fermer.');
+  expect(screen.getByLabelText('Synthetic name')).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+  expect(mockEditor.isDirty).toBe(true);
+  expect(window.localStorage.getItem('object-editor-draft:save-ack-user:HOT-ACK')).toBe(previousRecovery);
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledWith('HOT-ACK', expect.objectContaining({ name: 'C' })));
+  expect(screen.getByRole('alert')).toBe(warning);
+  expect(screen.getByLabelText('Synthetic name')).toHaveValue('C');
+  await act(async () => { pending.resolve(); });
+  await waitFor(() => expect(screen.queryByText('Brouillon local indisponible')).not.toBeInTheDocument());
+  expect(mockEditor.isDirty).toBe(false);
+  expect(screen.getByLabelText('Synthetic name')).toHaveValue('C');
+  expect(window.localStorage.getItem('object-editor-draft:save-ack-user:HOT-ACK')).toBeNull();
 });
 
 it('the real page saves B while C stays editable, dirty and recoverable, then the next save sends C', async () => {

@@ -19,6 +19,7 @@ on:
       - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
+      - 'tools/private-media/**'
       - 'docs/SQL_ROLLOUT_RUNBOOK.md'
       - '.github/workflows/sql-fresh-apply.yml'
   pull_request:
@@ -28,6 +29,7 @@ on:
       - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
+      - 'tools/private-media/**'
       - 'docs/SQL_ROLLOUT_RUNBOOK.md'
       - '.github/workflows/sql-fresh-apply.yml'
   workflow_dispatch:
@@ -533,6 +535,13 @@ jobs:
             exit 1
           fi
           echo "RGPD mirror alignment OK."
+
+      - name: Private object evidence (current rights, exact pair, archive consultation, anon denial)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          node --test tools/private-media/prepare-cutover.test.mjs
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_private_object_document_access.sql"
 
       - name: Stop Supabase
         if: always()

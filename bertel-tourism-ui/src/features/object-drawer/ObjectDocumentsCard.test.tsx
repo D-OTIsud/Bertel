@@ -1,10 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { getActiveObjectDocuments } from '../../services/object-documents';
+import { getActiveObjectDocuments, getObjectDocumentUrl } from '../../services/object-documents';
 import { useSessionStore } from '../../store/session-store';
 import { ObjectDocumentsCard } from './ObjectDocumentsCard';
 
 jest.mock('../../services/object-documents', () => ({
   getActiveObjectDocuments: jest.fn(),
+  getObjectDocumentUrl: jest.fn(),
 }));
 
 const mockGetDocuments = jest.mocked(getActiveObjectDocuments);
@@ -78,5 +79,25 @@ describe('ObjectDocumentsCard', () => {
 
     await act(async () => resolveOldRequest(documentResult()));
     expect(screen.queryByText('Consulter les documents')).not.toBeInTheDocument();
+  });
+
+  it('opens a private row through the exact object/document pair, with the approved local loading state', async () => {
+    const result = documentResult();
+    result.documents[0].url = 'https://storage.example.invalid/storage/v1/object/public/old_legal_media/synthetic.pdf';
+    mockGetDocuments.mockResolvedValue(result);
+    let resolve!: (url: string) => void;
+    jest.mocked(getObjectDocumentUrl).mockReturnValue(new Promise((yes) => { resolve = yes; }));
+    const tab = { opener: {} as unknown, closed: false, close: jest.fn(), location: { replace: jest.fn() } };
+    const open = jest.spyOn(window, 'open').mockReturnValue(tab as never);
+    try {
+      render(<ObjectDocumentsCard objectId="object-private" />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Consulter les documents' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Ouvrir Arrêté préfectoral' }));
+      expect(getObjectDocumentUrl).toHaveBeenCalledWith('object-private', 'doc-1', expect.any(AbortSignal));
+      expect(screen.getByRole('button', { name: 'Ouvrir Arrêté préfectoral' })).toHaveTextContent('Ouverture…');
+      expect(screen.queryByRole('link', { name: 'Ouvrir Arrêté préfectoral' })).not.toBeInTheDocument();
+      await act(async () => { resolve('https://storage.example.invalid/signed?token=synthetic'); });
+      expect(tab.location.replace).toHaveBeenCalledWith('https://storage.example.invalid/signed?token=synthetic');
+    } finally { open.mockRestore(); }
   });
 });

@@ -2,9 +2,9 @@ name: Release candidate archive
 
 on:
   push:
-    paths: ['tools/release-artifact/**', '.github/workflows/release-artifact.yml']
+    paths: ['tools/release-artifact/**', '.github/workflows/release-artifact.yml', 'bertel-tourism-ui/docker-compose*.yml']
   pull_request:
-    paths: ['tools/release-artifact/**', '.github/workflows/release-artifact.yml']
+    paths: ['tools/release-artifact/**', '.github/workflows/release-artifact.yml', 'bertel-tourism-ui/docker-compose*.yml']
   workflow_dispatch:
     inputs:
       expected_source_sha:
@@ -25,6 +25,8 @@ jobs:
         with:
           node-version: '22'
       - run: node --test tools/release-artifact/candidate.test.mjs
+      - name: Prebuilt Compose contract (config only, synthetic parameters)
+        run: node --test tools/release-artifact/prebuilt-compose.test.mjs
 
   prepare-archive:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'

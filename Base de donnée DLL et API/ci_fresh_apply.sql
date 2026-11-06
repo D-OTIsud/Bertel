@@ -364,7 +364,7 @@ ROLLBACK;
 \ir migration_accommodation_unit_type.sql
 
 \echo '== taxo6-test garde permanente §201 lot 5 (multi-valeur, doublon refuse, personas anon/proprietaire/etranger sur les 4 commandes, GRANT anon borne a SELECT, cascade, filtre Explorer non vacant, reprise des 7 unites) =='
-\ir tests/test_accommodation_unit_type.sql
+-- Final current-authority regression runs after overlay 20b: test_accommodation_unit_type.sql
 
 \echo '== taxo6b migration_accommodation_unit_type_catalog_v2.sql (§201 lot 5B : 22 types de logement, Insolite court + Autre distinct, extraction maison/appartement/studio/bungalow/chalet/roulotte hors taxonomy_hlo) =='
 \ir migration_accommodation_unit_type_catalog_v2.sql
@@ -691,9 +691,17 @@ ROLLBACK;
 \ir tests/test_partner_photo_album_public.sql
 \ir tests/test_object_current_rights.sql
 \ir tests/test_object_current_rights_surfaces.sql
+
+\echo '== 20b-test existing regressions against final current-authority policy =='
+\ir tests/test_accommodation_unit_type.sql
+\ir tests/test_rls_initplan_sweep.sql
+\ir tests/test_object_fma_rls.sql
+\ir tests/test_write_policy_percommand.sql
+\ir tests/test_room_type_read_gate.sql
 \ir tests/test_partner_identity_gate.sql
 \ir tests/test_actor_portal.sql
 \ir tests/test_org_link_reconcile_editor.sql
+
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

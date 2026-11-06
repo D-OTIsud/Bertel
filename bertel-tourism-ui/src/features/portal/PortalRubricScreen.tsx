@@ -52,7 +52,7 @@ const RUBRIC_HELP: Record<PortalRubricId, string> = {
   hours: 'Indiquez vos jours et heures d’ouverture habituels.',
   season: 'Indiquez la période où vous accueillez des visiteurs, et vos fermetures.',
   amenities: 'Cochez ce que vous proposez. Les visiteurs filtrent souvent là-dessus.',
-  accessibility: 'Cochez les aménagements qui existent déjà. L’office les relira avant publication.',
+  accessibility: 'Ce que vous faites déjà pour accueillir tout le monde.',
   welcome: 'Ce que vous pouvez accueillir, et à quelles conditions.',
   pricing: 'Le tarif que les visiteurs verront en premier.',
   activity: 'Ce qu’il faut savoir avant de réserver votre activité.',
@@ -162,7 +162,10 @@ export function PortalRubricScreen({
   const waiting = rubric.state === 'pending' || rubric.state === 'rejected';
 
   return (
-    <section className="portal-rubric" aria-labelledby="portal-rubric-title">
+    <section
+      className={rubric.id === 'accessibility' ? 'portal-rubric portal-rubric--accessibility' : 'portal-rubric'}
+      aria-labelledby="portal-rubric-title"
+    >
       <Link
         className="portal-back"
         href={hubHref}

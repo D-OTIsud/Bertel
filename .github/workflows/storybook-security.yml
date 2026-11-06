@@ -42,6 +42,8 @@ jobs:
         run: node node_modules/typescript/bin/tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --strict --skipLibCheck --types node --esModuleInterop playwright.storybook.config.ts tests/storybook/security.spec.ts
       - name: Exercise the real installed channel transports
         run: npm run test:storybook-security
+      - name: Exercise the real builder middleware, traversal refusal and memfs4
+        run: npm run test:webpack-middleware
       - name: Build the complete existing static Storybook
         run: npm run build-storybook -- --disable-telemetry
       - name: Install Playwright Chromium

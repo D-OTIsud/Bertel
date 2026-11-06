@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 
 // This is a quality assessment, never a publication or rights decision.
 // A provider outage is not converted into a low score or a photo refusal.

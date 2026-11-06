@@ -3,76 +3,43 @@ import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 
 import { loadListEmailDisposable } from './disposable.mjs';
+import { SqlSession } from './sql-session.mjs';
 
 // The loader validates all targets before any fixture or session is created.
 const local = await loadListEmailDisposable();
 
-class SqlSession {
-  constructor() {
-    this.pending = [];
-    this.lines = [];
-    this.buffer = '';
-    this.sequence = 0;
-    this.child = local.spawnPsql();
-    this.child.stdout.on('data', (chunk) => {
-      this.buffer += chunk.toString();
-      let index;
-      while ((index = this.buffer.indexOf('\n')) !== -1) {
-        const line = this.buffer.slice(0, index).replace(/\r$/, '');
-        this.buffer = this.buffer.slice(index + 1);
-        const active = this.pending[0];
-        if (active && line === active.marker) {
-          this.pending.shift();
-          active.resolve(this.lines.join('\n'));
-          this.lines = [];
-        } else if (line) this.lines.push(line);
-      }
-    });
-    this.child.stderr.on('data', () => {}); // Never re-emit SQL context/connection data.
-    this.child.on('error', () => { for (const item of this.pending.splice(0)) item.reject(new Error('Disposable SQL session failed')); });
-    this.child.on('exit', (code) => { for (const item of this.pending.splice(0)) item.reject(new Error(`Disposable SQL session exit ${code}`)); });
-  }
-  query(sql) {
-    const marker = `__list_email_result_${++this.sequence}__`;
-    return new Promise((resolve, reject) => {
-      this.pending.push({ marker, resolve, reject });
-      this.child.stdin.write(`${sql};\n\\echo ${marker}\n`);
-    });
-  }
-  close() {
-    return new Promise((resolve) => {
-      if (this.child.exitCode !== null) return resolve();
-      this.child.once('exit', resolve);
-      this.child.stdin.end('\\q\n');
-    });
-  }
-}
-
-
 async function fixture() {
-  const admin = new SqlSession(), first = new SqlSession(), second = new SqlSession(), holder = new SqlSession();
-  const user = randomUUID(), foreign = randomUUID(), list = randomUUID();
-  const org = `ORGM${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
-  await admin.query(`INSERT INTO public.object(id,object_type,name,status) VALUES('${org}','ORG','Synthetic mail ORG','draft');
-    INSERT INTO auth.users(id,email) VALUES('${user}','mail-concurrent@example.invalid'),('${foreign}','mail-foreign@example.invalid');
-    INSERT INTO public.app_user_profile(id,role) VALUES('${user}','tourism_agent') ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role;
-    INSERT INTO public.user_org_membership(user_id,org_object_id,is_active) VALUES('${user}','${org}',true);
-    INSERT INTO public.object_list(id,org_object_id,created_by,kind,name) VALUES('${list}','${org}','${user}','static','Synthetic mail list')`);
-  for (const worker of [first, second, holder]) await worker.query('SET ROLE service_role');
-  const context = (worker) => worker.query(`SELECT api.get_list_email_context('${user}','${list}')`).then(JSON.parse);
-  const prepare = (worker, operation, generation = 0, confirm = false, parents = [], recipient = 'b') => worker.query(
-    `SELECT api.prepare_list_email('${user}','${list}','${operation}',repeat('a',64),repeat('${recipient}',64),${generation},${confirm},ARRAY[${parents.map((id) => `'${id}'`).join(',')}]::uuid[])`).then(JSON.parse);
-  const begin = (worker, operation, token, recipient = 'b') => worker.query(
-    `SELECT api.begin_list_email('${user}','${list}','${operation}','${token}',repeat('a',64),repeat('${recipient}',64))`).then(JSON.parse);
-  const complete = (worker, operation, token, proof = 'a') => worker.query(
-    `SELECT api.complete_list_email('${user}','${list}','${operation}','${token}','accepted',false,NULL,repeat('${proof}',64))`);
-  const ack = (worker, operation, proof = 'a') => worker.query(`SELECT api.ack_list_email_client('${user}','${list}','${operation}',repeat('${proof}',64))`);
-  return { admin, first, second, holder, user, foreign, list, org, context, prepare, begin, complete, ack,
-    async close() {
-      await holder.query('ROLLBACK').catch(() => {});
-      await admin.query(`DELETE FROM public.object_list WHERE id='${list}'; DELETE FROM public.object WHERE id='${org}'; DELETE FROM auth.users WHERE id IN ('${user}','${foreign}'); DELETE FROM internal.list_email_metric WHERE user_id='${user}'`).catch(() => {});
-      await Promise.all([admin, first, second, holder].map((client) => client.close()));
-    } };
+  const owned = [];
+  try {
+    const open = () => { const session = new SqlSession(local.spawnPsql); owned.push(session); return session; };
+    const admin = open(), first = open(), second = open(), holder = open();
+    const user = randomUUID(), foreign = randomUUID(), list = randomUUID();
+    const org = `ORGM${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
+    await admin.query(`INSERT INTO public.object(id,object_type,name,status) VALUES('${org}','ORG','Synthetic mail ORG','draft');
+      INSERT INTO auth.users(id,email) VALUES('${user}','mail-concurrent@example.invalid'),('${foreign}','mail-foreign@example.invalid');
+      INSERT INTO public.app_user_profile(id,role) VALUES('${user}','tourism_agent') ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role;
+      INSERT INTO public.user_org_membership(user_id,org_object_id,is_active) VALUES('${user}','${org}',true);
+      INSERT INTO public.object_list(id,org_object_id,created_by,kind,name) VALUES('${list}','${org}','${user}','static','Synthetic mail list')`);
+    for (const worker of [first, second, holder]) await worker.query('SET ROLE service_role');
+    const context = (worker) => worker.query(`SELECT api.get_list_email_context('${user}','${list}')`).then(JSON.parse);
+    const prepare = (worker, operation, generation = 0, confirm = false, parents = [], recipient = 'b') => worker.query(
+      `SELECT api.prepare_list_email('${user}','${list}','${operation}',repeat('a',64),repeat('${recipient}',64),${generation},${confirm},ARRAY[${parents.map((id) => `'${id}'`).join(',')}]::uuid[])`).then(JSON.parse);
+    const begin = (worker, operation, token, recipient = 'b') => worker.query(
+      `SELECT api.begin_list_email('${user}','${list}','${operation}','${token}',repeat('a',64),repeat('${recipient}',64))`).then(JSON.parse);
+    const complete = (worker, operation, token, proof = 'a') => worker.query(
+      `SELECT api.complete_list_email('${user}','${list}','${operation}','${token}','accepted',false,NULL,repeat('${proof}',64))`);
+    const ack = (worker, operation, proof = 'a') => worker.query(`SELECT api.ack_list_email_client('${user}','${list}','${operation}',repeat('${proof}',64))`);
+    return { admin, first, second, holder, user, foreign, list, org, context, prepare, begin, complete, ack,
+      async close() {
+        await holder.query('ROLLBACK').catch(() => {});
+        await admin.query(`DELETE FROM public.object_list WHERE id='${list}'; DELETE FROM public.object WHERE id='${org}'; DELETE FROM auth.users WHERE id IN ('${user}','${foreign}'); DELETE FROM internal.list_email_metric WHERE user_id='${user}'`).catch(() => {});
+        await Promise.all([admin, first, second, holder].map((client) => client.close()));
+      } };
+  } catch (error) {
+    // A setup failure must not leave three idle psql children holding this process.
+    await Promise.allSettled(owned.map((session) => session.close()));
+    throw error;
+  }
 }
 async function waitForLock(f, pids) {
   assert.ok(pids.every((pid) => /^\d+$/.test(pid)));
@@ -115,7 +82,7 @@ test('two different gestures using the same captured generation cannot both rese
 });
 
 test('lost prepare acknowledgement and restart never dispatch automatically; reload requires explicit consent', { timeout: 30000 }, async () => {
-  const f = await fixture(), restarted = new SqlSession();
+  const f = await fixture(), restarted = new SqlSession(local.spawnPsql);
   try {
     await restarted.query('SET ROLE service_role');
     const a = randomUUID(), b = randomUUID();

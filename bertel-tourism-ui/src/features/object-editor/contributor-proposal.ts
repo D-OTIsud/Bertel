@@ -148,7 +148,8 @@ function summarizeModuleValue(value: unknown): string {
  * Build the `submit_pending_change` envelope for one dirty module proposed by a contributor.
  *
  * - `payload`: for the 6 auto sections, the exact whitelisted-RPC payload (re-dispatched on approve);
- *   otherwise the raw module draft slice (informational — approve cannot auto-apply it).
+ *   otherwise the module draft slice (publication projects its generalInfo visibility setting;
+ *   informational only — approve cannot auto-apply it).
  * - `metadata`: `{ rpc, section, manual_apply, field, before, after }`. `rpc` is null for manual
  *   sections (so approve refuses to auto-apply). `before`/`after` are the baseline vs draft slice
  *   serialized for the queue diff.
@@ -163,12 +164,21 @@ export function buildContributorSubmission(
   // A restored draft must not conceal a failed fresh read, or bypass the shared save guard.
   assertWorkspaceSaveAvailable(module, baseline[moduleKey]);
   assertWorkspaceSaveAvailable(module, draft[moduleKey]);
+  if (module === 'publication') {
+    assertWorkspaceSaveAvailable('general-info', baseline.generalInfo);
+    assertWorkspaceSaveAvailable('general-info', draft.generalInfo);
+  }
   const route = AUTO_DISPATCH_ROUTES[module];
-  const before = summarizeModuleValue(baseline[moduleKey]);
-  const after = summarizeModuleValue(draft[moduleKey]);
+  // The publication setting is edited in generalInfo. Keep the manual section
+  // envelope, but send and acknowledge the setting the contributor actually saw.
+  const value = (modules: ObjectWorkspaceModules) => module === 'publication'
+    ? { commercialVisibility: modules.generalInfo.commercialVisibility }
+    : modules[moduleKey];
+  const before = summarizeModuleValue(value(baseline));
+  const after = summarizeModuleValue(value(draft));
   const field = moduleLabel(module);
 
-  const payload: unknown = route ? route.buildPayload(draft) : (draft[moduleKey] ?? {});
+  const payload: unknown = route ? route.buildPayload(draft) : (value(draft) ?? {});
 
   return {
     objectId,

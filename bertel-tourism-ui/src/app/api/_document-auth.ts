@@ -2,6 +2,7 @@ import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { isSandboxDiscoveryUser } from '@/lib/sandbox-effects';
 
 // Socle d'AUTHENTIFICATION des routes d'upload de documents privés — partagé par les deux
 // familles : /api/actor-document (+ /url) et /api/task-document (+ /url).
@@ -103,6 +104,7 @@ export type AuthenticatedRequest =
       server: ServerClient;
       jwt: string;
       userId: string;
+      isSandboxDiscovery: boolean;
     };
 
 /**
@@ -125,5 +127,5 @@ export async function authenticated(req: NextRequest): Promise<AuthenticatedRequ
   if (!jwt) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
   const { data, error } = await server.auth.getUser(jwt);
   if (error || !data.user) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
-  return { ok: true, server, jwt, userId: data.user.id };
+  return { ok: true, server, jwt, userId: data.user.id, isSandboxDiscovery: isSandboxDiscoveryUser(data.user) };
 }

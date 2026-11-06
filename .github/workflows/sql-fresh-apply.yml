@@ -171,10 +171,20 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp4_list_org_members.sql"
 
+      - name: Initial object publication guard (real client role, create and publish rights, ORG onboarding)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_initial_publication_guard.sql"
+
       - name: Object status lifecycle test (rpc_set_object_status + wrapper)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_status_lifecycle.sql"
+
+      - name: Public discovery external effects (trusted provenance, positive mail, durable suppression, service ACL)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sandbox_external_effects.sql"
 
       - name: ITI model test (duration_min + elevation_loss; get_object_resource shape; hour→minute filter)
         env:

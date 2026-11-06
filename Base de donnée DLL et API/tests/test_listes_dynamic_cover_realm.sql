@@ -12,6 +12,11 @@ DECLARE
   activity timestamptz := now() - interval '2 days';
   filters jsonb := '{"buckets":[{"types":["HOT"],"filters":{"city_any":["ZzListCoverReview"]}}]}';
 BEGIN
+  -- Synthetic fixture writes use the maintenance connection with no request
+  -- identity. RESET ROLE alone does not clear claims from an earlier probe.
+  ASSERT current_user = 'postgres', 'Fixture setup requires the maintenance test role';
+  PERFORM set_config('request.jwt.claims','{}',true);
+  ASSERT auth.uid() IS NULL AND auth.role() IS NULL, 'Fixture setup must have no client claims';
   INSERT INTO object(id, object_type, name, status) VALUES
     ('ORGRVWCOVER00001','ORG','Organisation couverture fictive','published'),
     ('HOTRVWCOVER00001','HOT','Premier sans photo','published'),
@@ -26,6 +31,7 @@ BEGIN
   INSERT INTO user_org_membership(user_id,org_object_id,is_active) VALUES(u,'ORGRVWCOVER00001',true);
   PERFORM set_config('request.jwt.claims',json_build_object('sub',u,'role','authenticated')::text,true);
   SET LOCAL ROLE authenticated;
+  ASSERT current_user = 'authenticated' AND auth.uid() = u AND auth.role() = 'authenticated', 'List assertions require the real member context';
   list_id := api.create_list('dynamic','Couverture dynamique revue',NULL,filters,'/explorer?review=cover');
   result := api.get_list(list_id)::jsonb;
   ASSERT jsonb_array_length(result->'items')=2, 'Dynamic probe must resolve both actual fixtures (live city filter)';
@@ -35,10 +41,14 @@ BEGIN
   grid := (SELECT e FROM jsonb_array_elements(api.list_my_lists()::jsonb) e WHERE e->>'id'=list_id::text);
   ASSERT grid->>'cover_url'='https://example.test/second.jpg' AND (grid->>'item_count')::int=2, 'Grid and detail must resolve same dynamic cover/count';
   RESET ROLE;
+  PERFORM set_config('request.jwt.claims','{}',true);
+  ASSERT current_user = 'postgres' AND auth.uid() IS NULL AND auth.role() IS NULL, 'New source fixture uses maintenance context';
   UPDATE object_list SET last_activity_at=activity WHERE id=list_id;
   INSERT INTO object(id,object_type,name,status) VALUES('HOTRVWCOVER00003','HOT','Nouveau résultat automatique','published');
   INSERT INTO object_location(object_id,city,is_main_location) VALUES('HOTRVWCOVER00003','ZzListCoverReview',true);
+  PERFORM set_config('request.jwt.claims',json_build_object('sub',u,'role','authenticated')::text,true);
   SET LOCAL ROLE authenticated;
+  ASSERT current_user = 'authenticated' AND auth.uid() = u AND auth.role() = 'authenticated', 'List assertions require the real member context';
   result := api.get_list(list_id)::jsonb;
   ASSERT jsonb_array_length(result->'items')=3, 'Dynamic source changes must resolve automatically';
   ASSERT (result->>'last_activity_at')::timestamptz=activity, 'Dynamic refresh/read must not postpone retention';
@@ -47,6 +57,7 @@ BEGIN
   ASSERT (SELECT last_activity_at FROM object_list WHERE id=list_id)=activity, 'Sharing must preserve business activity';
   PERFORM set_config('request.jwt.claims','{"role":"anon"}',true);
   SET LOCAL ROLE anon;
+  ASSERT current_user = 'anon' AND auth.uid() IS NULL AND auth.role() = 'anon', 'Public assertions require the real anonymous context';
   result := api.get_public_list_by_token(token)::jsonb;
   ASSERT jsonb_array_length(result->'items')=3, 'Public link must retain live dynamic resolution';
   RESET ROLE;
@@ -63,6 +74,9 @@ DECLARE
   result jsonb;
   token text;
 BEGIN
+  ASSERT current_user = 'postgres', 'Realm fixture setup requires the maintenance test role';
+  PERFORM set_config('request.jwt.claims','{}',true);
+  ASSERT auth.uid() IS NULL AND auth.role() IS NULL, 'Realm fixture setup must have no client claims';
   SELECT id INTO publisher FROM ref_org_role WHERE code='publisher' LIMIT 1;
   SELECT id INTO phone_kind FROM ref_code_contact_kind WHERE code='phone' LIMIT 1;
   ASSERT publisher IS NOT NULL AND phone_kind IS NOT NULL, 'Realm probe reference seeds required';
@@ -81,15 +95,20 @@ BEGIN
   ASSERT (SELECT is_test FROM object WHERE id='HOTRVWCOVER00000'), 'Realm must be set by organization trigger';
   PERFORM set_config('request.jwt.claims',json_build_object('sub',u,'role','authenticated')::text,true);
   SET LOCAL ROLE authenticated;
+  ASSERT current_user = 'authenticated' AND auth.uid() = u AND auth.role() = 'authenticated', 'List assertions require the real member context';
   ASSERT NOT api.current_user_test_realm(), 'Caller must be in production realm';
   list_id := api.create_list('static','Revue isolation couverture',ARRAY['HOTRVWCOVER00000','HOTRVWCOVER00001'],NULL,NULL);
   result := api.get_list(list_id)::jsonb;
   ASSERT jsonb_array_length(result->'items')=1, 'Cross-realm published item must be rejected at admission';
   RESET ROLE;
+  PERFORM set_config('request.jwt.claims','{}',true);
+  ASSERT current_user = 'postgres' AND auth.uid() IS NULL AND auth.role() IS NULL, 'Historical leak fixture uses maintenance context';
   INSERT INTO object_list_item(list_id,object_id,position,note_fr)
     VALUES(list_id,'HOTRVWCOVER00000',0,'REALM-SECRET-NOTE');
   SELECT id INTO dynamic_id FROM object_list WHERE name='Couverture dynamique revue';
+  PERFORM set_config('request.jwt.claims',json_build_object('sub',u,'role','authenticated')::text,true);
   SET LOCAL ROLE authenticated;
+  ASSERT current_user = 'authenticated' AND auth.uid() = u AND auth.role() = 'authenticated', 'List assertions require the real member context';
   result := api.get_list(list_id)::jsonb;
   ASSERT jsonb_array_length(result->'items')=1 AND result->>'effective_cover_url' IS NULL,
     'Historical cross-realm item must not become cover or detail';
@@ -103,6 +122,7 @@ BEGIN
   RESET ROLE;
   PERFORM set_config('request.jwt.claims','{"role":"anon"}',true);
   SET LOCAL ROLE anon;
+  ASSERT current_user = 'anon' AND auth.uid() IS NULL AND auth.role() = 'anon', 'Public assertions require the real anonymous context';
   result := api.get_public_list_by_token(token)::jsonb;
   ASSERT jsonb_array_length(result->'items')=1 AND result::text NOT LIKE '%REALM-SECRET%',
     'Public historical list must exclude cross-realm photo/contact/note';

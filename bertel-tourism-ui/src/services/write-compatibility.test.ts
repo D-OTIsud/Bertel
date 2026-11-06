@@ -21,8 +21,12 @@ describe('write compatibility', () => {
     const sharedInterval = await readWriteCompatibility(jest.fn().mockResolvedValue(response({ minimumClientVersion: 1, writeContractVersion: 2 })));
     expect(sharedInterval).toMatchObject({ compatible: true, minimumClientVersion: 1, serverWriteContractVersion: 2 });
 
-    const oldClientAgainstNewMinimum = await readWriteCompatibility(jest.fn().mockResolvedValue(response({ minimumClientVersion: 2, writeContractVersion: 2 })));
+    const oldClientAgainstNewMinimum = await readWriteCompatibility(jest.fn().mockResolvedValue(response({ minimumClientVersion: 3, writeContractVersion: 3 })));
     expect(oldClientAgainstNewMinimum.compatible).toBe(false);
+  });
+
+  it('rejects the old writer after the server raises its minimum to 2', () => {
+    expect(() => assertWriteCompatible({ compatible: true, clientVersion: 1, minimumClientVersion: 2, serverWriteContractVersion: 2 })).toThrow();
   });
 
   it('throws before a write when the snapshot is incompatible', () => {

@@ -6,8 +6,8 @@
 -- une ORG n'en a pas ⇒ un draft ORG serait à jamais impubliable. On crée donc l'ORG
 -- directement 'published'.
 --
--- L'INSERT direct en 'published' est licite :
---   - trg_guard_object_status_change est BEFORE UPDATE OF status (il ne gate PAS l'INSERT) ;
+-- L'INSERT institutionnel en 'published' est licite pour ce rôle plateforme :
+--   - trg_guard_object_initial_publication (DB08) conserve l'exception plateforme ;
 --   - trg_manage_object_published_at ne gère que le PASSAGE à published lors d'un UPDATE, donc
 --     on pose published_at explicitement à l'INSERT ;
 --   - trg_auto_attach_object_to_creator_org (AFTER INSERT) retourne NEW immédiatement pour une

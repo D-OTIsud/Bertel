@@ -65,8 +65,11 @@ override. The acknowledgement must name the exact destination and its UUID.
 
 An atomic local checkpoint records that acknowledgement before verification
 continues. The destination bytes are then streamed and discarded: their real
-SHA-256 and size must equal the source, and their MIME/cache/ETag headers must
-match metadata. Both catalogs are checked again, including destination privacy.
+SHA-256 and size must equal the source, and their MIME/ETag/length headers must
+match metadata. The stored cache control is compared exactly through GETinfo on
+both objects before and after verification; HTTP Cache-Control is a delivery
+policy and is not compared with stored metadata. Both catalogs are checked
+again, including destination privacy.
 Only then is a verified record checkpointed. No content file or signed URL is
 written locally. Sequential streaming keeps memory independent of total corpus
 size; no parallel copy or whole-file buffering is used.

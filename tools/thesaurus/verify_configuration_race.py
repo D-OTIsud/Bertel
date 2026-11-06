@@ -1,4 +1,8 @@
 """Prove first publication serializes a competing URI-prefix configuration."""
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 import json
 from pathlib import Path

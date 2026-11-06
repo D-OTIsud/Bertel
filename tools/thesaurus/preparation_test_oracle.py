@@ -1,6 +1,10 @@
 """Independent success assertions for the isolated preparation race harness."""
 from __future__ import annotations
 
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 from psycopg2.extensions import TRANSACTION_STATUS_IDLE
 
 

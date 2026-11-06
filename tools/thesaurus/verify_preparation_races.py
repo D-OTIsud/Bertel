@@ -6,6 +6,10 @@ All original function definitions/owners/ACLs are checked after restoration.
 """
 from __future__ import annotations
 
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 import json
 from pathlib import Path

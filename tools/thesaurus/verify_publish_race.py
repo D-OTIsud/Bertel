@@ -1,4 +1,8 @@
 """Real two-session stale-release publication proof on an isolated local fixture."""
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse,json,threading,time,uuid
 from pathlib import Path
 import psycopg2

@@ -1,0 +1,66 @@
+name: Release candidate archive
+
+on:
+  push:
+    paths: ['tools/release-artifact/**', '.github/workflows/release-artifact.yml']
+  pull_request:
+    paths: ['tools/release-artifact/**', '.github/workflows/release-artifact.yml']
+  workflow_dispatch:
+    inputs:
+      expected_source_sha:
+        description: 'Exact reviewed master SHA. A different workflow snapshot is refused.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  guard-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tools/release-artifact/candidate.test.mjs
+
+  prepare-archive:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
+    needs: guard-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate immutable source and capture only the public runtime configuration
+        run: node tools/release-artifact/candidate.mjs prepare
+      - name: Build the reviewed non-demo image away from production
+        run: node tools/release-artifact/candidate.mjs build
+      - name: Check final native runtime and tooling copies
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="bertel-candidate:${GITHUB_SHA}"
+          docker run --rm --entrypoint node \
+            -v "$PWD/bertel-tourism-ui/scripts/check-native-image-runtime.cjs:/app/check-native-image-runtime.cjs:ro" \
+            "$image" check-native-image-runtime.cjs
+          docker run --rm --entrypoint node \
+            -v "$PWD/bertel-tourism-ui/scripts/check-tooling-runtime.cjs:/app/check-tooling-runtime.cjs:ro" \
+            "$image" check-tooling-runtime.cjs /app
+      - name: Private-loopback smoke with public parameters only, without a service credential
+        run: node tools/release-artifact/candidate.mjs smoke
+      - name: Export bounded image and source/checksum manifest
+        run: node tools/release-artifact/candidate.mjs export
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bertel-candidate-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-work/artifact/*
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0

@@ -15,7 +15,7 @@ test.each([false, true])('keyboard opens and selects a non-pointer option, searc
   const trigger = screen.getByRole('button', { name: 'Type' });
   trigger.focus();
   fireEvent.keyDown(trigger, { key: 'ArrowDown' });
-  const owner = searchable ? screen.getByRole('textbox') : screen.getByRole('listbox');
+  const owner = searchable ? screen.getByRole('combobox', { name: 'Rechercher' }) : screen.getByRole('listbox');
   expect(owner).toHaveFocus();
   expect(activeOption(owner)).toHaveTextContent('Tous');
   fireEvent.keyDown(owner, { key: 'ArrowDown' });
@@ -58,7 +58,7 @@ test('Escape closes only the picker and restores focus, while outside focus rema
   </div>);
   const trigger = screen.getByRole('button', { name: 'Type' });
   fireEvent.click(trigger);
-  fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Rechercher' }), { key: 'Escape' });
   expect(hostKey).not.toHaveBeenCalled();
   expect(trigger).toHaveFocus();
   fireEvent.click(trigger);
@@ -79,14 +79,14 @@ test.each([false, true])('filter owns focus inside a real Sheet, searchable=%s',
   await waitFor(() => expect(screen.getByRole('button', { name: 'Avant' })).toHaveFocus());
   const trigger = screen.getByRole('button', { name: 'Type' });
   fireEvent.keyDown(trigger, { key: 'ArrowDown' });
-  const owner = searchable ? screen.getByRole('textbox') : screen.getByRole('listbox');
+  const owner = searchable ? screen.getByRole('combobox', { name: 'Rechercher' }) : screen.getByRole('listbox');
   await waitFor(() => expect(owner).toHaveFocus());
   fireEvent.keyDown(owner, { key: 'Tab' });
   expect(screen.getByRole('button', { name: 'Après' })).toHaveFocus();
   expect(onOpenChange).not.toHaveBeenCalled();
   expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   fireEvent.keyDown(trigger, { key: 'ArrowDown' });
-  const reopened = searchable ? screen.getByRole('textbox') : screen.getByRole('listbox');
+  const reopened = searchable ? screen.getByRole('combobox', { name: 'Rechercher' }) : screen.getByRole('listbox');
   fireEvent.keyDown(reopened, { key: 'Tab', shiftKey: true });
   expect(screen.getByRole('button', { name: 'Avant' })).toHaveFocus();
   expect(onOpenChange).not.toHaveBeenCalled();
@@ -96,7 +96,7 @@ test('search spaces remain text and a zero-result menu has no stale active optio
   const onChange = jest.fn();
   render(<FilterDropdown options={options} selected={[]} onChange={onChange} mode="single" placeholder="Type" searchable />);
   fireEvent.click(screen.getByRole('button'));
-  const input = screen.getByRole('textbox');
+  const input = screen.getByRole('combobox', { name: 'Rechercher' });
   fireEvent.keyDown(input, { key: 'ArrowDown' });
   expect(activeOption(input)).toHaveTextContent('Hôtels');
   fireEvent.keyDown(input, { key: ' ' });
@@ -106,4 +106,16 @@ test('search spaces remain text and a zero-result menu has no stale active optio
   fireEvent.keyDown(input, { key: 'Enter' });
   expect(activeOption(input)).toBeNull();
   expect(onChange).not.toHaveBeenCalled();
+});
+
+test('searchable multi recovers its keyboard owner after a pointer selection', () => {
+  const onChange = jest.fn();
+  render(<FilterDropdown options={options} selected={[]} onChange={onChange} mode="multi" placeholder="Type" searchable />);
+  fireEvent.click(screen.getByRole('button'));
+  const search = screen.getByRole('combobox', { name: 'Rechercher' });
+  search.blur();
+  fireEvent.click(screen.getByRole('option', { name: 'Hôtels' }));
+  expect(search).toHaveFocus();
+  fireEvent.keyDown(search, { key: 'ArrowDown' });
+  expect(activeOption(search)).toHaveTextContent('Hôtels');
 });

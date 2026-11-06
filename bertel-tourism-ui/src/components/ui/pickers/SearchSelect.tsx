@@ -15,7 +15,7 @@ import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { fold } from './fold';
 import { usePickerPopover } from './usePickerPopover';
-import { PickerPanel } from './PickerPanel';
+import { PickerPanel, scrollOptionIntoView } from './PickerPanel';
 
 export interface SearchSelectOption {
   code: string;
@@ -108,8 +108,15 @@ export function SearchSelect({
     return map;
   }, [flatVisible, allowClear]);
   const rowCount = flatVisible.length + (allowClear ? 1 : 0);
-  const activeId = active >= 0 && active < rowCount ? `${listId}-option-${active}` : undefined;
+  const optionId = (code: string) => `${listId}-option-${encodeURIComponent(code)}`;
+  const activeOption = flatVisible[allowClear ? active - 1 : active];
+  const activeId = allowClear && active === 0 ? `${listId}-clear` : activeOption ? optionId(activeOption.code) : undefined;
   const showEmpty = isGrouped ? searching && flatVisible.length === 0 : filtered.length === 0;
+
+  useEffect(() => { setActive((index) => Math.max(0, Math.min(index, rowCount - 1))); }, [rowCount]);
+  useEffect(() => {
+    if (open && activeId) scrollOptionIntoView(document.getElementById(activeId), panelRef.current?.querySelector('[role="listbox"]') ?? null);
+  }, [open, activeId, panelRef]);
 
   // Focus the search + seed the open groups on the OPEN transition; clear the query on close.
   // Keyed on `open` only (NOT defaultExpanded): if the caller's `options` identity changes
@@ -119,7 +126,6 @@ export function SearchSelect({
     if (open) {
       setActive(0);
       setExpanded(defaultExpanded);
-      searchRef.current?.focus();
     } else {
       setQuery('');
     }
@@ -168,7 +174,7 @@ export function SearchSelect({
     return (
       <button
         key={option.code}
-        id={`${listId}-option-${rowIndex}`}
+        id={optionId(option.code)}
         type="button"
         role="option"
         aria-selected={option.code === value}
@@ -206,6 +212,9 @@ export function SearchSelect({
             ref={searchRef}
             className="picker__search"
             type="text"
+            role="combobox"
+            aria-expanded="true"
+            aria-autocomplete="list"
             value={query}
             placeholder={searchPlaceholder}
             aria-label="Rechercher"
@@ -220,7 +229,7 @@ export function SearchSelect({
           <div className="picker__options" role="listbox" id={listId}>
             {allowClear && (
               <button
-                id={`${listId}-option-0`}
+                id={`${listId}-clear`}
                 type="button"
                 role="option"
                 aria-selected={value === ''}

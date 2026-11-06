@@ -77,7 +77,9 @@ export function usePickerPopover(open: boolean, onClose: () => void, reflowKey: 
     position: 'fixed',
     top: 0,
     left: 0,
-    visibility: 'hidden',
+    // Opacity keeps the unmeasured panel invisible while allowing its focus
+    // scope to receive focus. visibility:hidden would reject that first focus.
+    opacity: 0,
   });
   const [tokens, setTokens] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -110,7 +112,7 @@ export function usePickerPopover(open: boolean, onClose: () => void, reflowKey: 
     // lisible, alors qu'un panneau long qui ne bascule pas est tronqué.
     const spaceBelow = viewportHeight - rect.bottom;
     const openUp = spaceBelow < PICKER_PANEL_MAX_HEIGHT + VIEWPORT_MARGIN && rect.top > spaceBelow;
-    const common = { position: 'fixed', left, minWidth: rect.width, visibility: 'visible' } as const;
+    const common = { position: 'fixed', left, minWidth: rect.width, opacity: 1 } as const;
     setPosition(
       openUp
         ? { ...common, bottom: viewportHeight - rect.top + 4 }

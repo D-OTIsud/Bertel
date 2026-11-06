@@ -1,9 +1,11 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
-import { PopupLayer } from '../ui/pickers/PickerPanel';
+import { PopupLayer, scrollOptionIntoView } from '../ui/pickers/PickerPanel';
+
+const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -58,7 +60,7 @@ export function FilterDropdown<T extends string>({
   const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(-1);
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({ position: 'fixed', top: 0, left: 0, opacity: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -94,12 +96,12 @@ export function FilterDropdown<T extends string>({
     const openUp = spaceBelow < MENU_MAX_HEIGHT + VIEWPORT_MARGIN && rect.top > spaceBelow;
     setMenuStyle(
       openUp
-        ? { position: 'fixed', bottom: vh - rect.top + 4, left, minWidth: rect.width, zIndex: 200 }
-        : { position: 'fixed', top: rect.bottom + 4, left, minWidth: rect.width, zIndex: 200 },
+        ? { position: 'fixed', bottom: vh - rect.top + 4, left, minWidth: rect.width, zIndex: 200, opacity: 1 }
+        : { position: 'fixed', top: rect.bottom + 4, left, minWidth: rect.width, zIndex: 200, opacity: 1 },
     );
   }, []);
 
-  useEffect(() => {
+  useClientLayoutEffect(() => {
     if (!open) return;
     updateMenuPosition();
     window.addEventListener('scroll', updateMenuPosition, true);
@@ -125,12 +127,6 @@ export function FilterDropdown<T extends string>({
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [open]);
 
-  // Keep keyboard focus on the popup owner; options use aria-activedescendant.
-  useEffect(() => {
-    if (!open) return;
-    (searchable ? searchRef.current : menuRef.current)?.focus({ preventScroll: true });
-  }, [open, searchable]);
-
   function handleTrigger() {
     triggerRef.current?.focus({ preventScroll: true });
     if (!open) setHighlight(searchable ? -1 : 0);
@@ -148,6 +144,7 @@ export function FilterDropdown<T extends string>({
         : [...selected, code];
       onChange(next);
       // multi: stay open
+      (searchable ? searchRef.current : menuRef.current)?.focus({ preventScroll: true });
     }
   }
 
@@ -167,10 +164,14 @@ export function FilterDropdown<T extends string>({
   const showAll = Boolean(allLabel) && !query.trim();
   const optionOffset = showAll ? 1 : 0;
   const rowCount = filteredOptions.length + optionOffset;
-  const activeId = highlight >= 0 && highlight < rowCount ? `${menuId}-option-${highlight}` : undefined;
+  const optionId = (code: string) => `${menuId}-option-${encodeURIComponent(code)}`;
+  const activeOption = filteredOptions[highlight - optionOffset];
+  const activeId = showAll && highlight === 0 ? `${menuId}-all` : activeOption ? optionId(activeOption.code) : undefined;
+
+  useEffect(() => { setHighlight((index) => Math.max(-1, Math.min(index, rowCount - 1))); }, [rowCount]);
 
   useEffect(() => {
-    if (open && activeId) document.getElementById(activeId)?.scrollIntoView?.({ block: 'nearest' });
+    if (open && activeId) scrollOptionIntoView(document.getElementById(activeId), menuRef.current);
   }, [open, activeId]);
 
   function activateHighlighted() {
@@ -263,6 +264,9 @@ export function FilterDropdown<T extends string>({
                 ref={searchRef}
                 className="filter-dropdown__search"
                 type="text"
+                role="combobox"
+                aria-expanded="true"
+                aria-autocomplete="list"
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
                 aria-controls={menuId}
@@ -272,13 +276,12 @@ export function FilterDropdown<T extends string>({
                   setQuery(e.target.value);
                   setHighlight(-1);
                 }}
-                autoFocus
               />
             </li>
           )}
           {showAll && (
             <li
-              id={`${menuId}-option-0`}
+              id={`${menuId}-all`}
               role="option"
               aria-selected={selected.length === 0}
               className={['filter-dropdown__item', selected.length === 0 ? 'filter-dropdown__item--selected' : '', highlight === 0 ? 'filter-dropdown__item--highlight' : ''].filter(Boolean).join(' ')}
@@ -310,7 +313,7 @@ export function FilterDropdown<T extends string>({
                   </li>
                 )}
                 <li
-                  id={`${menuId}-option-${idx + optionOffset}`}
+                  id={optionId(opt.code)}
                   role="option"
                   aria-selected={isSelected}
                   data-code={opt.code}

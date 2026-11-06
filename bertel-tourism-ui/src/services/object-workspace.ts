@@ -266,7 +266,9 @@ async function callObjectWorkspaceRpc(
   });
 
   if (error) {
-    throw mapMutationError(error, fallback);
+    // Keep the database outcome for retry/idempotency decisions while retaining
+    // the existing translated message. A refusal is not an uncertain transport failure.
+    throw Object.assign(mapMutationError(error, fallback), { code: error.code });
   }
 
   const result = readRecord(data);

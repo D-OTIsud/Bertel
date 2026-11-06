@@ -31,9 +31,14 @@ async function fixture() {
     const ack = (worker, operation, proof = 'a') => worker.query(`SELECT api.ack_list_email_client('${user}','${list}','${operation}',repeat('${proof}',64))`);
     return { admin, first, second, holder, user, foreign, list, org, context, prepare, begin, complete, ack,
       async close() {
-        await holder.query('ROLLBACK').catch(() => {});
-        await admin.query(`DELETE FROM public.object_list WHERE id='${list}'; DELETE FROM public.object WHERE id='${org}'; DELETE FROM auth.users WHERE id IN ('${user}','${foreign}'); DELETE FROM internal.list_email_metric WHERE user_id='${user}'`).catch(() => {});
-        await Promise.all([admin, first, second, holder].map((client) => client.close()));
+        let cleanupError;
+        try {
+          await holder.query('ROLLBACK').catch(() => {});
+          await admin.query(`DELETE FROM public.object_list WHERE id='${list}'; DELETE FROM public.object WHERE id='${org}'; DELETE FROM auth.users WHERE id IN ('${user}','${foreign}'); DELETE FROM internal.list_email_metric WHERE user_id='${user}'`);
+        } catch (error) { cleanupError = error; }
+        const closed = await Promise.allSettled([admin, first, second, holder].map((client) => client.close()));
+        if (cleanupError) throw cleanupError;
+        if (closed.some((result) => result.status === 'rejected')) throw new Error('Owned disposable SQL cleanup failed');
       } };
   } catch (error) {
     // A setup failure must not leave three idle psql children holding this process.

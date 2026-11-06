@@ -7,7 +7,7 @@ export class SqlSession {
       || !Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > 16 * 1024 * 1024) throw new Error('Invalid disposable SQL bounds');
     this.queryTimeoutMs = queryTimeoutMs; this.closeTimeoutMs = closeTimeoutMs; this.maxBytes = maxBytes;
     this.pending = []; this.lines = []; this.buffer = ''; this.sequence = 0; this.bytes = 0;
-    this.terminal = false; this.closed = false; this.closing = false; this.sqlstate = null; this.stderrTail = '';
+    this.terminal = false; this.closed = false; this.closing = false; this.sqlstate = null; this.diagnostics = {}; this.stderrTail = '';
     this.child = spawnPsql();
     this.child.stdout.on('data', (chunk) => {
       this.bytes += chunk.length;
@@ -24,11 +24,17 @@ export class SqlSession {
       }
     });
     this.child.stderr.on('data', (chunk) => {
-      // Never retain/re-emit the raw error, DSN or SQL context. psql is asked for
-      // SQLSTATE-only diagnostics; even an unexpected raw stderr stays private.
-      this.stderrTail = (this.stderrTail + chunk.toString()).slice(-128);
-      const match = this.stderrTail.match(/(?:ERROR|FATAL):\s*([0-9A-Z]{5})(?=\s|$)/);
-      if (match) { this.sqlstate = match[1]; this.stderrTail = ''; }
+      // Verbose psql fields are parsed only in memory. Emit SQLSTATE and these
+      // structural catalog identifiers only, never DETAIL, row values or SQL.
+      let buffer = this.stderrTail + chunk.toString(); let index;
+      while ((index = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, index).replace(/\r$/, ''); buffer = buffer.slice(index + 1);
+        const state = line.match(/(?:ERROR|FATAL):\s*([0-9A-Z]{5})(?=[:\s]|$)/);
+        if (state) this.sqlstate = state[1];
+        const structural = line.match(/^\s*(SCHEMA NAME|TABLE NAME|CONSTRAINT NAME):\s*([a-z_][a-z0-9_]{0,62})\s*$/);
+        if (structural) this.diagnostics[{ 'SCHEMA NAME': 'schema', 'TABLE NAME': 'table', 'CONSTRAINT NAME': 'constraint' }[structural[1]]] = structural[2];
+      }
+      this.stderrTail = buffer.slice(-512);
     });
     this.child.on('error', () => this.fail('Disposable SQL process failed'));
     this.child.stdin.on('error', () => this.fail('Disposable SQL input failed'));
@@ -40,11 +46,12 @@ export class SqlSession {
       this.rejectPending(this.error('Disposable SQL process closed'));
       this.finishClose?.();
     });
-    this.child.stdin.write('\\set VERBOSITY sqlstate\n');
+    this.child.stdin.write('\\set VERBOSITY verbose\n');
   }
   error(message) {
     const error = new Error(this.sqlstate ? `${message} (SQLSTATE ${this.sqlstate})` : message);
     if (this.sqlstate) error.sqlstate = this.sqlstate;
+    Object.assign(error, this.diagnostics);
     return error;
   }
   rejectPending(error) {

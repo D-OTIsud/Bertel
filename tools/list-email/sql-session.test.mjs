@@ -33,6 +33,17 @@ test('split stdout markers preserve a real result and sequential requests', asyn
   const second = f.session.query('SELECT 2'); f.child.stdout.write('2\n__list_email_result_2__\n');
   assert.equal(await second, '2'); await f.session.close(); assert.equal(f.child.kills, 0);
 });
+test('verbose diagnostics expose only structural identifiers, never row detail or arbitrary text', async () => {
+  const f = fake(); const pending = f.session.query('SELECT synthetic_failure');
+  f.child.stderr.write('ERROR: 23505: synthetic-secret-message\nDETAIL: synthetic-secret-row\nSCHEMA NAME: auth\nTABLE NAME: users\nCONSTRAINT NAME: users_email_partial_key\n');
+  f.child.stderr.write('CONSTRAINT NAME: synthetic-secret@invalid\n'); f.finish(3);
+  await assert.rejects(pending, (error) => {
+    assert.equal(error.sqlstate, '23505'); assert.equal(error.schema, 'auth'); assert.equal(error.table, 'users');
+    assert.equal(error.constraint, 'users_email_partial_key'); assert.equal(JSON.stringify(error).includes('synthetic-secret'), false);
+    assert.equal(error.message.includes('synthetic-secret'), false); return true;
+  });
+  await f.session.close();
+});
 test('a stalled query is bounded and only its owned child is killed', async () => {
   const f = fake(); await assert.rejects(f.session.query('SELECT stalled'), /query timed out/);
   await f.session.close(); assert.equal(f.child.kills, 1);

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import type { ProviderConfig } from '../../menu/extract/provider';
 import { readBoundedJson } from '@/lib/request-body.server';
 
@@ -43,7 +43,7 @@ export function parseTranslations(content: string, fields: Record<string, string
   try {
     // Some compatible providers wrap JSON in a code fence despite response_format.
     const json = content.trim().replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i, '$1');
-    const result = z.object({ translations: z.record(z.string().max(MAX_TRANSLATED_CHARS)) }).strict()
+    const result = z.object({ translations: z.record(z.string(), z.string().max(MAX_TRANSLATED_CHARS)) }).strict()
       .parse(JSON.parse(json));
     const keys = Object.keys(fields);
     if (Object.keys(result.translations).length !== keys.length

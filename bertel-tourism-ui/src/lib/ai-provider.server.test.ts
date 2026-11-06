@@ -20,10 +20,22 @@ it('accepts a valid OpenAI-compatible local provider without a key', async () =>
   });
 });
 
+it('preserves a non-null provider options record with nested unknown values', async () => {
+  const extra = { temperature: 0.2, seed: 7, logit_bias: { '21': -1 } };
+  rpc.mockReturnValue({ abortSignal: jest.fn().mockResolvedValue({ data: [{ ...valid, extra }], error: null }) });
+  await expect(resolveActiveAiProvider(server, signal)).resolves.toEqual({
+    config: { apiKind: 'openai_compatible', baseUrl: valid.base_url, model: valid.model, maxOutputTokens: 2048, extra },
+    apiKey: null,
+  });
+});
+
 it.each([
   { ...valid, api_kind: 'anthropic' },
   { ...valid, base_url: 'ftp://provider.example' },
   { ...valid, model: '   ' },
+  { ...valid, extra: [] },
+  { ...valid, max_output_tokens: 255.5 },
+  { ...valid, max_output_tokens: Number.MAX_SAFE_INTEGER + 1 },
 ])('fails closed for an unsupported or incomplete provider: %p', async (row) => {
   rpc.mockReturnValue({ abortSignal: jest.fn().mockResolvedValue({ data: [row], error: null }) });
   await expect(resolveActiveAiProvider(server, signal)).resolves.toBeNull();

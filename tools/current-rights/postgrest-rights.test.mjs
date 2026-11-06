@@ -49,6 +49,7 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
   const createdIds = [];
   let fixtureCreated = false;
   try {
+    assert.ok(Object.keys(ids).length === 6 && new Set(Object.values(ids)).size === 6, 'the fixture must own exactly six distinct synthetic identities');
     for (const [key, id] of Object.entries(ids)) {
       const email = `${emails[key]}@example.invalid`;
       const password = `Disposable!7-${randomUUID()}`;
@@ -68,6 +69,9 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
       const verified = await json(await local.request('/auth/v1/user', auth, undefined, 'GET'), 'independent Auth verification');
       assert.ok(verified.id === id, 'Auth must independently verify the same synthetic UID');
     }
+    assert.ok(createdIds.length === 6 && sessions.size === 5 && originalTokens.size === 5
+      && new Set(originalTokens.values()).size === 5 && !sessions.has('admin'),
+    'exactly six identities and five distinct real JWTs are required; the fixture-only admin never authenticates');
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
     const versionA = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${A}'`, 'private history witness'));
@@ -105,19 +109,30 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
     await denied(await rpc(headers('writer'), 'rpc_restore_object_version', { p_object_id: A, p_version_number: versionA }), 'restore after demotion');
     documents = await json(await rpc(headers('writer'), 'get_active_object_documents', { p_object_id: A }), 'documents after demotion');
     assert.ok(documents.authorized === false && documents.documents.length === 0);
+    const demotedFile = await json(await rpc(headers('writer'), 'get_object_document_file', { p_object_id: A, p_document_id: DOC }), 'private locator after demotion');
+    assert.ok(demotedFile.authorized === false && demotedFile.file === null);
     assert.ok(local.sql(`SELECT name FROM public.object WHERE id='${A}'`, 'unchanged refused state') === beforeRefusals);
 
     commit(`INSERT INTO public.user_permission(user_id,permission_id,is_active,granted_by) SELECT '${ids.writer}',id,true,'${ids.admin}'
       FROM public.ref_permission WHERE code='edit_canonical_when_publisher'`, 'committed individual exception');
     assert.ok(await canWrite('writer', A) === true, 'current individual exception remains a positive witness');
+    const exceptionName = 'Real JWT individual exception positive';
+    const exceptionChanged = await json(await local.request(`/rest/v1/object?id=eq.${A}`, headers('writer'),
+      { name: exceptionName }, 'PATCH', { prefer: 'return=representation' }), 'individual exception real DML positive');
+    assert.ok(exceptionChanged.length === 1 && exceptionChanged[0].name === exceptionName);
     commit(`UPDATE public.user_permission SET is_active=false WHERE user_id='${ids.writer}'`, 'committed exception revocation');
     assert.ok(await canWrite('writer', A) === false);
+    const revokedException = await json(await local.request(`/rest/v1/object?id=eq.${A}`, headers('writer'),
+      { name: 'Forbidden revoked exception edit' }, 'PATCH', { prefer: 'return=representation' }), 'DML after individual revocation');
+    assert.ok(revokedException.length === 0 && local.sql(`SELECT name FROM public.object WHERE id='${A}'`, 'exception state after refusal') === exceptionName);
     commit(`UPDATE public.user_permission SET is_active=true WHERE user_id='${ids.writer}';
       UPDATE public.user_org_membership SET is_active=false WHERE id='00000000-0000-4000-a000-00000000ab11'`, 'committed departure');
     assert.ok((await rows(headers('writer'), A)).length === 0 && await canWrite('writer', A) === false,
       'a former creator with a still-active individual permission must not invent publisher scope');
     await denied(await rpc(headers('writer'), 'get_object_versions', { p_object_id: A, p_limit: 50, p_offset: 0 }), 'private history after departure');
     await denied(await rpc(headers('writer'), 'get_object_version_snapshot', { p_object_id: A, p_version_number: versionA }), 'private snapshot after departure');
+    const departedFile = await json(await rpc(headers('writer'), 'get_object_document_file', { p_object_id: A, p_document_id: DOC }), 'private locator after departure');
+    assert.ok(departedFile.authorized === false && departedFile.file === null);
     await denied(await rpc(headers('writer'), 'rpc_restore_object_version', { p_object_id: PUBLIC, p_version_number: versionPublic }), 'published restore after departure');
     assert.ok((await rows(headers('writer'), PUBLIC)).length === 1 && (await rows(local.anonymous, PUBLIC)).length === 1);
     assert.ok((await json(await rpc(headers('writer'), 'get_object_versions', { p_object_id: PUBLIC, p_limit: 50, p_offset: 0 }), 'existing published history rule')).length > 0,
@@ -169,13 +184,15 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
     await denied(await rpc(headers('portal'), 'portal_photo_preview', { p_document_id: PHOTO }), 'actor role after committed demotion');
     commit(`UPDATE public.app_user_profile SET role='actor',actor_id=NULL WHERE id='${ids.portal}'`, 'committed account binding removal');
     assert.ok(await json(await rpc(headers('portal'), 'current_user_actor_id'), 'current actor after unlink') === null);
+    await denied(await rpc(headers('portal'), 'portal_photo_preview', { p_document_id: PHOTO }), 'private photo locator after actor unlink');
+    await denied(await rpc(headers('portal'), 'get_my_portal_photo_workspace', { p_object_id: A }), 'workspace after actor unlink');
     await denied(await rpc(headers('portal'), 'submit_actor_fiche', { p_object_id: A, p_changes: proposal, p_note: null }), 'removed actor binding');
-    assert.ok(proposalHash() === beforeProposal && local.sql(`SELECT name FROM public.object WHERE id='${A}'`, 'final refused canonical state') === beforeRefusals);
-    for (const key of ['writer', 'portal', 'tester']) {
+    assert.ok(proposalHash() === beforeProposal && local.sql(`SELECT name FROM public.object WHERE id='${A}'`, 'final refused canonical state') === exceptionName);
+    for (const key of sessions.keys()) {
       const verifiedAgain = await json(await local.request('/auth/v1/user', headers(key), undefined, 'GET'), 'Auth remains valid after authorization revocation');
       assert.ok(verifiedAgain.id === ids[key], 'the reused JWT must still authenticate the same live synthetic user');
     }
-    t.diagnostic('Real Auth identity, positive A/B/test scopes and byte-identical JWT revocations passed; no refresh, provider, e-mail or Storage content used.');
+    t.diagnostic('Six Auth identities/five verified JWTs, positive A/B/test scopes and byte-identical JWT revocations passed; no refresh, provider, e-mail or Storage content used.');
   } finally {
     let cleanupOk = true;
     if (fixtureCreated) {

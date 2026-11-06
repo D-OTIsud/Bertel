@@ -3204,7 +3204,7 @@ export async function getObjectWorkspaceMenusModule(
   };
 }
 
-async function getObjectWorkspaceActivityModule(
+export async function getObjectWorkspaceActivityModule(
   objectId: string,
   baseModule: ObjectWorkspaceActivityModule,
   catalogs: ReferenceCatalogs,
@@ -3225,7 +3225,7 @@ async function getObjectWorkspaceActivityModule(
   const [dataResult] = await Promise.all([
     client
       .from('object_act')
-      .select('duration_min, min_participants, max_participants, difficulty_level, guide_required, min_age, equipment_provided, equipment_provided_details')
+      .select('duration_min, min_participants, max_participants, difficulty_level, guide_required, min_age, equipment_provided')
       .eq('object_id', objectId)
       .maybeSingle(),
   ]);
@@ -3254,7 +3254,7 @@ async function getObjectWorkspaceActivityModule(
     guideRequired: readBoolean(row.guide_required),
     minAge: readString(row.min_age),
     equipmentProvided: readBoolean(row.equipment_provided),
-    equipmentProvidedDetails: readString(row.equipment_provided_details),
+    equipmentProvidedDetails: '',
     difficultyOptions,
     unavailableReason: null,
   };
@@ -5380,6 +5380,11 @@ export async function saveObjectWorkspaceActivity(objectId: string, input: Objec
   if (input.unavailableReason) {
     throw new Error(input.unavailableReason);
   }
+  // The deployed object_act schema stores only the boolean. Do not silently
+  // discard unsupported free text from the office editor or a restored draft.
+  if (input.equipmentProvidedDetails.trim()) {
+    throw new Error('Le détail du matériel fourni ne peut pas être enregistré pour le moment. Votre saisie est conservée.');
+  }
 
   validateActivityModule(input);
 
@@ -5398,7 +5403,6 @@ export async function saveObjectWorkspaceActivity(objectId: string, input: Objec
     guide_required: input.guideRequired,
     min_age: toNullableInteger(input.minAge),
     equipment_provided: input.equipmentProvided,
-    equipment_provided_details: input.equipmentProvided ? toNullableText(input.equipmentProvidedDetails) : null,
   }, { onConflict: 'object_id' });
 
   if (error) {

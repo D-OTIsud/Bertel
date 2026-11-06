@@ -74,6 +74,16 @@ describe('buildPortalRubrics — composition par type', () => {
     expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'pricing', 'activity']);
   });
 
+  it.each(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA'])('%s stays in HEB and never displays an activity rubric', (type) => {
+    expect(resolvePortalArchetype(type)).toBe('HEB');
+    expect(build({ archetype: 'HEB' }).map((rubric) => rubric.id)).not.toContain('activity');
+  });
+
+  it.each(['ACT', 'ASC'])('%s displays the activity rubric in ASC', (type) => {
+    expect(resolvePortalArchetype(type)).toBe('ASC');
+    expect(build({ archetype: 'ASC' }).map((rubric) => rubric.id)).toContain('activity');
+  });
+
   it('les deux rubriques d’ouverture portent le MÊME module (une enveloppe par module)', () => {
     const hours = PORTAL_RUBRICS.find((r) => r.id === 'hours');
     const season = PORTAL_RUBRICS.find((r) => r.id === 'season');
@@ -243,9 +253,16 @@ const BANNED = /\b(canonique|mod[ée]ration|soumission|module|section|workspace|
 
 describe('vocabulaire et intégrité du registre', () => {
 
+  it('Photos reste fermé par le plancher historique et s’ouvre seulement si media est autorisé', () => {
+    expect(build().some(rubric => rubric.id === 'photos')).toBe(false);
+    expect(build({ floor: floor.filter(module => module !== 'media') }).find(rubric => rubric.id === 'photos')?.state).toBe('todo');
+    expect(build({ floor: floor.filter(module => module !== 'media'), masked: ['media'] }).some(rubric => rubric.id === 'photos')).toBe(false);
+  });
+
   it('chaque rubrique porte un module hors plancher et un titre sans jargon', () => {
     for (const rubric of PORTAL_RUBRICS) {
-      expect(floor).not.toContain(rubric.module);
+      // The legacy server floor includes media; Photos remains an explicit opt-in.
+      expect(floor.filter(module => module !== 'media')).not.toContain(rubric.module);
       expect(rubric.title).not.toMatch(BANNED);
       expect(rubric.title.length).toBeGreaterThan(3);
     }

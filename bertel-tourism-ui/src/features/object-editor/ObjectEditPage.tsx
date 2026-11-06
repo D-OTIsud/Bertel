@@ -409,7 +409,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     // Only canonical writes establish persisted room IDs. Proposal submission is not a save.
     editor.commitModules(
       result.saved.flatMap((m) => m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]]),
-      { canonicalRooms: true, canonicalPlaces: true },
+      { canonicalRooms: true, canonicalPlaces: true, canonicalModules: result.canonicalModules, sentModules: editor.draft },
     );
     // Submitted proposals fold into the local baseline so the contributor isn't asked to
     // submit the same unchanged values again, but they do not become canonical room records.

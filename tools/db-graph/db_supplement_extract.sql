@@ -16,7 +16,7 @@ SELECT json_build_object(
       'body', p.prosrc
     ))
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname IN ('public','api','internal','audit','crm')
+    WHERE n.nspname IN ('public','api','internal','audit','crm','thesaurus')
       AND p.prokind = 'f'
   ), '[]'::json),
   'policies', COALESCE((
@@ -25,7 +25,7 @@ SELECT json_build_object(
       'cmd', cmd, 'roles', roles, 'qual', qual, 'with_check', with_check,
       'permissive', permissive
     ))
-    FROM pg_policies WHERE schemaname IN ('public','api','internal','audit','crm','storage')
+    FROM pg_policies WHERE schemaname IN ('public','api','internal','audit','crm','storage','thesaurus')
   ), '[]'::json),
   'partitions', COALESCE((
     SELECT json_agg(json_build_object(
@@ -37,7 +37,7 @@ SELECT json_build_object(
     JOIN pg_class p ON p.oid = i.inhparent JOIN pg_namespace pn ON pn.oid = p.relnamespace
     -- relkind filter: pg_inherits also tracks partitioned-INDEX inheritance — tables only here
     WHERE c.relispartition AND c.relkind IN ('r','p')
-      AND cn.nspname IN ('public','api','internal','audit','crm')
+      AND cn.nspname IN ('public','api','internal','audit','crm','thesaurus')
   ), '[]'::json),
   'enums', COALESCE((
     SELECT json_agg(json_build_object(
@@ -47,10 +47,10 @@ SELECT json_build_object(
                   FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace cn ON cn.oid = c.relnamespace
                   WHERE a.atttypid = t.oid AND a.attnum > 0 AND NOT a.attisdropped
                     AND c.relkind IN ('r','p','v','m')
-                    AND cn.nspname IN ('public','api','internal','audit','crm'))
+                    AND cn.nspname IN ('public','api','internal','audit','crm','thesaurus'))
     ))
     FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
-    WHERE t.typtype = 'e' AND n.nspname IN ('public','api','internal','audit','crm')
+    WHERE t.typtype = 'e' AND n.nspname IN ('public','api','internal','audit','crm','thesaurus')
   ), '[]'::json),
   'applicability', COALESCE((
     SELECT json_agg(json_build_object('object_type', a.object_type::text, 'facet_table', a.facet_table))

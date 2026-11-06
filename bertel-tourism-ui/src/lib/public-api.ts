@@ -17,11 +17,14 @@ export const PUBLIC_API_CONTRACT_VERSION = '1.0.0';
  */
 export const PUBLIC_RPC_ALLOWLIST = new Set<string>([
   'list_object_resources_page_text',
+  'list_partner_objects_with_vocabulary',
+  'get_partner_object_with_vocabulary',
   'get_object_resource',
   'list_object_markers',
   'list_reference_bundle',
   'list_catalog',
   'public_catalog_domains',
+  'thesaurus_public', // Immutable public thesaurus snapshots; service-role-only dispatcher.
   'list_deleted_objects_since', // C-4 tombstone feed (service-role only in DB)
   'get_object_i18n_all',        // C-5 i18n=all block (service-role only in DB)
   'get_object_jsonld',          // I4 schema.org JSON-LD block (service-role only in DB)
@@ -65,6 +68,18 @@ export async function callPublicRpc(rpcName: string, params: Record<string, unkn
   const startedAt = performance.now();
   const { data, error } = await server.schema('api').rpc(rpcName, params);
   if (error) {
+    // The thesaurus dispatcher uses explicit, non-sensitive domain errors. Other RPCs keep
+    // their historical generic 502 behavior; never forward raw SQL messages or details.
+    if (rpcName === 'thesaurus_public') {
+      const errors: Record<string, { status: number; error: string }> = {
+        PT400: { status: 400, error: 'invalid_parameters' },
+        PT404: { status: 404, error: 'not_found' },
+        PT409: { status: 409, error: 'conflict' },
+        PT503: { status: 503, error: 'release_unavailable' },
+      };
+      const mapped = errors[error.code];
+      if (mapped) return { ok: false, status: mapped.status, body: { error: mapped.error } };
+    }
     // Explicit safe fields only: upstream messages/details can contain request data.
     const pagination: { page_size?: number; view?: 'card' | 'full' } = {};
     if (typeof params.p_page_size === 'number' && Number.isSafeInteger(params.p_page_size) && params.p_page_size > 0) {
@@ -77,6 +92,8 @@ export async function callPublicRpc(rpcName: string, params: Record<string, unkn
       code: typeof error.code === 'string' && /^(?:[0-9A-Z]{5}|PGRST\d{3})$/.test(error.code) ? error.code : null,
       ...pagination,
     });
+    if (['list_partner_objects_with_vocabulary','get_partner_object_with_vocabulary'].includes(rpcName)
+      && error.code === 'PT400') return { ok: false, status: 400, body: { error: 'bad_request', detail: 'invalid parameters or cursor' } };
     return { ok: false, status: 502, body: { error: 'upstream_error', detail: 'upstream error' } };
   }
   return { ok: true, status: 200, body: data ?? null };

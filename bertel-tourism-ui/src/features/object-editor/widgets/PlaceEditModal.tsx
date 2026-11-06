@@ -40,7 +40,7 @@ export function PlaceEditModal({
 }: PlaceEditModalProps) {
   const [draft, setDraft] = useState(place);
   const { data: locationReferences } = useLocationReferenceOptionsQuery();
-  const communeOptions = zoneOptions.map((zone) => ({ id: zone.code, code: zone.code, label: zone.label }));
+  const communeOptions = zoneOptions.map((zone) => ({ id: zone.code, code: zone.code, label: zone.label, disabled: zone.disabled }));
   const hasLat = Boolean(draft.location.latitude.trim());
   const hasLng = Boolean(draft.location.longitude.trim());
   const coordMismatch = hasLat !== hasLng;

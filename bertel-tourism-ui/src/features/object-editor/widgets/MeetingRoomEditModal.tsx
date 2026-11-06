@@ -98,7 +98,7 @@ export function MeetingRoomEditModal({ open, room, equipmentOptions, onClose, on
         </div>
       </section>
       <section className="ed-modal__section"><h3>Équipements</h3><ChipSet>
-        {equipmentOptions.map((option) => <Chip key={option.id || option.code} label={option.label}
+        {equipmentOptions.map((option) => <Chip key={option.id || option.code} label={option.label} disabled={option.disabled}
           on={draft.equipmentCodes.includes(option.code)} onClick={() => set({
             equipmentCodes: draft.equipmentCodes.includes(option.code)
               ? draft.equipmentCodes.filter((code) => code !== option.code)

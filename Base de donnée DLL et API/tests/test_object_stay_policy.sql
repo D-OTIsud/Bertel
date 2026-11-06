@@ -18,7 +18,19 @@ BEGIN
   ASSERT EXISTS (SELECT 1 FROM pg_policy WHERE polrelid='public.object_stay_policy'::regclass AND polname='read_object_stay_policy' AND polcmd='r'), 'read policy missing';
   ASSERT EXISTS (SELECT 1 FROM pg_policy WHERE polrelid='public.object_stay_policy'::regclass AND polname='canonical_ins_object_stay_policy' AND polcmd='a'), 'canonical insert policy missing';
   SELECT count(*) INTO v_trg FROM pg_trigger WHERE tgrelid='public.object_stay_policy'::regclass AND NOT tgisinternal;
-  ASSERT v_trg = 2, 'expected 2 triggers (updated_at + audit), got '||v_trg;
+  ASSERT v_trg = 7, 'expected 2 business triggers and 5 thesaurus ownership/preparation guards, got '||v_trg;
+  ASSERT (SELECT count(*) FROM pg_trigger t JOIN (VALUES
+    ('update_object_stay_policy_updated_at','public.update_updated_at_column()'::regprocedure,19),
+    ('trg_audit_object_stay_policy','audit.log_row_changes()'::regprocedure,25),
+    ('thesaurus_write_fence','thesaurus.write_fence()'::regprocedure,30),
+    ('thesaurus_remember_ownership','thesaurus.remember_ownership()'::regprocedure,11),
+    ('thesaurus_ownership_transfer_guard','thesaurus.guard_ownership_transfer()'::regprocedure,23),
+    ('thesaurus_mutation_journal','thesaurus.record_owner_mutation()'::regprocedure,31),
+    ('thesaurus_prepared_truncate','thesaurus.guard_prepared_truncate()'::regprocedure,34)
+  ) expected(trigger_name,function_oid,trigger_type)
+    ON t.tgname=expected.trigger_name AND t.tgfoid=expected.function_oid AND t.tgtype=expected.trigger_type
+    WHERE t.tgrelid='public.object_stay_policy'::regclass AND NOT t.tgisinternal AND t.tgenabled='O')=7,
+    'stay policy business/ownership trigger names, functions, events or enabled state drifted';
   ASSERT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.object_stay_policy'::regclass AND contype='f'
                  AND pg_get_constraintdef(oid) ILIKE '%object(id)%'), 'FK to object missing';
 

@@ -83,6 +83,32 @@ function resetStore() {
   act(() => useExplorerStore.getState().resetAll());
 }
 
+describe('FiltersPanel — équivalences du thésaurus', () => {
+  beforeEach(resetStore);
+
+  it('ne propose aucune expansion sans critère taxonomique', () => {
+    render(<FiltersPanel />);
+    expect(screen.queryByRole('checkbox', { name: 'Inclure les anciens termes exactement équivalents' })).not.toBeInTheDocument();
+  });
+
+  it('préserve le filtrage actuel par défaut puis active explicitement les prédécesseurs équivalents', () => {
+    act(() => {
+      useExplorerStore.getState().toggleBucket('HOT');
+      useExplorerStore.getState().toggleTaxonomy('taxonomy_hlo', 'location_saisonniere');
+    });
+    render(<FiltersPanel references={SEMANTIC_ACCOMMODATION_REFERENCES} />);
+    const checkbox = screen.getByRole('checkbox', { name: 'Inclure les anciens termes exactement équivalents' });
+    expect(checkbox).not.toBeChecked();
+    expect(screen.getByText(/Les fiches portant un ancien terme restent/)).toBeInTheDocument();
+    fireEvent.click(checkbox);
+    expect(useExplorerStore.getState().common.includeEquivalentPredecessors).toBe(true);
+    expect(screen.queryByText(/Les fiches portant un ancien terme restent/)).not.toBeInTheDocument();
+    fireEvent.click(checkbox);
+    expect(useExplorerStore.getState().common.includeEquivalentPredecessors).toBe(false);
+    expect(useExplorerStore.getState().common.taxonomyAny).toEqual([{ domain: 'taxonomy_hlo', code: 'location_saisonniere' }]);
+  });
+});
+
 describe('FiltersPanel — sections type-spécifiques repliables', () => {
   beforeEach(resetStore);
 

@@ -3,12 +3,9 @@ import { type NextResponse, type NextRequest } from 'next/server';
 import { admitPartner } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { OBJECT_TYPE_CODES } from '@/lib/object-types';
-import { isRegionalTourinsoftVariant, resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
+import { resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
 
 export const runtime = 'nodejs';
-
-/** Pivot formats servable per list item (I4/§153): one batch RPC call per page, merged as `item.<profil>`. */
-const PIVOT_FORMATS = new Set(['jsonld', 'datatourisme', 'apidae', 'tourinsoft']);
 
 /**
  * GET /api/public/objects — partner-facing paginated list of PUBLISHED objects (audit API R1b).
@@ -76,7 +73,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const trackParam = (url.searchParams.get('track') ?? '').trim().toLowerCase();
   const track = isFull && (trackParam === 'gpx' || trackParam === 'kml') ? trackParam : 'none';
 
-  const result = await metrics.measure('list_rpc', () => callPublicRpc('list_object_resources_page_text', {
+  const taxonomyCodes = [...new Set((url.searchParams.get('taxonomy') ?? '').split(',').map((v) => v.trim()).filter(Boolean))].sort();
+  const equivalents = url.searchParams.get('include_equivalent_predecessors') ?? 'false';
+  if (taxonomyCodes.length > 100 || taxonomyCodes.some((v) => !/^taxonomy_[a-z_]+:[a-z0-9_-]+$/.test(v))
+    || !['true', 'false'].includes(equivalents) || (equivalents === 'true' && taxonomyCodes.length === 0)) {
+    return metrics.json({ error: 'bad_request', detail: 'invalid taxonomy filter' }, { status: 400, headers });
+  }
+
+  const result = await metrics.measure('list_rpc', () => callPublicRpc('list_partner_objects_with_vocabulary', {
     p_cursor: cursor,
     p_lang_prefs: [lang],
     p_page_size: pageSize,
@@ -85,6 +89,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     p_search: search,
     p_track_format: track,
     p_view: view, // 'full' ⇒ fiche complète par item ; 'card' (défaut) ⇒ carte allégée
+    p_format: format,
+    p_variant: tourinsoftVariant.variant,
+    p_taxonomy_codes: taxonomyCodes.length ? taxonomyCodes : null,
+    p_include_equivalent_predecessors: equivalents === 'true',
   }));
 
   metrics.audit(partner.keyId, 'GET /api/public/objects', result.status);
@@ -107,23 +115,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     });
   }
 
-  if (PIVOT_FORMATS.has(format) && items.length > 0) {
-    // One batch call for the whole page; merge each pivot document under item.<profil> (additive,
-    // mirror of the detail route). Best-effort — a failure leaves the plain page untouched.
-    const ids = items.map((it) => it?.id).filter((v): v is string => typeof v === 'string');
-    const batch = format === 'tourinsoft' && isRegionalTourinsoftVariant(tourinsoftVariant.variant)
-      ? await metrics.measure('pivot', () => callPublicRpc('get_objects_tourinsoft_batch', {
-          p_object_ids: ids,
-          p_variant: tourinsoftVariant.variant,
-        }))
-      : await metrics.measure('pivot', () => callPublicRpc('get_objects_interop_batch', { p_object_ids: ids, p_profile: format }));
-    if (batch.ok && batch.body && typeof batch.body === 'object') {
-      const docs = batch.body as Record<string, unknown>;
-      items = items.map((it) =>
-        typeof it?.id === 'string' && docs[it.id as string] != null ? { ...it, [format]: docs[it.id as string] } : it,
-      );
-    }
-  }
+  // Pivot enrichment is performed inside the page RPC. Its labels and release ID
+  // must share the same PostgreSQL snapshot, including during a publication.
 
   // Meta = white-list explicite : SEULES les 4 clés publiques contractuelles sortent ; les clés
   // internes du RPC (kind, offset, schema_version, render_*, cursor, language*, …) sont écartées.
@@ -145,6 +138,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         page_size: pageInfo.page_size ?? pageSize,
         total,
         next_cursor: nextCursor,
+        ...(pageInfo.vocabulary_release != null ? { vocabulary_release: pageInfo.vocabulary_release } : {}),
       },
       data,
     },

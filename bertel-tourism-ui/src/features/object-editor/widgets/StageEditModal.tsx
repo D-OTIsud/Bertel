@@ -224,7 +224,7 @@ export function StageEditModal({
               {stageKindOptions.slice(0, 8).map((option) => (
                 <Chip
                   key={option.id || option.code}
-                  label={option.label}
+                  label={option.label} disabled={option.disabled}
                   on={draft.kind === option.code}
                   onClick={() => setDraft((current) => ({ ...current, kind: option.code }))}
                 />

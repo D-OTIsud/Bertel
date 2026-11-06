@@ -718,6 +718,18 @@ ROLLBACK;
 \echo '== SEC05 distributed AI admission: exact per-user/per-route sliding 12/60s =='
 \ir ../supabase/migrations/20261106145451_distributed_ai_request_admission.sql
 
+\echo '== Thesaurus governed editorial model and immutable partner releases =='
+\ir ../supabase/migrations/20261106112948_thesaurus_publication.sql
+\ir ../supabase/migrations/20261106113509_thesaurus_consumers.sql
+\ir ../supabase/migrations/20261106160017_thesaurus_prepared_publication.sql
+\ir tests/test_thesaurus_publication.sql
+\ir tests/test_thesaurus_consumers.sql
+\ir tests/test_thesaurus_nested_consumers.sql
+\ir tests/test_thesaurus_editorial_tools.sql
+\ir tests/test_thesaurus_parent_impacts.sql
+\ir tests/test_thesaurus_incremental_snapshots.sql
+\ir tests/test_thesaurus_prepared_publication.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

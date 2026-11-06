@@ -29,6 +29,7 @@ export interface ObjectWorkspaceLegalTypeOption {
   id: string;
   code: string;
   label: string;
+  disabled?: boolean;
   /** `ref_legal_type.description` — dans quelle situation cette pièce est demandée (§209). */
   description: string;
   category: string;

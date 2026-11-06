@@ -110,6 +110,7 @@ export interface ObjectWorkspaceDistinctionSchemeOption {
   id: string;
   code: string;
   label: string;
+  disabled?: boolean;
   selectionMode: 'single' | 'multiple';
   isAccessibility: boolean;
   /** ref_classification_scheme.display_group — groups the §08 add-picker (official_classification / graded_label / quality_label). */
@@ -144,6 +145,7 @@ export interface ObjectWorkspaceSustainabilityAction {
   label: string;
   description: string;
   selected: boolean;
+  disabled?: boolean;
   note: string;
   documentId: string;
 }

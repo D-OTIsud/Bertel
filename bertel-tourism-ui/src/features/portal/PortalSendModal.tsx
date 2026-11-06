@@ -107,7 +107,13 @@ export function PortalSendModal({
     }
   }, [open]);
 
-  const modified = rubrics.filter((rubric) => rubric.state === 'dirty');
+  // Une seule ligne et une seule exclusion par module : ces deux vues sont envoyées
+  // ensemble, avec le payload complet qui préserve leurs données respectives.
+  const modified = Array.from(rubrics.filter((rubric) => rubric.state === 'dirty').reduce((groups, rubric) => {
+    const previous = groups.get(rubric.module);
+    groups.set(rubric.module, previous ? { ...previous, title: `${previous.title} · ${rubric.title}` } : rubric);
+    return groups;
+  }, new Map<WorkspaceModuleId, BuiltPortalRubric>()).values());
   const sending = modified.filter((rubric) => !excluded.has(rubric.module));
 
   async function handleSend() {
@@ -137,8 +143,7 @@ export function PortalSendModal({
     // l'appel, elle emprunterait le message du RÉSEAU, qui ne décrit pas ce qui s'est passé.
     try {
       for (const rubric of sending) {
-        // Deux rubriques ne partagent jamais un module POUR UN MÊME TYPE, mais une double
-        // enveloppe se marcherait dessus dans un seul envoi : on ferme la porte.
+        // Plusieurs rubriques peuvent partager un module, jamais une double enveloppe.
         if (seen.has(rubric.module)) continue;
         seen.add(rubric.module);
         modules.push(rubric.module);

@@ -59,7 +59,7 @@ function legacyDraft(before: ObjectWorkspaceModules, refreshed: ObjectWorkspaceM
 function RestoredSend({ modules }: { modules: ObjectWorkspaceModules }) {
   const editor = useObjectEditorState(OBJ, modules);
   const saved = usePortalDraft({ userId: USER, objectId: OBJ, serverModules: modules, editor });
-  const rubrics = buildPortalRubrics({ archetype: 'ASC', draft: editor.draft, dirty: editor.dirtySections,
+  const rubrics = buildPortalRubrics({ archetype: 'ASC', baseline: editor.baseline, draft: editor.draft, dirty: editor.dirtySections,
     masked: [], floor: ['legal', 'publication', 'provider'], pendingModules: new Set(), rejectedModules: new Set() });
   return <><span data-testid="recovery-state">{saved.discarded ? 'conflict' : 'ready'}</span>
     <PortalSendModal open onOpenChange={jest.fn()} objectId={OBJ} userId={USER} archetype="ASC" editor={editor}
@@ -71,6 +71,35 @@ beforeEach(() => {
   localStorage.clear(); jest.clearAllMocks();
   useSessionStore.setState({ userId: USER, role: 'actor', demoMode: false });
   jest.mocked(submitActorFiche).mockResolvedValue({ submissionId: 'photo-submission', taskId: 'photo-task', changeCount: 1, assigneeCount: 1 });
+});
+
+test('un JPEG déposé et une modification Accessibilité survivent au reload et produisent deux enveloppes distinctes', async () => {
+  const a = server(READ_A), b = server(READ_B), c = server(READ_C);
+  for (const modules of [a, b, c]) Object.assign(modules.characteristics, {
+    selectedLanguages: [], selectedEnvironmentCodes: [],
+    amenityGroups: [{ familyCode: 'accessibility', familyLabel: 'Accessibilité', options: [
+      { id: 'parking', code: 'acc_pmr_parking', label: 'Places PMR', disabilityTypes: ['motor'] },
+    ] }],
+  });
+  writePortalDraft(USER, OBJ, b, { media: deposited(a), characteristics: {
+    ...a.characteristics, selectedAmenityCodes: ['acc_pmr_parking'],
+  } }, 'Photo et accueil');
+  expect(readPortalDraft(USER, OBJ, c)?.droppedModules).toEqual([]);
+  render(<RestoredSend modules={c} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Envoyer' })).not.toHaveAttribute('aria-disabled', 'true'));
+  expect(screen.getByText('Accessibilité')).toBeInTheDocument();
+  expect(screen.queryByText('Équipements et moyens de paiement')).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+  await waitFor(() => expect(submitActorFiche).toHaveBeenCalledTimes(1));
+  const envelopes = jest.mocked(submitActorFiche).mock.calls[0][1];
+  expect(envelopes).toHaveLength(2);
+  expect(envelopes.find(envelope => envelope.targetTable === 'object_amenity')).toMatchObject({
+    payload: { amenities: [{ amenity_code: 'acc_pmr_parking' }] }, metadata: { section: 'characteristics', field: 'Accessibilité' },
+  });
+  expect(envelopes.find(envelope => envelope.targetTable === 'media')).toMatchObject({
+    payload: { additions: [{ upload_id: UPLOAD }] },
+  });
+  expect(c.media.objectItems).toHaveLength(4);
 });
 
 test('JPEG déjà déposé : refreshB puis reloadC ne bloquent pas son envoi et ne modifient aucune des4photos', async () => {

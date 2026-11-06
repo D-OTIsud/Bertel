@@ -60,18 +60,18 @@ const build = (over: Partial<Parameters<typeof buildPortalRubrics>[0]> = {}) =>
 describe('buildPortalRubrics — composition par type', () => {
   it('HEB : huitième écran « ouverture / fermetures », pas les horaires du restaurant', () => {
     const ids = build({ archetype: 'HEB', draft: draft() }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'season', 'amenities', 'welcome', 'pricing']);
+    expect(ids).toEqual(['contacts', 'presentation', 'season', 'amenities', 'accessibility', 'welcome', 'pricing']);
     expect(ids).not.toContain('hours');
   });
 
   it('RES : horaires oui, ouverture saisonnière non', () => {
     const ids = build({ archetype: 'RES' }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'welcome', 'pricing']);
+    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'welcome', 'pricing']);
   });
 
   it('ASC : la rubrique activité, pas la capacité', () => {
     const ids = build({ archetype: 'ASC' }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'pricing', 'activity']);
+    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'pricing', 'activity']);
   });
 
   it.each(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA'])('%s stays in HEB and never displays an activity rubric', (type) => {
@@ -89,12 +89,14 @@ describe('buildPortalRubrics — composition par type', () => {
     const season = PORTAL_RUBRICS.find((r) => r.id === 'season');
     expect(hours?.module).toBe('openings');
     expect(season?.module).toBe('openings');
-    // …et JAMAIS ensemble pour un même type : deux enveloppes du même module se
-    // marcheraient dessus dans un seul envoi.
+    // Les ouvertures restent alternatives ; équipements/accessibilité sont deux vues
+    // du même module, dont le portail construit une seule enveloppe.
     for (const archetype of ['HEB', 'RES', 'ASC', 'VIS', 'SRV', 'ITI', 'FMA'] as ArchetypeCode[]) {
-      const modules = build({ archetype }).map((r) => r.module);
+      const modules = build({ archetype }).filter((r) => r.id !== 'accessibility').map((r) => r.module);
       expect(new Set(modules).size).toBe(modules.length);
     }
+    expect(build({ archetype: 'ASC' }).filter((r) => r.module === 'characteristics').map((r) => r.id))
+      .toEqual(['amenities', 'accessibility']);
   });
 
   it('fail-CLOSED : un type sans rubrique n’ouvre aucun écran', () => {

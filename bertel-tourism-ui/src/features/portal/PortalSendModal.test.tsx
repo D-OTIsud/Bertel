@@ -175,6 +175,44 @@ test('les photos seules utilisent leurs identifiants privés sans changer les au
   expect(JSON.stringify(envelopes[0].payload)).not.toMatch(/https?:|storage:/);
 });
 
+test('Équipements et Accessibilité partent en une seule enveloppe complète et une seule ligne d’envoi', async () => {
+  const base = portalModules();
+  Object.assign(base.characteristics, {
+    selectedAmenityCodes: ['legacy_hidden', 'acc_unknown'], selectedPaymentCodes: ['visa'],
+    selectedLanguages: [{ languageId: '', code: 'fr', label: 'Français', levelId: '', levelCode: '', levelLabel: '' }],
+    selectedEnvironmentCodes: ['mountain'],
+    amenityGroups: [
+      { familyCode: 'general', familyLabel: 'Général', options: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi', disabilityTypes: [] }] },
+      { familyCode: 'accessibility', familyLabel: 'Accessibilité', options: [{ id: 'parking', code: 'acc_pmr_parking', label: 'Places PMR', disabilityTypes: ['motor'] }] },
+    ],
+  });
+  const next = { ...base, characteristics: { ...base.characteristics,
+    selectedAmenityCodes: [...base.characteristics.selectedAmenityCodes, 'wifi', 'acc_pmr_parking'] } };
+  const editor = { ...fakeEditor(), baseline: base, draft: next, dirtySections: { characteristics: true } } as ObjectEditorState;
+  setup({ editor, rubrics: rubrics({ baseline: base, draft: next, dirty: { characteristics: true } }) });
+  expect(screen.getByText('Équipements et moyens de paiement · Accessibilité')).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })).toHaveLength(1);
+  await userEvent.click(screen.getByRole('button', { name: 'Retirer de l’envoi' }));
+  expect(screen.getByRole('button', { name: 'Envoyer' })).toHaveAttribute('aria-disabled', 'true');
+  await userEvent.click(screen.getByRole('button', { name: 'Remettre dans l’envoi' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+  await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+  const envelopes = mockedPortal.submitActorFiche.mock.calls[0][1];
+  expect(envelopes).toHaveLength(1);
+  const expected = buildContributorSubmission(OBJ, 'characteristics', base, next);
+  expect(envelopes[0]).toEqual({ ...expected, metadata: { ...expected.metadata,
+    field: 'Équipements et moyens de paiement · Accessibilité',
+    before: expect.any(String), after: expect.any(String),
+  } });
+  expect(envelopes[0].payload).toMatchObject({
+    amenities: ['legacy_hidden', 'acc_unknown', 'wifi', 'acc_pmr_parking'].map(amenity_code => ({ amenity_code })),
+    languages: [{ language_id: null, language_code: 'fr', level_id: null, level_code: null }],
+    payment_methods: [{ payment_method_code: 'visa' }], environment_tags: [{ environment_tag_code: 'mountain' }],
+  });
+  expect(envelopes[0].metadata).toMatchObject({ rpc: 'save_object_commercial', section: 'characteristics' });
+  expect(editor.commitModules).toHaveBeenCalledWith(['characteristics'], { sentModules: next });
+});
+
 describe('PortalSendModal', () => {
   it('bloque l’envoi si le protocole serveur est incompatible', async () => {
     const priorDemoMode = useSessionStore.getState().demoMode;

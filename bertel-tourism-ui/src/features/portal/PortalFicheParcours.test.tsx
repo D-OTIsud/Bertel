@@ -26,6 +26,9 @@ import { useSessionStore } from '../../store/session-store';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 
 jest.mock('../../services/portal');
+jest.mock('../../services/write-compatibility', () => ({
+  readWriteCompatibility: jest.fn().mockResolvedValue({ compatible: true, clientVersion: 2, minimumClientVersion: 2, serverWriteContractVersion: 2 }),
+}));
 jest.mock('../../lib/supabase', () => ({
   ...jest.requireActual('../../lib/supabase'),
   getApiClient: jest.fn(),
@@ -155,6 +158,56 @@ beforeEach(() => {
   searchParams = new URLSearchParams('');
   historyStack = [''];
   useSessionStore.setState({ userId: USER, role: 'actor', demoMode: false } as never);
+});
+
+test('Accessibilité et Équipements se valident séparément sans écraser les autres données, puis partent ensemble', async () => {
+  const modules = fixture();
+  Object.assign(modules.characteristics, {
+    selectedLanguages: [], selectedEnvironmentCodes: ['mountain'], selectedPaymentCodes: [],
+    selectedAmenityCodes: ['acc_unknown'],
+    amenityGroups: [
+      { familyCode: 'general', familyLabel: 'Général', options: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi', disabilityTypes: [] }] },
+      { familyCode: 'accessibility', familyLabel: 'Accessibilité', options: [{ id: 'parking', code: 'acc_pmr_parking', label: 'Places PMR', disabilityTypes: ['motor'] }] },
+    ],
+    paymentOptions: [{ id: 'card', code: 'carte_bleue', label: 'Carte bancaire' }],
+  });
+  primeServices(modules);
+  mockedPortal.submitActorFiche.mockResolvedValue({ submissionId: 'accessibility-send', taskId: 'task', changeCount: 1, assigneeCount: 1 });
+  renderRouted();
+  async function open(label: string) {
+    const lists = await screen.findAllByRole('list', { name: 'Les rubriques de votre fiche' });
+    await userEvent.click(within(lists[0]).getByText(label));
+  }
+  function task(label: string) {
+    return within(screen.getAllByRole('list', { name: 'Les rubriques de votre fiche' })[0]).getByText(label).closest('li')!;
+  }
+  await open('Accessibilité');
+  await userEvent.click(await screen.findByLabelText('Places PMR'));
+  await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+  await screen.findByRole('list', { name: 'Les rubriques de votre fiche' });
+  expect(task('Accessibilité')).toHaveTextContent('Modifié — à envoyer');
+  expect(task('Équipements et moyens de paiement')).not.toHaveTextContent('Modifié — à envoyer');
+
+  await open('Équipements et moyens de paiement');
+  expect(screen.queryByLabelText('Places PMR')).not.toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText('Wi-Fi'));
+  await userEvent.click(screen.getByLabelText('Carte bancaire'));
+  await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+  await open('Accessibilité');
+  expect(screen.getByLabelText('Places PMR')).toBeChecked();
+  await userEvent.click(screen.getByLabelText('Places PMR'));
+  await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+  await screen.findByRole('list', { name: 'Les rubriques de votre fiche' });
+  expect(task('Accessibilité')).not.toHaveTextContent('Modifié — à envoyer');
+  expect(task('Équipements et moyens de paiement')).toHaveTextContent('Modifié — à envoyer');
+  await userEvent.click(screen.getByRole('button', { name: 'Envoyer à l’office' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+  await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+  expect(mockedPortal.submitActorFiche.mock.calls[0][1]).toEqual([expect.objectContaining({
+    payload: { amenities: [{ amenity_code: 'acc_unknown' }, { amenity_code: 'wifi' }], languages: [],
+      payment_methods: [{ payment_method_code: 'carte_bleue' }], environment_tags: [{ environment_tag_code: 'mountain' }] },
+    metadata: expect.objectContaining({ section: 'characteristics', field: 'Équipements et moyens de paiement' }),
+  })]);
 });
 
 test.each([false, true])('Photos ouvre le bon accès au workspace writesEnabled=%s sans modifier les autres rubriques', async writesEnabled => {

@@ -29,6 +29,7 @@ import { ArrowLeft, Check, Clock } from 'lucide-react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { ActivityRubric } from './rubrics/ActivityRubric';
 import { AmenitiesRubric } from './rubrics/AmenitiesRubric';
+import { AccessibilityRubric } from './rubrics/AccessibilityRubric';
 import { PhotosEditorRubric } from './rubrics/PhotosEditorRubric';
 import { ContactsRubric } from './rubrics/ContactsRubric';
 import { HoursRubric } from './rubrics/HoursRubric';
@@ -51,6 +52,7 @@ const RUBRIC_HELP: Record<PortalRubricId, string> = {
   hours: 'Indiquez vos jours et heures d’ouverture habituels.',
   season: 'Indiquez la période où vous accueillez des visiteurs, et vos fermetures.',
   amenities: 'Cochez ce que vous proposez. Les visiteurs filtrent souvent là-dessus.',
+  accessibility: 'Cochez les aménagements qui existent déjà. L’office les relira avant publication.',
   welcome: 'Ce que vous pouvez accueillir, et à quelles conditions.',
   pricing: 'Le tarif que les visiteurs verront en premier.',
   activity: 'Ce qu’il faut savoir avant de réserver votre activité.',
@@ -63,6 +65,7 @@ const FORMS: Record<PortalRubricId, (props: PortalRubricFormProps) => React.Reac
   hours: HoursRubric,
   season: SeasonRubric,
   amenities: AmenitiesRubric,
+  accessibility: AccessibilityRubric,
   welcome: WelcomeRubric,
   pricing: PricingRubric,
   activity: ActivityRubric,

@@ -565,6 +565,9 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_private_object_document_access.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_private_object_document_legal_access.sql"
 
+      - name: Admission source and upgrade provenance (offline only)
+        run: node --test tools/ai-quota/mcp-packaging.test.mjs
+
       - name: Distributed AI admission (service-only, sliding window, concurrent consumers)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

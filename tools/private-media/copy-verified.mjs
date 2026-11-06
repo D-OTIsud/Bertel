@@ -182,7 +182,8 @@ export function storageTransport({ projectRef, serviceKey, testOrigin, timeoutMs
       try {
         requireThat(!response.headers.get('content-encoding') || response.headers.get('content-encoding') === 'identity', 'content_encoding');
         requireThat(mime(response.headers.get('content-type')) === expected.content_type, 'content_type');
-        requireThat(response.headers.get('cache-control') === expected.cache_control, 'cache_control');
+        // Delivery cache policy may be rewritten by Storage/CDN; exact stored
+        // cache_control is checked by assertSource/assertDestination via GETinfo.
         requireThat(response.headers.get('etag') && !response.headers.get('etag').startsWith('W/')
           && etag(response.headers.get('etag')) === etag(expected.etag), 'content_etag');
         const length = response.headers.get('content-length');

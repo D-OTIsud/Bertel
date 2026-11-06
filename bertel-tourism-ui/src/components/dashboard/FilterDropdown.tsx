@@ -1,8 +1,11 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
+import { PopupLayer, scrollOptionIntoView } from '../ui/pickers/PickerPanel';
+
+const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -57,9 +60,18 @@ export function FilterDropdown<T extends string>({
   const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(-1);
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({ position: 'fixed', top: 0, left: 0, opacity: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const id = useId();
+  const menuId = `filter-options-${id}`;
+  const triggerId = `filter-trigger-${id}`;
+
+  function closeAndRestoreFocus() {
+    setOpen(false);
+    triggerRef.current?.focus({ preventScroll: true });
+  }
 
   // SSR guard: createPortal requires document.body, which is unavailable during
   // Next.js pre-rendering. Only enable the portal after the first client mount.
@@ -84,12 +96,12 @@ export function FilterDropdown<T extends string>({
     const openUp = spaceBelow < MENU_MAX_HEIGHT + VIEWPORT_MARGIN && rect.top > spaceBelow;
     setMenuStyle(
       openUp
-        ? { position: 'fixed', bottom: vh - rect.top + 4, left, minWidth: rect.width, zIndex: 200 }
-        : { position: 'fixed', top: rect.bottom + 4, left, minWidth: rect.width, zIndex: 200 },
+        ? { position: 'fixed', bottom: vh - rect.top + 4, left, minWidth: rect.width, zIndex: 200, opacity: 1 }
+        : { position: 'fixed', top: rect.bottom + 4, left, minWidth: rect.width, zIndex: 200, opacity: 1 },
     );
   }, []);
 
-  useEffect(() => {
+  useClientLayoutEffect(() => {
     if (!open) return;
     updateMenuPosition();
     window.addEventListener('scroll', updateMenuPosition, true);
@@ -115,17 +127,9 @@ export function FilterDropdown<T extends string>({
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [open]);
 
-  // Close on Escape.
-  useEffect(() => {
-    if (!open) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
-    }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [open]);
-
   function handleTrigger() {
+    triggerRef.current?.focus({ preventScroll: true });
+    if (!open) setHighlight(searchable ? -1 : 0);
     setOpen((v) => !v);
   }
 
@@ -133,13 +137,14 @@ export function FilterDropdown<T extends string>({
     if (mode === 'single') {
       const next = selected.includes(code) ? [] : [code];
       onChange(next as T[]);
-      setOpen(false);
+      closeAndRestoreFocus();
     } else {
       const next = selected.includes(code)
         ? selected.filter((v) => v !== code)
         : [...selected, code];
       onChange(next);
       // multi: stay open
+      (searchable ? searchRef.current : menuRef.current)?.focus({ preventScroll: true });
     }
   }
 
@@ -156,17 +161,53 @@ export function FilterDropdown<T extends string>({
       ? options.filter((o) => normalizeNeedle(o.label).includes(normalizeNeedle(query)))
       : options;
 
-  function handleSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'ArrowDown') {
+  const showAll = Boolean(allLabel) && !query.trim();
+  const optionOffset = showAll ? 1 : 0;
+  const rowCount = filteredOptions.length + optionOffset;
+  const optionId = (code: string) => `${menuId}-option-${encodeURIComponent(code)}`;
+  const activeOption = filteredOptions[highlight - optionOffset];
+  const activeId = showAll && highlight === 0 ? `${menuId}-all` : activeOption ? optionId(activeOption.code) : undefined;
+
+  useEffect(() => { setHighlight((index) => Math.max(-1, Math.min(index, rowCount - 1))); }, [rowCount]);
+
+  useEffect(() => {
+    if (open && activeId) scrollOptionIntoView(document.getElementById(activeId), menuRef.current,
+      searchable ? menuRef.current?.querySelector<HTMLElement>('.filter-dropdown__search-row') : null);
+  }, [open, activeId, searchable]);
+
+  function activateHighlighted() {
+    if (highlight < 0 || highlight >= rowCount) return;
+    if (showAll && highlight === 0) {
+      onChange([]);
+      closeAndRestoreFocus();
+      return;
+    }
+    const option = filteredOptions[highlight - optionOffset];
+    if (option) handleItem(option.code);
+  }
+
+  function handleMenuKey(e: React.KeyboardEvent<HTMLElement>) {
+    const inSearch = e.target instanceof HTMLInputElement;
+    if (e.key === 'Escape') {
+      e.stopPropagation();
       e.preventDefault();
-      setHighlight((h) => Math.min(filteredOptions.length - 1, h + 1));
+      closeAndRestoreFocus();
+    } else if (e.key === 'ArrowDown') {
+      e.stopPropagation();
+      e.preventDefault();
+      setHighlight((h) => Math.min(rowCount - 1, h + 1));
     } else if (e.key === 'ArrowUp') {
+      e.stopPropagation();
       e.preventDefault();
-      setHighlight((h) => Math.max(0, h - 1));
-    } else if (e.key === 'Enter') {
+      setHighlight((h) => rowCount ? Math.max(0, h - 1) : -1);
+    } else if (!inSearch && (e.key === 'Home' || e.key === 'End')) {
+      e.stopPropagation();
       e.preventDefault();
-      const opt = filteredOptions[highlight];
-      if (opt) handleItem(opt.code);
+      setHighlight(rowCount ? (e.key === 'Home' ? 0 : rowCount - 1) : -1);
+    } else if (e.key === 'Enter' || (!inSearch && e.key === ' ')) {
+      e.stopPropagation();
+      e.preventDefault();
+      activateHighlighted();
     }
   }
 
@@ -177,13 +218,24 @@ export function FilterDropdown<T extends string>({
     <div className="filter-dropdown">
       <button
         ref={triggerRef}
+        id={triggerId}
         type="button"
         className={hasSelection
           ? 'filter-dropdown__trigger filter-dropdown__trigger--active'
           : 'filter-dropdown__trigger'}
         onClick={handleTrigger}
+        onKeyDown={(event) => {
+          if (!open && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+            event.preventDefault();
+            event.stopPropagation();
+            triggerRef.current?.focus({ preventScroll: true });
+            setHighlight(event.key === 'ArrowUp' ? options.length + (allLabel ? 1 : 0) - 1 : 0);
+            setOpen(true);
+          } else if (open) handleMenuKey(event);
+        }}
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-controls={open ? menuId : undefined}
       >
         <span className="filter-dropdown__label">{label}</span>
         <ChevronDown className="filter-dropdown__chevron" size={20} strokeWidth={2} aria-hidden="true" />
@@ -194,37 +246,47 @@ export function FilterDropdown<T extends string>({
       )}
 
       {mounted && open && createPortal(
+        <PopupLayer panelRef={menuRef} triggerRef={triggerRef} focusRef={searchable ? searchRef : menuRef} onClose={() => setOpen(false)}>
         <ul
           ref={menuRef}
+          id={menuId}
           role="listbox"
+          aria-labelledby={triggerId}
+          aria-multiselectable={mode === 'multi' ? true : undefined}
+          aria-activedescendant={!searchable ? activeId : undefined}
+          tabIndex={searchable ? undefined : -1}
+          onKeyDown={handleMenuKey}
           className="filter-dropdown__menu"
           style={menuStyle}
         >
           {searchable && (
             <li className="filter-dropdown__search-row" role="presentation">
               <input
+                ref={searchRef}
                 className="filter-dropdown__search"
                 type="text"
+                role="combobox"
+                aria-expanded="true"
+                aria-autocomplete="list"
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
+                aria-controls={menuId}
+                aria-activedescendant={activeId}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setHighlight(-1);
                 }}
-                onKeyDown={handleSearchKey}
-                autoFocus
               />
             </li>
           )}
-          {allLabel && !query.trim() && (
+          {showAll && (
             <li
+              id={`${menuId}-all`}
               role="option"
               aria-selected={selected.length === 0}
-              className={selected.length === 0
-                ? 'filter-dropdown__item filter-dropdown__item--selected'
-                : 'filter-dropdown__item'}
-              onClick={() => { onChange([]); setOpen(false); }}
+              className={['filter-dropdown__item', selected.length === 0 ? 'filter-dropdown__item--selected' : '', highlight === 0 ? 'filter-dropdown__item--highlight' : ''].filter(Boolean).join(' ')}
+              onClick={() => { onChange([]); closeAndRestoreFocus(); }}
             >
               <span className="filter-dropdown__icon" aria-hidden>
                 {selected.length === 0 ? '✓' : ''}
@@ -239,7 +301,7 @@ export function FilterDropdown<T extends string>({
           )}
           {filteredOptions.map((opt, idx) => {
             const isSelected = selected.includes(opt.code);
-            const isHighlighted = idx === highlight;
+            const isHighlighted = idx + optionOffset === highlight;
             // Group header: rendered once before the first (filtered) option of each family.
             // Options are pre-sorted by family, so same-group options are contiguous ⇒ one
             // header per group. No header when options carry no `group` (flat, backward-compat).
@@ -252,6 +314,7 @@ export function FilterDropdown<T extends string>({
                   </li>
                 )}
                 <li
+                  id={optionId(opt.code)}
                   role="option"
                   aria-selected={isSelected}
                   data-code={opt.code}
@@ -272,7 +335,8 @@ export function FilterDropdown<T extends string>({
               </Fragment>
             );
           })}
-        </ul>,
+        </ul>
+        </PopupLayer>,
         document.body,
       )}
     </div>

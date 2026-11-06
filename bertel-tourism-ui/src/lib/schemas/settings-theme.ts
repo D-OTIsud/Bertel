@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 
 export const settingsThemeSchema = z.object({
   brandName: z.string().min(1, 'Nom de marque requis'),

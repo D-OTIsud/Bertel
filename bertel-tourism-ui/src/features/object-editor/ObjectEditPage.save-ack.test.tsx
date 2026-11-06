@@ -74,7 +74,7 @@ jest.mock('./shell/EditorTopbar', () => ({ EditorTopbar: (props: {
 </> }));
 jest.mock('./shell/EditorNav', () => ({ EditorNav: () => null }));
 jest.mock('./shell/EditorRail', () => ({ EditorRail: () => null }));
-jest.mock('./widgets/BlockersModal', () => ({ BlockersModal: () => null }));
+jest.mock('./widgets/BlockersModal', () => ({ BlockersModal: (props: { open: boolean; context: string }) => props.open ? <div role="dialog" aria-label={props.context} /> : null }));
 jest.mock('./widgets/VersionHistoryModal', () => ({ VersionHistoryModal: () => null }));
 jest.mock('./widgets/ImportExportModal', () => ({ ImportExportModal: () => null }));
 jest.mock('./widgets/PeerSavedBanner', () => ({ PeerSavedBanner: () => null }));
@@ -93,6 +93,7 @@ function mount() {
 beforeEach(() => {
   window.localStorage.clear();
   jest.clearAllMocks();
+  mockPublish.mockReset().mockResolvedValue(undefined);
   jest.mocked(saveObjectWorkspaceGeneralInfo).mockReset().mockResolvedValue(undefined);
   jest.mocked(saveObjectWorkspaceContacts).mockReset().mockResolvedValue(undefined);
   jest.mocked(saveObjectWorkspaceRooms).mockReset().mockResolvedValue(undefined);
@@ -280,4 +281,98 @@ it('a lost gallery response retains the exact request and created UUID for the p
   expect(requests[1]).toEqual(requests[0]);
   expect(mockEditor.draft.media.objectItems[0].id).toBe(requests[0].rows[0].id);
   expect(window.localStorage.getItem('workspace-gallery-request:save-ack-user:HOT-ACK')).toBeNull();
+});
+
+it.each(['same module', 'another module'])('publication stops before dispatch when C is typed during saving B (%s)', async (edit) => {
+  const saving = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(saving.promise);
+  mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledTimes(1));
+  expect(jest.mocked(saveObjectWorkspaceGeneralInfo).mock.calls[0][1].name).toBe('B');
+  if (edit === 'same module') fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C' } });
+  else fireEvent.change(screen.getByLabelText('Synthetic contact'), { target: { value: 'contact-c@example.invalid' } });
+  await act(async () => { saving.resolve(); });
+  await waitFor(() => expect(mockEditor.baseline.generalInfo.name).toBe('B'));
+  expect(mockPublish).not.toHaveBeenCalled();
+  expect(screen.getByRole('dialog', { name: 'publish-deferred' })).toBeInTheDocument();
+  expect(mockEditor.isDirty).toBe(true);
+  expect(mockEditor.draft.generalInfo.status).toBe('draft');
+  expect(mockToast).not.toHaveBeenCalled();
+  const stored = JSON.parse(window.localStorage.getItem('object-editor-draft:save-ack-user:HOT-ACK')!);
+  expect(stored.baseline.generalInfo.name).toBe('B');
+  if (edit === 'same module') expect(stored.draft.generalInfo.name).toBe('C');
+  else expect(stored.draft.contacts.objectItems[0].value).toBe('contact-c@example.invalid');
+});
+
+it('publication sends after saving B when no later content edit was made', async () => {
+  const saving = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(saving.promise);
+  mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledTimes(1));
+  await act(async () => { saving.resolve(); });
+  await waitFor(() => expect(mockPublish).toHaveBeenCalledWith(true));
+  expect(mockEditor.baseline.generalInfo.name).toBe('B');
+  expect(mockEditor.draft.generalInfo.status).toBe('published');
+  expect(mockEditor.isDirty).toBe(false);
+  expect(screen.queryByRole('dialog', { name: 'publish-deferred' })).not.toBeInTheDocument();
+});
+
+it('a refreshed gallery CAS baseline and description-language navigation do not postpone publication', async () => {
+  const saving = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(saving.promise);
+  mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledTimes(1));
+  act(() => {
+    mockEditor.mergeSavedModule('media', (media) => ({ ...media, galleryWriteBaseline: galleryBaseline(media, []) }));
+    mockEditor.patchModule('descriptions', { activeLanguage: 'en' });
+  });
+  await act(async () => { saving.resolve(); });
+  await waitFor(() => expect(mockPublish).toHaveBeenCalledWith(true));
+  expect(mockEditor.draft.descriptions.activeLanguage).toBe('en');
+  expect(screen.queryByRole('dialog', { name: 'publish-deferred' })).not.toBeInTheDocument();
+});
+
+it('C typed after publication was dispatched stays dirty without claiming that the sent B was cancelled', async () => {
+  const publishing = deferred();
+  mockPublish.mockReturnValueOnce(publishing.promise);
+  mount();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(mockPublish).toHaveBeenCalledTimes(1));
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C' } });
+  await act(async () => { publishing.resolve(); });
+  await waitFor(() => expect(mockEditor.draft.generalInfo.status).toBe('published'));
+  expect(mockEditor.baseline.generalInfo.name).toBe('B');
+  expect(mockEditor.draft.generalInfo.name).toBe('C');
+  expect(mockEditor.isDirty).toBe(true);
+  expect(screen.queryByRole('dialog', { name: 'publish-deferred' })).not.toBeInTheDocument();
+});
+
+it.each([
+  ['rooms', saveObjectWorkspaceRooms, 'knownRoomIds'],
+  ['meetingRooms', saveObjectWorkspaceMeetingRooms, 'knownRoomIds'],
+  ['places', saveObjectWorkspacePlaces, 'knownPlaceIds'],
+] as const)('canonical acknowledgement of new %s children does not postpone publication', async (key, service, knownKey) => {
+  const template = mockResource.modules[key].items[0];
+  mockResource.modules = { ...mockResource.modules, [key]: { ...mockResource.modules[key], items: [], [knownKey]: [] } };
+  const saving = deferred();
+  jest.mocked(service).mockReturnValueOnce(saving.promise);
+  const id = '00000000-0000-4000-a000-00000000b001';
+  mount();
+  act(() => mockEditor.replaceModule(key, { ...mockEditor.draft[key], items: [{
+    ...template, uid: id, recordId: key === 'meetingRooms' ? null : id, isNew: true, name: 'Sent child', label: 'Sent child',
+  }] } as never));
+  fireEvent.click(screen.getByRole('button', { name: 'Publish' }));
+  await waitFor(() => expect(service).toHaveBeenCalledTimes(1));
+  await act(async () => { saving.resolve(); });
+  await waitFor(() => expect(mockPublish).toHaveBeenCalledWith(true));
+  expect(mockEditor.baseline[key].items[0]).toMatchObject({ recordId: id, isNew: false });
+  expect(mockEditor.isDirty).toBe(false);
+  expect(screen.queryByRole('dialog', { name: 'publish-deferred' })).not.toBeInTheDocument();
 });

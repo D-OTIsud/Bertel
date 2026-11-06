@@ -14,7 +14,7 @@ import { useObjectEditorState } from './useObjectEditorState';
 import { useUnsavedDraftGuard } from './useUnsavedDraftGuard';
 import { useEditorSave } from './useEditorSave';
 import { makeSections, type SectionItem } from './section-config';
-import { MODULE_KEY_MAP } from './editor-state';
+import { getDirtySections, MODULE_KEY_MAP } from './editor-state';
 import {
   computeNavHint,
   computeOverallCompletion,
@@ -50,6 +50,21 @@ import { useEditorScrollSpy } from './useEditorScrollSpy';
 import './object-editor.css';
 import './editor-print.css';
 import { strictErrorMessage } from '../../lib/strict-error-message';
+
+/** Compare editable content, not a refreshed catalog or the gallery CAS/read token. */
+function changedSinceSave(
+  sent: ObjectWorkspaceModules,
+  current: ObjectWorkspaceModules,
+  nonApplicableModules: readonly WorkspaceModuleId[] = [],
+): boolean {
+  const content = (modules: ObjectWorkspaceModules): ObjectWorkspaceModules => {
+    const clean = stripCatalogOptions(modules);
+    return clean.media ? { ...clean, media: { ...clean.media, galleryWriteBaseline: undefined } } : clean;
+  };
+  return Object.values(getDirtySections({
+    objectId: '', baseline: content(sent), draft: content(current),
+  }, nonApplicableModules)).some(Boolean);
+}
 
 /** Full-page object editor. Fetches the workspace resource, then hands off to
  *  EditorReady so the editor hooks only run once data is present. */
@@ -174,6 +189,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const openDrawer = useUiStore((state) => state.openDrawer);
   const userId = useSessionStore((state) => state.userId);
   const editor = useObjectEditorState(objectId, resource.modules, userId, resource.nonApplicableModules);
+  const latestDraft = useRef(editor.draft);
+  latestDraft.current = editor.draft;
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const { confirmLeave } = useUnsavedDraftGuard(editor.isDirty);
   const { save, saving } = useEditorSave(objectId);
@@ -188,7 +205,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const [blockersModalOpen, setBlockersModalOpen] = useState(false);
-  const [modalContext, setModalContext] = useState<'publish' | 'save'>('publish');
+  const [modalContext, setModalContext] = useState<'publish' | 'save' | 'publish-deferred'>('publish');
   const [saveErrors, setSaveErrors] = useState<Issue[]>([]);
   const [saveFeedback, setSaveFeedback] = useState<EditorActionFeedback>('idle');
   const [publishFeedback, setPublishFeedback] = useState<EditorActionFeedback>('idle');
@@ -388,7 +405,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   );
 
   /** Persist local draft modules to the database (shared by publish and draft-save). */
-  async function persistDirtyModules(): Promise<{ ok: boolean; saveErrors: Issue[] }> {
+  async function persistDirtyModules(): Promise<{ ok: boolean; saveErrors: Issue[]; changedDuringSave?: boolean }> {
     if (editor.recoveryConflicts.length > 0) {
       const message = 'Des modifications locales et celles du serveur se chevauchent. Gardez votre brouillon ou choisissez les valeurs du serveur avant de sauvegarder.';
       setStatusMessage(message);
@@ -409,6 +426,9 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       baseline: editor.baseline,
       nonApplicableModules: resource.nonApplicableModules,
     });
+    // Check B against the latest visible C before acknowledgement attaches
+    // server IDs/baselines. This never clones the shared gallery retry allocator.
+    const changedDuringSave = changedSinceSave(sentModules, latestDraft.current, resource.nonApplicableModules);
     // Only canonical writes establish persisted room IDs. Proposal submission is not a save.
     editor.commitModules(
       result.saved.flatMap((m) => m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]]),
@@ -443,7 +463,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       return { ok: false, saveErrors: issues };
     }
 
-    return { ok: true, saveErrors: [] };
+    return { ok: true, saveErrors: [], changedDuringSave };
   }
 
   /** Persist work-in-progress without publishing and without the blocker gate. */
@@ -480,12 +500,19 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
 
     setStatusMessage(null);
     setPublishFeedback('pending');
-    const { ok, saveErrors: errors } = await persistDirtyModules();
+    const { ok, saveErrors: errors, changedDuringSave } = await persistDirtyModules();
     if (!ok) {
       setSaveErrors(errors);
       setModalContext('save');
       setBlockersModalOpen(true);
       setPublishFeedback('error');
+      return;
+    }
+    if (changedDuringSave) {
+      setSaveErrors([]);
+      setModalContext('publish-deferred');
+      setBlockersModalOpen(true);
+      setPublishFeedback('idle');
       return;
     }
 

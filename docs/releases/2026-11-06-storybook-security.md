@@ -1,8 +1,13 @@
 # Storybook dev-server security
 
-Starting point: master `7f02282e6131113570eeda86398c4b6820b632fd`.
-The three direct Storybook development dependencies (`storybook`,
+Final comparison base: master `3da1a78b24a434c711cff1a97cd2a94d8f66bdef`,
+composed without conflicts after the initial `7f02282` baseline. Their package
+manifests and lockfiles are identical, so the lock/audit deltas below apply to
+both bases.
+Three Storybook 10 development dependencies (`storybook`,
 `@storybook/nextjs`, `@storybook/addon-a11y`) are pinned together to `10.6.2`.
+The separate `@storybook/test-runner ^0.24.4` dependency and its locked entry
+remain unchanged; its command is not exercised by these gates.
 No application source, CSS, story, Storybook configuration, MapLibre artifact,
 Zod version or Radix version changes in this lot.
 Two npm test commands and a dedicated security CI workflow are added.
@@ -33,8 +38,9 @@ lock descriptors remain byte-identical to the starting point.
 
 ## Evidence
 
-Six Node tests import the real installed `PostMessageTransport` export and use
-DOM `MessageEvent` fixtures. They cover aligned installed versions, rejection of
+Six Node tests include one installed-version alignment check (also checking the
+transitive builder) and five probes importing the real installed
+`PostMessageTransport` export with DOM `MessageEvent` fixtures. They cover rejection of
 foreign/opaque preview senders, manager origin pinning, a configured remote ref,
 a frame losing registration, and static-preview compatibility. Three of the
 same origin-filter witnesses (preview dev, manager origin pinning and configured

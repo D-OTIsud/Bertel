@@ -35,6 +35,7 @@ async function startSmtp(options: { noTls?: boolean; rejectAuth?: boolean } = {}
   const messages: CapturedMail[] = [];
   let connections = 0;
   let upgrades = 0;
+  let dataCommands = 0;
   const server = net.createServer((socket) => {
     connections += 1;
     sockets.add(socket);
@@ -79,7 +80,7 @@ async function startSmtp(options: { noTls?: boolean; rejectAuth?: boolean } = {}
         } else if (/^RCPT TO:/i.test(line)) {
           recipients.push(line.slice('RCPT TO:'.length).trim());
           reply('250 recipient accepted');
-        } else if (line === 'DATA') { body = []; reply('354 End with dot'); }
+        } else if (line === 'DATA') { dataCommands += 1; body = []; reply('354 End with dot'); }
         else if (line === 'QUIT') { reply('221 Bye'); stream.end(); }
         else if (line === 'RSET' || line === 'NOOP') reply('250 OK');
         else reply('500 Unsupported test command');
@@ -94,6 +95,7 @@ async function startSmtp(options: { noTls?: boolean; rejectAuth?: boolean } = {}
     port, messages,
     get connections() { return connections; },
     get upgrades() { return upgrades; },
+    get dataCommands() { return dataCommands; },
     async close() {
       for (const socket of sockets) socket.destroy();
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
@@ -140,6 +142,7 @@ test('connection verification uses a separate connection and emits no message', 
   await sendListEmail({ to: 'recipient@example.invalid', subject: 'Before', html: '<p>Before</p>' });
   await expect(verifySmtpConnection()).resolves.toMatchObject({ ok: true });
   expect(server.messages).toHaveLength(1);
+  expect(server.dataCommands).toBe(1);
   await sendListEmail({ to: 'recipient@example.invalid', subject: 'After', html: '<p>After</p>' });
   expect(server.connections).toBe(2);
   expect(server.messages).toHaveLength(2);
@@ -157,8 +160,11 @@ test('real authentication refusal is reported without echoing the relay response
   const server = await relay({ rejectAuth: true });
   mockConfig.mockReturnValue({ ...mockConfig(), user: 'synthetic-user', pass: 'synthetic-fixture-secret' });
   const { sendListEmail } = await import('./mail.server');
-  await expect(sendListEmail({ to: 'recipient@example.invalid', subject: 'Blocked', html: '<p>Blocked</p>' }))
-    .rejects.toThrow('Authentification refusée. Vérifiez l’identifiant et le mot de passe.');
+  const error = await sendListEmail({ to: 'recipient@example.invalid', subject: 'Blocked', html: '<p>Blocked</p>' })
+    .catch((cause: unknown) => cause);
+  expect(error).toBeInstanceOf(Error);
+  expect((error as Error).message).toBe('Authentification refusée. Vérifiez l’identifiant et le mot de passe.');
+  expect((error as Error).message).not.toContain('synthetic-fixture-secret');
   expect(server.messages).toHaveLength(0);
   expect(server.upgrades).toBe(1);
 });

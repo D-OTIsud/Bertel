@@ -43,6 +43,13 @@ it('explains missing provider configuration without showing raw server details',
   await expect(translateWithAi(input, undefined, fetcher)).rejects.toThrow('administrateur');
 });
 
+it('keeps the existing retryable error for unavailable admission while retaining the unsent draft', async () => {
+  const original = JSON.stringify(input);
+  fetcher.mockResolvedValue({ ok: false, status: 503, json: async () => ({ error: 'ai_admission_unavailable', detail: 'private SQL details' }) });
+  await expect(translateWithAi(input, undefined, fetcher)).rejects.toThrow('La traduction a échoué. Réessayez dans un instant.');
+  expect(JSON.stringify(input)).toBe(original);
+});
+
 it('does not send after cancellation while retrieving the session', async () => {
   const controller = new AbortController();
   controller.abort();

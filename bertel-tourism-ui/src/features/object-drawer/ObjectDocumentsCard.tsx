@@ -5,6 +5,7 @@ import { AlertTriangle, ExternalLink, FileText, Loader2 } from 'lucide-react';
 import { Modal } from '../../components/common/Modal';
 import { getActiveObjectDocuments, type ObjectDocument } from '../../services/object-documents';
 import { useSessionStore } from '../../store/session-store';
+import { ObjectDocumentLink } from '../../components/common/ObjectDocumentLink';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -139,9 +140,9 @@ export function ObjectDocumentsCard({ objectId }: { objectId: string }) {
                           <span>{[typeLabel(document), document.issuer].filter(Boolean).join(' · ')}</span>
                           {(from || to) && <span>{from && `Du ${from}`}{from && to && ' '}{to && `au ${to}`}</span>}
                         </div>
-                        <a href={document.url} target="_blank" rel="noopener noreferrer" aria-label={`Ouvrir ${document.title}`}>
+                        <ObjectDocumentLink objectId={objectId} documentId={document.id} href={document.url} requiresSigning={document.requiresSigning} ariaLabel={`Ouvrir ${document.title}`}>
                           Ouvrir <ExternalLink size={14} aria-hidden />
-                        </a>
+                        </ObjectDocumentLink>
                       </li>
                     );
                   })}

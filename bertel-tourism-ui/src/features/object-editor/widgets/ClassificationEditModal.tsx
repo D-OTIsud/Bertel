@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { EditorModal, Field, Input, Readout, Chip, ChipSet } from '../primitives';
 import { DocumentUploadField } from './DocumentUploadField';
+import { ObjectDocumentLink } from '../../../components/common/ObjectDocumentLink';
 import { getSupabaseClient } from '../../../lib/supabase';
 import {
   CLASSIFICATION_STATUS_OPTIONS,
@@ -243,9 +244,9 @@ export function ClassificationEditModal({
         {draft.documentUrl ? (
           <Field label="Justificatif">
             <div className="doc-attached">
-              <a href={draft.documentUrl} target="_blank" rel="noopener noreferrer">
+              <ObjectDocumentLink objectId={objectId} documentId={draft.documentId} href={draft.documentUrl}>
                 {draft.documentTitle || 'Document joint'}
-              </a>
+              </ObjectDocumentLink>
               <button
                 type="button"
                 className="btn"

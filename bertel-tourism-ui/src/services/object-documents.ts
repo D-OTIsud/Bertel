@@ -1,6 +1,8 @@
 import { readTrimmedString as readString } from '../lib/json-read';
-import { getApiClient } from '../lib/supabase';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
+import { isPrivateObjectDocumentHref } from '../lib/object-document-location';
+import { apiError } from './api-error';
 
 export type ObjectDocumentCategory = 'legal' | 'classification';
 
@@ -8,6 +10,7 @@ export interface ObjectDocument {
   id: string;
   title: string;
   url: string;
+  requiresSigning?: boolean;
   category: ObjectDocumentCategory;
   typeCode: string;
   issuer: string;
@@ -31,12 +34,14 @@ function normalizeDocument(value: unknown): ObjectDocument | null {
   const row = value as Record<string, unknown>;
   const id = readString(row.document_id);
   const url = readString(row.url);
-  if (!id || !url) return null;
+  const requiresSigning = row.requires_signing === true || isPrivateObjectDocumentHref(url);
+  if (!id || (!url && !requiresSigning)) return null;
 
   return {
     id,
     title: readString(row.title) || 'Document sans titre',
-    url,
+    url: requiresSigning ? '' : url,
+    requiresSigning,
     category: row.category === 'classification' ? 'classification' : 'legal',
     typeCode: readString(row.type_code),
     issuer: readString(row.issuer),
@@ -44,6 +49,28 @@ function normalizeDocument(value: unknown): ObjectDocument | null {
     validTo: readNullableString(row.valid_to),
     createdAt: readNullableString(row.created_at),
   };
+}
+
+/** A fresh, object-scoped authorization for each opening; signed URLs are never cached. */
+export async function getObjectDocumentUrl(objectId: string, documentId: string, signal?: AbortSignal, accessContext: 'canonical' | 'legal' = 'canonical'): Promise<string> {
+  const client = getSupabaseClient();
+  const session = client ? await client.auth.getSession() : null;
+  const token = session?.data.session?.access_token;
+  if (!token) throw new Error('Votre session est indisponible. Reconnectez-vous.');
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  const response = await fetch('/api/object-document/url', {
+    method: 'POST', cache: 'no-store', signal,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ objectId, documentId, ...(accessContext === 'legal' ? { accessContext } : {}) }),
+  });
+  if (!response.ok) throw await apiError(response);
+  const payload = await response.json() as { url?: unknown };
+  if (typeof payload.url !== 'string') throw new Error('Le lien de téléchargement est indisponible.');
+  const url = new URL(payload.url);
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) {
+    throw new Error('Le lien de téléchargement est indisponible.');
+  }
+  return url.href;
 }
 
 /**

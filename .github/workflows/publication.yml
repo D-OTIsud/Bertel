@@ -1,0 +1,56 @@
+name: Publication safety
+
+# Run for every change: a private export can be added outside application paths.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Reviewed ancestor commit SHA for the bounded publication check
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  private-exports:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tools/check-publication.test.mjs
+      - run: node tools/check-publication.mjs
+      - name: Check every introduced or modified blob in the publication range
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          MANUAL_BASE_SHA: ${{ inputs.base }}
+        shell: bash
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$PR_BASE_SHA"
+          elif [[ "$EVENT_NAME" == "push" && "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            base="$BEFORE_SHA"
+          elif [[ "$EVENT_NAME" == "push" ]]; then
+            # A new branch has no before SHA. Bound it to its fork point from
+            # the existing default branch, without scanning inherited history.
+            if [[ "$GITHUB_REF_NAME" == "$DEFAULT_BRANCH" ]]; then
+              echo "New default branch has no trusted baseline; run manually with a reviewed base."
+              exit 1
+            fi
+            base="$(git merge-base HEAD "origin/$DEFAULT_BRANCH")"
+          else
+            base="$MANUAL_BASE_SHA"
+          fi
+          [[ "$base" =~ ^[0-9a-f]{40}$ ]] || { echo "A valid base commit SHA is required."; exit 1; }
+          git cat-file -e "$base^{commit}" || git fetch --no-tags origin "$base"
+          node tools/check-publication.mjs --base "$base"

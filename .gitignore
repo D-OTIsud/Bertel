@@ -118,6 +118,8 @@ outputs/
 /scratch/
 
 # Private audit evidence and real-contact import captures (local only).
+# Historical CRM exports stay local, including dated replacements.
+/docs/research/berta-deletes-backup-*.json
 /docs/audits/2026-11-05-global/
 /docs/audits/get-object-resource-map/
 /docs/import-candidates/audit-2026-10-26/

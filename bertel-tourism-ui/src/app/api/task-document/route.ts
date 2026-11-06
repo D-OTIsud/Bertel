@@ -1,9 +1,24 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { engineErrorDetail } from '@/lib/db-error-message';
+import {
+  readBoundedFormData,
+  assertFormDataShape,
+  FormDataShapeError,
+  BodyTooLargeError,
+  acquireLease,
+  SEMAPHORE_RETRY_AFTER_SECONDS,
+} from '@/lib/request-body.server';
 import { MediaProcessingError } from '../media/upload/process-image';
 import { processActorDocumentBuffer } from '../actor-document/process-actor-document';
-import { PRIVATE_BUCKET, UUID_SHAPE, authenticated, rejectOversizedBody } from '../_document-auth';
+import {
+  PRIVATE_BUCKET,
+  UUID_SHAPE,
+  MAX_UPLOAD_BODY_BYTES,
+  authenticated,
+  rejectOversizedBody,
+  type AuthenticatedRequest,
+} from '../_document-auth';
 import { authorizeTask, resolveLinkedDocument } from './authorize';
 
 // Pièces jointes de TÂCHE CRM (17i) — clone du modèle actor-document : Bearer → getUser,
@@ -36,8 +51,42 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // à défaut, on refuse AVANT de bufferiser ce qui n'aurait jamais pu aboutir.
   const oversized = rejectOversizedBody(req);
   if (oversized) return oversized;
+  const lease = acquireLease('upload');
+  if (!lease) {
+    return NextResponse.json(
+      { error: 'too_many_requests', detail: 'Trop de téléversements en cours, réessayez.' },
+      { status: 429, headers: { 'Retry-After': String(SEMAPHORE_RETRY_AFTER_SECONDS) } },
+    );
+  }
+  try {
+    return await handlePostAuthenticated(req, auth);
+  } finally {
+    lease.release();
+  }
+}
+
+async function handlePostAuthenticated(
+  req: NextRequest,
+  auth: Extract<AuthenticatedRequest, { ok: true }>,
+): Promise<NextResponse> {
   let form: FormData;
-  try { form = await req.formData(); } catch { return NextResponse.json({ error: 'bad_multipart' }, { status: 400 }); }
+  try {
+    form = await readBoundedFormData(req, MAX_UPLOAD_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return NextResponse.json(
+        { error: 'request_body_too_large', detail: 'Le fichier envoyé dépasse la taille maximale autorisée.' },
+        { status: 413 },
+      );
+    }
+    return NextResponse.json({ error: 'bad_multipart' }, { status: 400 });
+  }
+  try {
+    assertFormDataShape(form, { allowedFields: ['task_id', 'file'] });
+  } catch (error) {
+    if (error instanceof FormDataShapeError) return NextResponse.json({ error: 'bad_multipart' }, { status: 400 });
+    throw error;
+  }
   const taskId = form.get('task_id');
   const file = form.get('file');
   if (typeof taskId !== 'string' || !UUID_SHAPE.test(taskId) || !(file instanceof File)) {

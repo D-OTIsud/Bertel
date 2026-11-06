@@ -60,7 +60,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: bertel-candidate-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .release-work/artifact/*
+          path: |
+            .release-work/artifact/bertel-${{ github.sha }}.docker.tar.gz
+            .release-work/artifact/manifest.json
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
           compression-level: 0

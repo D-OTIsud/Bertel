@@ -1,4 +1,5 @@
 /** @jest-environment node */
+jest.mock('server-only', () => ({}));
 // INT-03 — un e-mail accepté par le relais SMTP ne doit JAMAIS repartir en erreur : un échec
 // du marquage mark_list_sent (retourné OU levé) reste un 200 avec trackingUpdated:false.
 import { POST } from './route';
@@ -24,6 +25,7 @@ import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
 import { sendListEmail } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
+import { renderListEmailHtml } from '@/emails/ListEmail';
 
 const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedCreate = jest.mocked(createClient);
@@ -87,9 +89,33 @@ function setup(opts: { markError?: { message: string } | null; markThrows?: bool
 
 describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
   beforeEach(() => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://app.test';
     jest.clearAllMocks();
     mockedSend.mockResolvedValue(undefined);
     mockedSmtp.mockResolvedValue({ host: 'smtp', port: 587, secure: false, user: null, pass: null, fromName: 'Bertel', fromEmail: 'no-reply@x' });
+  });
+
+  it('refuse une configuration absente avant création de lien ou SMTP, sans repli Host', async () => {
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    const { rpc, serverRpc } = setup({});
+    const response = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: 'app_origin_unavailable' });
+    expect(rpc).not.toHaveBeenCalledWith('ensure_list_share_link', expect.anything());
+    expect(mockedSend).not.toHaveBeenCalled();
+    expect(serverRpc).not.toHaveBeenCalled();
+  });
+
+  it('fabrique le lien de liste avec la configuration uniquement malgré des headers étrangers', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://bertel.example/';
+    setup({});
+    const request = req({ listId: 'list-1', toEmail: 'a@example.com' });
+    request.headers.set('origin', 'https://outside.example');
+    request.headers.set('host', 'outside.example');
+    request.headers.set('x-forwarded-host', 'outside.example');
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(renderListEmailHtml).toHaveBeenCalledWith(expect.objectContaining({ publicUrl: 'https://bertel.example/l/tok' }));
   });
 
   it('SMTP absent : ni lien, ni e-mail, ni marquage', async () => {

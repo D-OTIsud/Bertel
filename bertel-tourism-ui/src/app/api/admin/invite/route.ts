@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { authorizeAdminRoute, sharesActiveOrg } from '../_authorize';
+import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 
 export const runtime = 'nodejs';
@@ -20,7 +21,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Invitation e-mail (template Supabase « Invite user ») : l'invité clique le lien,
   // arrive authentifié sur /set-password et choisit son mot de passe. Le domaine de
   // redirection doit être dans l'allowlist Auth → URL Configuration du projet.
-  const origin = (req.headers.get('origin') ?? new URL(req.url).origin).replace(/\/$/, '');
+  const origin = getCanonicalAppOrigin();
+  if (!origin) return NextResponse.json({ error: 'app_origin_unavailable' }, { status: 503 });
   const redirectTo = `${origin}/set-password`;
 
   // Renvoi d'invitation : GoTrue refuse inviteUserByEmail sur un e-mail existant, donc on

@@ -58,15 +58,23 @@ ne bloque pas un autre opérateur privilégié.
    vers cet ID **avant** Deploy. Un export sans RepoTags ne crée pas ce tag à
    l’import : le tag exact est une étape distincte. Le recontrôler juste avant la
    bascule, sans autre écrivain ni nettoyage concurrent.
-4. Exécuter la recette isolée de l’image exacte sur loopback, avec les seuls
-   paramètres publics approuvés et leur empreinte, sans credential serveur ni
-   effet métier. Vérifier codecs/outils natifs requis, health, contrat2/2,
-   readiness live et paramètres publics. Borner ressources, délais et nettoyage
-   aux conteneurs de la recette ; conserver son reçu privé.
+4. Relire les preuves CI liées à l’archive exacte : codecs/outils natifs requis,
+   health, contrat2/2, readiness live et paramètres publics. Après import, exécuter
+   séparément le smoke hôte de l’opérateur versionné, avec `--network none`, les
+   seuls paramètres publics approuvés et leur empreinte, sans credential serveur
+   ni effet métier. Ce smoke hôte contrôle health, contrat2/2 et configuration
+   publique ; il ne contrôle ni Auth/readiness ni codecs/outils natifs. Les preuves
+   CI ne valent pas rejeu de ces contrôles sur l’hôte, et le smoke hôte ne les
+   atteste pas. Borner ressources, délais et nettoyage aux conteneurs de cette
+   recette ; conserver séparément ses résultats et ceux de CI.
 5. Relire pin S, référence Git accessible au checkout, Compose versionné dans S
-   et emplacement sélectionné, SOURCE_COMMIT=S au rendu et au runtime, absence de
-   variable explicite masquante, mode manuel sauvegardé et absence de tâche déjà
-   admise. Confirmer aussi la disponibilité du tag/ID et du retour préparé.
+   et emplacement sélectionné, absence de variable SOURCE_COMMIT explicite
+   masquante, mode manuel sauvegardé et absence de tâche déjà admise. Confirmer
+   aussi la disponibilité du tag/ID et du retour préparé. La sélection du futur
+   job reste une inférence fondée sur le générateur Coolify versionné et le
+   Compose : aucun checkpoint natif n’en prouve le futur rendu avant Deploy.
+   L’image physique et SOURCE_COMMIT effectifs du nouveau conteneur sont à
+   attribuer au postflight.
 
 L’import, le tag, la recette isolée et Deploy sont des actions distinctes. Cette
 documentation ne les autorise pas. Après revue des gardes et autorisation,

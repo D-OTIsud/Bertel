@@ -18,6 +18,7 @@
     "test:tooling-dependencies": "node --test scripts/tooling-dependencies.test.cjs",
     "test:storybook-security": "node --test scripts/storybook-security.test.mjs",
     "test:storybook-runtime": "node scripts/run-playwright.mjs test --config playwright.storybook.config.ts",
+    "test:webpack-middleware": "node --test scripts/webpack-middleware.test.cjs",
     "test": "jest --watch",
     "test:run": "jest",
     "playwright": "node scripts/run-playwright.mjs",
@@ -102,6 +103,9 @@
     "typescript": "5.7.3"
   },
   "overrides": {
+    "@storybook/builder-webpack5@10.6.2": {
+      "webpack-dev-middleware": "7.4.6"
+    },
     "next": {
       "postcss": "$postcss",
       "sharp": "$sharp"

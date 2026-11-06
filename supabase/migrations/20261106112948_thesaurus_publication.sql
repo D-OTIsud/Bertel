@@ -1045,7 +1045,7 @@ DO $projection_writer$DECLARE body text;t text;rel regclass;normalized text;part
     EXECUTE format('GRANT SELECT ON %s TO bertel_thesaurus_publisher',rel);
     IF(SELECT relkind IN('r','p')FROM pg_class WHERE oid=rel)THEN
       EXECUTE format('DROP POLICY IF EXISTS thesaurus_projection_read ON %s',rel);
-      EXECUTE format('CREATE POLICY thesaurus_projection_read ON %s FOR SELECT TO bertel_thesaurus_publisher USING(true)',rel);
+      EXECUTE format('CREATE POLICY thesaurus_projection_read ON %s FOR SELECT TO bertel_thesaurus_publisher USING(current_user=''bertel_thesaurus_publisher'')',rel);
     END IF;
   END LOOP;
 END $projection_writer$;
@@ -1053,7 +1053,7 @@ END $projection_writer$;
 REVOKE UPDATE ON public.object FROM bertel_thesaurus_publisher;
 GRANT UPDATE(cached_amenity_codes,cached_payment_codes,cached_environment_tags,cached_language_codes,cached_classification_codes,cached_taxonomy_codes,search_document,search_document_text,search_document_phonetic,updated_at)ON public.object TO bertel_thesaurus_publisher;
 DROP POLICY IF EXISTS thesaurus_projection_update ON public.object;
-CREATE POLICY thesaurus_projection_update ON public.object FOR UPDATE TO bertel_thesaurus_publisher USING(true)WITH CHECK(true);
+CREATE POLICY thesaurus_projection_update ON public.object FOR UPDATE TO bertel_thesaurus_publisher USING(current_user='bertel_thesaurus_publisher')WITH CHECK(current_user='bertel_thesaurus_publisher');
 GRANT EXECUTE ON FUNCTION api.strip_markdown(text),api.phonetic_document(text),public.immutable_unaccent(text)TO bertel_thesaurus_publisher;
 -- A vocabulary publication changes projections and the partner synchronization
 -- marker. Canonical object content and its canonical version remain unchanged.

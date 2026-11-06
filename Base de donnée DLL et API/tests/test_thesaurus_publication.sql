@@ -90,10 +90,12 @@ BEGIN
   ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',newcid))#>>'{data,name}'='Nouveau concept','New concept snapshot missing';
   -- Native tables without description/i18n columns use one semantic fallback authority.
   SELECT concept_id INTO rid FROM thesaurus.concept WHERE source_kind='classification_value'AND source_id='b73e3000-0000-4000-8000-000000000002';
-  rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',rid,'expected_version',0,'document',thesaurus.concept_document(rid)||'{"description":"Définition de valeur","description_i18n":{"en":"Value definition"}}'::jsonb));
+  rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',rid,'expected_version',0,'document',jsonb_set(thesaurus.concept_document(rid),'{source_fields,is_assignable}','false')||'{"description":"Définition de valeur","description_i18n":{"en":"Value definition"}}'::jsonb));
   rev:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',rev->>'revision_id','expected_version',(rev->>'version')::integer));
   pub:=api.thesaurus_admin('publish',jsonb_build_object('revision_ids',jsonb_build_array(rev->>'revision_id'),'idempotency_key','thesaurus-test-class-definition','expected_revision_versions',jsonb_build_object(rev->>'revision_id',(rev->>'version')::integer)));
   ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid))#>>'{data,definitions,fr}'='Définition de valeur','Unsupported native description disappeared on publication';
+  PERFORM thesaurus.sync_sources(NULL);
+  ASSERT(SELECT NOT assignable FROM thesaurus.concept WHERE concept_id=rid)AND api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid))#>>'{data,assignable}'='false','Standalone non-assignability was lost on source resynchronization';
   ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',rid))#>>'{data,definitions,en}'='Value definition','Unsupported translated definition disappeared';
   SELECT concept_id INTO rid FROM thesaurus.concept WHERE source_kind='commune'AND source_id='97499';
   rev:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',rid,'expected_version',0,'document',thesaurus.concept_document(rid)||'{"description":"Définition commune","name_i18n":{"en":"Test town"}}'::jsonb));

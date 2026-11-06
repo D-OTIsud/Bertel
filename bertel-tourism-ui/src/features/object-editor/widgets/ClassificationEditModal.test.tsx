@@ -1,6 +1,8 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { ClassificationEditModal } from './ClassificationEditModal';
 import { createClassificationDraft } from '../sections/classification-edit';
+import { getObjectDocumentUrl } from '../../../services/object-documents';
+jest.mock('../../../services/object-documents', () => ({ getObjectDocumentUrl: jest.fn() }));
 import type {
   ObjectWorkspaceDistinctionItem,
   ObjectWorkspaceDistinctionSchemeOption,
@@ -31,6 +33,18 @@ const grantedLabel: ObjectWorkspaceDistinctionSchemeOption = {
 };
 
 const SCHEMES = [starsScheme, grantedLabel];
+
+it('keeps Classification on its canonical reader rather than the legal-only context', async () => {
+  const target = { opener: null, closed: false, close: jest.fn(), location: { replace: jest.fn() } };
+  const open = jest.spyOn(window, 'open').mockReturnValue(target as never);
+  jest.mocked(getObjectDocumentUrl).mockResolvedValueOnce('https://example.invalid/signed?token=synthetic');
+  try {
+    const draft = { ...createClassificationDraft(), documentId: 'synthetic-document', documentUrl: 'private:synthetic-document', documentTitle: 'Synthetic classification attachment' };
+    renderAdd({ draft });
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Synthetic classification attachment' })); });
+    expect(getObjectDocumentUrl).toHaveBeenCalledWith('HOTRUN0000000001', 'synthetic-document', expect.any(AbortSignal));
+  } finally { open.mockRestore(); }
+});
 
 /** Drive the searchable référentiel picker: open → type → click the matching option. */
 function selectRef(_search: string, label: string) {

@@ -47,6 +47,14 @@ it('does not send an opening request after its caller aborts', async () => {
   expect(fetchMock).not.toHaveBeenCalled();
 });
 
+it('sends the existing legal reader context explicitly without changing the object/document pair', async () => {
+  fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ url: 'https://storage.example.invalid/signed?token=synthetic' }) });
+  await getObjectDocumentUrl('object-a', documentId, undefined, 'legal');
+  expect(fetchMock).toHaveBeenCalledWith('/api/object-document/url', expect.objectContaining({
+    body: JSON.stringify({ objectId: 'object-a', documentId, accessContext: 'legal' }),
+  }));
+});
+
 it('does not send an opening request without an authenticated token', async () => {
   jest.mocked(getSupabaseClient).mockReturnValue({ auth: { getSession: jest.fn(async () => ({ data: { session: null } })) } } as never);
   await expect(getObjectDocumentUrl('object-a', documentId)).rejects.toThrow('session');

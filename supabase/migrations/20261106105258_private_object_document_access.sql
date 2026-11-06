@@ -23,6 +23,43 @@ AS $function$
 $function$;
 REVOKE ALL ON FUNCTION internal.object_document_matches_object(uuid, text) FROM PUBLIC, anon, authenticated, service_role;
 
+-- Preserve the existing dedicated legal permission/publisher contract. Pin its
+-- two table sources before making it a dependency of the document reader.
+CREATE OR REPLACE FUNCTION api.user_can_manage_object_legal(p_object_id text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth, pg_temp
+AS $function$
+  SELECT (SELECT auth.uid()) IS NOT NULL AND (
+    api.is_object_owner(p_object_id) OR api.is_platform_superuser()
+    OR (api.user_has_permission('manage_legal_compliance') AND EXISTS (
+      SELECT 1 FROM public.object_org_link l
+      JOIN public.ref_org_role r ON r.id = l.role_id AND r.code = 'publisher'
+      WHERE l.object_id = p_object_id AND l.org_object_id = api.current_user_org_id()
+    ))
+  );
+$function$;
+
+-- A policy must not traverse ref_document as the caller: it would recurse into
+-- its own RLS. This boolean definer reveals no location and bypasses row policies
+-- only while evaluating the existing legal right plus exact ownership mapping.
+CREATE OR REPLACE FUNCTION api.can_read_exact_legal_document_metadata(p_document_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal, auth, pg_temp
+AS $function$
+  SELECT (SELECT auth.uid()) IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.object_legal l
+    WHERE l.document_id = p_document_id
+      AND COALESCE(api.user_can_manage_object_legal(l.object_id), false)
+      AND COALESCE(api.can_read_extended(l.object_id), false)
+      AND internal.object_document_matches_object(p_document_id, l.object_id)
+  );
+$function$;
+REVOKE ALL ON FUNCTION api.can_read_exact_legal_document_metadata(uuid) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION api.can_read_exact_legal_document_metadata(uuid) TO authenticated;
+DROP POLICY IF EXISTS legal_document_metadata_read ON public.ref_document;
+CREATE POLICY legal_document_metadata_read ON public.ref_document FOR SELECT TO authenticated
+  USING (access_scope = 'legal_private' AND api.can_read_exact_legal_document_metadata(id));
+
 CREATE OR REPLACE FUNCTION api.get_active_object_documents(p_object_id text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -104,6 +141,30 @@ END;
 $function$;
 REVOKE ALL ON FUNCTION api.get_object_document_file(text, uuid) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION api.get_object_document_file(text, uuid) TO authenticated;
+
+-- Only SectionLegal and its legal-document modal request this existing legal
+-- context. The card and Classification keep the canonical RPC above.
+CREATE OR REPLACE FUNCTION api.get_legal_object_document_file(p_object_id text, p_document_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal, auth, pg_temp
+AS $function$
+DECLARE v_file jsonb;
+BEGIN
+  IF (SELECT auth.uid()) IS NULL OR p_document_id IS NULL
+     OR NOT COALESCE(api.user_can_manage_object_legal(p_object_id), false)
+     OR NOT COALESCE(api.can_read_extended(p_object_id), false) THEN
+    RETURN jsonb_build_object('authorized', false, 'file', NULL);
+  END IF;
+  SELECT jsonb_build_object('bucket', d.storage_bucket, 'path', d.storage_path) INTO v_file
+  FROM public.ref_document d WHERE d.id = p_document_id
+    AND internal.object_document_matches_object(d.id, p_object_id)
+    AND EXISTS (SELECT 1 FROM public.object_legal l WHERE l.object_id = p_object_id AND l.document_id = d.id)
+    AND d.storage_bucket IN ('old_legal_media', 'legal-documents') AND NULLIF(d.storage_path, '') IS NOT NULL;
+  RETURN jsonb_build_object('authorized', true, 'file', v_file);
+END;
+$function$;
+REVOKE ALL ON FUNCTION api.get_legal_object_document_file(text, uuid) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION api.get_legal_object_document_file(text, uuid) TO authenticated;
 
 -- The destination is private and intentionally server-mediated. A permissive
 -- legacy policy must not let clients mint their own durable signed URLs there.

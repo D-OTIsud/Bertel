@@ -91,6 +91,16 @@ it('does not issue a URL when the browser blocks the new tab', () => {
   expect(getObjectDocumentUrl).not.toHaveBeenCalled();
 });
 
+it('requests the legal context only when that existing entry point explicitly selects it', async () => {
+  const target = tab();
+  jest.spyOn(window, 'open').mockReturnValue(target as never);
+  jest.mocked(getObjectDocumentUrl).mockResolvedValueOnce(SIGNED);
+  render(<ObjectDocumentLink objectId="object-a" documentId="document-a" href={HREF} accessContext="legal">Voir le justificatif</ObjectDocumentLink>);
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Voir le justificatif' })); });
+  expect(getObjectDocumentUrl).toHaveBeenCalledWith('object-a', 'document-a', expect.any(AbortSignal), 'legal');
+  expect(target.location.replace).toHaveBeenCalledWith(SIGNED);
+});
+
 it.each(['account', 'org', 'role'])('an A→B→A %s transition batched into one render cannot revive a pending URL', async (transition) => {
   const target = tab();
   jest.spyOn(window, 'open').mockReturnValue(target as never);

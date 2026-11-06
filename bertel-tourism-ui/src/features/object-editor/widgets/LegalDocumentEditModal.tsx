@@ -195,7 +195,7 @@ export function LegalDocumentEditModal({
       {draft.documentUrl ? (
         <Field label="Justificatif">
           <div className="doc-attached">
-            <ObjectDocumentLink objectId={objectId} documentId={draft.documentId} href={draft.documentUrl}>
+            <ObjectDocumentLink objectId={objectId} documentId={draft.documentId} href={draft.documentUrl} accessContext="legal">
               {draft.documentTitle || 'Document joint'}
             </ObjectDocumentLink>
             <button

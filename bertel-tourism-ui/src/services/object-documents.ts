@@ -52,7 +52,7 @@ function normalizeDocument(value: unknown): ObjectDocument | null {
 }
 
 /** A fresh, object-scoped authorization for each opening; signed URLs are never cached. */
-export async function getObjectDocumentUrl(objectId: string, documentId: string, signal?: AbortSignal): Promise<string> {
+export async function getObjectDocumentUrl(objectId: string, documentId: string, signal?: AbortSignal, accessContext: 'canonical' | 'legal' = 'canonical'): Promise<string> {
   const client = getSupabaseClient();
   const session = client ? await client.auth.getSession() : null;
   const token = session?.data.session?.access_token;
@@ -61,7 +61,7 @@ export async function getObjectDocumentUrl(objectId: string, documentId: string,
   const response = await fetch('/api/object-document/url', {
     method: 'POST', cache: 'no-store', signal,
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ objectId, documentId }),
+    body: JSON.stringify({ objectId, documentId, ...(accessContext === 'legal' ? { accessContext } : {}) }),
   });
   if (!response.ok) throw await apiError(response);
   const payload = await response.json() as { url?: unknown };

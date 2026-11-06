@@ -5,6 +5,8 @@ import { readLegalScalar } from './legal-edit';
 import { LEGAL_SUMMARY_UNAVAILABLE, workspaceSaveBlockedReason } from '../../../services/object-workspace-safety';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 import type { ObjectWorkspaceLegalModule, ObjectWorkspaceModules } from '../../../services/object-workspace-parser';
+import { getObjectDocumentUrl } from '../../../services/object-documents';
+jest.mock('../../../services/object-documents', () => ({ getObjectDocumentUrl: jest.fn() }));
 
 function legalModule(overrides: Partial<ObjectWorkspaceLegalModule> = {}): ObjectWorkspaceLegalModule {
   return {
@@ -62,6 +64,19 @@ function modulesWithLegal(overrides: Partial<ObjectWorkspaceLegalModule> = {}): 
 }
 
 describe('SectionLegal', () => {
+  it('opens its existing private justification in the legal context while the summary alone is unavailable', async () => {
+    const record = { ...legalModule().records[0], typeId: 'id-li', typeCode: 'attestation_assurance', typeLabel: 'Synthetic legal document', category: 'insurance', documentId: 'synthetic-document', documentUrl: 'private:synthetic-document', isPublic: false };
+    const { result } = renderHook(() => useObjectEditorState('HOTRUN0000000001', modulesWithLegal({ records: [record], unavailableReason: LEGAL_SUMMARY_UNAVAILABLE })));
+    const target = { opener: null, closed: false, close: jest.fn(), location: { replace: jest.fn() } };
+    const open = jest.spyOn(window, 'open').mockReturnValue(target as never);
+    jest.mocked(getObjectDocumentUrl).mockResolvedValueOnce('https://example.invalid/signed?token=synthetic');
+    try {
+      render(<SectionLegal editor={result.current} permissions={{ ...allowAll, legal: allowAll.legal, generalInfo: { ...allowAll.generalInfo, canDirectWrite: false } }} />);
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Voir le justificatif' })); });
+      expect(getObjectDocumentUrl).toHaveBeenCalledWith('HOTRUN0000000001', 'synthetic-document', expect.any(AbortSignal), 'legal');
+      expect(screen.getByText('Résumé de conformité indisponible. Les données juridiques restent modifiables.')).toBeInTheDocument();
+    } finally { open.mockRestore(); }
+  });
   it('shows route documents on ITI without asking for business identity, preserving existing records', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal()));
     render(<SectionLegal editor={result.current} permissions={allowAll} archetype="ITI" />);

@@ -682,6 +682,9 @@ ROLLBACK;
 \echo '== DB08 initial publication and institutional creation authorization =='
 \ir ../supabase/migrations/20261106092254_object_initial_publication_guard.sql
 
+\echo '== public discovery: suppress external notification email, preserve in-app events =='
+\ir ../supabase/migrations/20261106101044_sandbox_external_effects_policy.sql
+
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

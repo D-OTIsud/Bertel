@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { authorizeAdminRoute, sharesActiveOrg } from '../_authorize';
+import { SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const auth = await authorizeAdminRoute(req);
   if (!auth.ok) return auth.response;
+  if (auth.isSandboxDiscovery) return NextResponse.json({ error: SANDBOX_EXTERNAL_EFFECTS_ERROR, detail: SANDBOX_EMAIL_DETAIL }, { status: 403 });
   const { server } = auth;
 
   // Intentionally consumes only `email` (+ `resend`); membership + roles + permissions are wired

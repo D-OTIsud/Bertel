@@ -15,7 +15,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PortalFicheHub, type PortalRejection } from './PortalFicheHub';
 import { PortalSendModal } from './PortalSendModal';
 import { buildPortalRubrics, portalTypeLabel, PORTAL_RUBRICS } from './portal-rubrics';
@@ -27,6 +27,7 @@ import {
   type PortalSentSnapshot,
 } from './usePortalDraft';
 import { readPublicContact } from './portal-bindings';
+import { getPortalPhotoWorkspace } from '../../services/portal-photos';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 import { useObjectEditorState } from '../object-editor/useObjectEditorState';
 import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
@@ -88,8 +89,14 @@ export function PortalFicheEditor({
     editor,
     onStorageFailure: reportStorageFailure,
   });
+  const mergeSavedModule = useCallback<ObjectEditorState['mergeSavedModule']>((key, update) => {
+    editor.mergeSavedModule(key, update);
+    void queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] });
+    void queryClient.invalidateQueries({ queryKey: ['portal-fiches'] });
+  }, [editor.mergeSavedModule, queryClient, objectId]);
   const portalEditor: ObjectEditorState = {
     ...editor,
+    mergeSavedModule,
     replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => {
       editor.replaceModule(key, value);
       const module = (Object.keys(MODULE_KEY_MAP) as WorkspaceModuleId[]).find((entry) => MODULE_KEY_MAP[entry] === key);
@@ -197,14 +204,25 @@ export function PortalFicheEditor({
       buildPortalRubrics({
         archetype,
         draft: editor.draft,
+        baseline: editor.baseline,
         dirty: editor.dirtySections,
         masked: visibility.maskedModules,
         floor: visibility.floorModules,
         pendingModules,
         rejectedModules,
       }),
-    [archetype, editor.draft, editor.dirtySections, visibility, pendingModules, rejectedModules],
+    [archetype, editor.draft, editor.baseline, editor.dirtySections, visibility, pendingModules, rejectedModules],
   );
+
+  // Reuse the album's caller-scoped cache. Unknown/failed reads never promise writes.
+  const photoRubric = rubrics.find(rubric => rubric.id === 'photos');
+  const photoWorkspace = useQuery({
+    queryKey: ['portal-photo-workspace', userId, objectId],
+    queryFn: () => getPortalPhotoWorkspace(objectId),
+    enabled: !activeRubricId && Boolean(photoRubric && photoRubric.state !== 'unavailable' && !photoRubric.readOnlyReason)
+      && !editor.baseline.media.unavailableReason,
+    refetchOnWindowFocus: true,
+  });
 
   const rejections = useMemo<PortalRejection[]>(() => {
     const seen = new Set<string>();
@@ -216,14 +234,14 @@ export function PortalFicheEditor({
       // « une seule vérification ouverte » refuse (PT409).
       if (pendingModules.has(change.section as WorkspaceModuleId)) continue;
       seen.add(change.section);
-      const rubric =
-        PORTAL_RUBRICS.find((entry) => entry.module === change.section && entry.archetypes.includes(archetype)) ?? null;
+      const candidates = PORTAL_RUBRICS.filter((entry) => entry.module === change.section && entry.archetypes.includes(archetype));
+      const rubric = candidates.find((entry) => entry.title === change.field) ?? candidates[0] ?? null;
       list.push({
         module: change.section,
         rubricId: rubric?.id ?? null,
         // Le libellé du registre d'abord : `field` porte désormais la projection lisible
         // du portail, mais un envoi ANCIEN peut encore porter le libellé de l'éditeur.
-        title: rubric?.title ?? change.field,
+        title: change.field === candidates.map((entry) => entry.title).join(' · ') ? change.field : rubric?.title ?? change.field,
         note: change.reviewNote,
       });
     }
@@ -247,8 +265,8 @@ export function PortalFicheEditor({
       draft.discardedModules
         .map(
           (module) =>
-            PORTAL_RUBRICS.find((entry) => entry.module === module && entry.archetypes.includes(archetype))?.title ??
-            null,
+            PORTAL_RUBRICS.filter((entry) => entry.module === module && entry.archetypes.includes(archetype))
+              .map((entry) => entry.title).join(' · ') || null,
         )
         .filter((title): title is string => Boolean(title)),
     [draft.discardedModules, archetype],
@@ -351,6 +369,7 @@ export function PortalFicheEditor({
         storageFailed={storageFailed}
         formCache={formCache}
         media={resource.modules.media as ObjectWorkspaceMediaModule}
+        photoWritesEnabled={photoWorkspace.data?.writesEnabled === true && !photoWorkspace.isError}
         note={draft.note}
         onNoteChange={draft.setNote}
         savedAt={draft.savedAt}

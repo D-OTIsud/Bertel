@@ -131,12 +131,37 @@ function stripSlices(slices: PortalSlices): PortalSlices {
  * travaux sans le moindre rapport. Un brouillon qui ne porte QUE le message n'a alors plus
  * d'empreinte du tout : il ne peut écraser aucun travail, il n'y a rien à comparer.
  */
-function fingerprintOf(serverModules: ObjectWorkspaceModules, modules: WorkspaceModuleId[]): string {
+function withoutGalleryReadId(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const media = value as Record<string, unknown>;
+  const baseline = media.galleryWriteBaseline;
+  if (!baseline || typeof baseline !== 'object' || Array.isArray(baseline)) return value;
+  const { readId: _readId, ...stableBaseline } = baseline as Record<string, unknown>;
+  void _readId;
+  return { ...media, galleryWriteBaseline: stableBaseline };
+}
+
+function galleryReadId(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const baseline = (value as Record<string, unknown>).galleryWriteBaseline;
+  if (!baseline || typeof baseline !== 'object' || Array.isArray(baseline)) return undefined;
+  const readId = (baseline as Record<string, unknown>).readId;
+  return typeof readId === 'string' ? readId : undefined;
+}
+
+/** Align only the per-read office token; its CAS rows/models and all photo data stay intact. */
+function withGalleryReadId(value: unknown, readId: string | undefined): unknown {
+  if (readId === undefined || galleryReadId(value) === undefined) return value;
+  const media = value as Record<string, unknown>;
+  return { ...media, galleryWriteBaseline: { ...media.galleryWriteBaseline as Record<string, unknown>, readId } };
+}
+
+function fingerprintOf(serverModules: ObjectWorkspaceModules, modules: WorkspaceModuleId[], legacyReadId = false): string {
   const live = stripCatalogOptions(serverModules) as unknown as Record<string, unknown>;
   const scoped: Record<string, unknown> = {};
   for (const module of modules) {
     const key = MODULE_KEY_MAP[module];
-    scoped[key] = live[key];
+    scoped[key] = module === 'media' && !legacyReadId ? withoutGalleryReadId(live[key]) : live[key];
   }
   // Les tranches absentes hachent comme `null` des deux côtés : l'empreinte ne dépend que
   // de ce que le brouillon transporte.
@@ -209,11 +234,13 @@ export function readPortalDraft(
         conflicts.push(module);
         continue;
       }
-      const merged = mergeDraftAgainstServer(base, local, stripSlices({ [module]: live[key] })[module]);
+      const current = stripSlices({ [module]: live[key] })[module];
+      const readId = module === 'media' ? galleryReadId(current) : undefined;
+      const merged = mergeDraftAgainstServer(withGalleryReadId(base, readId), withGalleryReadId(local, readId), current);
       draft[module] = restoreCatalogOptions(merged.value, live[key], key);
       if (merged.conflicts.length) conflicts.push(module);
     } else {
-      draft[module] = restoreCatalogOptions(local, live[key], key);
+      draft[module] = restoreCatalogOptions(module === 'media' ? withGalleryReadId(local, galleryReadId(live[key])) : local, live[key], key);
     }
   }
   return { draft, note: payload.note, savedAt: payload.savedAt, droppedModules: conflicts };
@@ -247,6 +274,23 @@ export interface PortalFormStore {
 interface PortalFormPayload {
   fingerprint: string;
   forms: Record<string, unknown>;
+  /** New photo forms use a stable fingerprint, with the office per-read token excluded. */
+  fingerprintVersion?: 2;
+}
+
+/** Old photo forms stored only a hash. Accept them only when an evidenced readId reproduces
+ * that exact old hash against today's full data; a real office change still fails closed. */
+function matchesLegacyPhotoForm(fingerprint: string | undefined, userId: string, objectId: string,
+  serverModules: ObjectWorkspaceModules, modules: WorkspaceModuleId[]): boolean {
+  if (!modules.includes('media') || typeof fingerprint !== 'string') return false;
+  const saved = parsePortalDraft(readRaw(portalDraftKey(userId, objectId)));
+  const matchingDraft = saved?.objectId === objectId ? saved : null;
+  const candidates = new Set([
+    galleryReadId(serverModules.media), galleryReadId(matchingDraft?.baseline?.media), galleryReadId(matchingDraft?.modules.media),
+  ].filter((readId): readId is string => readId !== undefined));
+  return [...candidates].some(readId => fingerprint === fingerprintOf({ ...serverModules,
+    media: withGalleryReadId(serverModules.media, readId) as ObjectWorkspaceModules['media'],
+  }, modules, true));
 }
 
 /** Les modules des rubriques présentes — l'empreinte ne couvre qu'eux. */
@@ -275,7 +319,9 @@ export function readPortalForms(
     if (!forms || typeof forms !== 'object' || Array.isArray(forms)) return {};
     // L'office a retouché la rubrique depuis : rejouer un formulaire pris sur l'ancienne
     // valeur ferait renvoyer, sans le savoir, une donnée périmée.
-    if (record.fingerprint !== fingerprintOf(serverModules, modulesOfForms(forms))) return {};
+    const modules = modulesOfForms(forms);
+    if (record.fingerprint !== fingerprintOf(serverModules, modules)
+      && !(record.fingerprintVersion === undefined && matchesLegacyPhotoForm(record.fingerprint, userId, objectId, serverModules, modules))) return {};
     return forms as Record<string, unknown>;
   } catch {
     return {};
@@ -293,9 +339,11 @@ export function writePortalForms(
     removeRaw(portalFormKey(userId, objectId));
     return true;
   }
+  const modules = modulesOfForms(forms);
   const payload: PortalFormPayload = {
-    fingerprint: fingerprintOf(serverModules, modulesOfForms(forms)),
+    fingerprint: fingerprintOf(serverModules, modules),
     forms,
+    ...(modules.includes('media') ? { fingerprintVersion: 2 as const } : {}),
   };
   try {
     return writeRaw(portalFormKey(userId, objectId), JSON.stringify(payload));

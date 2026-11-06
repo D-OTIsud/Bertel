@@ -87,7 +87,11 @@ BEGIN
  OR (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure('api.submit_actor_fiche(text,jsonb,text)')) IS DISTINCT FROM '0861011392137effc9c7cb97bef6beab'
  OR (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure('api.approve_pending_change(uuid,text,boolean)')) IS DISTINCT FROM '78b171f997cd630da118ecc81382448d'
  OR (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure('api.reject_pending_change(uuid,text)')) IS DISTINCT FROM 'c125ebd25849243cf45f1b7a114960ed' THEN
-  RAISE EXCEPTION 'The canonical pre-photo moderation/submission contract changed; review before bootstrap';
+  RAISE EXCEPTION 'The canonical pre-photo moderation/submission contract changed; review before bootstrap. Actual source pins: %',
+   (SELECT jsonb_object_agg(signature,(SELECT md5(replace(prosrc,E'\r\n',E'\n'))
+      FROM pg_proc WHERE oid=to_regprocedure(signature))) FROM (VALUES
+    ('api.actor_portal_floor_modules()'),('api.submit_actor_fiche(text,jsonb,text)'),
+    ('api.approve_pending_change(uuid,text,boolean)'),('api.reject_pending_change(uuid,text)')) x(signature));
  END IF;
  IF (SELECT md5(pg_get_constraintdef(oid)) FROM pg_constraint WHERE conrelid='public.app_notification'::regclass AND conname='chk_app_notification_kind') IS DISTINCT FROM '7422d4daf1c99e1767e91a0ce5abcfa9' THEN
   RAISE EXCEPTION 'The canonical notification kinds changed; review before adding portal_message';

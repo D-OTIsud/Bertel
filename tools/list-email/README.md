@@ -9,7 +9,7 @@ Le navigateur produit un `Idempotency-Key` UUID par geste volontaire. Le serveur
 - Même clé + même snapshot accepté : réponse acceptée, aucun nouvel SMTP.
 - Même clé + autre liste/destinataire/snapshot : conflit avant SMTP.
 - Tentative commencée ou résultat inconnu : aucune expiration qui autoriserait un retry automatique.
-- Renvoi explicitement confirmé : nouvelle clé, référence à l’intention incertaine. Une ancienne réservation sans départ est supersédée sous verrou ; son worker retardé ne peut plus démarrer. Une requête dont aucun reçu n’a jamais été créé n’a pas passé cette barrière.
+- Renvoi explicitement confirmé : nouvelle clé, référence à l’intention incertaine. Une ancienne réservation sans départ est supersédée sous verrou ; son worker retardé ne peut plus démarrer. Même si l’ancienne requête n’a pas encore atteint le registre, sa clé est fermée durablement par un tombstone avant de permettre la remplaçante ; une arrivée tardive reste refusée. Les empreintes inconnues du tombstone restent NULL, sans inventer une admission ou un envoi.
 - Acceptation SMTP connue mais marquage de liste ou ACK de reçu raté : HTTP200 reste conservé. Si l’ACK est absent, la reprise voit l’incertitude et ne réémet pas.
 
 Les reçus internes ne contiennent ni adresse, sujet, corps, secret ou réponse SMTP brute. Leurs empreintes sont pseudonymes, pas anonymes. Ils vivent jusqu’au DELETE réel de leur `object_list` via FK cascade, y compris après archive, logout ou suppression du créateur. Aucun nouveau nettoyage n’est ajouté.
@@ -24,7 +24,7 @@ Il ne s’agit pas d’exactly-once SMTP/PostgreSQL. Une acceptation suivie d’
 
 ## Validation jetable
 
-Dans la CI `sql-fresh-apply` : manifeste canonique, contrat SQL transactionnel, cinq témoins multi-connexions, puis vrai GoTrue/PostgREST avec clés locales en mémoire et utilisateurs synthétiques confirmés sans e-mail. Les outils refusent les DSN/API non loopback et exigent `LIST_EMAIL_DISPOSABLE=true`. Ils ne lisent aucun `.env` projet et n’appellent jamais SMTP. Les traces append-only éventuelles meurent avec la pile CI.
+Dans la CI `sql-fresh-apply` : manifeste canonique, contrat SQL transactionnel, six témoins multi-connexions, puis vrai GoTrue/PostgREST avec clés locales en mémoire et utilisateurs synthétiques confirmés sans e-mail. Les outils refusent les DSN/API non loopback et exigent `LIST_EMAIL_DISPOSABLE=true`. Ils ne lisent aucun `.env` projet et n’appellent jamais SMTP. Les traces append-only éventuelles meurent avec la pile CI.
 
 ```sh
 psql "$LIST_EMAIL_TEST_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_distributed_list_email_intents.sql"

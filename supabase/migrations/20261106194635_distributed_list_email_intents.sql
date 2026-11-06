@@ -26,8 +26,8 @@ CREATE TABLE internal.list_email_intent (
   operation_id uuid NOT NULL,
   list_id uuid NOT NULL REFERENCES public.object_list(id) ON DELETE CASCADE,
   org_object_id text NOT NULL,
-  fingerprint text NOT NULL CHECK (fingerprint ~ '^[0-9a-f]{64}$'),
-  recipient_fingerprint text NOT NULL CHECK (recipient_fingerprint ~ '^[0-9a-f]{64}$'),
+  fingerprint text CHECK (fingerprint ~ '^[0-9a-f]{64}$'),
+  recipient_fingerprint text CHECK (recipient_fingerprint ~ '^[0-9a-f]{64}$'),
   state text NOT NULL DEFAULT 'reserved' CHECK (state IN ('reserved','started','accepted','rejected','unknown','superseded')),
   attempt_token uuid NOT NULL DEFAULT gen_random_uuid(),
   confirmed_previous_operation_id uuid,
@@ -40,6 +40,7 @@ CREATE TABLE internal.list_email_intent (
   rejection_code text CHECK (rejection_code IS NULL OR rejection_code IN ('EAUTH','EDNS','ENOTFOUND','EENVELOPE','NOT_CONFIGURED','CONFIG_CHANGED','CONFIG_UNAVAILABLE')),
   tracking_updated boolean NOT NULL DEFAULT false,
   PRIMARY KEY (user_id, operation_id),
+  CHECK (state='superseded' OR (fingerprint IS NOT NULL AND recipient_fingerprint IS NOT NULL)),
   CHECK ((state IN ('reserved','superseded') AND started_at IS NULL AND accepted_at IS NULL AND rejected_at IS NULL)
     OR (state IN ('started','unknown') AND started_at IS NOT NULL AND accepted_at IS NULL AND rejected_at IS NULL)
     OR (state='accepted' AND started_at IS NOT NULL AND accepted_at IS NOT NULL AND rejected_at IS NULL)
@@ -127,6 +128,7 @@ BEGIN
   SELECT r.* INTO v_receipt FROM internal.list_email_intent r
     WHERE r.user_id=p_user_id AND r.operation_id=p_operation_id FOR UPDATE;
   IF FOUND THEN
+    IF v_receipt.state='superseded' THEN RETURN jsonb_build_object('state','conflict'); END IF;
     IF v_receipt.list_id<>p_list_id OR v_receipt.org_object_id<>v_org
       OR v_receipt.fingerprint<>p_fingerprint OR v_receipt.recipient_fingerprint<>p_recipient_fingerprint THEN
       PERFORM internal.measure_list_email(p_user_id,v_org,'conflicts');
@@ -157,12 +159,18 @@ BEGIN
       IF v_previous.list_id<>p_list_id OR v_previous.recipient_fingerprint<>p_recipient_fingerprint
         OR v_previous.state='superseded' THEN RETURN jsonb_build_object('state','conflict'); END IF;
       -- A lost HTTP reply may precede SMTP. Under the same list lock, close an
-      -- earlier reservation before its delayed worker can dispatch. If no receipt
-      -- exists, the old request could not have passed this protocol's SMTP gate.
+      -- earlier reservation before its delayed worker can dispatch.
       UPDATE internal.list_email_intent SET
         state=CASE WHEN state='reserved' THEN 'superseded' ELSE state END,
         resend_acknowledged_at=COALESCE(resend_acknowledged_at,clock_timestamp())
         WHERE user_id=p_user_id AND operation_id=p_confirmed_previous_operation_id;
+    ELSE
+      -- Absence is not cancellation: Auth/snapshot work can still be in flight.
+      -- Close the old key durably before permitting the confirmed replacement.
+      -- Its unknown snapshot hashes stay NULL; this is a tombstone, not evidence
+      -- that the old message was prepared, admitted or submitted.
+      INSERT INTO internal.list_email_intent(user_id,operation_id,list_id,org_object_id,state,resend_acknowledged_at)
+        VALUES(p_user_id,p_confirmed_previous_operation_id,p_list_id,v_org,'superseded',clock_timestamp());
     END IF;
   END IF;
   INSERT INTO internal.list_email_intent(user_id,operation_id,list_id,org_object_id,fingerprint,recipient_fingerprint,confirmed_previous_operation_id)

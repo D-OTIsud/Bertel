@@ -181,3 +181,35 @@ test('authorization is reread after waiting on the list lock, not from a pre-loc
     assert.equal(await f.admin.query(`SELECT sum(started)=0 FROM internal.list_email_metric WHERE user_id='${f.user}'`), 't');
   } finally { await f.close(); }
 });
+
+
+test('confirmed B tombstones absent A while its old claim is waiting; delayed A never gains an SMTP permit', { timeout: 30000 }, async () => {
+  const f = await fixture();
+  try {
+    const old = randomUUID(), next = randomUUID();
+    await f.holder.query(`BEGIN; SELECT id FROM public.object_list WHERE id='${f.list}' FOR UPDATE`);
+    const pid = await f.first.query('SELECT pg_backend_pid()'); assert.match(pid, /^\d+$/);
+    const delayedA = f.claim(f.first, old);
+    let waiting = false;
+    for (let i = 0; i < 100; i++) {
+      if (await f.admin.query(`SELECT count(*) FROM pg_stat_activity WHERE pid=${pid} AND wait_event_type='Lock'`) === '1') { waiting = true; break; }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.ok(waiting, 'A must be in flight at the actual SQL gate');
+    const replacement = await f.claim(f.holder, next, old);
+    assert.equal(replacement.state, 'reserved');
+    await f.holder.query('COMMIT');
+    assert.equal((await delayedA).state, 'conflict');
+    let fakeEffects = 0;
+    const begunB = await f.begin(f.second, next, replacement.attempt_token);
+    if (begunB.started === true) fakeEffects++;
+    assert.equal(fakeEffects, 1); assert.equal(await f.complete(f.second, next, replacement.attempt_token), 't');
+    const lateA = await f.claim(f.first, old);
+    assert.equal(lateA.state, 'conflict'); assert.equal(lateA.attempt_token, undefined);
+    const begunA = await f.begin(f.first, old, randomUUID());
+    if (begunA.started === true) fakeEffects++;
+    assert.equal(begunA.started, false); assert.equal(fakeEffects, 1);
+    assert.equal(await f.admin.query(`SELECT state='superseded' AND started_at IS NULL AND fingerprint IS NULL AND recipient_fingerprint IS NULL FROM internal.list_email_intent WHERE user_id='${f.user}' AND operation_id='${old}'`), 't');
+    assert.equal(await f.admin.query(`SELECT sum(admitted)=1 AND sum(started)=1 AND sum(accepted)=1 FROM internal.list_email_metric WHERE user_id='${f.user}'`), 't', 'tombstone is not an invented admission/effect');
+  } finally { await f.close(); }
+});

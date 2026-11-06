@@ -94,14 +94,13 @@ export function ObjectEditPage({ objectId }: { objectId: string }) {
     );
   }
   // Keep the editor mounted after a failed background refresh: its unsaved draft
-  // lives in component state. Pause interaction until the permissions reload succeeds.
+  // lives in component state. Pause editing until the permissions reload succeeds;
+  // the memory-only draft export remains available without a server read or write.
   return (
     <>
       {loadError}
       <EditorModalContext.Provider value={`${data.name} · ${data.type ? TYPE_LABEL[data.type as keyof typeof TYPE_LABEL] || data.type : meta.family}`}>
-      <div style={{ display: 'contents' }} inert={isError || undefined}>
-        <EditorReady resource={data} objectId={objectId} meta={meta} workspaceReadReady={!isError && !isFetching} />
-      </div>
+        <EditorReady resource={data} objectId={objectId} meta={meta} workspaceReadReady={!isError && !isFetching} workspaceReadFailed={isError} />
       </EditorModalContext.Provider>
     </>
   );
@@ -184,7 +183,7 @@ function buildHistoryItems(draft: ObjectWorkspaceModules): HistoryRailItem[] {
     .slice(0, 5);
 }
 
-function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta; workspaceReadReady: boolean }) {
+function EditorReady({ resource, objectId, meta, workspaceReadReady, workspaceReadFailed }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta; workspaceReadReady: boolean; workspaceReadFailed: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const openDrawer = useUiStore((state) => state.openDrawer);
@@ -671,6 +670,7 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
 
   return (
     <div className={`edit-flat object-editor ${meta.accent}`}>
+      <div style={{ display: 'contents' }} inert={workspaceReadFailed || undefined}>
       <EditorTopbar
         objectName={resource.name}
         archetypeCodeName={typeLabel}
@@ -705,6 +705,7 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
           elles sont soumises à la modération de l’organisation avant publication.
         </div>
       )}
+      </div>
       {editor.localDraftUnavailable && (
         <div className="contributor-banner" role="alert">
           <strong>Brouillon local indisponible</strong> — Vos modifications restent dans cet onglet. Enregistrez ou exportez-les avant de fermer.
@@ -714,6 +715,7 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
           </button>
         </div>
       )}
+      <div style={{ display: 'contents' }} inert={workspaceReadFailed || undefined}>
       {editor.recoveryConflicts.length > 0 && (
         <div className="contributor-banner" role="alert">
           <strong>Brouillon à vérifier</strong> — vos modifications locales sont conservées, mais certaines données ont aussi changé sur le serveur. La sauvegarde est bloquée jusqu’à votre choix.
@@ -828,6 +830,7 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
         onImportFile={(file) => void handleImportFile(file)}
         importError={importError}
       />
+      </div>
     </div>
   );
 }

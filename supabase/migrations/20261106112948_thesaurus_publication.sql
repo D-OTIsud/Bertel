@@ -1016,6 +1016,9 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON public.ref_code_taxonomy_closure TO bertel_
 DROP POLICY IF EXISTS thesaurus_publisher ON public.ref_code_taxonomy_closure;
 CREATE POLICY thesaurus_publisher ON public.ref_code_taxonomy_closure FOR ALL TO bertel_thesaurus_publisher USING(true)WITH CHECK(true);
 GRANT EXECUTE ON FUNCTION api.refresh_ref_code_taxonomy_closure(text),api.is_ref_code_taxonomy_domain(text),api.thesaurus_generation(),api.thesaurus_object_release(),api.public_catalog_domains()TO bertel_thesaurus_publisher;
+-- Existing permissive RLS policies still evaluate these restricted helpers while
+-- the publisher maintains projections in both production and sandbox realms.
+GRANT EXECUTE ON FUNCTION api.current_user_test_realm(),api.current_user_extended_object_ids(),api.can_read_object(text)TO bertel_thesaurus_publisher;
 -- Derive the projection writer from the canonical helper at installation, rather
 -- than maintaining a second search definition. Exact body equality is an invariant.
 -- Its owner can UPDATE only derived columns: bypassing business-version triggers

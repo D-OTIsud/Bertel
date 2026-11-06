@@ -3,6 +3,51 @@
 BEGIN;
 SET LOCAL lock_timeout='500ms';
 SET LOCAL statement_timeout='15s';
+-- Existing installations may already expose the reset/seed maintenance path.
+-- Fix its UPSERT caller before installing the invariant, in this transaction.
+-- Fresh bootstrap defines the corrected seed later in migration_test_org_seed.sql.
+-- Pin both reviewed variants; the live media-seeding addition must survive.
+DO $seed_compatibility$
+DECLARE
+  v_oid oid:=to_regprocedure('internal.seed_test_corpus(integer)');
+  v_body text; v_definition text; v_hash text; v_new_hash text;
+  v_old text:=$old$      INSERT INTO object (id, object_type, name, status, region_code, extra)
+      VALUES (v_id, v_type::object_type, v_name, 'published', 'RUN',
+              jsonb_build_object('test_corpus', true, 'seeded_at', now()))$old$;
+  v_new text:=$new$      INSERT INTO object (id, object_type, name, status, region_code, extra, is_test)
+      VALUES (v_id, v_type::object_type, v_name, 'published', 'RUN',
+              jsonb_build_object('test_corpus', true, 'seeded_at', now()),
+              api.object_expected_is_test(v_id))$new$;
+BEGIN
+  IF v_oid IS NULL THEN
+    RAISE NOTICE 'Realm guard: seed not installed yet; fresh source supplies its derived UPSERT caller';
+    RETURN;
+  END IF;
+  SELECT replace(p.prosrc,E'\r\n',E'\n'),replace(pg_get_functiondef(p.oid),E'\r\n',E'\n')
+    INTO v_body,v_definition FROM pg_proc p
+    WHERE p.oid=v_oid AND p.prolang=(SELECT oid FROM pg_language WHERE lanname='plpgsql')
+      AND p.prorettype='jsonb'::regtype AND NOT p.prosecdef;
+  IF v_body IS NULL THEN
+    RAISE EXCEPTION 'Realm guard: seed signature/attributes differ from the reviewed predecessor';
+  END IF;
+  v_hash:=md5(v_body);
+  IF v_hash IN ('88474e38f9dd8b931d81589650b3ee88','b2f41c577485a92ba6ae13d87a94fef8') THEN
+    RETURN;
+  END IF;
+  IF v_hash NOT IN ('247201c2e9b09fdcc9700bc0ef6051c6','8c56f3cc49aa8075eb74e29718d1d20a')
+    OR (length(v_body)-length(replace(v_body,v_old,''))) / length(v_old) <> 1 THEN
+    RAISE EXCEPTION 'Realm guard: seed body drifted; reconcile the caller before installing the invariant';
+  END IF;
+  v_new_hash:=CASE v_hash
+    WHEN '247201c2e9b09fdcc9700bc0ef6051c6' THEN '88474e38f9dd8b931d81589650b3ee88'
+    ELSE 'b2f41c577485a92ba6ae13d87a94fef8' END;
+  EXECUTE replace(v_definition,v_old,v_new);
+  IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=v_oid) IS DISTINCT FROM v_new_hash THEN
+    RAISE EXCEPTION 'Realm guard: seed caller postcondition failed';
+  END IF;
+END;
+$seed_compatibility$;
+
 -- Source tables first, derived table last; bounded locks prevent a write racing
 -- the consistency preflight and trigger installation. Reads remain available.
 LOCK TABLE public.org_config, public.object_org_link, public.object IN SHARE ROW EXCLUSIVE MODE;

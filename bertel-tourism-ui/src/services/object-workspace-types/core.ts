@@ -35,6 +35,8 @@ export interface ObjectWorkspaceTaxonomyNodeOption {
   parentCode: string | null;
   depth: number;
   isAssignable: boolean;
+  /** Inactive terms remain visible when an existing assignment needs requalification. */
+  isActive?: boolean;
   position: number;
   axis?: 'famille' | 'nature' | 'sous_type' | 'type_unite' | 'positionnement' | null;
   family?: string | null;
@@ -70,7 +72,7 @@ export interface ObjectWorkspaceTaxonomyDomain {
  * Répond à « dans quoi le visiteur dort-il ? ».
  */
 export interface ObjectWorkspaceUnitTypes {
-  options: Array<{ code: string; label: string; description: string }>;
+  options: Array<{ code: string; label: string; description: string; isAssignable?: boolean }>;
   selectedCodes: string[];
   /** Non nul = catalogue absent (taxo6 non appliquée) ⇒ contrôle désactivé AVEC motif. */
   unavailableReason: string | null;
@@ -78,7 +80,7 @@ export interface ObjectWorkspaceUnitTypes {
 
 /** Positionnements commerciaux d'un hôtel, multi-valués et indépendants de sa nature. */
 export interface ObjectWorkspacePositionings {
-  options: Array<{ code: string; label: string; description: string }>;
+  options: Array<{ code: string; label: string; description: string; isAssignable?: boolean }>;
   selectedCodes: string[];
   unavailableReason: string | null;
 }

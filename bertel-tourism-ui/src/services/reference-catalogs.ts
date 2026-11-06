@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '../lib/supabase';
+import { readThesaurusReferenceSnapshot } from './thesaurus-generation';
 
 export type RefCodeRow = {
   id: string;
@@ -10,6 +11,9 @@ export type RefCodeRow = {
   metadata?: unknown;
   /** Les consommateurs qui filtraient `is_active` cote serveur filtrent en memoire. */
   is_active?: boolean | null;
+  is_assignable?: boolean | null;
+  parent_id?: string | null;
+  description?: string | null;
 };
 
 /**
@@ -103,6 +107,7 @@ export const REFERENCE_TABLES = Object.keys(REFERENCE_TABLE_SELECT) as ReadonlyA
 >;
 
 export type ReferenceCatalogs = {
+  vocabularyRelease?: string | number | null;
   refCodeByDomain: Record<string, RefCodeRow[]>;
   tables: Record<string, Record<string, unknown>[]>;
   failedTables?: string[];
@@ -140,6 +145,13 @@ export async function fetchReferenceCatalogs(): Promise<ReferenceCatalogs> {
 
   if (!client) {
     return { refCodeByDomain, tables };
+  }
+
+  const snapshot = await readThesaurusReferenceSnapshot();
+  if (snapshot) {
+    Object.assign(refCodeByDomain, snapshot.refCodeByDomain);
+    for (const table of REFERENCE_TABLES) tables[table] = snapshot.tables[table] ?? [];
+    return { refCodeByDomain, tables, vocabularyRelease: snapshot.meta.vocabulary_release };
   }
 
   const [refCodeResult, ...tableResults] = await Promise.all([

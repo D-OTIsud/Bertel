@@ -12,7 +12,7 @@ function exactSignedUrl(sdkUrl: string, bucket: string, path: string): string | 
   // storage-js encodeURI leaves reserved key characters intact. Keep only the
   // trusted signer endpoint/token, and encode the authorized key once per segment.
   const marker = sdkUrl.indexOf('/object/sign/');
-  const token = /[?&]token=([^&#]+)$/.exec(sdkUrl)?.[1];
+  const token = /[?&]token=([^?&#]+)$/.exec(sdkUrl)?.[1];
   if (marker < 0 || !token) return null;
   try {
     const url = new URL(`${sdkUrl.slice(0, marker)}/object/sign/${encodeURIComponent(bucket)}/${path.split('/').map(encodeURIComponent).join('/')}`);

@@ -128,7 +128,7 @@ it.each([[], [{ path: 'other.pdf', signedUrl: SIGNED, error: null }], [{ path: P
   expect((await POST(request())).status).toBe(503);
 });
 
-it.each(['folder/a?query#fragment.pdf', 'folder/%2e%2e/other.pdf', 'folder/100% and rÃ©sumÃ© #1?.pdf'])('the real Storage SDK sends the exact authorized key as JSON and returns an exact encoded download target: %s', async (path) => {
+it.each(['folder/a?query#fragment.pdf', 'folder/%2e%2e/other.pdf', 'folder/100% and résumé #1?.pdf', 'folder/name?token=inside.pdf'])('the real Storage SDK sends the exact authorized key as JSON and returns an exact encoded download target: %s', async (path) => {
   const h = harness({ authorized: true, file: { bucket: 'legal-documents', path } });
   const network: Array<{ url: URL; body: Record<string, unknown> }> = [];
   const actual = jest.requireActual('@supabase/supabase-js') as typeof import('@supabase/supabase-js');

@@ -106,6 +106,11 @@ jobs:
           END$$;
           SQL
 
+      - name: Platform branding authorization (canonical roles, metadata denial, real writer and RLS)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_branding_admin_authorization.sql"
+
       - name: SP-1 structural assertions (canonical-write authorization)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

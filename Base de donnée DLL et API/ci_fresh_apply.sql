@@ -463,7 +463,7 @@ ROLLBACK;
 \ir migration_org_link_reconcile.sql
 
 \echo '== 16x-test garde permanente 214 (personas reels par request.jwt.claims + SET LOCAL ROLE. Temoin editeur ne portant QUE edit_canonical_when_publisher : B il enregistre le module relationships et le lien publisher SURVIT / B2 deux enregistrements de suite / C le superuser ecrit toujours / D un authentifie sans membership reste refuse 42501 / E un lien omis du payload est bien supprime / F la bascule du principal ne heurte pas uq_object_primary_org / G un doublon payload leve toujours 23505. Temoin proprietaire PAR LIEN ACTEUR (claim email -> user_actor_ids) : H il enregistre et le lien qui porte son droit survit. I le report de note 208/T13b survit au reconcile. Verifie ROUGE contre le corps delete-all, sur les DEUX tables : 42501 object_org_link (bloc B) et 42501 actor_object_role (bloc H)) =='
-\ir tests/test_org_link_reconcile_editor.sql
+-- Final current-authority regression runs after overlay 20b: test_org_link_reconcile_editor.sql
 
 \echo '== 16b    migration_ref_code_admin_rpcs.sql  (Phase 7.5 editeur de referentiels ref_code : api.ref_code_domain_is_editable + rpc_upsert/set_active/reorder/delete_ref_code + list_ref_code_domains + ref_code_usage_count(s). DOCUMENTEE au runbook depuis sa creation mais JAMAIS declaree ici : trou d integrite de deploiement preexistant, revele par la tache 5 de 211 dont l etape 16y delegue a ces fonctions et echouerait donc sur base fraiche. Depend de rls_policies.sql (is_platform_superuser) et de schema_unified.sql (ref_code, ref_code_domain_registry)) =='
 \ir migration_ref_code_admin_rpcs.sql
@@ -693,6 +693,7 @@ ROLLBACK;
 \ir tests/test_object_current_rights_surfaces.sql
 \ir tests/test_partner_identity_gate.sql
 \ir tests/test_actor_portal.sql
+\ir tests/test_org_link_reconcile_editor.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

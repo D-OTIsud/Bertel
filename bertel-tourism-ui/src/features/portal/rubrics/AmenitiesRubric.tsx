@@ -9,8 +9,8 @@
  * qui n'écrase pas l'écran d'un téléphone.
  *
  * `visibleOptionCodes` = TOUS les codes rendus, repliés compris. `setAmenities` réinjecte
- * ce qui n'y figure pas — au premier rang l'accessibilité, saisie par l'office et jamais
- * montrée ici : sans cette garde, une validation effacerait les équipements PMR.
+ * ce qui n'y figure pas — au premier rang l'accessibilité, gérée dans sa propre rubrique :
+ * sans cette garde, une validation effacerait les équipements PMR.
  *
  * Les moyens de paiement suivent EXACTEMENT le même contrat, et pour la même raison :
  * `characteristics.paymentOptions` est le référentiel complet (15 codes), pas ce que

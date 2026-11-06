@@ -1,3 +1,4 @@
+import type { WorkspaceSaveResult } from '../../services/workspace-save-result';
 import { isPlainRecord as isRecord } from '../../lib/json-read';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
@@ -37,8 +38,18 @@ function readLocalDraft(userId: string, objectId: string, currentModules: Object
  * Owns the editor's mutable `{ baseline, draft }` snapshot of a workspace's
  * modules. Sections read their slice from `draft` and write through the typed
  * updaters; `dirtySections` drives the save bar; `commitModules` folds saved
- * modules back into the baseline so they read clean.
+ * modules' sent snapshots back into the baseline while retaining later edits.
  */
+export interface EditorCommitOptions {
+  canonicalRooms?: boolean;
+  canonicalPlaces?: boolean;
+  canonicalModules?: WorkspaceSaveResult;
+  /** Exact snapshot handed to an asynchronous writer or proposal submission. */
+  sentModules?: ObjectWorkspaceModules;
+  /** The publication proposal carries only this setting, not the full identity module. */
+  publicationSettingsOnly?: boolean;
+}
+
 export interface ObjectEditorState {
   /** Canonical object id this editor edits (for per-object routes like uploads). */
   objectId: string;
@@ -51,7 +62,8 @@ export interface ObjectEditorState {
   patchModule: <K extends keyof ObjectWorkspaceModules>(key: K, patch: Partial<ObjectWorkspaceModules[K]>) => void;
   replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => void;
   resetModule: (key: keyof ObjectWorkspaceModules) => void;
-  commitModules: (keys: (keyof ObjectWorkspaceModules)[], options?: { canonicalRooms?: boolean; canonicalPlaces?: boolean }) => void;
+  mergeSavedModule: <K extends keyof ObjectWorkspaceModules>(key: K, update: (current: ObjectWorkspaceModules[K]) => ObjectWorkspaceModules[K]) => void;
+  commitModules: (keys: (keyof ObjectWorkspaceModules)[], options?: EditorCommitOptions) => void;
   /** Sets object.status in BOTH draft and baseline (the new saved truth) without
    *  touching other fields — used after a successful status-lifecycle mutation so
    *  the UI reflects the change without a refetch (the snapshot is init-once). */
@@ -65,6 +77,40 @@ function copyModule<K extends keyof ObjectWorkspaceModules>(
   key: K,
 ): void {
   target[key] = source[key];
+}
+
+/** Give the existing three-way merge a media-only identity, including confirmed new UUIDs. */
+function rebaseSavedMedia(sent: ObjectWorkspaceModules['media'], local: ObjectWorkspaceModules['media'], saved: ObjectWorkspaceModules['media']) {
+  const created = sent.galleryWriteBaseline?.createdIds ?? {};
+  const confirmed = new Set(saved.objectItems.map(item => item.id));
+  const keyed = (media: ObjectWorkspaceModules['media']) => ({ ...media, objectItems: media.objectItems.map(item => {
+    const id = created[item.id] && confirmed.has(created[item.id]) ? created[item.id] : item.id;
+    return { ...item, id, recordId: id };
+  }) });
+  const merged = mergeDraftAgainstServer(keyed(sent), keyed(local), keyed(saved)).value;
+  return { ...merged, objectItems: merged.objectItems.map(({ recordId: _mergeIdentity, ...item }) => {
+    void _mergeIdentity;
+    return item;
+  }) };
+}
+
+/** Child acknowledgements confirm IDs, not a new server ordering or field values. */
+function rebaseSavedChildren<T>(local: T, saved: T, knownKey: 'knownRoomIds' | 'knownPlaceIds'): T {
+  type ChildModule = { items: Array<Record<string, unknown>>; knownRoomIds?: string[]; knownPlaceIds?: string[] };
+  const current = local as unknown as ChildModule;
+  const confirmed = saved as unknown as ChildModule;
+  if (!Array.isArray(current?.items) || !Array.isArray(confirmed?.items)) return local;
+  const id = (item: Record<string, unknown>) => typeof item.recordId === 'string' && item.recordId ? item.recordId
+    : typeof item.uid === 'string' && item.uid ? item.uid : null;
+  const byId = new Map(confirmed.items.filter((item) => id(item) !== null).map((item) => [id(item), item]));
+  return {
+    ...local,
+    [knownKey]: confirmed[knownKey],
+    items: current.items.map((item) => {
+      const record = byId.get(id(item));
+      return record ? { ...item, recordId: record.recordId, isNew: false } : item;
+    }),
+  };
 }
 
 export function useObjectEditorState(
@@ -160,19 +206,20 @@ export function useObjectEditorState(
     });
   }, [freshSnapshot, identityKey]);
 
-  const commitModules = useCallback((keys: (keyof ObjectWorkspaceModules)[], options?: { canonicalRooms?: boolean; canonicalPlaces?: boolean }) => {
+  const commitModules = useCallback((keys: (keyof ObjectWorkspaceModules)[], options?: EditorCommitOptions) => {
     setEditorState((prev) => {
-      const current = prev.identityKey === identityKey ? prev.snapshot : freshSnapshot;
+      // A completed request from another object/account must not reactivate it.
+      if (prev.identityKey !== identityKey) return prev;
+      const current = prev.snapshot;
       const baseline = { ...current.baseline };
       let draft = current.draft;
-      let canonicalModuleUpdated = false;
-      const draftClone = cloneModules(current.draft);
-      for (const key of keys) {
-        copyModule(baseline, draftClone, key);
-      }
+      const sent = options?.sentModules ?? current.draft;
+      const acknowledged = cloneModules(sent);
+      const canonicalChildren = new Set<keyof ObjectWorkspaceModules>();
       if (options?.canonicalRooms) {
-        if (keys.includes('rooms')) {
-          const rooms = draftClone.rooms as unknown as { items?: Array<Record<string, unknown>>; knownRoomIds?: string[] };
+        for (const key of ['rooms', 'meetingRooms'] as const) {
+          if (!keys.includes(key)) continue;
+          const rooms = acknowledged[key] as unknown as { items?: Array<Record<string, unknown>>; knownRoomIds?: string[] };
           if (rooms && Array.isArray(rooms.items)) {
             rooms.knownRoomIds = rooms.items
               .map((item) => typeof item.recordId === 'string' ? item.recordId : typeof item.uid === 'string' ? item.uid : '')
@@ -182,48 +229,59 @@ export function useObjectEditorState(
               recordId: typeof item.recordId === 'string' ? item.recordId : typeof item.uid === 'string' ? item.uid : item.recordId,
               isNew: false,
             }));
-            baseline.rooms = rooms as unknown as typeof baseline.rooms;
-            draftClone.rooms = rooms as unknown as typeof draftClone.rooms;
-            canonicalModuleUpdated = true;
-          }
-        }
-        if (keys.includes('meetingRooms')) {
-          const rooms = draftClone.meetingRooms as unknown as { items?: Array<Record<string, unknown>>; knownRoomIds?: string[] };
-          if (rooms && Array.isArray(rooms.items)) {
-            rooms.knownRoomIds = rooms.items
-              .map((item) => typeof item.recordId === 'string' ? item.recordId : typeof item.uid === 'string' ? item.uid : '')
-              .filter(Boolean);
-            rooms.items = rooms.items.map((item) => ({
-              ...item,
-              recordId: typeof item.recordId === 'string' ? item.recordId : typeof item.uid === 'string' ? item.uid : item.recordId,
-              isNew: false,
-            }));
-            baseline.meetingRooms = rooms as unknown as typeof baseline.meetingRooms;
-            draftClone.meetingRooms = rooms as unknown as typeof draftClone.meetingRooms;
-            canonicalModuleUpdated = true;
+            canonicalChildren.add(key);
           }
         }
       }
       if (options?.canonicalPlaces && keys.includes('places')) {
-        const places = draftClone.places as unknown as { items?: Array<Record<string, unknown>>; knownPlaceIds?: string[] };
+        const places = acknowledged.places as unknown as { items?: Array<Record<string, unknown>>; knownPlaceIds?: string[] };
         if (places && Array.isArray(places.items)) {
           places.knownPlaceIds = places.items
             .map((item) => typeof item.recordId === 'string' ? item.recordId : '')
             .filter(Boolean);
           places.items = places.items.map((item) => ({ ...item, isNew: false }));
-          baseline.places = places as unknown as typeof baseline.places;
-          draftClone.places = places as unknown as typeof draftClone.places;
-          canonicalModuleUpdated = true;
+          canonicalChildren.add('places');
         }
       }
-      if (canonicalModuleUpdated) draft = draftClone;
+      for (const key of keys) {
+        if (key === 'generalInfo' && options?.publicationSettingsOnly) {
+          baseline.generalInfo = { ...baseline.generalInfo, commercialVisibility: acknowledged.generalInfo.commercialVisibility };
+        } else {
+          copyModule(baseline, acknowledged, key);
+        }
+        if (canonicalChildren.has(key)) {
+          // Only records actually sent become canonical. Preserve later edits,
+          // additions and deletions while carrying the confirmed IDs forward.
+          draft = { ...draft, [key]: rebaseSavedChildren(current.draft[key], acknowledged[key], key === 'places' ? 'knownPlaceIds' : 'knownRoomIds') };
+        }
+      }
+      const media = options?.canonicalModules?.media;
+      if (keys.includes('media') && media) {
+        baseline.media = media;
+        draft = { ...draft, media: rebaseSavedMedia(sent.media, current.draft.media, media) };
+      }
       return { ...prev, identityKey, snapshot: { ...current, baseline, draft }, recoveryConflicts: prev.identityKey === identityKey ? prev.recoveryConflicts : [] };
     });
-  }, [freshSnapshot, identityKey]);
+  }, [identityKey]);
+
+  const mergeSavedModule = useCallback(<K extends keyof ObjectWorkspaceModules>(key: K, update: (current: ObjectWorkspaceModules[K]) => ObjectWorkspaceModules[K]) => {
+    setEditorState((prev) => {
+      // Une réponse d’une ancienne fiche/session ne doit pas réactiver son état.
+      if (prev.identityKey !== identityKey) return prev;
+      const current = prev.snapshot;
+      return { ...prev, identityKey, snapshot: { ...current,
+        baseline: { ...current.baseline, [key]: update(current.baseline[key]) },
+        draft: { ...current.draft, [key]: update(current.draft[key]) },
+      }, recoveryConflicts: prev.identityKey === identityKey ? prev.recoveryConflicts : [] };
+    });
+  // This updater reads the matching current state, not the server snapshot.
+  // Keep its identity stable when a refetch only supplies a new gallery readId.
+  }, [identityKey]);
 
   const setSavedStatus = useCallback((status: string) => {
     setEditorState((prev) => {
-      const current = prev.identityKey === identityKey ? prev.snapshot : freshSnapshot;
+      if (prev.identityKey !== identityKey) return prev;
+      const current = prev.snapshot;
       return {
       ...prev,
       identityKey,
@@ -243,10 +301,10 @@ export function useObjectEditorState(
       recoveryConflicts: prev.identityKey === identityKey ? prev.recoveryConflicts : [],
     };
     });
-  }, [freshSnapshot, identityKey]);
+  }, [identityKey]);
 
   const dirtySections = useMemo(() => getDirtySections(snapshot, nonApplicableModules), [snapshot, nonApplicableModules]);
   const isDirty = useMemo(() => Object.values(dirtySections).some(Boolean), [dirtySections]);
 
-  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, setSavedStatus };
+  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, mergeSavedModule, setSavedStatus };
 }

@@ -9,6 +9,7 @@ import { fetchThesaurusGeneration } from '../../services/thesaurus-generation';
 import { ensureReferenceCatalogs } from '../../hooks/useReferenceCatalogsQuery';
 import { getObjectResource } from '../../services/rpc';
 import { getObjectWorkspaceResource, saveObjectWorkspaceGeneralInfo, type ObjectWorkspaceResource } from '../../services/object-workspace';
+import { downloadTextFile } from './io/object-io-effects';
 
 let mockEditor: ObjectEditorState;
 let mockGeneration = '1';
@@ -57,6 +58,9 @@ jest.mock('./shell/EditorRail', () => ({ EditorRail: () => null }));
 jest.mock('./widgets/BlockersModal', () => ({ BlockersModal: () => null }));
 jest.mock('./widgets/ImportExportModal', () => ({ ImportExportModal: () => null }));
 jest.mock('./widgets/PeerSavedBanner', () => ({ PeerSavedBanner: () => null }));
+jest.mock('./io/object-io-effects', () => ({
+  ...jest.requireActual('./io/object-io-effects'), downloadTextFile: jest.fn(),
+}));
 
 const ID = 'HOT-VOCABULARY-REFRESH';
 const clients: QueryClient[] = [];
@@ -121,17 +125,36 @@ it.each([false, true])('retains unsaved C across vocabulary 1→2, reloads the s
   const nextWorkspace = deferred<ObjectWorkspaceResource>();
   view.server.characteristics.paymentOptions[0].label = 'Carte bancaire renommée';
   view.server.sustainability.categories[0].actions = view.server.sustainability.categories[0].actions.filter((action) => action.code !== 'SA_LED');
-  jest.mocked(getObjectWorkspaceResource).mockReturnValueOnce(nextWorkspace.promise);
+  // Generation invalidation may start an old-key refetch as well as the new
+  // observed query. Hold every read so this checks the actual pending editor.
+  jest.mocked(getObjectWorkspaceResource).mockImplementation(() => nextWorkspace.promise);
   mockGeneration = '2';
   act(() => { window.dispatchEvent(new CustomEvent('bertel:thesaurus-published', { detail: { releaseId: 2 } })); });
   await waitFor(() => expect(getObjectWorkspaceResource).toHaveBeenCalled());
   // Keep the exact mounted field while the new generation's workspace is pending.
   const retainedDuringPending = nameInput.isConnected;
   expect(nameInput).toHaveValue('C');
+  await waitFor(() => expect(nameInput.closest('[inert]')).not.toBeNull());
+  if (storageUnavailable) {
+    const exporter = screen.getByRole('button', { name: 'Exporter le brouillon JSON' });
+    expect(exporter.closest('[inert]')).toBeNull();
+    const readsBeforeExport = jest.mocked(getObjectWorkspaceResource).mock.calls.length;
+    fireEvent.click(exporter);
+    expect(downloadTextFile).toHaveBeenCalledTimes(1);
+    const [fileName, mime, json] = jest.mocked(downloadTextFile).mock.calls[0];
+    expect(fileName).toBe(`${ID}-brouillon.json`);
+    expect(mime).toBe('application/json');
+    expect(JSON.parse(json)).toMatchObject({ version: 2, modules: { generalInfo: { name: 'C' } } });
+    expect(getObjectWorkspaceResource).toHaveBeenCalledTimes(readsBeforeExport);
+    expect(saveObjectWorkspaceGeneralInfo).not.toHaveBeenCalled();
+    expect(screen.getByText(/Brouillon local indisponible/)).toBeInTheDocument();
+  }
   expect(view.resource().detail).toMatchObject({ current_version: 7 });
   await act(async () => { nextWorkspace.resolve(view.resource()); });
   await screen.findByRole('option', { name: 'Carte bancaire renommée' });
+  jest.mocked(getObjectWorkspaceResource).mockImplementation(async (_id, _langs, _catalogs, detail) => detail as unknown as ObjectWorkspaceResource);
   expect(screen.getByLabelText('Synthetic name')).toHaveValue('C');
+  expect(screen.getByLabelText('Synthetic name').closest('[inert]')).toBeNull();
   expect(screen.getByLabelText('Synthetic payment')).toHaveValue('card');
   expect(mockEditor.draft.characteristics.paymentOptions[0].id).toBe('card');
   expect(mockEditor.baseline.generalInfo.name).toBe('A');

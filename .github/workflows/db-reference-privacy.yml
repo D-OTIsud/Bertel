@@ -1,0 +1,29 @@
+name: DB reference privacy
+
+on:
+  push:
+    paths:
+      - 'tools/db-graph/**'
+      - '.github/workflows/db-reference-privacy.yml'
+  pull_request:
+    paths:
+      - 'tools/db-graph/**'
+      - '.github/workflows/db-reference-privacy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reference-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14.3'
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check pytest==9.0.3 pg8000==1.31.5
+      - name: Test reference extraction, cache, merge and rendering with synthetic data
+        run: python -m pytest tools/db-graph -q

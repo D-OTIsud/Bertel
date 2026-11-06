@@ -468,9 +468,10 @@ export function useObjectWorkspaceQuery(objectId: string | null) {
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const queryClient = useQueryClient();
   const generation = useThesaurusGeneration();
+  const workspaceQueryKey = generationQueryKey(['object-workspace', objectId, langPrefs], generation);
 
-  return useQuery({
-    queryKey: generationQueryKey(['object-workspace', objectId, langPrefs], generation),
+  const query = useQuery({
+    queryKey: workspaceQueryKey,
     queryFn: async () => {
       if (generation.isError) throw generation.error;
       const workspace = await loadObjectWorkspace(queryClient, objectId ?? '', langPrefs);
@@ -480,6 +481,9 @@ export function useObjectWorkspaceQuery(objectId: string | null) {
     enabled: Boolean(objectId) && !generation.isPending,
     staleTime: OBJECT_WORKSPACE_STALE_TIME_MS,
   });
+  // Restoration must verify the cache value actually observed by the page,
+  // including its vocabulary release or pending/error generation marker.
+  return { ...query, workspaceQueryKey };
 }
 
 export function useLocationReferenceOptionsQuery() {

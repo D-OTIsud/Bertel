@@ -71,6 +71,20 @@ NULL, missing and all other scopes are excluded by the SQL/REST readers, cache l
 seed merge and final HTML renderer. The complete table schema and audit count remain
 available; the audit additionally reports `public_rows` for export reconciliation.
 
+Reference table identities are normalized before filtering, merging and output:
+unquoted SQL names fold to lower case, and quoted lower-case names are supported.
+Ambiguous or unsupported identifiers stop the export; they are never guessed past
+the document boundary. REST extraction accepts only canonical public tables.
+The regression tests include rendered private names with a positive rendering
+control, SQL casing, cached aliases and stale-seed suppression. They use synthetic
+data and mocked readers, with no database or credentials:
+
+```powershell
+.tools/python/Scripts/python.exe -m pytest tools/db-graph -q
+```
+
+The `DB reference privacy` workflow runs this suite on relevant changes.
+
 ## Viewer (`graph.html`)
 Open directly in a browser (no server needed). Features: dark theme by default (Light/Dark toggle),
 filter chips by node kind and table domain (with all/none shortcuts), search, wheel-zoom + drag-pan,

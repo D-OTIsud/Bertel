@@ -7,6 +7,10 @@ Requires psycopg2 (the test run used psycopg2-binary 2.9.11 in a temporary direc
 
 from __future__ import annotations
 
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 import json
 from pathlib import Path

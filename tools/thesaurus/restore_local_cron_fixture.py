@@ -5,6 +5,10 @@ come from the failed global restoration witness. Only four legacy business
 triggers are briefly disabled, after all timing and concurrent workers finish.
 The thesaurus fences/journal remain enabled. No role or ACL is changed.
 """
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 from datetime import datetime
 import json

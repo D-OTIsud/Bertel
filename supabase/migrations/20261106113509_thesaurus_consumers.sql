@@ -159,13 +159,22 @@ GRANT EXECUTE ON FUNCTION api.thesaurus_taxonomy_matches(text[],text[],jsonb) TO
 -- role, security attribute and signature already installed by earlier migrations.
 DO $adapt_filter$
 DECLARE definition text; old_clause text := 'AND (params.taxonomy_any_codes IS NULL OR COALESCE(src.cached_taxonomy_codes, ARRAY[]::TEXT[]) && params.taxonomy_any_codes)';
+  previous_clause text := 'AND api.thesaurus_taxonomy_matches(src.cached_taxonomy_codes, params.taxonomy_any_codes, p_filters)';
+  -- The uncorrelated scalar subquery becomes an InitPlan. Expand the requested
+  -- codes once per query, never once per candidate object. Keep every unrelated
+  -- canonical visibility/filter clause and its function attributes intact.
+  new_clause text := $clause$AND (params.taxonomy_any_codes IS NULL OR COALESCE(src.cached_taxonomy_codes, ARRAY[]::TEXT[]) && (SELECT CASE
+    WHEN p_filters @> '{"include_equivalent_predecessors":true}'::jsonb
+      THEN api.thesaurus_expand_taxonomy_codes(ARRAY(SELECT (j->>'domain') || ':' || (j->>'code') FROM jsonb_array_elements(p_filters->'taxonomy_any') j WHERE COALESCE(j->>'domain','')<>'' AND COALESCE(j->>'code','')<>''))
+    ELSE ARRAY(SELECT (j->>'domain') || ':' || (j->>'code') FROM jsonb_array_elements(p_filters->'taxonomy_any') j WHERE COALESCE(j->>'domain','')<>'' AND COALESCE(j->>'code','')<>'') END))$clause$;
 BEGIN
   definition := pg_get_functiondef('api.get_filtered_object_ids(jsonb,public.object_type[],public.object_status[],text)'::regprocedure);
-  IF position('api.thesaurus_taxonomy_matches(src.cached_taxonomy_codes' IN definition)>0 THEN RETURN; END IF;
-  IF position(old_clause IN definition)=0 THEN
+  IF position(new_clause IN definition)>0 THEN RETURN; END IF;
+  IF position(previous_clause IN definition)>0 THEN old_clause:=previous_clause; END IF;
+  IF (length(definition)-length(replace(definition,old_clause,'')))/length(old_clause)<>1 THEN
     RAISE EXCEPTION 'Unsupported taxonomy filter predecessor; inspect before migrating';
   END IF;
-  EXECUTE replace(definition,old_clause,'AND api.thesaurus_taxonomy_matches(src.cached_taxonomy_codes, params.taxonomy_any_codes, p_filters)');
+  EXECUTE replace(definition,old_clause,new_clause);
 END
 $adapt_filter$;
 

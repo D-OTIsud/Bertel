@@ -589,8 +589,14 @@ BEGIN
   IF cardinality(added_ids)>0 THEN SELECT COALESCE(array_agg(DISTINCT x),'{}')INTO affected FROM(SELECT unnest(affected)x UNION SELECT object_id FROM thesaurus.usage_objects(added_ids))a;END IF;
   PERFORM thesaurus.refresh_affected_objects(affected);
   IF COALESCE(cardinality(p_revision_ids),0)>0 THEN
-    IF to_regclass('internal.mv_ref_data_json')IS NOT NULL THEN REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;END IF;
-    IF to_regclass('internal.mv_filtered_objects')IS NOT NULL THEN REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;END IF;
+    IF to_regclass('internal.mv_ref_data_json')IS NOT NULL THEN
+      IF(SELECT relispopulated FROM pg_class WHERE oid='internal.mv_ref_data_json'::regclass)THEN REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;
+      ELSE REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;END IF;
+    END IF;
+    IF to_regclass('internal.mv_filtered_objects')IS NOT NULL THEN
+      IF(SELECT relispopulated FROM pg_class WHERE oid='internal.mv_filtered_objects'::regclass)THEN REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;
+      ELSE REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;END IF;
+    END IF;
   END IF;
   INSERT INTO thesaurus.release(previous_release_id,created_by,idempotency_key,affected_objects,request_fingerprint)VALUES(prev,thesaurus.current_actor(),p_key,cardinality(affected),request_fp)RETURNING release_id INTO rid;
   WITH documents AS MATERIALIZED(
@@ -1018,7 +1024,7 @@ CREATE POLICY thesaurus_publisher ON public.ref_code_taxonomy_closure FOR ALL TO
 GRANT EXECUTE ON FUNCTION api.refresh_ref_code_taxonomy_closure(text),api.is_ref_code_taxonomy_domain(text),api.thesaurus_generation(),api.thesaurus_object_release(),api.public_catalog_domains()TO bertel_thesaurus_publisher;
 -- Existing permissive RLS policies still evaluate these restricted helpers while
 -- the publisher maintains projections in both production and sandbox realms.
-GRANT EXECUTE ON FUNCTION api.current_user_test_realm(),api.current_user_extended_object_ids(),api.can_read_object(text)TO bertel_thesaurus_publisher;
+GRANT EXECUTE ON FUNCTION api.current_user_test_realm(),api.current_user_extended_object_ids(),api.can_read_object(text),api.user_can_write_object_canonical(text)TO bertel_thesaurus_publisher;
 -- Derive the projection writer from the canonical helper at installation, rather
 -- than maintaining a second search definition. Exact body equality is an invariant.
 -- Its owner can UPDATE only derived columns: bypassing business-version triggers
@@ -1084,6 +1090,27 @@ ALTER FUNCTION thesaurus.refresh_affected_object(text)OWNER TO bertel_thesaurus_
 ALTER FUNCTION thesaurus.refresh_affected_objects(text[])OWNER TO bertel_thesaurus_publisher;
 REVOKE CREATE ON SCHEMA thesaurus FROM bertel_thesaurus_publisher;
 GRANT EXECUTE ON FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)TO postgres;
+-- RLS evaluates all applicable policies even when a dedicated publisher policy
+-- permits the row. Fail installation on a newly restricted helper instead of
+-- discovering it in a later publication. Stored policy references are resolved
+-- function OIDs; they do not require granting access to managed schemas such as
+-- auth. SQL function bodies retain their own reviewed invoker/definer rules.
+DO $publisher_invariants$
+DECLARE missing text;guard_count integer;
+BEGIN
+  SELECT string_agg(DISTINCT dependency.refobjid::regprocedure::text,', 'ORDER BY dependency.refobjid::regprocedure::text)INTO missing
+  FROM pg_policy policy
+  JOIN pg_depend dependency ON dependency.classid='pg_policy'::regclass AND dependency.objid=policy.oid AND dependency.refclassid='pg_proc'::regclass
+  WHERE policy.polrelid IN(SELECT polrelid FROM pg_policy WHERE polname='thesaurus_projection_read')
+    AND(0=ANY(policy.polroles)OR(SELECT oid FROM pg_roles WHERE rolname='bertel_thesaurus_publisher')=ANY(policy.polroles))
+    AND(policy.polcmd IN('r','*')OR(policy.polrelid='public.object'::regclass AND policy.polcmd='w'))
+    AND NOT has_function_privilege('bertel_thesaurus_publisher',dependency.refobjid,'EXECUTE');
+  IF missing IS NOT NULL THEN RAISE EXCEPTION 'Publisher lacks EXECUTE for applicable RLS helpers: %',missing;END IF;
+  SELECT count(*)INTO guard_count FROM pg_trigger WHERE tgrelid='public.object'::regclass
+    AND tgname=ANY(ARRAY['trg_audit_object','trg_increment_object_version','trg_object_version','update_object_updated_at'])
+    AND NOT tgisinternal AND tgenabled='O' AND pg_get_expr(tgqual,tgrelid)=$guard$(CURRENT_USER <> 'bertel_thesaurus_publisher'::name)$guard$;
+  IF guard_count<>4 THEN RAISE EXCEPTION 'Canonical object trigger publisher guards drifted: expected four exact active guards';END IF;
+END $publisher_invariants$;
 -- Preserve the creator's ADMIN-only management capability for future migrations,
 -- while revoking both privileges that would allow inherited writes or SET ROLE.
 DO $publisher_membership$BEGIN

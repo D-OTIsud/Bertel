@@ -268,11 +268,16 @@ END $$;
 CREATE OR REPLACE FUNCTION thesaurus.usage_objects(p_concepts uuid[]) RETURNS TABLE(object_id text) LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path=pg_catalog,public,thesaurus AS $$
 #variable_conflict use_column
-DECLARE f record;cond text;sql text;
+DECLARE f record;cond text;sql text;owners text;
 BEGIN
   -- Follow actual foreign keys, including composite ref_code and every standalone adapter.
   FOR f IN
     SELECT DISTINCT con.conrelid,ns.nspname,cl.relname,con.conkey,con.confkey,con.confrelid,CASE WHEN target.relispartition THEN substring(pg_get_expr(target.relpartbound,target.oid)FROM'''([^'']+)''')END source_domain,
+      EXISTS(SELECT 1 FROM pg_constraint owner_fk
+        JOIN pg_attribute owner_column ON owner_column.attrelid=owner_fk.conrelid AND owner_column.attname='object_id'AND NOT owner_column.attisdropped
+        JOIN pg_attribute object_key ON object_key.attrelid='public.object'::regclass AND object_key.attname='id'AND NOT object_key.attisdropped
+        WHERE owner_fk.contype='f'AND owner_fk.conrelid=con.conrelid AND owner_fk.confrelid='public.object'::regclass
+          AND owner_fk.conkey=ARRAY[owner_column.attnum]AND owner_fk.confkey=ARRAY[object_key.attnum]) direct_object_owner,
       CASE target.relname WHEN 'ref_amenity' THEN 'amenity' WHEN 'ref_classification_scheme' THEN 'classification_scheme'
        WHEN 'ref_classification_value' THEN 'classification_value' WHEN 'ref_language' THEN 'language'
        WHEN 'ref_commune' THEN 'commune' WHEN 'ref_sustainability_action' THEN 'sustainability_action'
@@ -287,7 +292,12 @@ BEGIN
     SELECT string_agg(format('t.%I::text = c.%I',la.attname,CASE ra.attname WHEN'domain'THEN'domain'WHEN'code'THEN'code'ELSE'source_id'END),' AND ' ORDER BY u.ord)
     INTO cond FROM unnest(f.conkey,f.confkey)WITH ORDINALITY u(l,r,ord)
       JOIN pg_attribute la ON la.attrelid=f.conrelid AND la.attnum=u.l JOIN pg_attribute ra ON ra.attrelid=f.confrelid AND ra.attnum=u.r;
-    sql:=format('SELECT DISTINCT unnest(thesaurus.object_ids_for_row(%s,to_jsonb(t)))FROM %I.%I t JOIN thesaurus.concept c ON c.source_kind=%L AND %s %s WHERE c.concept_id=ANY($1)',f.conrelid,f.nspname,f.relname,f.kind,cond,CASE WHEN f.source_domain IS NULL THEN''ELSE format('AND c.domain=%L',f.source_domain)END);
+    owners:=format('thesaurus.object_ids_for_row(%s,to_jsonb(t))',f.conrelid);
+    -- A verified direct FK already identifies the owner. Avoid serializing rich
+    -- object/media rows just to read object_id. Nullable direct owners retain the
+    -- original nested walker (for example media owned through an object place).
+    IF f.direct_object_owner THEN owners:=format('CASE WHEN NULLIF(t.object_id::text,'''')IS NOT NULL THEN ARRAY[t.object_id::text]ELSE %s END',owners);END IF;
+    sql:=format('SELECT DISTINCT unnest(%s)FROM %I.%I t JOIN thesaurus.concept c ON c.source_kind=%L AND %s %s WHERE c.concept_id=ANY($1)',owners,f.nspname,f.relname,f.kind,cond,CASE WHEN f.source_domain IS NULL THEN''ELSE format('AND c.domain=%L',f.source_domain)END);
     RETURN QUERY EXECUTE sql USING p_concepts;
   END LOOP;
   RETURN QUERY SELECT DISTINCT oc.object_id::text FROM public.object_classification oc CROSS JOIN LATERAL unnest(oc.subvalue_ids)sub_id JOIN thesaurus.concept c ON c.source_kind='classification_value'AND c.source_id=sub_id::text WHERE c.concept_id=ANY(p_concepts);
@@ -348,13 +358,16 @@ SET search_path=pg_catalog,thesaurus AS $$SELECT thesaurus.concept_document(p_id
 -- Render a release in one relational pass. Native rows and semantic arrays are
 -- materialized once instead of re-running the eight-source union per concept.
 -- Editorial reads keep concept_document(uuid) and its conflict fingerprint.
-CREATE OR REPLACE FUNCTION thesaurus.publication_documents()
+CREATE OR REPLACE FUNCTION thesaurus.publication_documents(p_concepts uuid[])
 RETURNS TABLE(concept_id uuid,domain text,is_public boolean,document jsonb)
 LANGUAGE sql STABLE SET search_path=pg_catalog,thesaurus AS $documents$
 WITH sources AS MATERIALIZED(SELECT * FROM thesaurus.source_rows),
-governed AS MATERIALIZED(
+eligible AS MATERIALIZED(
  SELECT c.*,v.is_public FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain)
  JOIN thesaurus.source_link sl USING(concept_id)WHERE v.is_governed
+),
+governed AS MATERIALIZED(
+ SELECT * FROM eligible WHERE p_concepts IS NULL OR concept_id=ANY(p_concepts)
 ),
 localized AS(
  SELECT concept_id,
@@ -387,7 +400,7 @@ relations AS(
 ),
 children AS(
  SELECT parent.concept_id,jsonb_agg(child.concept_id ORDER BY child.concept_id) items
- FROM sources s JOIN governed child ON(child.source_kind,child.source_id,child.domain)=(s.source_kind,s.source_id,s.domain)AND child.is_public
+ FROM sources s JOIN eligible child ON(child.source_kind,child.source_id,child.domain)=(s.source_kind,s.source_id,s.domain)AND child.is_public
  JOIN thesaurus.concept parent ON(parent.source_kind,parent.source_id,parent.domain)=(s.parent_kind,s.parent_source_id,s.parent_domain)
  GROUP BY parent.concept_id
 ),
@@ -416,6 +429,12 @@ LEFT JOIN mappings ON mappings.concept_id=d.concept_id LEFT JOIN children ON chi
 LEFT JOIN relations ON relations.concept_id=d.concept_id
 WHERE instance.singleton
 $documents$;
+
+-- Keep a full renderer as an independent oracle and for a first publication.
+CREATE OR REPLACE FUNCTION thesaurus.publication_documents()
+RETURNS TABLE(concept_id uuid,domain text,is_public boolean,document jsonb)
+LANGUAGE sql STABLE SET search_path=pg_catalog,thesaurus
+AS $$SELECT * FROM thesaurus.publication_documents(NULL::uuid[])$$;
 
 CREATE OR REPLACE FUNCTION thesaurus.is_ancestor(p_parent uuid,p_child uuid)RETURNS boolean LANGUAGE sql STABLE
 SET search_path=pg_catalog,thesaurus AS $$
@@ -587,7 +606,7 @@ END $$;
 CREATE OR REPLACE FUNCTION thesaurus.activate(p_revision_ids uuid[],p_bootstrap_domains text[],p_key text,p_expected bigint DEFAULT NULL,p_versions jsonb DEFAULT '{}') RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,thesaurus,public,api,internal,extensions,auth AS $$
 #variable_conflict use_column
-DECLARE prev bigint;rid bigint;r record;doc jsonb;quality jsonb;affected text[]:='{}';a text;ids uuid[]:='{}';prior_ids uuid[];added_ids uuid[];n integer;v_manifest jsonb;checksum text;inst thesaurus.instance%ROWTYPE;d text;parent uuid;rec jsonb;count_changes integer;request_fp text;
+DECLARE prev bigint;rid bigint;r record;doc jsonb;quality jsonb;affected text[]:='{}';a text;ids uuid[]:='{}';prior_ids uuid[];added_ids uuid[];document_dirty uuid[]:='{}';scope_dirty uuid[]:='{}';n integer;v_manifest jsonb;checksum text;inst thesaurus.instance%ROWTYPE;d text;parent uuid;rec jsonb;count_changes integer;request_fp text;
 BEGIN
   IF NULLIF(btrim(p_key),'')IS NULL OR length(p_key)>200 THEN RAISE EXCEPTION 'Idempotency key required' USING ERRCODE='PT400';END IF;
   -- Warm query plans before serializing writers. These results are discarded;
@@ -623,6 +642,17 @@ BEGIN
     ids:=array_append(ids,r.concept_id);
   END LOOP;
   IF cardinality(ids)<>COALESCE(cardinality(p_revision_ids),0)THEN RAISE EXCEPTION 'Unknown revision' USING ERRCODE='PT404';END IF;
+  -- Public documents contain their own fields and structural/semantic target
+  -- identities. Retain old parents and both endpoints before any edge is removed.
+  SELECT COALESCE(array_agg(DISTINCT x),'{}')INTO document_dirty FROM(
+    SELECT unnest(ids)x
+    UNION SELECT parent.concept_id FROM thesaurus.concept changed
+      JOIN thesaurus.source_rows source ON(source.source_kind,source.source_id,source.domain)=(changed.source_kind,changed.source_id,changed.domain)
+      JOIN thesaurus.concept parent ON(parent.source_kind,parent.source_id,parent.domain)=(source.parent_kind,source.parent_source_id,source.parent_domain)
+      WHERE changed.concept_id=ANY(ids)
+    UNION SELECT relation.concept_id FROM thesaurus.relation relation WHERE relation.concept_id=ANY(ids)OR relation.target_id=ANY(ids)
+    UNION SELECT relation.target_id FROM thesaurus.relation relation WHERE relation.concept_id=ANY(ids)OR relation.target_id=ANY(ids)
+  )dirty(x);
   UPDATE thesaurus.vocabulary SET is_governed=true,updated_at=now() WHERE domain IN(SELECT c.domain FROM thesaurus.revision r JOIN thesaurus.concept c USING(concept_id)WHERE r.revision_id=ANY(COALESCE(p_revision_ids,'{}')));
   PERFORM thesaurus.ensure_parent_dependencies();
   -- Include descendants before AND after a re-parenting, so no old path is missed.
@@ -676,10 +706,40 @@ BEGIN
     END IF;
   END IF;
   INSERT INTO thesaurus.release(previous_release_id,created_by,idempotency_key,affected_objects,request_fingerprint)VALUES(prev,thesaurus.current_actor(),p_key,cardinality(affected),request_fp)RETURNING release_id INTO rid;
+  -- New domains/concepts and exposure changes also affect parent narrower lists.
+  -- All ordinary canonical edits are fenced revisions; every other current,
+  -- unchanged document can therefore be copied from its immutable predecessor.
+  SELECT COALESCE(array_agg(c.concept_id),'{}')INTO scope_dirty
+  FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain)
+  JOIN thesaurus.source_link sl USING(concept_id)
+  LEFT JOIN thesaurus.release_concept previous ON previous.release_id=prev AND previous.concept_id=c.concept_id
+  WHERE v.is_governed AND(previous.concept_id IS NULL OR previous.is_public IS DISTINCT FROM v.is_public);
+  document_dirty:=document_dirty||scope_dirty;
+  SELECT COALESCE(array_agg(DISTINCT x),'{}')INTO document_dirty FROM(
+    SELECT unnest(document_dirty)x
+    UNION SELECT parent.concept_id FROM thesaurus.concept changed
+      JOIN thesaurus.source_rows source ON(source.source_kind,source.source_id,source.domain)=(changed.source_kind,changed.source_id,changed.domain)
+      JOIN thesaurus.concept parent ON(parent.source_kind,parent.source_id,parent.domain)=(source.parent_kind,source.parent_source_id,source.parent_domain)
+      WHERE changed.concept_id=ANY(document_dirty)
+    UNION SELECT relation.concept_id FROM thesaurus.relation relation
+      WHERE relation.concept_id IN(SELECT concept_id FROM thesaurus.revision WHERE revision_id=ANY(COALESCE(p_revision_ids,'{}')))
+        OR relation.target_id IN(SELECT concept_id FROM thesaurus.revision WHERE revision_id=ANY(COALESCE(p_revision_ids,'{}')))
+        OR relation.concept_id=ANY(scope_dirty)OR relation.target_id=ANY(scope_dirty)
+    UNION SELECT relation.target_id FROM thesaurus.relation relation
+      WHERE relation.concept_id IN(SELECT concept_id FROM thesaurus.revision WHERE revision_id=ANY(COALESCE(p_revision_ids,'{}')))
+        OR relation.target_id IN(SELECT concept_id FROM thesaurus.revision WHERE revision_id=ANY(COALESCE(p_revision_ids,'{}')))
+        OR relation.concept_id=ANY(scope_dirty)OR relation.target_id=ANY(scope_dirty)
+  )dirty(x);
   WITH documents AS MATERIALIZED(
-    SELECT * FROM thesaurus.publication_documents())
+    SELECT * FROM thesaurus.publication_documents(document_dirty))
   INSERT INTO thesaurus.release_concept(release_id,concept_id,domain,is_public,document,checksum)
   SELECT rid,concept_id,domain,is_public,document,md5(document::text)FROM documents;
+  INSERT INTO thesaurus.release_concept(release_id,concept_id,domain,is_public,document,checksum)
+  SELECT rid,c.concept_id,c.domain,v.is_public,previous.document,previous.checksum
+  FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain)
+  JOIN thesaurus.source_link sl USING(concept_id)
+  JOIN thesaurus.release_concept previous ON previous.release_id=prev AND previous.concept_id=c.concept_id
+  WHERE v.is_governed AND NOT(c.concept_id=ANY(document_dirty));
   -- Monotonic historical identity, including tombstones of no-longer-public vocabularies.
   INSERT INTO thesaurus.release_concept(release_id,concept_id,domain,is_public,document,checksum)
   SELECT rid,p.concept_id,p.domain,p.is_public,p.document,p.checksum FROM thesaurus.release_concept p WHERE p.release_id=prev AND NOT EXISTS(SELECT 1 FROM thesaurus.release_concept n WHERE n.release_id=rid AND n.concept_id=p.concept_id);

@@ -15,6 +15,26 @@ Le dossier de recette est [l'audit d'implémentation](audits/2026-11-06-thesauru
 
 **Réapplication des sources SQL.** Après installation du thésaurus, ne pas réappliquer isolément `schema_unified.sql`, `api_views_functions.sql` ou les anciennes migrations de filtres : ils peuvent remplacer les quatre gardes de triggers de `object` ou la lecture des équivalences. Sur une base existante, toute maintenance qui réapplique ces définitions doit réappliquer ensuite les **deux migrations du thésaurus, dans l'ordre indiqué**, puis les tests de publication et de consommateurs avant remise en service. Sur une installation vierge, utiliser le manifeste complet ordonné. Vérifier les clauses `WHEN` des quatre triggers, les droits du rôle de publication et les index uniques des deux vues matérialisées requises avant toute activation ou généralisation aux adaptateurs autonomes.
 
+**Réconciliation après maintenance exceptionnelle.** Les instantanés incrémentaux supposent que les sources gouvernées restent protégées par leurs triggers. Si une maintenance autorisée a suspendu ces gardes, conserver la fermeture des lectures publiques et des écritures pendant la reprise. Restaurer et contrôler toutes les gardes avant de rouvrir le service ; synchroniser les identités natives depuis l'administration avec un opérateur plateforme autorisé, puis comparer le rendu complet à la publication courante avec cette lecture privilégiée :
+
+```sql
+WITH expected AS MATERIALIZED (
+  SELECT * FROM thesaurus.publication_documents()
+), actual AS (
+  SELECT concept_id, domain, is_public, document
+  FROM thesaurus.release_concept
+  WHERE release_id = api.thesaurus_generation()
+)
+SELECT COALESCE(e.concept_id, a.concept_id) AS concept_id,
+       a.document AS published_document, e.document AS canonical_document
+FROM expected e FULL JOIN actual a USING (concept_id)
+WHERE e.concept_id IS NULL OR a.concept_id IS NULL
+   OR (e.domain, e.is_public, e.document)
+      IS DISTINCT FROM (a.domain, a.is_public, a.document);
+```
+
+Tout écart impose une réconciliation avant réouverture. Pour **chaque concept différent**, y compris les anciens et nouveaux parents ou voisins, préparer une révision à partir de son document canonique courant, la valider et publier l'ensemble après aperçu ; ne jamais écraser une révision locale existante. Cette publication reconstruit les représentations affectées et conserve l'historique. Rejouer ensuite la comparaison complète, les contrôles de projections et les tests SQL : aucun écart résiduel n'est accepté. Il n'existe pas de drapeau public `force_full` ni de bouton de réparation automatique. Une URI modifiée, une source publiée supprimée ou une rupture de FK exige une réparation/restauration de l'identité avant cette procédure ; ne pas recréer arbitrairement un identifiant publié. La reprise d'une maintenance importante se répète d'abord sur la copie restaurée, avec son temps d'exécution mesuré.
+
 La répétition locale de sauvegarde/restauration a conservé six publications et l'empreinte d'instantané `066d6ed270f423964b4f440fd217e6dc` ; voir la [preuve locale](../.tmp-thesaurus-implementation/restoreproof-summary.json). Cette preuve ne remplace pas la répétition sur la cible de déploiement.
 
 ## Audit remediation — regional export read grants (2026-09-06)

@@ -85,6 +85,10 @@ END
 $test$;
 -- Exercise the actual invoker permission chain after moving the legacy serializer
 -- into the private schema: a postgres-only test would miss a missing EXECUTE grant.
+-- Isolated minimal test databases may omit the canonical bootstrap's public-reference
+-- grants; restore only those read prerequisites inside this rolled-back transaction.
+GRANT USAGE ON SCHEMA api,public TO anon;
+GRANT SELECT ON public.ref_code,public.ref_amenity TO anon;
 SET LOCAL ROLE anon;
 DO $catalog_anon$
 BEGIN

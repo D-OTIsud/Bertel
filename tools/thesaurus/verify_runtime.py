@@ -168,8 +168,7 @@ def main() -> None:
     def rename_publisher():
         conn = connect("thesaurus-benchmark-publisher")
         try:
-            with conn.cursor() as cur:
-                cur.execute("SELECT pg_advisory_xact_lock(741126,1)")
+            outcomes["rename_pid"] = conn.get_backend_pid()
             started_publish.set()
             start = time.perf_counter()
             outcomes["rename"] = rpc(conn, "publish", rename)
@@ -199,6 +198,19 @@ def main() -> None:
     rename_thread.start()
     if not started_publish.wait(20):
         raise RuntimeError("Benchmark publisher did not start")
+    # Observe the fence acquired by the actual API. Planning warmup intentionally
+    # happens before that fence and remains included in total publication latency.
+    for _ in range(2000):
+        with observer.cursor() as cur:
+            cur.execute("SELECT EXISTS(SELECT 1 FROM pg_locks WHERE pid=%s AND locktype='advisory'AND mode='ExclusiveLock'AND granted AND classid=741126 AND objid=1)", (outcomes["rename_pid"],))
+            if cur.fetchone()[0]:
+                outcomes["benchmark_publication_fence_observed"] = True
+                break
+        if not rename_thread.is_alive():
+            break
+        time.sleep(0.01)
+    if not outcomes.get("benchmark_publication_fence_observed"):
+        raise RuntimeError(f"The API publication fence was not observed: {outcomes}")
     editor_thread = threading.Thread(target=editor)
     editor_thread.start()
     rename_thread.join(300)
@@ -211,7 +223,7 @@ def main() -> None:
         "database": args.database,
         "fixture": {"kind": "synthetic", "published_objects": args.objects, "taxonomy_nodes": 3, "maximum_depth": 2},
         "concurrency": {key: outcomes.get(key) for key in ("observed_assignment_wait", "assignment_rejected", "assignment_sqlstate", "retirement_ms")},
-        "benchmark": {"preview_ms": outcomes["preview_ms"], "publication_ms": outcomes["publication_ms"], "editor_wait_ms": outcomes["editor_wait_ms"], "affected_objects": outcomes["rename"]["affected_objects"], "within_2s_editor_budget": outcomes["editor_wait_ms"] <= 2000},
+        "benchmark": {"preview_ms": outcomes["preview_ms"], "publication_ms": outcomes["publication_ms"], "editor_wait_ms": outcomes["editor_wait_ms"], "affected_objects": outcomes["rename"]["affected_objects"], "observed_publication_fence": outcomes["benchmark_publication_fence_observed"], "within_2s_editor_budget": outcomes["editor_wait_ms"] <= 2000},
     }
     output = json.dumps(report, ensure_ascii=False, indent=2)
     if args.output:

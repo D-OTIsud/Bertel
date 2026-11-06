@@ -153,8 +153,8 @@ BEGIN
   ASSERT gen=api.thesaurus_generation(),'Nested rename publication did not activate';
   -- Existing object triggers use transaction-stable now(): the timestamp can equal the
   -- creation time of an uncommitted fixture. A version increment proves the real touch.
-  ASSERT (SELECT updated_at>=before_hot AND current_version>before_hot_version FROM public.object WHERE id='HOTRUNNESTED0001'),'Nested hotel usages did not advance synchronization marker/version';
-  ASSERT (SELECT updated_at>=before_res AND current_version>before_res_version FROM public.object WHERE id='RESRUNNESTED0003'),'Nested menu usages did not advance synchronization marker/version';
+  ASSERT (SELECT updated_at>before_hot AND current_version=before_hot_version FROM public.object WHERE id='HOTRUNNESTED0001'),'Nested hotel usages must advance synchronization marker without a fabricated canonical version';
+  ASSERT (SELECT updated_at>before_res AND current_version=before_res_version FROM public.object WHERE id='RESRUNNESTED0003'),'Nested menu usages must advance synchronization marker without a fabricated canonical version';
   gen:=pg_temp.publish_nested(true);
   ASSERT (api.thesaurus_admin('requalification')->>'total')::integer=15,'Requalification missed nested/array fixture usages';
 

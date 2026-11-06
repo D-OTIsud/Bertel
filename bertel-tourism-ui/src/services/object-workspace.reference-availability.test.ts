@@ -7,10 +7,10 @@ import type { ReferenceCatalogs } from './reference-catalogs';
 import type { ObjectWorkspaceCharacteristicsModule } from './object-workspace-parser';
 
 it('preserves selected retired characteristics and carries nonassignability to every selector', async () => {
-  const old = (id: string, code: string, name: string) => ({ id, code, name, is_active: true, thesaurus_assignable: false, thesaurus_lifecycle: 'retired' });
+  const old = (id: string, code: string, name: string) => ({ id, code, name, is_active: true, thesaurus_assignable: false, thesaurus_lifecycle: 'retired' as const });
   const catalogs: ReferenceCatalogs = {
     vocabularyRelease: 8,
-    refCodeByDomain: { payment_method: [old('payment-1', 'old_payment', 'Ancien paiement')], environment_tag: [old('env-1', 'old_environment', 'Ancien environnement')], language_level: [] },
+    refCodeByDomain: { payment_method: [{ ...old('payment-1', 'old_payment', 'Ancien paiement'), domain: 'payment_method', position: 0 }], environment_tag: [{ ...old('env-1', 'old_environment', 'Ancien environnement'), domain: 'environment_tag', position: 0 }], language_level: [] },
     tables: {
       ref_language: [old('lang-1', 'old_language', 'Ancienne langue')],
       ref_amenity: [{ ...old('amenity-1', 'old_amenity', 'Ancien équipement'), scope: 'object', family_id: 'family-1', family: { code: 'equipment', name: 'Équipements' } }],

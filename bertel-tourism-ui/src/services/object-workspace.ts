@@ -2306,6 +2306,7 @@ function normalizeLegalTypeOption(row: Record<string, unknown>): ObjectWorkspace
     id: readString(row.id),
     code: readString(row.code),
     label: readString(row.name, readString(row.code)),
+    ...referenceAvailability(row),
     description: readString(row.description),
     category: readString(row.category),
     isPublic: readBoolean(row.is_public),
@@ -3482,12 +3483,13 @@ function loadOpeningPeriodTypeOptions(
 ): ObjectWorkspaceOpeningPeriodTypeOption[] {
   // Catalogue depuis le cache de session. Le filtre `is_active` etait fait cote
   // serveur ; il l'est desormais en memoire (le select du cache porte la colonne).
-  const data = (catalogs.refCodeByDomain.opening_period_type ?? []).filter((row) => row.is_active !== false);
+  const data = catalogs.refCodeByDomain.opening_period_type ?? [];
   return data.map((row) => {
     const metadata = (row.metadata ?? {}) as { color?: unknown; all_year?: unknown };
     return {
       code: String(row.code ?? ''),
       label: String(row.name ?? row.code ?? ''),
+      ...referenceAvailability(row as unknown as Record<string, unknown>),
       color: typeof metadata.color === 'string' ? metadata.color : '',
       allYear: metadata.all_year === true,
     };

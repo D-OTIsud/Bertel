@@ -9,6 +9,9 @@ jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
 jest.mock('@/lib/mail.server', () => ({
   sendListEmail: jest.fn(),
+  prepareListEmail: async (options: unknown) => ({ sender: { address: 'sender@example.invalid', name: 'Synthetic' },
+    send: () => jest.requireMock('@/lib/mail.server').sendListEmail(options) }),
+  MailDeliveryError: class extends Error { rejectionCode: string | null; constructor(error: { code?: string }) { super('Authentification refusée.'); this.rejectionCode = error.code ?? null; } },
   MailNotConfiguredError: class extends Error {},
 }));
 jest.mock('@/lib/smtp-settings.server', () => ({ resolveSmtpConfig: jest.fn() }));
@@ -23,7 +26,7 @@ jest.mock('@/features/lists/type-meta', () => ({
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
-import { sendListEmail } from '@/lib/mail.server';
+import { sendListEmail, MailDeliveryError } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import { renderListEmailHtml } from '@/emails/ListEmail';
 
@@ -35,7 +38,7 @@ const mockedSmtp = jest.mocked(resolveSmtpConfig);
 function req(body: Record<string, unknown>): NextRequest {
   return new NextRequest('https://app.test/api/lists/send', {
     method: 'POST',
-    headers: { authorization: 'Bearer t', 'content-type': 'application/json' },
+    headers: { authorization: 'Bearer t', 'content-type': 'application/json', 'Idempotency-Key': 'd2000000-0000-4000-8000-000000000001' },
     body: JSON.stringify(body),
   });
 }
@@ -63,6 +66,9 @@ function setup(opts: { markError?: { message: string } | null; markThrows?: bool
       if (opts.markThrows) return Promise.reject(new Error('db down'));
       return Promise.resolve({ data: null, error: opts.markError ?? null });
     }
+    if (name === 'claim_list_email') return Promise.resolve({ data: { state: 'reserved', attempt_token: 'd2000000-0000-4000-8000-000000000099' }, error: null });
+    if (name === 'begin_list_email') return Promise.resolve({ data: { started: true }, error: null });
+    if (name === 'complete_list_email') return Promise.resolve({ data: true, error: null });
     throw new Error(`unexpected server rpc ${name}`);
   });
 
@@ -161,9 +167,9 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
     expect(body.warning).toBeUndefined();
   });
 
-  it('échec SMTP avant acceptation => erreur, aucun marquage tenté', async () => {
+  it('refus AUTH certain avant soumission => erreur, aucun marquage tenté', async () => {
     setup({ markError: null });
-    mockedSend.mockRejectedValue(new Error('smtp refused'));
+    mockedSend.mockRejectedValue(new MailDeliveryError({ code: 'EAUTH' }));
 
     const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
 

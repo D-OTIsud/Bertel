@@ -576,6 +576,18 @@ jobs:
           node --test tools/ai-quota/distributed-admission.test.mjs
           node --test tools/ai-quota/postgrest-admission.test.mjs
 
+      - name: Manual list-mail intentions (service-only, concurrent, unknown result, list lifetime)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: |
+          cmp "Base de donnée DLL et API/distributed_list_email_intents.sql" supabase/migrations/20261106194635_distributed_list_email_intents.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_distributed_list_email_intents.sql"
+          node --test tools/list-email/distributed-intents.test.mjs
+          node --test tools/list-email/postgrest-intents.test.mjs
+
       # This final test intentionally crosses COMMIT boundaries to emulate new
       # requests with the same claims. Its exact-ID synthetic fixtures are cleaned;
       # append-only audit/version traces die with this disposable local database.

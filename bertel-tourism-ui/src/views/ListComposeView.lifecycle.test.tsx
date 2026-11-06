@@ -272,7 +272,7 @@ describe('ListComposeView — perte de canEdit avec un brouillon local (revue R2
 
     fireEvent.click(screen.getByRole('button', { name: /Envoyer/ }));
 
-    await waitFor(() => expect(sendListByEmail).toHaveBeenCalledWith('list-1', 'voyageur@example.com'));
+    await waitFor(() => expect(sendListByEmail).toHaveBeenCalledWith('list-1', 'voyageur@example.com', expect.objectContaining({ operationId: expect.any(String) })));
     expect(updateList).not.toHaveBeenCalled();
     expect(setListItems).not.toHaveBeenCalled();
   });

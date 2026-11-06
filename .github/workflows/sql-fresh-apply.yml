@@ -129,16 +129,9 @@ jobs:
         # suite after the complete fresh installation; no opt-in flag is needed.
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_album_fresh.sql"
 
-      - name: Current object rights (17 policies, explicit grants, portal and legacy-email denial)
-        env:
-          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_current_rights.sql"
-
-      - name: Current-rights private surfaces (history, docs, CRM, gallery receipts, portal preview/proposals)
-        env:
-          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_current_rights_surfaces.sql"
-
+      # Current-rights core/surfaces and the eight adapted legacy probes run
+      # exactly once, together after the final overlay inside the manifest.
+      # Committed revocation remains a separate final disposable-DB phase.
       - name: SP-1 structural assertions (canonical-write authorization)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -209,11 +202,6 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_cards_published_fastpath.sql"
 
-      - name: RLS auth-initplan sweep test (object-family policies wrapped; owner/stranger UPDATE gating intact)
-        env:
-          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_rls_initplan_sweep.sql"
-
       - name: Open-status timezone test (get_local_now_for_timezone no longer scans pg_timezone_names; fallback contract preserved)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -234,16 +222,6 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_capacity_applicability_seed.sql"
 
-      - name: object_fma RLS test (§47 8n — per-command canonical write triple + owner/stranger/anon gating)
-        env:
-          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_fma_rls.sql"
-
-      - name: write-policy per-command test (§47 8o — per-command coverage + owner/stranger/anon probe)
-        env:
-          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_write_policy_percommand.sql"
-
       - name: actor links editor test (§48 8r — per-command actor_object_role + actors branch + search_actors)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -263,11 +241,6 @@ jobs:
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_type_spu.sql"
-
-      - name: room-type trio read gate test (§54 8v — anon draft room-type leak closed, link ext arm + repaired link writes)
-        env:
-          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_room_type_read_gate.sql"
 
       - name: object_review read gate test (§56 8w — anon draft review leak closed, extended arm added, admin writes intact)
         env:
@@ -487,11 +460,6 @@ jobs:
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_prospects_documents.sql"
-
-      - name: "Actor portal test (18a — persona actor + portée dédiée, D7, visibilité des rubriques, submit_actor_fiche, lectures acteur, D9 validation totale/partielle, résolution + outbox, RGPD branche acteur)"
-        env:
-          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_portal.sql"
 
       - name: "ref_amenity visit modes test (18b — seed visite_libre/visite_guidee/audioguide, famille visit_mediation ; répare le blocage de sauvegarde §06 BlockVIS sans mélanger avec accessibility)"
         env:

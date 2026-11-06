@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
@@ -53,17 +53,54 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'bad_json' }, { status: 400 });
   }
   const listId = str(body.listId);
-  const toEmail = str(body.toEmail).trim();
+  const phase = body.phase;
+  const api = server.schema('api');
   if (!listId) return NextResponse.json({ error: 'missing_list' }, { status: 400 });
-  if (!EMAIL_RE.test(toEmail)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
+  if (phase === 'context') {
+    try {
+      const result = await api.rpc('get_list_email_context', { p_user_id: userData.user.id, p_list_id: listId });
+      const data = asRec(result.data);
+      if (result.error || !data) return protectionUnavailable();
+      if (data.state === 'forbidden') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+      if (data.state !== 'ready' || !asRec(data.generations)) return protectionUnavailable();
+      return NextResponse.json({ ok: true, phase: 'context', listId, userId: userData.user.id, generations: data.generations },
+        { status: 200, headers: { 'Cache-Control': 'no-store' } });
+    } catch { return protectionUnavailable(); }
+  }
+  if (phase !== 'prepare' && phase !== 'dispatch' && phase !== 'ack') return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   const operationId = (req.headers.get('idempotency-key') ?? '').trim().toLowerCase();
+  if (!UUID_RE.test(operationId)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+  if (phase === 'ack') {
+    const proof = str(body.resultToken);
+    if (!/^[0-9a-f]{64}$/.test(proof)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+    try {
+      const result = await api.rpc('ack_list_email_client', { p_user_id: userData.user.id, p_list_id: listId, p_operation_id: operationId, p_result_token: proof });
+      if (result.error) return protectionUnavailable();
+      return NextResponse.json({ ok: true, phase: 'acknowledged', operationId, acknowledged: result.data === true },
+        { status: 200, headers: { 'Cache-Control': 'no-store' } });
+    } catch { return protectionUnavailable(); }
+  }
+  const toEmail = str(body.toEmail).trim();
+  if (!EMAIL_RE.test(toEmail)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
   const previous = body.confirmedPreviousOperationId;
-  if (!UUID_RE.test(operationId) || (previous !== undefined && (typeof previous !== 'string' || !UUID_RE.test(previous)
-    || previous.toLowerCase() === operationId))) {
+  const previousIds = body.confirmedPreviousOperationIds;
+  if ((previous !== undefined && (typeof previous !== 'string' || !UUID_RE.test(previous)))
+    || (previousIds !== undefined && (!Array.isArray(previousIds) || !previousIds.every((id) => typeof id === 'string' && UUID_RE.test(id))))) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   }
-  const confirmedPreviousOperationId = typeof previous === 'string' ? previous.toLowerCase() : null;
-
+  const confirmedPreviousOperationIds = [...new Set([
+    ...(Array.isArray(previousIds) ? previousIds.map((id: string) => id.toLowerCase()) : []),
+    ...(typeof previous === 'string' ? [previous.toLowerCase()] : []),
+  ])].sort();
+  if (confirmedPreviousOperationIds.includes(operationId)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+  const confirmResend = body.confirmResend === true;
+  const expectedGeneration = str(body.expectedGeneration);
+  const dispatchToken = str(body.dispatchToken);
+  if (phase === 'prepare' && ((!/^(0|[1-9][0-9]{0,18})$/.test(expectedGeneration)
+    || BigInt(expectedGeneration) > 9223372036854775807n)
+    || (body.confirmResend !== undefined && typeof body.confirmResend !== 'boolean')
+    || (confirmedPreviousOperationIds.length > 0 && !confirmResend))) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+  if (phase === 'dispatch' && !UUID_RE.test(dispatchToken)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
 
   // Resolve before creating a share link or reading any mutable list side effect. A disabled
   // database setting intentionally wins over environment fallback in resolveSmtpConfig.
@@ -153,15 +190,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const hash = (value: string) => createHash('sha256').update(value, 'utf8').digest('hex');
   const fingerprint = hash(JSON.stringify([listId, toEmail, subject, html, prepared.sender.address, prepared.sender.name]));
   const args = { p_user_id: userData.user.id, p_list_id: listId, p_operation_id: operationId };
-  const api = server.schema('api');
-  const unavailable = () => NextResponse.json({ error: 'email_protection_unavailable' }, { status: 503 });
+  const unavailable = protectionUnavailable;
   const receiptResponse = (receipt: Rec): NextResponse | null => {
-    if (receipt.state === 'accepted') return success(toEmail, receipt.tracking_updated === true);
+    if (receipt.state === 'accepted') {
+      const proof = str(receipt.result_token);
+      return /^[0-9a-f]{64}$/.test(proof) ? success(toEmail, receipt.tracking_updated === true, operationId, proof) : unavailable();
+    }
     if (receipt.state === 'forbidden') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    if (receipt.state === 'stale') return NextResponse.json({ error: 'email_context_stale' }, { status: 409 });
     if (receipt.state === 'conflict' || receipt.state === 'superseded') return NextResponse.json({ error: 'bad_request' }, { status: 409 });
     if (receipt.state === 'started' || receipt.state === 'unknown') {
       const previousOperation = str(receipt.operation_id) || operationId;
-      return NextResponse.json({ error: 'email_delivery_unknown', operationId: previousOperation }, { status: 409 });
+      return NextResponse.json({ error: 'email_delivery_unknown', operationId: previousOperation,
+        operationIds: Array.isArray(receipt.operation_ids) ? receipt.operation_ids : [previousOperation] }, { status: 409 });
     }
     if (receipt.state === 'rejected') {
       if (receipt.rejection_code === 'NOT_CONFIGURED') return NextResponse.json({ error: 'smtp_not_configured' }, { status: 503 });
@@ -169,38 +210,53 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
     return null;
   };
-  let receipt: Rec | null;
+  const recipientFingerprint = hash(toEmail);
+  if (phase === 'prepare') {
+    let receipt: Rec | null;
+    try {
+      const result = await api.rpc('prepare_list_email', { ...args, p_fingerprint: fingerprint,
+        p_recipient_fingerprint: recipientFingerprint, p_expected_generation: expectedGeneration,
+        p_confirm_resend: confirmResend, p_confirmed_previous_operation_ids: confirmedPreviousOperationIds });
+      receipt = asRec(result.data);
+      if (result.error || !receipt) return unavailable();
+    } catch { return unavailable(); }
+    const response = receiptResponse(receipt);
+    if (response) return response;
+    const token = str(receipt.attempt_token);
+    if (receipt.state !== 'reserved' || !UUID_RE.test(token)) return unavailable();
+    // This acknowledgement is a permit only. No SMTP or automatic continuation
+    // exists on the server; a lost prepare response cannot dispatch by itself.
+    return NextResponse.json({ ok: true, phase: 'prepared', operationId, dispatchToken: token },
+      { status: 200, headers: { 'Cache-Control': 'no-store' } });
+  }
+  const attemptToken = dispatchToken;
   try {
-    const claimed = await api.rpc('claim_list_email', { ...args, p_fingerprint: fingerprint,
-      p_recipient_fingerprint: hash(toEmail), p_confirmed_previous_operation_id: confirmedPreviousOperationId });
-    receipt = asRec(claimed.data);
-    if (claimed.error || !receipt) return unavailable();
-  } catch { return unavailable(); }
-  const existingResponse = receiptResponse(receipt);
-  if (existingResponse) return existingResponse;
-  const attemptToken = str(receipt.attempt_token);
-  if (receipt.state !== 'reserved' || !UUID_RE.test(attemptToken)) return unavailable();
-  try {
-    const begun = await api.rpc('begin_list_email', { ...args, p_attempt_token: attemptToken });
-    const verdict = asRec(begun.data);
-    if (begun.error || !verdict) return unavailable();
+    const result = await api.rpc('begin_list_email', { ...args, p_attempt_token: attemptToken,
+      p_fingerprint: fingerprint, p_recipient_fingerprint: recipientFingerprint });
+    const verdict = asRec(result.data);
+    if (result.error || !verdict) return unavailable();
     if (verdict.started !== true) return receiptResponse(verdict) ?? unavailable();
   } catch { return unavailable(); }
-  const complete = async (outcome: 'accepted' | 'rejected' | 'unknown', trackingUpdated = false, rejectionCode: string | null = null) => {
+  const complete = async (outcome: 'accepted' | 'rejected' | 'unknown', trackingUpdated = false, rejectionCode: string | null = null, resultToken: string | null = null) => {
     try {
       const result = await api.rpc('complete_list_email', { ...args, p_attempt_token: attemptToken,
-        p_outcome: outcome, p_tracking_updated: trackingUpdated, p_rejection_code: rejectionCode });
+        p_outcome: outcome, p_tracking_updated: trackingUpdated, p_rejection_code: rejectionCode, p_result_token: resultToken });
       return !result.error && result.data === true;
     } catch { return false; }
   };
   // The durable started state is committed BEFORE SMTP. A crash/timeout after this point
   // remains uncertain and cannot automatically reserve another transmission.
+  let resultToken: string;
+  try { resultToken = randomBytes(32).toString('hex'); }
+  catch { await complete('rejected', false, 'CONFIG_UNAVAILABLE'); return unavailable(); }
+  // The result proof stays server-only until the relay accepts the message. Its
+  // HEX64 type is distinct from the UUID permit; ACK still requires durable accepted.
   try { await prepared.send(); }
   catch (error) {
     const rejectionCode = error instanceof MailNotConfiguredError ? 'NOT_CONFIGURED'
       : error instanceof MailDeliveryError ? error.rejectionCode : null;
     await complete(rejectionCode ? 'rejected' : 'unknown', false, rejectionCode);
-    if (!rejectionCode) return NextResponse.json({ error: 'email_delivery_unknown', operationId }, { status: 409 });
+    if (!rejectionCode) return NextResponse.json({ error: 'email_delivery_unknown', operationId, operationIds: [operationId] }, { status: 409 });
     if (rejectionCode === 'NOT_CONFIGURED') return NextResponse.json({ error: 'smtp_not_configured' }, { status: 503 });
     return NextResponse.json({ error: 'send_failed', detail: error instanceof Error ? error.message : '' }, { status: 502 });
   }
@@ -224,15 +280,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // A missing receipt ACK cannot undo the known relay acceptance. Keep 200; a replay
   // sees started/unknown and asks for explicit confirmation rather than resending.
-  await complete('accepted', trackingUpdated);
-  return success(toEmail, trackingUpdated);
+  await complete('accepted', trackingUpdated, null, resultToken);
+  return success(toEmail, trackingUpdated, operationId, resultToken);
 }
 
-function success(toEmail: string, trackingUpdated: boolean): NextResponse {
+function protectionUnavailable(): NextResponse {
+  return NextResponse.json({ error: 'email_protection_unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+}
+
+function success(toEmail: string, trackingUpdated: boolean, operationId: string, resultToken: string): NextResponse {
   return NextResponse.json(
     trackingUpdated
-      ? { ok: true, sentTo: toEmail, trackingUpdated: true }
-      : { ok: true, sentTo: toEmail, trackingUpdated: false, warning: 'tracking_update_failed' },
-    { status: 200 },
+      ? { ok: true, phase: 'accepted', operationId, resultToken, sentTo: toEmail, trackingUpdated: true }
+      : { ok: true, phase: 'accepted', operationId, resultToken, sentTo: toEmail, trackingUpdated: false, warning: 'tracking_update_failed' },
+    { status: 200, headers: { 'Cache-Control': 'no-store' } },
   );
 }

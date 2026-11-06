@@ -27,6 +27,7 @@ jest.mock('@/services/service-availability', () => ({
 jest.mock('@/services/lists', () => ({
   ...jest.requireActual('@/services/lists'),
   getList: jest.fn(),
+  getListEmailContext: jest.fn(async () => ({ generations: {} })),
   updateList: jest.fn(),
   setListItems: jest.fn(),
   deleteList: jest.fn(),

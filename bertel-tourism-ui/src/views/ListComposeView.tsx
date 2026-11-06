@@ -54,6 +54,8 @@ import {
   duplicateList,
   ensureListShareLink,
   getList,
+  getListEmailContext,
+  LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE,
   listItemFromObjectCard,
   listsQueryKeys,
   mergeEnrichedListItems,
@@ -203,19 +205,20 @@ export default function ListComposeView({ listId }: { listId: string }) {
   // React n'ait eu la chance de committer `sending`/`langSwitching`.
   const actionLockRef = useRef(false);
   const sendScopeRef = useRef({ generation: 0, identity: currentIdentityKey, controller: null as AbortController | null });
-  const uncertainSendRef = useRef<{ identity: string; email: string; operationId: string } | null>(null);
+  const uncertainSendRef = useRef(new Map<string, { identity: string; operationIds: string[] }>());
   if (sendScopeRef.current.identity !== currentIdentityKey) {
     sendScopeRef.current.generation += 1;
     sendScopeRef.current.identity = currentIdentityKey;
     sendScopeRef.current.controller?.abort();
-    uncertainSendRef.current = null;
+    uncertainSendRef.current.clear();
   }
   useEffect(() => {
     // A→B→A may be batched into one render. Invalidate synchronously on each real
     // identity/authority change, rather than comparing only the final rendered IDs.
     const unsubscribe = useSessionStore.subscribe((state, previous) => {
       if (state.userId === previous.userId && state.orgId === previous.orgId && state.status === previous.status
-        && state.role === previous.role && state.isTestRealm === previous.isTestRealm && state.demoMode === previous.demoMode) return;
+        && state.role === previous.role && state.isTestRealm === previous.isTestRealm && state.demoMode === previous.demoMode
+        && state.canEditObjects === previous.canEditObjects && state.adminRank === previous.adminRank) return;
       sendScopeRef.current.generation += 1;
       const controller = sendScopeRef.current.controller;
       if (controller) {
@@ -224,7 +227,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
         actionLockRef.current = false;
         setSending(false);
       }
-      uncertainSendRef.current = null;
+      uncertainSendRef.current.clear();
       setErrorMessage(null);
       setSendNotice(null);
     });
@@ -235,6 +238,21 @@ export default function ListComposeView({ listId }: { listId: string }) {
       sendScopeRef.current.controller = null;
     };
   }, []);
+  const emailContextKey = ['list-email-context', listId, userId, orgId] as const;
+  const emailContext = useQuery({
+    queryKey: emailContextKey,
+    enabled: serviceAvailability.email && Boolean(userId), retry: false,
+    queryFn: ({ queryKey, signal }) => {
+      const [, targetList, targetUser, targetOrg] = queryKey;
+      const identity = `${targetList}:${targetUser ?? ''}:${targetOrg ?? ''}`;
+      const generation = sendScopeRef.current.generation;
+      return getListEmailContext(targetList, { expectedUserId: targetUser, signal, isCurrent: () => {
+        const current = useSessionStore.getState();
+        return sendScopeRef.current.generation === generation && sendScopeRef.current.identity === identity
+          && current.userId === targetUser && current.orgId === targetOrg;
+      } });
+    },
+  });
   useEffect(() => {
     const controller = sendScopeRef.current.controller;
     if (controller?.signal.aborted) {
@@ -733,12 +751,17 @@ export default function ListComposeView({ listId }: { listId: string }) {
 
   async function handleSend() {
     if (actionLockRef.current || !detail || !serviceAvailability.email) return;
+    // Freeze the complete recipient counter map before the prompt or any await.
+    // A gesture never obtains a newer generation automatically after waiting.
+    const context = emailContext.data && { generations: { ...emailContext.data.generations } };
+    if (!context) { setErrorMessage(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE); return; }
     const email = window.prompt('Adresse e-mail du destinataire :', '')?.trim();
     if (!email) return;
-    const previous = uncertainSendRef.current;
-    const confirmedPreviousOperationId = previous?.identity === currentIdentityKey && previous.email === email
-      ? previous.operationId : undefined;
-    if (confirmedPreviousOperationId && !window.confirm(LIST_EMAIL_RESEND_CONFIRMATION)) return;
+    const previous = uncertainSendRef.current.get(email);
+    const confirmedPreviousOperationIds = previous?.identity === currentIdentityKey ? [...previous.operationIds] : [];
+    const confirmedPreviousOperationId = confirmedPreviousOperationIds.at(-1);
+    const confirmResend = previous?.identity === currentIdentityKey;
+    if (confirmResend && !window.confirm(LIST_EMAIL_RESEND_CONFIRMATION)) return;
     const scope = sendScopeRef.current;
     const generation = scope.generation;
     const controller = new AbortController();
@@ -753,9 +776,9 @@ export default function ListComposeView({ listId }: { listId: string }) {
     try {
       const abandonedLocalEdits = await flushPendingEdits();
       if (!isCurrent()) return;
-      const result = await sendListByEmail(listId, email, { operationId, confirmedPreviousOperationId, isCurrent, signal: controller.signal });
+      const result = await sendListByEmail(listId, email, { operationId, context, confirmResend, confirmedPreviousOperationId, confirmedPreviousOperationIds, isCurrent, expectedUserId: userId, signal: controller.signal });
       if (!isCurrent()) return;
-      uncertainSendRef.current = null;
+      uncertainSendRef.current.delete(email);
       invalidate();
       const sentTo = `E-mail envoyé à ${email}.`;
       // L'e-mail est parti dès que sendListByEmail résout (le relais SMTP l'a accepté) : on ne
@@ -779,8 +802,13 @@ export default function ListComposeView({ listId }: { listId: string }) {
       );
     } catch (e) {
       if (!isCurrent()) return;
-      uncertainSendRef.current = e instanceof ListEmailUnknownError
-        ? { identity: currentIdentityKey, email, operationId: e.operationId } : null;
+      if (e instanceof ListEmailUnknownError) {
+        const pending = uncertainSendRef.current.get(email);
+        uncertainSendRef.current.set(email, { identity: currentIdentityKey,
+          operationIds: [...new Set([...(pending?.identity === currentIdentityKey ? pending.operationIds : []), ...e.operationIds])] });
+      }
+      // A certain refusal of B does not close an earlier A. Keep its chain until
+      // an accepted, structured ACK of an intention that carries every predecessor.
       setErrorMessage(
         strictErrorMessage(e, "Échec de l'envoi. Vos modifications restent affichées ici ; réessayez."),
       );
@@ -789,6 +817,8 @@ export default function ListComposeView({ listId }: { listId: string }) {
         sendScopeRef.current.controller = null;
         setSending(false);
         actionLockRef.current = false;
+        // Read-only refresh belongs to future gestures; never retry this one.
+        void queryClient.invalidateQueries({ queryKey: emailContextKey });
       }
     }
   }

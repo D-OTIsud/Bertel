@@ -196,12 +196,13 @@ test('map preview actions remain clickable where the real legend overlaps', asyn
   const { errors, unexpected } = await offlineExplorer(page, testInfo);
   await page.getByRole('combobox', { name: 'Rechercher une fiche' }).fill('Hotel Basalte');
   await expect(page.locator('.explorer-result-card')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Carte', exact: true }).click();
+  await page.getByRole('button', { name: 'Split', exact: true }).click();
   const pin = page.locator('.map-marker-pin').first();
   await expect(pin).toBeVisible({ timeout: 20_000 });
   const legend = page.getByRole('group', { name: 'Légende des types', exact: true });
   const legendBounds = (await legend.boundingBox())!;
   const canvasBounds = (await page.locator('.maplibregl-canvas').boundingBox())!;
+  expect(legendBounds.y + legendBounds.height).toBeLessThanOrEqual(710);
   // Pan the real MapLibre canvas, keeping the marker on screen. The preview
   // then crosses the existing bottom-left legend, as observed in production.
   const destination = { x: legendBounds.x + 135, y: legendBounds.y + 115 };

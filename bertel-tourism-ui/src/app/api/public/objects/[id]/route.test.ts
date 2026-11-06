@@ -89,7 +89,8 @@ describe('GET /api/public/objects/[id]', () => {
     rpcMock.mockResolvedValue({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } });
     const res = await GET(req(), ctx());
     expect(res.status).toBe(200);
-    expect(rpcMock).toHaveBeenCalledWith('get_object_resource', expect.objectContaining({ p_object_id: VALID_ID }));
+    expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
     const json = await res.json();
     expect(json.meta.contract_version).toBe('1.0.0');
     expect(json.data).toEqual({ id: VALID_ID, name: 'Hôtel' });
@@ -108,32 +109,27 @@ describe('GET /api/public/objects/[id]', () => {
     expect(json.data.i18n).toBeUndefined(); // no i18n block unless ?lang=all
   });
 
-  it('?lang=all — resolves base keys in FR and merges the multi-language i18n block', async () => {
+  it('?lang=all — resolves FR and receives i18n within one coherent content/release RPC', async () => {
     mockStatus({ status: 'published' });
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_object_i18n_all'
-        ? Promise.resolve({ ok: true, status: 200, body: { description: { fr: 'Bonjour', en: 'Hello' } } })
-        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-    );
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 7 }, data: {
+      id: VALID_ID, name: 'Hôtel', i18n: { description: { fr: 'Bonjour', en: 'Hello' } },
+    } } });
     const reqAll = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?lang=all`, {
       headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
     });
     const res = await GET(reqAll, ctx());
     expect(res.status).toBe(200);
     // base resource resolved in FR (not "all")
-    expect(rpcMock).toHaveBeenCalledWith('get_object_resource', expect.objectContaining({ p_lang_prefs: ['fr'] }));
-    expect(rpcMock).toHaveBeenCalledWith('get_object_i18n_all', { p_object_id: VALID_ID });
+    expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_lang_prefs: ['fr'], p_i18n_all: true }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
     const json = await res.json();
     expect(json.data.i18n).toEqual({ description: { fr: 'Bonjour', en: 'Hello' } });
+    expect(json.meta.vocabulary_release).toBe(7);
   });
 
-  it('?lang=all — degrades to the base resource if the i18n block fetch fails (fail-open)', async () => {
+  it('?lang=all — preserves the base resource when SQL omits unavailable optional i18n', async () => {
     mockStatus({ status: 'published' });
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_object_i18n_all'
-        ? Promise.resolve({ ok: false, status: 502, body: { error: 'upstream_error' } })
-        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-    );
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 7 }, data: { id: VALID_ID, name: 'Hôtel' } } });
     const reqAll = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?lang=all`, {
       headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
     });
@@ -142,34 +138,29 @@ describe('GET /api/public/objects/[id]', () => {
     const json = await res.json();
     expect(json.data.id).toBe(VALID_ID);
     expect(json.data.i18n).toBeUndefined(); // block omitted on failure, not an error
+    expect(rpcMock).toHaveBeenCalledTimes(1);
   });
 
   it('?format=jsonld — merges the additive schema.org jsonld block, base keys untouched (I4)', async () => {
     mockStatus({ status: 'published' });
     const doc = { '@context': 'https://schema.org', '@type': 'Hotel', name: 'Hôtel' };
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_object_jsonld'
-        ? Promise.resolve({ ok: true, status: 200, body: doc })
-        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-    );
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 8 }, data: { id: VALID_ID, name: 'Hôtel', jsonld: doc } } });
     const reqJl = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=jsonld`, {
       headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
     });
     const res = await GET(reqJl, ctx());
     expect(res.status).toBe(200);
-    expect(rpcMock).toHaveBeenCalledWith('get_object_jsonld', { p_object_id: VALID_ID });
+    expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID, p_format: 'jsonld' }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
     const json = await res.json();
     expect(json.data.id).toBe(VALID_ID); // base keys untouched
     expect(json.data.jsonld).toEqual(doc);
+    expect(json.meta.vocabulary_release).toBe(8);
   });
 
-  it('?format=jsonld — degrades to the base resource if the jsonld block fetch fails (fail-open)', async () => {
+  it('?format=jsonld — preserves the base resource when SQL omits an unavailable optional pivot', async () => {
     mockStatus({ status: 'published' });
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_object_jsonld'
-        ? Promise.resolve({ ok: false, status: 502, body: { error: 'upstream_error' } })
-        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-    );
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 8 }, data: { id: VALID_ID, name: 'Hôtel' } } });
     const reqJl = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=jsonld`, {
       headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
     });
@@ -182,11 +173,7 @@ describe('GET /api/public/objects/[id]', () => {
 
   it('?format=jsonld — omits the block when the RPC returns null (unmapped type / unpublished)', async () => {
     mockStatus({ status: 'published' });
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_object_jsonld'
-        ? Promise.resolve({ ok: true, status: 200, body: null })
-        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-    );
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 8 }, data: { id: VALID_ID, name: 'Hôtel' } } });
     const reqJl = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=jsonld`, {
       headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
     });
@@ -197,21 +184,18 @@ describe('GET /api/public/objects/[id]', () => {
   });
 
   it.each(['datatourisme', 'apidae', 'tourinsoft'])(
-    '?format=%s — merges the additive interop block via get_object_interop, base keys untouched (I4b)',
+    '?format=%s — receives the additive interop block in the atomic wrapper, base keys untouched',
     async (fmt) => {
       mockStatus({ status: 'published' });
       const doc = { profile: fmt, ok: true };
-      rpcMock.mockImplementation((name: string, params: Record<string, unknown>) =>
-        name === 'get_object_interop' && params.p_profile === fmt
-          ? Promise.resolve({ ok: true, status: 200, body: doc })
-          : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-      );
+      rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 9 }, data: { id: VALID_ID, name: 'Hôtel', [fmt]: doc } } });
       const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=${fmt}`, {
         headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
       });
       const res = await GET(r, ctx());
       expect(res.status).toBe(200);
-      expect(rpcMock).toHaveBeenCalledWith('get_object_interop', { p_object_id: VALID_ID, p_profile: fmt });
+      expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID, p_format: fmt }));
+      expect(rpcMock).toHaveBeenCalledTimes(1);
       const json = await res.json();
       expect(json.data.id).toBe(VALID_ID); // base keys untouched
       expect(json.data[fmt]).toEqual(doc); // merged under a key named after the profile
@@ -219,13 +203,9 @@ describe('GET /api/public/objects/[id]', () => {
     },
   );
 
-  it('?format=apidae — degrades to the base resource if the interop fetch fails (fail-open)', async () => {
+  it('?format=apidae — preserves a base resource when SQL omits an unavailable optional pivot', async () => {
     mockStatus({ status: 'published' });
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_object_interop'
-        ? Promise.resolve({ ok: false, status: 502, body: { error: 'upstream_error' } })
-        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-    );
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: {}, data: { id: VALID_ID, name: 'Hôtel' } } });
     const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=apidae`, {
       headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
     });
@@ -238,11 +218,7 @@ describe('GET /api/public/objects/[id]', () => {
 
   it('?format=tourinsoft — omits the block when the RPC returns null (unmapped type)', async () => {
     mockStatus({ status: 'published' });
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_object_interop'
-        ? Promise.resolve({ ok: true, status: 200, body: null })
-        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-    );
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: {}, data: { id: VALID_ID, name: 'Hôtel' } } });
     const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft`, {
       headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
     });
@@ -253,31 +229,25 @@ describe('GET /api/public/objects/[id]', () => {
   });
 
   it.each(['reunion-hebergement-v1', 'reunion-regional-v1'] as const)(
-    '?format=tourinsoft&variant=%s — uses the dedicated regional RPC',
+    '?format=tourinsoft&variant=%s — passes the regional variant into the atomic wrapper',
     async (variant) => {
       mockStatus({ status: 'published' });
       const regional = { SyndicObjectID: VALID_ID, ObjectTypeName: 'Hôtellerie' };
-      rpcMock.mockImplementation((name: string) =>
-        name === 'get_object_tourinsoft'
-          ? Promise.resolve({ ok: true, status: 200, body: regional })
-          : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-      );
+      rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: {}, data: { id: VALID_ID, name: 'Hôtel', tourinsoft: regional } } });
       const r = new NextRequest(
         `http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft&variant=${variant}`,
         { headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) } },
       );
       const res = await GET(r, ctx());
       expect(res.status).toBe(200);
-      expect(rpcMock).toHaveBeenCalledWith('get_object_tourinsoft', {
-        p_object_id: VALID_ID,
-        p_variant: variant,
-      });
+      expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID, p_format: 'tourinsoft', p_variant: variant }));
+      expect(rpcMock).toHaveBeenCalledTimes(1);
       expect(rpcMock).not.toHaveBeenCalledWith('get_object_interop', expect.anything());
       expect((await res.json()).data.tourinsoft).toEqual(regional);
     },
   );
 
-  it('?format=tourinsoft&variant=legacy-v1 — preserves the historical interop RPC path', async () => {
+  it('?format=tourinsoft&variant=legacy-v1 — forwards the historical variant within the wrapper', async () => {
     mockStatus({ status: 'published' });
     rpcMock.mockResolvedValue({ ok: true, status: 200, body: { id: VALID_ID } });
     const r = new NextRequest(
@@ -285,7 +255,8 @@ describe('GET /api/public/objects/[id]', () => {
       { headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) } },
     );
     await GET(r, ctx());
-    expect(rpcMock).toHaveBeenCalledWith('get_object_interop', { p_object_id: VALID_ID, p_profile: 'tourinsoft' });
+    expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID, p_format: 'tourinsoft', p_variant: 'legacy-v1' }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
     expect(rpcMock).not.toHaveBeenCalledWith('get_object_tourinsoft', expect.anything());
   });
 
@@ -312,6 +283,34 @@ describe('GET /api/public/objects/[id]', () => {
     expect(res.status).toBe(200);
     expect(rpcMock).not.toHaveBeenCalledWith('get_object_interop', expect.anything());
     expect(rpcMock).not.toHaveBeenCalledWith('get_object_jsonld', expect.anything());
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 404 if the object is unpublished between the preliminary gate and the atomic SQL snapshot', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: null });
+    const result = await GET(req(), ctx());
+    expect(result.status).toBe(404);
+    expect((await result.json()).error).toBe('not_found');
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the release paired with content without exposing internal wrapper metadata', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 13, private_state: 'secret' }, data: {
+      id: VALID_ID, name: 'Version 13', canonical_description: { fr: 'private markdown' }, org_description: {},
+    } } });
+    const json = await (await GET(req(), ctx())).json();
+    expect(json.meta).toEqual({ contract_version: '1.0.0', vocabulary_release: 13 });
+    expect(json.data).toEqual({ id: VALID_ID, name: 'Version 13' });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not manufacture vocabulary metadata before the first publication', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: null }, data: { id: VALID_ID } } });
+    const json = await (await GET(req(), ctx())).json();
+    expect(json.meta).toEqual({ contract_version: '1.0.0' });
   });
 });
 

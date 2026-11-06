@@ -155,6 +155,9 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       accommodationPositioningsAny: (searchParams.get('accommodationPositionings') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
     }),
     ...(taxonomyAny !== undefined && { taxonomyAny }),
+    ...(searchParams.get('includeEquivalentPredecessors') != null && {
+      includeEquivalentPredecessors: searchParams.get('includeEquivalentPredecessors') === 'true',
+    }),
     ...(searchParams.get('amenityFamilies') != null && {
       amenityFamiliesAny: (searchParams.get('amenityFamilies') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
     }),
@@ -260,6 +263,9 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (normalizedFilters.common.rankedLabelSchemeCode && !normalizedFilters.common.rankedLabelIncludeEquivalents) {
     p.set('rankedLabelExact', 'true');
+  }
+  if (normalizedFilters.common.taxonomyAny.length > 0 && normalizedFilters.common.includeEquivalentPredecessors === true) {
+    p.set('includeEquivalentPredecessors', 'true');
   }
   if (normalizedFilters.common.rankedLabelSchemeCode && normalizedFilters.common.rankedLabelValueCodes.length > 0) {
     p.set('rankedLabelValues', normalizedFilters.common.rankedLabelValueCodes.join(','));

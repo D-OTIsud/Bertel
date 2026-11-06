@@ -92,13 +92,13 @@ export function ClassificationEditModal({
 
   function selectScheme(code: string) {
     const scheme = schemes.find((candidate) => candidate.code === code);
-    if (!scheme) {
+    if (!scheme || scheme.disabled) {
       set({ schemeId: '', schemeCode: '', schemeLabel: '', valueId: '', valueCode: '', valueLabel: '' });
       return;
     }
     // Auto-resolve the first still-available value so save is enabled immediately;
     // for single-value labels this is the only ("accordé") value.
-    const firstValue = availableValueOptions(scheme, existingItems, '')[0] ?? scheme.valueOptions[0] ?? null;
+    const firstValue = availableValueOptions(scheme, existingItems, '')[0] ?? null;
     set({
       schemeId: scheme.id,
       schemeCode: scheme.code,
@@ -117,7 +117,9 @@ export function ClassificationEditModal({
   // strings (YYYY-MM-DD) compare lexically = chronologically.
   const datesOutOfOrder = Boolean(draft.awardedAt && draft.validUntil && draft.validUntil < draft.awardedAt);
   const saveDisabled =
-    !draft.schemeCode || !draft.valueCode || (awardedRequired && !draft.awardedAt) || datesOutOfOrder;
+    !draft.schemeCode || !draft.valueCode || (awardedRequired && !draft.awardedAt) || datesOutOfOrder
+    || (mode === 'add' && Boolean(currentScheme?.disabled))
+    || Boolean(currentScheme?.valueOptions.find((option) => option.code === draft.valueCode)?.disabled && draft.valueCode !== originalValueCode);
   const missing =
     Number(!draft.schemeCode || !draft.valueCode) +
     Number(awardedRequired && !draft.awardedAt) +
@@ -150,6 +152,7 @@ export function ClassificationEditModal({
                     <Chip
                       key={scheme.code}
                       label={scheme.label}
+                      disabled={scheme.disabled || availableValueOptions(scheme, existingItems, '').length === 0}
                       on={draft.schemeCode === scheme.code}
                       onClick={() => selectScheme(scheme.code)}
                     />
@@ -172,6 +175,7 @@ export function ClassificationEditModal({
                   <Chip
                     key={option.code}
                     label={option.label}
+                    disabled={option.disabled}
                     on={draft.valueCode === option.code}
                     onClick={() =>
                       set({ valueId: option.id ?? '', valueCode: option.code, valueLabel: option.label })

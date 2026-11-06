@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '../lib/supabase';
+import { readThesaurusReferenceSnapshot, type ReferenceSnapshot } from './thesaurus-generation';
 import { useSessionStore } from '../store/session-store';
 import type {
   AccessibilityAmenityRef,
@@ -541,6 +542,13 @@ function toAccommodationFamilies(rows: Array<{
  * Les deux surfaces voient ainsi exactement les mêmes domaines, nœuds actifs,
  * niveaux et libellés issus de ref_code.
  */
+function snapshotTaxonomies(snapshot: ReferenceSnapshot): ExplorerTaxonomyDomain[] {
+  const domains = (snapshot.tables.ref_code_domain_registry ?? []).filter((d) => d.is_taxonomy === true && d.object_type !== 'ORG') as unknown as TaxonomyDomainRow[];
+  const codes = new Set(domains.map((d) => d.domain));
+  const nodes = Object.values(snapshot.refCodeByDomain).flat().filter((n) => codes.has(String(n.domain)) && n.is_active !== false) as unknown as TaxonomyNodeRow[];
+  return buildTaxonomyDomains(domains, nodes);
+}
+
 export async function listTaxonomyReferences(): Promise<ExplorerTaxonomyDomain[]> {
   const session = useSessionStore.getState();
   const client = getSupabaseClient();
@@ -548,6 +556,9 @@ export async function listTaxonomyReferences(): Promise<ExplorerTaxonomyDomain[]
   if (session.demoMode || !client) {
     return buildDemoReferences(ACCESSIBILITY_DISABILITY_REFERENCES).taxonomies;
   }
+
+  const snapshot = await readThesaurusReferenceSnapshot();
+  if (snapshot) return snapshotTaxonomies(snapshot);
 
   const taxonomyDomainsResult = await client
     .from('ref_code_domain_registry')
@@ -593,6 +604,10 @@ export async function listAccommodationFamilies(): Promise<ExplorerAccommodation
     return buildDemoReferences(ACCESSIBILITY_DISABILITY_REFERENCES).accommodationFamilies ?? [];
   }
 
+  const snapshot = await readThesaurusReferenceSnapshot(['accommodation_family']);
+  if (snapshot) return toAccommodationFamilies((snapshot.refCodeByDomain.accommodation_family ?? [])
+    .filter((row) => row.is_active !== false) as unknown as Array<{code:string;name:string;description:string|null;position:number|null;metadata?:unknown}>);
+
   const result = await client
     .from('ref_code')
     .select('code,name,description,position,metadata')
@@ -617,6 +632,10 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     return buildDemoReferences(ACCESSIBILITY_DISABILITY_REFERENCES);
   }
 
+  const snapshot = await readThesaurusReferenceSnapshot();
+  const result = <T,>(data: T) => ({ data, error: null });
+  const codeRows = (domain: string) => (snapshot?.refCodeByDomain[domain] ?? []).filter((r) => r.is_active !== false);
+
   const [
     metricsResult,
     applicabilityResult,
@@ -635,7 +654,25 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     rankedLabelApplicabilityResult,
     capacityBoundsResult,
     rankedLabelSchemeValuesResult,
-  ] = await Promise.all([
+  ] = snapshot ? [
+    result(snapshot.tables.ref_capacity_metric ?? []),
+    result(snapshot.tables.ref_capacity_applicability ?? []),
+    snapshotTaxonomies(snapshot),
+    result(codeRows('accommodation_family')),
+    result(codeRows('iti_practice')),
+    result(codeRows('environment_tag')),
+    result(codeRows('accommodation_unit_type').filter((r) => r.is_assignable !== false)),
+    result(codeRows('amenity_family')),
+    result(snapshot.tables.ref_tag ?? []),
+    result(snapshot.locationOptions ?? null),
+    result((snapshot.tables.ref_amenity ?? []).filter((r) => r.scope === 'object' || r.scope === 'both')),
+    result(snapshot.tables.ref_sustainability_action_category ?? []),
+    result(snapshot.tables.ref_sustainability_action ?? []),
+    result((snapshot.tables.ref_classification_scheme ?? []).filter((r) => r.is_distinction === true)),
+    result(snapshot.tables.ref_classification_scheme_applicability ?? []),
+    result(snapshot.tables.v_capacity_metric_bounds ?? []),
+    result(snapshot.tables.ref_classification_value ?? []),
+  ] as const : await Promise.all([
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
     listTaxonomyReferences(),
@@ -756,6 +793,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     .filter((row) => row.scheme?.is_distinction === true);
 
   return {
+    ...(snapshot ? { vocabularyRelease: snapshot.meta.vocabulary_release } : {}),
     accessibilityDisabilityTypes: ACCESSIBILITY_DISABILITY_REFERENCES,
     accessibilityAmenities: buildAccessibilityAmenities(accessibilityAmenities),
     sustainabilityCategories: buildSustainabilityCategories(sustainabilityCategories, sustainabilityActions),

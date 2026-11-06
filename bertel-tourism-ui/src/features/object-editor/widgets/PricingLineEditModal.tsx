@@ -413,7 +413,7 @@ export function PricingLineEditModal({
                       {pricing.priceSeasonOptions.map((option) => (
                         <Chip
                           key={option.id || option.code}
-                          label={option.label}
+                          label={option.label} disabled={option.disabled}
                           on={draft.seasonCode === option.code}
                           onClick={() => set({ seasonCode: draft.seasonCode === option.code ? '' : option.code }, 'season')}
                         />

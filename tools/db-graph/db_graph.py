@@ -69,6 +69,7 @@ def main():
     tbls = _read("schema_tbls.json")
     extra = _read("catalog_extra.json")
     sql_paths = glob.glob(os.path.join(ROOT, "Base de donnée DLL et API", "*.sql"))
+    sql_paths += sorted(glob.glob(os.path.join(ROOT, "supabase", "migrations", "*.sql")))
     reference_paths = _reference_sql_paths(sql_paths)
     g = build_graph(tbls, extra, sql_paths)
     seed_refs = _make_sources_relative(extract_reference_values(reference_paths))

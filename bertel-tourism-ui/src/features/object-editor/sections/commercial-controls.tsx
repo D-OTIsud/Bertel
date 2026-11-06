@@ -187,7 +187,7 @@ function LanguagesModal({
 
   const levelChoices = [
     { v: '', l: 'Aucun niveau' },
-    ...languageLevelOptions.map((option) => ({ v: option.id, l: option.label })),
+    ...languageLevelOptions.map((option) => ({ v: option.id, l: option.label, disabled: option.disabled })),
   ];
   const folded = fold(query.trim());
   const available = languageOptions.filter(
@@ -217,7 +217,7 @@ function LanguagesModal({
         <div className="lang-level-grid">
           {codes.map((code) => (
             <div className={`lang-level-grid__row${focusCode === code ? ' is-focus' : ''}`} key={code}>
-              <span className="lang-level-grid__name">{labelFor(code)}</span>
+              <span className="lang-level-grid__name">{labelFor(code)}{languageOptions.find((option) => option.code === code)?.disabled ? ' — à requalifier' : ''}</span>
               <div className="lang-level-grid__act">
                 <Select
                   value={levelByCode[code] ?? ''}
@@ -246,7 +246,7 @@ function LanguagesModal({
         {available.map((option) => (
           <Chip
             key={option.code}
-            label={option.label}
+            label={option.label} disabled={option.disabled}
             sm
             onClick={() => setCodes((prev) => (prev.includes(option.code) ? prev : [...prev, option.code]))}
           />

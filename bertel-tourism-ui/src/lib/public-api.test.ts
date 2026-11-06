@@ -54,3 +54,25 @@ it('preserves successful RPC data without logging it', async () => {
   expect(await callPublicRpc('get_object_resource', { p_id: 'object' })).toEqual({ ok: true, status: 200, body: { id: 'object' } });
   expect(console.error).not.toHaveBeenCalled();
 });
+
+it.each([
+  ['PT400', 400, 'invalid_parameters'], ['PT404', 404, 'not_found'],
+  ['PT409', 409, 'conflict'], ['PT503', 503, 'release_unavailable'],
+])('maps explicit thesaurus domain errors without exposing SQL text: %s', async (code, status, error) => {
+  rpcMock.mockResolvedValue({ data: null, error: { code, message: 'private SQL text' } });
+  expect(await callPublicRpc('thesaurus_public', { p_action: 'concepts' })).toEqual({ ok: false, status, body: { error } });
+  expect(console.error).not.toHaveBeenCalled();
+});
+
+it('does not apply thesaurus error translation to unrelated public RPCs', async () => {
+  rpcMock.mockResolvedValue({ data: null, error: { code: 'PT404', message: 'private SQL text' } });
+  expect(await callPublicRpc('get_object_resource', {})).toEqual(genericError);
+});
+
+it.each(['list_partner_objects_with_vocabulary', 'get_partner_object_with_vocabulary'])(
+  'translates invalid atomic-wrapper parameters into safe 400 (%s)', async (name) => {
+    rpcMock.mockResolvedValue({ data: null, error: { code: 'PT400', message: 'private SQL state' } });
+    expect(await callPublicRpc(name, {})).toEqual({ ok: false, status: 400,
+      body: { error: 'bad_request', detail: 'invalid parameters or cursor' } });
+  },
+);

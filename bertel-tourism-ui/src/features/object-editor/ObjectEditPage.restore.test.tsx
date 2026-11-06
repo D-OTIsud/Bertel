@@ -8,8 +8,13 @@ import { useSessionStore } from '../../store/session-store';
 import { getObjectResource } from '../../services/rpc';
 import { getObjectVersions, restoreObjectVersion } from '../../services/object-versions';
 import { getObjectWorkspaceResource, saveObjectWorkspaceGeneralInfo, type ObjectWorkspaceResource } from '../../services/object-workspace';
+import { fetchThesaurusGeneration } from '../../services/thesaurus-generation';
 
 let mockEditor: ObjectEditorState;
+let mockVocabularyGeneration: string | null = null;
+jest.mock('../../services/thesaurus-generation', () => ({
+  ...jest.requireActual('../../services/thesaurus-generation'), fetchThesaurusGeneration: jest.fn(),
+}));
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 jest.mock('../../lib/supabase', () => ({ getApiClient: jest.fn(() => null), getSupabaseClient: jest.fn(() => null) }));
 jest.mock('../../services/rpc', () => ({ ...jest.requireActual('../../services/rpc'), getObjectResource: jest.fn() }));
@@ -19,7 +24,9 @@ jest.mock('../../services/object-versions', () => ({
 jest.mock('../../services/object-workspace', () => ({
   ...jest.requireActual('../../services/object-workspace'), getObjectWorkspaceResource: jest.fn(), saveObjectWorkspaceGeneralInfo: jest.fn(),
 }));
-jest.mock('../../hooks/useReferenceCatalogsQuery', () => ({ ensureReferenceCatalogs: jest.fn(async () => ({})) }));
+jest.mock('../../hooks/useReferenceCatalogsQuery', () => ({
+  ensureReferenceCatalogs: jest.fn(async () => ({ vocabularyRelease: mockVocabularyGeneration })),
+}));
 jest.mock('../../services/notification-delivery', () => ({ pingNotifyDrain: jest.fn() }));
 jest.mock('../../services/write-compatibility', () => ({
   ...jest.requireActual('../../services/write-compatibility'),
@@ -74,8 +81,9 @@ function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   clients.push(client);
   const initial = resource();
-  client.setQueryData(['object-detail', ID, ['fr']], initial);
-  client.setQueryData(['object-workspace', ID, ['fr']], initial);
+  const generationKey = mockVocabularyGeneration == null ? [] : [mockVocabularyGeneration];
+  client.setQueryData(['object-detail', ID, ['fr'], ...generationKey], initial);
+  client.setQueryData(['object-workspace', ID, ['fr'], ...generationKey], initial);
   jest.mocked(getObjectResource).mockImplementation(async (id) => resource(id) as never);
   jest.mocked(getObjectWorkspaceResource).mockImplementation(async (_id, _langs, _catalogs, detail) => detail as unknown as ObjectWorkspaceResource);
   jest.mocked(getObjectVersions).mockResolvedValue([
@@ -89,7 +97,7 @@ function mount() {
 }
 
 async function startRestore() {
-  fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Versions' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Restaurer la version 2' }));
   await waitFor(() => expect(restoreObjectVersion).toHaveBeenCalledTimes(1));
 }
@@ -106,6 +114,8 @@ function saveButton() { return screen.getByRole('button', { name: 'Enregistrer' 
 beforeEach(() => {
   window.localStorage.clear();
   jest.clearAllMocks();
+  mockVocabularyGeneration = null;
+  jest.mocked(fetchThesaurusGeneration).mockImplementation(async () => mockVocabularyGeneration);
   useSessionStore.setState({ demoMode: false, userId: USER, langPrefs: ['fr'] });
 });
 afterEach(() => {
@@ -114,7 +124,8 @@ afterEach(() => {
   for (const client of clients.splice(0)) client.clear();
 });
 
-it('the real page restores B, observes B, then a visibility save sends B rather than the pre-restore A', async () => {
+it.each([null, '3'])('the real page restores B, observes B, then a visibility save sends B rather than the pre-restore A (vocabulary %s)', async (generation) => {
+  mockVocabularyGeneration = generation;
   const view = mount();
   await startRestore();
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -244,7 +255,7 @@ it.each(['account', 'object'])('a restore response from the previous %s cannot a
 });
 
 async function queueOfflineRestore(view: ReturnType<typeof mount>) {
-  fireEvent.click(screen.getByRole('button', { name: 'Versions' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Versions' }));
   const restore = await screen.findByRole('button', { name: 'Restaurer la version 2' });
   act(() => onlineManager.setOnline(false));
   fireEvent.click(restore);

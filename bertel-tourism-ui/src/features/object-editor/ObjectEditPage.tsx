@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useUiStore } from '../../store/ui-store';
 import { useSessionStore } from '../../store/session-store';
 import { sessionQueryScopeKey } from '../../app/session-query-cache';
@@ -70,7 +70,16 @@ function changedSinceSave(
 /** Full-page object editor. Fetches the workspace resource, then hands off to
  *  EditorReady so the editor hooks only run once data is present. */
 export function ObjectEditPage({ objectId }: { objectId: string }) {
-  const { data, isError, error, refetch, isFetching } = useObjectWorkspaceQuery(objectId);
+  const read = useObjectWorkspaceQuery(objectId);
+  const { isError, error, refetch, isFetching } = read;
+  const userId = useSessionStore((state) => state.userId);
+  const identity = JSON.stringify([objectId, userId]);
+  const previous = useRef<{ identity: string; data: ObjectWorkspaceResource } | null>(null);
+  if (read.data) previous.current = { identity, data: read.data };
+  // A vocabulary generation changes the query key while the draft still belongs
+  // to the same editor. Keep that editor mounted, including when local storage
+  // is unavailable; an object/account transition never reuses this fallback.
+  const data = read.data ?? (previous.current?.identity === identity ? previous.current.data : undefined);
   const loadError = isError ? (
       <div className="panel-card panel-card--warning" role="alert">
         <p>{(error as Error).message}</p>
@@ -93,14 +102,14 @@ export function ObjectEditPage({ objectId }: { objectId: string }) {
       </div>
     );
   }
-  // Keep the editor mounted after a failed background refresh: its unsaved draft
-  // lives in component state. Pause editing until the permissions reload succeeds;
+  // Keep the editor mounted during vocabulary refresh or after a failed read:
+  // its unsaved draft lives in component state. Pause editing until the current read succeeds;
   // the memory-only draft export remains available without a server read or write.
   return (
     <>
       {loadError}
       <EditorModalContext.Provider value={`${data.name} · ${data.type ? TYPE_LABEL[data.type as keyof typeof TYPE_LABEL] || data.type : meta.family}`}>
-        <EditorReady resource={data} objectId={objectId} meta={meta} workspaceReadReady={!isError && !isFetching} workspaceReadFailed={isError} />
+        <EditorReady resource={data} objectId={objectId} meta={meta} workspaceQueryKey={read.workspaceQueryKey} workspaceReadReady={Boolean(read.data) && !isError && !isFetching} workspaceReadFailed={isError || !read.data} />
       </EditorModalContext.Provider>
     </>
   );
@@ -183,7 +192,7 @@ function buildHistoryItems(draft: ObjectWorkspaceModules): HistoryRailItem[] {
     .slice(0, 5);
 }
 
-function EditorReady({ resource, objectId, meta, workspaceReadReady, workspaceReadFailed }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta; workspaceReadReady: boolean; workspaceReadFailed: boolean }) {
+function EditorReady({ resource, objectId, meta, workspaceQueryKey, workspaceReadReady, workspaceReadFailed }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta; workspaceQueryKey: QueryKey; workspaceReadReady: boolean; workspaceReadFailed: boolean }) {
   const router = useRouter();
   const toast = useToast();
   const openDrawer = useUiStore((state) => state.openDrawer);
@@ -294,7 +303,7 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady, workspaceRe
 
   useEffect(() => {
     if (!restoring || !pendingRestore?.awaitingRead || !workspaceReadReady || resource.id !== objectId) return;
-    const current = queryClient.getQueryState<ObjectWorkspaceResource>(['object-workspace', objectId, langPrefs]);
+    const current = queryClient.getQueryState<ObjectWorkspaceResource>(workspaceQueryKey);
     // invalidateQueries can resolve before the observer delivers its fresh prop,
     // and can also resolve after a failed/paused refetch. Adopt only the exact
     // successful cache value that the page now observes, including after Retry.
@@ -304,7 +313,7 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady, workspaceRe
     setVersionsModalOpen(false);
     setStatusMessage(`Version v${pendingRestore.versionNumber} restaurée — une nouvelle version a été créée.`);
     setPendingRestore(null);
-  }, [restoring, pendingRestore, workspaceReadReady, resource, objectId, langPrefs, queryClient, editor.adoptRestoredModules]);
+  }, [restoring, pendingRestore, workspaceReadReady, workspaceQueryKey, resource, objectId, queryClient, editor.adoptRestoredModules]);
 
   // §E Import / export — frontend-only tool (no backend, no object creation).
   const [importExportOpen, setImportExportOpen] = useState(false);

@@ -131,3 +131,8 @@ outputs/
 /docs/design/Modales-proposition-source.html
 /.tmp-jest-gor-review/
 /.release-work/
+
+# Private database copies, credentials and transient thesaurus validation evidence.
+# Keep these out of both version control and source-graph discovery.
+/.tmp-iti-sections-local/
+/.tmp-thesaurus-implementation/

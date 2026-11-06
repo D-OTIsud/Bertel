@@ -80,7 +80,7 @@ export function DishFields({
             {dietOptions.map((o) => (
               <Chip
                 key={o.code}
-                label={o.label}
+                label={o.label} disabled={o.disabled}
                 sm
                 on={draft.dietaryTagCodes.includes(o.code)}
                 onClick={() => set({ dietaryTagCodes: toggleItemCode(draft.dietaryTagCodes, o.code) })}
@@ -99,7 +99,7 @@ export function DishFields({
             {originOptions.map((option) => (
               <Chip
                 key={option.code}
-                label={option.label}
+                label={option.label} disabled={option.disabled}
                 sm
                 on={draft.dietaryTagCodes.includes(option.code)}
                 onClick={() => set({ dietaryTagCodes: toggleItemCode(draft.dietaryTagCodes, option.code) })}
@@ -118,7 +118,7 @@ export function DishFields({
             {allergenOptions.map((o) => (
               <Chip
                 key={o.code}
-                label={o.label}
+                label={o.label} disabled={o.disabled}
                 sm
                 on={draft.allergenCodes.includes(o.code)}
                 onClick={() => set({ allergenCodes: toggleItemCode(draft.allergenCodes, o.code) })}

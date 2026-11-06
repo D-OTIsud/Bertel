@@ -22,10 +22,7 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
 RUN apk add --no-cache libc6-compat
 
 COPY package.json package-lock.json ./
-# Keep the same lockfile installation options as CI. Next.js 16.2.11 pins
-# @swc/helpers to 0.5.15, while @storybook/test-runner's @swc/core declares
-# an optional peer >=0.5.17. --legacy-peer-deps preserves the lockfile tree
-# despite this peer range mismatch; it is an explicit installation option.
+# Keep the same explicit lockfile installation option as CI.
 RUN npm ci --legacy-peer-deps
 
 COPY . .

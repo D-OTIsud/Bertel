@@ -3,8 +3,9 @@
 This targeted supplement describes the fresh source
 `Base de donnée DLL et API/ai_request_admission.sql`, originally reviewed as
 `20261106145451_distributed_ai_request_admission.sql`. Production received the
-guarded DO under real version `20261106200353` at 20:03:53 UTC; its exact request
-bytes are now the upgrade file. The fresh source remains the original bytes.
+guarded DO under real version `20261106200353`, observed by the postflight at
+20:05 UTC; its exact request bytes are now the upgrade file. The fresh source
+remains the original bytes.
 See the [production record](../docs/releases/2026-11-06-ai-admission-production.md).
 This supplement is a targeted postflight, not a full schema extraction.
 

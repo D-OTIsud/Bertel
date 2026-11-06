@@ -30,8 +30,9 @@ function roundTrip(value: ObjectWorkspaceModules): ObjectWorkspaceModules {
   const text = serializeObjectJson(stripCatalogOptions(value), { objectId: OBJECT, type: 'HOT', name: 'synthetic' });
   const parsed = parseImportedObjectJson(text);
   if (!parsed.ok) throw new Error(parsed.error);
+  expect(Object.keys(parsed.modules).sort()).toEqual(Object.keys(value).sort());
   return Object.fromEntries(Object.entries(parsed.modules).map(([key, module]) =>
-    [key, restoreCatalogOptions(module, value[key as keyof ObjectWorkspaceModules], key)])) as ObjectWorkspaceModules;
+    [key, restoreCatalogOptions(module, value[key as keyof ObjectWorkspaceModules], key)])) as unknown as ObjectWorkspaceModules;
 }
 function full(value = media()) {
   return { ...parseObjectWorkspace({ id: OBJECT, name: 'Synthetic', raw: {} }, ['fr']), media: value };

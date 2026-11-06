@@ -1,4 +1,5 @@
 /** @jest-environment node */
+jest.mock('server-only', () => ({}));
 import { POST } from './route';
 
 // Gabarit du dépôt pour une route service-role (§164 : src/app/api/admin/invite/route.test.ts) :
@@ -195,7 +196,7 @@ beforeEach(() => {
   mockedCreateClient.mockReset();
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://x.supabase.co';
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
-  delete process.env.NEXT_PUBLIC_APP_URL;
+  process.env.NEXT_PUBLIC_APP_URL = 'https://app.test';
 });
 
 describe('POST /api/crm/actor-access — identité et gate', () => {
@@ -413,18 +414,19 @@ describe('POST /api/crm/actor-access — invitation', () => {
     });
   });
 
-  it('sans configuration, l’origine vient de l’URL de la requête — toujours pas de l’en-tête Origin', async () => {
+  it('sans configuration, refuse avant toute invitation ou suppression de compte', async () => {
+    delete process.env.NEXT_PUBLIC_APP_URL;
     const spies = serverStub({ channels: ['marie@basalte.re'], newUserId: 'u-new' });
     gate();
-    await POST(
+    const response = await POST(
       req(
         { authorization: 'Bearer t', origin: 'https://attaquant.example' },
         { action: 'invite', actorId: ACTOR, email: 'marie@basalte.re' },
       ),
     );
-    expect(spies.inviteUserByEmail).toHaveBeenCalledWith('marie@basalte.re', {
-      redirectTo: 'https://app.test/set-password?espace=1',
-    });
+    expect(response.status).toBe(503);
+    expect(spies.inviteUserByEmail).not.toHaveBeenCalled();
+    expect(spies.deleteUser).not.toHaveBeenCalled();
   });
 
   it('422 quand l’e-mail n’est PAS un canal de CET acteur', async () => {

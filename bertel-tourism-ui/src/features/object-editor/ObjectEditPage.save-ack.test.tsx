@@ -192,6 +192,30 @@ it('exports retained C while a restored baseline B still requires an explicit co
   expect(saveObjectWorkspaceGeneralInfo).not.toHaveBeenCalled();
 });
 
+it('keeps the current-draft export reachable after a background workspace read fails, with editing still blocked', async () => {
+  const view = mount();
+  failDraftStorage();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C — retained during read failure' } });
+  const baseline = mockEditor.baseline;
+  await act(async () => {
+    view.client.getQueryCache().find({ queryKey: ['object-workspace', 'HOT-ACK'], exact: true })!.setState({
+      status: 'error', error: new Error('Synthetic workspace verification failure'), fetchStatus: 'idle',
+    });
+  });
+  await screen.findByText('Synthetic workspace verification failure');
+  const button = screen.getByRole('button', { name: 'Exporter le brouillon JSON' });
+  expect(button.closest('[inert]')).toBeNull();
+  expect(screen.getByLabelText('Synthetic name').closest('[inert]')).not.toBeNull();
+  expect(screen.getByRole('button', { name: 'Save' }).closest('[inert]')).not.toBeNull();
+  fireEvent.click(button);
+  expect(JSON.parse(jest.mocked(downloadTextFile).mock.calls[0][2]).modules.generalInfo.name).toBe('C — retained during read failure');
+  expect(mockEditor.baseline).toBe(baseline);
+  expect(mockEditor.isDirty).toBe(true);
+  expect(screen.getByText('Brouillon local indisponible')).toBeInTheDocument();
+  expect(loadObjectWorkspace).not.toHaveBeenCalled();
+  expect(saveObjectWorkspaceGeneralInfo).not.toHaveBeenCalled();
+});
+
 it.each([null, 'another-account'])('does not export an old account when the session changes during the click to %s', (userId) => {
   mount();
   failDraftStorage();

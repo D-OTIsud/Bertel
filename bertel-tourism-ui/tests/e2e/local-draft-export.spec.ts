@@ -1,11 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
-test('a failed local draft write can export the latest edits while keeping the previous recovery copy', async ({ page }, testInfo) => {
+test.beforeEach(async ({ page }, testInfo) => {
   const baseURL = testInfo.project.use.baseURL;
   if (!baseURL) throw new Error('The local application origin is required');
   const origin = new URL(baseURL).origin;
   await page.route(/^https?:\/\//, (route) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+});
+
+test('a failed local draft write can export the latest edits while keeping the previous recovery copy', async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     const setItem = Storage.prototype.setItem;
     Object.defineProperty(window, '__draftStoreBlocked', { value: false, writable: true });
@@ -55,3 +58,31 @@ test('a failed local draft write can export the latest edits while keeping the p
     await warning.screenshot({ path: testInfo.outputPath(`draft-warning-${width}.png`) });
   }
 });
+
+for (const denied of [['localStorage'], ['localStorage', 'sessionStorage']]) {
+  test(`a refused ${denied.join(' and ')} getter still lets the demo editor export current input`, async ({ page }) => {
+    await page.addInitScript((names) => {
+      for (const name of names) Object.defineProperty(window, name, {
+        configurable: true,
+        get: () => { throw new DOMException('Synthetic storage access refusal', 'SecurityError'); },
+      });
+    }, denied);
+    const objectId = 'HOTRUN0000000001';
+    await page.goto(`/objects/${objectId}/edit`);
+    const name = page.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
+    await expect(name).toBeVisible();
+    await name.fill('C — saisie sans accès au stockage');
+    const warning = page.getByRole('alert').filter({ hasText: 'Brouillon local indisponible' });
+    await expect(warning).toBeVisible();
+    const downloaded = page.waitForEvent('download');
+    await warning.getByRole('button', { name: 'Exporter le brouillon JSON', exact: true }).click();
+    const download = await downloaded;
+    const filename = await download.path();
+    if (!filename) throw new Error('The browser did not produce a draft download');
+    const envelope = JSON.parse(await readFile(filename, 'utf8'));
+    expect(envelope).toMatchObject({ format: 'bertel-object', version: 2, objectId, type: 'HOT' });
+    expect(envelope.modules.generalInfo.name).toBe('C — saisie sans accès au stockage');
+    await expect(name).toHaveValue('C — saisie sans accès au stockage');
+    await expect(warning).toBeVisible();
+  });
+}

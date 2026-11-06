@@ -34,7 +34,7 @@ jest.mock('../../store/ui-store', () => ({ useUiStore: () => jest.fn() }));
 jest.mock('../../store/session-store', () => ({
   useSessionStore: Object.assign(
     (selector: (state: unknown) => unknown) => selector({ userId: 'publication-iti', langPrefs: ['fr'] }),
-    { getState: () => ({ demoMode: false }), subscribe: () => () => {} },
+    { getState: () => ({ demoMode: false, userId: 'publication-iti' }), subscribe: () => () => {} },
   ),
 }));
 jest.mock('../../hooks/useToast', () => ({ useToast: () => ({ success: mockToastSuccess }) }));

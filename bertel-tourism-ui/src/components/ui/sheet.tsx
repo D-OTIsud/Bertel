@@ -63,7 +63,7 @@ const SheetContent = React.forwardRef<
       {showClose && (
         <SheetClose className="absolute right-4 top-4 rounded-full bg-background/80 p-2 text-foreground/70 transition-colors hover:bg-background hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">Fermer</span>
         </SheetClose>
       )}
     </SheetContentPrimitive>

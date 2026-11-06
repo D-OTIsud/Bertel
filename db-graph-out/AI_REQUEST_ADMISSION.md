@@ -1,8 +1,11 @@
 # AI admission — source/local catalog supplement, 6 November 2026
 
-This targeted supplement describes migration
-`20261106145451_distributed_ai_request_admission.sql` and its isolated PostgreSQL17
-execution. It is not a new extraction of the production catalog or whole schema.
+This targeted supplement describes the fresh source
+`Base de donnée DLL et API/ai_request_admission.sql`, originally reviewed as
+`20261106145451_distributed_ai_request_admission.sql`, and its isolated PostgreSQL17
+execution. The pending MCP upgrade template is
+`tools/ai-quota/prepared-mcp-upgrade.sql`; no generated production version is
+claimed. See the [preparation record](../docs/releases/2026-11-06-ai-admission-mcp-preparation.md). It is not a new extraction of the production catalog or whole schema.
 
 - `internal.ai_request_rate_state`: primary key `(user_id, route)`;
   `user_id uuid` FK `auth.users(id) ON DELETE CASCADE`;

@@ -2306,3 +2306,54 @@ Le numéro 19f de l'ancien document partenaire est remplacé par 19j pour ne pas
 **Validation et limites** : aucune connexion production. Parsing SQL/PLpgSQL local, cohérence des neuf fragments et des inverses, existence/ordre des includes ; l'exécution de toutes les fixtures et d'un fresh bootstrap PostgreSQL isolé reste à réaliser avant de certifier la convergence runtime. Les nouveaux constats d'audit des droits sont consignés séparément, sans correctif ajouté à ce lot.
 
 Résultat local de la consolidation : pglast 8.4 valide le SQL des 12 fichiers ajoutés/modifiés, les fonctions procédurales modifiées et les quatre blocs DO d'admission séparément ; 224 includes existent et l'ordre des dépendances est vérifié ; les neuf fragments inverses restaurent exactement la définition master initiale du builder après normalisation LF ; `git diff --check` passe. Aucun exécutable PostgreSQL/Docker local n'était disponible. Ces contrôles de source ne remplacent pas les tests d'exécution.
+
+## 20a — Socle photo seul pour installation fraîche
+
+`Base de donnée DLL et API/partner_photo_album_fresh_install.sql` est une
+initialisation **neuve uniquement**, après les dernières migrations canoniques
+portail, CRM, realm, notifications et lecteurs publics. Ce fichier ne constitue
+pas une migration universelle vers une base existante. Sa garde refuse un
+contrat album déjà présent, même une seule des 53 nouvelles signatures ou un
+artefact partiel, et toute divergence des quatre prédécesseurs partagés de
+soumission/modération. Aucun lecteur public de master n'est redéfini.
+
+Le socle déclare les fonctions finales du contrat photo, ses trois tables
+privées, les reçus CAS office, les index, les deux triggers de proposition et
+les six restrictions DML photo. Il garde les mutations acteur fermées, l'analyse
+photo désactivée et non configurée, l'ancien classement et l'expéditeur CRM
+générique fermés. Il n'installe aucun lot carte, menu, séjour ou horaires et ne
+normalise aucun objet ni photo. L'ouverture acteur demeure un cutover explicite
+distinct ; elle ne résulte pas d'une installation fraîche.
+
+Le manifeste exécute dans la même session psql la capture synthétique des
+lecteurs/JSON publics, le socle puis leur comparaison intégrale. La suite
+transactionnelle photo vérifie ensuite les signatures et droits, la fermeture,
+les reçus CAS/rejeux, les refus de portée et un recours photo privé non vide :
+lecture acteur, fermeture explicite, lecture office après recours lié et refus
+pour un autre office/acteur. Les chemins photo et pièce jointe CRM restent
+distincts. Le workflow SQL la rejoue réellement après l'installation complète,
+sans option oubliée ou identifiant opérateur.
+
+Un contrôle commun du catalogue vérifie les 57 sources, signatures, attributs,
+configurations et ACL exactes, y compris les droits requis. Il atteste aussi les
+colonnes, contraintes FK/CHECK, index et ACL des trois tables, les expressions,
+commandes et rôles des sept policies ciblées, les triggers et les deux index
+publics. Il s'exécute avant le COMMIT de l'initialiseur et dans les tests. Dix
+altérations transactionnelles jetables doivent être refusées : retrait d'un
+droit requis, ajouts anon/service_role, configuration, policy homonyme permissive,
+expression/rôles affaiblis, FK/CHECK/index manquant et type de colonne modifié.
+
+### Base photo déjà activée
+
+Ne rejouer **ni** cet initialiseur, **ni** le paquet historique du 5 novembre,
+**ni** une fermeture/réactivation pour aligner les fichiers du dépôt. Le contrôle
+`Base de donnée DLL et API/checks/check_partner_photo_album_existing.sql` est
+strictement en lecture seule et se termine par ROLLBACK. Il reconnaît les sources
+et attributs du contrat déjà actif avec ce même contrôle intégral du catalogue.
+Il exige les écritures acteur ouvertes et une analyse OFF comme dans l'état livré ; il ne change jamais ces états.
+
+Un succès permet de documenter l'adoption du socle dans la traçabilité de la
+cible existante, sans répéter ses DDL et sans inventer une entrée d'historique.
+Une divergence impose un delta revu et testé sur une copie isolée. Le paquet
+historique, ses empreintes et les preuves opérateur gardent leur provenance
+distincte. Les données, liens Storage et reçus existants doivent rester intacts.

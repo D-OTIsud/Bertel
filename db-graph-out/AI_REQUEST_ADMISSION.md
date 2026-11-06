@@ -33,7 +33,7 @@ fingerprint and ledger; it does not redate the earlier function/ACL capture.
 
 The source describes sliding-window admission for the two server routes
 `/api/ai/translate` and `/api/menu/extract`, via
-[`src/lib/ai-admission.server.ts`](../src/lib/ai-admission.server.ts).
+[`src/lib/ai-admission.server.ts`](../bertel-tourism-ui/src/lib/ai-admission.server.ts).
 Those source semantics and the observed catalogue are separate from runtime
 qualification: this refresh executed **no admission RPC**, read **no quota-state
 rows**, created no quota fixture and made no database mutation. It does not

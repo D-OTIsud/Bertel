@@ -445,8 +445,12 @@ describe('ListComposeView — durable uncertainty and current scope', () => {
     await act(async () => { resolve(baseDetail({ introFr: 'Synthetic draft C' })); });
     expect(sendListByEmail).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Mot d'introduction")).toHaveValue('Synthetic draft C');
+    // The old actor generation's ACK was intentionally not adopted. A fresh
+    // gesture must save the retained C under the current identity before SMTP.
+    jest.mocked(updateList).mockResolvedValue(baseDetail({ introFr: 'Synthetic draft C' }));
     fireEvent.click(screen.getByRole('button', { name: /^envoyer$/i }));
     await waitFor(() => expect(sendListByEmail).toHaveBeenCalledTimes(1));
+    expect(updateList).toHaveBeenCalledTimes(2);
     expect(await screen.findByRole('status')).toHaveTextContent('E-mail envoyé');
   });
   it('a late SMTP result after account ABA cannot display an old notice or leave the new view locked', async () => {

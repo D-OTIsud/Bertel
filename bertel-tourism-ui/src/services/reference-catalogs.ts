@@ -79,6 +79,7 @@ export const REF_CODE_DOMAINS = [
 export const REFERENCE_TABLE_SELECT = {
   ref_amenity: 'id, code, name, extra, family_id, position, scope, family:family_id(code, name, position)',
   ref_language: 'id, code, name, position',
+  ref_commune: 'insee_code, name, region_code, position, is_active',
   ref_contact_role: 'id, code, name',
   ref_org_role: 'id, code, name',
   ref_actor_role: 'id, code, name',

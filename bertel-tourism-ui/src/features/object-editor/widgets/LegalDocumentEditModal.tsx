@@ -77,7 +77,7 @@ export function LegalDocumentEditModal({
     ...(typeOptions.some((option) => option.code === draft.typeCode)
       ? []
       : [{ v: draft.typeCode, l: draft.typeLabel || draft.typeCode }]),
-    ...typeOptions.map((option) => ({ v: option.code, l: option.label })),
+    ...typeOptions.map((option) => ({ v: option.code, l: option.label, disabled: option.disabled })),
   ];
 
   // « Quand demander cette pièce » — vide pour un code hérité absent du catalogue (le Field masque
@@ -133,7 +133,7 @@ export function LegalDocumentEditModal({
     >
       <Field label="Type de document" required hint={selectedTypeDescription || undefined}>
         <ChipSet>
-          {typeOptions.slice(0, 8).map((option) => <Chip key={option.id} label={option.label} on={draft.typeCode === option.code} onClick={() => selectType(option.code)} />)}
+          {typeOptions.slice(0, 8).map((option) => <Chip key={option.id} label={option.label} disabled={option.disabled} on={draft.typeCode === option.code} onClick={() => selectType(option.code)} />)}
         </ChipSet>
         <Disclosure title="Autre document…" defaultOpen={!typeOptions.slice(0, 8).some((option) => option.code === draft.typeCode)}>
         <Select

@@ -49,6 +49,7 @@ function CreatableRefField({ label, value, options, objectId, busy, onSelect, on
             <Chip
               key={option.code}
               label={option.label}
+              disabled={option.disabled}
               on={value === option.code}
               onClick={() => onSelect(option.code)}
             />

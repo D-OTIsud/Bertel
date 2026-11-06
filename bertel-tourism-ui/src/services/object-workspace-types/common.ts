@@ -10,6 +10,8 @@ export interface WorkspaceReferenceOption {
   id: string;
   code: string;
   label: string;
+  /** Historical references remain visible but cannot be newly assigned. */
+  disabled?: boolean;
 }
 
 /** A media reference option that also carries its file URL, so pickers can render a

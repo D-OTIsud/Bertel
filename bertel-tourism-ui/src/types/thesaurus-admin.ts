@@ -69,7 +69,7 @@ export interface ThesaurusConcept extends ThesaurusDocument {
   assignable: boolean;
   source_key: Record<string, unknown>;
   source_fingerprint: string;
-  usage_count: number;
+  usage_count?: number;
   revision?: ThesaurusRevision | null;
   uri?: string;
 }

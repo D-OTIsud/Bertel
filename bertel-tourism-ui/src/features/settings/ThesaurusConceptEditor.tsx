@@ -156,7 +156,7 @@ export function ThesaurusConceptEditor({ concept, initialRevision, domain, conce
 
   return <section className="thesaurus__editor" aria-labelledby={`${formId}-heading`}>
     <header className="thesaurus__editor-head">
-      <div><h3 id={`${formId}-heading`}>{concept?.name ?? 'Nouveau concept'}</h3><p className="muted">{domain.name}{concept && ` · ${concept.usage_count} fiche${concept.usage_count > 1 ? 's' : ''}`}</p></div>
+      <div><h3 id={`${formId}-heading`}>{concept?.name ?? 'Nouveau concept'}</h3><p className="muted">{domain.name}{concept && (concept.usage_count == null ? ' · Impact calculé dans la prévisualisation' : ` · ${concept.usage_count} fiche${concept.usage_count > 1 ? 's' : ''}`)}</p></div>
       <span className={`thesaurus__badge ${revision?.status === 'validated' && !dirty ? 'is-valid' : ''}`}>{dirty ? 'Modifications non enregistrées' : revision?.status === 'validated' ? 'Brouillon validé' : revision && revision.status !== 'published' ? 'Brouillon' : concept ? 'Publié' : 'À créer'}</span>
     </header>
     {!domain.is_governed && <p role="note" className="inline-alert inline-alert--warning">Ce domaine doit être activé dans Configuration avant de publier ses modifications.</p>}

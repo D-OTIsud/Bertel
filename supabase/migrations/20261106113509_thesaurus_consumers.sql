@@ -9,6 +9,8 @@ SET search_path = pg_catalog, thesaurus
 AS $fn$
   SELECT COALESCE(jsonb_object_agg(c.domain || ':' || c.source_id,
     jsonb_build_object('thesaurus_lifecycle',rc.document->>'lifecycle',
+      'thesaurus_valid_today',COALESCE((rc.document->>'valid_from')::date,current_date)<=current_date
+        AND COALESCE((rc.document->>'valid_to')::date,current_date)>=current_date,
       'thesaurus_assignable',COALESCE((rc.document->>'assignable')::boolean,false)
         AND COALESCE((rc.document->>'valid_from')::date,current_date)<=current_date
         AND COALESCE((rc.document->>'valid_to')::date,current_date)>=current_date)), '{}'::jsonb)
@@ -17,6 +19,66 @@ AS $fn$
 $fn$;
 REVOKE ALL ON FUNCTION api.thesaurus_reference_statuses() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION api.thesaurus_reference_statuses() TO anon,authenticated,service_role;
+
+-- Keep the authoritative legacy serializer instead of maintaining a second copy of its
+-- branches/i18n/order. Its invoker rights and public-reference RLS remain unchanged.
+DO $catalog_predecessor$
+DECLARE definition text;
+BEGIN
+  IF to_regprocedure('thesaurus.legacy_list_catalog(text,text)')IS NULL THEN
+    definition:=pg_get_functiondef('api.list_catalog(text,text)'::regprocedure);
+    IF position('Unknown or non-public catalog domain:'IN definition)=0
+      OR position('parent_code'IN definition)=0 OR position('icon_url'IN definition)=0
+      OR position('ref_amenity'IN definition)=0 THEN
+      RAISE EXCEPTION 'Unsupported public catalog predecessor; inspect before migrating';
+    END IF;
+    ALTER FUNCTION api.list_catalog(text,text)SET SCHEMA thesaurus;
+    ALTER FUNCTION thesaurus.list_catalog(text,text)RENAME TO legacy_list_catalog;
+  ELSIF to_regprocedure('api.list_catalog(text,text)')IS NOT NULL THEN
+    definition:=pg_get_functiondef('api.list_catalog(text,text)'::regprocedure);
+    IF position('thesaurus.legacy_list_catalog'IN definition)=0 THEN
+      RAISE EXCEPTION 'Catalog wrapper was replaced outside its governed migration';
+    END IF;
+  END IF;
+END
+$catalog_predecessor$;
+REVOKE ALL ON FUNCTION thesaurus.legacy_list_catalog(text,text)FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION thesaurus.legacy_list_catalog(text,text)TO anon,authenticated,service_role,bertel_thesaurus_publisher;
+
+CREATE OR REPLACE FUNCTION thesaurus.filter_public_catalog(p_domain text,p_catalog jsonb)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path=pg_catalog,thesaurus,api
+AS $fn$
+  WITH statuses AS MATERIALIZED(SELECT api.thesaurus_reference_statuses()data)
+  SELECT COALESCE(jsonb_agg(entry.item ORDER BY entry.ord),'[]'::jsonb)
+  FROM jsonb_array_elements(p_catalog)WITH ORDINALITY entry(item,ord)CROSS JOIN statuses
+  WHERE EXISTS(SELECT 1 FROM thesaurus.source_rows s LEFT JOIN thesaurus.source_rows parent
+    ON(parent.source_kind,parent.source_id,parent.domain)=(s.parent_kind,s.parent_source_id,s.parent_domain)
+    WHERE s.domain=p_domain AND s.code=entry.item->>'code'
+      -- A sustainability code is qualified by its category; do not merge homonyms.
+      AND(p_domain<>'sustainability_action'OR parent.code IS NOT DISTINCT FROM entry.item->>'parent_code')
+      AND statuses.data#>>ARRAY[s.domain||':'||s.source_id,'thesaurus_lifecycle']='active'
+      AND(statuses.data#>>ARRAY[s.domain||':'||s.source_id,'thesaurus_valid_today'])::boolean)
+$fn$;
+REVOKE ALL ON FUNCTION thesaurus.filter_public_catalog(text,jsonb)FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION thesaurus.filter_public_catalog(text,jsonb)TO anon,authenticated,service_role,bertel_thesaurus_publisher;
+
+CREATE OR REPLACE FUNCTION api.list_catalog(p_domain text,p_lang text DEFAULT 'fr')
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY INVOKER
+SET search_path=pg_catalog,api,thesaurus
+AS $fn$
+DECLARE catalog jsonb;
+BEGIN
+  catalog:=thesaurus.legacy_list_catalog(p_domain,p_lang);
+  IF NOT thesaurus.is_governed(p_domain)THEN RETURN catalog;END IF;
+  -- /catalog retains active structural categories even when they are not assignable.
+  -- It excludes historical or out-of-date choices, including standalone source tables
+  -- whose native schema has no is_active column. The original five fields are untouched.
+  RETURN thesaurus.filter_public_catalog(p_domain,catalog);
+END
+$fn$;
+REVOKE ALL ON FUNCTION api.list_catalog(text,text)FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION api.list_catalog(text,text)TO anon,authenticated,service_role,bertel_thesaurus_publisher;
 
 CREATE OR REPLACE FUNCTION api.thesaurus_reference_snapshot(p_domains text[] DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY INVOKER
@@ -40,7 +102,7 @@ BEGIN
 
   -- Hard-coded reference relations only. Never accept a relation name from the caller.
   FOREACH table_name IN ARRAY ARRAY[
-    'ref_language','ref_contact_role','ref_org_role','ref_actor_role','ref_iti_assoc_role',
+    'ref_language','ref_commune','ref_contact_role','ref_org_role','ref_actor_role','ref_iti_assoc_role',
     'ref_tag','ref_legal_type','ref_capacity_metric','ref_capacity_applicability',
     'ref_classification_scheme','ref_classification_scheme_applicability',
     'ref_sustainability_action','ref_sustainability_action_category',
@@ -48,12 +110,12 @@ BEGIN
   ] LOOP
     EXECUTE format('SELECT COALESCE(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) FROM public.%I t', table_name)
       INTO rows;
-    status_domain := CASE table_name WHEN 'ref_language' THEN 'language'
+    status_domain := CASE table_name WHEN 'ref_language' THEN 'language' WHEN 'ref_commune' THEN 'commune'
       WHEN 'ref_classification_scheme' THEN 'classification_scheme'
       WHEN 'ref_sustainability_action' THEN 'sustainability_action'
       WHEN 'ref_sustainability_action_category' THEN 'sustainability_category' ELSE NULL END;
     IF status_domain IS NOT NULL THEN
-      SELECT COALESCE(jsonb_agg(x || COALESCE(statuses->(status_domain||':'||(x->>'id')),'{}'::jsonb)),'[]'::jsonb) INTO rows FROM jsonb_array_elements(rows) x;
+      SELECT COALESCE(jsonb_agg(x || COALESCE(statuses->(status_domain||':'||COALESCE(x->>'id',x->>'insee_code')),'{}'::jsonb)),'[]'::jsonb) INTO rows FROM jsonb_array_elements(rows) x;
     END IF;
     catalogs := catalogs || jsonb_build_object(table_name, rows);
   END LOOP;

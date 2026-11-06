@@ -14,7 +14,7 @@ DO $publisher_membership$BEGIN
   -- Literal quoted role avoids the older Supabase supautils CURRENT_USER RoleSpec crash.
   EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH INHERIT TRUE,SET TRUE',current_user);
 END $publisher_membership$;
-GRANT USAGE ON SCHEMA thesaurus,public,api,extensions,auth,internal,audit TO bertel_thesaurus_publisher;
+GRANT USAGE ON SCHEMA thesaurus,public,api,extensions,internal,audit TO bertel_thesaurus_publisher;
 
 CREATE TABLE IF NOT EXISTS thesaurus.instance (
   singleton boolean PRIMARY KEY DEFAULT true CHECK(singleton),
@@ -189,12 +189,15 @@ DO $guards$ DECLARE s record; BEGIN
   END LOOP;
 END $guards$;
 
--- The existing AFTER trigger maintains derived object caches. Run that tightly scoped
--- trigger as its existing owner, rather than granting the publisher arbitrary object writes.
+-- Ordinary source edits retain the existing maintenance. A publication batches it
+-- once after all source changes, under the exclusive publication fence.
 ALTER FUNCTION api.trg_refresh_ref_code_taxonomy_closure()SECURITY DEFINER;
 ALTER FUNCTION api.trg_refresh_ref_code_taxonomy_closure()SET search_path=pg_catalog,public,api;
 REVOKE ALL ON FUNCTION api.trg_refresh_ref_code_taxonomy_closure()FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION api.trg_refresh_ref_code_taxonomy_closure()TO postgres,bertel_thesaurus_publisher;
+DROP TRIGGER IF EXISTS trg_refresh_ref_code_taxonomy_closure ON public.ref_code;
+CREATE TRIGGER trg_refresh_ref_code_taxonomy_closure AFTER INSERT OR UPDATE OR DELETE ON public.ref_code
+FOR EACH ROW WHEN(current_user<>'bertel_thesaurus_publisher')EXECUTE FUNCTION api.trg_refresh_ref_code_taxonomy_closure();
 
 CREATE OR REPLACE FUNCTION thesaurus.sync_sources(p_domains text[] DEFAULT NULL) RETURNS integer LANGUAGE plpgsql
 SET search_path=pg_catalog,thesaurus,public AS $$
@@ -280,6 +283,7 @@ BEGIN
       AND (target.relname IN ('ref_code','ref_amenity','ref_classification_scheme','ref_classification_value','ref_language','ref_commune','ref_sustainability_action','ref_sustainability_action_category')
         OR EXISTS(SELECT 1 FROM pg_inherits i WHERE i.inhrelid=target.oid AND i.inhparent='public.ref_code'::regclass))
   LOOP
+    IF NOT EXISTS(SELECT 1 FROM thesaurus.concept c WHERE c.concept_id=ANY(p_concepts)AND c.source_kind=f.kind AND(f.source_domain IS NULL OR c.domain=f.source_domain))THEN CONTINUE;END IF;
     SELECT string_agg(format('to_jsonb(t)->%L = s.source_key->%L',la.attname,ra.attname),' AND ' ORDER BY u.ord)
     INTO cond FROM unnest(f.conkey,f.confkey)WITH ORDINALITY u(l,r,ord)
       JOIN pg_attribute la ON la.attrelid=f.conrelid AND la.attnum=u.l JOIN pg_attribute ra ON ra.attrelid=f.confrelid AND ra.attnum=u.r;
@@ -385,11 +389,17 @@ BEGIN
 EXCEPTION WHEN invalid_text_representation THEN RETURN jsonb_build_object('errors',jsonb_build_array('Identifiant de relation invalide.'),'warnings',warnings);
 END $$;
 
+-- Supabase owns auth; delegate the actor lookup without granting its schema to the publisher.
+CREATE OR REPLACE FUNCTION thesaurus.current_actor() RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path=pg_catalog,auth AS $$ SELECT auth.uid() $$;
+REVOKE ALL ON FUNCTION thesaurus.current_actor() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION thesaurus.current_actor() TO bertel_thesaurus_publisher;
+
 CREATE OR REPLACE FUNCTION thesaurus.refresh_affected_object(p_object_id text)RETURNS void LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,public,api AS $$
 #variable_conflict use_column
 BEGIN
-  PERFORM api.refresh_object_filter_caches(p_object_id);
+  PERFORM thesaurus.refresh_object_filter_caches(p_object_id);
   UPDATE public.object SET updated_at=clock_timestamp()WHERE id=p_object_id;
 END $$;
 
@@ -537,7 +547,7 @@ BEGIN
     DELETE FROM thesaurus.note WHERE concept_id=r.concept_id;
     INSERT INTO thesaurus.note(concept_id,lang,type,value,source)SELECT r.concept_id,COALESCE(x->>'lang','fr'),COALESCE(x->>'type','scope'),x->>'value',x->>'source' FROM jsonb_array_elements(COALESCE(doc->'notes','[]'))x;
     DELETE FROM thesaurus.mapping WHERE concept_id=r.concept_id;
-    INSERT INTO thesaurus.mapping(concept_id,type,target_uri,vocabulary,version,source,validated_by)SELECT r.concept_id,x->>'type',x->>'target_uri',x->>'vocabulary',x->>'version',x->>'source',auth.uid()FROM jsonb_array_elements(COALESCE(doc->'mappings','[]'))x ON CONFLICT DO NOTHING;
+    INSERT INTO thesaurus.mapping(concept_id,type,target_uri,vocabulary,version,source,validated_by)SELECT r.concept_id,x->>'type',x->>'target_uri',x->>'vocabulary',x->>'version',x->>'source',thesaurus.current_actor()FROM jsonb_array_elements(COALESCE(doc->'mappings','[]'))x ON CONFLICT DO NOTHING;
     DELETE FROM thesaurus.relation existing WHERE(existing.concept_id=r.concept_id OR(existing.target_id=r.concept_id AND existing.type IN('related','exact_equivalent')))
       AND EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(r.base_document->'relations','[]')||COALESCE((SELECT jsonb_agg(jsonb_build_object('type','replaced_by','target_id',x))FROM jsonb_array_elements_text(COALESCE(r.base_document->'replaced_by','[]'))x),'[]'))oldrel WHERE oldrel->>'type'=existing.type AND oldrel->>'target_id'=CASE WHEN existing.concept_id=r.concept_id THEN existing.target_id ELSE existing.concept_id END::text)
       AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(doc->'relations','[]')||COALESCE((SELECT jsonb_agg(jsonb_build_object('type','replaced_by','target_id',x))FROM jsonb_array_elements_text(COALESCE(doc->'replaced_by','[]'))x),'[]'))newrel WHERE newrel->>'type'=existing.type AND newrel->>'target_id'=CASE WHEN existing.concept_id=r.concept_id THEN existing.target_id ELSE existing.concept_id END::text);
@@ -561,7 +571,7 @@ BEGIN
     IF to_regclass('internal.mv_ref_data_json')IS NOT NULL THEN REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;END IF;
     IF to_regclass('internal.mv_filtered_objects')IS NOT NULL THEN REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;END IF;
   END IF;
-  INSERT INTO thesaurus.release(previous_release_id,created_by,idempotency_key,affected_objects,request_fingerprint)VALUES(prev,auth.uid(),p_key,cardinality(affected),request_fp)RETURNING release_id INTO rid;
+  INSERT INTO thesaurus.release(previous_release_id,created_by,idempotency_key,affected_objects,request_fingerprint)VALUES(prev,thesaurus.current_actor(),p_key,cardinality(affected),request_fp)RETURNING release_id INTO rid;
   INSERT INTO thesaurus.release_concept(release_id,concept_id,domain,is_public,document,checksum)
   SELECT rid,c.concept_id,c.domain,v.is_public,
     doc.d-'source_kind'-'source_key'-'source_fields'-'source_fingerprint'-'name_i18n'-'description_i18n',
@@ -734,7 +744,7 @@ BEGIN
     'capabilities',jsonb_build_object('content_proposal_preconditions',1,'read_only_workspace',1),
     'instance',(SELECT to_jsonb(i)FROM thesaurus.instance i WHERE singleton),
     'domains',COALESCE((SELECT jsonb_agg(to_jsonb(v)||jsonb_build_object('concept_count',(SELECT count(*)FROM thesaurus.concept c WHERE c.domain=v.domain))ORDER BY name,domain)FROM thesaurus.vocabulary v WHERE v.is_public),'[]'),
-    'concepts',COALESCE((SELECT jsonb_agg(x.doc ORDER BY x.domain,x.code,x.concept_id)FROM(SELECT c.domain,c.code,c.concept_id,thesaurus.concept_document(c.concept_id)||jsonb_build_object('usage_count',(SELECT count(DISTINCT u.object_id)FROM thesaurus.usage_objects(ARRAY[c.concept_id])u),'revision',(SELECT to_jsonb(r)FROM thesaurus.revision r WHERE r.concept_id=c.concept_id AND status<>'published'))doc FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain) WHERE v.is_public AND(ids IS NULL OR c.concept_id=ANY(ids))AND(NULLIF(p_payload->>'domain','')IS NULL OR c.domain=p_payload->>'domain')AND(NULLIF(p_payload->>'query','')IS NULL OR(thesaurus.concept_document(c.concept_id)::text)ILIKE'%'||(p_payload->>'query')||'%')ORDER BY c.domain,c.code,c.concept_id LIMIT lim OFFSET off)x),'[]'),
+    'concepts',COALESCE((SELECT jsonb_agg(x.doc ORDER BY x.domain,x.code,x.concept_id)FROM(SELECT c.domain,c.code,c.concept_id,thesaurus.concept_document(c.concept_id)||jsonb_build_object('usage_count',CASE WHEN p_payload->>'include_usage_counts'='true' THEN(SELECT count(DISTINCT u.object_id)FROM thesaurus.usage_objects(ARRAY[c.concept_id])u)ELSE NULL END,'revision',(SELECT to_jsonb(r)FROM thesaurus.revision r WHERE r.concept_id=c.concept_id AND status<>'published'))doc FROM thesaurus.concept c JOIN thesaurus.vocabulary v USING(domain) WHERE v.is_public AND(ids IS NULL OR c.concept_id=ANY(ids))AND(NULLIF(p_payload->>'domain','')IS NULL OR c.domain=p_payload->>'domain')AND(NULLIF(p_payload->>'query','')IS NULL OR(thesaurus.concept_document(c.concept_id)::text)ILIKE'%'||(p_payload->>'query')||'%')ORDER BY c.domain,c.code,c.concept_id LIMIT lim OFFSET off)x),'[]'),
     'revisions',COALESCE((SELECT jsonb_agg(to_jsonb(r)ORDER BY updated_at DESC)FROM(SELECT r.*,c.domain FROM thesaurus.revision r JOIN thesaurus.concept c USING(concept_id)WHERE status<>'published'ORDER BY updated_at DESC LIMIT 200)r),'[]'),
     'releases',COALESCE((SELECT jsonb_agg(to_jsonb(r)ORDER BY release_id DESC)FROM(SELECT * FROM thesaurus.release ORDER BY release_id DESC LIMIT 50)r),'[]'),
     'outbox',COALESCE((SELECT jsonb_agg(to_jsonb(o)ORDER BY id DESC)FROM(SELECT * FROM thesaurus.outbox ORDER BY id DESC LIMIT 100)o),'[]'),
@@ -986,7 +996,37 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON public.ref_code_taxonomy_closure TO bertel_
 DROP POLICY IF EXISTS thesaurus_publisher ON public.ref_code_taxonomy_closure;
 CREATE POLICY thesaurus_publisher ON public.ref_code_taxonomy_closure FOR ALL TO bertel_thesaurus_publisher USING(true)WITH CHECK(true);
 GRANT EXECUTE ON FUNCTION api.refresh_ref_code_taxonomy_closure(text),api.is_ref_code_taxonomy_domain(text),api.thesaurus_generation(),api.thesaurus_object_release(),api.public_catalog_domains()TO bertel_thesaurus_publisher;
-GRANT EXECUTE ON FUNCTION auth.uid()TO bertel_thesaurus_publisher;
+-- Derive the projection writer from the canonical helper at installation, rather
+-- than maintaining a second search definition. Exact body equality is an invariant.
+-- Its owner can UPDATE only derived columns: bypassing business-version triggers
+-- here cannot bypass canonical content auditing or grant an application role access.
+DO $projection_writer$DECLARE body text;t text;rel regclass;BEGIN
+  SELECT prosrc INTO STRICT body FROM pg_proc WHERE oid='api.refresh_object_filter_caches(text)'::regprocedure;
+  EXECUTE format('CREATE OR REPLACE FUNCTION thesaurus.refresh_object_filter_caches(p_object_id text)RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public,api,auth,extensions AS %L',body);
+  IF(SELECT prosrc FROM pg_proc WHERE oid='thesaurus.refresh_object_filter_caches(text)'::regprocedure)IS DISTINCT FROM body THEN RAISE EXCEPTION 'Canonical search projection body drift';END IF;
+  FOREACH t IN ARRAY ARRAY['object','object_amenity','ref_amenity','object_payment_method','ref_code_payment_method','object_environment_tag','ref_code_environment_tag','object_language','ref_language','object_classification','ref_classification_scheme','ref_classification_value','object_taxonomy','ref_code_taxonomy_closure','ref_code','tag_link','ref_tag','object_cuisine_type','ref_code_cuisine_type','object_menu','object_menu_item','object_menu_item_dietary_tag','ref_code_dietary_tag','object_menu_item_allergen','ref_code_allergen','object_description']LOOP
+    rel:=format('public.%I',t)::regclass;
+    EXECUTE format('GRANT SELECT ON %s TO bertel_thesaurus_publisher',rel);
+    IF(SELECT relkind IN('r','p')FROM pg_class WHERE oid=rel)THEN
+      EXECUTE format('DROP POLICY IF EXISTS thesaurus_projection_read ON %s',rel);
+      EXECUTE format('CREATE POLICY thesaurus_projection_read ON %s FOR SELECT TO bertel_thesaurus_publisher USING(true)',rel);
+    END IF;
+  END LOOP;
+END $projection_writer$;
+GRANT UPDATE(cached_amenity_codes,cached_payment_codes,cached_environment_tags,cached_language_codes,cached_classification_codes,cached_taxonomy_codes,search_document,search_document_text,search_document_phonetic,updated_at)ON public.object TO bertel_thesaurus_publisher;
+DROP POLICY IF EXISTS thesaurus_projection_update ON public.object;
+CREATE POLICY thesaurus_projection_update ON public.object FOR UPDATE TO bertel_thesaurus_publisher USING(true)WITH CHECK(true);
+GRANT EXECUTE ON FUNCTION api.strip_markdown(text),api.phonetic_document(text),public.immutable_unaccent(text)TO bertel_thesaurus_publisher;
+-- A vocabulary publication changes projections and the partner synchronization
+-- marker. Canonical object content and its canonical version remain unchanged.
+DROP TRIGGER IF EXISTS trg_audit_object ON public.object;
+CREATE TRIGGER trg_audit_object AFTER DELETE OR UPDATE ON public.object FOR EACH ROW WHEN(current_user<>'bertel_thesaurus_publisher')EXECUTE FUNCTION audit.log_row_changes();
+DROP TRIGGER IF EXISTS trg_increment_object_version ON public.object;
+CREATE TRIGGER trg_increment_object_version BEFORE INSERT OR UPDATE ON public.object FOR EACH ROW WHEN(current_user<>'bertel_thesaurus_publisher')EXECUTE FUNCTION public.increment_object_version();
+DROP TRIGGER IF EXISTS trg_object_version ON public.object;
+CREATE TRIGGER trg_object_version AFTER INSERT OR UPDATE ON public.object FOR EACH ROW WHEN(current_user<>'bertel_thesaurus_publisher')EXECUTE FUNCTION public.save_object_version();
+DROP TRIGGER IF EXISTS update_object_updated_at ON public.object;
+CREATE TRIGGER update_object_updated_at BEFORE UPDATE ON public.object FOR EACH ROW WHEN(current_user<>'bertel_thesaurus_publisher')EXECUTE FUNCTION public.update_object_updated_at_business();
 DO $maintain$BEGIN
   IF to_regclass('internal.mv_ref_data_json')IS NOT NULL THEN GRANT MAINTAIN ON TABLE internal.mv_ref_data_json TO bertel_thesaurus_publisher;END IF;
   IF to_regclass('internal.mv_filtered_objects')IS NOT NULL THEN GRANT MAINTAIN ON TABLE internal.mv_filtered_objects TO bertel_thesaurus_publisher;END IF;
@@ -998,6 +1038,8 @@ GRANT EXECUTE ON FUNCTION thesaurus.admin_dispatch(text,jsonb)TO authenticated;
 GRANT EXECUTE ON FUNCTION thesaurus.public_dispatch(text,bigint,jsonb)TO service_role;
 GRANT CREATE ON SCHEMA thesaurus TO bertel_thesaurus_publisher;
 ALTER FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)OWNER TO bertel_thesaurus_publisher;
+ALTER FUNCTION thesaurus.refresh_object_filter_caches(text)OWNER TO bertel_thesaurus_publisher;
+ALTER FUNCTION thesaurus.refresh_affected_object(text)OWNER TO bertel_thesaurus_publisher;
 REVOKE CREATE ON SCHEMA thesaurus FROM bertel_thesaurus_publisher;
 GRANT EXECUTE ON FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)TO postgres;
 -- Preserve the creator's ADMIN-only management capability for future migrations,

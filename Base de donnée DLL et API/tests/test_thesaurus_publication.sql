@@ -17,6 +17,7 @@ INSERT INTO public.ref_classification_value(id,scheme_id,code,name)VALUES('b73e3
 INSERT INTO public.ref_sustainability_action_category(id,code,name,description)VALUES('b73e4000-0000-4000-8000-000000000001','thesaurus_test_category','Durabilité du test','Définition catégorie');
 INSERT INTO public.ref_sustainability_action(id,category_id,code,label,description)VALUES('b73e4000-0000-4000-8000-000000000002','b73e4000-0000-4000-8000-000000000001','thesaurus_test_action','Action du test','Définition action');
 INSERT INTO public.ref_commune(insee_code,name)VALUES('97499','Commune du test');
+INSERT INTO public.ref_language(id,code,name)VALUES('b73e6000-0000-4000-8000-000000000001','qaa','Langue privée du test');
 INSERT INTO public.object(id,object_type,name,status)VALUES('HLORUNTHESAUR001','HLO','Fiche témoin thésaurus','draft');
 INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES('HLORUNTHESAUR001','taxonomy_hlo','b73e1000-0000-4000-8000-000000000002');
 -- The same vocabulary is shared across realms. Derive the sandbox marker through
@@ -56,10 +57,10 @@ BEGIN
   ASSERT (workspace#>>'{stats,matching_concepts}')::integer>=2,'Workspace filter omitted fixtures';
   ASSERT EXISTS(SELECT 1 FROM thesaurus.concept WHERE concept_id=cid AND legacy_search_terms@>ARRAY['Terme historique']),'Legacy aliases were discarded';
   ASSERT NOT EXISTS(SELECT 1 FROM thesaurus.label WHERE concept_id=cid),'Legacy aliases were incorrectly asserted as validated labels';
-  pub:=api.thesaurus_admin('bootstrap','{"domains":["taxonomy_hlo","amenity_family","amenity","classification_scheme","sustainability_category","sustainability_action"],"idempotency_key":"thesaurus-test-bootstrap"}');
+  pub:=api.thesaurus_admin('bootstrap','{"domains":["taxonomy_hlo","amenity_family","amenity","classification_scheme","classification_value","language","commune","sustainability_category","sustainability_action"],"idempotency_key":"thesaurus-test-bootstrap"}');
   first_release:=(pub->>'release_id')::bigint;
   ASSERT first_release>0 AND api.thesaurus_generation()=first_release,'Bootstrap failed to activate a release';
-  ASSERT (api.thesaurus_admin('bootstrap','{"domains":["taxonomy_hlo","amenity_family","amenity","classification_scheme","sustainability_category","sustainability_action"],"idempotency_key":"thesaurus-test-bootstrap"}')->>'release_id')::bigint=first_release,'Bootstrap idempotency failed';
+  ASSERT (api.thesaurus_admin('bootstrap','{"domains":["taxonomy_hlo","amenity_family","amenity","classification_scheme","classification_value","language","commune","sustainability_category","sustainability_action"],"idempotency_key":"thesaurus-test-bootstrap"}')->>'release_id')::bigint=first_release,'Bootstrap idempotency failed';
   BEGIN PERFORM api.thesaurus_admin('bootstrap','{"domains":["taxonomy_hlo"],"idempotency_key":"thesaurus-test-bootstrap"}');RAISE EXCEPTION 'Reused idempotency key accepted different request';EXCEPTION WHEN SQLSTATE'PT409'THEN NULL;END;
   oldexport:=api.thesaurus_public('export',first_release,'{"domains":["taxonomy_hlo"],"lang":"en-US","domains":null,"status":null,"query":null,"after":null}');
   ASSERT jsonb_array_length(oldexport->'data')>=2,'Actual snapshot export omitted fixtures';
@@ -161,6 +162,8 @@ BEGIN
   ASSERT NOT has_function_privilege('authenticated','api.thesaurus_public(text,bigint,jsonb)','EXECUTE'),'Partner reader granted to authenticated';
   ASSERT NOT has_table_privilege('authenticated','thesaurus.revision','SELECT'),'Private revisions directly readable';
   ASSERT NOT pg_has_role('authenticated','bertel_thesaurus_publisher','MEMBER'),'Application can assume publisher';
+  ASSERT(SELECT count(DISTINCT c.source_kind)FROM thesaurus.concept c JOIN thesaurus.publication_documents()d USING(concept_id))=8,'Batch rendering must exercise every typed native source adapter';
+  ASSERT NOT EXISTS(SELECT 1 FROM thesaurus.publication_documents()d WHERE d.document IS DISTINCT FROM(thesaurus.concept_document(d.concept_id,false)-'source_kind'-'source_key'-'source_fields'-'source_fingerprint'-'name_i18n'-'description_i18n')),'Batch release documents differ from the canonical per-concept public projection';
   PERFORM set_config('request.jwt.claims','{"sub":"b73e0000-0000-4000-8000-000000000099","role":"authenticated"}',true);
   BEGIN PERFORM api.thesaurus_admin('workspace');RAISE EXCEPTION 'Ordinary user accessed global editorial data';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
   RAISE NOTICE 'Thesaurus bootstrap, draft isolation, publication, history, language, security and retention tests passed.';

@@ -24,12 +24,13 @@ test('Markdown editing preserves formatting across language switches and rejects
   await expect(region.locator('a')).toHaveAttribute('href', 'https://example.invalid/tourisme');
 
   await region.press('ControlOrMeta+A');
-  const dialogs: string[] = [];
+  const dialogs: { type: string; message: string }[] = [];
   page.on('dialog', async (dialog) => {
-    dialogs.push(dialog.type());
+    dialogs.push({ type: dialog.type(), message: dialog.message() });
     await dialog.accept(dialog.type() === 'prompt' ? 'javascript:alert(1)' : undefined);
   });
   await editor.getByRole('button', { name: 'Lien', exact: true }).click();
-  await expect.poll(() => dialogs).toEqual(['prompt', 'alert']);
+  await expect.poll(() => dialogs.map((dialog) => dialog.type)).toEqual(['prompt', 'alert']);
+  expect(dialogs[1].message).toBe('Adresse non valide. Utilisez http(s):// ou mailto:.');
   await expect(region.locator('a')).toHaveAttribute('href', 'https://example.invalid/tourisme');
 });

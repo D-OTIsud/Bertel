@@ -115,7 +115,7 @@ export function VersionHistoryModal({
                       type="button"
                       className="btn danger"
                       aria-label={`Restaurer la version ${row.versionNumber}`}
-                      disabled={!canRestore || isRestoring}
+                      disabled={!canRestore || restoringVersion !== null}
                       title={canRestore ? undefined : restoreDisabledReason}
                       onClick={() => onRestore(row.versionNumber)}
                     >

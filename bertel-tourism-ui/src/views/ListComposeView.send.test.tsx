@@ -231,13 +231,13 @@ describe('ListComposeView — envoi et sauvegarde confirmée (MET-02)', () => {
     fireEvent.click(screen.getByRole('button', { name: /envoyer/i }));
 
     await waitFor(() => expect(sendListByEmail).toHaveBeenCalled());
-    expect(updateList).toHaveBeenCalledWith('list-1', expect.objectContaining({ name: 'Nouveau nom' }));
+    expect(updateList).toHaveBeenCalledWith('list-1', expect.objectContaining({ name: 'Nouveau nom' }), expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(setListItems).toHaveBeenCalledWith(
       'list-1',
       expect.arrayContaining([
         expect.objectContaining({ object_id: 'obj-b', position: 0 }),
         expect.objectContaining({ object_id: 'obj-a', position: 1, note_fr: 'Coup de cœur !' }),
-      ]),
+      ]), expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
 
@@ -370,7 +370,7 @@ describe('ListComposeView — changement de langue (A11Y-07)', () => {
     await waitFor(() =>
       expect(updateList).toHaveBeenCalledWith(
         'list-1',
-        expect.objectContaining({ lang: 'en', intro_fr: 'Bonjour brouillon' }),
+        expect.objectContaining({ lang: 'en', intro_fr: 'Bonjour brouillon' }), expect.objectContaining({ signal: expect.any(AbortSignal) })
       ),
     );
     await waitFor(() => expect(screen.getByLabelText("Mot d'introduction")).toHaveValue('Hello EN'));

@@ -152,7 +152,7 @@ describe('ListComposeView — réconciliation post-enregistrement (rejet vs ajou
     await waitFor(() => expect(setListItems).toHaveBeenCalledTimes(1));
     expect(setListItems).toHaveBeenNthCalledWith(1, 'list-1', [
       expect.objectContaining({ object_id: 'A' }),
-    ]);
+    ], expect.objectContaining({ signal: expect.any(AbortSignal) }));
 
     // Pendant l'attente, un second lieu est ajouté localement (jamais encore envoyé).
     jest.mocked(useObjectSearch).mockReturnValue({

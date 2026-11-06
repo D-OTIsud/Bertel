@@ -10,6 +10,8 @@ jest.mock('./public-api', () => ({
 import { NextRequest } from 'next/server';
 import { admitPartner, logPartnerCall } from './partner-auth';
 import { callPublicRpc } from './public-api';
+import { GET as getConcepts } from '@/app/api/public/thesaurus/releases/[releaseId]/concepts/route';
+import { GET as getManifest } from '@/app/api/public/thesaurus/route';
 import { canonicalThesaurusJson, decodeThesaurusCursor, encodeThesaurusCursor,
   handleThesaurusRequest, publicThesaurusConcept, thesaurusJsonLd } from './thesaurus-api';
 
@@ -123,6 +125,54 @@ it('does not accept a snapshot for a different requested release', async () => {
   expect((await handleThesaurusRequest(req(), { action: 'concepts', releaseId: '1' })).status).toBe(502);
 });
 
+it('completes a signed HTTP page traversal without duplicates or omissions after the current publication advances', async () => {
+  const ids = Array.from({ length: 5 }, (_, index) => `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`);
+  const frozen = ids.map((id, index) => ({ ...concept, concept_id: id,
+    uri: concept.uri.replace(ID, id), preferred_labels: { fr: `Terme initial ${index}` } }));
+  let currentRelease = 1;
+  rpc.mockImplementation(async (_name, input) => {
+    if (input.p_action === 'manifest') return response({ current_release_id: currentRelease }, { release_id: currentRelease });
+    // The live publication has changed its membership and labels. A pinned old
+    // release must still be requested on every continuation, not reconstructed
+    // from a changing current vocabulary.
+    const rows = input.p_release_id === 1 ? frozen : frozen.slice(1).map((row) => ({ ...row,
+      preferred_labels: { fr: 'Nouvelle publication' } }));
+    const after = input.p_params.after;
+    const start = after ? rows.findIndex((row) => row.concept_id === after) + 1 : 0;
+    const page = rows.slice(start, start + input.p_params.page_size);
+    return response(page, { release_id: input.p_release_id, total: rows.length,
+      next_after: start + page.length < rows.length ? page.at(-1)?.concept_id : null });
+  });
+  const context = { params: Promise.resolve({ releaseId: '1' }) };
+  const first = await getConcepts(req('?page_size=2'), context);
+  expect(first.status).toBe(200);
+  const firstBody = await first.json();
+  currentRelease = 2;
+  const manifest = await (await getManifest(new NextRequest('http://localhost/api/public/thesaurus', {
+    headers: { authorization: `Bearer bk_live_${'a'.repeat(48)}` },
+  }))).json();
+  expect(manifest.meta.release_id).toBe(2);
+  const collected = [...firstBody.data];
+  let cursor = firstBody.meta.next_cursor;
+  let pages = 1;
+  while (cursor) {
+    const next = await getConcepts(req(`?page_size=2&cursor=${encodeURIComponent(cursor)}`), context);
+    expect(next.status).toBe(200);
+    const body = await next.json();
+    expect(body.meta.release_id).toBe(1);
+    expect(body.meta.total).toBe(5);
+    collected.push(...body.data);
+    cursor = body.meta.next_cursor;
+    expect(++pages).toBeLessThanOrEqual(3);
+  }
+  expect(pages).toBe(3);
+  expect(collected.map((row) => row.concept_id)).toEqual(ids);
+  expect(new Set(collected.map((row) => row.concept_id)).size).toBe(5);
+  expect(collected.map((row) => row.name)).toEqual(frozen.map((row) => row.preferred_labels.fr));
+  const pageCalls = rpc.mock.calls.filter(([, input]) => input.p_action === 'concepts');
+  expect(pageCalls.map(([, input]) => input.p_release_id)).toEqual([1, 1, 1]);
+});
+
 it('generates deterministic ETags per representation and a bodyless 304 after fresh admission', async () => {
   const first = await handleThesaurusRequest(req(), { action: 'concepts', releaseId: '1' });
   const etag = first.headers.get('etag')!;
@@ -135,6 +185,33 @@ it('generates deterministic ETags per representation and a bodyless 304 after fr
   expect(admission).toHaveBeenCalledTimes(2);
   const english = await handleThesaurusRequest(req('?lang=en'), { action: 'concepts', releaseId: '1' });
   expect(english.headers.get('etag')).not.toBe(etag);
+});
+
+it('rejects a revoked key with its previously valid ETag and consumes no snapshot read', async () => {
+  const first = await getConcepts(req(), { params: Promise.resolve({ releaseId: '1' }) });
+  const etag = first.headers.get('etag')!;
+  expect(etag).toMatch(/^"[0-9a-f]{64}"$/);
+  admission.mockResolvedValue(null);
+  rpc.mockClear();
+  const revoked = await getConcepts(req('', { 'if-none-match': etag }), { params: Promise.resolve({ releaseId: '1' }) });
+  expect(revoked.status).toBe(401);
+  expect(await revoked.json()).toEqual({ error: 'unauthorized' });
+  expect(admission).toHaveBeenCalledTimes(2);
+  expect(rpc).not.toHaveBeenCalled();
+});
+
+it('returns 429 for a newly exhausted quota even with the exact valid ETag', async () => {
+  const first = await getConcepts(req(), { params: Promise.resolve({ releaseId: '1' }) });
+  const etag = first.headers.get('etag')!;
+  admission.mockResolvedValue({ partner: { keyId: 'key' },
+    rate: { allowed: false, limit: 120, remaining: 0, retryAfter: 19 } });
+  rpc.mockClear();
+  const exhausted = await getConcepts(req('', { 'if-none-match': etag }), { params: Promise.resolve({ releaseId: '1' }) });
+  expect(exhausted.status).toBe(429);
+  expect(exhausted.headers.get('Retry-After')).toBe('19');
+  expect(await exhausted.json()).toEqual({ error: 'rate_limited', retry_after: 19 });
+  expect(admission).toHaveBeenCalledTimes(2);
+  expect(rpc).not.toHaveBeenCalled();
 });
 
 it('resolves retired concepts and reports fallback languages without relabeling translations', async () => {

@@ -15,14 +15,28 @@ INSERT INTO public.ref_code(id,domain,code,name,description,parent_id,is_assigna
 INSERT INTO public.ref_code(id,domain,code,name,description,is_assignable)VALUES
 ('b73e1000-0000-4000-8000-000000000103','taxonomy_hlo','consumer_heading','Catégorie structurelle','Définition de catégorie',false),
 ('b73e1000-0000-4000-8000-000000000104','amenity_family','consumer_amenity_family','Famille du catalogue','Définition de famille',true);
+INSERT INTO public.ref_code(id,domain,code,name,description)VALUES
+('b73e1000-0000-4000-8000-000000000105','taxonomy_hlo','consumer_old_exact','Ancien terme équivalent','Définition témoin'),
+('b73e1000-0000-4000-8000-000000000106','taxonomy_hlo','consumer_successor','Successeur exact','Définition témoin'),
+('b73e1000-0000-4000-8000-000000000107','taxonomy_hlo','consumer_old_split','Ancien terme à scinder','Définition témoin'),
+('b73e1000-0000-4000-8000-000000000108','taxonomy_hlo','consumer_split_a','Première branche','Définition témoin'),
+('b73e1000-0000-4000-8000-000000000109','taxonomy_hlo','consumer_split_b','Seconde branche','Définition témoin');
 INSERT INTO public.ref_amenity(id,code,name,family_id,description)VALUES
 ('b73e2000-0000-4000-8000-000000000101','consumer_retired_amenity','Équipement à retirer','b73e1000-0000-4000-8000-000000000104','Définition du témoin');
 INSERT INTO public.object(id,object_type,name,status) VALUES
 ('HLORUNTHESAUR101','HLO','Fiche publiée témoin','draft'),
 ('HLORUNTHESAUR102','HLO','Fiche brouillon témoin','draft');
+INSERT INTO public.object(id,object_type,name,status)VALUES
+('HLORUNTHESAUR103','HLO','Fiche à requalifier équivalence','draft'),
+('HLORUNTHESAUR104','HLO','Fiche à requalifier scission','draft');
 INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id) VALUES
 ('HLORUNTHESAUR101','taxonomy_hlo','b73e1000-0000-4000-8000-000000000102');
+INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES
+('HLORUNTHESAUR102','taxonomy_hlo','b73e1000-0000-4000-8000-000000000105'),
+('HLORUNTHESAUR103','taxonomy_hlo','b73e1000-0000-4000-8000-000000000105'),
+('HLORUNTHESAUR104','taxonomy_hlo','b73e1000-0000-4000-8000-000000000107');
 UPDATE public.object SET status='published' WHERE id='HLORUNTHESAUR101';
+UPDATE public.object SET status='published'WHERE id IN('HLORUNTHESAUR103','HLORUNTHESAUR104');
 -- The fresh manifest intentionally leaves these WITH NO DATA until its final step.
 -- Populate the real fixture before exercising the canonical filtered-object reader.
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
@@ -30,6 +44,8 @@ REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
 
 DO $test$
 DECLARE config jsonb; activation jsonb; snapshot jsonb; resource jsonb; page jsonb; rid bigint; legacy jsonb; direct jsonb;cid uuid;revision jsonb;catalog jsonb;
+  exact_old uuid;exact_successor uuid;split_old uuid;split_a uuid;split_b uuid;revisions jsonb:='[]';versions jsonb:='{}';
+  filters jsonb;selected_code text;include_old boolean;office_ids text[];partner_ids text[];
 BEGIN
   config:=api.thesaurus_admin('configure_instance','{"base_uri":"https://example.invalid/api/public/thesaurus/concepts/","license":"test-fixture-only","attribution":"Fixture"}');
   legacy:=api.list_reference_bundle();
@@ -80,6 +96,32 @@ BEGIN
   ASSERT NOT(catalog?'crm_sentiment'),'Catalog wrapper widened the public allowlist';
   ASSERT NOT EXISTS(SELECT 1 FROM jsonb_each(catalog)d CROSS JOIN LATERAL jsonb_array_elements(d.value)x WHERE(SELECT array_agg(k ORDER BY k)FROM jsonb_object_keys(x)k)<>ARRAY['code','domain','icon_url','name','parent_code']),'Catalog wrapper changed its exact five-field shape';
   ASSERT api.thesaurus_public('concept',NULL,jsonb_build_object('concept_id',cid))#>>'{data,lifecycle}'='retired','Historical amenity is no longer resolvable through the rich thesaurus';
+  -- Exact equivalence and split replacements are distinct editorial decisions.
+  -- Exercise the actual back-office engine and partner serializer with identical
+  -- published scope, rather than asserting only the small resolver in isolation.
+  SELECT concept_id INTO exact_old FROM thesaurus.concept WHERE source_id='b73e1000-0000-4000-8000-000000000105'AND domain='taxonomy_hlo';
+  SELECT concept_id INTO exact_successor FROM thesaurus.concept WHERE source_id='b73e1000-0000-4000-8000-000000000106'AND domain='taxonomy_hlo';
+  SELECT concept_id INTO split_old FROM thesaurus.concept WHERE source_id='b73e1000-0000-4000-8000-000000000107'AND domain='taxonomy_hlo';
+  SELECT concept_id INTO split_a FROM thesaurus.concept WHERE source_id='b73e1000-0000-4000-8000-000000000108'AND domain='taxonomy_hlo';
+  SELECT concept_id INTO split_b FROM thesaurus.concept WHERE source_id='b73e1000-0000-4000-8000-000000000109'AND domain='taxonomy_hlo';
+  revision:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',exact_old,'expected_version',0,'document',thesaurus.concept_document(exact_old)||jsonb_build_object('lifecycle','retired','replaced_by',jsonb_build_array(exact_successor),'relations',jsonb_build_array(jsonb_build_object('type','exact_equivalent','target_id',exact_successor)))));
+  revision:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',revision->>'revision_id','expected_version',(revision->>'version')::integer));
+  revisions:=revisions||jsonb_build_array(revision->>'revision_id');versions:=versions||jsonb_build_object(revision->>'revision_id',(revision->>'version')::integer);
+  revision:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',split_old,'expected_version',0,'document',thesaurus.concept_document(split_old)||jsonb_build_object('lifecycle','retired','replaced_by',jsonb_build_array(split_a,split_b),'relations',jsonb_build_array(jsonb_build_object('type','related','target_id',split_a)))));
+  revision:=api.thesaurus_admin('validate_draft',jsonb_build_object('revision_id',revision->>'revision_id','expected_version',(revision->>'version')::integer));
+  revisions:=revisions||jsonb_build_array(revision->>'revision_id');versions:=versions||jsonb_build_object(revision->>'revision_id',(revision->>'version')::integer);
+  PERFORM api.thesaurus_admin('publish',jsonb_build_object('revision_ids',revisions,'expected_revision_versions',versions,'expected_release_id',api.thesaurus_generation(),'idempotency_key','consumer-equivalence-and-split'));
+  FOREACH selected_code IN ARRAY ARRAY['consumer_successor','consumer_split_a','consumer_split_b','consumer_old_split']LOOP
+    FOREACH include_old IN ARRAY ARRAY[false,true]LOOP
+      filters:=jsonb_build_object('taxonomy_any',jsonb_build_array(jsonb_build_object('domain','taxonomy_hlo','code',selected_code)),'include_equivalent_predecessors',include_old);
+      SELECT COALESCE(array_agg(f.object_id ORDER BY f.object_id),'{}')INTO office_ids FROM api.get_filtered_object_ids(filters,ARRAY['HLO']::public.object_type[],ARRAY['published']::public.object_status[],NULL)f;
+      page:=api.list_partner_objects_with_vocabulary(p_types=>ARRAY['HLO'],p_taxonomy_codes=>ARRAY['taxonomy_hlo:'||selected_code],p_include_equivalent_predecessors=>include_old);
+      SELECT COALESCE(array_agg(x->>'id'ORDER BY x->>'id'),'{}')INTO partner_ids FROM jsonb_array_elements(page->'data')x;
+      ASSERT office_ids=partner_ids,'Back-office and partner equivalence filters disagree on their exact visible object sets';
+      ASSERT partner_ids=CASE WHEN selected_code='consumer_old_split'THEN ARRAY['HLORUNTHESAUR104']WHEN selected_code='consumer_successor'AND include_old THEN ARRAY['HLORUNTHESAUR103']ELSE ARRAY[]::text[]END,'Exact equivalence, default opt-out, split non-expansion or published visibility changed';
+    END LOOP;
+  END LOOP;
+  ASSERT(SELECT ref_code_id FROM public.object_taxonomy WHERE object_id='HLORUNTHESAUR103'AND domain='taxonomy_hlo')='b73e1000-0000-4000-8000-000000000105'::uuid AND(SELECT ref_code_id FROM public.object_taxonomy WHERE object_id='HLORUNTHESAUR104'AND domain='taxonomy_hlo')='b73e1000-0000-4000-8000-000000000107'::uuid,'Equivalence or split publication silently reassigned historical objects';
   RAISE NOTICE 'Thesaurus reference snapshot, atomic object contract, visibility and taxonomy consumer tests passed.';
 END
 $test$;

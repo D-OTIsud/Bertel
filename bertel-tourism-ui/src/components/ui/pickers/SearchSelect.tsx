@@ -15,6 +15,7 @@ import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { fold } from './fold';
 import { usePickerPopover } from './usePickerPopover';
+import { PickerPanel, scrollOptionIntoView } from './PickerPanel';
 
 export interface SearchSelectOption {
   code: string;
@@ -107,17 +108,24 @@ export function SearchSelect({
     return map;
   }, [flatVisible, allowClear]);
   const rowCount = flatVisible.length + (allowClear ? 1 : 0);
+  const optionId = (code: string) => `${listId}-option-${encodeURIComponent(code)}`;
+  const activeOption = flatVisible[allowClear ? active - 1 : active];
+  const activeId = allowClear && active === 0 ? `${listId}-clear` : activeOption ? optionId(activeOption.code) : undefined;
   const showEmpty = isGrouped ? searching && flatVisible.length === 0 : filtered.length === 0;
 
-  // Focus the search + seed the open groups on the OPEN transition; clear the query on close.
+  useEffect(() => { setActive((index) => Math.max(0, Math.min(index, rowCount - 1))); }, [rowCount]);
+  useEffect(() => {
+    if (open && activeId) scrollOptionIntoView(document.getElementById(activeId), panelRef.current?.querySelector('[role="listbox"]') ?? null);
+  }, [open, activeId, panelRef]);
+
+  // Seed the open groups on the OPEN transition; clear the query on close.
   // Keyed on `open` only (NOT defaultExpanded): if the caller's `options` identity changes
-  // while the popover is open, re-running this would steal focus / reset ArrowDown navigation.
+  // while the popover is open, re-running this would reset ArrowDown navigation.
   // defaultExpanded is read fresh at open time. (§71 E review)
   useEffect(() => {
     if (open) {
       setActive(0);
       setExpanded(defaultExpanded);
-      searchRef.current?.focus();
     } else {
       setQuery('');
     }
@@ -127,6 +135,7 @@ export function SearchSelect({
   function commit(code: string) {
     onChange(code);
     setOpen(false);
+    triggerRef.current?.focus({ preventScroll: true });
   }
 
   function toggleGroup(name: string) {
@@ -140,6 +149,7 @@ export function SearchSelect({
       event.stopPropagation();
       event.preventDefault();
       setOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
       return;
     }
     if (event.key === 'ArrowDown') {
@@ -164,6 +174,7 @@ export function SearchSelect({
     return (
       <button
         key={option.code}
+        id={optionId(option.code)}
         type="button"
         role="option"
         aria-selected={option.code === value}
@@ -186,21 +197,29 @@ export function SearchSelect({
         aria-expanded={open}
         aria-controls={listId}
         aria-label={ariaLabel}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          triggerRef.current?.focus({ preventScroll: true });
+          setOpen((o) => !o);
+        }}
       >
         <span className="picker__trigger-label">{triggerLabel}</span>
         <ChevronDown className="picker__chevron" size={20} strokeWidth={2} aria-hidden="true" />
       </button>
 
       {mounted && open && createPortal(
-        <div className="picker__panel" ref={panelRef} style={panelStyle}>
+        <PickerPanel panelRef={panelRef} triggerRef={triggerRef} searchRef={searchRef} style={panelStyle} onClose={close}>
           <input
             ref={searchRef}
             className="picker__search"
             type="text"
+            role="combobox"
+            aria-expanded="true"
+            aria-autocomplete="list"
             value={query}
             placeholder={searchPlaceholder}
             aria-label="Rechercher"
+            aria-controls={listId}
+            aria-activedescendant={activeId}
             onChange={(event) => {
               setQuery(event.target.value);
               setActive(0);
@@ -210,6 +229,7 @@ export function SearchSelect({
           <div className="picker__options" role="listbox" id={listId}>
             {allowClear && (
               <button
+                id={`${listId}-clear`}
                 type="button"
                 role="option"
                 aria-selected={value === ''}
@@ -240,7 +260,7 @@ export function SearchSelect({
               : filtered.map(renderOption)}
             {showEmpty && <p className="picker__empty">Aucun résultat</p>}
           </div>
-        </div>,
+        </PickerPanel>,
         document.body,
       )}
     </div>

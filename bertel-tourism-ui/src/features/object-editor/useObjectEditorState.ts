@@ -1,3 +1,4 @@
+import type { WorkspaceSaveResult } from '../../services/workspace-save-result';
 import { isPlainRecord as isRecord } from '../../lib/json-read';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
@@ -51,7 +52,8 @@ export interface ObjectEditorState {
   patchModule: <K extends keyof ObjectWorkspaceModules>(key: K, patch: Partial<ObjectWorkspaceModules[K]>) => void;
   replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => void;
   resetModule: (key: keyof ObjectWorkspaceModules) => void;
-  commitModules: (keys: (keyof ObjectWorkspaceModules)[], options?: { canonicalRooms?: boolean; canonicalPlaces?: boolean }) => void;
+  mergeSavedModule: <K extends keyof ObjectWorkspaceModules>(key: K, update: (current: ObjectWorkspaceModules[K]) => ObjectWorkspaceModules[K]) => void;
+  commitModules: (keys: (keyof ObjectWorkspaceModules)[], options?: { canonicalRooms?: boolean; canonicalPlaces?: boolean; canonicalModules?: WorkspaceSaveResult; sentModules?: ObjectWorkspaceModules }) => void;
   /** Sets object.status in BOTH draft and baseline (the new saved truth) without
    *  touching other fields — used after a successful status-lifecycle mutation so
    *  the UI reflects the change without a refetch (the snapshot is init-once). */
@@ -65,6 +67,21 @@ function copyModule<K extends keyof ObjectWorkspaceModules>(
   key: K,
 ): void {
   target[key] = source[key];
+}
+
+/** Give the existing three-way merge a media-only identity, including confirmed new UUIDs. */
+function rebaseSavedMedia(sent: ObjectWorkspaceModules['media'], local: ObjectWorkspaceModules['media'], saved: ObjectWorkspaceModules['media']) {
+  const created = sent.galleryWriteBaseline?.createdIds ?? {};
+  const confirmed = new Set(saved.objectItems.map(item => item.id));
+  const keyed = (media: ObjectWorkspaceModules['media']) => ({ ...media, objectItems: media.objectItems.map(item => {
+    const id = created[item.id] && confirmed.has(created[item.id]) ? created[item.id] : item.id;
+    return { ...item, id, recordId: id };
+  }) });
+  const merged = mergeDraftAgainstServer(keyed(sent), keyed(local), keyed(saved)).value;
+  return { ...merged, objectItems: merged.objectItems.map(({ recordId: _mergeIdentity, ...item }) => {
+    void _mergeIdentity;
+    return item;
+  }) };
 }
 
 export function useObjectEditorState(
@@ -160,7 +177,7 @@ export function useObjectEditorState(
     });
   }, [freshSnapshot, identityKey]);
 
-  const commitModules = useCallback((keys: (keyof ObjectWorkspaceModules)[], options?: { canonicalRooms?: boolean; canonicalPlaces?: boolean }) => {
+  const commitModules = useCallback((keys: (keyof ObjectWorkspaceModules)[], options?: { canonicalRooms?: boolean; canonicalPlaces?: boolean; canonicalModules?: WorkspaceSaveResult; sentModules?: ObjectWorkspaceModules }) => {
     setEditorState((prev) => {
       const current = prev.identityKey === identityKey ? prev.snapshot : freshSnapshot;
       const baseline = { ...current.baseline };
@@ -169,6 +186,13 @@ export function useObjectEditorState(
       const draftClone = cloneModules(current.draft);
       for (const key of keys) {
         copyModule(baseline, draftClone, key);
+      }
+      const media = options?.canonicalModules?.media;
+      if (keys.includes('media') && media) {
+        const sent = options?.sentModules?.media ?? current.draft.media;
+        baseline.media = media;
+        draftClone.media = rebaseSavedMedia(sent, current.draft.media, media);
+        canonicalModuleUpdated = true;
       }
       if (options?.canonicalRooms) {
         if (keys.includes('rooms')) {
@@ -221,6 +245,20 @@ export function useObjectEditorState(
     });
   }, [freshSnapshot, identityKey]);
 
+  const mergeSavedModule = useCallback(<K extends keyof ObjectWorkspaceModules>(key: K, update: (current: ObjectWorkspaceModules[K]) => ObjectWorkspaceModules[K]) => {
+    setEditorState((prev) => {
+      // Une réponse d’une ancienne fiche/session ne doit pas réactiver son état.
+      if (prev.identityKey !== identityKey) return prev;
+      const current = prev.snapshot;
+      return { ...prev, identityKey, snapshot: { ...current,
+        baseline: { ...current.baseline, [key]: update(current.baseline[key]) },
+        draft: { ...current.draft, [key]: update(current.draft[key]) },
+      }, recoveryConflicts: prev.identityKey === identityKey ? prev.recoveryConflicts : [] };
+    });
+  // This updater reads the matching current state, not the server snapshot.
+  // Keep its identity stable when a refetch only supplies a new gallery readId.
+  }, [identityKey]);
+
   const setSavedStatus = useCallback((status: string) => {
     setEditorState((prev) => {
       const current = prev.identityKey === identityKey ? prev.snapshot : freshSnapshot;
@@ -248,5 +286,5 @@ export function useObjectEditorState(
   const dirtySections = useMemo(() => getDirtySections(snapshot, nonApplicableModules), [snapshot, nonApplicableModules]);
   const isDirty = useMemo(() => Object.values(dirtySections).some(Boolean), [dirtySections]);
 
-  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, setSavedStatus };
+  return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, mergeSavedModule, setSavedStatus };
 }

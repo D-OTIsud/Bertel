@@ -23,6 +23,7 @@
 import { useEffect, useState } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { buildContributorSubmission, isAutoDispatchModule } from '../object-editor/contributor-proposal';
+import { buildPortalPhotoSubmission } from '../../services/portal-photos';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 import { describePortalChange } from './portal-change-summary';
 import { clearPortalDraft, writePortalSent } from './usePortalDraft';
@@ -141,7 +142,9 @@ export function PortalSendModal({
         if (seen.has(rubric.module)) continue;
         seen.add(rubric.module);
         modules.push(rubric.module);
-        const base = buildContributorSubmission(objectId, rubric.module, editor.baseline, editor.draft);
+        const base = rubric.module === 'media'
+          ? buildPortalPhotoSubmission(objectId, editor.baseline.media, editor.draft.media)
+          : buildContributorSubmission(objectId, rubric.module, editor.baseline, editor.draft);
         const readable = describePortalChange(rubric.module, editor.baseline, editor.draft, archetype);
         envelopes.push({ ...base, metadata: { ...base.metadata, ...readable } });
       }
@@ -210,7 +213,7 @@ export function PortalSendModal({
               <span className="muted">
                 {off
                   ? 'ne partira pas cette fois'
-                  : isAutoDispatchModule(rubric.module)
+                  : rubric.module === 'media' || isAutoDispatchModule(rubric.module)
                     ? // Il vient de cliquer « Valider » : « appliqué dès validation » lui
                       // ferait croire que c'est déjà en ligne.
                       'l’office les publiera tout de suite'

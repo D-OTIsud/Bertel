@@ -69,7 +69,9 @@ describe('BlockersModal', () => {
   it('fires onClose from the footer button', () => {
     const onClose = jest.fn();
     render(<BlockersModal {...baseProps} onClose={onClose} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Fermer' }));
+    const footerButton = screen.getByText('Fermer', { selector: 'button.btn.primary' });
+    expect(footerButton).toHaveAccessibleName('Fermer');
+    fireEvent.click(footerButton);
     expect(onClose).toHaveBeenCalled();
   });
 });
@@ -117,5 +119,5 @@ it('uses the approved deferred-publication notice in the existing modal', () => 
   expect(screen.queryByText('An unrelated save error')).not.toBeInTheDocument();
   expect(screen.queryByText('An unrelated warning')).not.toBeInTheDocument();
   expect(screen.getByText('Une modification a été saisie pendant l’enregistrement. Elle est conservée. Relancez la publication pour enregistrer et publier la dernière version.')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Fermer' })).toBeInTheDocument();
+  expect(screen.getByText('Fermer', { selector: 'button.btn.primary' })).toHaveAccessibleName('Fermer');
 });

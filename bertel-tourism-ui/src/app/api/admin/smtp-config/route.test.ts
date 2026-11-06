@@ -63,6 +63,19 @@ it('retains an existing password when omitted on the same saved account', async 
   expect(await response.text()).not.toContain('never-return-me');
 });
 
+it('rejects an overflowing JSON port with the existing first error before any write', async () => {
+  const body = JSON.stringify({ ...input, port: 0 }).replace('"port":0', '"port":1e309');
+  expect(JSON.parse(body).port).toBe(Infinity);
+  const request = new NextRequest('http://localhost/api/admin/smtp-config', {
+    method: 'PUT', headers: { authorization: 'Bearer valid', 'Content-Type': 'application/json' }, body,
+  });
+  const response = await PUT(request);
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ detail: 'Expected integer, received float' });
+  expect(rpc).not.toHaveBeenCalledWith('upsert_smtp_config', expect.anything());
+  expect(verifySmtpConnection).not.toHaveBeenCalled();
+});
+
 it('requires fresh credentials for a new host/account', async () => {
   expect((await PUT(req('PUT', { ...input, host: 'other.example.com' }))).status).toBe(400);
   expect(rpc).not.toHaveBeenCalledWith('upsert_smtp_config', expect.anything());

@@ -1,5 +1,5 @@
 import 'server-only';
-import { z } from 'zod';
+import { z, integerTypeError } from '@/lib/zod';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SmtpSettings } from '@/services/smtp-settings';
 import { readSmtpConfig, type SmtpConfig } from './env.server';
@@ -10,7 +10,8 @@ export const smtpSettingsInputSchema = z.object({
   enabled: z.boolean(),
   host: z.string().trim().min(1, 'Indiquez le serveur SMTP.').max(253)
     .regex(/^[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?$/, 'Utilisez un nom de serveur, sans https:// ni chemin.'),
-  port: z.number().int().min(1).max(65535),
+  // Keep integer and field-bound messages in their existing order; the port range is safe.
+  port: z.number({ error: integerTypeError }).refine(Number.isInteger, 'Expected integer, received float').min(1).max(65535),
   secure: z.boolean(),
   fromEmail: line.pipe(z.string().email('Indiquez une adresse d’expédition valide.')),
   fromName: line.pipe(z.string().min(1, 'Indiquez le nom d’expédition.')),

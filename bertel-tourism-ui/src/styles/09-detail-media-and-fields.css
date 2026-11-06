@@ -473,8 +473,8 @@
 }
 
 .workspace-tooltip__trigger:focus-visible {
-  /* audit S1 : anneau visible au clavier (le bloc combiné ci-dessous retire l'outline). */
-  box-shadow: 0 0 0 2px var(--teal-tint);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
   border-radius: 4px;
 }
 
@@ -482,7 +482,6 @@
 .workspace-tooltip__trigger:focus-visible {
   background: rgba(24, 49, 59, 0.08);
   color: var(--text-main);
-  outline: none;
 }
 
 .workspace-tooltip__bubble {

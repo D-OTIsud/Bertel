@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 import { getApiClient } from "../lib/supabase";
 import { photoAssessmentSchema } from "../app/api/portal-photo/analyze/assessment";
 

@@ -1,7 +1,7 @@
 import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { isSandboxDiscoveryUser, SANDBOX_AI_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { resolveActiveAiProvider } from '@/lib/ai-provider.server';

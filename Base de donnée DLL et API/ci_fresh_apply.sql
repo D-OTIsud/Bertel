@@ -688,8 +688,12 @@ ROLLBACK;
 \ir tests/fixtures/capture_partner_photo_album_public.sql
 \ir object_current_rights.sql
 \ir ../supabase/migrations/20261106100603_object_current_authorization.sql
+-- Separate privileged-leaf hardening; preserve the malformed DB03 shadow witness.
+\ir object_canonical_write_sources.sql
+\ir ../supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql
 \ir tests/test_partner_photo_album_public.sql
 \ir tests/test_object_current_rights.sql
+\ir tests/test_object_canonical_write_sources.sql
 \ir tests/test_object_current_rights_surfaces.sql
 
 \echo '== 20b-test existing regressions against final current-authority policy =='

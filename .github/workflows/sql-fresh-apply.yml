@@ -21,6 +21,7 @@ on:
       - 'tools/tourinsoft/**'
       - 'tools/private-media/**'
       - 'tools/ai-quota/**'
+      - 'tools/current-rights/**'
       - 'docs/SQL_ROLLOUT_RUNBOOK.md'
       - '.github/workflows/sql-fresh-apply.yml'
   pull_request:
@@ -32,12 +33,22 @@ on:
       - 'tools/tourinsoft/**'
       - 'tools/private-media/**'
       - 'tools/ai-quota/**'
+      - 'tools/current-rights/**'
       - 'docs/SQL_ROLLOUT_RUNBOOK.md'
       - '.github/workflows/sql-fresh-apply.yml'
   workflow_dispatch:
+    inputs:
+      storage_contract:
+        description: 'Run only strict synthetic Storage capability (known v1.41.8 concurrency failure; no production)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   fresh-apply:
+    # Push/PR always run the mandatory application/rights gate. The explicit
+    # manual selector below starts a separate upstream capability probe only.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.storage_contract != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -65,6 +76,7 @@ jobs:
         # canonical manifest (for example ref_code).
         run: |
           mkdir -p "$RUNNER_TEMP/bertel-fresh/supabase"
+          printf 'BERTEL_CURRENT_RIGHTS_DISPOSABLE_V1\n' > "$RUNNER_TEMP/bertel-fresh/.bertel-current-rights-disposable"
           cp supabase/config.toml "$RUNNER_TEMP/bertel-fresh/supabase/config.toml"
           # Expose the existing api namespace only in this disposable HTTP test
           # stack. Production config/visibility is not changed by this gate.
@@ -85,7 +97,12 @@ jobs:
         # Boots the Supabase-flavoured Postgres (DB image provides the auth/storage
         # schemas, the anon/authenticated/service_role roles, and the extensions the
         # manifest depends on). config.toml pins major_version 17 to match PROD.
-        run: supabase start --workdir "$RUNNER_TEMP/bertel-fresh"
+        env:
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        # Native startup normally prints generated keys. Keep its raw streams in
+        # memory, never in Actions output or an uploaded diagnostic file.
+        run: node tools/current-rights/start-disposable.mjs
 
       - name: Apply the canonical fresh-install manifest (aborts on first error)
         env:
@@ -567,6 +584,16 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -v current_rights_disposable=true -f "Base de donnée DLL et API/tests/test_object_current_rights_committed_revocation.sql"
 
+      - name: Current rights through real GoTrue and PostgREST (same JWT after COMMIT)
+        env:
+          CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: |
+          node --test tools/current-rights/disposable.test.mjs
+          node --test tools/current-rights/storage-refusals.test.mjs
+          node --test tools/current-rights/postgrest-rights.test.mjs
+
       - name: PostgreSQL diagnostics on failure
         if: failure()
         run: docker ps -aq --filter name=supabase_db_ | xargs -r -n1 docker logs --tail 120
@@ -574,3 +601,47 @@ jobs:
       - name: Stop Supabase
         if: always()
         run: supabase stop --workdir "$RUNNER_TEMP/bertel-fresh"
+
+  storage-contract:
+    name: Strict Storage capability (manual, synthetic only)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.storage_contract == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      CURRENT_RIGHTS_DISPOSABLE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.78.1
+
+      - name: Prepare owned blank Storage stack
+        # No Bertel schema or real object is needed by this independent probe.
+        run: |
+          mkdir -p "$RUNNER_TEMP/bertel-storage/supabase"
+          printf 'BERTEL_CURRENT_RIGHTS_DISPOSABLE_V1\n' > "$RUNNER_TEMP/bertel-storage/.bertel-current-rights-disposable"
+          cp supabase/config.toml "$RUNNER_TEMP/bertel-storage/supabase/config.toml"
+
+      - name: Start disposable Supabase with generated keys withheld
+        env:
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
+        run: node tools/current-rights/start-disposable.mjs
+
+      - name: Strict private Storage HTTP capability (failure is not tolerated)
+        env:
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
+        # This is deliberately separate from required Auth coverage. Two accepted
+        # concurrent copies remain a failed capability, never a security success.
+        run: |
+          node --test tools/current-rights/disposable.test.mjs tools/current-rights/storage-refusals.test.mjs
+          docker ps --format '{{.Image}}' --filter 'name=supabase_storage_'
+          node --test tools/current-rights/storage-contract.test.mjs
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --workdir "$RUNNER_TEMP/bertel-storage"

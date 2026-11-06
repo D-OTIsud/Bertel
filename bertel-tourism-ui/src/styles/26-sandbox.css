@@ -129,7 +129,10 @@
   font-size: 12px;
 }
 
-.object-documents-modal__item a {
+.object-documents-modal__item .object-document-link__error { color: var(--red, #93392a); }
+
+.object-documents-modal__item a,
+.object-documents-modal__item .object-document-link__button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -139,6 +142,7 @@
   text-decoration: none;
 }
 
-.object-documents-modal__item a:hover {
+.object-documents-modal__item a:hover,
+.object-documents-modal__item .object-document-link__button:hover {
   text-decoration: underline;
 }

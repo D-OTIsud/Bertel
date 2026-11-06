@@ -141,6 +141,10 @@
 .perm-drawer__exceptions { margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--line); }
 .perm-drawer__exceptions h2 { font-size: 14px; margin: 0 0 2px; }
 .link-button { background: none; border: 0; padding: 0; font: inherit; color: var(--teal); text-decoration: underline; cursor: pointer; }
+.object-document-link { display: inline-grid; min-width: 0; max-width: 100%; gap: 4px; }
+.object-document-link__button { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-align: inherit; cursor: pointer; }
+.object-document-link__button:disabled { cursor: progress; }
+.object-document-link__error { font-size: 12px; color: var(--red, #93392a); }
 
 /* Matrice permission × rôle métier — surface DÉDIÉE, hors de la fiche d'un membre. */
 .role-matrix th[scope="col"] { text-align: center; }

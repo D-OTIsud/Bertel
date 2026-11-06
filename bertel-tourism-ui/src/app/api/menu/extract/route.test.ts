@@ -124,13 +124,51 @@ describe('POST /api/menu/extract', () => {
     expect((await res.json()).truncated).toBe(true);
   });
 
-  it('400s when the image array exceeds the outer cap (pathological decoy-array defense)', async () => {
+  it('rejects the oversized image array before reading any elements and preserves the cap message', async () => {
+    mockedServer.mockReturnValue(serverWithUser());
+    let reads = 0;
+    const images = new Proxy(Array.from({ length: 65 }, () => ({ mime: 'image/jpeg', base64: TINY_JPEG_BASE64 })), {
+      get(target, property, receiver) {
+        if (typeof property === 'string' && /^\d+$/.test(property)) reads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const res = await POST(req({ authorization: 'Bearer t' }, makeBody({ images })));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'bad_request', detail: 'Array must contain at most 64 element(s)' });
+    expect(reads).toBe(0);
+    expect(mockedCreate).not.toHaveBeenCalled();
+    expect(mockedPrepareVisionImage).not.toHaveBeenCalled();
+    expect(mockedOrchestrate).not.toHaveBeenCalled();
+  });
+
+  it('keeps accepting the exact image-count bound with the existing truncation result', async () => {
     mockedServer.mockReturnValue(serverWithUser());
     const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
     mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
-    const body = makeBody({ images: Array.from({ length: 65 }, () => ({ mime: 'image/jpeg', base64: TINY_JPEG_BASE64 })) });
-    const res = await POST(req({ authorization: 'Bearer t' }, body));
+    let reads = 0;
+    const images = new Proxy(Array.from({ length: 64 }, () => ({ mime: 'image/jpeg', base64: TINY_JPEG_BASE64 })), {
+      get(target, property, receiver) {
+        if (typeof property === 'string' && /^\d+$/.test(property)) reads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const res = await POST(req({ authorization: 'Bearer t' }, makeBody({ images })));
+    expect(res.status).toBe(200);
+    expect((await res.json()).truncated).toBe(true);
+    expect(mockedPrepareVisionImage).toHaveBeenCalledTimes(8);
+    expect(reads).toBeGreaterThan(0);
+  });
+
+  it('preserves the option-list bound and message before invoking conversion or a provider', async () => {
+    mockedServer.mockReturnValue(serverWithUser());
+    const allowed_sections = Array.from({ length: 201 }, () => ({ id: 'main', code: 'main', label: 'Main' }));
+    const res = await POST(req({ authorization: 'Bearer t' }, makeBody({ allowed_sections })));
     expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'bad_request', detail: 'Array must contain at most 200 element(s)' });
+    expect(mockedCreate).not.toHaveBeenCalled();
+    expect(mockedPrepareVisionImage).not.toHaveBeenCalled();
+    expect(mockedOrchestrate).not.toHaveBeenCalled();
   });
 
   it('holds the ai lease while an image preparation is in flight: a second authorized request is 429ed and never reaches the provider; the lease frees only once the pending work settles', async () => {

@@ -17,6 +17,7 @@ import { ChevronDown } from 'lucide-react';
 import { fold } from './fold';
 import type { SearchSelectOption } from './SearchSelect';
 import { usePickerPopover } from './usePickerPopover';
+import { PickerPanel, scrollOptionIntoView } from './PickerPanel';
 
 interface SearchMultiSelectProps {
   /** Codes sélectionnés. L'ordre d'affichage des puces suit celui des options. */
@@ -69,11 +70,16 @@ export function SearchMultiSelect({
     () => options.filter((option) => folded === '' || fold(option.label).includes(folded)),
     [options, folded],
   );
+  const optionId = (code: string) => `${listId}-option-${encodeURIComponent(code)}`;
+  const activeId = filtered[active] ? optionId(filtered[active].code) : undefined;
+  useEffect(() => { setActive((index) => Math.max(0, Math.min(index, filtered.length - 1))); }, [filtered.length]);
+  useEffect(() => {
+    if (open && activeId) scrollOptionIntoView(document.getElementById(activeId), panelRef.current?.querySelector('[role="listbox"]') ?? null);
+  }, [open, activeId, panelRef]);
 
   useEffect(() => {
     if (open) {
       setActive(0);
-      searchRef.current?.focus();
     } else {
       setQuery('');
     }
@@ -82,6 +88,7 @@ export function SearchMultiSelect({
   // Le popover reste OUVERT après un basculement : on en choisit plusieurs d'affilée.
   function toggle(code: string) {
     onChange(selectedSet.has(code) ? values.filter((value) => value !== code) : [...values, code]);
+    if (open) searchRef.current?.focus({ preventScroll: true });
   }
 
   function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -90,6 +97,7 @@ export function SearchMultiSelect({
       event.stopPropagation();
       event.preventDefault();
       setOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
       return;
     }
     if (event.key === 'ArrowDown') {
@@ -124,7 +132,10 @@ export function SearchMultiSelect({
         aria-controls={listId}
         aria-label={ariaLabel}
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          triggerRef.current?.focus({ preventScroll: true });
+          setOpen((o) => !o);
+        }}
       >
         <span className="picker__trigger-label">{triggerLabel}</span>
         <ChevronDown className="picker__chevron" size={20} strokeWidth={2} aria-hidden="true" />
@@ -150,14 +161,19 @@ export function SearchMultiSelect({
       )}
 
       {mounted && open && createPortal(
-        <div className="picker__panel" ref={panelRef} style={panelStyle}>
+        <PickerPanel panelRef={panelRef} triggerRef={triggerRef} searchRef={searchRef} style={panelStyle} onClose={close}>
           <input
             ref={searchRef}
             className="picker__search"
             type="text"
+            role="combobox"
+            aria-expanded="true"
+            aria-autocomplete="list"
             value={query}
             placeholder={searchPlaceholder}
             aria-label="Rechercher"
+            aria-controls={listId}
+            aria-activedescendant={activeId}
             onChange={(event) => {
               setQuery(event.target.value);
               setActive(0);
@@ -170,6 +186,7 @@ export function SearchMultiSelect({
               return (
                 <button
                   key={option.code}
+                  id={optionId(option.code)}
                   type="button"
                   role="option"
                   aria-selected={checked}
@@ -183,7 +200,7 @@ export function SearchMultiSelect({
             })}
             {filtered.length === 0 && <p className="picker__empty">{emptyLabel}</p>}
           </div>
-        </div>,
+        </PickerPanel>,
         document.body,
       )}
     </div>

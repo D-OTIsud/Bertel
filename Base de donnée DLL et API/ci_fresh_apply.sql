@@ -111,6 +111,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \ir migration_crm_directory_search.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
+
+\echo '== 9a platform branding canonical-profile authorization (folded into fresh source; standalone upgrade retained) =='
+\ir ../supabase/migrations/20261106075113_branding_admin_authorization.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='
 \ir media_bucket.sql
 \echo '== 11/13 seeds_data.sql  (needs ref_sustainability_action_group from step 2) =='
@@ -654,6 +657,18 @@ ROLLBACK;
 \echo '== verified completeness history and exact source dates =='
 \ir ../supabase/migrations/20261030141523_restore_verified_completeness_history.sql
 \ir tests/test_completeness_history.sql
+
+\echo '== 20a photo-only album: fresh closed preparation and exact public-contract differential =='
+-- These three files must run in this SAME psql session. The baseline is
+-- synthetic and session-local; the initializer is NOT an existing-DB upgrade.
+\ir tests/test_partner_photo_album_partial.sql
+\ir tests/fixtures/capture_partner_photo_album_public.sql
+\ir partner_photo_album_fresh_install.sql
+\ir tests/test_partner_photo_album_public.sql
+
+\echo '== 20a-test photo-only contract: closed actors/AI, real CAS receipts and isolated actors =='
+\ir tests/test_partner_photo_album_fresh.sql
+\ir tests/test_partner_photo_album_catalog_rejections.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

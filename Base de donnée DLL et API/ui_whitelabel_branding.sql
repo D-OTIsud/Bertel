@@ -30,30 +30,22 @@ RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public, api, auth
+SET search_path = public, api, auth, pg_temp
 AS $$
-  SELECT
+  -- Human platform authority comes only from the canonical server-managed profile.
+  -- Auth metadata is not a second source of platform permissions.
+  SELECT COALESCE(
     auth.role() IN ('service_role', 'admin')
-    OR EXISTS (
+    OR (auth.role() = 'authenticated' AND EXISTS (
       SELECT 1
       FROM public.app_user_profile p
       WHERE p.id = auth.uid()
         AND p.role IN ('owner', 'super_admin')
-    )
-    OR EXISTS (
-      SELECT 1
-      FROM auth.users u
-      WHERE u.id = auth.uid()
-        AND COALESCE(
-          NULLIF(lower(u.raw_app_meta_data ->> 'role'), ''),
-          NULLIF(lower(u.raw_user_meta_data ->> 'role'), ''),
-          ''
-        ) IN ('admin', 'owner', 'super_admin')
-    );
+    )), false);
 $$;
 
 COMMENT ON FUNCTION api.is_platform_admin() IS
-'Returns true when the current user can manage platform-level branding and UI theme settings, using app_user_profile or auth metadata.';
+'Platform branding authority: authenticated owner/super_admin from app_user_profile, or the existing service_role/admin technical identity. Auth metadata never grants authority; missing auth context returns false.';
 
 -- -----------------------------------------------------
 -- 2) Global branding settings (singleton row)
@@ -300,6 +292,7 @@ COMMENT ON FUNCTION api.upsert_app_branding(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, 
 GRANT SELECT ON public.app_branding_settings TO authenticated;
 GRANT ALL ON public.app_branding_settings TO service_role;
 
+REVOKE ALL ON FUNCTION api.is_platform_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.is_platform_admin() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.get_public_branding() TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.get_app_branding() TO authenticated, service_role;

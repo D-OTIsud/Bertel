@@ -607,66 +607,146 @@ export const LIST_EMAIL_RESEND_CONFIRMATION =
 export const LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE =
   "L'envoi est momentanément indisponible. Réessayez dans un instant.";
 export class ListEmailUnknownError extends Error {
-  constructor(readonly operationId: string) {
+  readonly operationIds: string[];
+  readonly operationId: string;
+  constructor(operations: string | string[]) {
     super(LIST_EMAIL_UNKNOWN_MESSAGE);
     this.name = 'ListEmailUnknownError';
+    this.operationIds = [...new Set(typeof operations === 'string' ? [operations] : operations)];
+    this.operationId = this.operationIds[0] ?? '';
   }
+}
+export interface ListEmailGenerationContext {
+  generations: Readonly<Record<string, string>>;
 }
 export interface SendListEmailIntent {
   operationId: string;
+  /** Snapshot loaded with the view and copied synchronously at the gesture. */
+  context: ListEmailGenerationContext;
+  confirmResend?: boolean;
   confirmedPreviousOperationId?: string;
-  /** Scope is captured at the gesture, including changes hidden by a batched render. */
+  confirmedPreviousOperationIds?: string[];
   isCurrent?: () => boolean;
   signal?: AbortSignal;
+  expectedUserId?: string | null;
 }
-
-/** A committed started receipt is never automatically retransmitted. Each deliberate
- * send has a UUID; an uncertain previous send additionally requires explicit confirmation. */
-export async function sendListByEmail(listId: string, toEmail: string, intent?: SendListEmailIntent): Promise<SendListEmailResult> {
-  const operationId = intent?.operationId ?? crypto.randomUUID();
-  const assertCurrent = () => {
-    if (intent?.signal?.aborted || intent?.isCurrent?.() === false) throw new DOMException('Obsolete list-mail scope', 'AbortError');
-  };
-  assertCurrent();
-  // A stale visible action must not start an SMTP request after an administrator disables it.
-  const availability = await getServiceAvailability({ force: true });
-  assertCurrent();
-  if (!availability.email) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+const mailUuid = (value: unknown): value is string => typeof value === 'string'
+  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+const mailProof = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
+const mailGeneration = (value: unknown): value is string => typeof value === 'string'
+  && /^(0|[1-9][0-9]{0,18})$/.test(value) && BigInt(value) <= 9223372036854775807n;
+function generationSnapshot(value: ListEmailGenerationContext | undefined): ListEmailGenerationContext {
+  const input = value && asRecord(value.generations);
+  if (!input || !Object.entries(input).every(([key, generation]) => mailProof(key) && mailGeneration(generation))) {
+    throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  }
+  return { generations: Object.freeze({ ...input } as Record<string, string>) };
+}
+interface MailScope { isCurrent?: () => boolean; signal?: AbortSignal; expectedUserId?: string | null }
+function assertMailScope(scope?: MailScope) {
+  if (scope?.signal?.aborted || scope?.isCurrent?.() === false) throw new DOMException('Obsolete list-mail scope', 'AbortError');
+}
+async function mailSession(scope?: MailScope) {
+  assertMailScope(scope);
   const client = getApiClient();
   if (!client) throw new Error('Supabase non configuré.');
   const { data } = await client.auth.getSession();
-  assertCurrent();
-  const token = data.session?.access_token;
-  if (!token) throw new Error('Session expirée — reconnectez-vous.');
-  let res: Response;
+  assertMailScope(scope);
+  if (!data.session?.access_token) throw new Error('Session expirée — reconnectez-vous.');
+  if (scope?.expectedUserId !== undefined && data.session.user?.id !== scope.expectedUserId) {
+    throw new DOMException('Obsolete list-mail scope', 'AbortError');
+  }
+  return data.session;
+}
+async function mailJson(response: Response): Promise<GenericRecord | null> {
+  return asRecord(await response.json().catch(() => null));
+}
+function mailRefusal(response: Response, body: GenericRecord | null, operationId: string, mayHaveEffect: boolean): Error {
+  const j = body ?? {};
+  if (response.status === 409 && j.error === 'email_delivery_unknown') {
+    const ids = Array.isArray(j.operationIds) ? j.operationIds.filter(mailUuid) : mailUuid(j.operationId) ? [j.operationId] : [];
+    return new ListEmailUnknownError(ids);
+  }
+  if (response.status === 503 && j.error === 'email_protection_unavailable') return new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  if (response.status === 409 && j.error === 'email_context_stale') return new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  if (response.status === 503 && ['smtp_not_configured', 'smtp_unavailable', 'app_origin_unavailable'].includes(String(j.error))) {
+    return new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+  }
+  const certain: Record<number, readonly string[]> = {
+    400: ['bad_json', 'bad_request', 'missing_list', 'invalid_email'], 401: ['unauthenticated'],
+    403: ['forbidden', 'sandbox_external_effects_disabled'], 404: ['not_found'],
+    409: ['bad_request'], 500: ['server_misconfigured', 'share_failed'], 502: ['send_failed'],
+  };
+  if (typeof j.error === 'string' && certain[response.status]?.includes(j.error)) {
+    const friendly = typeof j.detail === 'string' ? shareLinkFriendlyMessage(j.detail) : null;
+    return new Error(friendly ?? readApiErrorMessage(j, response.status));
+  }
+  return mayHaveEffect ? new ListEmailUnknownError(operationId) : new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+}
+
+/** Read-only, authorized context load before a gesture. It never creates a permit. */
+export async function getListEmailContext(listId: string, scope?: MailScope): Promise<ListEmailGenerationContext> {
+  const session = await mailSession(scope);
+  let response: Response;
+  try { response = await fetch('/api/lists/send', { method: 'POST', cache: 'no-store', signal: scope?.signal,
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ phase: 'context', listId }) }); }
+  catch { assertMailScope(scope); throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE); }
+  const body = await mailJson(response); assertMailScope(scope);
+  if (!response.ok) throw mailRefusal(response, body, '', false);
+  if (body?.ok !== true || body.phase !== 'context' || body.listId !== listId || typeof body.userId !== 'string'
+    || (session.user?.id && body.userId !== session.user.id)) throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  return generationSnapshot({ generations: body.generations as Record<string, string> });
+}
+
+/** No generation reload/retry belongs to this gesture. Prepare acknowledges a
+ * permit, dispatch can only consume it, ACK proves receipt of an accepted result. */
+export async function sendListByEmail(listId: string, toEmail: string, intent?: SendListEmailIntent): Promise<SendListEmailResult> {
+  const context = generationSnapshot(intent?.context); // clone BEFORE the first await
+  const recipient = toEmail.trim();
+  const operationId = intent?.operationId ?? crypto.randomUUID();
+  const parents = [...new Set([...(intent?.confirmedPreviousOperationIds ?? []),
+    ...(intent?.confirmedPreviousOperationId ? [intent.confirmedPreviousOperationId] : [])])];
+  const confirmResend = intent?.confirmResend === true || parents.length > 0;
+  assertMailScope(intent);
+  const availability = await getServiceAvailability({ force: true }); assertMailScope(intent);
+  if (!availability.email) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+  const session = await mailSession(intent);
+  let recipientHash: string;
   try {
-    res = await fetch('/api/lists/send', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}`, 'Idempotency-Key': operationId },
-      body: JSON.stringify({ listId, toEmail, ...(intent?.confirmedPreviousOperationId ? { confirmedPreviousOperationId: intent.confirmedPreviousOperationId } : {}) }),
-      signal: intent?.signal,
-    });
-  } catch {
-    assertCurrent();
-    // A lost HTTP reply is not proof of a failed SMTP delivery.
-    throw new ListEmailUnknownError(operationId);
+    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(recipient));
+    recipientHash = [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  } catch { assertMailScope(intent); throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE); }
+  assertMailScope(intent);
+  const expectedGeneration = context.generations[recipientHash] ?? '0';
+  const post = (body: GenericRecord) => fetch('/api/lists/send', { method: 'POST', cache: 'no-store',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}`, 'Idempotency-Key': operationId },
+    body: JSON.stringify({ listId, ...body }), signal: intent?.signal });
+  let prepare: Response;
+  try { prepare = await post({ phase: 'prepare', toEmail: recipient, expectedGeneration, confirmResend, confirmedPreviousOperationIds: parents }); }
+  catch { assertMailScope(intent); throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE); }
+  let result = await mailJson(prepare); assertMailScope(intent);
+  if (!prepare.ok) throw mailRefusal(prepare, result, operationId, false);
+  const accepted = (body: GenericRecord | null) => body?.ok === true && body.phase === 'accepted'
+    && body.operationId === operationId && mailProof(body.resultToken);
+  if (!accepted(result)) {
+    if (result?.ok !== true || result.phase !== 'prepared' || result.operationId !== operationId || !mailUuid(result.dispatchToken)) {
+      throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+    }
+    let dispatch: Response;
+    assertMailScope(intent);
+    try { dispatch = await post({ phase: 'dispatch', toEmail: recipient, dispatchToken: result.dispatchToken }); }
+    catch { assertMailScope(intent); throw new ListEmailUnknownError(operationId); }
+    result = await mailJson(dispatch); assertMailScope(intent);
+    if (!dispatch.ok) throw mailRefusal(dispatch, result, operationId, true);
+    if (!accepted(result)) throw new ListEmailUnknownError(operationId);
   }
-  assertCurrent();
-  if (!res.ok) {
-    const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string; operationId?: string };
-    assertCurrent();
-    if (j.error === 'email_delivery_unknown') throw new ListEmailUnknownError(j.operationId ?? operationId);
-    if (j.error === 'email_protection_unavailable') throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
-    if (res.status === 503) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
-    if (res.status >= 500 && !(res.status === 502 && j.error === 'send_failed')
-      && j.error !== 'server_misconfigured' && j.error !== 'share_failed') throw new ListEmailUnknownError(operationId);
-    const shareFriendly = j.detail ? shareLinkFriendlyMessage(j.detail) : null;
-    if (shareFriendly) throw new Error(shareFriendly);
-    throw new Error(readApiErrorMessage(j, res.status));
-  }
-  const body = (await res.json().catch(() => ({}))) as { trackingUpdated?: boolean };
-  assertCurrent();
-  return { trackingUpdated: body.trackingUpdated === true };
+  // A result proof has a different type/value from the prepare permit. A missing
+  // ACK never converts a known relay acceptance into a retryable mail failure.
+  assertMailScope(intent);
+  try { await post({ phase: 'ack', resultToken: result!.resultToken }); } catch { /* known acceptance remains success */ }
+  assertMailScope(intent);
+  return { trackingUpdated: result!.trackingUpdated === true };
 }
 
 // ---------- partage ----------

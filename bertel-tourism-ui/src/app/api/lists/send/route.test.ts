@@ -39,8 +39,16 @@ function req(body: Record<string, unknown>): NextRequest {
   return new NextRequest('https://app.test/api/lists/send', {
     method: 'POST',
     headers: { authorization: 'Bearer t', 'content-type': 'application/json', 'Idempotency-Key': 'd2000000-0000-4000-8000-000000000001' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ phase: 'prepare', expectedGeneration: '0', ...body }),
   });
+}
+
+async function send(request: NextRequest) {
+  const input = await request.clone().json();
+  const prepared = await POST(request);
+  const body = await prepared.clone().json();
+  if (!prepared.ok || body.phase !== 'prepared') return prepared;
+  return POST(req({ ...input, phase: 'dispatch', dispatchToken: body.dispatchToken }));
 }
 
 const LIST_ROW = {
@@ -66,7 +74,7 @@ function setup(opts: { markError?: { message: string } | null; markThrows?: bool
       if (opts.markThrows) return Promise.reject(new Error('db down'));
       return Promise.resolve({ data: null, error: opts.markError ?? null });
     }
-    if (name === 'claim_list_email') return Promise.resolve({ data: { state: 'reserved', attempt_token: 'd2000000-0000-4000-8000-000000000099' }, error: null });
+    if (name === 'prepare_list_email') return Promise.resolve({ data: { state: 'reserved', attempt_token: 'd2000000-0000-4000-8000-000000000099' }, error: null });
     if (name === 'begin_list_email') return Promise.resolve({ data: { started: true }, error: null });
     if (name === 'complete_list_email') return Promise.resolve({ data: true, error: null });
     throw new Error(`unexpected server rpc ${name}`);
@@ -104,7 +112,7 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
   it('refuse une configuration absente avant création de lien ou SMTP, sans repli Host', async () => {
     delete process.env.NEXT_PUBLIC_APP_URL;
     const { rpc, serverRpc } = setup({});
-    const response = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }));
+    const response = await send(req({ listId: 'list-1', toEmail: 'a@example.com' }));
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ error: 'app_origin_unavailable' });
     expect(rpc).not.toHaveBeenCalledWith('ensure_list_share_link', expect.anything());
@@ -119,7 +127,7 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
     request.headers.set('origin', 'https://outside.example');
     request.headers.set('host', 'outside.example');
     request.headers.set('x-forwarded-host', 'outside.example');
-    const response = await POST(request);
+    const response = await send(request);
     expect(response.status).toBe(200);
     expect(renderListEmailHtml).toHaveBeenCalledWith(expect.objectContaining({ publicUrl: 'https://bertel.example/l/tok' }));
   });
@@ -127,7 +135,7 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
   it('SMTP absent : ni lien, ni e-mail, ni marquage', async () => {
     mockedSmtp.mockResolvedValue(null);
     const { rpc, serverRpc } = setup({ markError: null });
-    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    const res = await send(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
     expect(res.status).toBe(503);
     expect(rpc).not.toHaveBeenCalled();
     expect(serverRpc).not.toHaveBeenCalled();
@@ -137,7 +145,7 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
   it('mark_list_sent renvoie une erreur => 200, trackingUpdated:false, un seul envoi SMTP', async () => {
     setup({ markError: { message: 'forbidden' } });
 
-    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    const res = await send(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
     const body = (await res.json()) as Record<string, unknown>;
 
     expect(res.status).toBe(200);
@@ -148,7 +156,7 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
   it('mark_list_sent lève une exception => 200, trackingUpdated:false, un seul envoi SMTP', async () => {
     setup({ markThrows: true });
 
-    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    const res = await send(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
     const body = (await res.json()) as Record<string, unknown>;
 
     expect(res.status).toBe(200);
@@ -159,7 +167,7 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
   it('mark_list_sent réussit => 200, trackingUpdated:true, pas d’avertissement', async () => {
     setup({ markError: null });
 
-    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    const res = await send(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
     const body = (await res.json()) as Record<string, unknown>;
 
     expect(res.status).toBe(200);
@@ -171,7 +179,7 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
     setup({ markError: null });
     mockedSend.mockRejectedValue(new MailDeliveryError({ code: 'EAUTH' }));
 
-    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    const res = await send(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
 
     expect(res.status).toBe(502);
     const body = (await res.json()) as Record<string, unknown>;
@@ -181,18 +189,18 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
   it('marque via le client SERVICE-ROLE (jamais asCaller), avec p_sender_id = l’appelant authentifié', async () => {
     const { rpc, serverRpc } = setup({ markError: null });
 
-    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    const res = await send(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
     expect(res.status).toBe(200);
 
     expect(serverRpc).toHaveBeenCalledWith('mark_list_sent', { p_list_id: 'list-1', p_sender_id: 'u1' });
     // asCaller n'a JAMAIS reçu mark_list_sent — seuls get_list et ensure_list_share_link.
     expect(rpc).not.toHaveBeenCalledWith('mark_list_sent', expect.anything());
-    expect(rpc.mock.calls.map((c) => c[0]).sort()).toEqual(['ensure_list_share_link', 'get_list']);
+    expect(rpc.mock.calls.map((c) => c[0]).sort()).toEqual(['ensure_list_share_link', 'ensure_list_share_link', 'get_list', 'get_list']);
   });
 
   it('génère le lien public via ensure_list_share_link (en tant qu’appelant), pas share_list', async () => {
     const { rpc } = setup({ markError: null });
-    await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    await send(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
     expect(rpc).toHaveBeenCalledWith('ensure_list_share_link', { p_list_id: 'list-1' });
   });
 
@@ -213,7 +221,7 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
       from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }) }) }),
     } as never);
 
-    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    const res = await send(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
 
     expect(res.status).toBe(403);
     expect(mockedSend).not.toHaveBeenCalled();

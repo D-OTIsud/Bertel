@@ -1,35 +1,14 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 
-assert.equal(process.env.LIST_EMAIL_DISPOSABLE, 'true', 'explicit disposable authorization required');
-assert.ok(process.env.LIST_EMAIL_SUPABASE_WORKDIR && process.env.LIST_EMAIL_TEST_DB_URL, 'disposable Supabase workdir and database required');
-const dsn = new URL(process.env.LIST_EMAIL_TEST_DB_URL);
-assert.ok(['127.0.0.1', 'localhost'].includes(dsn.hostname) && dsn.pathname === '/postgres', 'loopback database required');
-let status;
-try { status = JSON.parse(execFileSync('supabase', ['status', '--workdir', process.env.LIST_EMAIL_SUPABASE_WORKDIR, '--output', 'json'],
-  { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })); }
-catch { throw new Error('Cannot read disposable Supabase status'); }
-const origin = new URL(status.API_URL);
-assert.ok(['http:', 'https:'].includes(origin.protocol) && ['127.0.0.1', 'localhost'].includes(origin.hostname)
-  && !origin.username && !origin.password, 'loopback Supabase API required');
-assert.ok(status.SERVICE_ROLE_KEY && status.ANON_KEY, 'local generated keys required');
-const service = { apikey: status.SERVICE_ROLE_KEY, authorization: `Bearer ${status.SERVICE_ROLE_KEY}` };
-const anonymous = { apikey: status.ANON_KEY, authorization: `Bearer ${status.ANON_KEY}` };
-const request = (path, headers, body, method = 'POST') => fetch(new URL(path, origin), {
-  method, redirect: 'error', headers: { ...headers, 'content-type': 'application/json' },
-  ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(10000),
-});
-const rpc = async (headers, name, args) => request(`/rest/v1/rpc/${name}`, { ...headers, 'content-profile': 'api', 'accept-profile': 'api' }, args);
-function sql(statement) {
-  // Input contains exact synthetic fixture IDs only. No keys, JWTs or business mail.
-  try { return execFileSync(process.env.LIST_EMAIL_PSQL ?? 'psql', [dsn.href, '-X', '-qAt', '-v', 'ON_ERROR_STOP=1'],
-    { input: statement, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim(); }
-  catch { throw new Error('Disposable list-mail SQL fixture failed'); }
-}
+import { loadListEmailDisposable } from './disposable.mjs';
+const local = await loadListEmailDisposable();
+const { service, anonymous, request } = local;
+const rpc = (headers, name, args) => request(`/rest/v1/rpc/${name}`, { ...headers, 'content-profile': 'api', 'accept-profile': 'api' }, args);
+const sql = (statement) => local.sql(statement, 'synthetic list mail');
 
-test('real Auth/PostgREST keep service-only receipt identity, concurrent one-attempt and revocation semantics', { timeout: 45000 }, async () => {
+test('real GoTrue/PostgREST enforce prepare/dispatch/result ACK, reload, generations and current authorization', { timeout: 45000 }, async () => {
   let user;
   const list = randomUUID(), operation = randomUUID();
   const org = `ORGM${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`;
@@ -41,7 +20,7 @@ test('real Auth/PostgREST keep service-only receipt identity, concurrent one-att
     user = (await created.json()).id; assert.match(user, /^[0-9a-f-]{36}$/);
     const login = await request('/auth/v1/token?grant_type=password', anonymous, { email, password });
     assert.equal(login.status, 200); const session = await login.json(); assert.ok(session.access_token);
-    const caller = { apikey: status.ANON_KEY, authorization: `Bearer ${session.access_token}` };
+    const caller = { apikey: anonymous.apikey, authorization: `Bearer ${session.access_token}` };
     const verified = await request('/auth/v1/user', caller, undefined, 'GET');
     assert.equal(verified.status, 200); assert.equal((await verified.json()).id, user);
     sql(`BEGIN; SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
@@ -49,45 +28,60 @@ test('real Auth/PostgREST keep service-only receipt identity, concurrent one-att
       INSERT INTO public.app_user_profile(id,role) VALUES('${user}','tourism_agent') ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role;
       INSERT INTO public.user_org_membership(user_id,org_object_id,is_active) VALUES('${user}','${org}',true);
       INSERT INTO public.object_list(id,org_object_id,created_by,kind,name) VALUES('${list}','${org}','${user}','static','Synthetic list'); COMMIT;`);
-    const args = { p_user_id: user, p_list_id: list, p_operation_id: operation, p_fingerprint: 'a'.repeat(64), p_recipient_fingerprint: 'b'.repeat(64) };
-    for (const identity of [anonymous, caller]) {
-      const denied = await rpc(identity, 'claim_list_email', args);
-      assert.ok([401, 403].includes(denied.status), 'ordinary role cannot choose a receipt identity');
+    const scope = { p_user_id: user, p_list_id: list };
+    const args = { ...scope, p_operation_id: operation, p_fingerprint: 'a'.repeat(64), p_recipient_fingerprint: 'b'.repeat(64), p_expected_generation: '0' };
+    for (const identity of [anonymous, caller]) for (const [name, body] of [
+      ['get_list_email_context', scope], ['prepare_list_email', args],
+      ['ack_list_email_client', { ...scope, p_operation_id: operation, p_result_token: 'a'.repeat(64) }],
+    ]) {
+      const denied = await rpc(identity, name, body);
+      assert.ok([401, 403].includes(denied.status), 'ordinary role cannot choose a receipt identity or ACK');
     }
-    const claims = await Promise.all([rpc({ ...service }, 'claim_list_email', args), rpc({ ...service }, 'claim_list_email', args)]);
-    assert.ok(claims.every((r) => r.status === 200), 'real service-role must execute invoker RPC and row locks');
-    const receipts = await Promise.all(claims.map((r) => r.json()));
+    const read = await rpc(service, 'get_list_email_context', scope); assert.equal(read.status, 200);
+    assert.deepEqual(await read.json(), { state: 'ready', generations: {} });
+    const preparations = await Promise.all([rpc(service, 'prepare_list_email', args), rpc(service, 'prepare_list_email', args)]);
+    assert.ok(preparations.every((r) => r.status === 200), 'actual service-role executes INVOKER and RLS contract');
+    const receipts = await Promise.all(preparations.map((r) => r.json()));
     assert.ok(receipts.every((r) => r.state === 'reserved')); assert.equal(receipts[0].attempt_token, receipts[1].attempt_token);
-    const exact = { p_user_id: user, p_list_id: list, p_operation_id: operation, p_attempt_token: receipts[0].attempt_token };
+    const exact = { ...scope, p_operation_id: operation, p_attempt_token: receipts[0].attempt_token, p_fingerprint: args.p_fingerprint, p_recipient_fingerprint: args.p_recipient_fingerprint };
+    const wrongNonce = await rpc(service, 'begin_list_email', { ...exact, p_attempt_token: randomUUID() });
+    assert.equal(wrongNonce.status, 200); assert.equal((await wrongNonce.json()).started, false);
     const begun = await Promise.all([rpc(service, 'begin_list_email', exact), rpc(service, 'begin_list_email', exact)]);
-    assert.ok(begun.every((r) => r.status === 200)); const verdicts = await Promise.all(begun.map((r) => r.json()));
-    let fakeEffects = 0; for (const verdict of verdicts) if (verdict.started === true) fakeEffects++;
-    assert.equal(fakeEffects, 1); assert.equal(verdicts.filter((r) => r.started === false && r.state === 'unknown').length, 1);
-    const unknown = await rpc(service, 'claim_list_email', args); assert.equal(unknown.status, 200); assert.equal((await unknown.json()).state, 'unknown');
-    // An old HTTP request can still be preparing outside SQL. Close its absent
-    // key before confirmed B; even after B accepts, late A must never gain a permit.
-    const absentA = randomUUID(), replacementB = randomUUID();
-    const replacementArgs = { ...args, p_operation_id: replacementB, p_recipient_fingerprint: 'c'.repeat(64), p_confirmed_previous_operation_id: absentA };
-    const reservedB = await rpc(service, 'claim_list_email', replacementArgs); assert.equal(reservedB.status, 200);
-    const receiptB = await reservedB.json(); assert.equal(receiptB.state, 'reserved');
-    const exactB = { ...exact, p_operation_id: replacementB, p_attempt_token: receiptB.attempt_token };
-    const beginB = await rpc(service, 'begin_list_email', exactB); assert.equal(beginB.status, 200);
-    const verdictB = await beginB.json(); if (verdictB.started === true) fakeEffects++;
-    assert.equal(verdictB.started, true);
-    const ackB = await rpc(service, 'complete_list_email', { ...exactB, p_outcome: 'accepted' }); assert.equal(ackB.status, 200); assert.equal(await ackB.json(), true);
-    const lateA = await rpc(service, 'claim_list_email', { ...args, p_operation_id: absentA, p_recipient_fingerprint: 'c'.repeat(64) });
-    assert.equal(lateA.status, 200); const verdictA = await lateA.json(); assert.equal(verdictA.state, 'conflict');
-    assert.equal(verdictA.attempt_token, undefined); assert.equal(fakeEffects, 2, 'only the original operation and B admitted an effect, never A');
-    sql(`UPDATE public.user_org_membership SET is_active=false WHERE user_id='${user}' AND org_object_id='${org}';`);
-    const revoked = await rpc(service, 'claim_list_email', args); assert.equal(revoked.status, 200); assert.equal((await revoked.json()).state, 'forbidden');
-    const ack = await rpc(service, 'complete_list_email', { ...exact, p_outcome: 'accepted', p_tracking_updated: false });
-    assert.equal(ack.status, 200); assert.equal(await ack.json(), true);
-    assert.equal(sql(`SELECT sum(admitted)=2 AND sum(started)=2 AND sum(accepted)=2 FROM internal.list_email_metric WHERE user_id='${user}';`), 't');
+    assert.ok(begun.every((r) => r.status === 200));
+    const verdicts = await Promise.all(begun.map((r) => r.json()));
+    assert.equal(verdicts.filter((r) => r.started === true).length, 1);
+    assert.equal(verdicts.filter((r) => r.started === false && r.state === 'unknown').length, 1);
+    const ack = (op, proof) => rpc(service, 'ack_list_email_client', { ...scope, p_operation_id: op, p_result_token: proof });
+    const premature = await ack(operation, 'a'.repeat(64)); assert.equal(premature.status, 200); assert.equal(await premature.json(), false);
+    const complete = await rpc(service, 'complete_list_email', { ...scope, p_operation_id: operation, p_attempt_token: exact.p_attempt_token, p_outcome: 'accepted', p_result_token: 'a'.repeat(64) });
+    assert.equal(complete.status, 200); assert.equal(await complete.json(), true);
+    const replacementId = randomUUID();
+    const discover = await rpc(service, 'prepare_list_email', { ...args, p_operation_id: replacementId, p_expected_generation: '1' });
+    assert.equal(discover.status, 200); const unknown = await discover.json();
+    assert.equal(unknown.state, 'unknown'); assert.deepEqual(unknown.operation_ids, [operation]);
+    const confirmed = await rpc(service, 'prepare_list_email', { ...args, p_operation_id: replacementId, p_expected_generation: '1', p_confirm_resend: true });
+    assert.equal(confirmed.status, 200); const replacement = await confirmed.json(); assert.equal(replacement.state, 'reserved');
+    const replacementArgs = { ...exact, p_operation_id: replacementId, p_attempt_token: replacement.attempt_token };
+    const positive = await rpc(service, 'begin_list_email', replacementArgs); assert.equal(positive.status, 200); assert.equal((await positive.json()).started, true);
+    const accepted = await rpc(service, 'complete_list_email', { ...scope, p_operation_id: replacementId, p_attempt_token: replacement.attempt_token, p_outcome: 'accepted', p_result_token: 'b'.repeat(64) });
+    assert.equal(accepted.status, 200); assert.equal(await accepted.json(), true);
+    const wrongResult = await ack(replacementId, 'a'.repeat(64)); assert.equal(wrongResult.status, 200); assert.equal(await wrongResult.json(), false);
+    const received = await ack(replacementId, 'b'.repeat(64)); assert.equal(received.status, 200); assert.equal(await received.json(), true);
+    const old = await rpc(service, 'prepare_list_email', { ...args, p_operation_id: randomUUID() });
+    assert.equal(old.status, 200); assert.equal((await old.json()).state, 'stale', 'old gesture is not refreshed even after current result ACK');
+    const pendingId = randomUUID();
+    const next = await rpc(service, 'prepare_list_email', { ...args, p_operation_id: pendingId, p_expected_generation: '2' });
+    assert.equal(next.status, 200); const pending = await next.json(); assert.equal(pending.state, 'reserved');
+    sql(`BEGIN; UPDATE public.user_org_membership SET is_active=false WHERE user_id='${user}' AND org_object_id='${org}'; COMMIT;`);
+    // Same verified JWT remains cryptographically valid; fresh backend rights revoke its scope.
+    const sameJwt = await request('/auth/v1/user', caller, undefined, 'GET'); assert.equal(sameJwt.status, 200);
+    const deniedContext = await rpc(service, 'get_list_email_context', scope); assert.equal(deniedContext.status, 200); assert.equal((await deniedContext.json()).state, 'forbidden');
+    const deniedBegin = await rpc(service, 'begin_list_email', { ...exact, p_operation_id: pendingId, p_attempt_token: pending.attempt_token });
+    assert.equal(deniedBegin.status, 200); assert.equal((await deniedBegin.json()).state, 'forbidden');
+    const deniedPrepare = await rpc(service, 'prepare_list_email', { ...args, p_operation_id: randomUUID(), p_expected_generation: '3' });
+    assert.equal(deniedPrepare.status, 200); assert.equal((await deniedPrepare.json()).state, 'forbidden');
   } finally {
-    if (user) {
-      sql(`DELETE FROM public.object_list WHERE id='${list}'; DELETE FROM public.object WHERE id='${org}'; DELETE FROM internal.list_email_metric WHERE user_id='${user}';`);
-      const removed = await request(`/auth/v1/admin/users/${user}`, service, { should_soft_delete: false }, 'DELETE');
-      assert.equal(removed.status, 200, 'synthetic fixture cleanup');
-    }
+    sql(`DELETE FROM public.object_list WHERE id='${list}'; DELETE FROM public.object WHERE id='${org}'; ${user ? `DELETE FROM internal.list_email_metric WHERE user_id='${user}';` : ''}`);
+    if (user) { const removed = await request(`/auth/v1/admin/users/${user}`, service, undefined, 'DELETE'); assert.equal(removed.status, 200); }
   }
 });

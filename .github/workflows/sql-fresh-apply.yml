@@ -21,6 +21,7 @@ on:
       - 'tools/tourinsoft/**'
       - 'tools/private-media/**'
       - 'tools/ai-quota/**'
+      - 'tools/list-email/**'
       - 'tools/current-rights/**'
       - 'docs/SQL_ROLLOUT_RUNBOOK.md'
       - '.github/workflows/sql-fresh-apply.yml'
@@ -33,6 +34,7 @@ on:
       - 'tools/tourinsoft/**'
       - 'tools/private-media/**'
       - 'tools/ai-quota/**'
+      - 'tools/list-email/**'
       - 'tools/current-rights/**'
       - 'docs/SQL_ROLLOUT_RUNBOOK.md'
       - '.github/workflows/sql-fresh-apply.yml'
@@ -93,6 +95,16 @@ jobs:
             printf 'CREATE SCHEMA IF NOT EXISTS api;\n' > "$bootstrap_file"
           done
 
+      - name: Prepare owned list-email disposable stack guard
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: |
+          node --test tools/list-email/disposable.test.mjs
+          node tools/list-email/init-disposable.mjs --prepare
+
       - name: Start Supabase local database
         # Boots the Supabase-flavoured Postgres (DB image provides the auth/storage
         # schemas, the anon/authenticated/service_role roles, and the extensions the
@@ -103,6 +115,15 @@ jobs:
         # Native startup normally prints generated keys. Keep its raw streams in
         # memory, never in Actions output or an uploaded diagnostic file.
         run: node tools/current-rights/start-disposable.mjs
+
+      - name: Verify newly started list-email stack ownership before fresh SQL
+        id: list_email_owned_stack
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: node tools/list-email/init-disposable.mjs --verify-start
 
       - name: Apply the canonical fresh-install manifest (aborts on first error)
         env:
@@ -584,7 +605,8 @@ jobs:
           LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
         run: |
           cmp "Base de donnée DLL et API/distributed_list_email_intents.sql" supabase/migrations/20261106194635_distributed_list_email_intents.sql
-          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_distributed_list_email_intents.sql"
+          node tools/list-email/init-disposable.mjs
+          node tools/list-email/sql-fixture.mjs
           node --test tools/list-email/distributed-intents.test.mjs
           node --test tools/list-email/postgrest-intents.test.mjs
 
@@ -607,11 +629,11 @@ jobs:
           node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: PostgreSQL diagnostics on failure
-        if: failure()
-        run: docker ps -aq --filter name=supabase_db_ | xargs -r -n1 docker logs --tail 120
+        if: ${{ failure() && steps.list_email_owned_stack.outcome == 'success' }}
+        run: echo "Owned disposable PostgreSQL stage failed; raw database logs withheld."
 
       - name: Stop Supabase
-        if: always()
+        if: ${{ always() && steps.list_email_owned_stack.outcome == 'success' }}
         run: supabase stop --workdir "$RUNNER_TEMP/bertel-fresh"
 
   storage-contract:

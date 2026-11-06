@@ -20,7 +20,9 @@ SELECT jsonb_pretty(jsonb_build_object(
     ) d
   ),
   'reference_table_counts', (
-    SELECT jsonb_agg(jsonb_build_object('table', table_name, 'rows', row_count) ORDER BY table_name)
+    SELECT jsonb_agg((jsonb_build_object('table', table_name, 'rows', row_count)
+      || CASE WHEN table_name='public.ref_document' THEN jsonb_build_object('public_rows',
+        (SELECT count(*)FROM public.ref_document WHERE access_scope='public'))ELSE '{}'::jsonb END) ORDER BY table_name)
     FROM (VALUES
       ('public.ref_actor_role', (SELECT count(*) FROM public.ref_actor_role)),
       ('public.ref_amenity', (SELECT count(*) FROM public.ref_amenity)),

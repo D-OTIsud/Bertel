@@ -1,0 +1,65 @@
+name: Production image runtime
+
+on:
+  push:
+    paths:
+      - 'bertel-tourism-ui/package*.json'
+      - 'bertel-tourism-ui/Dockerfile'
+      - 'bertel-tourism-ui/.dockerignore'
+      - 'bertel-tourism-ui/src/app/api/media/upload/process-image*'
+      - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
+      - '.github/workflows/image-runtime.yml'
+  pull_request:
+    paths:
+      - 'bertel-tourism-ui/package*.json'
+      - 'bertel-tourism-ui/Dockerfile'
+      - 'bertel-tourism-ui/.dockerignore'
+      - 'bertel-tourism-ui/src/app/api/media/upload/process-image*'
+      - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
+      - '.github/workflows/image-runtime.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node22-alpine:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: bertel-tourism-ui
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the actual Alpine builder
+        run: docker build --target builder --build-arg NEXT_PUBLIC_ENABLE_DEMO_MODE=true -t bertel-image-builder .
+      - name: Exercise the real upload decoder on Alpine
+        run: >-
+          docker run --rm --entrypoint npm bertel-image-builder
+          run test:run -- --ci --runInBand
+          src/app/api/media/upload/process-image.test.ts
+          src/app/api/media/upload/process-image.decoding.test.ts
+      - name: Build the production runtime
+        run: docker build --build-arg NEXT_PUBLIC_ENABLE_DEMO_MODE=true -t bertel-image-runtime .
+      - name: Verify native codecs in the final non-root image
+        run: >-
+          docker run --rm --entrypoint node
+          -v "$PWD/scripts/check-native-image-runtime.cjs:/app/check-native-image-runtime.cjs:ro"
+          bertel-image-runtime check-native-image-runtime.cjs
+      - name: Start the final image and check HTTP health
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name bertel-image-smoke -p 3000:3000 bertel-image-runtime
+          trap 'docker logs bertel-image-smoke; docker rm -f bertel-image-smoke' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/api/health > /tmp/bertel-health.json; then
+              node -e 'const h = require("/tmp/bertel-health.json"); if (h.ok !== true) process.exit(1)'
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1

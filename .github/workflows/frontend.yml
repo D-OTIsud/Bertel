@@ -39,8 +39,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: bertel-tourism-ui/package-lock.json
 
-      # --legacy-peer-deps mirrors the Dockerfile install: next@16 pins @swc/helpers to
-      # 0.5.15 while @storybook/test-runner's optional @swc/core peer wants >=0.5.17.
+      # Keep the same explicit lockfile installation option as the Dockerfile.
       - run: npm ci --legacy-peer-deps
 
       - run: npm run typecheck

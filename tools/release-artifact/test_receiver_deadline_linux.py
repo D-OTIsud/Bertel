@@ -143,8 +143,42 @@ def supervise(kind, death, unarmed):
                 pass
 
 
+def broken_result_witness():
+    class BrokenChannel:
+        def send(self, unused):
+            raise BrokenPipeError("synthetic result failure")
+        def close(self):
+            raise OSError("synthetic close failure")
+    def fail(*unused):
+        raise RuntimeError("SYNTHETIC_URL_SENTINEL_NOT_A_REAL_URL")
+    r._http_to_file = fail
+    with tempfile.TemporaryFile() as output:
+        worker = multiprocessing.get_context("fork").Process(
+            target=r._download_worker, args=(BrokenChannel(), output.fileno(), {}, "synthetic-memory-only"))
+        try:
+            worker.start()
+            worker.join(2)
+            if worker.is_alive():
+                raise AssertionError("broken-channel witness did not terminate")
+            if worker.exitcode != 0:
+                raise AssertionError("worker leaked an unhandled result-channel exception")
+        finally:
+            if worker.is_alive():
+                worker.kill()
+                worker.join(2)
+    print(json.dumps({"result_channel_failure": "sanitized", "worker_reaped": True}))
+
+
 @unittest.skipUnless(sys.platform.startswith("linux"), "native Linux process witnesses")
 class DeadlineLinuxTests(unittest.TestCase):
+    def test_actual_fork_broken_channel_has_no_raw_error_or_traceback(self):
+        result = subprocess.run([sys.executable, "-I", str(Path(__file__).resolve()), "--broken-result"],
+                                capture_output=True, text=True, timeout=5, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+        self.assertNotIn("SYNTHETIC_URL_SENTINEL", result.stdout + result.stderr)
+        self.assertTrue(json.loads(result.stdout)["worker_reaped"])
+
     def run_case(self, kind, death, unarmed=False):
         result = subprocess.run([sys.executable, "-I", str(Path(__file__).resolve()), "--supervise",
                                  kind, str(int(death)), "1" if unarmed else "0"],
@@ -232,7 +266,9 @@ class FilesystemLinuxTests(unittest.TestCase):
         self.assertEqual(json.loads(verified.read_bytes()), {"status": "synthetic_verified"})
 
 
-if __name__ == "__main__" and len(sys.argv) == 5 and sys.argv[1] == "--supervise":
+if __name__ == "__main__" and sys.argv[1:] == ["--broken-result"]:
+    broken_result_witness()
+elif __name__ == "__main__" and len(sys.argv) == 5 and sys.argv[1] == "--supervise":
     supervise(sys.argv[2], int(sys.argv[3]), sys.argv[4] == "1")
 elif __name__ == "__main__":
     unittest.main(verbosity=2)

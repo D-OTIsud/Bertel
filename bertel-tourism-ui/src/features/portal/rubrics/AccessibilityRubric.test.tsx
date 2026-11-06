@@ -59,7 +59,7 @@ test('un même aménagement reste coché en passant d’une famille à l’autre
   mount('HEB');
   expect(screen.getByLabelText('Lit adapté')).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText('Chien guide accueilli'));
-  fireEvent.click(screen.getByRole('button', { name: /Vision/ }));
+  fireEvent.click(screen.getByRole('button', { name: /^Vue/ }));
   expect(screen.getByLabelText('Chien guide accueilli')).toBeChecked();
   expect(screen.queryByLabelText('Lit adapté')).not.toBeInTheDocument();
 });

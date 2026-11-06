@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { loadDisposable } from './disposable.mjs';
+import { assertAnonymousHeadRefusal, assertStorageRefusal, storageErrorIdentity as errorCode } from './storage-refusals.mjs';
 
 const local = loadDisposable();
 const component = (value) => encodeURIComponent(value).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
@@ -9,11 +10,6 @@ const objectPath = (bucket, key) => `${component(bucket)}/${key.split('/').map(c
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const etag = (value) => typeof value === 'string' ? value.replace(/^"|"$/g, '') : null;
 const uuid = (value) => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-const protocolErrors = new Set(['InvalidKey', 'InvalidRequest', 'InvalidMimeType', 'invalid_mime_type', 'NoSuchKey', 'NoSuchObject',
-  'not_found', 'AccessDenied', 'KeyAlreadyExists', 'ResourceAlreadyExists', 'Duplicate', 'InternalError']);
-// v1.41.8's response schema strips `code` on some routes; its legacy `error`
-// field still carries an explicit identity. Never print a free-form message.
-const errorCode = (error) => [error?.code, error?.error].find((value) => protocolErrors.has(value)) ?? 'unknown';
 async function result(response, label) {
   if (!response.ok) {
     // Expose only the protocol's enum code; messages can contain locators.
@@ -91,16 +87,16 @@ test('real local Storage preserves private cross-bucket copy bytes and stored me
         return Buffer.from(await response.arrayBuffer());
       }));
       assert.ok(reads.every((read) => read.length === bytes.length && digest(read) === digest(bytes)), 'real source and destination SHA256 must equal the synthetic input');
-      assert.ok(!(await head(destination, copied[index], local.anonymous)).ok
-        && !(await head(destination, copied[index], local.anonymous, 'public')).ok, 'private copied bytes must remain unavailable anonymously');
+      assertAnonymousHeadRefusal(await head(destination, copied[index], local.anonymous));
+      assertAnonymousHeadRefusal(await head(destination, copied[index], local.anonymous, 'public'));
     }
     // The destination intentionally rejects PNG uploads; server copy is tested
     // separately, without changing its restrictions to force compatibility.
     const uploadRejected = await local.request(`/storage/v1/object/${objectPath(destination, copied[3])}`, local.service, png, 'POST',
       { 'content-type': 'image/png', 'x-upsert': 'false' });
-    assert.ok(!uploadRejected.ok, 'the negative MIME-upload control must be active');
+    await assertStorageRefusal(uploadRejected, 'mime', 'restricted PNG upload');
     const before = await result(await info(destination, copied[0]), 'before collision');
-    assert.ok(!(await copy(uploaded[0], copied[0])).ok, 'an existing target must refuse copy without upsert');
+    await assertStorageRefusal(await copy(uploaded[0], copied[0]), 'collision', 'existing target without upsert');
     const after = await result(await info(destination, copied[0]), 'after collision');
     assert.ok(after.id === before.id && after.etag === before.etag && after.size === before.size, 'collision must preserve existing destination metadata');
     const race = await Promise.all([copy(uploaded[0], copied[2]), copy(uploaded[0], copied[2])]);
@@ -108,6 +104,9 @@ test('real local Storage preserves private cross-bucket copy bytes and stored me
     const outcomes = await Promise.all(race.map(async (response) => ({ status: response.status,
       code: response.ok ? 'ok' : errorCode(await response.clone().json().catch(() => null)) })));
     t.diagnostic(JSON.stringify({ concurrentCopyAccepted: accepted, outcomes }));
+    for (const loser of race.filter((response) => !response.ok)) {
+      await assertStorageRefusal(loser, 'collision', 'concurrent copy loser');
+    }
     assert.equal(accepted, 1, 'two real concurrent copies must create one destination only');
     const raceInfo = await result(await info(destination, copied[2]), 'race destination');
     const raceAck = await race.find((response) => response.ok).json();

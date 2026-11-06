@@ -1,5 +1,5 @@
 -- Disposable synthetic witnesses. Invoke as the connecting database owner.
-CREATE OR REPLACE FUNCTION pg_temp.setup_current_rights_fixture() RETURNS jsonb
+CREATE OR REPLACE FUNCTION pg_temp.setup_current_rights_fixture(p_existing_auth_users boolean DEFAULT false) RETURNS jsonb
 LANGUAGE plpgsql SET search_path=pg_catalog,public,api,internal,pg_temp AS $fixture$
 DECLARE
   v_publisher uuid; v_editor uuid; v_perm uuid; v_publish_perm uuid; v_actor_role uuid; v_email_kind uuid;
@@ -21,12 +21,21 @@ BEGIN
   SELECT id INTO v_tag2 FROM public.ref_code_media_tag ORDER BY code OFFSET 1 LIMIT 1;
   ASSERT v_publisher IS NOT NULL AND v_editor IS NOT NULL AND v_perm IS NOT NULL AND v_publish_perm IS NOT NULL AND v_actor_role IS NOT NULL AND v_email_kind IS NOT NULL;
   ASSERT v_amenity1 IS NOT NULL AND v_amenity2 IS NOT NULL AND v_bed1 IS NOT NULL AND v_bed2 IS NOT NULL AND v_media_type IS NOT NULL AND v_tag1 IS NOT NULL AND v_tag2 IS NOT NULL, 'Non-empty DML reference witnesses are required';
+  -- HTTP witnesses create real confirmed users through GoTrue first. Other SQL
+  -- callers keep the original synthetic-user setup through the default argument.
+  IF p_existing_auth_users THEN
+    ASSERT (SELECT count(*) FROM auth.users WHERE id IN (
+      '00000000-0000-4000-a000-00000000ae11','00000000-0000-4000-a000-00000000ae12',
+      '00000000-0000-4000-a000-00000000ae13','00000000-0000-4000-a000-00000000ae14',
+      '00000000-0000-4000-a000-00000000ae15'))=5, 'HTTP fixture requires five real synthetic GoTrue users';
+  ELSE
   INSERT INTO auth.users(id,email) VALUES
     ('00000000-0000-4000-a000-00000000ae11','current-rights-writer@example.invalid'),
     ('00000000-0000-4000-a000-00000000ae12','current-rights-email@example.invalid'),
     ('00000000-0000-4000-a000-00000000ae13','current-rights-portal@example.invalid'),
     ('00000000-0000-4000-a000-00000000ae14','current-rights-other-portal@example.invalid'),
     ('00000000-0000-4000-a000-00000000ae15','current-rights-admin@example.invalid');
+  END IF;
   INSERT INTO public.actor(id,display_name,is_test) VALUES
     ('00000000-0000-4000-a000-00000000aa01','Synthetic current rights actor A',false),
     ('00000000-0000-4000-a000-00000000aa02','Synthetic current rights actor B',false),

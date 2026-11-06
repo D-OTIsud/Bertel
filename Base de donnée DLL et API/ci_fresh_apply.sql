@@ -658,8 +658,21 @@ ROLLBACK;
 \ir ../supabase/migrations/20261030141523_restore_verified_completeness_history.sql
 \ir tests/test_completeness_history.sql
 
+\echo '== 20a photo-only album: fresh closed preparation and exact public-contract differential =='
+-- These three files must run in this SAME psql session. The baseline is
+-- synthetic and session-local; the initializer is NOT an existing-DB upgrade.
+\ir tests/test_partner_photo_album_partial.sql
+\ir tests/fixtures/capture_partner_photo_album_public.sql
+\ir partner_photo_album_fresh_install.sql
+\ir tests/test_partner_photo_album_public.sql
+
+\echo '== 20a-test photo-only contract: closed actors/AI, real CAS receipts and isolated actors =='
+\ir tests/test_partner_photo_album_fresh.sql
+\ir tests/test_partner_photo_album_catalog_rejections.sql
+
 \echo '== DB08 initial publication and institutional creation authorization =='
 \ir ../supabase/migrations/20261106092254_object_initial_publication_guard.sql
+
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

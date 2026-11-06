@@ -16,6 +16,38 @@
 -- Mirrors test_object_review_read_gate.sql fixture mechanics.
 \set ON_ERROR_STOP on
 BEGIN;
+-- The current canonical database includes the actor-photo correction reader.
+-- This temporary assertion rejects every other SELECT or FOR ALL policy.
+SET LOCAL search_path=pg_catalog,public;
+CREATE FUNCTION pg_temp.assert_media_visibility_policies() RETURNS void
+LANGUAGE plpgsql SET search_path=pg_catalog,public AS $policy_contract$
+BEGIN
+  ASSERT (SELECT count(*) FROM pg_policy WHERE polrelid='public.media'::regclass
+    AND polcmd IN ('r','*'))=2, 'media must have exactly the two reviewed SELECT policies and no FOR ALL bypass';
+  ASSERT EXISTS(SELECT 1 FROM pg_policy WHERE polrelid='public.media'::regclass
+    AND polname='read_media' AND polcmd='r' AND polpermissive AND polroles=ARRAY[0]::oid[]
+    AND polwithcheck IS NULL
+    AND regexp_replace(pg_get_expr(polqual,polrelid),'[[:space:]]','','g')=
+      regexp_replace($public_reader$(((is_published IS TRUE) AND ((visibility IS NULL) OR (visibility = 'public'::text)) AND (((object_id IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = media.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM (object_place p
+     JOIN object o ON ((o.id = p.object_id)))
+  WHERE ((p.id = media.place_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))))) OR ((object_id IS NOT NULL) AND (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids))) OR ((place_id IS NOT NULL) AND (place_id IN ( SELECT p.id
+   FROM object_place p
+  WHERE (p.object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids))))))$public_reader$,'[[:space:]]','','g')),
+    'read_media must retain the exact public visibility/extended-scope/test-realm predicate';
+  ASSERT EXISTS(SELECT 1 FROM pg_policy WHERE polrelid='public.media'::regclass
+    AND polname='correction_read_root_gallery' AND polcmd='r' AND polpermissive
+    AND polroles=ARRAY['authenticated'::regrole::oid] AND polwithcheck IS NULL
+    AND regexp_replace(pg_get_expr(polqual,polrelid),'[[:space:]]','','g')=
+      '((place_idISNULL)ANDapi.can_read_object_for_correction(object_id))'),
+    'correction reader must remain root-gallery-only and authenticated-only';
+  ASSERT (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc
+    WHERE oid=to_regprocedure('api.can_read_object_for_correction(text)'))='5f3aad478764f2ac4f92a43a40853f8e',
+    'correction helper must retain actor denial, object realm and canonical-writer scope';
+END;
+$policy_contract$;
 DO $$
 DECLARE
   v_orgA    text := 'ORGRUN9999990701';
@@ -28,6 +60,7 @@ DECLARE
   v_photo    uuid;
   v_m_private uuid;
   v_m_public  uuid;
+  v_rejected boolean;
 BEGIN
   -- ---------- Fixture (as the connecting superuser/owner; RLS bypassed) ----------
   SELECT id INTO v_pub_role FROM ref_org_role WHERE code = 'publisher' LIMIT 1;
@@ -69,13 +102,27 @@ BEGIN
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES
     (v_userA, v_orgA, TRUE), (v_userB, v_orgB, TRUE);
 
-  -- ---------- Structural: ONE SELECT policy, visibility in its qual ----------
-  ASSERT (SELECT count(*) FROM pg_policies WHERE schemaname='public'
-          AND tablename='media' AND cmd='SELECT') = 1,
-         'media must carry exactly ONE SELECT policy (read_media)';
-  ASSERT (SELECT qual FROM pg_policies WHERE schemaname='public'
-          AND tablename='media' AND policyname='read_media') LIKE '%visibility%',
-         'read_media qual does not mention visibility (14a not applied?)';
+  -- ---------- Exact SELECT contracts, including adversarial policy witnesses ----------
+  PERFORM pg_temp.assert_media_visibility_policies();
+  v_rejected:=false;
+  BEGIN
+    CREATE POLICY album_test_for_all_bypass ON public.media FOR ALL TO anon USING(true) WITH CHECK(true);
+    PERFORM pg_temp.assert_media_visibility_policies();
+  EXCEPTION WHEN assert_failure THEN v_rejected:=true; END;
+  ASSERT v_rejected, 'A third FOR ALL read bypass was not rejected';
+  v_rejected:=false;
+  BEGIN
+    ALTER POLICY correction_read_root_gallery ON public.media TO PUBLIC;
+    PERFORM pg_temp.assert_media_visibility_policies();
+  EXCEPTION WHEN assert_failure THEN v_rejected:=true; END;
+  ASSERT v_rejected, 'A publicly broadened correction reader was not rejected';
+  v_rejected:=false;
+  BEGIN
+    ALTER POLICY read_media ON public.media USING(true);
+    PERFORM pg_temp.assert_media_visibility_policies();
+  EXCEPTION WHEN assert_failure THEN v_rejected:=true; END;
+  ASSERT v_rejected, 'A weakened public visibility predicate was not rejected';
+  PERFORM pg_temp.assert_media_visibility_policies();
 
   -- ---------- ANON: published parent -> NULL+public only; draft parent -> nothing ----------
   PERFORM set_config('request.jwt.claims', json_build_object('role','anon')::text, true);

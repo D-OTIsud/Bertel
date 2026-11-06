@@ -1,7 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { LegalDocumentEditModal } from './LegalDocumentEditModal';
 import { buildNewDocumentRecord } from '../sections/legal-edit';
 import type { ObjectWorkspaceLegalTypeOption } from '../../../services/object-workspace-parser';
+import { getObjectDocumentUrl } from '../../../services/object-documents';
+import { useSessionStore } from '../../../store/session-store';
+jest.mock('../../../services/object-documents', () => ({ getObjectDocumentUrl: jest.fn() }));
 
 /**
  * §209 — le catalogue `ref_legal_type` a été refait sur les pièces réellement demandées aux
@@ -49,6 +52,19 @@ function renderModal() {
 }
 
 describe('LegalDocumentEditModal', () => {
+  it('keeps the dedicated legal reader for an attached private document without a canonical capability', async () => {
+    useSessionStore.setState({ canEditObjects: false, userId: 'synthetic-legal-only', status: 'ready' });
+    const target = { opener: null, closed: false, close: jest.fn(), location: { replace: jest.fn() } };
+    const open = jest.spyOn(window, 'open').mockReturnValue(target as never);
+    jest.mocked(getObjectDocumentUrl).mockResolvedValueOnce('https://example.invalid/signed?token=synthetic');
+    try {
+      const draft = { ...buildNewDocumentRecord(TYPE_OPTIONS[0]), documentId: 'synthetic-document', documentUrl: 'private:synthetic-document', documentTitle: 'Synthetic legal attachment' };
+      render(<LegalDocumentEditModal open mode="edit" draft={draft} typeOptions={TYPE_OPTIONS} objectId="HLORUN0000000001" onClose={() => {}} onSave={jest.fn()} />);
+      await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Synthetic legal attachment' })); });
+      expect(getObjectDocumentUrl).toHaveBeenCalledWith('HLORUN0000000001', 'synthetic-document', expect.any(AbortSignal), 'legal');
+      expect(target.location.replace).toHaveBeenCalled();
+    } finally { open.mockRestore(); }
+  });
   it('propose les types du catalogue juridique', () => {
     renderModal();
     expect(screen.getByRole('button', { name: 'Extrait KBIS' })).toBeInTheDocument();

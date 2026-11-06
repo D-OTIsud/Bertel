@@ -95,6 +95,7 @@ const CLUSTER_OPTIONS = { radius: 30, maxZoom: 12, map: CLUSTER_MAP, reduce: CLU
 
 type HoverPopupState = {
   lngLat: [number, number];
+  trigger: HTMLButtonElement;
   id: string;
   name: string;
   image?: string;
@@ -181,7 +182,6 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
   /** Popup must not auto-close before this timestamp (ms since epoch). */
   const minVisibleUntilRef = useRef(0);
   const popupContainerRef = useRef<HTMLDivElement | null>(null);
-  const popupTriggerRef = useRef<HTMLButtonElement | null>(null);
   const suppressMarkerFocusRef = useRef(false);
   const popupKeyboardRef = useRef(false);
   const popupHoveredRef = useRef(false);
@@ -291,9 +291,9 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
   const closeHoverPopup = useCallback(() => {
     dismissHoverPopup();
     suppressMarkerFocusRef.current = true;
-    popupTriggerRef.current?.focus({ preventScroll: true });
+    hoverPopupState?.trigger.focus({ preventScroll: true });
     suppressMarkerFocusRef.current = false;
-  }, [dismissHoverPopup]);
+  }, [dismissHoverPopup, hoverPopupState]);
 
   const schedulePopupClose = useCallback(() => {
     clearCloseTimer();
@@ -451,7 +451,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
   }, [lassoFeedback]);
 
   const handleMarkerEnter = useCallback(
-    (card: ObjectCard, lng: number, lat: number) => {
+    (card: ObjectCard, lng: number, lat: number, trigger: HTMLButtonElement) => {
       // D20 : survol croisé — la carte-résultat correspondante se surligne dans la liste.
       useExplorerStore.getState().setHoveredCard(card.id);
       clearCloseTimer();
@@ -460,6 +460,8 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
         openTimerRef.current = null;
         minVisibleUntilRef.current = Date.now() + POPUP_MIN_VISIBLE_MS;
         setHoverPopupState({
+          // A cancelled hover must never change the displayed popup's owner.
+          trigger,
           id: card.id,
           name: card.name,
           image: card.image ?? undefined,
@@ -873,15 +875,13 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
                   onPointerEnter={(event) => {
                     popupKeyboardRef.current = false;
                     markerHoveredRef.current = true;
-                    popupTriggerRef.current = event.currentTarget;
-                    handleMarkerEnter(card, longitude, latitude);
+                    handleMarkerEnter(card, longitude, latitude, event.currentTarget);
                   }}
                   onPointerLeave={() => handleMarkerLeave()}
                   onFocus={(event) => {
                     if (suppressMarkerFocusRef.current) return;
                     popupKeyboardRef.current = true;
-                    popupTriggerRef.current = event.currentTarget;
-                    handleMarkerEnter(card, longitude, latitude);
+                    handleMarkerEnter(card, longitude, latitude, event.currentTarget);
                   }}
                   onBlur={() => {
                     clearOpenTimer();

@@ -27,8 +27,11 @@ not refunded or retried. HTTP429 retains existing messages and reports the real
 503 responses keep their previous wording. Discovery remains blocked before any
 quota/body/provider work. Existing per-process CPU leases are unchanged.
 
-Apply `20261106145451_distributed_ai_request_admission.sql` before deploying the
-application. Missing RPC/grants deliberately cause503, never fallback to a local
+Install the reviewed admission schema before deploying the application. The fresh
+manifest uses `Base de donnée DLL et API/ai_request_admission.sql`; the original
+`20261106145451` file is still pending provenance until the actual upgrade receipt
+is reconciled. The [MCP preparation](2026-11-06-ai-admission-mcp-preparation.md)
+does not authorize execution or claim a generated version. Missing RPC/grants deliberately cause503, never fallback to a local
 or unlimited counter. All replicas must run the new server before asserting a
 distributed guarantee. An application rollback leaves the database state intact
 but old servers again enforce only local quotas; do not describe that mixed or

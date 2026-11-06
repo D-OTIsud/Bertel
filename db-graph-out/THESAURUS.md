@@ -1,12 +1,7 @@
 # Thésaurus — complément du catalogue de schéma
 
-**État du catalogue local au 6 novembre 2026 à 16:42 UTC ; pas encore appliqué en production.**
-Ce document complète le graphe historique ; il ne constitue ni une nouvelle extraction
-du catalogue de production, ni une régénération de `graph.json`/`dbdoc` à partir des anciens
-entrants. Les constats ci-dessous proviennent d'une introspection en lecture seule de
-`bertel_thesaurus_test` et `bertel_thesaurus_prepared_activate_test`, PostgreSQL **17.10**, après application locale des trois migrations.
-Les scénarios de test utilisent des transactions annulées ; ils ne constituent pas un
-corpus éditorial publié en production.
+**Catalogue réel de production PostgreSQL 17.6 régénéré le 2026-11-06 18:34 UTC.**
+Les six prérequis et trois migrations du thésaurus sont installés. La régénération complète de `dbdoc/`, du graphe et de la référence API/DB provient du catalogue réel via le connecteur Supabase ; tbls rend localement ce JSON vérifié. Le relevé du 2026-11-06T18:32:57.548536+00:00 trouve 17 tables privées sous RLS et 18 politiques, une génération 3 et 66 domaines gouvernés. Le schéma est installé et une génération est active ; cette extraction ne déclare pas à elle seule la recette HTTP ou la validation éditoriale du corpus.
 
 Sources canoniques :
 
@@ -41,7 +36,7 @@ Les références à `concept` et `release` dans ce tableau désignent ce même s
 | `ownership_retention` | `(transaction_id,table_oid,row_key)` | Propriétaires conservés avant les suppressions en cascade ; cache transactionnel interne. |
 | `mutation_journal` | `(top_xid,owner_id)` | XID principal `xid8`, propriétaire `text`, sans FK pour conserver les propriétaires supprimés ; index `(owner_id,top_xid)`. Insertion par trigger de confiance uniquement ; rôle de publication limité à SELECT/DELETE. |
 
-La préparation calcule les neuf colonnes de cache dans un seul snapshot sans écrire ni verrouiller les fiches. Un verrou transactionnel de sources précède le verrou d'éditeur tardif ; le journal, les propriétaires actuels, le contrat de projection et l'autorité fraîche de l'opérateur sont vérifiés avant l'application atomique. L'introspection compte **113 relations possédées** et **74 relations de sources**, partitions comprises. Les tags polymorphes sont résolus explicitement. Le contrat refuse une dépendance de projection ou une garde non revue ; les tests comportementaux et les mesures de contention restent des preuves distinctes de ce catalogue.
+La préparation calcule les neuf colonnes de cache dans un seul snapshot sans écrire ni verrouiller les fiches. Un verrou transactionnel de sources précède le verrou d'éditeur tardif ; le journal, les propriétaires actuels, le contrat de projection et l'autorité fraîche de l'opérateur sont vérifiés avant l'application atomique. L'introspection de production compte **114 relations possédées** et **74 relations de sources**, partitions comprises. L'écart avec les 113 relations du banc local correspond à une partition d'historique supplémentaire. Les tags polymorphes sont résolus explicitement. Le contrat refuse une dépendance de projection ou une garde non revue ; les tests comportementaux et les mesures de contention restent des preuves distinctes de ce catalogue.
 
 Les trois tables de publication sont protégées par `thesaurus.guard_immutable` : les
 instantanés terminés ne sont pas réécrits. Une correction crée une nouvelle publication.
@@ -116,8 +111,10 @@ l'admission HTTP. Aucun nouveau scope n'est imposé aux clés partenaires exista
 
 ## RLS, capacité de publication et gardes
 
-Les 16 politiques privées observées sont `publisher_only`, `FOR ALL TO
-bertel_thesaurus_publisher USING(true) WITH CHECK(true)`. Les tables/séquences privées
+Les 16 tables éditoriales et de publication ont chacune une politique `publisher_only`, `FOR ALL TO
+bertel_thesaurus_publisher USING(true) WITH CHECK(true)`. Le journal ajoute deux politiques
+distinctes `publisher_read`/`publisher_delete` et ne permet aucune insertion par ce rôle :
+les reçus proviennent uniquement du trigger de confiance. Les tables/séquences privées
 ne sont pas accordées à `PUBLIC`, `anon`, `authenticated` ou `service_role`. Les tables
 sont possédées par le rôle d'installation ; l'accès applicatif passe par les fonctions
 gérées, et non par les tables.
@@ -128,6 +125,20 @@ de projections lui appartiennent. Ses droits sur `public.object` concernent seul
 les colonnes de caches/recherche et `updated_at` ; une publication ne fabrique pas de
 nouvelle version canonique d'une fiche. Les permissions de maintenance des MV sont
 explicites. Les fonctions privées sont révoquées de `PUBLIC` après leur création.
+
+L'entretien privé `thesaurus.prune_mutation_journal(integer)` supprime au plus le nombre
+de reçus demandé (1 à 100 000), uniquement lorsqu'ils sont visibles dans son snapshot.
+Il essaie un verrou transactionnel partagé K2 et rend immédiatement 0 si une préparation
+détient K2 exclusif ; il reste compatible avec les écrivains de sources et ne prend pas K1.
+Le job `bertel-thesaurus-journal-prune`, actif toutes les 15 minutes, demande 10 000 reçus.
+Cette capacité théorique ne remplace pas le suivi du débit réel du journal.
+
+Les partitions et tables entrent dans le contrat de gardes par leur OID réel. Si un
+entretien DDL crée une nouvelle partition possédée, notamment d'historique, sans les
+gardes requises, la publication échoue explicitement (`PT503`) jusqu'à leur installation
+revue. Réinstaller les gardes appropriées après ce DDL puis régénérer le catalogue ; ne
+pas désactiver le contrat pour contourner cette vérification. Au relevé ci-dessus, les
+114 relations de production satisfont le contrat.
 
 Les gardes protègent les anciennes écritures de sources gouvernées, l'immuabilité
 des publications, les nouvelles affectations de valeurs historiques et les transferts

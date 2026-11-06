@@ -72,6 +72,17 @@ describe('ThesaurusAdmin editorial workflow', () => {
     expect(mock.publishThesaurus).not.toHaveBeenCalled();
   });
 
+  it('keeps the current published document available read-only alongside an edited draft', async () => {
+    mock.fetchThesaurusWorkspace.mockResolvedValue(workspace({ concepts: [concept({ revision: revision({ document: service.normalizeThesaurusDocument({ code: 'appartement', name: 'Appartement proposé', description: 'Définition proposée.' }) }) })] }));
+    renderAdmin();
+    expect(await screen.findByLabelText('Libellé préféré (fr)')).toHaveValue('Appartement proposé');
+    const details = screen.getByText('Version publiée actuelle · lecture seule').closest('details')!;
+    fireEvent.click(within(details).getByText('Version publiée actuelle · lecture seule'));
+    expect(within(details).getByRole('cell', { name: 'Appartement' })).toBeInTheDocument();
+    expect(within(details).getByRole('cell', { name: 'Logement indépendant dans un immeuble.' })).toBeInTheDocument();
+    expect(within(details).queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
   it('keeps the typed value after a version conflict and exposes an explicit reload', async () => {
     mock.saveThesaurusDraft.mockRejectedValue(new Error('PT409 REVISION_CONFLICT'));
     renderAdmin();
@@ -81,6 +92,26 @@ describe('ThesaurusAdmin editorial workflow', () => {
     expect(await screen.findByText(/Votre saisie est conservée/)).toBeInTheDocument();
     expect(input).toHaveValue('Ma modification locale');
     expect(screen.getByRole('button', { name: 'Recharger la version courante' })).toBeInTheDocument();
+  });
+
+  it('recovers a newly saved draft after leaving the editor and locks its assigned stable code', async () => {
+    const created = revision({ concept_id: 'concept-new', document: service.normalizeThesaurusDocument({ code: 'nouveau', name: 'Nouveau logement', description: 'Logement disposant d’un espace de vie indépendant.' }) });
+    mock.saveThesaurusDraft.mockResolvedValue(created);
+    renderAdmin();
+    await screen.findByLabelText('Libellé préféré (fr)');
+    fireEvent.click(screen.getByRole('button', { name: 'Nouveau concept' }));
+    fireEvent.change(screen.getByLabelText('Code stable'), { target: { value: 'nouveau' } });
+    fireEvent.change(screen.getByLabelText('Libellé préféré (fr)'), { target: { value: 'Nouveau logement' } });
+    fireEvent.change(screen.getByLabelText('Définition (fr)'), { target: { value: 'Logement disposant d’un espace de vie indépendant.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le brouillon' }));
+    await screen.findByText(/Brouillon enregistré/);
+    await waitFor(() => expect(screen.queryByText('Modifications non enregistrées')).not.toBeInTheDocument());
+    expect(screen.getByLabelText('Code stable')).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Publications' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Concepts' }));
+    expect(screen.getByLabelText('Libellé préféré (fr)')).toHaveValue('Nouveau logement');
+    expect(screen.getByLabelText('Code stable')).toHaveValue('nouveau');
+    expect(screen.getByLabelText('Code stable')).toBeDisabled();
   });
 
   it('submits the saved version for validation and presents server quality errors', async () => {

@@ -10,6 +10,7 @@ import {
 const mockFetch = jest.fn();
 const mockGeneration = jest.fn<Promise<string | null>, []>();
 jest.mock('../services/thesaurus-generation', () => ({
+  ...jest.requireActual('../services/thesaurus-generation'),
   fetchThesaurusGeneration: () => mockGeneration(),
 }));
 jest.mock('../services/reference-catalogs', () => ({

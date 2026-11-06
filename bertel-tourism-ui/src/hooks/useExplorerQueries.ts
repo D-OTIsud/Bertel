@@ -56,7 +56,7 @@ import {
 import { getObjectVersions, restoreObjectVersion } from '../services/object-versions';
 import { ensureReferenceCatalogs } from './useReferenceCatalogsQuery';
 import { generationQueryKey, useThesaurusGeneration } from './useThesaurusGeneration';
-import { fetchThesaurusGeneration } from '../services/thesaurus-generation';
+import { assertVocabularyGeneration, fetchThesaurusGeneration } from '../services/thesaurus-generation';
 import { dedupeExplorerCards, refineCardsByPolygon, resolveExplorerStatuses, sortExplorerCards } from '../utils/facets';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
@@ -290,7 +290,12 @@ export function useExplorerReferencesQuery() {
   const generation = useThesaurusGeneration();
   return useQuery({
     queryKey: generationQueryKey(['explorer-references'], generation),
-    queryFn: () => { if (generation.isError) throw generation.error; return listExplorerReferences(); },
+    queryFn: async () => {
+      if (generation.isError) throw generation.error;
+      const refs = await listExplorerReferences();
+      assertVocabularyGeneration(refs.vocabularyRelease, generation.data);
+      return refs;
+    },
     enabled: !generation.isPending,
     staleTime: 5 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,

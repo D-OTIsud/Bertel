@@ -2,6 +2,22 @@
 -- Depends on 20261106112948_thesaurus_publication.sql. Existing RPC signatures stay intact.
 BEGIN;
 
+-- Public-reference status only: no editorial documents or native-to-concept IDs.
+CREATE OR REPLACE FUNCTION api.thesaurus_reference_statuses()
+RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, thesaurus
+AS $fn$
+  SELECT COALESCE(jsonb_object_agg(c.domain || ':' || c.source_id,
+    jsonb_build_object('thesaurus_lifecycle',rc.document->>'lifecycle',
+      'thesaurus_assignable',COALESCE((rc.document->>'assignable')::boolean,false)
+        AND COALESCE((rc.document->>'valid_from')::date,current_date)<=current_date
+        AND COALESCE((rc.document->>'valid_to')::date,current_date)>=current_date)), '{}'::jsonb)
+  FROM thesaurus.release_concept rc JOIN thesaurus.concept c USING(concept_id)
+  WHERE rc.release_id=api.thesaurus_generation() AND rc.is_public
+$fn$;
+REVOKE ALL ON FUNCTION api.thesaurus_reference_statuses() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION api.thesaurus_reference_statuses() TO anon,authenticated,service_role;
+
 CREATE OR REPLACE FUNCTION api.thesaurus_reference_snapshot(p_domains text[] DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY INVOKER
 SET search_path = pg_catalog, public, api, internal, extensions
@@ -11,10 +27,12 @@ DECLARE
   catalogs jsonb := '{}'::jsonb;
   rows jsonb;
   table_name text;
+  status_domain text;
+  statuses jsonb := api.thesaurus_reference_statuses();
 BEGIN
   SELECT COALESCE(jsonb_object_agg(domain, items), '{}'::jsonb) INTO refs
   FROM (
-    SELECT r.domain, jsonb_agg(to_jsonb(r) ORDER BY r.position NULLS LAST, r.code) items
+    SELECT r.domain, jsonb_agg(to_jsonb(r) || COALESCE(statuses->(r.domain||':'||r.id::text),'{}'::jsonb) ORDER BY r.position NULLS LAST, r.code) items
     FROM public.ref_code r
     WHERE p_domains IS NULL OR r.domain = ANY(p_domains)
     GROUP BY r.domain
@@ -30,15 +48,22 @@ BEGIN
   ] LOOP
     EXECUTE format('SELECT COALESCE(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) FROM public.%I t', table_name)
       INTO rows;
+    status_domain := CASE table_name WHEN 'ref_language' THEN 'language'
+      WHEN 'ref_classification_scheme' THEN 'classification_scheme'
+      WHEN 'ref_sustainability_action' THEN 'sustainability_action'
+      WHEN 'ref_sustainability_action_category' THEN 'sustainability_category' ELSE NULL END;
+    IF status_domain IS NOT NULL THEN
+      SELECT COALESCE(jsonb_agg(x || COALESCE(statuses->(status_domain||':'||(x->>'id')),'{}'::jsonb)),'[]'::jsonb) INTO rows FROM jsonb_array_elements(rows) x;
+    END IF;
     catalogs := catalogs || jsonb_build_object(table_name, rows);
   END LOOP;
-  SELECT COALESCE(jsonb_agg(to_jsonb(a) || jsonb_build_object('family',
+  SELECT COALESCE(jsonb_agg(to_jsonb(a) || COALESCE(statuses->('amenity:'||a.id::text),'{}'::jsonb) || jsonb_build_object('family',
     CASE WHEN f.id IS NULL THEN NULL ELSE jsonb_build_object('code', f.code, 'name', f.name, 'position', f.position) END)
     ORDER BY a.position NULLS LAST, a.code), '[]'::jsonb)
     INTO rows FROM public.ref_amenity a
     LEFT JOIN public.ref_code f ON f.id = a.family_id AND f.domain = 'amenity_family';
   catalogs := catalogs || jsonb_build_object('ref_amenity', rows);
-  SELECT COALESCE(jsonb_agg(to_jsonb(v) || jsonb_build_object('scheme',
+  SELECT COALESCE(jsonb_agg(to_jsonb(v) || COALESCE(statuses->('classification_value:'||v.id::text),'{}'::jsonb) || jsonb_build_object('scheme',
     jsonb_build_object('code',s.code,'is_distinction',s.is_distinction))
     ORDER BY v.position NULLS LAST, v.code), '[]'::jsonb)
     INTO rows FROM public.ref_classification_value v

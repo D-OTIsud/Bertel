@@ -2,7 +2,7 @@ import { getSupabaseClient } from '../lib/supabase';
 import {
   bootstrapThesaurus, discardThesaurusDraft, fetchThesaurusWorkspace, normalizeThesaurusDocument, rebaseThesaurusDraft,
   previewThesaurusPublication, publishThesaurus, saveThesaurusDraft,
-  thesaurusErrorMessage, validateThesaurusDraft,
+  thesaurusErrorMessage, validateThesaurusDraft, pingThesaurusNotifyDrain, retryThesaurusOutbox,
 } from './thesaurus-admin';
 
 jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn() }));
@@ -81,6 +81,7 @@ describe('thesaurus administration network contract', () => {
     expect(normalized.relations).toEqual([]);
     expect(normalized.replaced_by).toEqual(['successor']);
     expect(() => normalizeThesaurusDocument({ labels: [{ kind: 'alt', value: 'Legacy without language' }] })).toThrow(/langue/);
+    expect(() => normalizeThesaurusDocument({ notes: [{ type: 'source', value: 'Legacy without language' }] })).toThrow(/langue/);
   });
 
   it('preserves the PostgREST conflict code even when the server message has no literal conflict marker', async () => {
@@ -99,5 +100,38 @@ describe('thesaurus administration network contract', () => {
     await discardThesaurusDraft('rev-1', 4);
     expect(rpc).toHaveBeenNthCalledWith(1, 'thesaurus_admin', { p_action: 'rebase_draft', p_payload: { revision_id: 'rev-1', expected_version: 3 } });
     expect(rpc).toHaveBeenNthCalledWith(2, 'thesaurus_admin', { p_action: 'discard_draft', p_payload: { revision_id: 'rev-1', expected_version: 4 } });
+  });
+
+  it('drains publication, bootstrap and explicit retries with the current authenticated session', async () => {
+    const originalFetch = global.fetch;
+    const fetcher = jest.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetcher;
+    try {
+      const rpc = jest.fn().mockResolvedValue({ data: { release_id: 8 }, error: null });
+      const getSession = jest.fn().mockResolvedValue({ data: { session: { access_token: 'current-session' } } });
+      getClient.mockReturnValue({ schema: () => ({ rpc }), auth: { getSession } } as never);
+      await publishThesaurus({ revision_ids: [], expected_revision_versions: {}, expected_release_id: 7, idempotency_key: 'batch' });
+      await bootstrapThesaurus(['taxonomy_hlo']);
+      await retryThesaurusOutbox('12');
+      expect(fetcher).toHaveBeenCalledTimes(3);
+      expect(fetcher).toHaveBeenCalledWith('/api/admin/thesaurus/notify-drain', {
+        method: 'POST', headers: { Authorization: 'Bearer current-session' },
+      });
+    } finally { global.fetch = originalFetch; }
+  });
+
+  it('keeps a successful publication when the outbox drain fails and skips missing sessions', async () => {
+    const originalFetch = global.fetch;
+    const fetcher = jest.fn().mockRejectedValue(new Error('network unavailable'));
+    global.fetch = fetcher;
+    try {
+      const rpc = jest.fn().mockResolvedValue({ data: { release_id: 8 }, error: null });
+      const getSession = jest.fn().mockResolvedValue({ data: { session: { access_token: 'current-session' } } });
+      getClient.mockReturnValue({ schema: () => ({ rpc }), auth: { getSession } } as never);
+      await expect(publishThesaurus({ revision_ids: [], expected_revision_versions: {}, expected_release_id: 7, idempotency_key: 'batch' })).resolves.toMatchObject({ release_id: 8 });
+      getSession.mockResolvedValue({ data: { session: null } });
+      await pingThesaurusNotifyDrain();
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    } finally { global.fetch = originalFetch; }
   });
 });

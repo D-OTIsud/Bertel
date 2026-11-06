@@ -48,6 +48,20 @@ async function invoke(action: string, payload: JsonObject = {}): Promise<unknown
   return data;
 }
 
+/** A successful publication remains successful if its recoverable notification drain fails. */
+export async function pingThesaurusNotifyDrain(): Promise<void> {
+  try {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const { data } = await client.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch('/api/admin/thesaurus/notify-drain', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch { /* Durable pending/failed events remain available for retry or lease recovery. */ }
+}
+
 export function normalizeThesaurusIssues(value: unknown): ThesaurusIssue[] {
   return array(value).map((item) => {
     if (typeof item === 'string') return { code: item, message: item };
@@ -78,7 +92,8 @@ export function normalizeThesaurusDocument(value: unknown): ThesaurusDocument {
     }),
     notes: array(data.notes).map((item) => {
       const note = record(item);
-      return { lang: String(note.lang ?? 'fr'), type: String(note.type ?? 'scope'), value: String(note.value ?? ''), source: String(note.source ?? '') };
+      if (typeof note.lang !== 'string' || !note.lang) throw new Error('Réponse de note malformée : sa langue doit être explicite.');
+      return { lang: note.lang, type: String(note.type ?? 'scope'), value: String(note.value ?? ''), source: String(note.source ?? '') };
     }),
     relations: array(data.relations).filter((item) => record(item).type !== 'replaced_by').map((item) => {
       const relation = record(item);
@@ -180,10 +195,11 @@ export async function previewThesaurusPublication(revisionIds: string[], expecte
 export async function publishThesaurus(input: { revision_ids: string[]; idempotency_key: string; expected_release_id: number | null; expected_revision_versions: Record<string, number>; preview_fingerprint?: string }): Promise<ThesaurusRelease> {
   const data = record(await invoke('publish', input));
   if (data.release_id == null) throw new Error('Publication sans numéro de version : vérifiez son état avant de réessayer.');
+  await pingThesaurusNotifyDrain();
   return { release_id: Number(data.release_id), previous_release_id: data.previous_release_id == null ? null : Number(data.previous_release_id), changed_count: Number(data.changed_count ?? 0), affected_objects: Number(data.affected_objects ?? 0), created_at: String(data.created_at ?? '') };
 }
 
 export async function configureThesaurusInstance(input: ThesaurusInstance): Promise<void> { await invoke('configure_instance', input as unknown as JsonObject); }
 export async function configureThesaurusDomain(input: { domain: string; is_governed: boolean; is_public: boolean; require_definition: boolean }): Promise<void> { await invoke('configure_domain', input); }
-export async function bootstrapThesaurus(domains: string[]): Promise<void> { await invoke('bootstrap', { domains }); }
-export async function retryThesaurusOutbox(id: string): Promise<void> { await invoke('retry_outbox', { id }); }
+export async function bootstrapThesaurus(domains: string[]): Promise<void> { await invoke('bootstrap', { domains }); await pingThesaurusNotifyDrain(); }
+export async function retryThesaurusOutbox(id: string): Promise<void> { await invoke('retry_outbox', { id }); await pingThesaurusNotifyDrain(); }

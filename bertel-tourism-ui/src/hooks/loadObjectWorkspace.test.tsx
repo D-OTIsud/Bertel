@@ -8,6 +8,7 @@ const mockFetchCatalogs = jest.fn();
 const mockFetchGeneration = jest.fn();
 
 jest.mock('../services/thesaurus-generation', () => ({
+  ...jest.requireActual('../services/thesaurus-generation'),
   fetchThesaurusGeneration: () => mockFetchGeneration(),
 }));
 

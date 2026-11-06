@@ -401,7 +401,10 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       return { ok: true, saveErrors: [] };
     }
 
-    const result = await save(dirty, resource.permissions, editor.draft, {
+    // State updates replace module values: this reference is the exact request
+    // snapshot, including the gallery's shared stable-ID retry allocator.
+    const sentModules = editor.draft;
+    const result = await save(dirty, resource.permissions, sentModules, {
       canWriteCanonicalDirect,
       baseline: editor.baseline,
       nonApplicableModules: resource.nonApplicableModules,
@@ -409,13 +412,17 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     // Only canonical writes establish persisted room IDs. Proposal submission is not a save.
     editor.commitModules(
       result.saved.flatMap((m) => m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]]),
-      { canonicalRooms: true, canonicalPlaces: true, canonicalModules: result.canonicalModules, sentModules: editor.draft },
+      { canonicalRooms: true, canonicalPlaces: true, canonicalModules: result.canonicalModules, sentModules },
     );
     // Submitted proposals fold into the local baseline so the contributor isn't asked to
     // submit the same unchanged values again, but they do not become canonical room records.
     editor.commitModules(
-      result.submitted.flatMap((m) => m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]]),
+      result.submitted.filter((m) => m !== 'publication').map((m) => MODULE_KEY_MAP[m]),
+      { sentModules },
     );
+    if (result.submitted.includes('publication')) {
+      editor.commitModules(['generalInfo'], { sentModules, publicationSettingsOnly: true });
+    }
 
     // Tell the other editors of this fiche so they can reload before clobbering. Only direct saves
     // changed the DB — submitted proposals are pending and must not signal a peer reload.

@@ -335,7 +335,7 @@ describe('PortalSendModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
 
     await waitFor(() => expect(onSent).toHaveBeenCalledTimes(1));
-    expect(editor.commitModules).toHaveBeenCalledWith(expect.arrayContaining(['contacts', 'openings']));
+    expect(editor.commitModules).toHaveBeenCalledWith(expect.arrayContaining(['contacts', 'openings']), { sentModules: editor.draft });
     // Sans instantané, un rechargement remet les valeurs PUBLIÉES dans les champs et le
     // partenaire croit son envoi perdu.
     const sent = JSON.parse(window.localStorage.getItem(`portal-sent:${USER}:${OBJ}`) ?? '{}');

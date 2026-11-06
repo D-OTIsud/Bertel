@@ -168,7 +168,7 @@ export function PortalSendModal({
           ]),
         ),
       });
-      editor.commitModules(modules.map((module) => MODULE_KEY_MAP[module]));
+      editor.commitModules(modules.map((module) => MODULE_KEY_MAP[module]), { sentModules: editor.draft });
       clearPortalDraft(userId, objectId);
       onSent({ submissionId: result.submissionId, modules });
       onOpenChange(false);

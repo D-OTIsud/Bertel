@@ -18,7 +18,10 @@ never request-body metadata. Existing caller-scoped object permissions remain.
 Unavailable, malformed or timed-out admission fails closed with HTTP503 before
 provider-secret lookup, image processing or paid work. The admission network
 deadline is five seconds; caller abort propagates and a late positive result is
-ignored. An uncertain database timeout may already have consumed a slot and is
+ignored. During extraction, an abort also prevents further image jobs/provider
+start after the current image job settles; the local lease remains held until
+that job settles. Its existing cancellation/error surface is reused.
+An uncertain database timeout may already have consumed a slot and is
 not refunded or retried. HTTP429 retains existing messages and reports the real
 `Retry-After`. The existing frontend error state is reused; other configuration
 503 responses keep their previous wording. Discovery remains blocked before any
@@ -36,5 +39,15 @@ Validation includes real PostgreSQL17 service-role/negative privilege tests,
 strict sliding-window expiration, independent consumers blocked on the same row,
 one remaining slot, clock after lock, restart persistence and separate budgets.
 API tests exercise real admission parsing/abort logic with simulated effects and
-provider/DB responses. Fresh Supabase SQL CI is wired to run both SQL and multi-connection
-tests. No real AI provider call is used.
+provider/DB responses. Fresh Supabase SQL CI is wired to run SQL, multi-connection
+and real GoTrue/PostgREST role tests on its disposable loopback stack. The latter
+creates a confirmed synthetic account, verifies its Auth identity, proves client
+roles cannot call admission, and admits exactly12 of24 concurrent service-role
+requests across two HTTP callers. Only an in-memory effect counter is used;
+there is no AI provider, invite or email endpoint call. The account is removed.
+
+`maxDuration=60` is deployment metadata in Next16.4.5, not a demonstrated
+standalone execution timer. A successful admission adds its actual latency below
+five seconds; the existing55-second provider timeout is unchanged. External
+proxy/hosting limits and live disconnect propagation need separate operational
+verification; this change does not claim a measured end-to-end60-second bound.

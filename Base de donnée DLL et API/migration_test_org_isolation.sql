@@ -46,7 +46,7 @@ ALTER TABLE org_config ADD COLUMN IF NOT EXISTS is_test_org boolean NOT NULL DEF
 ALTER TABLE object_deletion_log ADD COLUMN IF NOT EXISTS is_test boolean NOT NULL DEFAULT false;
 
 COMMENT ON COLUMN object.is_test IS
-  'Fiche du corpus de test (org_config.is_test_org). Entretenue par trigger depuis object_org_link — ne pas ecrire a la main. Exclut la fiche de l''API partenaire, de anon, et de toute ORG de production.';
+  'Realm derive de l ORG primaire (ou de la propre configuration d une ORG). Les ecritures directes contradictoires sont refusees ; l entretien passe par les sources autorisees. Exclut le corpus de test des lecteurs publics et partenaires.';
 COMMENT ON COLUMN org_config.is_test_org IS
   'ORG bac a sable : ses fiches sont is_test, ses membres ne voient QUE le corpus de test. Reserve au superuser plateforme.';
 COMMENT ON COLUMN object_deletion_log.is_test IS
@@ -89,30 +89,80 @@ COMMENT ON FUNCTION api.current_user_test_realm() IS
 
 -- ── 3. Le trigger : l'ORG est la source de verite ───────────────────────────────
 
--- Realm que la fiche DEVRAIT porter, d'apres son ORG primaire. Une fiche sans lien
--- d'ORG reste en production (false) — fail-closed du bon cote : une fiche orpheline
--- ne doit pas devenir invisible, elle doit rester visible et donc suspecte.
+-- Source transitions serialize by organization before touching derived object
+-- rows. The object guard never takes these locks: it already owns an object row,
+-- whereas a config transition owns its config row before updating objects.
+-- A SHARE lock on the organization row also makes a stale REPEATABLE READ source
+-- transition fail with 40001 instead of accepting a pre-flip snapshot.
+CREATE OR REPLACE FUNCTION internal.lock_object_realm_sources(p_org_ids text[])
+RETURNS void
+LANGUAGE plpgsql SECURITY INVOKER
+SET search_path = pg_catalog, public, api, pg_temp
+AS $fn$
+DECLARE v_org_id text;
+BEGIN
+  FOR v_org_id IN SELECT DISTINCT x FROM unnest(p_org_ids) x WHERE x IS NOT NULL ORDER BY x LOOP
+    PERFORM pg_advisory_xact_lock(hashtextextended('bertel.object-realm:' || v_org_id, 0));
+  END LOOP;
+  FOR v_org_id IN SELECT DISTINCT x FROM unnest(p_org_ids) x WHERE x IS NOT NULL ORDER BY x LOOP
+    PERFORM 1 FROM public.object WHERE id=v_org_id FOR SHARE;
+  END LOOP;
+END;
+$fn$;
+REVOKE ALL ON FUNCTION internal.lock_object_realm_sources(text[]) FROM PUBLIC, anon, authenticated, service_role;
+
+-- An ORG follows its own configuration. Other objects follow their primary
+-- organization. A new/orphan object has no source yet and starts in production;
+-- the existing AFTER INSERT auto-attachment stamps a test creator's object.
 CREATE OR REPLACE FUNCTION api.object_expected_is_test(p_object_id text)
 RETURNS boolean
 LANGUAGE sql STABLE
-SET search_path = pg_catalog, public, api
+SET search_path = pg_catalog, public, api, pg_temp
 AS $fn$
-  SELECT COALESCE((
+  SELECT COALESCE(
+    (SELECT oc.is_test_org FROM public.org_config oc WHERE oc.org_object_id=p_object_id),
+    (
     SELECT oc.is_test_org
-    FROM object_org_link ool
-    JOIN org_config oc ON oc.org_object_id = ool.org_object_id
+    FROM public.object_org_link ool
+    JOIN public.org_config oc ON oc.org_object_id = ool.org_object_id
     WHERE ool.object_id = p_object_id AND ool.is_primary IS TRUE
-    ORDER BY ool.updated_at DESC
+    ORDER BY ool.updated_at DESC, ool.org_object_id
     LIMIT 1
-  ), false);
+    ), false);
 $fn$;
+
+-- This is an invariant, not another authorization decision. Even privileged
+-- writers must change the source organization/config rather than forge its copy.
+-- VOLATILE is intentional: queries in a row trigger need a fresh snapshot after
+-- waiting for another transaction's row update. No caller-controlled bypass GUC.
+CREATE OR REPLACE FUNCTION api.guard_object_is_test()
+RETURNS trigger
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = pg_catalog, public, api, pg_temp
+AS $fn$
+DECLARE v_expected boolean;
+BEGIN
+  SELECT api.object_expected_is_test(NEW.id) INTO v_expected;
+  IF NEW.is_test IS DISTINCT FROM v_expected THEN
+    RAISE EXCEPTION 'Object realm is derived from its organization'
+      USING ERRCODE='42501', DETAIL='object_realm_is_derived',
+        HINT='Change the primary organization or its configuration through the existing authorized path.';
+  END IF;
+  RETURN NEW;
+END;
+$fn$;
+REVOKE ALL ON FUNCTION api.guard_object_is_test() FROM PUBLIC, anon, authenticated, service_role;
+DROP TRIGGER IF EXISTS trg_guard_object_is_test ON public.object;
+CREATE TRIGGER trg_guard_object_is_test
+BEFORE INSERT OR UPDATE OF is_test ON public.object
+FOR EACH ROW EXECUTE FUNCTION api.guard_object_is_test();
 
 CREATE OR REPLACE FUNCTION api.sync_object_is_test(p_object_id text)
 RETURNS void
 LANGUAGE sql
-SET search_path = pg_catalog, public, api
+SET search_path = pg_catalog, public, api, pg_temp
 AS $fn$
-  UPDATE object o
+  UPDATE public.object o
      SET is_test = api.object_expected_is_test(p_object_id)
    WHERE o.id = p_object_id
      AND o.is_test IS DISTINCT FROM api.object_expected_is_test(p_object_id);
@@ -121,67 +171,90 @@ $fn$;
 CREATE OR REPLACE FUNCTION api.trg_object_org_link_is_test()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = pg_catalog, public, api
+SET search_path = pg_catalog, public, api, pg_temp
 AS $fn$
+DECLARE v_org_ids text[]:=ARRAY[]::text[]; v_object_ids text[]:=ARRAY[]::text[]; v_object_id text;
 BEGIN
+  -- An object DELETE already owns the derived row before FK cascades remove
+  -- its links. There is no remaining row to synchronize; do not invert the
+  -- source-lock -> object-row order against a concurrent config transition.
+  IF TG_OP='DELETE' AND NOT EXISTS(SELECT 1 FROM public.object WHERE id=OLD.object_id) THEN
+    RETURN NULL;
+  END IF;
   IF TG_OP <> 'INSERT' THEN
-    PERFORM api.sync_object_is_test(OLD.object_id);
+    v_org_ids:=array_append(v_org_ids,OLD.org_object_id);
+    v_object_ids:=array_append(v_object_ids,OLD.object_id);
   END IF;
   IF TG_OP <> 'DELETE' THEN
-    PERFORM api.sync_object_is_test(NEW.object_id);
+    v_org_ids:=array_append(v_org_ids,NEW.org_object_id);
+    v_object_ids:=array_append(v_object_ids,NEW.object_id);
   END IF;
+  PERFORM internal.lock_object_realm_sources(v_org_ids);
+  FOR v_object_id IN SELECT DISTINCT x FROM unnest(v_object_ids) x ORDER BY x LOOP
+    PERFORM api.sync_object_is_test(v_object_id);
+  END LOOP;
   RETURN NULL;
 END;
 $fn$;
 
-DROP TRIGGER IF EXISTS trg_object_org_link_is_test ON object_org_link;
+DROP TRIGGER IF EXISTS trg_object_org_link_is_test ON public.object_org_link;
 CREATE TRIGGER trg_object_org_link_is_test
-AFTER INSERT OR DELETE OR UPDATE OF org_object_id, is_primary ON object_org_link
+AFTER INSERT OR DELETE OR UPDATE OF object_id, org_object_id, is_primary ON public.object_org_link
 FOR EACH ROW EXECUTE FUNCTION api.trg_object_org_link_is_test();
 
--- Bascule d'une ORG entiere (is_test_org modifie) : re-synchronise ses fiches.
+-- A config insert, flag change, key move or deletion re-derives every affected
+-- organization and current primary child. An absent source uses the same false
+-- fallback as an object without a primary organization. No authorization changes.
 CREATE OR REPLACE FUNCTION api.trg_org_config_is_test()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = pg_catalog, public, api
+SET search_path = pg_catalog, public, api, pg_temp
 AS $fn$
+DECLARE v_org_ids text[]:=ARRAY[]::text[]; v_object_id text;
 BEGIN
-  UPDATE object o
-     SET is_test = NEW.is_test_org
-   WHERE o.id IN (
-           SELECT ool.object_id FROM object_org_link ool
-           WHERE ool.org_object_id = NEW.org_object_id AND ool.is_primary IS TRUE
-         )
-     AND o.is_test IS DISTINCT FROM NEW.is_test_org;
-  -- L'ORG elle-meme est un objet : elle porte le realm de sa propre configuration.
-  UPDATE object o SET is_test = NEW.is_test_org
-   WHERE o.id = NEW.org_object_id AND o.is_test IS DISTINCT FROM NEW.is_test_org;
+  IF TG_OP <> 'INSERT' THEN
+    v_org_ids:=array_append(v_org_ids,OLD.org_object_id);
+  END IF;
+  IF TG_OP <> 'DELETE' THEN
+    v_org_ids:=array_append(v_org_ids,NEW.org_object_id);
+  END IF;
+  PERFORM internal.lock_object_realm_sources(v_org_ids);
+  -- Read the current primary source for each row, rather than stamp one config
+  -- value onto an object whose primary link may have moved while we waited.
+  FOR v_object_id IN
+    SELECT ool.object_id FROM public.object_org_link ool
+      WHERE ool.org_object_id=ANY(v_org_ids) AND ool.is_primary IS TRUE
+    UNION SELECT unnest(v_org_ids)
+    ORDER BY 1
+  LOOP
+    PERFORM api.sync_object_is_test(v_object_id);
+  END LOOP;
   RETURN NULL;
 END;
 $fn$;
 
-DROP TRIGGER IF EXISTS trg_org_config_is_test ON org_config;
+DROP TRIGGER IF EXISTS trg_org_config_is_test ON public.org_config;
 CREATE TRIGGER trg_org_config_is_test
-AFTER INSERT OR UPDATE OF is_test_org ON org_config
+AFTER INSERT OR DELETE OR UPDATE OF org_object_id, is_test_org ON public.org_config
 FOR EACH ROW EXECUTE FUNCTION api.trg_org_config_is_test();
 
 -- Le tombstone herite du realm de la fiche AU MOMENT de sa suppression.
 CREATE OR REPLACE FUNCTION api.trg_object_deletion_log_is_test()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = pg_catalog, public, api
+SET search_path = pg_catalog, public, api, pg_temp
 AS $fn$
 BEGIN
   IF NEW.is_test IS NOT TRUE THEN
-    NEW.is_test := COALESCE((SELECT o.is_test FROM object o WHERE o.id = NEW.object_id), false);
+    NEW.is_test := COALESCE((SELECT o.is_test FROM public.object o WHERE o.id = NEW.object_id), false);
   END IF;
   RETURN NEW;
 END;
 $fn$;
 
-DROP TRIGGER IF EXISTS trg_object_deletion_log_is_test ON object_deletion_log;
+DROP TRIGGER IF EXISTS trg_object_deletion_log_is_test ON public.object_deletion_log;
 CREATE TRIGGER trg_object_deletion_log_is_test
-BEFORE INSERT ON object_deletion_log
+BEFORE INSERT ON public.object_deletion_log
 FOR EACH ROW EXECUTE FUNCTION api.trg_object_deletion_log_is_test();
 
 -- ── 4. Point de passage 1 — la policy de lecture publique ───────────────────────

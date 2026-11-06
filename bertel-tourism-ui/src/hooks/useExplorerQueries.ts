@@ -1,3 +1,4 @@
+import type { WorkspaceSaveResult } from '../services/workspace-save-result';
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { assertWorkspaceSaveAvailable } from '../services/object-workspace-safety';
@@ -453,7 +454,7 @@ export function useLocationReferenceOptionsQuery() {
  * the end via `invalidateObjectWorkspaceCaches` — the previous per-module mutation awaited a
  * full workspace refetch after EVERY module, which was the bulk of the save latency.
  */
-export async function saveWorkspaceModule(objectId: string, input: SaveWorkspaceModuleInput, compatibility?: WriteCompatibility): Promise<void> {
+export async function saveWorkspaceModule(objectId: string, input: SaveWorkspaceModuleInput, compatibility?: WriteCompatibility): Promise<void | WorkspaceSaveResult> {
   // Validate before dispatch so direct callers cannot bypass the editor batch guard.
   if (input.moduleId === 'general-info') {
     if (input.value) assertWorkspaceSaveAvailable('general-info', input.value);

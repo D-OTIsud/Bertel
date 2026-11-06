@@ -242,30 +242,17 @@ export function useBootstrapSession() {
         return;
       }
 
-      const canEditObjects = await fetchCanEditObjects();
-      if (!isCurrent(run)) {
-        return;
-      }
-
-      const canCreateObjects = await fetchCanCreateObjects();
-      if (!isCurrent(run)) {
-        return;
-      }
-
-      const activeOrg = await fetchActiveOrg();
-      if (!isCurrent(run)) {
-        return;
-      }
-
-      const adminRank = await fetchAdminRank();
-      if (!isCurrent(run)) {
-        return;
-      }
-      const adminRoleCode = await fetchAdminRoleCode();
-      if (!isCurrent(run)) {
-        return;
-      }
-      const isTestRealm = await fetchTestRealm();
+      // These read-only probes depend on the authenticated user, not on each
+      // other. Keep profile/persona resolution ahead of the batch and publish
+      // only its complete result for the still-current auth generation.
+      const [canEditObjects, canCreateObjects, activeOrg, adminRank, adminRoleCode, isTestRealm] = await Promise.all([
+        fetchCanEditObjects(),
+        fetchCanCreateObjects(),
+        fetchActiveOrg(),
+        fetchAdminRank(),
+        fetchAdminRoleCode(),
+        fetchTestRealm(),
+      ]);
       if (!isCurrent(run)) {
         return;
       }

@@ -26,6 +26,8 @@ export interface PortalRubricFormProps {
   onCancel: () => void;
   /** Remonte l'état « ce formulaire a été touché » au chrome, qui garde la sortie. */
   onDirtyChange: (dirty: boolean) => void;
+  /** Guard navigation during an already-started server mutation. */
+  onBusyChange?: (busy: boolean) => void;
   /**
    * La saisie en cours, tenue par le hub. Elle survit au démontage de l'écran — c'est le
    * seul filet du bouton Retour du téléphone, qui ne passe par aucun lien interceptable.

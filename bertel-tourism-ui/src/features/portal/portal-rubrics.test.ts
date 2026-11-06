@@ -60,18 +60,28 @@ const build = (over: Partial<Parameters<typeof buildPortalRubrics>[0]> = {}) =>
 describe('buildPortalRubrics — composition par type', () => {
   it('HEB : huitième écran « ouverture / fermetures », pas les horaires du restaurant', () => {
     const ids = build({ archetype: 'HEB', draft: draft() }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'season', 'amenities', 'welcome', 'pricing']);
+    expect(ids).toEqual(['contacts', 'presentation', 'season', 'amenities', 'accessibility', 'welcome', 'pricing']);
     expect(ids).not.toContain('hours');
   });
 
   it('RES : horaires oui, ouverture saisonnière non', () => {
     const ids = build({ archetype: 'RES' }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'welcome', 'pricing']);
+    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'welcome', 'pricing']);
   });
 
   it('ASC : la rubrique activité, pas la capacité', () => {
     const ids = build({ archetype: 'ASC' }).map((r) => r.id);
-    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'pricing', 'activity']);
+    expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'accessibility', 'pricing', 'activity']);
+  });
+
+  it.each(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA'])('%s stays in HEB and never displays an activity rubric', (type) => {
+    expect(resolvePortalArchetype(type)).toBe('HEB');
+    expect(build({ archetype: 'HEB' }).map((rubric) => rubric.id)).not.toContain('activity');
+  });
+
+  it.each(['ACT', 'ASC'])('%s displays the activity rubric in ASC', (type) => {
+    expect(resolvePortalArchetype(type)).toBe('ASC');
+    expect(build({ archetype: 'ASC' }).map((rubric) => rubric.id)).toContain('activity');
   });
 
   it('les deux rubriques d’ouverture portent le MÊME module (une enveloppe par module)', () => {
@@ -79,12 +89,14 @@ describe('buildPortalRubrics — composition par type', () => {
     const season = PORTAL_RUBRICS.find((r) => r.id === 'season');
     expect(hours?.module).toBe('openings');
     expect(season?.module).toBe('openings');
-    // …et JAMAIS ensemble pour un même type : deux enveloppes du même module se
-    // marcheraient dessus dans un seul envoi.
+    // Les ouvertures restent alternatives ; équipements/accessibilité sont deux vues
+    // du même module, dont le portail construit une seule enveloppe.
     for (const archetype of ['HEB', 'RES', 'ASC', 'VIS', 'SRV', 'ITI', 'FMA'] as ArchetypeCode[]) {
-      const modules = build({ archetype }).map((r) => r.module);
+      const modules = build({ archetype }).filter((r) => r.id !== 'accessibility').map((r) => r.module);
       expect(new Set(modules).size).toBe(modules.length);
     }
+    expect(build({ archetype: 'ASC' }).filter((r) => r.module === 'characteristics').map((r) => r.id))
+      .toEqual(['amenities', 'accessibility']);
   });
 
   it('fail-CLOSED : un type sans rubrique n’ouvre aucun écran', () => {
@@ -243,9 +255,16 @@ const BANNED = /\b(canonique|mod[ée]ration|soumission|module|section|workspace|
 
 describe('vocabulaire et intégrité du registre', () => {
 
+  it('Photos reste fermé par le plancher historique et s’ouvre seulement si media est autorisé', () => {
+    expect(build().some(rubric => rubric.id === 'photos')).toBe(false);
+    expect(build({ floor: floor.filter(module => module !== 'media') }).find(rubric => rubric.id === 'photos')?.state).toBe('todo');
+    expect(build({ floor: floor.filter(module => module !== 'media'), masked: ['media'] }).some(rubric => rubric.id === 'photos')).toBe(false);
+  });
+
   it('chaque rubrique porte un module hors plancher et un titre sans jargon', () => {
     for (const rubric of PORTAL_RUBRICS) {
-      expect(floor).not.toContain(rubric.module);
+      // The legacy server floor includes media; Photos remains an explicit opt-in.
+      expect(floor.filter(module => module !== 'media')).not.toContain(rubric.module);
       expect(rubric.title).not.toMatch(BANNED);
       expect(rubric.title.length).toBeGreaterThan(3);
     }

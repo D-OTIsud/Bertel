@@ -14,7 +14,7 @@ import { useObjectEditorState } from './useObjectEditorState';
 import { useUnsavedDraftGuard } from './useUnsavedDraftGuard';
 import { useEditorSave } from './useEditorSave';
 import { makeSections, type SectionItem } from './section-config';
-import { MODULE_KEY_MAP } from './editor-state';
+import { getDirtySections, MODULE_KEY_MAP } from './editor-state';
 import {
   computeNavHint,
   computeOverallCompletion,
@@ -50,6 +50,21 @@ import { useEditorScrollSpy } from './useEditorScrollSpy';
 import './object-editor.css';
 import './editor-print.css';
 import { strictErrorMessage } from '../../lib/strict-error-message';
+
+/** Compare editable content, not a refreshed catalog or the gallery CAS/read token. */
+function changedSinceSave(
+  sent: ObjectWorkspaceModules,
+  current: ObjectWorkspaceModules,
+  nonApplicableModules: readonly WorkspaceModuleId[] = [],
+): boolean {
+  const content = (modules: ObjectWorkspaceModules): ObjectWorkspaceModules => {
+    const clean = stripCatalogOptions(modules);
+    return clean.media ? { ...clean, media: { ...clean.media, galleryWriteBaseline: undefined } } : clean;
+  };
+  return Object.values(getDirtySections({
+    objectId: '', baseline: content(sent), draft: content(current),
+  }, nonApplicableModules)).some(Boolean);
+}
 
 /** Full-page object editor. Fetches the workspace resource, then hands off to
  *  EditorReady so the editor hooks only run once data is present. */
@@ -174,6 +189,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const openDrawer = useUiStore((state) => state.openDrawer);
   const userId = useSessionStore((state) => state.userId);
   const editor = useObjectEditorState(objectId, resource.modules, userId, resource.nonApplicableModules);
+  const latestDraft = useRef(editor.draft);
+  latestDraft.current = editor.draft;
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const { confirmLeave } = useUnsavedDraftGuard(editor.isDirty);
   const { save, saving } = useEditorSave(objectId);
@@ -188,10 +205,30 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const [blockersModalOpen, setBlockersModalOpen] = useState(false);
-  const [modalContext, setModalContext] = useState<'publish' | 'save'>('publish');
+  const [modalContext, setModalContext] = useState<'publish' | 'save' | 'publish-deferred'>('publish');
   const [saveErrors, setSaveErrors] = useState<Issue[]>([]);
   const [saveFeedback, setSaveFeedback] = useState<EditorActionFeedback>('idle');
   const [publishFeedback, setPublishFeedback] = useState<EditorActionFeedback>('idle');
+  const publicationGeneration = useRef(0);
+  const publicationMounted = useRef(false);
+  useEffect(() => {
+    publicationMounted.current = true;
+    publicationGeneration.current += 1;
+    setPublishFeedback('idle');
+    // Observe account transitions synchronously, including A -> B -> A batched
+    // into one React render. Returning to A must not revive its older request.
+    const unsubscribe = useSessionStore.subscribe((next, previous) => {
+      if (next.userId !== previous.userId) {
+        publicationGeneration.current += 1;
+        setPublishFeedback('idle');
+      }
+    });
+    return () => {
+      unsubscribe();
+      publicationMounted.current = false;
+      publicationGeneration.current += 1;
+    };
+  }, [objectId]);
   // Independent timer refs per channel: a shared ref would let a publish flash's clearTimeout
   // cancel the save flash's pending revert-to-idle timer (or vice versa) when save→publish (or
   // the reverse) happens within the 1.2s flash window, stranding that channel on "success".
@@ -388,7 +425,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   );
 
   /** Persist local draft modules to the database (shared by publish and draft-save). */
-  async function persistDirtyModules(): Promise<{ ok: boolean; saveErrors: Issue[] }> {
+  async function persistDirtyModules(isCurrent?: () => boolean): Promise<{ ok: boolean; saveErrors: Issue[]; changedDuringSave?: boolean }> {
     if (editor.recoveryConflicts.length > 0) {
       const message = 'Des modifications locales et celles du serveur se chevauchent. Gardez votre brouillon ou choisissez les valeurs du serveur avant de sauvegarder.';
       setStatusMessage(message);
@@ -401,21 +438,34 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       return { ok: true, saveErrors: [] };
     }
 
-    const result = await save(dirty, resource.permissions, editor.draft, {
+    // State updates replace module values: this reference is the exact request
+    // snapshot, including the gallery's shared stable-ID retry allocator.
+    const sentModules = editor.draft;
+    const result = await save(dirty, resource.permissions, sentModules, {
       canWriteCanonicalDirect,
       baseline: editor.baseline,
       nonApplicableModules: resource.nonApplicableModules,
     });
+    // The request may settle after its editor/account has changed. Ignore the
+    // old continuation before acknowledgement, presence or status feedback.
+    if (isCurrent && !isCurrent()) return { ok: false, saveErrors: [] };
+    // Check B against the latest visible C before acknowledgement attaches
+    // server IDs/baselines. This never clones the shared gallery retry allocator.
+    const changedDuringSave = changedSinceSave(sentModules, latestDraft.current, resource.nonApplicableModules);
     // Only canonical writes establish persisted room IDs. Proposal submission is not a save.
     editor.commitModules(
       result.saved.flatMap((m) => m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]]),
-      { canonicalRooms: true, canonicalPlaces: true },
+      { canonicalRooms: true, canonicalPlaces: true, canonicalModules: result.canonicalModules, sentModules },
     );
     // Submitted proposals fold into the local baseline so the contributor isn't asked to
     // submit the same unchanged values again, but they do not become canonical room records.
     editor.commitModules(
-      result.submitted.flatMap((m) => m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]]),
+      result.submitted.filter((m) => m !== 'publication').map((m) => MODULE_KEY_MAP[m]),
+      { sentModules },
     );
+    if (result.submitted.includes('publication')) {
+      editor.commitModules(['generalInfo'], { sentModules, publicationSettingsOnly: true });
+    }
 
     // Tell the other editors of this fiche so they can reload before clobbering. Only direct saves
     // changed the DB — submitted proposals are pending and must not signal a peer reload.
@@ -436,7 +486,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       return { ok: false, saveErrors: issues };
     }
 
-    return { ok: true, saveErrors: [] };
+    return { ok: true, saveErrors: [], changedDuringSave };
   }
 
   /** Persist work-in-progress without publishing and without the blocker gate. */
@@ -463,6 +513,11 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   }
 
   async function handlePublish() {
+    const generation = publicationGeneration.current;
+    const isCurrent = () => publicationMounted.current
+      && publicationGeneration.current === generation
+      && useSessionStore.getState().userId === userId;
+    if (!isCurrent()) return;
     if (validation.blockers.length > 0) {
       setSaveErrors([]);
       setModalContext('publish');
@@ -473,7 +528,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
 
     setStatusMessage(null);
     setPublishFeedback('pending');
-    const { ok, saveErrors: errors } = await persistDirtyModules();
+    const { ok, saveErrors: errors, changedDuringSave } = await persistDirtyModules(isCurrent);
+    if (!isCurrent()) return;
     if (!ok) {
       setSaveErrors(errors);
       setModalContext('save');
@@ -481,14 +537,23 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       setPublishFeedback('error');
       return;
     }
+    if (changedDuringSave) {
+      setSaveErrors([]);
+      setModalContext('publish-deferred');
+      setBlockersModalOpen(true);
+      setPublishFeedback('idle');
+      return;
+    }
 
     try {
       await publishObject.mutateAsync(true);
+      if (!isCurrent()) return;
       editor.setSavedStatus('published');
       setSaveErrors([]);
       toast.success('Fiche enregistrée et publiée');
       flashSuccess(setPublishFeedback, publishFeedbackTimerRef);
     } catch (error) {
+      if (!isCurrent()) return;
       const issue = publishErrorToIssue(error);
       setSaveErrors([issue]);
       setPublishFeedback('error');

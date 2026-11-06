@@ -22,7 +22,6 @@ jobs:
     timeout-minutes: 15
     env:
       STORAGE_CREATE_ONLY_DISPOSABLE: 'true'
-      STORAGE_CREATE_ONLY_WORKDIR: ${{ runner.temp }}/bertel-storage-create-only
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,13 +33,19 @@ jobs:
         with:
           version: 2.78.1
       - name: Prepare owned empty stack without Bertel migrations
+        env:
+          STORAGE_CREATE_ONLY_WORKDIR: ${{ runner.temp }}/bertel-storage-create-only
         run: |
           mkdir -p "$STORAGE_CREATE_ONLY_WORKDIR/supabase"
           printf 'BERTEL_STORAGE_CREATE_ONLY_DISPOSABLE_V1\n' > "$STORAGE_CREATE_ONLY_WORKDIR/.bertel-storage-create-only"
           printf 'project_id = "bertel-storage-create-only"\n\n[db]\nmajor_version = 17\n' > "$STORAGE_CREATE_ONLY_WORKDIR/supabase/config.toml"
       - name: Start disposable stack with generated keys withheld
+        env:
+          STORAGE_CREATE_ONLY_WORKDIR: ${{ runner.temp }}/bertel-storage-create-only
         run: node tools/storage-create-only/stack.mjs start
       - name: Require exact Storage v1.41.8 and race two real uploads
+        env:
+          STORAGE_CREATE_ONLY_WORKDIR: ${{ runner.temp }}/bertel-storage-create-only
         run: node tools/storage-create-only/probe.mjs
       - name: Preserve bounded synthetic observations even on a red capability
         if: always()
@@ -51,4 +56,6 @@ jobs:
           retention-days: 7
       - name: Destroy owned disposable stack
         if: always()
+        env:
+          STORAGE_CREATE_ONLY_WORKDIR: ${{ runner.temp }}/bertel-storage-create-only
         run: node tools/storage-create-only/stack.mjs stop

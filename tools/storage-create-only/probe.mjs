@@ -100,6 +100,10 @@ try {
     // in flight. This widens the actual precheck/upload window; it is not claimed
     // to be a server-side preflight barrier or a universal concurrency proof.
     const results = Promise.all(pending.map(item => item.result));
+    // A transport can fail during the held-body delay. Mark the rejection as
+    // handled immediately, while preserving the rejection of the original
+    // promise at the final await and the outer cleanup/report finally block.
+    void results.catch(() => {});
     try { await Promise.all(pending.map(item => item.started)); await delay(750); }
     finally { pending.forEach(item => item.release()); }
     const responses = await results;

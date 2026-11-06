@@ -1,0 +1,54 @@
+name: Storage create-only capability
+
+# Deliberate independent experiment. No real data/Auth,
+# canonical manifest or operator action. A failed capability stays a red job.
+# The exact branch trigger lets the reviewed experiment run before registering
+# this new manual workflow on master. Publishing this branch starts the probe.
+on:
+  push:
+    branches:
+      - 'codex/audit-storage-create-only-20261106'
+    paths:
+      - 'tools/storage-create-only/**'
+      - '.github/workflows/storage-create-only.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upload-race:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      STORAGE_CREATE_ONLY_DISPOSABLE: 'true'
+      STORAGE_CREATE_ONLY_WORKDIR: ${{ runner.temp }}/bertel-storage-create-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate refusal and ownership guards (no Storage simulation)
+        run: node --test tools/storage-create-only/contract.test.mjs
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.78.1
+      - name: Prepare owned empty stack without Bertel migrations
+        run: |
+          mkdir -p "$STORAGE_CREATE_ONLY_WORKDIR/supabase"
+          printf 'BERTEL_STORAGE_CREATE_ONLY_DISPOSABLE_V1\n' > "$STORAGE_CREATE_ONLY_WORKDIR/.bertel-storage-create-only"
+          printf 'project_id = "bertel-storage-create-only"\n\n[db]\nmajor_version = 17\n' > "$STORAGE_CREATE_ONLY_WORKDIR/supabase/config.toml"
+      - name: Start disposable stack with generated keys withheld
+        run: node tools/storage-create-only/stack.mjs start
+      - name: Require exact Storage v1.41.8 and race two real uploads
+        run: node tools/storage-create-only/probe.mjs
+      - name: Preserve bounded synthetic observations even on a red capability
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storage-create-only-observations
+          path: ${{ runner.temp }}/bertel-storage-create-only/probe-report.json
+          retention-days: 7
+      - name: Destroy owned disposable stack
+        if: always()
+        run: node tools/storage-create-only/stack.mjs stop

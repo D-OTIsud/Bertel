@@ -1,4 +1,5 @@
 /** @jest-environment node */
+jest.mock('server-only', () => ({}));
 import type { NextRequest } from 'next/server';
 import { POST as translate } from '../ai/translate/route';
 import { POST as extract } from '../menu/extract/route';

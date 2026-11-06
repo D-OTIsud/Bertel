@@ -112,5 +112,8 @@ navigation, unchanged overscale default, both ordinary WebGL2 and a browser with
 WebGL2 context creation disabled (real WebGL1). Only offline synthetic map data
 is used. This browser proof does not certify every physical GPU or third-party
 tile service. Existing native image and real browser PDF gates remain enabled.
+Map proofs have retries disabled. Their bounded readiness wait accepts only a
+temporarily missing matching React ref/canvas; engine errors propagate and a
+missing/lost GL context fails after ref readiness.
 
 No production deployment or configuration change is part of this packaging lot.

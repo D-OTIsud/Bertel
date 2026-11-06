@@ -74,6 +74,16 @@ describe('buildPortalRubrics — composition par type', () => {
     expect(ids).toEqual(['contacts', 'presentation', 'hours', 'amenities', 'pricing', 'activity']);
   });
 
+  it.each(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA'])('%s stays in HEB and never displays an activity rubric', (type) => {
+    expect(resolvePortalArchetype(type)).toBe('HEB');
+    expect(build({ archetype: 'HEB' }).map((rubric) => rubric.id)).not.toContain('activity');
+  });
+
+  it.each(['ACT', 'ASC'])('%s displays the activity rubric in ASC', (type) => {
+    expect(resolvePortalArchetype(type)).toBe('ASC');
+    expect(build({ archetype: 'ASC' }).map((rubric) => rubric.id)).toContain('activity');
+  });
+
   it('les deux rubriques d’ouverture portent le MÊME module (une enveloppe par module)', () => {
     const hours = PORTAL_RUBRICS.find((r) => r.id === 'hours');
     const season = PORTAL_RUBRICS.find((r) => r.id === 'season');

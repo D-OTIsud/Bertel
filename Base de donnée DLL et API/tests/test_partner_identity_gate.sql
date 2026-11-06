@@ -119,6 +119,10 @@ BEGIN
     'UID-only member lost own organisation draft';
   ASSERT EXISTS (SELECT 1 FROM public.object WHERE id = v_draft),
     'UID-only member lost direct RLS read';
+  ASSERT api.get_object_resource(v_draft, ARRAY['fr'], 'none',
+    '{"render":false,"fields":["actors"]}'::jsonb)::jsonb IS NOT NULL,
+    'UID-only current member lost private DEFINER resource';
+
   RESET ROLE;
   PERFORM set_config('request.jwt.claims', jsonb_build_object(
     'role', 'authenticated', 'sub', v_portal)::text, true);
@@ -127,6 +131,12 @@ BEGIN
     'UID-only actor persona lost assigned portal scope';
   ASSERT NOT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() AS s(id) WHERE id = v_draft),
     'actor persona inherited organisation membership scope';
+  v_payload := api.get_object_resource(v_bridge, ARRAY['fr'], 'none',
+    '{"render":false,"fields":["actors"]}'::jsonb)::jsonb;
+  ASSERT v_payload IS NOT NULL
+    AND jsonb_array_length(coalesce(v_payload->'actors','[]'::jsonb)) > 0,
+    'Current explicit portal resource witness must include its real assigned actor';
+
   RESET ROLE;
 
   -- An email claim, without a current authenticated UID/profile binding,
@@ -141,6 +151,10 @@ BEGIN
     ASSERT NOT EXISTS(SELECT 1 FROM api.user_actor_ids()), 'contact email supplied an actor identity';
     ASSERT api.can_read_extended(v_bridge) IS FALSE, 'contact email recovered the private bridge';
     ASSERT NOT EXISTS(SELECT 1 FROM public.object WHERE id=v_bridge), 'private email-only row leaked';
+    ASSERT api.get_object_resource(v_bridge, ARRAY['fr'], 'none',
+      '{"render":false,"fields":["actors"]}'::jsonb)::jsonb IS NULL,
+      'Email contact recovered a private resource through the DEFINER reader';
+
     ASSERT EXISTS(SELECT 1 FROM public.object WHERE id=v_published), 'published read witness missing';
     ASSERT EXISTS(SELECT 1 FROM api.current_user_extended_object_ids() s(id) WHERE id=v_bridge) IS FALSE,
       'email claim added private extended scope';

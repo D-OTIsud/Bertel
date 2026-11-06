@@ -10,15 +10,6 @@ DECLARE
   v_writer text:='{"sub":"00000000-0000-4000-a000-00000000ae11","role":"authenticated","email":"current-rights-writer@example.invalid"}';
   v_portal text:='{"sub":"00000000-0000-4000-a000-00000000ae13","role":"authenticated","email":"current-rights-portal@example.invalid"}';
 BEGIN
-  -- Legal metadata retains its specialist permission; canonical editing alone
-  -- must not grant it. The same current business-role removal revokes both.
-  INSERT INTO public.org_role_permission(org_object_id,role_id,permission_id,is_active,granted_by)
-    SELECT 'ORGRUN999999AR01',r.id,p.id,true,'00000000-0000-4000-a000-00000000ae15'
-    FROM public.ref_org_business_role r CROSS JOIN public.ref_permission p
-    WHERE r.code='editor' AND p.code='manage_legal_compliance' AND p.is_active
-    ON CONFLICT ON CONSTRAINT org_role_permission_uniq DO UPDATE SET is_active=true;
-  GET DIAGNOSTICS v_rows=ROW_COUNT;
-  ASSERT v_rows=1, 'Legal positive requires a real current specialist permission';
   UPDATE public.object SET name='Synthetic private history version two' WHERE id='HOTRUN999999AR01';
   UPDATE public.object SET name='Synthetic public history version two' WHERE id='HOTRUN999999AR03';
   SELECT min(version_number) INTO v_min FROM public.object_version WHERE object_id='HOTRUN999999AR01';

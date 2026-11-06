@@ -9,6 +9,7 @@ let mockAckUnavailable = false;
 let mockHtml = '<p>Synthetic snapshot B</p>';
 const mockReceipts = new Map<string, { state: string; fingerprint: unknown; recipient: unknown; token: string; trackingUpdated: boolean }>();
 const mockCounts = { claims: 0, attempts: 0 };
+const mockProfileRead = jest.fn();
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: () => ({
   auth: { getUser: async () => ({ data: { user: { id: 'd2000000-0000-4000-8000-000000000010', email: 'synthetic@example.invalid' } }, error: null }) },
@@ -19,6 +20,13 @@ jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: () => ({
     const receipt = mockReceipts.get(key);
     if (name === 'claim_list_email') {
       mockCounts.claims += 1;
+      if (receipt?.state === 'superseded') return { data: { state: 'conflict' }, error: null };
+      const previous = args.p_confirmed_previous_operation_id;
+      if (!receipt && previous) {
+        const old = mockReceipts.get(String(previous));
+        if (old?.state === 'reserved') old.state = 'superseded';
+        else if (!old) mockReceipts.set(String(previous), { state: 'superseded', fingerprint: null, recipient: null, token: 'unused', trackingUpdated: false });
+      }
       if (receipt && (receipt.fingerprint !== args.p_fingerprint || receipt.recipient !== args.p_recipient_fingerprint)) {
         return { data: { state: 'conflict' }, error: null };
       }
@@ -47,7 +55,7 @@ jest.mock('@/lib/supabase-caller.server', () => ({ createCallerClient: () => ({
     ? { data: mockListAllowed ? { id: 'd2000000-0000-4000-8000-000000000020', org_object_id: 'ORGSYNTHETIC0001', name: 'Synthetic list', lang: 'fr', items: [] } : null,
       error: mockListAllowed ? null : { message: 'forbidden' } }
     : { data: { share_token: 'synthetic-token' }, error: null } }),
-  from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }),
+  from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => mockProfileRead() }) }) }),
 }) }));
 jest.mock('@/lib/smtp-settings.server', () => ({ resolveSmtpConfig: async () => ({ host: 'synthetic.invalid', fromEmail: 'sender@example.invalid', fromName: 'Synthetic' }) }));
 jest.mock('@/lib/mail.server', () => ({
@@ -64,14 +72,15 @@ function instance(): Handler {
   return handler;
 }
 const OPERATION = 'd2000000-0000-4000-8000-000000000001';
-function request(toEmail = 'recipient@example.invalid', operation = OPERATION): NextRequest {
+function request(toEmail = 'recipient@example.invalid', operation = OPERATION, previous?: string): NextRequest {
   return new Request('https://synthetic.invalid/api/lists/send', {
     method: 'POST', headers: { authorization: 'Bearer synthetic-token', 'content-type': 'application/json', 'Idempotency-Key': operation },
-    body: JSON.stringify({ listId: 'd2000000-0000-4000-8000-000000000020', toEmail }),
+    body: JSON.stringify({ listId: 'd2000000-0000-4000-8000-000000000020', toEmail, ...(previous ? { confirmedPreviousOperationId: previous } : {}) }),
   }) as NextRequest;
 }
 beforeEach(() => {
   mockMail.mockReset().mockResolvedValue(undefined); mockReceipts.clear();
+  mockProfileRead.mockReset().mockResolvedValue({ data: null, error: null });
   mockListAllowed = true; mockTrackingError = false; mockProtectionUnavailable = false; mockAckUnavailable = false;
   mockHtml = '<p>Synthetic snapshot B</p>'; mockCounts.claims = 0; mockCounts.attempts = 0;
   process.env.NEXT_PUBLIC_APP_URL = 'https://synthetic.invalid';
@@ -132,4 +141,24 @@ it('requires a valid, non-self-confirming intention before the shared gate or SM
   }) as NextRequest;
   for (const req of [missing, request('recipient@example.invalid', 'invalid'), self]) expect((await send(req)).status).toBe(400);
   expect(mockMail).not.toHaveBeenCalled(); expect(mockCounts.claims).toBe(0);
+});
+
+
+it('confirmed B finishes while A is still preparing; delayed A is tombstoned and never submits SMTP', async () => {
+  let release!: (value: { data: null; error: null }) => void;
+  let entered!: () => void;
+  const preparing = new Promise<void>((done) => { entered = done; });
+  const profile = new Promise<{ data: null; error: null }>((done) => { release = done; });
+  mockProfileRead.mockImplementationOnce(() => { entered(); return profile; });
+  const first = instance(), second = instance();
+  const delayedA = first(request());
+  await preparing;
+  const replacement = 'd2000000-0000-4000-8000-000000000002';
+  expect((await second(request('recipient@example.invalid', replacement, OPERATION))).status).toBe(200);
+  expect(mockMail).toHaveBeenCalledTimes(1);
+  release({ data: null, error: null });
+  expect((await delayedA).status).toBe(409);
+  expect(mockMail).toHaveBeenCalledTimes(1); expect(mockCounts.attempts).toBe(1);
+  expect(mockReceipts.get(OPERATION)?.state).toBe('superseded');
+  expect(mockReceipts.get(replacement)?.state).toBe('accepted');
 });

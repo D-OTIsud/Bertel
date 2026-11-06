@@ -64,11 +64,25 @@ test('real Auth/PostgREST keep service-only receipt identity, concurrent one-att
     let fakeEffects = 0; for (const verdict of verdicts) if (verdict.started === true) fakeEffects++;
     assert.equal(fakeEffects, 1); assert.equal(verdicts.filter((r) => r.started === false && r.state === 'unknown').length, 1);
     const unknown = await rpc(service, 'claim_list_email', args); assert.equal(unknown.status, 200); assert.equal((await unknown.json()).state, 'unknown');
+    // An old HTTP request can still be preparing outside SQL. Close its absent
+    // key before confirmed B; even after B accepts, late A must never gain a permit.
+    const absentA = randomUUID(), replacementB = randomUUID();
+    const replacementArgs = { ...args, p_operation_id: replacementB, p_recipient_fingerprint: 'c'.repeat(64), p_confirmed_previous_operation_id: absentA };
+    const reservedB = await rpc(service, 'claim_list_email', replacementArgs); assert.equal(reservedB.status, 200);
+    const receiptB = await reservedB.json(); assert.equal(receiptB.state, 'reserved');
+    const exactB = { ...exact, p_operation_id: replacementB, p_attempt_token: receiptB.attempt_token };
+    const beginB = await rpc(service, 'begin_list_email', exactB); assert.equal(beginB.status, 200);
+    const verdictB = await beginB.json(); if (verdictB.started === true) fakeEffects++;
+    assert.equal(verdictB.started, true);
+    const ackB = await rpc(service, 'complete_list_email', { ...exactB, p_outcome: 'accepted' }); assert.equal(ackB.status, 200); assert.equal(await ackB.json(), true);
+    const lateA = await rpc(service, 'claim_list_email', { ...args, p_operation_id: absentA, p_recipient_fingerprint: 'c'.repeat(64) });
+    assert.equal(lateA.status, 200); const verdictA = await lateA.json(); assert.equal(verdictA.state, 'conflict');
+    assert.equal(verdictA.attempt_token, undefined); assert.equal(fakeEffects, 2, 'only the original operation and B admitted an effect, never A');
     sql(`UPDATE public.user_org_membership SET is_active=false WHERE user_id='${user}' AND org_object_id='${org}';`);
     const revoked = await rpc(service, 'claim_list_email', args); assert.equal(revoked.status, 200); assert.equal((await revoked.json()).state, 'forbidden');
     const ack = await rpc(service, 'complete_list_email', { ...exact, p_outcome: 'accepted', p_tracking_updated: false });
     assert.equal(ack.status, 200); assert.equal(await ack.json(), true);
-    assert.equal(sql(`SELECT sum(admitted)=1 AND sum(started)=1 AND sum(accepted)=1 FROM internal.list_email_metric WHERE user_id='${user}';`), 't');
+    assert.equal(sql(`SELECT sum(admitted)=2 AND sum(started)=2 AND sum(accepted)=2 FROM internal.list_email_metric WHERE user_id='${user}';`), 't');
   } finally {
     if (user) {
       sql(`DELETE FROM public.object_list WHERE id='${list}'; DELETE FROM public.object WHERE id='${org}'; DELETE FROM internal.list_email_metric WHERE user_id='${user}';`);

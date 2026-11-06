@@ -37,6 +37,34 @@ test('single selection restores its trigger but an outside click keeps the chose
   expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 });
 
+test('a pointer selection in multi returns focus to search for the next keyboard choice', () => {
+  const onChange = jest.fn();
+  render(<SearchMultiSelect values={[]} options={options} onChange={onChange} aria-label="Cible" />);
+  fireEvent.click(screen.getByRole('combobox', { name: 'Cible' }));
+  const option = screen.getByRole('option', { name: 'Premier' });
+  option.focus();
+  fireEvent.click(option);
+  const search = screen.getByRole('combobox', { name: 'Rechercher' });
+  expect(search).toHaveFocus();
+  fireEvent.keyDown(search, { key: 'ArrowDown' });
+  fireEvent.keyDown(search, { key: 'Enter' });
+  expect(onChange).toHaveBeenLastCalledWith(['two']);
+});
+
+test.each([false, true])('an asynchronous catalog shrink keeps one reachable active option, multi=%s', (multi) => {
+  const expanded = Array.from({ length: 6 }, (_, i) => ({ code: String(i), label: `Choix ${i}` }));
+  const element = (catalog: typeof expanded) => multi
+    ? <SearchMultiSelect values={[]} options={catalog} onChange={jest.fn()} aria-label="Cible" />
+    : <SearchSelect value="" options={catalog} onChange={jest.fn()} aria-label="Cible" />;
+  const { rerender } = render(element(expanded));
+  fireEvent.click(screen.getByRole('combobox', { name: 'Cible' }));
+  const search = screen.getByRole('combobox', { name: 'Rechercher' });
+  for (let i = 0; i < 5; i++) fireEvent.keyDown(search, { key: 'ArrowDown' });
+  rerender(element(expanded.slice(0, 2)));
+  expect(search).toHaveFocus();
+  expect(document.getElementById(search.getAttribute('aria-activedescendant') ?? '')).toHaveTextContent('Choix 1');
+});
+
 test.each([false, true])('picker focus and Escape coexist with a real Sheet, multi=%s', async (multi) => {
   const onOpenChange = jest.fn();
   render(<Sheet open onOpenChange={onOpenChange}><SheetContent aria-describedby={undefined}>

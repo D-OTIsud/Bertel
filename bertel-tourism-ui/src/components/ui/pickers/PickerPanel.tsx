@@ -5,6 +5,20 @@ import { FocusScope } from '@radix-ui/react-focus-scope';
 import { DismissableLayer } from '@radix-ui/react-dismissable-layer';
 import { dialogFocusables } from '../dialog-focus';
 
+/** Reveal an active row without scrolling the document behind a portal. */
+export function scrollOptionIntoView(option: HTMLElement | null, viewport: HTMLElement | null) {
+  if (!option || !viewport) return;
+  const row = option.getBoundingClientRect();
+  const bounds = viewport.getBoundingClientRect();
+  const scale = viewport.offsetHeight ? bounds.height / viewport.offsetHeight : 1;
+  const top = bounds.top + viewport.clientTop * scale;
+  const bottom = top + viewport.clientHeight * scale;
+  // WebKit rounds scrollTop to whole CSS pixels. Round outward so a fractional
+  // last row cannot remain clipped; account for a zoomed/scaled host as well.
+  if (row.top < top) viewport.scrollTop += Math.floor((row.top - top) / scale);
+  else if (row.bottom > bottom) viewport.scrollTop += Math.ceil((row.bottom - bottom) / scale);
+}
+
 /** A non-modal popup participates in the host's existing Radix focus/layer stack. */
 export function PopupLayer({ children, panelRef, triggerRef, focusRef, onClose }: {
   children: ReactElement;
@@ -49,7 +63,7 @@ export function PopupLayer({ children, panelRef, triggerRef, focusRef, onClose }
         event.stopPropagation();
         if (nextInside >= 0 && nextInside < inside.length) return;
 
-        const dialog = trigger.closest<HTMLElement>('[role="dialog"]');
+        const dialog = trigger.closest<HTMLElement>('[role="dialog"],[role="alertdialog"]');
         const outside = dialogFocusables(dialog ?? document.body).filter((node) =>
           !panel.contains(node) && !node.hasAttribute('data-radix-focus-guard'));
         const direction = event.shiftKey ? -1 : 1;

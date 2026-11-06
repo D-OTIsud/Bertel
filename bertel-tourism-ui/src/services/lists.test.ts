@@ -20,6 +20,8 @@ import {
   restoreList,
   reviewListFeature,
   sendListByEmail,
+  ListEmailUnknownError,
+  LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE,
   setListFeatured,
 } from './lists';
 
@@ -552,5 +554,47 @@ describe('sendListByEmail — messages FR (revue architecte §4)', () => {
       json: async () => ({ ok: true, trackingUpdated: true }),
     }) as unknown as typeof fetch;
     await expect(sendListByEmail('L1', 'a@example.com')).resolves.toEqual({ trackingUpdated: true });
+  });
+});
+
+
+describe('sendListByEmail — exact intention and uncertain HTTP reply', () => {
+  const originalFetch = global.fetch;
+  const operationId = 'd2000000-0000-4000-8000-000000000001';
+  beforeEach(() => {
+    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: true });
+    (getApiClient as jest.Mock).mockReturnValue({ auth: { getSession: async () => ({ data: { session: { access_token: 'synthetic-token' } } }) } });
+  });
+  afterEach(() => { global.fetch = originalFetch; });
+  it('passes one stable intention and the explicit confirmation without altering the address', async () => {
+    const confirmedPreviousOperationId = 'd2000000-0000-4000-8000-000000000002';
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ trackingUpdated: true }) });
+    await sendListByEmail('L1', 'ExactCase@example.invalid', { operationId, confirmedPreviousOperationId });
+    expect(global.fetch).toHaveBeenCalledWith('/api/lists/send', expect.objectContaining({
+      headers: expect.objectContaining({ 'Idempotency-Key': operationId }),
+      body: JSON.stringify({ listId: 'L1', toEmail: 'ExactCase@example.invalid', confirmedPreviousOperationId }),
+    }));
+  });
+  it('a lost HTTP reply is unknown, never an automatic second POST', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('synthetic network loss'));
+    await expect(sendListByEmail('L1', 'recipient@example.invalid', { operationId })).rejects.toMatchObject({ name: 'ListEmailUnknownError', operationId });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+  it('reads durable prior unknown and distinguishes protection 503 from SMTP configuration', async () => {
+    const previous = 'd2000000-0000-4000-8000-000000000002';
+    global.fetch = jest.fn().mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ error: 'email_delivery_unknown', operationId: previous }) })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: 'email_protection_unavailable' }) });
+    await expect(sendListByEmail('L1', 'recipient@example.invalid', { operationId })).rejects.toEqual(new ListEmailUnknownError(previous));
+    await expect(sendListByEmail('L1', 'recipient@example.invalid', { operationId })).rejects.toThrow(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  });
+  it('an obsolete gesture after delayed availability cannot acquire a new identity JWT or POST', async () => {
+    let resolve!: (value: { translation: boolean; imageAnalysis: boolean; email: boolean }) => void;
+    jest.mocked(getServiceAvailability).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    let current = true;
+    global.fetch = jest.fn();
+    const pending = sendListByEmail('L1', 'recipient@example.invalid', { operationId, isCurrent: () => current });
+    const outcome = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    current = false; resolve({ translation: false, imageAnalysis: false, email: true });
+    await outcome; expect(global.fetch).not.toHaveBeenCalled();
   });
 });

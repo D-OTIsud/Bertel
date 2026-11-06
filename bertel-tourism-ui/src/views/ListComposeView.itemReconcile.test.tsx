@@ -26,10 +26,7 @@ jest.mock('@/services/lists', () => ({
 jest.mock('@/features/object-editor/useObjectSearch', () => ({ useObjectSearch: jest.fn() }));
 jest.mock('@/hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn() }));
 
-jest.mock('@/store/session-store', () => ({
-  useSessionStore: (selector: (state: { userName: string; email: string; avatarUrl: string | null }) => unknown) =>
-    selector({ userName: 'Conseiller', email: 'conseiller@example.com', avatarUrl: null }),
-}));
+
 
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 

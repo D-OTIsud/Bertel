@@ -600,36 +600,72 @@ export interface SendListEmailResult {
   trackingUpdated: boolean;
 }
 
-/**
- * Envoie la liste par e-mail via la route serveur POST /api/lists/send (relais SMTP côté VPS).
- * Passe le JWT de l'appelant en Bearer ; la route ré-autorise via get_list (en tant qu'appelant).
- */
-export async function sendListByEmail(listId: string, toEmail: string): Promise<SendListEmailResult> {
+export const LIST_EMAIL_UNKNOWN_MESSAGE =
+  "Résultat de l'envoi inconnu. Il a peut-être été transmis. Vérifiez avant de lancer un nouvel envoi.";
+export const LIST_EMAIL_RESEND_CONFIRMATION =
+  "L'envoi précédent a peut-être été transmis. Envoyer de nouveau peut créer un doublon. Continuer ?";
+export const LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE =
+  "L'envoi est momentanément indisponible. Réessayez dans un instant.";
+export class ListEmailUnknownError extends Error {
+  constructor(readonly operationId: string) {
+    super(LIST_EMAIL_UNKNOWN_MESSAGE);
+    this.name = 'ListEmailUnknownError';
+  }
+}
+export interface SendListEmailIntent {
+  operationId: string;
+  confirmedPreviousOperationId?: string;
+  /** Scope is captured at the gesture, including changes hidden by a batched render. */
+  isCurrent?: () => boolean;
+  signal?: AbortSignal;
+}
+
+/** A committed started receipt is never automatically retransmitted. Each deliberate
+ * send has a UUID; an uncertain previous send additionally requires explicit confirmation. */
+export async function sendListByEmail(listId: string, toEmail: string, intent?: SendListEmailIntent): Promise<SendListEmailResult> {
+  const operationId = intent?.operationId ?? crypto.randomUUID();
+  const assertCurrent = () => {
+    if (intent?.signal?.aborted || intent?.isCurrent?.() === false) throw new DOMException('Obsolete list-mail scope', 'AbortError');
+  };
+  assertCurrent();
   // A stale visible action must not start an SMTP request after an administrator disables it.
   const availability = await getServiceAvailability({ force: true });
+  assertCurrent();
   if (!availability.email) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
   const client = getApiClient();
   if (!client) throw new Error('Supabase non configuré.');
   const { data } = await client.auth.getSession();
+  assertCurrent();
   const token = data.session?.access_token;
   if (!token) throw new Error('Session expirée — reconnectez-vous.');
-  const res = await fetch('/api/lists/send', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ listId, toEmail }),
-  });
+  let res: Response;
+  try {
+    res = await fetch('/api/lists/send', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}`, 'Idempotency-Key': operationId },
+      body: JSON.stringify({ listId, toEmail, ...(intent?.confirmedPreviousOperationId ? { confirmedPreviousOperationId: intent.confirmedPreviousOperationId } : {}) }),
+      signal: intent?.signal,
+    });
+  } catch {
+    assertCurrent();
+    // A lost HTTP reply is not proof of a failed SMTP delivery.
+    throw new ListEmailUnknownError(operationId);
+  }
+  assertCurrent();
   if (!res.ok) {
-    const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+    const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string; operationId?: string };
+    assertCurrent();
+    if (j.error === 'email_delivery_unknown') throw new ListEmailUnknownError(j.operationId ?? operationId);
+    if (j.error === 'email_protection_unavailable') throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
     if (res.status === 503) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
-    // La route relaie tel quel le message brut d'`ensure_list_share_link` (ex. « forbidden » +
-    // detail:"SHARE_NOT_AVAILABLE: …") quand elle ne peut pas générer le lien « sélection
-    // complète » qu'embarque l'e-mail : sans ce test, l'utilisateur lirait le libellé générique
-    // « action non autorisée » au lieu de comprendre que le LIEN, pas ses droits, est en cause.
+    if (res.status >= 500 && !(res.status === 502 && j.error === 'send_failed')
+      && j.error !== 'server_misconfigured' && j.error !== 'share_failed') throw new ListEmailUnknownError(operationId);
     const shareFriendly = j.detail ? shareLinkFriendlyMessage(j.detail) : null;
     if (shareFriendly) throw new Error(shareFriendly);
     throw new Error(readApiErrorMessage(j, res.status));
   }
   const body = (await res.json().catch(() => ({}))) as { trackingUpdated?: boolean };
+  assertCurrent();
   return { trackingUpdated: body.trackingUpdated === true };
 }
 

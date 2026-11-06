@@ -1,23 +1,25 @@
+import { createHash } from 'node:crypto';
 import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { isSandboxDiscoveryUser, SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
-import { sendListEmail, MailNotConfiguredError } from '@/lib/mail.server';
+import { prepareListEmail, MailDeliveryError, MailNotConfiguredError } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import { renderListEmailHtml, listEmailSubject, type ListEmailItem } from '@/emails/ListEmail';
 import { ACCENT_INK, typeLabel } from '@/features/lists/type-meta';
 
 // Envoi d'une liste par e-mail MÉTIER (relais Google par IP du VPS). Modèle sécurité = upload média
 // (§59) : JWT appelant → get_list + ensure_list_share_link DEFINER auto-autorisent (en tant
-// qu'appelant, jamais la service key) → envoi une seule fois → marquage mark_list_sent fait
+// qu'appelant, jamais la service key) → une tentative par intention → marquage mark_list_sent fait
 // APRÈS coup par le client SERVICE-ROLE, avec p_sender_id = l'appelant authentifié (contrat
 // listes 2026-09-07 : la signature UUID-only du RPC est retirée aux clients ordinaires — seul
 // service_role peut l'appeler). SMTP absent ⇒ 503 sans casser lien/PDF.
 export const runtime = 'nodejs';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_ITEMS = 4; // n'embarquer que les premières fiches ; le reste via « sélection complète »
 
 type Rec = Record<string, unknown>;
@@ -44,7 +46,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // 2. Corps.
   let body: Rec;
   try {
-    body = (await req.json()) as Rec;
+    const parsed = asRec(await req.json());
+    if (!parsed) return NextResponse.json({ error: 'bad_json' }, { status: 400 });
+    body = parsed;
   } catch {
     return NextResponse.json({ error: 'bad_json' }, { status: 400 });
   }
@@ -52,6 +56,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const toEmail = str(body.toEmail).trim();
   if (!listId) return NextResponse.json({ error: 'missing_list' }, { status: 400 });
   if (!EMAIL_RE.test(toEmail)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
+  const operationId = (req.headers.get('idempotency-key') ?? '').trim().toLowerCase();
+  const previous = body.confirmedPreviousOperationId;
+  if (!UUID_RE.test(operationId) || (previous !== undefined && (typeof previous !== 'string' || !UUID_RE.test(previous)
+    || previous.toLowerCase() === operationId))) {
+    return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+  }
+  const confirmedPreviousOperationId = typeof previous === 'string' ? previous.toLowerCase() : null;
+
 
   // Resolve before creating a share link or reading any mutable list side effect. A disabled
   // database setting intentionally wins over environment fallback in resolveSmtpConfig.
@@ -130,17 +142,67 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     totalCount: rawItems.length,
   });
 
-  // 7. Envoi.
-  try {
-    await sendListEmail({ to: toEmail, subject: listEmailSubject(name, lang), html });
-  } catch (err) {
-    if (err instanceof MailNotConfiguredError) {
-      return NextResponse.json({ error: 'smtp_not_configured', detail: err.message }, { status: 503 });
+  // Freeze exactly what is submitted, including the configured From identity. Hashes are
+  // pseudonymous receipts, not aggregate measurement or a promise of SMTP exactly-once.
+  const subject = listEmailSubject(name, lang);
+  let prepared: Awaited<ReturnType<typeof prepareListEmail>>;
+  try { prepared = await prepareListEmail({ to: toEmail, subject, html }); }
+  catch (error) {
+    return NextResponse.json({ error: error instanceof MailNotConfiguredError ? 'smtp_not_configured' : 'smtp_unavailable' }, { status: 503 });
+  }
+  const hash = (value: string) => createHash('sha256').update(value, 'utf8').digest('hex');
+  const fingerprint = hash(JSON.stringify([listId, toEmail, subject, html, prepared.sender.address, prepared.sender.name]));
+  const args = { p_user_id: userData.user.id, p_list_id: listId, p_operation_id: operationId };
+  const api = server.schema('api');
+  const unavailable = () => NextResponse.json({ error: 'email_protection_unavailable' }, { status: 503 });
+  const receiptResponse = (receipt: Rec): NextResponse | null => {
+    if (receipt.state === 'accepted') return success(toEmail, receipt.tracking_updated === true);
+    if (receipt.state === 'forbidden') return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    if (receipt.state === 'conflict' || receipt.state === 'superseded') return NextResponse.json({ error: 'bad_request' }, { status: 409 });
+    if (receipt.state === 'started' || receipt.state === 'unknown') {
+      const previousOperation = str(receipt.operation_id) || operationId;
+      return NextResponse.json({ error: 'email_delivery_unknown', operationId: previousOperation }, { status: 409 });
     }
-    return NextResponse.json(
-      { error: 'send_failed', detail: err instanceof Error ? err.message : 'unknown' },
-      { status: 502 },
-    );
+    if (receipt.state === 'rejected') {
+      if (receipt.rejection_code === 'NOT_CONFIGURED') return NextResponse.json({ error: 'smtp_not_configured' }, { status: 503 });
+      return NextResponse.json({ error: 'send_failed', detail: new MailDeliveryError({ code: receipt.rejection_code }).message }, { status: 502 });
+    }
+    return null;
+  };
+  let receipt: Rec | null;
+  try {
+    const claimed = await api.rpc('claim_list_email', { ...args, p_fingerprint: fingerprint,
+      p_recipient_fingerprint: hash(toEmail), p_confirmed_previous_operation_id: confirmedPreviousOperationId });
+    receipt = asRec(claimed.data);
+    if (claimed.error || !receipt) return unavailable();
+  } catch { return unavailable(); }
+  const existingResponse = receiptResponse(receipt);
+  if (existingResponse) return existingResponse;
+  const attemptToken = str(receipt.attempt_token);
+  if (receipt.state !== 'reserved' || !UUID_RE.test(attemptToken)) return unavailable();
+  try {
+    const begun = await api.rpc('begin_list_email', { ...args, p_attempt_token: attemptToken });
+    const verdict = asRec(begun.data);
+    if (begun.error || !verdict) return unavailable();
+    if (verdict.started !== true) return receiptResponse(verdict) ?? unavailable();
+  } catch { return unavailable(); }
+  const complete = async (outcome: 'accepted' | 'rejected' | 'unknown', trackingUpdated = false, rejectionCode: string | null = null) => {
+    try {
+      const result = await api.rpc('complete_list_email', { ...args, p_attempt_token: attemptToken,
+        p_outcome: outcome, p_tracking_updated: trackingUpdated, p_rejection_code: rejectionCode });
+      return !result.error && result.data === true;
+    } catch { return false; }
+  };
+  // The durable started state is committed BEFORE SMTP. A crash/timeout after this point
+  // remains uncertain and cannot automatically reserve another transmission.
+  try { await prepared.send(); }
+  catch (error) {
+    const rejectionCode = error instanceof MailNotConfiguredError ? 'NOT_CONFIGURED'
+      : error instanceof MailDeliveryError ? error.rejectionCode : null;
+    await complete(rejectionCode ? 'rejected' : 'unknown', false, rejectionCode);
+    if (!rejectionCode) return NextResponse.json({ error: 'email_delivery_unknown', operationId }, { status: 409 });
+    if (rejectionCode === 'NOT_CONFIGURED') return NextResponse.json({ error: 'smtp_not_configured' }, { status: 503 });
+    return NextResponse.json({ error: 'send_failed', detail: error instanceof Error ? error.message : '' }, { status: 502 });
   }
 
   // 8. Marquer envoyée (best-effort : le relais SMTP a déjà accepté l'e-mail). Un échec ici — que
@@ -160,6 +222,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     trackingUpdated = false;
   }
 
+  // A missing receipt ACK cannot undo the known relay acceptance. Keep 200; a replay
+  // sees started/unknown and asks for explicit confirmation rather than resending.
+  await complete('accepted', trackingUpdated);
+  return success(toEmail, trackingUpdated);
+}
+
+function success(toEmail: string, trackingUpdated: boolean): NextResponse {
   return NextResponse.json(
     trackingUpdated
       ? { ok: true, sentTo: toEmail, trackingUpdated: true }

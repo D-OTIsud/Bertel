@@ -1,0 +1,520 @@
+{
+  "scope": "fresh photo-only, actor mutations closed, AI off",
+  "production_prepare_sha256": "b1b0b68e14e82387709f629f13733039d6822515582bed45a5cd4cf65f8cebf7",
+  "immutable_pins_checked": 21,
+  "functions": [
+    {
+      "signature": "api.portal_message_upload_context(text)",
+      "source_md5": "5639376fb2db3a9fa10b848a8c3f4662",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "5639376fb2db3a9fa10b848a8c3f4662"
+    },
+    {
+      "signature": "api.send_portal_message(text,text,text,jsonb,text,uuid)",
+      "source_md5": "77fd5064a6370507403718f72c117cb8",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "77fd5064a6370507403718f72c117cb8"
+    },
+    {
+      "signature": "api.portal_message_document(uuid)",
+      "source_md5": "0e199f9e33068be528d7a86a7c364040",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "0e199f9e33068be528d7a86a7c364040"
+    },
+    {
+      "signature": "api.list_portal_message_documents(uuid)",
+      "source_md5": "6f6940df421ddb25985f4c0ce0887236",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "6f6940df421ddb25985f4c0ce0887236"
+    },
+    {
+      "signature": "api.list_my_portal_messages(text)",
+      "source_md5": "c46248e3af50aded8c76e3c2d6918207",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "c46248e3af50aded8c76e3c2d6918207"
+    },
+    {
+      "signature": "internal.portal_photo_assert_actor(text)",
+      "source_md5": "4b59c2493e616de1095e2e4b7990988c",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "4b59c2493e616de1095e2e4b7990988c"
+    },
+    {
+      "signature": "internal.portal_photos_json(text)",
+      "source_md5": "6f95c8a52b100151d9cd977c3de40489",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "6f95c8a52b100151d9cd977c3de40489"
+    },
+    {
+      "signature": "api.portal_photo_upload_context(text)",
+      "source_md5": "44fcac2ee880212547ded6afee6391db",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "44fcac2ee880212547ded6afee6391db"
+    },
+    {
+      "signature": "api.list_my_portal_photos(text)",
+      "source_md5": "25bd7f838f26f725556fca1c13b06536",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "25bd7f838f26f725556fca1c13b06536"
+    },
+    {
+      "signature": "api.withdraw_portal_photo(text,uuid)",
+      "source_md5": "a5bc065728bf99e755a77208f40d2eca",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "a5bc065728bf99e755a77208f40d2eca"
+    },
+    {
+      "signature": "api.reorder_portal_photos(text,jsonb)",
+      "source_md5": "0bc33055580e17653c9dccc5dfee4fad",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "0bc33055580e17653c9dccc5dfee4fad"
+    },
+    {
+      "signature": "internal.validate_portal_photo_additions(text,jsonb,uuid)",
+      "source_md5": "a3fdd6bae9f521258c7481df06c4b7f5",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "a3fdd6bae9f521258c7481df06c4b7f5"
+    },
+    {
+      "signature": "api.portal_photo_preview(uuid)",
+      "source_md5": "6a616a0f060a8026ce6398c4159222ee",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "6a616a0f060a8026ce6398c4159222ee"
+    },
+    {
+      "signature": "api.prepare_portal_photo_approval(uuid,boolean,uuid)",
+      "source_md5": "34b7086ba27afbf3e3b4249c8204cadd",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "34b7086ba27afbf3e3b4249c8204cadd"
+    },
+    {
+      "signature": "api.get_portal_photo_review(uuid)",
+      "source_md5": "c4c970611354739163cec5a1f97b0107",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "c4c970611354739163cec5a1f97b0107"
+    },
+    {
+      "signature": "api.publish_portal_photo_additions(text,jsonb)",
+      "source_md5": "2cb3dff0a63010819e3a25dfc18fdaa0",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "2cb3dff0a63010819e3a25dfc18fdaa0"
+    },
+    {
+      "signature": "api.portal_photo_failed_approval(uuid)",
+      "source_md5": "d6c59366cebc471b31e8cee046dfced8",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "d6c59366cebc471b31e8cee046dfced8"
+    },
+    {
+      "signature": "api.actor_portal_floor_modules()",
+      "source_md5": "665978299c69efd2c98f6eb05d3a1890",
+      "security_definer": false,
+      "volatility": "i",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "665978299c69efd2c98f6eb05d3a1890"
+    },
+    {
+      "signature": "api.submit_actor_fiche(text,jsonb,text)",
+      "source_md5": "e0b91bc214a91cd7af76672adad363d6",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "e0b91bc214a91cd7af76672adad363d6"
+    },
+    {
+      "signature": "api.approve_pending_change(uuid,text,boolean)",
+      "source_md5": "6b397ae9bf5c169c2d84f923b331966e",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "6b397ae9bf5c169c2d84f923b331966e"
+    },
+    {
+      "signature": "api.can_read_object_for_correction(text)",
+      "source_md5": "5f3aad478764f2ac4f92a43a40853f8e",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "5f3aad478764f2ac4f92a43a40853f8e"
+    },
+    {
+      "signature": "internal.gallery_published_photo_count(text)",
+      "source_md5": "ec22e1567cd1887c340e0321876c5c57",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "ec22e1567cd1887c340e0321876c5c57"
+    },
+    {
+      "signature": "internal.gallery_photo_reservations(text)",
+      "source_md5": "0fa0cc8c3ad8c7840043d2650642cdc6",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "0fa0cc8c3ad8c7840043d2650642cdc6"
+    },
+    {
+      "signature": "internal.gallery_photo_usage(text)",
+      "source_md5": "6471e4e8a4af9ad59d2cb0e4a7f29cf4",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "6471e4e8a4af9ad59d2cb0e4a7f29cf4"
+    },
+    {
+      "signature": "internal.gallery_assert_photo_capacity(text,integer,integer)",
+      "source_md5": "e67cf51c1963d6b7c285f3515d515b66",
+      "security_definer": false,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "e67cf51c1963d6b7c285f3515d515b66"
+    },
+    {
+      "signature": "internal.gallery_arm_photo_reservation(text,uuid,uuid)",
+      "source_md5": "098dfbf450b18668cb64e51f6aa58a09",
+      "security_definer": false,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "098dfbf450b18668cb64e51f6aa58a09"
+    },
+    {
+      "signature": "internal.gallery_bind_photo_proposal()",
+      "source_md5": "0f97bc881ed306ae32fd225655bc719a",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "0f97bc881ed306ae32fd225655bc719a"
+    },
+    {
+      "signature": "api.reserve_portal_photo_upload(text,uuid,uuid)",
+      "source_md5": "a5fce4c520cbde65eba79ad79606f1b8",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "a5fce4c520cbde65eba79ad79606f1b8"
+    },
+    {
+      "signature": "api.complete_portal_photo_upload(uuid,uuid,text,text,integer,integer)",
+      "source_md5": "9547ed89070d14006643207c3b68ab91",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "9547ed89070d14006643207c3b68ab91"
+    },
+    {
+      "signature": "api.cancel_portal_photo_upload(text,uuid)",
+      "source_md5": "7e3c23242d2facfa131986db2c6908c7",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "7e3c23242d2facfa131986db2c6908c7"
+    },
+    {
+      "signature": "api.save_object_gallery(text,jsonb)",
+      "source_md5": "408ea171ef9ec6c76e0afaaddbb23495",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "408ea171ef9ec6c76e0afaaddbb23495"
+    },
+    {
+      "signature": "api.get_gallery_write_receipt(text,uuid)",
+      "source_md5": "ee756718bb5d3f0ae342c6f0d47c6de0",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "ee756718bb5d3f0ae342c6f0d47c6de0"
+    },
+    {
+      "signature": "internal.photo_analysis_local_day(timestamptz)",
+      "source_md5": "38f1adbaaf626bd35e1294cb0393a43d",
+      "security_definer": false,
+      "volatility": "i",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "38f1adbaaf626bd35e1294cb0393a43d"
+    },
+    {
+      "signature": "internal.photo_analysis_reset_at(date)",
+      "source_md5": "c4bc45e6cc7999eea96bf7b6bff21c9c",
+      "security_definer": false,
+      "volatility": "i",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "c4bc45e6cc7999eea96bf7b6bff21c9c"
+    },
+    {
+      "signature": "internal.photo_analysis_assert_owner(text,uuid)",
+      "source_md5": "bd9444a8b10dcd937f4f50eb843a52a8",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "bd9444a8b10dcd937f4f50eb843a52a8"
+    },
+    {
+      "signature": "internal.photo_analysis_json(uuid)",
+      "source_md5": "1743f873326cdba918b5211d2cdd1337",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "1743f873326cdba918b5211d2cdd1337"
+    },
+    {
+      "signature": "internal.photo_analysis_envelope(uuid)",
+      "source_md5": "faf46fc45060eb0a25af7e6bcb3d78a6",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "faf46fc45060eb0a25af7e6bcb3d78a6"
+    },
+    {
+      "signature": "internal.photo_assessment_valid(jsonb)",
+      "source_md5": "731195a162c9fed769431901ebae7e47",
+      "security_definer": false,
+      "volatility": "i",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "731195a162c9fed769431901ebae7e47"
+    },
+    {
+      "signature": "api.reserve_portal_photo_analysis(text,uuid,uuid)",
+      "source_md5": "e372c27fd334aaa0d6ed41f87ec264f4",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "e372c27fd334aaa0d6ed41f87ec264f4"
+    },
+    {
+      "signature": "api.get_portal_photo_analysis(uuid)",
+      "source_md5": "aabe091cac52f851258f948e95ec652f",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "aabe091cac52f851258f948e95ec652f"
+    },
+    {
+      "signature": "api.start_portal_photo_analysis(uuid,uuid)",
+      "source_md5": "6a115e697591fb28dac15a7ca7a8910b",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "6a115e697591fb28dac15a7ca7a8910b"
+    },
+    {
+      "signature": "api.finish_portal_photo_analysis(uuid,uuid,jsonb)",
+      "source_md5": "b585a79d0ca486e5c1a62abea0e9b00c",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "b585a79d0ca486e5c1a62abea0e9b00c"
+    },
+    {
+      "signature": "api.appeal_portal_photo_analysis(uuid,text,uuid)",
+      "source_md5": "9d27522cdf3fb6dd1a54bdff2261ff80",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "9d27522cdf3fb6dd1a54bdff2261ff80"
+    },
+    {
+      "signature": "internal.portal_photo_actor_writes_enabled()",
+      "source_md5": "5edaa81d56c3ca4002303ab379e8e00a",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": true,
+      "active_source_md5": "7a31866ed1030d580f46000be0a46a46"
+    },
+    {
+      "signature": "internal.portal_photo_assert_writes_open()",
+      "source_md5": "7248051e04fc047d0ef8dde443dbfc45",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "7248051e04fc047d0ef8dde443dbfc45"
+    },
+    {
+      "signature": "internal.portal_photo_text_snapshot(text,text,jsonb,jsonb,text)",
+      "source_md5": "b5ee1d7c5ca8575bb1ccf270f5cbe8c2",
+      "security_definer": false,
+      "volatility": "i",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "b5ee1d7c5ca8575bb1ccf270f5cbe8c2"
+    },
+    {
+      "signature": "internal.portal_photo_order_snapshot(text)",
+      "source_md5": "6f21fd8308e7c3f69015258a36e2c00b",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "6f21fd8308e7c3f69015258a36e2c00b"
+    },
+    {
+      "signature": "internal.portal_photo_workspace_json(text,uuid)",
+      "source_md5": "8dfdc1baa12f0f1ce3160a1ff33a1302",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "8dfdc1baa12f0f1ce3160a1ff33a1302"
+    },
+    {
+      "signature": "api.get_my_portal_photo_workspace(text)",
+      "source_md5": "3c0ebe6838a87eb01ac48004d787d785",
+      "security_definer": true,
+      "volatility": "s",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "3c0ebe6838a87eb01ac48004d787d785"
+    },
+    {
+      "signature": "internal.update_portal_photo_texts(text,uuid,boolean,jsonb,text,text)",
+      "source_md5": "38657a2ee2fb384ba845e56e62643f51",
+      "security_definer": false,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "38657a2ee2fb384ba845e56e62643f51"
+    },
+    {
+      "signature": "api.update_portal_photo_texts(text,uuid,jsonb,text,text)",
+      "source_md5": "7e8199850c1fa78dd07b2f6b79158528",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "7e8199850c1fa78dd07b2f6b79158528"
+    },
+    {
+      "signature": "api.update_portal_photo_proposal_texts(text,uuid,jsonb,text,text)",
+      "source_md5": "3607ea1821107f8bb864a990e546cac6",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "3607ea1821107f8bb864a990e546cac6"
+    },
+    {
+      "signature": "api.reconcile_portal_photo_order(text,jsonb,jsonb)",
+      "source_md5": "5f56f93a5500abae1b0eee6ca5a081d8",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "5f56f93a5500abae1b0eee6ca5a081d8"
+    },
+    {
+      "signature": "api.appeal_portal_photo_review(text,uuid,uuid,text,uuid)",
+      "source_md5": "afaeffe50e20a79ebf04532a4f4fad0f",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "afaeffe50e20a79ebf04532a4f4fad0f"
+    },
+    {
+      "signature": "internal.gallery_capture_photo_proposal_usage()",
+      "source_md5": "360ab28205c9a79e000292d0bec340d0",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "360ab28205c9a79e000292d0bec340d0"
+    },
+    {
+      "signature": "internal.portal_photo_appeal_document(uuid)",
+      "source_md5": "07845634e2fc3240ae127f63adf39617",
+      "security_definer": false,
+      "volatility": "s",
+      "language": "sql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "07845634e2fc3240ae127f63adf39617"
+    },
+    {
+      "signature": "api.reject_pending_change(uuid,text)",
+      "source_md5": "3326541c58555fc8c19b0463d50abc11",
+      "security_definer": true,
+      "volatility": "v",
+      "language": "plpgsql",
+      "fresh_only_false_default": false,
+      "active_source_md5": "3326541c58555fc8c19b0463d50abc11"
+    }
+  ]
+}

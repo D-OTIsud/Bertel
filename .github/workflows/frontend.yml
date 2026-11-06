@@ -50,6 +50,9 @@ jobs:
       - name: Exercise the corrected build dependency APIs
         run: npm run test:tooling-dependencies
 
+      - name: Exercise the pinned operator CLI and preserved PostCSS YAML loader
+        run: npm run test:supabase-cli
+
       - run: npm run typecheck
 
       - run: npm run test:run -- --ci --maxWorkers=2

@@ -52,13 +52,43 @@ Root review required two harness corrections before publication: resolve
 `runner.temp` in step environments, and attach an immediate rejection handler
 while upload bodies are held, without absorbing the final awaited error or
 bypassing cleanup. Both corrections are included in the reviewed candidate.
-The real probe has **not run locally** (Docker is absent). The workflow is
-prepared for review; no run, deployment or operator change is implied.
+The real probe has **not run locally** (Docker is absent). The actual disposable
+CI execution is recorded below; no hosted operation, deployment or operator
+change is included.
 
 ```sh
 node --test tools/storage-create-only/contract.test.mjs
 ```
 
-If the real probe returns two successes, this alternative is blocked for the
-migration. A source/backend fix or a different reviewed primitive would need its
-own evidence. Replacing that failure with a permissive assertion is not an option.
+## Executed capability result: RED
+
+[Run 42277702340](https://github.com/D-OTIsud/Bertel/actions/runs/42277702340),
+job `128098246632`, executed source head
+`c71fa30c05c9324dc6fb285723807b03e466fca8`. The actual image was
+`public.ecr.aws/supabase/storage-api:v1.41.8`, image ID
+`sha256:9d58edcbd8aefd2cefea68a289d1ded3447f4fe3236ed0f524134e85a7f5b1cb`.
+
+The sequential control returned HTTP200, then HTTP400 with represented status
+409 and error `Duplicate`; its first payload hash remained unchanged. All three
+fresh-target concurrent races returned **HTTP200 / HTTP200** for the two different
+payloads, despite `x-upsert:false`. In all three cases the final downloaded bytes
+matched payload B. This is a measured overwrite race, not an accepted server
+error, missing-file refusal or failed test setup. No 5xx was counted as success.
+
+- Payload A SHA256: `0973a81092fbfb16df307cce1748cffbdaa1be0eed976cc1b28e973d5fb41a41`.
+- Payload B/final SHA256: `8a252bd3adc42695aa2b2bf904a8cd020d2c9861f8756fb18aeab9650a2c4fe7`.
+
+Later collision refusals preserved those final bytes. The uploaded report records
+`cleanup:true` and `capabilityPassed:false`; object/bucket cleanup completed, and
+the final owned-stack destruction step succeeded at 19:16:03 UTC. The capability
+job correctly remains failed. It was not retried or weakened.
+
+[Synthetic observations artifact 13533837354](https://github.com/D-OTIsud/Bertel/actions/runs/42277702340/artifacts/13533837354)
+ZIP SHA256: `3e840cbfbff6f7f4552f5122d0de3cea4159529947299d57daf0d4cda7cc459e`.
+This ZIP contains only the bounded `probe-report.json`; its digest was checked
+again when retrieving the evidence. Keys and raw CLI output are excluded.
+
+Therefore this standard-upload alternative is blocked for the migration on the
+tested version. This result does not measure production, other Storage versions,
+backends or every possible schedule. A source/backend fix or a different reviewed
+primitive needs separate evidence. No atomic create-only guarantee is claimed.

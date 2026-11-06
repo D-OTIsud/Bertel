@@ -153,10 +153,15 @@ export function useBootstrapSession() {
       return undefined;
     }
 
+    const authClient = client;
     let cancelled = false;
+    let generation = 0;
+    let pendingSync: ReturnType<typeof setTimeout> | null = null;
+    const isCurrent = (run: number) => !cancelled && run === generation;
 
     async function syncUser(
       activeClient: NonNullable<ReturnType<typeof getSupabaseClient>>,
+      run: number,
       options: { preserveReadyState?: boolean; authEvent?: AuthChangeEvent } = {},
     ) {
       const currentStatus = useSessionStore.getState().status;
@@ -165,7 +170,7 @@ export function useBootstrapSession() {
       }
 
       const { data, error } = await activeClient.auth.getUser();
-      if (cancelled) {
+      if (!isCurrent(run)) {
         return;
       }
 
@@ -199,8 +204,7 @@ export function useBootstrapSession() {
         langPrefs: fallbackLangPrefs,
       });
       const profileRole = normalizeRole(profile?.role);
-      if (cancelled) return;
-      useProviderScopeStore.getState().initialize(user.id, profile?.preferences?.provider_only === true);
+      if (!isCurrent(run)) return;
       const role = profileRole ?? metadataRole;
       if (!role) {
         setSessionError('Le role utilisateur est absent (session Supabase et table app_user_profile).');
@@ -217,7 +221,8 @@ export function useBootstrapSession() {
       // rendraient tous false/null. Le portail fait ses propres lectures.
       if (role === 'actor') {
         const isTestRealm = await fetchTestRealm();
-        if (cancelled) return;
+        if (!isCurrent(run)) return;
+        useProviderScopeStore.getState().initialize(user.id, profile?.preferences?.provider_only === true);
         hydrateFromAuth({
           isTestRealm,
           role,
@@ -238,30 +243,30 @@ export function useBootstrapSession() {
       }
 
       const canEditObjects = await fetchCanEditObjects();
-      if (cancelled) {
+      if (!isCurrent(run)) {
         return;
       }
 
       const canCreateObjects = await fetchCanCreateObjects();
-      if (cancelled) {
+      if (!isCurrent(run)) {
         return;
       }
 
       const activeOrg = await fetchActiveOrg();
-      if (cancelled) {
+      if (!isCurrent(run)) {
         return;
       }
 
       const adminRank = await fetchAdminRank();
-      if (cancelled) {
+      if (!isCurrent(run)) {
         return;
       }
       const adminRoleCode = await fetchAdminRoleCode();
-      if (cancelled) {
+      if (!isCurrent(run)) {
         return;
       }
       const isTestRealm = await fetchTestRealm();
-      if (cancelled) {
+      if (!isCurrent(run)) {
         return;
       }
       if (isSandboxMode() && !isTestRealm) {
@@ -269,6 +274,7 @@ export function useBootstrapSession() {
         return;
       }
 
+      useProviderScopeStore.getState().initialize(user.id, profile?.preferences?.provider_only === true);
       hydrateFromAuth({
         role,
         userId: user.id,
@@ -287,20 +293,49 @@ export function useBootstrapSession() {
       });
     }
 
-    void syncUser(client);
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((event) => {
+    function scheduleSync(event?: AuthChangeEvent) {
+      if (cancelled) return;
+      // Invalidate running work immediately, even while the auth callback holds
+      // Supabase's lock. Only the newest generation may publish any state.
+      const run = ++generation;
+      if (pendingSync !== null) clearTimeout(pendingSync);
+      pendingSync = null;
       // Do not leave a prior user's capability result visible while session bootstrap
       // resolves a sign-in/sign-out event (including a quick same-user reconnection).
       if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
         clearServiceAvailabilityForSessionTransition();
       }
-      void syncUser(client, { preserveReadyState: true, authEvent: event });
-    });
+      if (event === 'SIGNED_OUT') {
+        setGuest(GUEST_SIGNED_OUT_MESSAGE);
+        if (isSandboxMode()) {
+          leaveSandbox();
+          window.location.replace('/login');
+        }
+        return;
+      }
+      // Never call another Supabase API from inside onAuthStateChange: even a
+      // non-awaited getUser() can wait on the lock held by that notification.
+      // Coalesce the fallback bootstrap and INITIAL_SESSION if both are pending.
+      pendingSync = setTimeout(() => {
+        pendingSync = null;
+        if (!isCurrent(run)) return;
+        void syncUser(authClient, run, { preserveReadyState: event !== undefined, authEvent: event }).catch(() => {
+          if (isCurrent(run)) setSessionError('Impossible de recuperer la session Supabase.');
+        });
+      }, 0);
+    }
+
+    const {
+      data: { subscription },
+    } = authClient.auth.onAuthStateChange((event) => { scheduleSync(event); });
+    // Some clients deliver INITIAL_SESSION synchronously while subscribing.
+    // Do not supersede that event (especially SIGNED_OUT) with the fallback.
+    if (generation === 0) scheduleSync();
 
     return () => {
       cancelled = true;
+      generation += 1;
+      if (pendingSync !== null) clearTimeout(pendingSync);
       subscription.unsubscribe();
     };
   }, [demoMode, hydrateFromAuth, setBooting, setGuest, setSessionError]);

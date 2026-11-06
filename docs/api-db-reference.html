@@ -19,7 +19,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <article class="mini-card"><div class="metric">370</div><b>tables</b><p class="muted">13 vues · 9 enums</p></article>
 <article class="mini-card"><div class="metric">502</div><b>fonctions/RPC</b><p class="muted">577 policies · 565 triggers</p></article>
 <article class="mini-card"><div class="metric">2992</div><b>valeurs référentielles</b><p class="muted">live si disponible, seeds sinon</p></article>
-<article class="mini-card"><div class="metric">3899</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
+<article class="mini-card"><div class="metric">3898</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les valeurs de référentiel listées ici viennent du fichier live <code>db-graph-out/reference_live.json</code> quand il existe, sinon des <code>INSERT ... VALUES</code> et CTE <code>VALUES</code> versionnés dans les SQL du dépôt.</p>
 <p class="muted">État source live au moment de la génération : Supabase MCP JSON=db-graph-out/reference_live.json. Workflow conseillé : lancer <code>tools/db-graph/db_reference_audit.sql</code> via Supabase MCP <code>execute_sql</code>, récupérer l'URL projet et une clé publishable via MCP, exécuter <code>tools/db-graph/export_reference_live_rest.py</code>, puis relancer <code>.tools/python/Scripts/python.exe tools/db-graph/db_graph.py</code>. Le dump MCP pur <code>tools/db-graph/db_reference_extract.sql</code> reste disponible si le client MCP accepte le volume complet.</p>
@@ -3030,17 +3030,16 @@ A set-based rewrite of this function (sub-second) is a tracked follow-up (lot1_m
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
-<details class="rpc" data-search="api.is_platform_admin() auth.users public.app_user_profile">
+<details class="rpc" data-search="api.is_platform_admin() public.app_user_profile">
 <summary><code>api.is_platform_admin()</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/branding_admin_profile_role_patch.sql:13</code><br><code>Base de donnée DLL et API/ui_whitelabel_branding.sql:28</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/branding_admin_profile_role_patch.sql:15</code><br><code>Base de donnée DLL et API/ui_whitelabel_branding.sql:28</code></p>
 </div>
-<blockquote>Returns true when the current user can manage platform-level branding and UI theme settings, using app_user_profile or auth metadata.</blockquote>
+<blockquote>Platform branding authority: authenticated owner/super_admin from app_user_profile, or the existing service_role/admin technical identity. Auth metadata never grants authority; missing auth context returns false.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
-<tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-app_user_profile"><code>public.app_user_profile</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
@@ -7989,7 +7988,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <tr id="table-auth-sessions"><td><code>auth.sessions</code></td><td>table</td><td>other</td><td>non</td><td><code>api.rpc_list_org_members(p_org_object_id text)</code></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 2 · FK ← 2</td></tr>
 <tr id="table-auth-sso_domains"><td><code>auth.sso_domains</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-auth-sso_providers"><td><code>auth.sso_providers</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 3</td></tr>
-<tr id="table-auth-users"><td><code>auth.users</code></td><td>table</td><td>other</td><td>non</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_sandbox_discovery_user()</code> <span class="muted">+5</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 65</td></tr>
+<tr id="table-auth-users"><td><code>auth.users</code></td><td>table</td><td>other</td><td>non</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_sandbox_discovery_user()</code> <span class="muted">+4</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 65</td></tr>
 <tr id="table-auth-webauthn_challenges"><td><code>auth.webauthn_challenges</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-auth-webauthn_credentials"><td><code>auth.webauthn_credentials</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-cron-job"><td><code>cron.job</code></td><td>table</td><td>other</td><td>non</td><td><code>api.get_ingestor_scheduler_health()</code></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 0</td></tr>

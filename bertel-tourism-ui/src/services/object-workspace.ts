@@ -432,11 +432,16 @@ function buildDemoPublicationItems(): ObjectWorkspacePublicationSelectionItem[] 
   }));
 }
 
+function referenceAvailability(row: Record<string, unknown>): { disabled?: boolean } {
+  return row.thesaurus_assignable === false || row.is_active === false || row.is_assignable === false ? { disabled: true } : {};
+}
+
 function normalizeReferenceOption(row: Record<string, unknown>): WorkspaceReferenceOption {
   return {
     id: readString(row.id),
     code: readString(row.code),
     label: readString(row.name, readString(row.code)),
+    ...referenceAvailability(row),
   };
 }
 
@@ -470,6 +475,7 @@ interface AmenityRef {
   familyLabel: string;
   disabilityTypes: string[];
   position: number;
+  disabled?: boolean;
 }
 
 function normalizeAmenityRef(row: Record<string, unknown>): AmenityRef {
@@ -483,6 +489,7 @@ function normalizeAmenityRef(row: Record<string, unknown>): AmenityRef {
     familyCode: readString(familyRecord.code, 'misc'),
     familyLabel: readString(familyRecord.name, 'Autres equipements'),
     disabilityTypes: readStringList(extra.disability_types),
+    ...referenceAvailability(row),
     position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
   };
 }
@@ -525,6 +532,7 @@ function buildAmenityGroups(amenities: AmenityRef[], selectedCodes: Set<string>)
       code: amenity.code,
       label: amenity.label,
       disabilityTypes: amenity.disabilityTypes,
+      ...(amenity.disabled ? { disabled: true } : {}),
     };
     current.options.push(option);
 
@@ -565,13 +573,14 @@ function buildRoomAmenityGroups(rows: Record<string, unknown>[]): ObjectWorkspac
       code: readString(row.code),
       label: readString(row.name, readString(row.code)),
       disabilityTypes: readStringList(readRecord(row.extra).disability_types),
+      ...referenceAvailability(row),
     });
     map.set(familyCode, entry);
   }
   return Array.from(map.values()).sort((a, b) => a.familyPos - b.familyPos).map((entry) => entry.group);
 }
 
-async function getObjectWorkspaceCharacteristicsModule(
+export async function getObjectWorkspaceCharacteristicsModule(
   objectId: string,
   baseModule: ObjectWorkspaceCharacteristicsModule,
   catalogs: ReferenceCatalogs,
@@ -810,6 +819,7 @@ interface ClassificationSchemeRef {
   selectionMode: 'single' | 'multiple';
   displayGroup: string;
   position: number;
+  disabled?: boolean;
 }
 
 interface ClassificationValueRef {
@@ -819,6 +829,7 @@ interface ClassificationValueRef {
   label: string;
   ordinal: number;
   disabilityType: string | null;
+  disabled?: boolean;
 }
 
 function normalizeClassificationSchemeRef(row: Record<string, unknown>): ClassificationSchemeRef {
@@ -829,6 +840,7 @@ function normalizeClassificationSchemeRef(row: Record<string, unknown>): Classif
     label: readString(row.name, readString(row.code)),
     description: readString(row.description),
     selectionMode: selection === 'multiple' ? 'multiple' : 'single',
+    ...referenceAvailability(row),
     displayGroup: readString(row.display_group),
     position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
   };
@@ -843,6 +855,7 @@ function normalizeClassificationValueRef(row: Record<string, unknown>): Classifi
     label: readString(row.name, readString(row.code)),
     ordinal: toNullableInteger(readString(row.ordinal)) ?? Number.MAX_SAFE_INTEGER,
     disabilityType: readString(metadata.disability_type) || null,
+    ...referenceAvailability(row),
   };
 }
 
@@ -994,7 +1007,7 @@ function normalizeTaxonomyNodeRef(row: Record<string, unknown>): TaxonomyNodeRef
     label: readString(row.name, readString(row.code)),
     description: readString(row.description),
     parentId: readString(row.parent_id) || null,
-    isAssignable: row.is_active !== false && (row.is_assignable == null || readBoolean(row.is_assignable)),
+    isAssignable: !referenceAvailability(row).disabled,
     isActive: row.is_active !== false,
     position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
     axis: axis === 'famille' || axis === 'nature' || axis === 'sous_type'
@@ -1314,7 +1327,7 @@ async function loadAccommodationUnitTypes(
     code: readString(row.code),
     label: readString(row.name),
     description: readString(row.description),
-    isAssignable: row.is_active !== false && row.is_assignable !== false,
+    isAssignable: !referenceAvailability(row).disabled,
   }));
   const codeById = new Map(options.map((option) => [option.id, option.code]));
   if (((selectedResult.data ?? []) as Array<Record<string, unknown>>).some((row) => !codeById.has(readString(row.unit_type_id)))) {
@@ -1370,7 +1383,7 @@ async function loadHotelPositionings(
       code: readString(row.code),
       label: readString(row.name),
       description: readString(row.description),
-      isAssignable: row.is_active !== false && row.is_assignable !== false,
+      isAssignable: !referenceAvailability(row).disabled,
     }));
   const codeById = new Map(options.map((option) => [option.id, option.code]));
   if (((selectedResult.data ?? []) as Array<Record<string, unknown>>).some((row) => !codeById.has(readString(row.positioning_id)))) {
@@ -1524,12 +1537,13 @@ async function getObjectWorkspaceDistinctionsModule(
     code: scheme.code,
     label: scheme.label,
     selectionMode: scheme.selectionMode,
+    ...(scheme.disabled ? { disabled: true } : {}),
     isAccessibility: accessibilitySchemes.some((s) => s.id === scheme.id),
     displayGroup: scheme.displayGroup,
     valueOptions: valueRefs
       .filter((value) => value.schemeId === scheme.id)
       .sort((left, right) => left.ordinal - right.ordinal || left.label.localeCompare(right.label, 'fr'))
-      .map((value) => ({ id: value.id, code: value.code, label: value.label })),
+      .map((value) => ({ id: value.id, code: value.code, label: value.label, ...(value.disabled ? { disabled: true } : {}) })),
   }));
 
   let accessibilityAmenityCoverage: ObjectWorkspaceAccessibilityAmenityItem[] = [];
@@ -3711,6 +3725,7 @@ async function getObjectWorkspaceSustainabilityModule(
           label: readString(action.label, readString(action.code)),
           description: readString(action.description),
           selected: Boolean(selected),
+          ...referenceAvailability(action),
           note: selected?.note ?? '',
           documentId: selected?.documentId ?? '',
         };
@@ -4189,7 +4204,7 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics, catalogs),
     // Zones (communes desservies): ref_commune catalog (public read) + the object's object_zone
     // (can_read_object). Enriched unconditionally like contacts/characteristics (§41).
-    getObjectWorkspaceZonesModule(objectId, parsedModules.location),
+    getObjectWorkspaceZonesModule(objectId, parsedModules.location, catalogs),
     getObjectWorkspacePlacesModule(objectId, parsedModules.places),
     getObjectWorkspacePermissions(objectId),
     getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById, catalogs),
@@ -6016,6 +6031,7 @@ export async function saveObjectWorkspacePlaces(objectId: string, input: ObjectW
 async function getObjectWorkspaceZonesModule(
   objectId: string,
   baseModule: ObjectWorkspaceLocationModule,
+  catalogs?: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceLocationModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -6026,7 +6042,9 @@ async function getObjectWorkspaceZonesModule(
     return { ...baseModule, zonesUnavailableReason: 'Connexion backend indisponible pour charger les communes.' };
   }
   const [communeRefs, objectZones] = await Promise.all([
-    client.from('ref_commune').select('insee_code, name, position').eq('is_active', true).order('position', { ascending: true }),
+    catalogs?.vocabularyRelease !== undefined && catalogs.tables.ref_commune
+      ? Promise.resolve({ data: catalogs.tables.ref_commune, error: null })
+      : client.from('ref_commune').select('insee_code, name, position, is_active').order('position', { ascending: true }),
     client.from('object_zone').select('insee_commune, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
   if (communeRefs.error || objectZones.error) {
@@ -6036,6 +6054,7 @@ async function getObjectWorkspaceZonesModule(
     .map((row) => ({
       code: readString((row as Record<string, unknown>).insee_code),
       label: readString((row as Record<string, unknown>).name),
+      ...referenceAvailability(row as Record<string, unknown>),
     }))
     .filter((option) => option.code !== '');
   const zoneCodes = (objectZones.data ?? [])

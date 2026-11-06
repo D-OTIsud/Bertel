@@ -128,6 +128,7 @@ export function SectionSustainability({ editor, archetype, folded }: SectionProp
                     <Chip
                       key={action.id}
                       label={action.label}
+                      disabled={action.disabled}
                       title={action.description || undefined}
                       on={action.selected}
                       onClick={() => toggleAction(category, action)}

@@ -136,6 +136,7 @@ export interface ObjectWorkspaceZoneOption {
   code: string;
   /** Commune display name. */
   label: string;
+  disabled?: boolean;
 }
 
 export interface ObjectWorkspaceLocationModule {

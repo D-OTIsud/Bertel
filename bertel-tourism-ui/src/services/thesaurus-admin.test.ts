@@ -57,6 +57,7 @@ describe('thesaurus administration network contract', () => {
     const result = await fetchThesaurusWorkspace({ domain: 'taxonomy_hlo', query: 'Appart', offset: 100, page_size: 100 });
     expect(result.requalification[0]).toMatchObject({ object_id: 'HLO1', concept_name: 'Appartement', lifecycle: 'retired' });
     expect(result.concepts[0].labels).toEqual(document.labels);
+    expect(result.concepts[0].usage_count).toBeUndefined();
     expect(rpc).toHaveBeenCalledWith('thesaurus_admin', { p_action: 'workspace', p_payload: { domain: 'taxonomy_hlo', query: 'Appart', offset: 100, page_size: 100 } });
   });
 

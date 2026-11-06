@@ -2,7 +2,7 @@ import type { WorkspaceReferenceOption } from '../../../services/object-workspac
 
 interface ReferenceSelectProps {
   value: string;
-  options: WorkspaceReferenceOption[];
+  options: (WorkspaceReferenceOption & { disabled?: boolean })[];
   onChange: (code: string, option: WorkspaceReferenceOption | null) => void;
   allowEmpty?: boolean;
   emptyLabel?: string;
@@ -33,7 +33,9 @@ export function ReferenceSelect({
       aria-label={ariaLabel}
       onChange={(e) => {
         const next = e.target.value;
-        onChange(next, options.find((o) => o.code === next) ?? null);
+        const option = options.find((o) => o.code === next);
+        if (option?.disabled || (next === value && !option)) return;
+        onChange(next, option ?? null);
       }}
     >
       {allowEmpty && <option value="">{emptyLabel}</option>}
@@ -41,9 +43,11 @@ export function ReferenceSelect({
         <option value="" disabled>{placeholder}</option>
       )}
       {options.map((o) => (
-        <option key={o.id || o.code} value={o.code}>{o.label}</option>
+        <option key={o.id || o.code} value={o.code} disabled={o.disabled}>
+          {o.label}{o.disabled ? o.code === value ? ' — à requalifier' : ' — indisponible' : ''}
+        </option>
       ))}
-      {!known && value !== '' && <option value={value}>{value}</option>}
+      {!known && value !== '' && <option value={value} disabled>{value} — à requalifier</option>}
     </select>
   );
 }

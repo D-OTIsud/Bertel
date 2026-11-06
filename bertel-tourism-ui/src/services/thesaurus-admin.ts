@@ -142,7 +142,8 @@ export async function fetchThesaurusWorkspace(input: { domain?: string; query?: 
       return {
         ...normalizeThesaurusDocument(concept), concept_id: String(concept.concept_id), domain: String(concept.domain),
         assignable: Boolean(concept.assignable), source_key: record(concept.source_key),
-        source_fingerprint: String(concept.source_fingerprint ?? ''), usage_count: Number(concept.usage_count ?? 0),
+        source_fingerprint: String(concept.source_fingerprint ?? ''),
+        ...(concept.usage_count == null ? {} : { usage_count: Number(concept.usage_count) }),
         revision: concept.revision ? normalizeThesaurusRevision(concept.revision) : null,
         ...(concept.uri == null ? {} : { uri: String(concept.uri) }),
       } satisfies ThesaurusConcept;

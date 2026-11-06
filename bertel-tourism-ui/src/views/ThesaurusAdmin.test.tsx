@@ -83,6 +83,14 @@ describe('ThesaurusAdmin editorial workflow', () => {
     expect(within(details).queryByRole('textbox')).not.toBeInTheDocument();
   });
 
+  it('does not present an uncomputed usage count as zero', async () => {
+    mock.fetchThesaurusWorkspace.mockResolvedValue(workspace({ concepts: [concept({ usage_count: undefined })] }));
+    renderAdmin();
+    await screen.findByLabelText('Libellé préféré (fr)');
+    expect(screen.getByText(/Impact calculé dans la prévisualisation/)).toBeInTheDocument();
+    expect(screen.queryByText(/· 0 fiche/)).not.toBeInTheDocument();
+  });
+
   it('keeps the typed value after a version conflict and exposes an explicit reload', async () => {
     mock.saveThesaurusDraft.mockRejectedValue(new Error('PT409 REVISION_CONFLICT'));
     renderAdmin();

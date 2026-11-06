@@ -94,5 +94,5 @@ export function availableValueOptions(
       .filter((item) => item.schemeCode === scheme.code && item.valueCode !== currentValueCode)
       .map((item) => item.valueCode),
   );
-  return scheme.valueOptions.filter((value) => !taken.has(value.code));
+  return scheme.valueOptions.filter((value) => !taken.has(value.code) && (!value.disabled || value.code === currentValueCode));
 }

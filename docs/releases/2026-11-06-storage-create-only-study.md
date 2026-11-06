@@ -48,6 +48,10 @@ without keys, and the workflow always destroys its owned stack.
 
 The lightweight local tests cover the refusal classifier and endpoint/project
 guards, including negative cases. They do not simulate or certify Storage.
+Root review required two harness corrections before publication: resolve
+`runner.temp` in step environments, and attach an immediate rejection handler
+while upload bodies are held, without absorbing the final awaited error or
+bypassing cleanup. Both corrections are included in the reviewed candidate.
 The real probe has **not run locally** (Docker is absent). The workflow is
 prepared for review; no run, deployment or operator change is implied.
 

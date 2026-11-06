@@ -683,6 +683,11 @@ function EditorReady({ resource, objectId, meta, workspaceReadReady }: { resourc
           elles sont soumises à la modération de l’organisation avant publication.
         </div>
       )}
+      {editor.localDraftUnavailable && (
+        <div className="contributor-banner" role="alert">
+          <strong>Brouillon local indisponible</strong> — Vos modifications restent dans cet onglet. Enregistrez ou exportez-les avant de fermer.
+        </div>
+      )}
       {editor.recoveryConflicts.length > 0 && (
         <div className="contributor-banner" role="alert">
           <strong>Brouillon à vérifier</strong> — vos modifications locales sont conservées, mais certaines données ont aussi changé sur le serveur. La sauvegarde est bloquée jusqu’à votre choix.

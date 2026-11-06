@@ -111,6 +111,34 @@ beforeEach(() => {
   mockResource = { id: 'HOT-ACK', name: 'A', type: 'HOT', detail: {} as ObjectWorkspaceResource['detail'], modules, permissions: allowAll };
 });
 
+afterEach(() => { jest.restoreAllMocks(); });
+
+it.each(['QuotaExceededError', 'SecurityError'])('keeps the durable local-draft warning, typing and real Save available after %s', async (errorName) => {
+  const pending = deferred();
+  jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(pending.promise);
+  mount();
+  expect(screen.queryByText('Brouillon local indisponible')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'B' } });
+  const previousRecovery = window.localStorage.getItem('object-editor-draft:save-ack-user:HOT-ACK');
+  jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('unavailable', errorName); });
+  fireEvent.change(screen.getByLabelText('Synthetic name'), { target: { value: 'C' } });
+  const warning = screen.getByRole('alert');
+  expect(warning).toHaveTextContent('Brouillon local indisponible — Vos modifications restent dans cet onglet. Enregistrez ou exportez-les avant de fermer.');
+  expect(screen.getByLabelText('Synthetic name')).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+  expect(mockEditor.isDirty).toBe(true);
+  expect(window.localStorage.getItem('object-editor-draft:save-ack-user:HOT-ACK')).toBe(previousRecovery);
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => expect(saveObjectWorkspaceGeneralInfo).toHaveBeenCalledWith('HOT-ACK', expect.objectContaining({ name: 'C' })));
+  expect(screen.getByRole('alert')).toBe(warning);
+  expect(screen.getByLabelText('Synthetic name')).toHaveValue('C');
+  await act(async () => { pending.resolve(); });
+  await waitFor(() => expect(screen.queryByText('Brouillon local indisponible')).not.toBeInTheDocument());
+  expect(mockEditor.isDirty).toBe(false);
+  expect(screen.getByLabelText('Synthetic name')).toHaveValue('C');
+  expect(window.localStorage.getItem('object-editor-draft:save-ack-user:HOT-ACK')).toBeNull();
+});
+
 it('the real page saves B while C stays editable, dirty and recoverable, then the next save sends C', async () => {
   const first = deferred();
   jest.mocked(saveObjectWorkspaceGeneralInfo).mockReturnValueOnce(first.promise);

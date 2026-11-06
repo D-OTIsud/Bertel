@@ -2,6 +2,8 @@
 
 Date : 6 novembre 2026. Version : V3. Statut : plan d’architecture et de réalisation validé par Claude et Codex après trois tours de revue. Cette validation porte sur le plan ; sa mise en œuvre constitue un travail distinct.
 
+Suivi de réalisation au 6 novembre : les neuf lots techniques sont implémentés et les 66 domaines publics sont activés en production (publication R3, 1 319 concepts). Les migrations, tests, performances mesurées, recettes HTTP et limites sont consignés dans [l'audit d'implémentation](../../audits/2026-11-06-thesaurus-implementation.md) et le [runbook](../../SQL_ROLLOUT_RUNBOOK.md). La complétude éditoriale des définitions, traductions et correspondances externes reste un travail métier ; le bootstrap ne certifie pas ces contenus. Les retours ultérieurs de Claude Code ont conduit à des corrections de concurrence ; sa dernière relecture du code reste indisponible à cause du plafond du compte et n'est pas assimilée à la validation du plan ci-dessus.
+
 Construire un thésaurus touristique sur les référentiels existants, avec des concepts identifiables durablement, des libellés et relations explicites, une administration éditoriale et des publications reproductibles accessibles aux partenaires. Le stockage reste PostgreSQL ; le modèle s’aligne sur SKOS et propose des représentations JSON et JSON-LD/SKOS.
 
 ## 1. Périmètre et jalons

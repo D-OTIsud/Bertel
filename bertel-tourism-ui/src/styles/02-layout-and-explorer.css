@@ -821,6 +821,11 @@ a {
 }
 
 /* Map pin hover popup — flush hero image + body, matches the Tourism UI redesign. */
+.map-hover-popup {
+  /* The preview actions must stay clickable above the corner map controls. */
+  z-index: 3;
+}
+
 .map-hover-popup .maplibregl-popup-content,
 .map-hover-popup .mapboxgl-popup-content {
   padding: 0 !important;
@@ -830,8 +835,9 @@ a {
 }
 
 .map-hover-card-wrap {
+  position: relative;
   display: block;
-  width: 260px;
+  width: min(260px, calc(100vw - 32px));
   pointer-events: auto;
   border-radius: var(--radius-md);
   overflow: hidden;
@@ -849,14 +855,16 @@ a {
   color: var(--ink);
 }
 
-.map-hover-card--button {
-  cursor: pointer;
-}
-
-.map-hover-card--button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent-brand) 52%, white);
-  outline-offset: -2px;
-  border-radius: var(--radius-md);
+.map-hover-card__close {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  right: 4px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .map-hover-card__media {
@@ -928,11 +936,6 @@ a {
   overflow: hidden;
 }
 
-.map-hover-card--button:hover .map-hover-card__name,
-.map-hover-card--button:focus-visible .map-hover-card__name {
-  color: var(--accent-brand);
-}
-
 .map-hover-card__meta {
   display: flex;
   align-items: center;
@@ -988,6 +991,8 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  border: 0;
+  font-family: inherit;
 }
 
 .map-hover-card__cta {
@@ -995,22 +1000,16 @@ a {
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  margin-top: 6px;
   box-sizing: border-box;
-  height: 26px;
+  min-height: 44px;
   width: 100%;
-  padding: 0 12px;
-  border-radius: 10px;
-  background: var(--teal);
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  transition: background 0.12s ease;
 }
 
-.map-hover-card--button:hover .map-hover-card__cta {
-  background: var(--teal-2, #0d4f4e);
+.map-hover-card__cta:focus-visible,
+.map-hover-card__close:focus-visible,
+.map-hover-card__tag:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
 }
 
 .map-hover-card__cta-icon {

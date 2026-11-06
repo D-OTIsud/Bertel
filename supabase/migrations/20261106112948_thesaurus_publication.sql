@@ -805,7 +805,7 @@ BEGIN
   IF EXISTS(SELECT 1 FROM unnest(statuses)s WHERE s NOT IN('active','deprecated','retired'))THEN RAISE EXCEPTION 'Invalid lifecycle filter' USING ERRCODE='PT400';END IF;
   lim:=LEAST(200,GREATEST(1,COALESCE((p_params->>'limit')::integer,(p_params->>'page_size')::integer,100)));
   afterid:=NULLIF(p_params->>'after','')::uuid;lang:=COALESCE(NULLIF(p_params->>'lang',''),'fr');q:=NULLIF(p_params->>'query','');
-  meta:=jsonb_build_object('contract_version','1.0.0','release_id',rid,'previous_release_id',r.previous_release_id,'as_of',r.as_of,'checksum',r.checksum,'next_after',NULL);
+  meta:=jsonb_build_object('contract_version','1.0.0','release_id',rid,'previous_release_id',r.previous_release_id,'as_of',r.manifest->'as_of','checksum',r.checksum,'next_after',NULL);
   IF p_action IN('manifest','release')THEN
     data:=r.manifest;
     IF p_action='manifest'THEN data:=data||jsonb_build_object('releases',COALESCE((SELECT jsonb_agg(rr.manifest ORDER BY release_id DESC)FROM(SELECT release_id,manifest FROM thesaurus.release ORDER BY release_id DESC LIMIT 100)rr),'[]'));END IF;
@@ -1098,12 +1098,17 @@ GRANT EXECUTE ON FUNCTION thesaurus.activate(uuid[],text[],text,bigint,jsonb)TO 
 DO $publisher_invariants$
 DECLARE missing text;guard_count integer;
 BEGIN
+  WITH RECURSIVE source_relations(oid)AS(
+    SELECT unnest(ARRAY['public.ref_code'::regclass,'public.ref_amenity'::regclass,'public.ref_classification_scheme'::regclass,'public.ref_classification_value'::regclass,'public.ref_language'::regclass,'public.ref_commune'::regclass,'public.ref_sustainability_action_category'::regclass,'public.ref_sustainability_action'::regclass,'public.ref_code_taxonomy_closure'::regclass])::oid
+    UNION SELECT inheritance.inhrelid FROM pg_inherits inheritance JOIN source_relations parent ON parent.oid=inheritance.inhparent
+  )
   SELECT string_agg(DISTINCT dependency.refobjid::regprocedure::text,', 'ORDER BY dependency.refobjid::regprocedure::text)INTO missing
   FROM pg_policy policy
   JOIN pg_depend dependency ON dependency.classid='pg_policy'::regclass AND dependency.objid=policy.oid AND dependency.refclassid='pg_proc'::regclass
-  WHERE policy.polrelid IN(SELECT polrelid FROM pg_policy WHERE polname='thesaurus_projection_read')
-    AND(0=ANY(policy.polroles)OR(SELECT oid FROM pg_roles WHERE rolname='bertel_thesaurus_publisher')=ANY(policy.polroles))
-    AND(policy.polcmd IN('r','*')OR(policy.polrelid='public.object'::regclass AND policy.polcmd='w'))
+  WHERE(0=ANY(policy.polroles)OR(SELECT oid FROM pg_roles WHERE rolname='bertel_thesaurus_publisher')=ANY(policy.polroles))
+    AND(policy.polrelid IN(SELECT oid FROM source_relations)
+      OR(policy.polrelid IN(SELECT polrelid FROM pg_policy WHERE polname='thesaurus_projection_read')
+        AND(policy.polcmd IN('r','*')OR(policy.polrelid='public.object'::regclass AND policy.polcmd='w'))))
     AND NOT has_function_privilege('bertel_thesaurus_publisher',dependency.refobjid,'EXECUTE');
   IF missing IS NOT NULL THEN RAISE EXCEPTION 'Publisher lacks EXECUTE for applicable RLS helpers: %',missing;END IF;
   SELECT count(*)INTO guard_count FROM pg_trigger WHERE tgrelid='public.object'::regclass

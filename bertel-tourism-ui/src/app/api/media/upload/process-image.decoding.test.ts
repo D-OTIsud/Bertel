@@ -22,6 +22,12 @@ test('the SVG native loader is also blocked as defense in depth', async () => {
   await expect(nativeSharp(svg).metadata()).rejects.toThrow(/blocked|disabled|unsupported/i);
 });
 
+test('high-bit bytes cannot impersonate the RIFF/WEBP signature', async () => {
+  const forged = Buffer.from([0xd2, 0xc9, 0xc6, 0xc6, 0, 0, 0, 0, 0xd7, 0xc5, 0xc2, 0xd0]);
+  await expect(processImage({ buffer: forged, mimeType: 'image/webp' })).rejects.toMatchObject({ code: 'decode' });
+  expect(sharp).not.toHaveBeenCalled();
+});
+
 test.each(['jpeg', 'png', 'webp'] as const)('still processes a genuine %s raster through the installed native decoder', async (format) => {
   const input = await nativeSharp({ create: { width: 12, height: 8, channels: 3, background: '#235678' } })
     .toFormat(format).toBuffer();

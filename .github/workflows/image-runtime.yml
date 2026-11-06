@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run -d --name bertel-image-smoke -p 3000:3000 bertel-image-runtime
+          docker run -d --name bertel-image-smoke -p 3000:3000 -e NEXT_PUBLIC_ENABLE_DEMO_MODE=true bertel-image-runtime
           trap 'docker logs bertel-image-smoke; docker rm -f bertel-image-smoke' EXIT
           for attempt in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:3000/api/health > /tmp/bertel-health.json; then

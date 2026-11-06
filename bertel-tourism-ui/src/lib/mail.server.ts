@@ -1,6 +1,6 @@
 import 'server-only';
 import nodemailer, { type Transporter } from 'nodemailer';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import type { SmtpConfig } from './env.server';
 import { resolveSmtpConfig } from './smtp-settings.server';
 

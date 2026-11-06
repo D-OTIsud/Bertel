@@ -822,8 +822,8 @@ a {
 
 /* Map pin hover popup — flush hero image + body, matches the Tourism UI redesign. */
 .map-hover-popup {
-  /* The preview actions must stay clickable above the corner map controls. */
-  z-index: 3;
+  /* Keep preview actions above the legend (5) and corner map controls. */
+  z-index: 6;
 }
 
 .map-hover-popup .maplibregl-popup-content,

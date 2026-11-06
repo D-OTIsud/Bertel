@@ -1,57 +1,70 @@
 # Import and isolated smoke
 
-`import_and_smoke.py` is a separate operator mutation after the receiver has
-verified an archive. It imports one reviewed image, checks its immutable identity,
-creates a local candidate tag, and tests an isolated container. It never deploys
-the application, changes Compose, binds a public port or supplies a service secret.
+`import_and_smoke.py` never deploys the application or changes Compose. Fresh mode
+imports a reviewed image, validates portable identity and local Size, then runs
+the bounded tag/smoke procedure. One explicit legacy continuation can adopt a
+confirmed load without loading again.
 
 The operator must hold an exclusive writer freeze for the candidate tag and
-inspected images throughout this operation. Inspect-then-tag is **not CAS**.
-The script checks before and after; it does not fence another Docker writer.
+inspected images. Inspect-then-tag is **not CAS** and does not fence another
+Docker writer. Quarantine path checks require exclusive trusted root ownership;
+they reopen paths across calls and are not an atomic file-descriptor snapshot.
 
-The base64 JSON argument contains `folder`, `expected`, `receiver_succeeded: true`,
-`current_container` and `writers_frozen: true`. `expected` is the receiver's exact
-reviewed parameter object. The current container is supplied by the operator;
-the source contains no deployment-specific container name, URL or release pin.
-The receipt, folder ownership and ZIP/manifest/gzip hashes are rechecked before
-mutation. Public configuration is read as six selected public fields only and
-must match its expected canonical hash.
+The JSON argument contains `folder`, the original `expected` receiver object,
+`receiver_succeeded: true`, `current_container`, `writers_frozen: true`, and
+`image_identity`. The latter contains `config_sha256` equal to the expected
+image ID plus `rootfs: {type: "layers", diff_ids: [...]}` extracted from the
+audited immutable config. Original receiver parameters and manifests are unchanged.
 
-`import-smoke-operation/` is exclusive and never adopted on retry. Its immutable
-JSON records and parent directories are fsynced. Smoke name, nonce and expected
-image are durable before `docker create`; the returned full container ID is
-durable before an exact ID/name/nonce/image inspection, also durably recorded,
-permits start. A valid-looking foreign ID is refused outside the cleanup zone.
-Missing/invalid acknowledgements, every nonzero Docker.run result, transport
-failures and interruptions stop the procedure as an unknown outcome. They leave records for read-only inspection,
-with no automatic replay or cleanup of an uncertain request.
+Portable identity requires exact ID/config digest, ordered RootFS DiffIDs, OS,
+architecture, USER and revision/source labels. The host's Docker-reported Size
+must be a strict positive integer at most 1 GiB. It is recorded separately from
+CI Size, with no equality requirement and no claim about the cause of a
+difference. The new operation receipt records both measurements; old CI
+manifests and receipts are never rewritten. Config content and uncompressed
+DiffIDs define the cryptographic check, not a fresh rehash of host filesystem
+files. See the [OCI config specification](https://github.com/opencontainers/image-spec/blob/v1.1.1/config.md).
 
-An acknowledged negative read-only probe may clean only a confirmed ID whose
-Docker metadata still matches the exact ID, name, nonce label and image. A
-nonzero mutating CLI exit does not establish rejection and never triggers
-automatic cleanup. Cleanup intent and acknowledgement
-are also durable; a lost cleanup acknowledgement is not retried. The script
-does not roll back an imported image or tag automatically.
+Fresh uses the exclusive `import-smoke-operation/` journal. The immutable
+records and directories are fsynced. Name/nonce/image precede create; its
+acknowledged full ID and exact ID/name/nonce/image validation precede start.
+Every nonzero `Docker.run` exit, timeout, interruption or invalid ACK is unknown:
+no automatic replay or cleanup of that uncertain request.
 
-The smoke has `--network none`, no published port, `--no-healthcheck`, bounded
-CPU/memory/pids, dropped capabilities and no new privileges. Disabling the
-inherited image healthcheck keeps readiness outside this smoke's scope. Its
-three explicit GETs are `/api/health`, `/api/app-version` and `/runtime-config.js`,
-all with `redirect: 'error'`. Runtime configuration is parsed without evaluating
-JavaScript, must have exactly six unique expected string keys, and must match
-the public configuration hash. Health and the 2/2 contract must pass.
+The only continuation is `continuation.kind = "after_confirmed_load_4db"`.
+Its predecessor operator digest must be the reviewed 4db tool. The profile
+supplies exact byte sizes and SHA256 for only `00-intent.json`,
+`10-load-intent.json`, `11-load-ack.json`. The original directory must contain
+exactly those three regular root-owned mode0600 files. Raw hashes, strict JSON,
+legacy version1 intent/source/image/tag/current/nonce/name/scope, and loaded=true
+must agree. Missing, extra or divergent state refuses.
 
-On refusal, inspect the immutable operation journal and the recorded identity
-read-only before choosing a new operation. An existing operation directory
-blocks automatic retry. A crash can leave only an intent, including when Docker
-already performed a request. Those states are deliberately not interpreted as
-evidence that no effect occurred.
+The continuation creates only the fixed exclusive sibling
+`import-smoke-after-confirmed-load-4db/`. It preserves the original directory
+and records the predecessor hashes, a fresh nonce/name and an honest adoption
+record with `load_performed: false`. Portable physical identity, bounded Size
+and empty RepoTags are mandatory before tag/create. It calls the same tag/smoke
+tail and performs zero load calls. An existing sibling blocks any automatic
+retry. New intents use version2 and cannot be adopted as legacy version1.
+There is no general skip-load/start-stage/resume interface.
 
-Tests use synthetic Docker effects and a real Node process with an in-process
-loopback HTTP fixture/fake fetch. The Linux guard job tests actual private file
-modes, exclusive records and fsync failure ordering as root in a disposable runner.
-It does not start a Docker container, build an image or contact production.
+The smoke has network=none, no published port, `--no-healthcheck`, bounded
+CPU/memory/pids, dropped capabilities and no new privileges. Its three GETs are
+`/api/health`, `/api/app-version`, `/runtime-config.js`, all `redirect: 'error'`.
+They test static health, 2/2 contract and exact six-field public configuration.
+Runtime configuration is parsed without JavaScript evaluation. No readiness,
+Auth, business, SMTP, AI, document or Storage operation is tested.
 
-Quarantine path/hash checks require exclusive trusted root ownership. They
-reopen paths across calls and are not an atomic file-descriptor snapshot; no
-concurrent root writer or path replacement is permitted during the operation.
+An acknowledged negative read-only probe may clean only its confirmed container.
+Cleanup rechecks exact ID/name/nonce/image, journals intent and acknowledgement,
+and never retries an uncertain rm. A foreign create ACK is refused outside the
+cleanup zone. Images and tags are not automatically rolled back or deleted.
+
+On refusal, stop and inspect the immutable journal read-only. Do not reset,
+delete or replay it. S1 fresh is an operator-held sequence gate after successful
+S0 continuation/smoke; preparing an S1 parameter file does not authorize running
+it early.
+
+Tests use synthetic Docker effects, real Node against loopback fixtures/fake
+fetch, and native Linux-root file/mode/fsync checks. They start no real Docker
+container, build no image and contact no production host.

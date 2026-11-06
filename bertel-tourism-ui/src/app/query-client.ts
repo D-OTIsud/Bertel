@@ -28,15 +28,25 @@ export const queryClient = new QueryClient({
 
 // Discard records persisted before actor realm isolation was enforced server-side.
 export const queryCacheBuster = 'v2-actor-realm-isolation';
-export const queryCacheStorageKey = isSandboxMode() ? 'bertel-test-rq-cache' : 'bertel-rq-cache';
+function browserCacheStorage(): { key: string; storage: Storage } | undefined {
+  if (typeof window === 'undefined') return undefined;
+  // Storage getters and the sandbox-mode read can throw before Providers mounts.
+  // Keep its existing memory-only path reachable; never try the other realm's cache.
+  try {
+    const sandbox = isSandboxMode();
+    return {
+      key: sandbox ? 'bertel-test-rq-cache' : 'bertel-rq-cache',
+      storage: sandbox ? window.sessionStorage : window.localStorage,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+const cacheStorage = browserCacheStorage();
+export const queryCacheStorageKey = cacheStorage?.key ?? 'bertel-rq-cache';
 export const queryCacheMaxAgeMs = DAY_MS;
 
-export const queryPersister =
-  typeof window !== 'undefined'
-    ? createSyncStoragePersister({
-        key: queryCacheStorageKey,
-        storage: isSandboxMode() ? window.sessionStorage : window.localStorage,
-      })
-    : undefined;
+export const queryPersister = cacheStorage ? createSyncStoragePersister(cacheStorage) : undefined;
 
 bindSessionQueryCache(queryClient, () => { void queryPersister?.removeClient(); });

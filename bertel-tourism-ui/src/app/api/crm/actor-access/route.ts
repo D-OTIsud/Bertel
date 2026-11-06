@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { UUID_SHAPE, authenticated, callerClient, type ServerClient } from '../../_document-auth';
 import { SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 
@@ -82,25 +83,6 @@ async function actorEmailChannels(server: ServerClient, actorId: string): Promis
   return ((data ?? []) as Array<{ value?: unknown }>)
     .map((row) => String(row.value ?? '').trim().toLowerCase())
     .filter(Boolean);
-}
-
-/**
- * Origine des liens d'invitation.
- *
- * ⚠ PAS l'en-tête `Origin`, contrairement à `admin/invite/route.ts` : §164 réservait ce
- * geste au rang plateforme, ici la population est « qui a `write_crm_notes` sur cet
- * acteur ». Un appelant qui pose `Origin: https://attaquant.example` ferait émettre une
- * invitation dont le lien porte le jeton vers son propre hôte, et la seule défense serait
- * l'allowlist Auth du dashboard — une configuration que ce code ne contrôle pas.
- *
- * `NEXT_PUBLIC_APP_URL` est la variable serveur déjà utilisée par `crm/notify-drain` et
- * `lists/send` pour fabriquer des liens : pas un nouveau bouton de déploiement. Repli sur
- * l'origine de la requête (`Host`, normalement réécrit par le proxy), jamais sur un en-tête
- * que l'appelant choisit librement.
- */
-function inviteOrigin(req: NextRequest): string {
-  const configured = (process.env.NEXT_PUBLIC_APP_URL ?? '').trim();
-  return (configured || new URL(req.url).origin).replace(/\/$/, '');
 }
 
 /**
@@ -233,6 +215,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   if (!EMAIL_SHAPE.test(email)) return NextResponse.json({ error: 'invalid_email' }, { status: 422 });
+  const origin = getCanonicalAppOrigin();
+  if (!origin) return NextResponse.json({ error: 'app_origin_unavailable' }, { status: 503 });
   const channels = await actorEmailChannels(server, actorId);
   if (!channels.includes(email)) {
     return NextResponse.json({ error: 'email_not_actor_channel' }, { status: 422 });
@@ -290,7 +274,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // personne invitée lit la copie écrite pour le personnel de l'office.
     // ⚠ L'allowlist Auth → URL Configuration doit accepter la query string (motif
     // `…/set-password*`), sinon Supabase retombe sur le Site URL et le paramètre est perdu.
-    redirectTo: `${inviteOrigin(req)}/set-password?espace=1`,
+    redirectTo: `${origin}/set-password?espace=1`,
   });
   if (createErr || !created?.user) {
     return NextResponse.json(

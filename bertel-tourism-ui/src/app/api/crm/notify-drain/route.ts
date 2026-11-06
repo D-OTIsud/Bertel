@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { isSandboxDiscoveryUser, SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { MailNotConfiguredError, sendMail, type MailSender } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
@@ -46,6 +47,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: SANDBOX_EXTERNAL_EFFECTS_ERROR, detail: SANDBOX_EMAIL_DETAIL }, { status: 403 });
   }
 
+  const origin = getCanonicalAppOrigin();
+  if (!origin) return NextResponse.json({ error: 'app_origin_unavailable' }, { status: 503 });
+
   // SMTP absent ⇒ on sort AVANT de réclamer quoi que ce soit : chaque ligne réclamée a un TTL
   // de 10 minutes pendant lequel elle est invisible aux autres appels — la consommer sans
   // pouvoir envoyer retarderait le vrai drain (le prochain passage utile) de 10 minutes pour rien.
@@ -81,13 +85,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'email_policy_unavailable' }, { status: 503 });
     }
   }
-  // ⚠ MISE EN SERVICE — `NEXT_PUBLIC_APP_URL` DOIT être posé en production. Sans lui,
-  // `origin` retombe sur `req.nextUrl.origin`, c'est-à-dire sur l'en-tête `Host` de
-  // l'appelant. C'était sans grande portée tant que ces liens ne partaient qu'à des membres
-  // de l'équipe ; depuis 18a ils partent à des PARTENAIRES EXTERNES, et un `Host` falsifié
-  // les enverrait vers un domaine choisi par l'appelant du drain — qui doit être connecté,
-  // mais pas nécessairement digne de confiance.
-  const origin = (process.env.NEXT_PUBLIC_APP_URL ?? '').trim() || req.nextUrl.origin;
   const sent: string[] = [];
   const failed: Array<{ id: string; error: string }> = [];
 

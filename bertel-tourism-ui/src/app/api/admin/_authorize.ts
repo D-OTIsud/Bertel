@@ -2,12 +2,13 @@ import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { type SupabaseClient } from '@supabase/supabase-js';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { isSandboxDiscoveryUser } from '@/lib/sandbox-effects';
 
 /** Rang d'administration d'ORG minimal pour les routes /api/admin/*. */
 const MIN_ADMIN_RANK = 30;
 
 export type AdminAuth =
-  | { ok: true; server: SupabaseClient; asCaller: SupabaseClient; callerId: string; isSuper: boolean; rank: number }
+  | { ok: true; server: SupabaseClient; asCaller: SupabaseClient; callerId: string; isSuper: boolean; rank: number; isSandboxDiscovery: boolean }
   | { ok: false; response: NextResponse };
 
 /**
@@ -54,7 +55,7 @@ export async function authorizeAdminRoute(req: NextRequest): Promise<AdminAuth> 
     };
   }
 
-  return { ok: true, server, asCaller, callerId: caller.user.id, isSuper: isSuper === true, rank: numericRank };
+  return { ok: true, server, asCaller, callerId: caller.user.id, isSuper: isSuper === true, rank: numericRank, isSandboxDiscovery: isSandboxDiscoveryUser(caller.user) };
 }
 
 /**

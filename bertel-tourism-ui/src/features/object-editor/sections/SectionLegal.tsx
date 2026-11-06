@@ -4,6 +4,7 @@ import { Chip, Field, Fs, Input, Readout } from '../primitives';
 import { LegalDocumentEditModal } from '../widgets/LegalDocumentEditModal';
 import { ObjectDocumentLink } from '../../../components/common/ObjectDocumentLink';
 import type { SectionProps } from './section-types';
+import { LEGAL_SUMMARY_UNAVAILABLE, workspaceSaveBlockedReason } from '../../../services/object-workspace-safety';
 import {
   normalizeInseeDigits,
   type ObjectWorkspaceLegalRecord,
@@ -71,7 +72,9 @@ function docListHeader(showActions: boolean) {
 export function SectionLegal({ editor, permissions, archetype, folded }: SectionProps) {
   const legal = editor.draft.legal;
   const access = permissions.legal;
-  const canWrite = Boolean(access?.canDirectWrite) && !legal.unavailableReason;
+  const blockedReason = workspaceSaveBlockedReason('legal', legal);
+  const canWrite = Boolean(access?.canDirectWrite) && !blockedReason;
+  const summaryUnavailable = legal.unavailableReason === LEGAL_SUMMARY_UNAVAILABLE;
   const isAccommodation = archetype === 'HEB';
   const isItinerary = archetype === 'ITI';
   const today = new Date().toISOString().slice(0, 10);
@@ -134,7 +137,7 @@ export function SectionLegal({ editor, permissions, archetype, folded }: Section
       folded={folded}
       pill={pill}
     >
-      {!canWrite && (
+      {(!canWrite || summaryUnavailable) && (
         <p
           style={{
             fontSize: 12,
@@ -146,8 +149,10 @@ export function SectionLegal({ editor, permissions, archetype, folded }: Section
             border: '1px solid var(--line-soft)',
           }}
         >
-          <strong style={{ color: 'var(--ink-3)' }}>Lecture seule.</strong>{' '}
-          {access?.disabledReason ?? legal.unavailableReason ?? "Vous n'avez pas le droit de modifier la conformité juridique."}
+          {canWrite ? 'Résumé de conformité indisponible. Les données juridiques restent modifiables.' : <>
+            <strong style={{ color: 'var(--ink-3)' }}>Lecture seule.</strong>{' '}
+            {access?.disabledReason ?? blockedReason ?? "Vous n'avez pas le droit de modifier la conformité juridique."}
+          </>}
         </p>
       )}
 

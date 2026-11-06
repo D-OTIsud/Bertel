@@ -106,3 +106,16 @@ describe('BlockersModal — saut depuis une erreur d’enregistrement (chantier 
     expect(screen.getByText('Module inconnu')).toBeInTheDocument();
   });
 });
+
+it('uses the approved deferred-publication notice in the existing modal', () => {
+  render(<BlockersModal {...baseProps} context="publish-deferred"
+    requiredBlockers={[{ section: '02', message: 'A later required-field issue', tone: 'req' }]}
+    saveErrors={[{ section: 'Transport', message: 'An unrelated save error', tone: 'req' }]}
+    warnings={[{ section: '04', message: 'An unrelated warning', tone: 'warn' }]} />);
+  expect(screen.getByRole('heading', { name: 'Publication reportée' })).toBeInTheDocument();
+  expect(screen.queryByText('A later required-field issue')).not.toBeInTheDocument();
+  expect(screen.queryByText('An unrelated save error')).not.toBeInTheDocument();
+  expect(screen.queryByText('An unrelated warning')).not.toBeInTheDocument();
+  expect(screen.getByText('Une modification a été saisie pendant l’enregistrement. Elle est conservée. Relancez la publication pour enregistrer et publier la dernière version.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Fermer' })).toBeInTheDocument();
+});

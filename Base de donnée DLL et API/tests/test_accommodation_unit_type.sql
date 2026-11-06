@@ -19,6 +19,7 @@
 \set ON_ERROR_STOP on
 
 BEGIN;
+\ir fixtures/current_canonical_permission.sql
 
 DO $unit_guard$
 DECLARE
@@ -87,10 +88,8 @@ BEGIN
     RAISE EXCEPTION 'lot5: vocabulaire accommodation_unit_type incomplet';
   END IF;
 
-  -- Le droit d'écriture canonique ne vient PAS de `object.created_by` mais d'un
-  -- lien acteur PRIMAIRE, résolu depuis l'e-mail du JWT (api.is_object_owner).
-  -- Une fixture qui se contenterait de `created_by` testerait un droit que la
-  -- policy n'accorde pas — et passerait au vert pour la mauvaise raison.
+  -- Current publisher membership + explicit canonical permission supply writes.
+  -- Retain contact/creator fixtures as provenance only.
   SELECT id INTO v_kind FROM ref_code_contact_kind WHERE code = 'email';
   SELECT id INTO v_role FROM ref_actor_role WHERE code = 'operator' LIMIT 1;
   IF v_kind IS NULL OR v_role IS NULL THEN
@@ -122,6 +121,8 @@ BEGIN
 
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES
     (v_userA, v_orgA, TRUE), (v_userB, v_orgB, TRUE);
+
+  PERFORM pg_temp.grant_current_canonical_fixture(v_userA,v_orgA,ARRAY[v_pub,v_draft]);
 
   -- ---------- Multi-valeur : Bulle ET Lodge sur la MÊME fiche ----------
   INSERT INTO object_accommodation_unit_type (object_id, unit_type_id) VALUES

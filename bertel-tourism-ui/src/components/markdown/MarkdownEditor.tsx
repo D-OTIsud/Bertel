@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
@@ -46,7 +46,7 @@ function ToolBtn({ label, active, disabled, onClick, children }: ToolBtnProps) {
       title={label}
       disabled={disabled}
       onMouseDown={(e) => e.preventDefault()}
-      onClick={onClick}
+      onClick={() => { if (!disabled) onClick(); }}
     >
       {children}
     </button>
@@ -54,9 +54,10 @@ function ToolBtn({ label, active, disabled, onClick, children }: ToolBtnProps) {
 }
 
 function setLink(editor: Editor): void {
+  if (editor.isDestroyed || !editor.isEditable) return;
   const prev = editor.getAttributes('link').href as string | undefined;
   const url = window.prompt('Adresse du lien (https://…)', prev ?? 'https://');
-  if (url === null) return;
+  if (editor.isDestroyed || !editor.isEditable || url === null) return;
   if (url.trim() === '') {
     editor.chain().focus().extendMarkRange('link').unsetLink().run();
     return;
@@ -104,58 +105,58 @@ function useToolbarState(editor: Editor): ToolbarState {
   });
 }
 
-function Toolbar({ editor, variant }: { editor: Editor; variant: 'block' | 'inline' }) {
+function Toolbar({ editor, variant, disabled }: { editor: Editor; variant: 'block' | 'inline'; disabled?: boolean }) {
   const state = useToolbarState(editor);
   const block = variant !== 'inline';
   return (
-    <div className="md-editor__toolbar" role="toolbar" aria-label="Mise en forme">
+    <div className="md-editor__toolbar" role="toolbar" aria-label="Mise en forme" aria-disabled={disabled || undefined}>
       {block && (
         <>
-          <ToolBtn label="Titre" active={state.isHeading2}
+          <ToolBtn label="Titre" active={state.isHeading2} disabled={disabled}
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
             <Heading2 size={16} aria-hidden />
           </ToolBtn>
-          <ToolBtn label="Sous-titre" active={state.isHeading3}
+          <ToolBtn label="Sous-titre" active={state.isHeading3} disabled={disabled}
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
             <Heading3 size={16} aria-hidden />
           </ToolBtn>
           <span className="md-editor__sep" aria-hidden />
         </>
       )}
-      <ToolBtn label="Gras" active={state.isBold}
+      <ToolBtn label="Gras" active={state.isBold} disabled={disabled}
         onClick={() => editor.chain().focus().toggleBold().run()}>
         <BoldIcon size={16} aria-hidden />
       </ToolBtn>
-      <ToolBtn label="Italique" active={state.isItalic}
+      <ToolBtn label="Italique" active={state.isItalic} disabled={disabled}
         onClick={() => editor.chain().focus().toggleItalic().run()}>
         <ItalicIcon size={16} aria-hidden />
       </ToolBtn>
       <span className="md-editor__sep" aria-hidden />
       {block && (
         <>
-          <ToolBtn label="Liste à puces" active={state.isBulletList}
+          <ToolBtn label="Liste à puces" active={state.isBulletList} disabled={disabled}
             onClick={() => editor.chain().focus().toggleBulletList().run()}>
             <List size={16} aria-hidden />
           </ToolBtn>
-          <ToolBtn label="Liste numérotée" active={state.isOrderedList}
+          <ToolBtn label="Liste numérotée" active={state.isOrderedList} disabled={disabled}
             onClick={() => editor.chain().focus().toggleOrderedList().run()}>
             <ListOrdered size={16} aria-hidden />
           </ToolBtn>
-          <ToolBtn label="Citation" active={state.isBlockquote}
+          <ToolBtn label="Citation" active={state.isBlockquote} disabled={disabled}
             onClick={() => editor.chain().focus().toggleBlockquote().run()}>
             <Quote size={16} aria-hidden />
           </ToolBtn>
         </>
       )}
-      <ToolBtn label="Lien" active={state.isLink} onClick={() => setLink(editor)}>
+      <ToolBtn label="Lien" active={state.isLink} disabled={disabled} onClick={() => setLink(editor)}>
         <LinkIcon size={16} aria-hidden />
       </ToolBtn>
       <span className="md-editor__sep" aria-hidden />
-      <ToolBtn label="Annuler" disabled={!state.canUndo}
+      <ToolBtn label="Annuler" disabled={disabled || !state.canUndo}
         onClick={() => editor.chain().focus().undo().run()}>
         <Undo2 size={16} aria-hidden />
       </ToolBtn>
-      <ToolBtn label="Rétablir" disabled={!state.canRedo}
+      <ToolBtn label="Rétablir" disabled={disabled || !state.canRedo}
         onClick={() => editor.chain().focus().redo().run()}>
         <Redo2 size={16} aria-hidden />
       </ToolBtn>
@@ -170,6 +171,7 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel, variant =
   // Keep onChange in a ref so the once-bound onUpdate callback never calls a stale closure
   // (the parent passes a fresh arrow each render — e.g. one closing over the active language).
   const onChangeRef = useRef(onChange);
+  const disabledRef = useRef(Boolean(disabled));
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
@@ -210,8 +212,15 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel, variant =
     immediatelyRender: false,
     // `md-content` makes block transforms (H2/H3, lists, blockquote, links) VISIBLE while editing —
     // Tailwind preflight strips their default styling, so the editable needs the same display rules.
-    editorProps: { attributes: { 'aria-label': ariaLabel, class: 'md-editor__content md-content' } },
-    onUpdate: ({ editor }) => onChangeRef.current(editor.storage.markdown.getMarkdown()),
+    editorProps: { attributes: () => ({
+      'aria-label': ariaLabel, class: 'md-editor__content md-content',
+      'aria-readonly': disabledRef.current ? 'true' : 'false',
+    }) },
+    onUpdate: ({ editor }) => {
+      if (!disabledRef.current && editor.isEditable) {
+        onChangeRef.current(editor.storage.markdown.getMarkdown());
+      }
+    },
   });
 
   // External value change (e.g. switching language tab) → reset content WITHOUT firing onUpdate.
@@ -222,7 +231,10 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel, variant =
     }
   }, [value, editor]);
 
-  useEffect(() => {
+  // Revoke editing before the next browser input can reach ProseMirror. Its
+  // native read-only input gate keeps selection/copy available without key filters.
+  useLayoutEffect(() => {
+    disabledRef.current = Boolean(disabled);
     editor?.setEditable(!disabled, false);
   }, [disabled, editor]);
 
@@ -230,7 +242,7 @@ export function MarkdownEditor({ value, onChange, disabled, ariaLabel, variant =
 
   return (
     <div className="md-editor">
-      <Toolbar editor={editor} variant={variant} />
+      <Toolbar editor={editor} variant={variant} disabled={disabled} />
       <EditorContent editor={editor} />
     </div>
   );

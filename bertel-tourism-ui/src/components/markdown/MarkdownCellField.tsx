@@ -34,6 +34,7 @@ export function MarkdownCellField({
     setOpen(true);
   }
   function save() {
+    if (disabled) return;
     onChange(draft);
     setOpen(false);
   }
@@ -53,7 +54,7 @@ export function MarkdownCellField({
         </button>
       )}
 
-      <EditorModal open={open} title={label} size="lg" onClose={() => setOpen(false)} onSave={save}>
+      <EditorModal open={open} title={label} size="lg" onClose={() => setOpen(false)} onSave={save} saveDisabled={disabled}>
         <MarkdownEditorLazy value={draft} onChange={setDraft} variant={variant} ariaLabel={ariaLabel} disabled={disabled} />
       </EditorModal>
     </div>

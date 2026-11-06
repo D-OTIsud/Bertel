@@ -65,11 +65,11 @@ BEGIN
     VALUES('ORGRUN999999AR01',v_editor,v_perm,true,'00000000-0000-4000-a000-00000000ae15'),
       ('ORGRUN999999AR01',v_editor,v_publish_perm,true,'00000000-0000-4000-a000-00000000ae15')
     ON CONFLICT ON CONSTRAINT org_role_permission_uniq DO UPDATE SET is_active=true;
-  INSERT INTO public.actor_channel(actor_id,kind_id,value,visibility) VALUES
-    ('00000000-0000-4000-a000-00000000aa01',v_email_kind,'current-rights-writer@example.invalid','public'),
-    ('00000000-0000-4000-a000-00000000aa01',v_email_kind,'current-rights-email@example.invalid','public'),
-    ('00000000-0000-4000-a000-00000000aa02',v_email_kind,'current-rights-foreign@example.invalid','public'),
-    ('00000000-0000-4000-a000-00000000aa03',v_email_kind,'current-rights-writer@example.invalid','public');
+  INSERT INTO public.actor_channel(actor_id,kind_id,value) VALUES
+    ('00000000-0000-4000-a000-00000000aa01',v_email_kind,'current-rights-writer@example.invalid'),
+    ('00000000-0000-4000-a000-00000000aa01',v_email_kind,'current-rights-email@example.invalid'),
+    ('00000000-0000-4000-a000-00000000aa02',v_email_kind,'current-rights-foreign@example.invalid'),
+    ('00000000-0000-4000-a000-00000000aa03',v_email_kind,'current-rights-writer@example.invalid');
   INSERT INTO public.actor_object_role(actor_id,object_id,role_id,is_primary,visibility) VALUES
     ('00000000-0000-4000-a000-00000000aa01','HOTRUN999999AR01',v_actor_role,true,'public'),
     ('00000000-0000-4000-a000-00000000aa02','HOTRUN999999AR02',v_actor_role,true,'public'),

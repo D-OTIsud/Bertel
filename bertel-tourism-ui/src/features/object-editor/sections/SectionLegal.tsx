@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Chip, Field, Fs, Input, Readout } from '../primitives';
 import { LegalDocumentEditModal } from '../widgets/LegalDocumentEditModal';
+import { ObjectDocumentLink } from '../../../components/common/ObjectDocumentLink';
 import type { SectionProps } from './section-types';
 import {
   normalizeInseeDigits,
@@ -261,14 +262,14 @@ export function SectionLegal({ editor, permissions, archetype, folded }: Section
                   <div style={{ fontSize: 12 }}>
                     <span className="mono">{formatLegalValidity(record)}</span>
                     {record.documentUrl && (
-                      <a
+                      <ObjectDocumentLink
+                        objectId={editor.objectId}
+                        documentId={record.documentId}
                         href={record.documentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         style={{ display: 'block', color: 'var(--accent)', textDecoration: 'underline', marginTop: 2 }}
                       >
                         Voir le justificatif
-                      </a>
+                      </ObjectDocumentLink>
                     )}
                   </div>
                   <div>

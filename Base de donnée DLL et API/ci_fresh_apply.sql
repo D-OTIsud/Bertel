@@ -639,6 +639,10 @@ ROLLBACK;
 \echo '== 19h filtrage generique des dates et statuts des justificatifs actifs =='
 \ir ../supabase/migrations/20260908053837_attach_classification_evidence.sql
 
+\echo '== DB07 private evidence: current canonical gate and exact object/document mapping =='
+\ir ../supabase/migrations/20261106105258_private_object_document_access.sql
+\ir tests/test_private_object_document_access.sql
+
 \echo '== 19i ordinary contributor bell and email notifications (current moderation rights, coalesced sections, portal exclusion) =='
 \ir ../supabase/migrations/20260911152231_internal_pending_change_notifications.sql
 \ir tests/test_internal_pending_change_notifications.sql

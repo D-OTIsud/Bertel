@@ -1,63 +1,50 @@
-# Revue croisée du plan de thésaurus Bertel
+# Revue croisée du thésaurus Bertel
 
-Date : 6 novembre 2026. Demande : faire critiquer le plan par Claude, évaluer ses remarques indépendamment, réviser et solliciter une nouvelle revue jusqu’à un accord argumenté.
+6 novembre 2026. La demande est de faire critiquer le plan par Claude, d'évaluer ses objections indépendamment et d'itérer jusqu'à un accord argumenté. Le [plan V3](../superpowers/plans/2026-11-06-thesaurus-api-partenaires-plan.md) a été validé au niveau architectural. La revue technique ultérieure reste **conditionnelle aux preuves de déploiement** décrites dans l'[audit d'implémentation](2026-11-06-thesaurus-implementation.md) ; elle ne déclare pas le plan entier exécuté.
 
-Le plan courant se trouve dans [Thésaurus Bertel et API partenaires](../superpowers/plans/2026-11-06-thesaurus-api-partenaires-plan.md). Ce journal porte sur l’architecture proposée, pas sur une implémentation réalisée.
+## Validation du plan : trois tours
 
-## Méthode
+Au moment de ces trois tours, le CLI installé n'était pas authentifié. La revue a été menée dans l'application Claude connectée, conversation **Thésaurus Bertel : relecture de plan**, modèle affiché **Opus 5.5 Moyen**. Le plan et les faits du dépôt ont été transmis en texte ; Claude n'avait pas le dépôt dans cette conversation et ne devait ni exécuter de test ni modifier de fichier. Les verdicts ci-dessous ont été lus dans l'interface.
 
-Le CLI Claude Code installé n’était pas authentifié. La revue a donc été menée dans l’application Claude connectée, dans une nouvelle conversation intitulée **Thésaurus Bertel : relecture de plan**, avec le modèle affiché **Opus 5.5 Moyen**. Le plan et les faits pertinents tirés du dépôt ont été transmis en texte collé. Claude a été informé qu’il ne disposait pas du dépôt dans cette conversation et invité à ne lancer aucun outil ni modifier aucun fichier.
-
-Les réponses ont été lues dans l’interface. Les remarques ci-dessous en sont une synthèse ; les verdicts entre guillemets reprennent le texte visible. La validation du plan n’est pas une preuve d’exécution de tests SQL ou de conformité d’un futur déploiement.
-
-## Tour 1
-
-Verdict de Claude : **« RÉVISER »**.
-
-| Objection | Évaluation Codex | Évolution retenue |
+| Tour | Verdict de Claude | Évaluation et évolution retenue par Codex |
 |---|---|---|
-| Sources canoniques encore modifiables hors workflow | Bloquant confirmé | Domaines gouvernés, garde DB, chemins d’écriture inventoriés, administration générique en lecture seule |
-| `is_active`/validité et cycle éditorial sans correspondance | Bloquant confirmé | Séparer état, assignabilité et dates ; figer les publications ; conserver le comportement temporel legacy de `/catalog` |
-| Sort des affectations de fiches lors des fusions/scissions | Bloquant confirmé | Conservation des usages historiques, refus des nouvelles affectations, requalification explicite |
-| Atomicité annoncée sans frontière pour les dérivés | Bloquant confirmé | Projections SQL requises dans la bascule ; caches hors base par génération ; outbox réservée aux opérations non critiques |
+| 1 | **« RÉVISER »** | Quatre blocages confirmés : écritures sources hors workflow, confusion état/assignabilité/validité, devenir des affectations lors des fusions/scissions, frontière d'atomicité des projections. Ajout de gardes DB, dimensions distinctes, conservation historique avec requalification et bascule atomique des dérivés requis. |
+| 2 | **« VALIDÉ au niveau de l'architecture »** | Les quatre blocages sont traités. Huit précisions intégrées : mises à jour de contenu comme propositions, inventaire réel des consommateurs, budget de contention, reprise des valeurs retirées, distinction `/catalog`/historique, équivalence opt-in commune, URI authentifiées et volume de resynchronisation annoncé. |
+| 3 | **« VALIDÉ. La V3 est un plan d'architecture et de réalisation cohérent. »** | Aucun nouveau blocage architectural. Ajout du signalement des fiches liées à des prédécesseurs quand l'option est désactivée et des cinq livrables de passage du lot 1. La comparaison legacy possède une référence avant modification puis un contrôle réel avant activation. |
 
-Autres améliorations retenues : termes de recherche hérités préservés pendant la revue, différentiel minimal dès V1, URI configurée par instance, politique publique unique, licence/attribution et phasage des adaptateurs autonomes.
+Codex n'a pas suivi trois formulations trop larges : une GUC modifiable n'est pas une autorisation ; seuls des prédécesseurs d'équivalence exacte validée peuvent élargir un filtre ; les projections requises ne peuvent pas converger après la bascule. Claude a accepté ces objections au deuxième tour. Un renommage d'un concept actif ne retire pas son assignabilité. La validation commune porte sur ce plan, sans transformer la revue en preuve de tests ou d'activation.
 
-## Désaccords argumentés de Codex
+## Revue du code par le CLI demandé
 
-1. **Drapeau de session comme autorisation** : refusé. Une GUC positionnable par l’appelant n’est pas une capacité de publication ; utiliser des privilèges/rôles et fonctions de confiance, en reconnaissant le pouvoir du propriétaire réel de la base.
-2. **Inclure tous les prédécesseurs dans les filtres d’un successeur** : formulation trop large. Seule une équivalence exacte validée autorise cette expansion ; une scission ou un remplacement de sens différent ne la déclenche pas.
-3. **Convergence différée de tous les dérivés** : refusée pour les projections requises par les filtres hiérarchiques. La cohérence de l’arbre, de la closure et des caches SQL doit être conservée au moment de l’activation.
+Après la nouvelle demande explicite de l'utilisateur, le CLI **Claude Code** a réellement été exécuté, avec `--model claude-opus-5-5 --effort medium`, en lecture seule (`--permission-mode plan`, outils Read/Grep/Glob). L'artefact JSON confirme `canonicalModel: claude-opus-5-5`, sans sous-agent et sans refus de permission. Il ne s'agit pas d'un agent GPT présenté comme Claude.
 
-## Tour 2
+Premier verdict CLI : **« À CORRIGER »**, huit constats. Codex a inspecté les faits, retenu les correctifs justifiés et contesté les hypothèses qui n'étaient pas établies.
 
-Verdict visible de Claude : **« VALIDÉ au niveau de l’architecture »**.
+| Nº | Constat CLI | Décision de Codex et état |
+|---|---|---|
+| 1 | Dépendances RLS du rôle de publication incomplètes | **Retenu.** Grants EXECUTE ciblés, puis assertion `pg_policy` → `pg_depend` → `pg_proc` pour arrêter l'installation si un helper nécessaire devient inexécutable. Pas de grant global sur les fonctions API. L'hypothèse supplémentaire d'un USAGE nécessaire sur `auth` a été réfutée avec une publication réelle après révocation explicite : les policies stockées appellent les fonctions par OID ; le helper d'identité de confiance résout sa dépendance sous son propriétaire. |
+| 2 | Expansion d'équivalence répétée par fiche | **Retenu et corrigé.** Sous-requête non corrélée exécutée une fois par requête. Artefact `runtime-filter-initplan.json` : zéro expansion option fausse, cinq pour cinq requêtes option vraie. La justesse des résultats repose sur huit comparaisons exactes back-office/partenaire, distinctes de ce benchmark sans prédécesseurs. |
+| 3 | Rafraîchissement de MV bloquant les lecteurs | **Retenu et corrigé.** `CONCURRENTLY` sur une MV déjà peuplée ; remplissage simple sinon. Mesure isolée : 132 lectures concurrentes, attente maximale 1,80 ms. Les index uniques des deux MV doivent être vérifiés sur la cible. L'essai éditeur sous charge dépasse encore le budget de 10,70 ms et reste visible dans l'audit. |
+| 4 | Compatibilité de version PostgreSQL | **Vérifiée.** Cible PostgreSQL 17.6 ; les instructions MAINTAIN et INHERIT/SET utilisées sont disponibles dans cette majeure. La CI doit également réussir sur son environnement Supabase. |
+| 5 | Délai et contention sur corpus réel | **Retenu comme preuve d'ouverture manquante.** Les 447 fiches des mesures locales sont synthétiques. La répétition sur copie restaurée de la production et le budget éditeur ≤ 2 s restent requis. Les seuils supplémentaires de publication < 4 s et de ratio filtre < 1,2× suggérés par Claude ne figuraient pas au plan et n'ont pas été transformés en exigences convenues. |
+| 6 | Dérive des triggers lors d'une réapplication de fichiers de base | **Retenu.** Les quatre exemptions de publication sont vérifiées à l'installation et par le test du manifeste. Réappliquer des fichiers de base après les overlays peut encore rétablir d'anciennes définitions ; le runbook doit imposer l'ordre et les contrôles finaux, ou les miroirs doivent être alignés. Un simple succès de la migration ne prouve pas une réapplication ultérieure sûre. |
+| 7 | Audit d'implémentation contradictoire | **Retenu.** Matrice des 17 critères réécrite autour d'artefacts nommés et de leurs limites ; les mesures successives et l'échec sous charge ne sont plus masqués par d'anciens paragraphes. La preuve HTTP simulée reste explicitement séparée du smoke réel. |
+| 8 | Secret de curseur, exclusion du realm test, portée de la réécriture SQL | **Retenu comme contrôle de déploiement.** Configurer `THESAURUS_CURSOR_SECRET` sur les applications concernées, vérifier les deux branches de liste publique et comparer la définition réelle de `get_filtered_object_ids` avant/après. Le repli serveur sur la clé service-role existe, mais une rotation invaliderait ses curseurs ; ce n'est pas une preuve de configuration de production. |
 
-Claude indique que les quatre défauts bloquants du premier tour sont traités et qu’il n’en identifie pas de nouveau à ce niveau. Il accepte les trois désaccords argumentés ci-dessus.
+### Seconde revue CLI des correctifs
 
-Ses points de cadrage restants sont examinés et intégrés :
+Le même CLI a relu les changements du commit `745c3a8` et les artefacts mesurés. Résultat conservé dans `claude-cli-corrections-review.json` : **« validation technique conditionnelle »**. Claude indique n'avoir exécuté aucun test lui-même.
 
-- Les évolutions de contenu livrées par Bertel entrent comme propositions et n’écrasent pas les adaptations locales ; seul le fresh-install initialise directement son corpus.
-- L’inventaire compte les consommateurs qui doivent vérifier la génération, afin d’affiner réellement le chiffrage.
-- Le pilote mesure la contention d’un changement de racine ; un budget de verrouillage conditionne l’élargissement du périmètre.
-- Le retrait crée une obligation de reprise visible, tandis que la dépréciation permet de conserver durablement l’usage historique.
-- `/catalog` sert les choix actifs ; le thésaurus résout les codes historiques.
-- L’expansion d’équivalence est une option explicite commune au back-office et à l’API, désactivée par défaut pour conserver les filtres actuels.
-- Les URI V1 sont réservées aux partenaires authentifiés ; aucun accès anonyme implicite.
-- La prévisualisation annonce le nombre de fiches dont le contenu partenaire changera et le guide explique les resynchronisations groupées.
+Il juge résolus les défauts de droits RLS, d'expansion répétée, de rafraîchissement bloquant et de version PostgreSQL. Il accepte explicitement les deux réfutations de Codex : USAGE sur `auth` non nécessaire dans le cas prouvé ; seuils 1,2×/4 s simples recommandations. L'assertion des exemptions de triggers résout le défaut à l'installation, avec la réserve sur une réapplication ultérieure des fichiers de base.
 
-## Tour 3
+Les réserves restantes sont précises : contrôles après réapplication des fichiers de base ; dépendances de privilèges des adaptateurs autonomes avant généralisation ; secret de curseur et diff de la fonction filtre ; CI exacte, sauvegarde/restauration représentative, benchmark réel, déploiement, comparaison `/catalog` et smokes partenaires. Le précontrôle réel de 14:13 UTC confirme depuis les deux index uniques valides nécessaires au rafraîchissement concurrent.
 
-Verdict visible de Claude : **« VALIDÉ. La V3 est un plan d’architecture et de réalisation cohérent. »**
+Codex partage ce verdict conditionnel : les corrections techniques sont fondées, mais la mesure sous charge et les opérations encore absentes empêchent d'annoncer l'ouverture validée. La validation architecturale V3 et la validation opérationnelle sont deux conclusions distinctes.
 
-Claude confirme avoir vérifié les huit précisions par rapport à V2 et n’y trouve ni régression ni contradiction. Sa seule vigilance non bloquante porte sur l’option d’équivalence désactivée par défaut : les écrans doivent signaler l’existence de fiches attachées aux prédécesseurs et donner accès à la reprise. Ce comportement est ajouté au lot interface.
+### Troisième avis CLI : le budget de contention
 
-Il fixe cinq critères de passage du lot 1 : inventaire complet des chemins d’écriture/lecture ; politique publique reconstituée ; volume pilote et performances mesurés ; rapport de reprise à blanc ; réestimation technique et éditoriale présentée au PO. Ils sont intégrés au plan. La comparaison `/catalog` possède une référence dès l’inventaire, puis un test réel avant/après lors de la modification, avant activation.
+Après la mesure sur copie réelle (publication 6,7 s, attente éditeur 5,1 s), le même CLI Opus 5.5, effort moyen, évalue une proposition de refus récupérable après 1,8 s. Artefact : `claude-cli-contention-review.json`. Son verdict distingue un filet de sécurité conforme au mécanisme d'échec récupérable du plan d'un contournement si ce refus sert à déclarer le budget atteint. Un refus borné change une attente en échec de sauvegarde ; il ne raccourcit pas la détention du verrou global.
 
-## Conclusion de Codex
+**Codex est d'accord : le critère 17 reste non satisfait.** Ni un timeout plus long de publication, ni un `PT409` plus rapide ne sont utilisés pour annoncer une réussite. Le bootstrap massif réussi sur copie demeure une opération d'installation à encadrer ; il ne prouve pas une publication interactive dans le budget. L'ouverture et l'élargissement restent conditionnés à une optimisation mesurée ou à la conception générationnelle prévue par le plan, sans réduire arbitrairement les 447 fiches du pilote ni supprimer des projections requises.
 
-Codex partage la validation du plan V3 : les quatre défauts initiaux ont une règle de traitement et des critères de recette ; les trois désaccords ont été résolus de façon argumentée ; les points d’inventaire restants ont un livrable et une condition de passage explicites.
-
-Une dernière lecture indépendante ne relève aucun blocage supplémentaire. Elle précise seulement que la non-assignabilité concerne les valeurs dépréciées/retirées, pas un concept actif simplement renommé ; le critère de recette est corrigé en ce sens.
-
-Le résultat produit comprend deux documents préparatoires. Aucune modification de l’application, de la base de données, des clés partenaires ou de la production n’a été réalisée pendant cette revue. Aucun test d’implémentation n’est revendiqué.
+Les trois artefacts CLI et les preuves d'exécution sont conservés localement dans `.tmp-thesaurus-implementation/`, exclu de Git. Les archiver avec la livraison en retirant toute donnée sensible. Les verdicts de Claude ne remplacent ni les logs CI ni la recette déployée.

@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 
 export const objectContactSchema = z.object({
   label: z.string().min(1, 'Libelle requis').optional(),

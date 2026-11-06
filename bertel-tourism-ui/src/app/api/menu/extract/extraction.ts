@@ -1,5 +1,5 @@
 import { stripDiacritics } from '../../../../lib/text-fold';
-import { z } from 'zod';
+import { z } from '@/lib/zod';
 import type {
   ObjectWorkspaceMenu,
   ObjectWorkspaceMenuItem,

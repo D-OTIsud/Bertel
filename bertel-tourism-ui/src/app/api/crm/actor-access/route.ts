@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { UUID_SHAPE, authenticated, callerClient, type ServerClient } from '../../_document-auth';
+import { SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 
 export const runtime = 'nodejs';
 
@@ -145,6 +146,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // n'a rien à faire au gate.
   if (!UUID_SHAPE.test(actorId)) return NextResponse.json({ error: 'invalid_actor' }, { status: 422 });
   if (!ACTIONS.includes(action)) return NextResponse.json({ error: 'invalid_action' }, { status: 422 });
+  if (auth.isSandboxDiscovery && (action === 'invite' || action === 'resend')) {
+    return NextResponse.json({ error: SANDBOX_EXTERNAL_EFFECTS_ERROR, detail: SANDBOX_EMAIL_DETAIL }, { status: 403 });
+  }
 
   // Permission dédiée, y compris pour lire le statut. Le droit CRM seul ne suffit pas.
   const { data: canManagePortal, error: permissionError } = await callerClient(jwt)

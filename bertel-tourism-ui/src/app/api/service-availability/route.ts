@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { isSandboxDiscoveryUser } from '@/lib/sandbox-effects';
 import { resolveActiveAiProvider } from '@/lib/ai-provider.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const { data, error } = await server.auth.getUser(jwt);
     if (error || !data?.user) return json(unavailable, 401);
+    if (isSandboxDiscoveryUser(data.user)) return json(unavailable);
   } catch {
     return json(unavailable, 503);
   }

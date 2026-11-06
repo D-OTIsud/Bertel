@@ -5,7 +5,7 @@
 -- Apply this on databases where ui_whitelabel_branding.sql was already run
 -- before the branding admin guard checked app_user_profile.role.
 -- Kept aligned with the canonical guard; the current incremental upgrade is
--- supabase/migrations/20261106053951_branding_admin_authorization.sql.
+-- supabase/migrations/20261106075113_branding_admin_authorization.sql.
 -- =====================================================
 
 BEGIN;

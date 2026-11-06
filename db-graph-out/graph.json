@@ -6,7 +6,7 @@
   "policy_count": 577,
   "trigger_count": 565,
   "enum_count": 9,
-  "edge_count": 3899
+  "edge_count": 3898
  },
  "nodes": [
   {
@@ -45430,7 +45430,7 @@
    "label": "is_platform_admin",
    "schema": "api",
    "domain": "api",
-   "doc": "Returns true when the current user can manage platform-level branding and UI theme settings, using app_user_profile or auth metadata.",
+   "doc": "Platform branding authority: authenticated owner/super_admin from app_user_profile, or the existing service_role/admin technical identity. Auth metadata never grants authority; missing auth context returns false.",
    "props": {
     "signature": "is_platform_admin()",
     "returns": "boolean",
@@ -45440,7 +45440,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/branding_admin_profile_role_patch.sql",
-      "line": 13
+      "line": 15
      },
      {
       "path": "Base de donnée DLL et API/ui_whitelabel_branding.sql",
@@ -89672,18 +89672,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM public.app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "api.is_platform_admin()",
-   "target": "auth.users",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM auth.users"
     }
    }
   },

@@ -212,9 +212,10 @@ test('map preview actions remain clickable where the real legend overlaps', asyn
     const dy = destination.y - (bounds.y + bounds.height / 2);
     if (Math.abs(dx) < 3 && Math.abs(dy) < 3) break;
     const start = {
-      x: dx < 0 ? canvasBounds.x + canvasBounds.width - 45 : canvasBounds.x + 45,
-      y: dy > 0 ? canvasBounds.y + 60 : canvasBounds.y + canvasBounds.height - 60,
+      x: dx < 0 ? canvasBounds.x + canvasBounds.width - 100 : canvasBounds.x + 100,
+      y: dy > 0 ? canvasBounds.y + 80 : canvasBounds.y + canvasBounds.height - 80,
     };
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.classList.contains('maplibregl-canvas'), start)).toBe(true);
     await page.mouse.move(start.x, start.y);
     await page.mouse.down();
     await page.mouse.move(start.x + dx, start.y + dy, { steps: 12 });
@@ -227,7 +228,9 @@ test('map preview actions remain clickable where the real legend overlaps', asyn
     return Math.hypot(bounds.x + bounds.width / 2 - destination.x, bounds.y + bounds.height / 2 - destination.y);
   }).toBeLessThan(5);
   const name = (await pin.getAttribute('aria-label'))!.replace(/^Ouvrir /, '');
-  await pin.hover();
+  // The pin is intentionally behind the legend. Keyboard focus opens the
+  // preview without requiring a pointer to pass through the legend first.
+  await pin.focus();
   const preview = page.getByRole('article', { name, exact: true });
   const open = preview.getByRole('button', { name: `Ouvrir la fiche ${name}`, exact: true });
   const close = preview.getByRole('button', { name: `Fermer l’aperçu de ${name}`, exact: true });
@@ -239,6 +242,7 @@ test('map preview actions remain clickable where the real legend overlaps', asyn
     - Math.max(openBounds.x, legendBounds.x)).toBeGreaterThan(44);
   expect(Math.min(openBounds.y + openBounds.height, legendBounds.y + legendBounds.height)
     - Math.max(openBounds.y, legendBounds.y)).toBeGreaterThan(20);
+  await page.screenshot({ path: testInfo.outputPath('map-preview-overlapping-legend.png') });
   for (const control of [open, close]) {
     const hits = await control.evaluate(element => {
       const rect = element.getBoundingClientRect();
@@ -249,7 +253,6 @@ test('map preview actions remain clickable where the real legend overlaps', asyn
     });
     expect(hits).toEqual(Array(9).fill(true));
   }
-  await page.screenshot({ path: testInfo.outputPath('map-preview-overlapping-legend.png') });
   // This point was covered by the legend before the stacking correction.
   await open.click({ position: { x: 8, y: openBounds.height - 8 } });
   await expect(preview).toHaveCount(0);

@@ -2,6 +2,7 @@ import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { isSandboxDiscoveryUser, SANDBOX_AI_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { resolveActiveAiProvider } from '@/lib/ai-provider.server';
 import {
   acquireLease,
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const { data, error } = await server.auth.getUser(jwt);
     if (error || !data?.user) return errorResponse('unauthenticated', 'Reconnectez-vous pour utiliser la traduction IA.', 401);
+    if (isSandboxDiscoveryUser(data.user)) return errorResponse(SANDBOX_EXTERNAL_EFFECTS_ERROR, SANDBOX_AI_DETAIL, 403);
     if (rateLimited(data.user.id)) {
       return NextResponse.json({ error: 'rate_limited', detail: 'Trop de traductions demandées. Réessayez dans une minute.' },
         { status: 429, headers: { 'Retry-After': '60' } });

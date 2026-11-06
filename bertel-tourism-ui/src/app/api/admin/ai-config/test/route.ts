@@ -2,6 +2,7 @@ import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { isSandboxDiscoveryUser, SANDBOX_AI_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -22,6 +23,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!jwt) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
   const { data: userData, error: userErr } = await server.auth.getUser(jwt);
   if (userErr || !userData?.user) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
+  if (isSandboxDiscoveryUser(userData.user)) {
+    return NextResponse.json({ ok: false, error: SANDBOX_EXTERNAL_EFFECTS_ERROR, detail: SANDBOX_AI_DETAIL }, { status: 403 });
+  }
 
   // Super-admin gate, evaluated AS THE CALLER.
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();

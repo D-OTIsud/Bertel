@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { UUID_SHAPE, authenticated, callerClient, type ServerClient } from '../../_document-auth';
+import { SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 
 export const runtime = 'nodejs';
 
@@ -84,25 +86,6 @@ async function actorEmailChannels(server: ServerClient, actorId: string): Promis
 }
 
 /**
- * Origine des liens d'invitation.
- *
- * ⚠ PAS l'en-tête `Origin`, contrairement à `admin/invite/route.ts` : §164 réservait ce
- * geste au rang plateforme, ici la population est « qui a `write_crm_notes` sur cet
- * acteur ». Un appelant qui pose `Origin: https://attaquant.example` ferait émettre une
- * invitation dont le lien porte le jeton vers son propre hôte, et la seule défense serait
- * l'allowlist Auth du dashboard — une configuration que ce code ne contrôle pas.
- *
- * `NEXT_PUBLIC_APP_URL` est la variable serveur déjà utilisée par `crm/notify-drain` et
- * `lists/send` pour fabriquer des liens : pas un nouveau bouton de déploiement. Repli sur
- * l'origine de la requête (`Host`, normalement réécrit par le proxy), jamais sur un en-tête
- * que l'appelant choisit librement.
- */
-function inviteOrigin(req: NextRequest): string {
-  const configured = (process.env.NEXT_PUBLIC_APP_URL ?? '').trim();
-  return (configured || new URL(req.url).origin).replace(/\/$/, '');
-}
-
-/**
  * Trace CRM du geste — l'accès portail s'ouvre et se ferme sans laisser d'autre trace.
  *
  * Le périmètre CRM est PARTAGÉ : sur un acteur rattaché aux objets de deux offices, l'agent
@@ -145,6 +128,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // n'a rien à faire au gate.
   if (!UUID_SHAPE.test(actorId)) return NextResponse.json({ error: 'invalid_actor' }, { status: 422 });
   if (!ACTIONS.includes(action)) return NextResponse.json({ error: 'invalid_action' }, { status: 422 });
+  if (auth.isSandboxDiscovery && (action === 'invite' || action === 'resend')) {
+    return NextResponse.json({ error: SANDBOX_EXTERNAL_EFFECTS_ERROR, detail: SANDBOX_EMAIL_DETAIL }, { status: 403 });
+  }
 
   // Permission dédiée, y compris pour lire le statut. Le droit CRM seul ne suffit pas.
   const { data: canManagePortal, error: permissionError } = await callerClient(jwt)
@@ -229,6 +215,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   if (!EMAIL_SHAPE.test(email)) return NextResponse.json({ error: 'invalid_email' }, { status: 422 });
+  const origin = getCanonicalAppOrigin();
+  if (!origin) return NextResponse.json({ error: 'app_origin_unavailable' }, { status: 503 });
   const channels = await actorEmailChannels(server, actorId);
   if (!channels.includes(email)) {
     return NextResponse.json({ error: 'email_not_actor_channel' }, { status: 422 });
@@ -286,7 +274,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // personne invitée lit la copie écrite pour le personnel de l'office.
     // ⚠ L'allowlist Auth → URL Configuration doit accepter la query string (motif
     // `…/set-password*`), sinon Supabase retombe sur le Site URL et le paramètre est perdu.
-    redirectTo: `${inviteOrigin(req)}/set-password?espace=1`,
+    redirectTo: `${origin}/set-password?espace=1`,
   });
   if (createErr || !created?.user) {
     return NextResponse.json(

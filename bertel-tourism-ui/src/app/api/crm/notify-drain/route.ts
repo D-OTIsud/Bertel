@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
+import { isSandboxDiscoveryUser, SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { MailNotConfiguredError, sendMail, type MailSender } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import {
@@ -41,6 +43,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!jwt) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   const { data: userData, error: userErr } = await server.auth.getUser(jwt);
   if (userErr || !userData?.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  if (isSandboxDiscoveryUser(userData.user)) {
+    return NextResponse.json({ error: SANDBOX_EXTERNAL_EFFECTS_ERROR, detail: SANDBOX_EMAIL_DETAIL }, { status: 403 });
+  }
+
+  const origin = getCanonicalAppOrigin();
+  if (!origin) return NextResponse.json({ error: 'app_origin_unavailable' }, { status: 503 });
 
   // SMTP absent ⇒ on sort AVANT de réclamer quoi que ce soit : chaque ligne réclamée a un TTL
   // de 10 minutes pendant lequel elle est invisible aux autres appels — la consommer sans
@@ -62,13 +70,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const rows = Array.isArray(data) ? data : [];
-  // ⚠ MISE EN SERVICE — `NEXT_PUBLIC_APP_URL` DOIT être posé en production. Sans lui,
-  // `origin` retombe sur `req.nextUrl.origin`, c'est-à-dire sur l'en-tête `Host` de
-  // l'appelant. C'était sans grande portée tant que ces liens ne partaient qu'à des membres
-  // de l'équipe ; depuis 18a ils partent à des PARTENAIRES EXTERNES, et un `Host` falsifié
-  // les enverrait vers un domaine choisi par l'appelant du drain — qui doit être connecté,
-  // mais pas nécessairement digne de confiance.
-  const origin = (process.env.NEXT_PUBLIC_APP_URL ?? '').trim() || req.nextUrl.origin;
+  // A real office user can drain notifications produced in the discovery corpus.
+  // Suppress those using authoritative DB provenance, independently of the caller.
+  const notificationIds = rows.map((row) => str((row as Rec)?.notification_id)).filter(Boolean);
+  let blockedIds = new Set<string>();
+  if (notificationIds.length) {
+    try {
+      const suppressed = await server.schema('api').rpc('suppress_sandbox_notification_emails', { p_notification_ids: notificationIds });
+      if (suppressed.error || !Array.isArray(suppressed.data) || !suppressed.data.every((id) => typeof id === 'string')) {
+        return NextResponse.json({ error: 'email_policy_unavailable' }, { status: 503 });
+      }
+      blockedIds = new Set(suppressed.data);
+    } catch {
+      return NextResponse.json({ error: 'email_policy_unavailable' }, { status: 503 });
+    }
+  }
   const sent: string[] = [];
   const failed: Array<{ id: string; error: string }> = [];
 
@@ -77,6 +93,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const row = (raw ?? {}) as Rec;
     const id = str(row.notification_id);
     const to = str(row.recipient_email);
+    if (blockedIds.has(id)) continue;
     // Ligne malformée ou sans e-mail (le claim les termine normalement lui-même) :
     // on la SAUTE — le claim la re-traitera, jamais de boucle d'erreur ici.
     if (!id || !to) continue;

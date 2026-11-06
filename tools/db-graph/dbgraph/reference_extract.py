@@ -163,8 +163,23 @@ def _line_for(text, offset):
     return text.count("\n", 0, offset) + 1
 
 
+def canonical_reference_table(table):
+    """Normalize supported SQL identifiers before using a row's table identity.
+
+    Unquoted identifiers fold to lower case. Quoted lower-case identifiers are
+    supported; other quoted/ambiguous names fail closed rather than being
+    guessed into the document privacy boundary. This is not a full SQL parser.
+    """
+    ident = r'(?:[A-Za-z_][A-Za-z0-9_]*|"[a-z_][a-z0-9_]*")'
+    match = re.fullmatch(r'\s*(' + ident + r')\s*(?:\.\s*(' + ident + r')\s*)?', table) if isinstance(table, str) else None
+    if not match:
+        raise ValueError("Unsupported reference table identifier")
+    parts = [part.strip('"').lower() for part in match.groups() if part is not None]
+    return ".".join(parts if len(parts) == 2 else ["public", parts[0]])
+
+
 def _qualify(table):
-    return table if "." in table else "public." + table
+    return canonical_reference_table(table)
 
 
 def _split_qualname(table):
@@ -187,8 +202,14 @@ def public_reference_rows(rows):
     Schema, policy and source-function metadata remain complete. Fail closed for
     legacy caches/seeds with no scope rather than exposing private file metadata.
     """
-    return [row for row in rows if _qualify(row.get("table", "")) != "public.ref_document"
-            or (row.get("values") or {}).get("access_scope") == "public"]
+    public = []
+    for row in rows:
+        table = canonical_reference_table(row.get("table"))
+        if table.split(".")[1] == "ref_document" and (row.get("values") or {}).get("access_scope") != "public":
+            continue
+        # Do not return aliases or mutate a caller's cache while filtering it.
+        public.append({**row, "table": table})
+    return public
 
 
 def _rows_from_tuples(table, columns, tuples, path, line, source_kind):
@@ -453,9 +474,10 @@ def load_mcp_reference_values(path):
 def merge_reference_extracts(seed_refs, live_refs):
     """Prefer live rows for successfully queried tables, keep seeds for the rest."""
     live = (live_refs or {}).get("live") or {"status": "not_queried", "tables": []}
-    queried = set(live.get("tables") or [])
-    rows = list((live_refs or {}).get("rows") or [])
-    rows.extend(row for row in (seed_refs or {}).get("rows", []) if row.get("table") not in queried)
+    live = {**live, "tables": [canonical_reference_table(table) for table in live.get("tables") or []]}
+    queried = set(live["tables"])
+    rows = public_reference_rows((live_refs or {}).get("rows") or [])
+    rows.extend(row for row in public_reference_rows((seed_refs or {}).get("rows", [])) if row["table"] not in queried)
     return {
         "rows": public_reference_rows(rows),
         "derived_sources": list((seed_refs or {}).get("derived_sources", [])) + list((live_refs or {}).get("derived_sources", [])),

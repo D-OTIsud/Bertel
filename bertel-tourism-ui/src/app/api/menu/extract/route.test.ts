@@ -1,9 +1,11 @@
 /** @jest-environment node */
 // POST /api/menu/extract — API-01 body bound + AI concurrency semaphore.
 import { POST } from './route';
+import { admitAiRequest } from '@/lib/ai-admission.server';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
+jest.mock('@/lib/ai-admission.server', () => ({ admitAiRequest: jest.fn() }));
 jest.mock('./media-prep', () => ({
   MAX_VISION_IMAGES: 8,
   prepareVisionImage: jest.fn(async (buf: Buffer, mime: string) => ({ mime, base64: buf.toString('base64') })),
@@ -57,6 +59,7 @@ function serverWithUser() {
 
 describe('POST /api/menu/extract', () => {
   beforeEach(() => {
+    jest.mocked(admitAiRequest).mockReset().mockResolvedValue({ allowed: true, remaining: 11, retryAfter: 0 });
     testUser += 1;
     mockedServer.mockReset();
     mockedCreate.mockReset();
@@ -282,5 +285,58 @@ describe('POST /api/menu/extract', () => {
     expect(res.status).toBe(413);
     expect(await res.json()).toMatchObject({ error: 'request_body_too_large' });
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('does not start another image or the provider after caller abort during deferred image preparation', async () => {
+    const providerResult = { data: [{ api_kind: 'openai_compatible', base_url: 'https://provider.example/v1', model: 'm', max_output_tokens: 256, extra: null, api_key: 'k' }], error: null };
+    const providerRead = Object.assign(Promise.resolve(providerResult), { abortSignal: jest.fn().mockResolvedValue(providerResult) });
+    mockedServer.mockReturnValue({ ...(serverWithUser() as unknown as Record<string, unknown>), schema: () => ({ rpc: jest.fn(() => providerRead) }) } as never);
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc: jest.fn().mockResolvedValue({ data: true, error: null }) }) } as never);
+    let started!: () => void;
+    let finish!: (image: { mime: string; base64: string }) => void;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    mockedPrepareVisionImage.mockImplementationOnce(() => { started(); return new Promise((resolve) => { finish = resolve; }); });
+    const caller = new AbortController();
+    const pending = POST(new Request('https://synthetic.invalid/api/menu/extract', {
+      method: 'POST', signal: caller.signal,
+      headers: { authorization: 'Bearer t', 'content-type': 'application/json' },
+      body: JSON.stringify(makeBody({ images: [{ mime: 'image/jpeg', base64: TINY_JPEG_BASE64 }, { mime: 'image/jpeg', base64: TINY_JPEG_BASE64 }] })),
+    }) as never);
+    await ready;
+    caller.abort();
+    expect((await POST(req({ authorization: 'Bearer t' }, makeBody()))).status).toBe(429);
+    expect(mockedPrepareVisionImage).toHaveBeenCalledTimes(1);
+    finish({ mime: 'image/jpeg', base64: 'AAA' });
+    const response = await pending;
+    expect(mockedOrchestrate).not.toHaveBeenCalled();
+    expect(mockedPrepareVisionImage).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({ error: 'extraction_failed' });
+    expect((await POST(req({ authorization: 'Bearer t' }, makeBody()))).status).toBe(200);
+  });
+
+  it('propagates caller abort to an already-started provider and frees the lease after it settles', async () => {
+    const providerResult = { data: [{ api_kind: 'openai_compatible', base_url: 'https://provider.example/v1', model: 'm', max_output_tokens: 256, extra: null, api_key: 'k' }], error: null };
+    const providerRead = Object.assign(Promise.resolve(providerResult), { abortSignal: jest.fn().mockResolvedValue(providerResult) });
+    mockedServer.mockReturnValue({ ...(serverWithUser() as unknown as Record<string, unknown>), schema: () => ({ rpc: jest.fn(() => providerRead) }) } as never);
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc: jest.fn().mockResolvedValue({ data: true, error: null }) }) } as never);
+    let started!: () => void;
+    const ready = new Promise<void>((resolve) => { started = resolve; });
+    let providerSignal: AbortSignal | undefined;
+    mockedOrchestrate.mockImplementationOnce((_input, deps) => new Promise((_resolve, reject) => {
+      providerSignal = deps.signal;
+      started();
+      deps.signal?.addEventListener('abort', () => reject(deps.signal?.reason), { once: true });
+    }));
+    const caller = new AbortController();
+    const pending = POST(new Request('https://synthetic.invalid/api/menu/extract', {
+      method: 'POST', signal: caller.signal, headers: { authorization: 'Bearer t', 'content-type': 'application/json' },
+      body: JSON.stringify(makeBody()),
+    }) as never);
+    await ready;
+    caller.abort();
+    expect((await pending).status).toBe(500);
+    expect(providerSignal?.aborted).toBe(true);
+    expect((await POST(req({ authorization: 'Bearer t' }, makeBody()))).status).toBe(200);
   });
 });

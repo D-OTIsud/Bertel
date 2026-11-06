@@ -793,9 +793,11 @@ export function useRestoreObjectVersionMutation(objectId: string | null) {
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['object-versions', objectId] }),
-        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
         queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
       ]);
+      // The workspace loader reuses object-detail. Mark/refetch that dependency
+      // first, otherwise a fresh cached A can rebuild the workspace after restore B.
+      await queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] });
     },
   });
 }

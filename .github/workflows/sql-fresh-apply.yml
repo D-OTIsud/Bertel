@@ -608,7 +608,6 @@ jobs:
     env:
       CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       CURRENT_RIGHTS_DISPOSABLE: 'true'
-      CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
     steps:
       - uses: actions/checkout@v4
 
@@ -625,9 +624,13 @@ jobs:
           cp supabase/config.toml "$RUNNER_TEMP/bertel-storage/supabase/config.toml"
 
       - name: Start disposable Supabase with generated keys withheld
+        env:
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
         run: node tools/current-rights/start-disposable.mjs
 
       - name: Strict private Storage HTTP capability (failure is not tolerated)
+        env:
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
         # This is deliberately separate from required Auth coverage. Two accepted
         # concurrent copies remain a failed capability, never a security success.
         run: |

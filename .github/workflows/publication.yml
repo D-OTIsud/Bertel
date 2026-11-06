@@ -1,0 +1,22 @@
+name: Publication safety
+
+# Run for every change: a private export can be added outside application paths.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  private-exports:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tools/check-publication.test.mjs
+      - run: node tools/check-publication.mjs

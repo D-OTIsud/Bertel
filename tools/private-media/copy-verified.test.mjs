@@ -56,6 +56,8 @@ async function storage(t, options = {}) {
       data.destination = { ...source, id: destinationId, name: record.destination_path, bucket_id: 'legal-documents', etag: 'dest-tag' };
       if (options.corrupt) data.targetBytes[0] ^= 1;
       if (options.sourceChange) source.etag = 'changed-after-copy';
+      if (options.sourceCacheChangeAfterCopy) source.cache_control = 'max-age=1';
+      if (options.targetCacheChangeAfterCopy) data.destination.cache_control = 'max-age=1';
       if (options.abortOnCopy) options.abortOnCopy.abort();
       if (options.lostAck) { req.socket.destroy(); return; }
       if (options.badAck) return json({ Id: destinationId, Key: 'legal-documents/outside' });
@@ -70,15 +72,19 @@ async function storage(t, options = {}) {
       const info = isSource ? source : data.destination;
       if (!info) return json({}, 404);
       const body = isSource ? f.bytes : data.targetBytes;
+      const deliveryCache = (isSource ? options.sourceDeliveryCache : options.targetDeliveryCache) ?? info.cache_control;
       const headers = { 'content-type': options.badMime && isSource ? 'image/jpeg' : info.content_type,
-        'cache-control': info.cache_control, etag: `"${info.etag}"`, 'content-length': body.length };
+        'cache-control': deliveryCache, etag: `"${info.etag}"`, 'content-length': body.length };
       if (isSource && options.missingHeader) delete headers[options.missingHeader];
       if (isSource && options.compressed) headers['content-encoding'] = 'gzip';
       res.writeHead(200, headers);
       if (isSource && options.truncated) {
         res.flushHeaders(); res.write(body.subarray(0, body.length - 1)); setTimeout(() => res.destroy(), 20); return;
       }
-      res.end(body); return;
+      res.end(body);
+      if (isSource && options.sourceCacheChangeAfterRead) source.cache_control = 'max-age=1';
+      if (isTarget && options.targetCacheChangeAfterRead) data.destination.cache_control = 'max-age=1';
+      return;
     }
     json({}, 404);
   });
@@ -105,6 +111,50 @@ test('real local HTTP copy + two byte streams produce a cutover-compatible recei
   assert.ok(s.data.urls.includes("/storage/v1/object/authenticated/old_legal_media/synthetic/quote%20'%C3%A9.pdf"));
   assert.match(prepareCutover(s.manifest, receipt, s.inventory.digest, 1), /UPDATE public\.ref_document/);
   assert.equal(JSON.stringify(receipt).includes('test-only-no-real-key'), false);
+});
+
+// Delivery headers can be rewritten by the Storage renderer/CDN. The stored
+// cache_control remains an exact GETinfo invariant throughout copy and resume.
+test('different HTTP cache policies preserve exact stored cache metadata and verified resume', async (t) => {
+  const s = await storage(t, { sourceDeliveryCache: 'private, no-cache',
+    targetDeliveryCache: 'max-age=3600, s-maxage=60, stale-while-revalidate=30' });
+  const receipt = await copyVerified(s.inventory, s);
+  assert.equal(s.data.posts, 1); assert.equal(s.data.reads, 2);
+  assert.equal(receipt.records.length, 1);
+  assert.equal(receipt.records[0].source_cache_control, 'max-age=3600');
+  assert.equal(receipt.records[0].destination_cache_control, 'max-age=3600');
+  assert.equal(receipt.records[0].source_sha256, sha256(s.bytes));
+  assert.equal(receipt.records[0].destination_sha256, sha256(s.bytes));
+  const resumed = await copyVerified(s.inventory, { ...s, receipt });
+  assert.equal(resumed.records.length, 1);
+  assert.equal(s.data.posts, 1); assert.equal(s.data.reads, 4);
+});
+
+test('a missing HTTP cache header does not replace exact stored cache validation', async (t) => {
+  const s = await storage(t, { missingHeader: 'cache-control', targetDeliveryCache: 'private, no-cache' });
+  const receipt = await copyVerified(s.inventory, s);
+  assert.equal(receipt.records.length, 1); assert.equal(s.data.posts, 1); assert.equal(s.data.reads, 2);
+  assert.equal(receipt.records[0].destination_cache_control, s.manifest.records[0].source_metadata.cache_control);
+});
+
+test('source cache metadata already changed refuses before content or copy', async (t) => {
+  const s = await storage(t, { sourceDeliveryCache: 'private, no-cache' });
+  s.source.cache_control = 'max-age=1';
+  await assert.rejects(copyVerified(s.inventory, s), /source_changed/);
+  assert.equal(s.data.posts, 0); assert.equal(s.data.reads, 0); assert.equal(s.receipt, undefined);
+});
+
+for (const [label, options, code, posts, reads] of [
+  ['source after its stream', { sourceCacheChangeAfterRead: true }, 'source_changed', 0, 1],
+  ['source after copy', { sourceCacheChangeAfterCopy: true }, 'source_changed', 1, 2],
+  ['destination after copy', { targetCacheChangeAfterCopy: true }, 'destination_changed', 1, 1],
+  ['destination after its stream', { targetCacheChangeAfterRead: true }, 'destination_changed', 1, 2],
+]) test(`stored cache metadata drift on ${label} never becomes a verified record`, async (t) => {
+  const s = await storage(t, { ...options, sourceDeliveryCache: 'private, no-cache',
+    targetDeliveryCache: 'private, no-cache' });
+  await assert.rejects(copyVerified(s.inventory, s), new RegExp(code));
+  assert.equal(s.data.posts, posts); assert.equal(s.data.reads, reads);
+  assert.equal(s.receipt?.records.length ?? 0, 0);
 });
 
 test('verified resume rehashes both contents and performs no second copy', async (t) => {

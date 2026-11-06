@@ -14,6 +14,7 @@ on:
       - 'bertel-tourism-ui/tests/e2e/map-runtime.spec.ts'
       - 'bertel-tourism-ui/vendor/**'
       - 'bertel-tourism-ui/scripts/*maplibre*'
+      - 'bertel-tourism-ui/scripts/*tooling*'
       - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
       - '.github/workflows/image-runtime.yml'
   pull_request:
@@ -29,6 +30,7 @@ on:
       - 'bertel-tourism-ui/tests/e2e/map-runtime.spec.ts'
       - 'bertel-tourism-ui/vendor/**'
       - 'bertel-tourism-ui/scripts/*maplibre*'
+      - 'bertel-tourism-ui/scripts/*tooling*'
       - 'bertel-tourism-ui/scripts/check-native-image-runtime.cjs'
       - '.github/workflows/image-runtime.yml'
 
@@ -52,6 +54,8 @@ jobs:
         run: docker build --target builder --build-arg NEXT_PUBLIC_ENABLE_DEMO_MODE=true -t bertel-image-builder .
       - name: Reproduce and exercise the installed backport on Node 22 Alpine
         run: docker run --rm --entrypoint npm bertel-image-builder run test:maplibre-backport
+      - name: Exercise corrected build dependency APIs on Alpine
+        run: docker run --rm --entrypoint npm bertel-image-builder run test:tooling-dependencies
       - name: Exercise the real upload decoder on Alpine
         run: >-
           docker run --rm --entrypoint npm bertel-image-builder
@@ -66,6 +70,11 @@ jobs:
           docker run --rm --entrypoint node
           -v "$PWD/scripts/check-native-image-runtime.cjs:/app/check-native-image-runtime.cjs:ro"
           bertel-image-runtime check-native-image-runtime.cjs
+      - name: Inspect tooling copies actually included in the final image
+        run: >-
+          docker run --rm --entrypoint node
+          -v "$PWD/scripts/check-tooling-runtime.cjs:/app/check-tooling-runtime.cjs:ro"
+          bertel-image-runtime check-tooling-runtime.cjs /app
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

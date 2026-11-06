@@ -5,6 +5,10 @@ The optional cache worker simulates two captured cron commands; pg_cron itself
 is unavailable on the Windows restoration. It commits local cache maintenance,
 then restores the original clock cache and filtered MV after the measurement.
 """
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 from datetime import datetime, timezone
 import hashlib

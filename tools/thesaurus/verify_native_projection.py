@@ -1,4 +1,8 @@
 """Rollback proof: two assignable HLO ancestors change all 489 real cache rows."""
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import argparse
 import json
 from pathlib import Path

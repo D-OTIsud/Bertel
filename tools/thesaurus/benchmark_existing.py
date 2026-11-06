@@ -1,3 +1,7 @@
+raise RuntimeError(
+    "ARCHIVED_THESAURUS_TOOL: this historical database tool is disabled; see tools/thesaurus/README.md."
+)
+
 import json,threading,time,uuid,argparse
 from pathlib import Path
 import psycopg2

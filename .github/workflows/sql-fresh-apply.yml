@@ -102,7 +102,7 @@ jobs:
           LIST_EMAIL_DISPOSABLE: 'true'
           LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
         run: |
-          node --test tools/list-email/disposable.test.mjs
+          node --test tools/list-email/disposable.test.mjs tools/list-email/sql-session.test.mjs
           node tools/list-email/init-disposable.mjs --prepare
 
       - name: Start Supabase local database
@@ -600,7 +600,8 @@ jobs:
           node --test tools/ai-quota/distributed-admission.test.mjs
           node --test tools/ai-quota/postgrest-admission.test.mjs
 
-      - name: Manual list-mail intentions (service-only, concurrent, unknown result, list lifetime)
+      - name: Attest owned list-mail disposable target (no product fixture yet)
+        timeout-minutes: 5
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
           LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
@@ -609,9 +610,33 @@ jobs:
         run: |
           cmp "Base de donnée DLL et API/distributed_list_email_intents.sql" supabase/migrations/20261106194635_distributed_list_email_intents.sql
           node tools/list-email/init-disposable.mjs
-          node tools/list-email/sql-fixture.mjs
-          node --test tools/list-email/distributed-intents.test.mjs
-          node --test tools/list-email/postgrest-intents.test.mjs
+
+      - name: Manual list-mail SQL contract (synthetic, service-only, list lifetime)
+        timeout-minutes: 5
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: node tools/list-email/sql-fixture.mjs
+
+      - name: Manual list-mail concurrent intentions (owned bounded workers, no SMTP)
+        timeout-minutes: 5
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: node --test tools/list-email/distributed-intents.test.mjs
+
+      - name: Manual list-mail through real GoTrue and PostgREST (synthetic only)
+        timeout-minutes: 5
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: node --test tools/list-email/postgrest-intents.test.mjs
 
       # This final test intentionally crosses COMMIT boundaries to emulate new
       # requests with the same claims. Its exact-ID synthetic fixtures are cleaned;

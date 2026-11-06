@@ -167,6 +167,7 @@ function effectiveSnapshot(raw: ExplorerFilters, options: ExplorerFilterContextO
   common.accommodationPositioningsAny = values<string>('accommodation_positionings_any');
   common.amenityFamiliesAny = values<string>('amenity_families_any');
   common.taxonomyAny = values<ExplorerFilters['common']['taxonomyAny'][number]>('taxonomy_any');
+  common.includeEquivalentPredecessors = common.taxonomyAny.length > 0 && first<boolean>('include_equivalent_predecessors') === true;
   const tags = new Set(values<string>('tags_any'));
   common.tagsAny = raw.common.tagsAny.filter((tag) => tags.has(tag.slug.trim()));
   common.rankedLabelSchemeCode = first<string>('label_scheme_ranked') ?? null;

@@ -29,6 +29,8 @@ services:
       # Server-only secret (service-role / sb_secret_*): runtime env ONLY — never a
       # build ARG, which would bake the secret into the image layers.
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # Optional dedicated HMAC key for thesaurus cursors, runtime only.
+      THESAURUS_CURSOR_SECRET: ${THESAURUS_CURSOR_SECRET:-}
     # No persistent volumes - Next.js app is stateless, data lives in Supabase
 
 volumes: {}

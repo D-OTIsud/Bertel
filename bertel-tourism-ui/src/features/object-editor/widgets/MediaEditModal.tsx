@@ -137,6 +137,7 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
                 key={option.id || option.code}
                 type="button"
                 aria-pressed={draft.typeCode === option.code}
+                disabled={option.disabled && draft.typeCode !== option.code}
                 onClick={() => set({ typeCode: option.code, typeId: option.id ?? '', typeLabel: option.label ?? '' })}
               >
                 {option.label || option.code}

@@ -1,5 +1,60 @@
 # SQL Rollout Runbook (Bertel3.0)
 
+## Thésaurus gouverné — 2026-11-06 (production activée)
+
+Le dossier de recette est [l'audit d'implémentation](audits/2026-11-06-thesaurus-implementation.md), associé à la [PR 95](https://github.com/D-OTIsud/Bertel/pull/95). Les neuf migrations nécessaires ont été appliquées en production (historique 182 → 191), puis l'application livrée à 18:00:06 UTC. Le bootstrap explicite a produit R1 (15 concepts HLO), R2 (26 concepts cumulés), puis R3 à 18:20:33 UTC : **66 domaines gouvernés/publics et 1 319 concepts**. Les trois tâches d'outbox sont terminées. Les 35 contrôles HTTP réels passent, avec catalogue historique inchangé et clé de recette révoquée. Les étapes suivantes restent la procédure de référence pour une autre cible ou une reprise.
+
+1. Avant migration, capturer la réponse de `/api/public/catalog`, ses domaines autorisés et une empreinte de `api.list_reference_bundle()` pour la langue/date témoin. Sauvegarder la cible avec son schéma privé `thesaurus`, ses sources `public.ref_*`, affectations, révisions, publications, instantanés, pointeur de génération et outbox. Conserver les rôles/propriétaires/ACL nécessaires à la restauration, les versions de migrations et la configuration applicative. Répéter la restauration dans une base isolée avant activation, puis vérifier nombres de publications, empreintes des exports historiques et affectations. Une sauvegarde des seules tables `public` est insuffisante.
+2. Faire passer le manifeste frais et les tests sur la source SQL exacte de release. Sur une cible existante, rapprocher les signatures/privilèges des fonctions remplacées et son historique Supabase. Le portail livré exige aussi les six prérequis d'autorisation et de documents ci-dessous : installer seulement ceux qui manquent, dans cet ordre de dépendances, puis les trois migrations du thésaurus. Ne pas déduire cet ordre du seul tri des timestamps. Le manifeste [ci_fresh_apply.sql](<../Base de donnée DLL et API/ci_fresh_apply.sql>) ordonne l'installation vierge ; ne jamais le rejouer sur une cible existante. La migration seule n'active aucune publication.
+
+   | Ordre | Migration |
+   |---|---|
+   | 1 | `20261106083901_object_realm_derived_write_guard.sql` |
+   | 2 | `20261106092254_object_initial_publication_guard.sql` |
+   | 3 | `20261106100603_object_current_authorization.sql` |
+   | 4 | `20261106101044_sandbox_external_effects_policy.sql` |
+   | 5 | `20261106105258_private_object_document_access.sql` |
+   | 6 | `20261106115711_object_canonical_write_source_hardening.sql` |
+   | 7 | [20261106112948_thesaurus_publication.sql](../supabase/migrations/20261106112948_thesaurus_publication.sql) |
+   | 8 | [20261106113509_thesaurus_consumers.sql](../supabase/migrations/20261106113509_thesaurus_consumers.sql) |
+   | 9 | [20261106160017_thesaurus_prepared_publication.sql](../supabase/migrations/20261106160017_thesaurus_prepared_publication.sql) |
+
+   Le connecteur Supabase attribue son propre timestamp à `apply_migration`. Après succès prouvé, utiliser la commande officielle `supabase migration repair --status applied VERSION_CANONIQUE`, puis `--status reverted VERSION_CONNECTEUR` pour aligner l'historique sans réexécuter le SQL. Vérifier les versions/noms avant et après ; une erreur de télémétrie après réparation ne justifie pas un second passage aveugle. Les neuf versions canoniques sont présentes en production. Les migrations de documents définissent les lecteurs et protections ; aucun transfert des fichiers Storage n'est revendiqué.
+3. Déployer les consommateurs et l'interface compatibles avant de gouverner un domaine. Dans **Réglages → Référentiels → Thésaurus → Configuration**, avec une session de superuser plateforme existante, définir **avant la première publication** `base_uri = https://bertel.otisud.re/api/public/thesaurus/concepts/`, `license = Licence Ouverte / Etalab 2.0`, `attribution = OTI du Sud`. L'URI devient immuable après publication. Cette licence concerne les données du vocabulaire Bertel ; elle ne remplace ni MIT pour le logiciel, ni les licences des sources externes. Il est recommandé de définir au runtime un secret aléatoire dédié `THESAURUS_CURSOR_SECRET`, conservé entre les déploiements : le repli compatible utilise la clé serveur Supabase, dont la rotation invalide alors les curseurs de pagination en cours. Ne jamais publier ces secrets dans le dépôt ou les journaux.
+4. Depuis Configuration, sélectionner **explicitement** les domaines du pilote hébergement retenus après inventaire des consommateurs, examiner le compte de concepts et confirmer le bootstrap. Aucune activation globale implicite. Refaire les lectures historiques et les comparer au relevé avant migration, à langue/date identiques : le bootstrap sans modification éditoriale doit préserver le contenu et le périmètre du catalogue.
+5. Avec une clé partenaire existante autorisée, vérifier `/api/public/thesaurus` et une publication numérotée : URI, licence/attribution, génération, détail d'un concept actif et d'un concept historique, pagination épinglée à cette publication et export JSON/JSON-LD. Un vocabulaire interne doit être refusé. Refaire une requête avec ETag après admission : clé révoquée refusée, quota dépassé `429`. Tester renommage d'ancêtre, conservation d'une ancienne affectation et aperçu du nombre de fiches à resynchroniser sur la copie/pilote, puis seulement ouvrir les nouvelles routes au périmètre validé.
+6. Surveiller l'outbox dans Publications. Le drain authentifié `POST /api/admin/thesaurus/notify-drain`, réservé au superuser plateforme, prend un bail puis livre la notification de génération et termine la tâche atomiquement. Reprendre une tâche échouée par **Reprendre**, puis relancer le drain ; une tâche déjà livrée ne produit pas de second effet. Un bail abandonné est récupérable après dix minutes. Ne pas marquer manuellement une éviction réussie sans livraison. Le signal `pg_notify` est éphémère : `completed` ne prouve pas sa réception par un abonné absent. Le polling de génération et les lectures atomiques protègent les consommateurs même si le drain doit être rejoué.
+
+**Incident.** Suspendre les publications et placer l'administration en lecture seule au niveau du déploiement ; conserver les gardes SQL. Désactiver temporairement les nouvelles routes à l'entrée HTTP si nécessaire, sans modifier le contrat historique `/catalog` ni présenter cette mesure comme un bouton déjà implémenté. Corriger un contenu publié par une **nouvelle publication validée**, sans réécrire/supprimer l'historique ni reculer arbitrairement son pointeur. Une reprise technique s'effectue d'abord sur la copie restaurée : comparer instantanés/empreintes, ACL et affectations, puis appliquer la procédure de restauration approuvée de la cible et reprendre l'outbox. Ne pas restaurer uniquement une ancienne source en laissant une génération ou des représentations plus récentes.
+
+**Réapplication des sources SQL.** Après installation du thésaurus, ne pas réappliquer isolément `schema_unified.sql`, `api_views_functions.sql` ou les anciennes migrations de filtres : ils peuvent remplacer les quatre gardes de triggers de `object` ou la lecture des équivalences. Sur une base existante, toute maintenance qui réapplique ces définitions doit réappliquer ensuite les **trois migrations du thésaurus, dans l'ordre indiqué**, puis les tests de publication, préparation et consommateurs avant remise en service. Sur une installation vierge, utiliser le manifeste complet ordonné. Vérifier les clauses `WHEN` des quatre triggers, le contrat `thesaurus.assert_preparation_contract()`, les droits du rôle de publication et les index uniques des deux vues matérialisées requises avant toute activation ou généralisation aux adaptateurs autonomes.
+
+**Publication préparée et conflits.** La publication exige `READ COMMITTED`. Elle prend d'abord le verrou transactionnel exclusif de sources `(741126,2)` et calcule les neuf caches sans verrouiller les fiches. Les mutations des propriétaires sont journalisées avec le XID de transaction principal ; les tags polymorphes et les transferts de propriétaire sont inclus. Le verrou exclusif d'écriture `(741126,1)` est acquis ensuite par essais bornés, sans mise en file d'un verrou exclusif qui bloquerait de nouveaux éditeurs. Sous ce verrou, l'autorité de l'opérateur, le contrat SQL, les propriétaires actuels et le journal sont vérifiés à nouveau. Un conflit `PT409` annule toute la publication et préserve les brouillons ; recharger l'aperçu et reprendre avec une nouvelle clé d'idempotence. Aucune publication partielle ni tâche asynchrone de reconstruction n'est engagée. Les écritures de sources dans une transaction qui détient déjà le verrou d'éditeur refusent immédiatement une inversion de verrous. `TRUNCATE` est refusé après activation ; avant activation, le rejeu des seeds est protégé par les mêmes verrous. La désactivation privilégiée de triggers ou `session_replication_role=replica` relève uniquement de la maintenance exceptionnelle fermée décrite ci-dessous.
+
+**Entretien du journal.** Avec `pg_cron` installé, la troisième migration programme `bertel-thesaurus-journal-prune` toutes les quinze minutes : `SELECT thesaurus.prune_mutation_journal(10000)`. Cette fonction privée prend S2 partagé par essai immédiat, renvoie zéro si une publication détient X2, et supprime au maximum le nombre demandé de lignes déjà visibles dans son snapshot. Elle reste compatible avec les écritures de sources, ne prend jamais K1 et ne supprime pas les transactions encore en cours. Vérifier le job actif et ses exécutions sur la cible ; l'absence de `pg_cron` locale exige un worker de maintenance exécutant cette même commande. La publication purge également les lignes visibles de son snapshot avant de demander K1. Les écritures d'historique `object_version` et ses vraies partitions restent clôturées mais ne créent pas de faux signal de modification des entrées de cache. Ce choix est lié au contrat SQL qui refuse une nouvelle dépendance de projection non revue.
+
+**Réconciliation après maintenance exceptionnelle.** Les instantanés incrémentaux supposent que les sources gouvernées restent protégées par leurs triggers. Si une maintenance autorisée a suspendu ces gardes, conserver la fermeture des lectures publiques et des écritures pendant la reprise. Restaurer et contrôler toutes les gardes avant de rouvrir le service ; synchroniser les identités natives depuis l'administration avec un opérateur plateforme autorisé, puis comparer le rendu complet à la publication courante avec cette lecture privilégiée :
+
+```sql
+WITH expected AS MATERIALIZED (
+  SELECT * FROM thesaurus.publication_documents()
+), actual AS (
+  SELECT concept_id, domain, is_public, document
+  FROM thesaurus.release_concept
+  WHERE release_id = api.thesaurus_generation()
+)
+SELECT COALESCE(e.concept_id, a.concept_id) AS concept_id,
+       a.document AS published_document, e.document AS canonical_document
+FROM expected e FULL JOIN actual a USING (concept_id)
+WHERE e.concept_id IS NULL OR a.concept_id IS NULL
+   OR (e.domain, e.is_public, e.document)
+      IS DISTINCT FROM (a.domain, a.is_public, a.document);
+```
+
+Tout écart impose une réconciliation avant réouverture. Pour **chaque concept différent**, y compris les anciens et nouveaux parents ou voisins, préparer une révision à partir de son document canonique courant, la valider et publier l'ensemble après aperçu ; ne jamais écraser une révision locale existante. Cette publication reconstruit les représentations affectées et conserve l'historique. Rejouer ensuite la comparaison complète, les contrôles de projections et les tests SQL : aucun écart résiduel n'est accepté. Il n'existe pas de drapeau public `force_full` ni de bouton de réparation automatique. Une URI modifiée, une source publiée supprimée ou une rupture de FK exige une réparation/restauration de l'identité avant cette procédure ; ne pas recréer arbitrairement un identifiant publié. La reprise d'une maintenance importante se répète d'abord sur la copie restaurée, avec son temps d'exécution mesuré.
+
+La sauvegarde complète réelle avant installation (77 092 642 octets) a été restaurée sur une base isolée : 1 187 fiches, 911 affectations taxonomiques et 182 migrations concordent. Les adaptations d'extensions managées sous Windows et les tentatives ultérieures de rafraîchissement échouées sont détaillées dans l'audit ; les archives partielles ne sont pas des sauvegardes valides. La copie a ensuite reçu les six prérequis et les trois migrations, avec contrôle des invariants avant application sur la cible. Conserver cette archive et ses métadonnées privées hors Git. Le graphe DB a été régénéré depuis le catalogue réel après installation et publication R3 ; l'extraction documentaire ne conserve que `ref_document.access_scope = 'public'`.
+
 ## Audit remediation — regional export read grants (2026-09-06)
 
 Apply `supabase/migrations/20260905200731_tourinsoft_service_read_grants.sql` after I4f and before its regional assertions. The fresh manifest includes it at that exact position; existing installations may apply it after their I4f migration. It grants only SELECT on 19 explicitly listed source relations to `service_role`, which the INVOKER serializer requires. These missing privileges were measured after a complete isolated Auth/Storage bootstrap, across all 49 direct relations. The migration verifies the serializer stays INVOKER and cannot be executed by anon/authenticated. No data is rewritten. To reverse, restore those tables' previously captured service-role SELECT privileges; do not revoke pre-existing grants blindly.
@@ -2420,18 +2475,22 @@ Les prédicats, jointures, tests de rôle, LIMIT 1 et résultats NULL sont conse
 
 La preuve PostgreSQL 17 locale restaure chaque vrai prédécesseur indépendamment : les quatre fonctions échouent sur des ombres mal formées, puis chacune accepte une autorité contrefaite non vide dans le témoin de régression correspondant. Après correction, le test versionné `tests/test_object_canonical_write_sources.sql` garde un vrai writer courant et un vrai administrateur positifs, refuse les faux profils/grants/memberships et le faux publisher sur une ligne étrangère publiée réellement visible, puis refuse après révocation effective du rôle, de l’exception individuelle et du profil privilégié. Les variantes live/fraîche, le rejeu et le refus atomique de dérives de corps/chemin/parallel passent, avec tous les autres attributs pg_proc conservés. Le témoin DB03 existant reste requis en CI complète. Cette preuve est SQL sur un rôle de test local ; elle ne revendique aucune exploitation REST. Le harnais réduit ne remplace pas Supabase fresh-apply. Une récupération livre un delta sûr en avant, sans rétablir un chemin de résolution non fiable.
 
-## Admission IA : source fraîche et transport préparatoire
+## Admission IA : source fraîche et reçu de production
 
 Le manifeste frais inclut `ai_request_admission.sql`, dont les octets restent ceux
-du source relu initialement sous `20261106145451`. Le template gardé
-`tools/ai-quota/prepared-mcp-upgrade.sql` reste hors du manifeste et hors du
-dossier des migrations tant qu’aucun reçu réel n’existe. Cette préparation ne
-constate aucune application.
+du source relu initialement sous `20261106145451`. Le DO gardé a réellement été
+appliqué une fois sous la version `20261106200353`, puis réconcilié en lecture
+seule : 192 versions, 191 anciennes inchangées et catalogue/droits conformes.
+Voir le [record de production](releases/2026-11-06-ai-admission-production.md).
+Le fichier de cette version contient exactement la requête appliquée ; le source
+frais distinct reste inchangé et ne charge pas la garde liée au snapshot191.
 
-Avant toute opération ciblée, suivre le [record de préparation](releases/2026-11-06-ai-admission-mcp-preparation.md) :
+Le [record de préparation](releases/2026-11-06-ai-admission-mcp-preparation.md) conserve la filiation :
 contre-revue du payload exact, nouveau préflight, choix du transport, un seul
 essai et postflight en lecture seule sans appel d’admission ni compte de test.
-L’atomicité du corps DO n’établit pas celle du reçu Management API. Après reçu
-réel vérifié seulement, déplacer le même blob DO sous sa version exacte, retirer
-le fichier initial jamais appliqué et actualiser les références sans rejouer le
-SQL ni réparer artificiellement l’historique. Le source frais demeure inchangé.
+L’atomicité du corps DO n’établit pas un contrat général du reçu Management API.
+Le déplacement du blob sous sa vraie version et le retrait du fichier145451
+jamais appliqué ne rejouent aucun SQL ni ne modifient l’historique distant.
+Ne pas exécuter à nouveau cette garde, ni lancer un `db push` global. Un rollback
+applicatif conserve ce schéma additif ; la protection distribuée exige encore
+le déploiement du nouveau serveur sur toutes les répliques.

@@ -346,6 +346,33 @@ describe('SectionIdentity', () => {
 });
 
 describe("§201 — types d'unité (axe multi-valué)", () => {
+  it('conserve les anciens termes visibles et interdit de les attribuer après retrait explicite', () => {
+    const modules = modulesWithTaxonomy([
+      { ...editableTaxonomyNodes[0], isAssignable: false, isActive: false },
+      editableTaxonomyNodes[3],
+    ]);
+    modules.taxonomy.unitTypes = {
+      options: [{ code: 'bubble', label: 'Bulle ancienne', description: '', isAssignable: false }],
+      selectedCodes: ['bubble'], unavailableReason: null,
+    };
+    modules.taxonomy.positionings = {
+      options: [{ code: 'family_hotel', label: 'Hôtel familial ancien', description: '', isAssignable: false }],
+      selectedCodes: [], unavailableReason: null,
+    };
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const { rerender } = render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText(/Ce terme n’est plus attribuable/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hôtel familial ancien — indisponible' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Modifier la nature/ }));
+    expect(screen.getByRole('radio', { name: /Hôtel.*Actuelle.*À requalifier/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Fermer/ }));
+    expect(screen.getByRole('button', { name: 'Bulle ancienne — à requalifier' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Bulle ancienne — à requalifier' }));
+    rerender(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
+    expect(result.current.draft.taxonomy.unitTypes.selectedCodes).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Bulle ancienne — indisponible' })).toBeDisabled();
+  });
+
   const UNIT_TYPES = {
     options: [
       { code: 'bubble', label: 'Bulle', description: 'Unité transparente.' },

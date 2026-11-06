@@ -103,7 +103,7 @@ export function SectionAttachments({ editor, folded, objectId = '' }: SectionPro
               />
               <Select
                 value={item.roleCode}
-                options={relationships.orgRoleOptions.map((option) => ({ v: option.code, l: option.label }))}
+                options={relationships.orgRoleOptions.map((option) => ({ v: option.code, l: option.label, disabled: option.disabled }))}
                 onChange={(roleCode) => replaceLinks(setOrgRole(relationships.organizationLinks, index, roleCode, relationships.orgRoleOptions))}
               />
               <button

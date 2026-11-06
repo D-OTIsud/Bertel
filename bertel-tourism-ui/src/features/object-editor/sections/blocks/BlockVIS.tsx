@@ -35,6 +35,7 @@ export function BlockVIS({ editor, folded }: SectionProps) {
       <div className="grid-3" style={{ marginBottom: 10 }}>
         <Toggle
           label="Visite libre"
+          disabled={visitOptions.find((option) => option.code === 'visite_libre')?.disabled}
           sub="Livret distribué à l'entrée"
           on={characteristics.selectedAmenityCodes.includes('visite_libre')}
           onChange={() =>
@@ -46,6 +47,7 @@ export function BlockVIS({ editor, folded }: SectionProps) {
         />
         <Toggle
           label="Visite guidée"
+          disabled={visitOptions.find((option) => option.code === 'visite_guidee')?.disabled}
           sub="Sur réservation"
           on={characteristics.selectedAmenityCodes.includes('visite_guidee')}
           onChange={() =>
@@ -57,6 +59,7 @@ export function BlockVIS({ editor, folded }: SectionProps) {
         />
         <Toggle
           label="Audioguide"
+          disabled={visitOptions.find((option) => option.code === 'audioguide')?.disabled}
           on={characteristics.selectedAmenityCodes.includes('audioguide')}
           onChange={() =>
             editor.replaceModule('characteristics', {

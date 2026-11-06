@@ -35,7 +35,8 @@ test('the prepared or actually versioned DO embeds all source bytes except the t
 
 test('the reviewed upgrade envelope remains exact and does not create a second version', () => {
   assert.equal(hash(payload), '43e2a719e8b4ac7112a32df09beb84042d5f51d265a640ce3dc921d8da4f44f0');
-  assert.equal(migrations.length, 1, 'pending original or one real receipt version, never both');
+  assert.deepEqual(migrations, ['20261106200353_distributed_ai_request_admission.sql'],
+    'only the actually observed production receipt version remains active');
 });
 
 test('fresh apply uses the source and never the production-state upgrade guard', async () => {

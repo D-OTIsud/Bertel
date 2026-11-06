@@ -61,7 +61,7 @@ describe('GET /api/public/objects', () => {
   it('SECURITY: status is always FORCED to published (a partner can never request drafts)', async () => {
     await GET(req('?types=HOT,RES&page_size=10'));
     const [rpcName, params] = rpcMock.mock.calls[0];
-    expect(rpcName).toBe('list_object_resources_page_text');
+    expect(rpcName).toBe('list_partner_objects_with_vocabulary');
     expect(params.p_status).toEqual(['published']);
     expect(params.p_types).toEqual(['HOT', 'RES']);
     expect(params.p_page_size).toBe(10);
@@ -156,50 +156,42 @@ describe('GET /api/public/objects', () => {
     expect(json.meta.total).toBe(10);
   });
 
-  it('?format=datatourisme — ONE batch call for the page, doc merged under item.<profil> (I4c)', async () => {
-    const page = { info: { next_cursor: 'c2' }, data: [{ id: 'A1' }, { id: 'B2' }, { id: 'C3' }] };
+  it('?format=datatourisme — one atomic page RPC preserves attached pivots and unmapped items', async () => {
     const docs = { A1: { '@type': ['PointOfInterest'] }, C3: { '@type': ['PointOfInterest'] } }; // B2 unmapped
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_objects_interop_batch'
-        ? Promise.resolve({ ok: true, status: 200, body: docs })
-        : Promise.resolve({ ok: true, status: 200, body: page }),
-    );
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: {
+      info: { next_cursor: 'c2', vocabulary_release: 7 },
+      data: [{ id: 'A1', datatourisme: docs.A1 }, { id: 'B2' }, { id: 'C3', datatourisme: docs.C3 }],
+    } });
     const res = await GET(req('?format=datatourisme'));
     expect(res.status).toBe(200);
-    expect(rpcMock).toHaveBeenCalledWith('get_objects_interop_batch', {
-      p_object_ids: ['A1', 'B2', 'C3'],
-      p_profile: 'datatourisme',
-    });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(rpcMock).toHaveBeenCalledWith('list_partner_objects_with_vocabulary', expect.objectContaining({ p_format: 'datatourisme' }));
     const json = await res.json();
     expect(json.data[0].datatourisme).toEqual(docs.A1);
     expect(json.data[1].datatourisme).toBeUndefined(); // unmapped item: key absent, item intact
     expect(json.data[1].id).toBe('B2');
     expect(json.data[2].datatourisme).toEqual(docs.C3);
     expect(json.meta.next_cursor).toBe('c2'); // pagination untouched
+    expect(json.meta.vocabulary_release).toBe(7); // same result as content, never a second version lookup
   });
 
-  it('?format=jsonld — the list batch also serves the schema.org profile', async () => {
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_objects_interop_batch'
-        ? Promise.resolve({ ok: true, status: 200, body: { X: { '@type': 'Hotel' } } })
-        : Promise.resolve({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X' }] } }),
-    );
+  it('?format=jsonld — the atomic list RPC also serves the schema.org profile', async () => {
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X', jsonld: { '@type': 'Hotel' } }] } });
     const res = await GET(req('?format=jsonld'));
     const json = await res.json();
-    expect(rpcMock).toHaveBeenCalledWith('get_objects_interop_batch', { p_object_ids: ['X'], p_profile: 'jsonld' });
+    expect(rpcMock).toHaveBeenCalledWith('list_partner_objects_with_vocabulary', expect.objectContaining({ p_format: 'jsonld' }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
     expect(json.data[0].jsonld).toEqual({ '@type': 'Hotel' });
   });
 
-  it('?format=apidae — degrades to the plain page if the batch fails (fail-open)', async () => {
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_objects_interop_batch'
-        ? Promise.resolve({ ok: false, status: 502, body: { error: 'upstream_error' } })
-        : Promise.resolve({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X' }] } }),
-    );
+  it('?format=apidae — preserves a plain page when SQL omits an unavailable optional enrichment', async () => {
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X' }] } });
     const res = await GET(req('?format=apidae'));
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.data).toEqual([{ id: 'X' }]); // page intact, no apidae key
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(rpcMock).toHaveBeenCalledWith('list_partner_objects_with_vocabulary', expect.objectContaining({ p_format: 'apidae' }));
   });
 
   it('?format=<unknown> — ignored: batch RPC never called', async () => {
@@ -218,30 +210,22 @@ describe('GET /api/public/objects', () => {
   });
 
   it.each(['reunion-hebergement-v1', 'reunion-regional-v1'] as const)(
-    '?format=tourinsoft&variant=%s — uses one dedicated set-based batch RPC',
+    '?format=tourinsoft&variant=%s — forwards the regional variant within one atomic RPC',
     async (variant) => {
-      rpcMock.mockImplementation((name: string) =>
-        name === 'get_objects_tourinsoft_batch'
-          ? Promise.resolve({ ok: true, status: 200, body: { X: { SyndicObjectID: 'X' } } })
-          : Promise.resolve({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X' }] } }),
-      );
+      rpcMock.mockResolvedValue({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X', tourinsoft: { SyndicObjectID: 'X' } }] } });
       const res = await GET(req(`?format=tourinsoft&variant=${variant}`));
       expect(res.status).toBe(200);
-      expect(rpcMock).toHaveBeenCalledWith('get_objects_tourinsoft_batch', {
-        p_object_ids: ['X'],
-        p_variant: variant,
-      });
+      expect(rpcMock).toHaveBeenCalledWith('list_partner_objects_with_vocabulary', expect.objectContaining({ p_format: 'tourinsoft', p_variant: variant }));
+      expect(rpcMock).toHaveBeenCalledTimes(1);
       expect(rpcMock).not.toHaveBeenCalledWith('get_objects_interop_batch', expect.anything());
       expect((await res.json()).data[0].tourinsoft).toEqual({ SyndicObjectID: 'X' });
     },
   );
 
-  it('?format=tourinsoft&variant=legacy-v1 — preserves the historical batch RPC path', async () => {
+  it('?format=tourinsoft&variant=legacy-v1 — forwards the historical variant to SQL', async () => {
     await GET(req('?format=tourinsoft&variant=legacy-v1'));
-    expect(rpcMock).toHaveBeenCalledWith('get_objects_interop_batch', {
-      p_object_ids: ['X'],
-      p_profile: 'tourinsoft',
-    });
+    expect(rpcMock).toHaveBeenCalledWith('list_partner_objects_with_vocabulary', expect.objectContaining({ p_format: 'tourinsoft', p_variant: 'legacy-v1' }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
     expect(rpcMock).not.toHaveBeenCalledWith('get_objects_tourinsoft_batch', expect.anything());
   });
 
@@ -257,7 +241,7 @@ describe('GET /api/public/objects', () => {
   it('view=full — passe p_view:full et page_size par défaut 25', async () => {
     await GET(req('?view=full'));
     const [rpcName, params] = rpcMock.mock.calls[0];
-    expect(rpcName).toBe('list_object_resources_page_text');
+    expect(rpcName).toBe('list_partner_objects_with_vocabulary');
     expect(params.p_view).toBe('full');
     expect(params.p_page_size).toBe(25);
   });
@@ -311,6 +295,32 @@ describe('GET /api/public/objects', () => {
   it('track invalide (view=full) — ignoré (p_track_format:none)', async () => {
     await GET(req('?view=full&track=shp'));
     expect(rpcMock.mock.calls[0][1].p_track_format).toBe('none');
+  });
+
+  it('normalizes qualified taxonomy codes while keeping predecessor expansion opt-in', async () => {
+    await GET(req('?taxonomy=taxonomy_hlo:appartement,taxonomy_hlo:maison,taxonomy_hlo:appartement'));
+    expect(rpcMock).toHaveBeenCalledWith('list_partner_objects_with_vocabulary', expect.objectContaining({
+      p_taxonomy_codes: ['taxonomy_hlo:appartement', 'taxonomy_hlo:maison'], p_include_equivalent_predecessors: false,
+    }));
+    rpcMock.mockClear();
+    await GET(req('?taxonomy=taxonomy_hlo:appartement&include_equivalent_predecessors=true'));
+    expect(rpcMock.mock.calls[0][1]).toMatchObject({ p_taxonomy_codes: ['taxonomy_hlo:appartement'], p_include_equivalent_predecessors: true });
+  });
+
+  it.each(['?taxonomy=appartement', '?taxonomy=crm_sentiment:happy', '?include_equivalent_predecessors=true',
+    '?taxonomy=taxonomy_hlo:appartement&include_equivalent_predecessors=yes'])('rejects an invalid taxonomy option: %s', async (query) => {
+    expect((await GET(req(query))).status).toBe(400);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('omits vocabulary_release before bootstrap and preserves it only from the content snapshot', async () => {
+    const before = await (await GET(req())).json();
+    expect(before.meta.vocabulary_release).toBeUndefined();
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { info: { vocabulary_release: 12, private_author: 'secret' }, data: [{ id: 'X', name: 'Version 12' }] } });
+    const after = await (await GET(req())).json();
+    expect(after.meta.vocabulary_release).toBe(12);
+    expect(after.meta.private_author).toBeUndefined();
+    expect(after.data[0].name).toBe('Version 12');
   });
 });
 

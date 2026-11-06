@@ -69,6 +69,7 @@ def main():
     tbls = _read("schema_tbls.json")
     extra = _read("catalog_extra.json")
     sql_paths = glob.glob(os.path.join(ROOT, "Base de donnée DLL et API", "*.sql"))
+    sql_paths += sorted(glob.glob(os.path.join(ROOT, "supabase", "migrations", "*.sql")))
     reference_paths = _reference_sql_paths(sql_paths)
     g = build_graph(tbls, extra, sql_paths)
     seed_refs = _make_sources_relative(extract_reference_values(reference_paths))
@@ -77,22 +78,22 @@ def main():
     refs = _make_sources_relative(refs)
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(DOCS, exist_ok=True)
-    with open(os.path.join(OUT, "graph.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(OUT, "graph.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(g, f, ensure_ascii=False, indent=1)
-    with open(os.path.join(OUT, "graph.html"), "w", encoding="utf-8") as f:
+    with open(os.path.join(OUT, "graph.html"), "w", encoding="utf-8", newline="\n") as f:
         f.write(render_html(g))
     for name, fn in (("FUNCTIONS.md", write_functions_md), ("POLICIES.md", write_policies_md),
                      ("TYPES.md", write_types_md), ("DB_AGENT_INDEX.md", write_index_md)):
-        with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
+        with open(os.path.join(OUT, name), "w", encoding="utf-8", newline="\n") as f:
             f.write(fn(g))
     # object-type-centric views (computed from the graph + the type/archetype metadata)
     type_meta = _load_object_type_meta()
     for name, fn in (("OBJECT_TYPES.md", write_object_types_md),
                      ("FUNCTION_ACCESS.md", write_function_access_md),
                      ("SURFACE_COVERAGE.md", write_surface_coverage_md)):
-        with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
+        with open(os.path.join(OUT, name), "w", encoding="utf-8", newline="\n") as f:
             f.write(fn(g, type_meta))
-    with open(os.path.join(DOCS, "api-db-reference.html"), "w", encoding="utf-8") as f:
+    with open(os.path.join(DOCS, "api-db-reference.html"), "w", encoding="utf-8", newline="\n") as f:
         f.write(render_api_db_reference_html(g, refs, live_note=live_note))
     live = refs.get("live", {})
     print("db-graph: wrote %d nodes / %d edges and %d reference rows (%s, %d SQL seed rows from %d files) to %s and docs/api-db-reference.html" % (

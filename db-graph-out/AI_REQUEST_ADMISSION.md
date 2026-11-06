@@ -1,11 +1,12 @@
-# AI admission — source/local catalog supplement, 6 November 2026
+# AI admission — targeted production postflight, 6 November 2026 UTC
 
 This targeted supplement describes the fresh source
 `Base de donnée DLL et API/ai_request_admission.sql`, originally reviewed as
-`20261106145451_distributed_ai_request_admission.sql`, and its isolated PostgreSQL17
-execution. The pending MCP upgrade template is
-`tools/ai-quota/prepared-mcp-upgrade.sql`; no generated production version is
-claimed. See the [preparation record](../docs/releases/2026-11-06-ai-admission-mcp-preparation.md). It is not a new extraction of the production catalog or whole schema.
+`20261106145451_distributed_ai_request_admission.sql`. Production received the
+guarded DO under real version `20261106200353` at 20:03:53 UTC; its exact request
+bytes are now the upgrade file. The fresh source remains the original bytes.
+See the [production record](../docs/releases/2026-11-06-ai-admission-production.md).
+This supplement is a targeted postflight, not a full schema extraction.
 
 - `internal.ai_request_rate_state`: primary key `(user_id, route)`;
   `user_id uuid` FK `auth.users(id) ON DELETE CASCADE`;
@@ -25,6 +26,10 @@ claimed. See the [preparation record](../docs/releases/2026-11-06-ai-admission-m
   state is stored or modified by this component. Expired entries are filtered
   when that key is next admitted; no retention/purge schedule is introduced.
 
-The full schema graph needs regeneration from a complete migrated disposable
-Supabase catalog before claiming a full refresh; regenerating the whole graph
-from the reduced native substrate would discard unrelated schema knowledge.
+At 20:05 UTC, the real ledger contained 192 versions and the 191 earlier entries
+were unchanged. Body/signature, schema, RLS, role permissions and service access
+to both api/internal matched the reviewed target. No admission RPC or quota row
+was used for this postflight. The application rollout was still pending.
+
+A complete live graph refresh is tracked separately. Do not replace the full
+graph with the reduced native test substrate.

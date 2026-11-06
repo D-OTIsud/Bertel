@@ -1,6 +1,7 @@
 export interface SelectOption {
   v: string;
   l: string;
+  disabled?: boolean;
 }
 
 interface SelectProps {
@@ -35,17 +36,26 @@ export function Select({
       aria-invalid={ariaInvalid}
       aria-describedby={ariaDescribedBy}
       aria-required={ariaRequired}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => {
+        const next = e.target.value;
+        const option = options.find((item) => (typeof item === 'string' ? item : item.v) === next);
+        if (typeof option !== 'string' && option?.disabled) return;
+        if (next === value && option === undefined) return;
+        onChange(next);
+      }}
     >
       {options.map((o, i) => {
         const v = typeof o === 'string' ? o : o.v;
         const l = typeof o === 'string' ? o : o.l;
+        const disabled = typeof o !== 'string' && o.disabled;
         return (
-          <option key={`${v}-${i}`} value={v}>
-            {l}
+          <option key={`${v}-${i}`} value={v} disabled={disabled}>
+            {l}{disabled ? v === value ? ' — à requalifier' : ' — indisponible' : ''}
           </option>
         );
       })}
+      {value !== '' && !options.some((option) => (typeof option === 'string' ? option : option.v) === value)
+        && <option value={value} disabled>{value} — à requalifier</option>}
     </select>
   );
 }

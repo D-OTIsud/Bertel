@@ -151,6 +151,7 @@ export function useObjectEditorState(
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
   const [localDraftFailure, setLocalDraftFailure] = useState<string | null>(null);
   const unreadLocalDraft = useRef<string | null>(null);
+  const catalogSource = useRef({ identityKey, modules });
 
   useEffect(() => {
     setHydratedKey(null);
@@ -180,6 +181,38 @@ export function useObjectEditorState(
   // The hook is mounted per object; modules are the fresh server snapshot for that mount.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [objectId, userId]);
+
+  useEffect(() => {
+    const previous = catalogSource.current;
+    catalogSource.current = { identityKey, modules };
+    if (previous.identityKey !== identityKey || previous.modules === modules
+      || JSON.stringify(previous.modules) === JSON.stringify(modules)) return;
+    // Background vocabulary reads replace choices, not the user's editable
+    // values or recovery decisions. Update both sides so a label change alone
+    // cannot make a clean module dirty.
+    const refresh = (current: ObjectWorkspaceModules): ObjectWorkspaceModules => {
+      const values = stripCatalogOptions(current);
+      const refreshed = Object.fromEntries(Object.entries(modules).map(([key, module]) => [
+        key, restoreCatalogOptions(values[key as keyof ObjectWorkspaceModules], module, key),
+      ])) as unknown as ObjectWorkspaceModules;
+      // The import helper rebuilds sustainability from its live catalog. A
+      // withdrawn choice still carries object data and must remain removable.
+      for (const category of current.sustainability?.categories ?? []) {
+        const target = refreshed.sustainability.categories.find((item) => item.code === category.code);
+        const missing = category.actions.filter((action) =>
+          (action.selected || action.note || action.documentId) && !target?.actions.some((item) => item.code === action.code),
+        ).map((action) => ({ ...action, disabled: true }));
+        if (missing.length === 0) continue;
+        if (target) target.actions.push(...missing);
+        else refreshed.sustainability.categories.push({ ...category, actions: missing });
+      }
+      return refreshed;
+    };
+    setEditorState((previous) => previous.identityKey !== identityKey ? previous : {
+      ...previous,
+      snapshot: { ...previous.snapshot, baseline: refresh(previous.snapshot.baseline), draft: refresh(previous.snapshot.draft) },
+    });
+  }, [identityKey, modules]);
 
   useEffect(() => {
     if (!userId || hydratedKey !== identityKey || !stateMatchesIdentity) return;

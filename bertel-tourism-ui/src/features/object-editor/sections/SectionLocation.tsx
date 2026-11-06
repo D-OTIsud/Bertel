@@ -29,6 +29,7 @@ export function SectionLocation({ editor, typeCode, archetype, folded }: Section
     id: zone.code,
     code: zone.code,
     label: zone.label,
+    disabled: zone.disabled,
   }));
   const communeCode = main.codeInsee
     || (communeOptions.find((option) => foldCommuneLabel(option.label) === foldCommuneLabel(main.city))?.code ?? '');

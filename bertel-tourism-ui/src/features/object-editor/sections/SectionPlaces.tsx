@@ -105,6 +105,7 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
               <Chip
                 key={option.code}
                 label={option.label}
+                disabled={option.disabled}
                 on={location.zoneCodes.includes(option.code)}
                 onClick={canEditZones ? () => toggleZone(option.code) : undefined}
               />

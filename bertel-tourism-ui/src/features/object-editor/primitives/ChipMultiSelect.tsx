@@ -7,6 +7,7 @@ import { fold } from '../../../components/ui/pickers/fold';
 interface ChipMultiSelectOption {
   code: string;
   label: string;
+  disabled?: boolean;
 }
 
 interface ChipMultiSelectProps {
@@ -41,14 +42,20 @@ export function ChipMultiSelect({
   chipTitle,
 }: ChipMultiSelectProps) {
   if (!modalTitle) {
+    const byCode = new Map(options.map((option) => [option.code, option]));
+    const visibleOptions = [...options, ...selected.filter((code) => !byCode.has(code))
+      .map((code) => ({ code, label: code, disabled: true }))];
     return (
       <ChipSet>
-        {options.map((option) => (
+        {visibleOptions.map((option) => (
           <Chip
             key={option.code}
             label={option.label}
             on={selected.includes(option.code)}
-            onClick={() => onToggle?.(option.code)}
+            disabled={option.disabled}
+            onClick={onToggle ? () => {
+              if (!option.disabled || selected.includes(option.code)) onToggle(option.code);
+            } : undefined}
             sm={sm}
           />
         ))}
@@ -90,7 +97,7 @@ function ChipMultiSelectModal({
   const [draft, setDraft] = useState<string[]>(selected);
 
   const byCode = new Map(options.map((option) => [option.code, option]));
-  const selectedOptions = selected.map((code) => byCode.get(code)).filter(Boolean) as ChipMultiSelectOption[];
+  const selectedOptions = selected.map((code) => byCode.get(code) ?? { code, label: code, disabled: true });
 
   function startEditing() {
     setDraft(selected);
@@ -99,10 +106,11 @@ function ChipMultiSelectModal({
   }
 
   function toggleDraft(code: string) {
-    setDraft((prev) => (prev.includes(code) ? prev.filter((value) => value !== code) : [...prev, code]));
+    setDraft((prev) => prev.includes(code) ? prev.filter((value) => value !== code)
+      : byCode.has(code) && !byCode.get(code)?.disabled ? [...prev, code] : prev);
   }
 
-  const draftSelected = draft.map((code) => byCode.get(code)).filter(Boolean) as ChipMultiSelectOption[];
+  const draftSelected = draft.map((code) => byCode.get(code) ?? { code, label: code, disabled: true });
   const folded = fold(query.trim());
   const available = options.filter(
     (option) => !draft.includes(option.code) && (folded === '' || fold(option.label).includes(folded)),
@@ -118,6 +126,7 @@ function ChipMultiSelectModal({
               <Chip
                 key={option.code}
                 label={option.label}
+                disabled={option.disabled}
                 on
                 sm
                 title={chipTitle?.(option.code) ?? 'Retirer'}
@@ -139,7 +148,7 @@ function ChipMultiSelectModal({
         saveLabel="Valider"
         onClose={() => setOpen(false)}
         onSave={() => {
-          onChange(draft);
+          onChange(draft.filter((code) => selected.includes(code) || (byCode.has(code) && !byCode.get(code)?.disabled)));
           setOpen(false);
         }}
       >
@@ -155,7 +164,7 @@ function ChipMultiSelectModal({
         {draftSelected.length > 0 ? (
           <ChipSet>
             {draftSelected.map((option) => (
-              <Chip key={option.code} label={option.label} on sm title="Retirer" onClick={() => toggleDraft(option.code)} />
+              <Chip key={option.code} label={option.label} disabled={option.disabled} on sm title="Retirer" onClick={() => toggleDraft(option.code)} />
             ))}
           </ChipSet>
         ) : (
@@ -166,7 +175,7 @@ function ChipMultiSelectModal({
         </div>
         <ChipSet>
           {available.map((option) => (
-            <Chip key={option.code} label={option.label} sm={sm} onClick={() => toggleDraft(option.code)} />
+            <Chip key={option.code} label={option.label} disabled={option.disabled} sm={sm} onClick={() => toggleDraft(option.code)} />
           ))}
         </ChipSet>
       </EditorModal>

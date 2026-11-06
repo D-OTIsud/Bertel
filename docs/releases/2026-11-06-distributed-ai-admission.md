@@ -36,5 +36,5 @@ Validation includes real PostgreSQL17 service-role/negative privilege tests,
 strict sliding-window expiration, independent consumers blocked on the same row,
 one remaining slot, clock after lock, restart persistence and separate budgets.
 API tests exercise real admission parsing/abort logic with simulated effects and
-provider/DB responses. Fresh Supabase SQL CI runs both SQL and multi-connection
+provider/DB responses. Fresh Supabase SQL CI is wired to run both SQL and multi-connection
 tests. No real AI provider call is used.

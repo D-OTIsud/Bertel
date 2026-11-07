@@ -41,7 +41,7 @@ appartiennent à `postgres`. Les sept sont SECURITY INVOKER, avec
 Ce relevé porte sur le catalogue et le reçu. La recette de l’application,
 l’envoi SMTP et l’observation de volumes relèvent de preuves séparées.
 Le [graphe complet](DB_AGENT_INDEX.md) utilise la capture distincte du
-7 novembre 2026 à 04:03:36 UTC, également au ledger 193. Les valeurs de
+7 novembre 2026 à 05:18:46 UTC, au ledger 194. Les valeurs de
 référence publiques conservent leur instantané du 6 novembre.
 
 [Source canonique fraîche](<../Base de donnée DLL et API/distributed_list_email_intents.sql>) · [DO appliqué](../supabase/migrations/20261107031344_distributed_list_email_intents.sql) · [Record de production](../docs/releases/2026-11-07-distributed-list-email-production.md) · [Contrat d’envoi et de mesure](../tools/list-email/README.md)

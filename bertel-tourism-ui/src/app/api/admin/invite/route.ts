@@ -1,11 +1,45 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import type { User } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { authorizeAdminRoute } from '../_authorize';
 import { routeFailure } from '../../_route-failure';
 import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 
 export const runtime = 'nodejs';
+const AUTH_PAGE_SIZE = 1000;
+
+type AccountLookup =
+  | { kind: 'complete'; user: User | undefined }
+  | { kind: 'ambiguous' | 'failed' };
+
+async function lookupAccount(server: SupabaseClient, email: string): Promise<AccountLookup> {
+  const seen = new Set<string>();
+  let total: number | undefined;
+  let user: User | undefined;
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await server.auth.admin.listUsers({ page, perPage: AUTH_PAGE_SIZE });
+    if (error || !data || !Array.isArray(data.users) || !Number.isSafeInteger(data.total) || data.total < 0) {
+      return { kind: 'failed' };
+    }
+    total ??= data.total;
+    if (data.total !== total || data.users.length !== Math.min(AUTH_PAGE_SIZE, total - seen.size)) {
+      return { kind: 'failed' };
+    }
+    const hasMore = seen.size + data.users.length < total;
+    // auth-js currently parses only the first digit of nextPage. Use its presence,
+    // and advance our own verified page sequence.
+    const hasNext = typeof data.nextPage === 'number' && Number.isSafeInteger(data.nextPage) && data.nextPage > 0;
+    if (hasMore ? !hasNext : data.nextPage !== null) return { kind: 'failed' };
+    for (const candidate of data.users) {
+      if (typeof candidate?.id !== 'string' || !candidate.id || seen.has(candidate.id)) return { kind: 'failed' };
+      seen.add(candidate.id);
+      if (candidate.email?.toLowerCase() !== email) continue;
+      if (user) return { kind: 'ambiguous' };
+      user = candidate;
+    }
+    if (!hasMore) return { kind: 'complete', user };
+  }
+}
 
 function outOfScope(): NextResponse {
   return NextResponse.json({ error: 'out_of_scope' }, { status: 403 });
@@ -53,13 +87,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // GoTrue can send an invitation again for an existing unconfirmed account. A partial
   // or ambiguous lookup must never be treated as an absent account.
-  const { data: list, error: listError } = await server.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (listError || !list || list.nextPage !== null || list.total !== list.users.length) {
-    return routeFailure('admin/invite.POST', 'create_failed');
+  const lookup = await lookupAccount(server, email).catch(() => ({ kind: 'failed' } as const));
+  if (lookup.kind !== 'complete') {
+    return lookup.kind === 'ambiguous' ? outOfScope() : routeFailure('admin/invite.POST', 'create_failed');
   }
-  const matching = list.users.filter((user) => user.email?.toLowerCase() === email);
-  if (matching.length > 1) return outOfScope();
-  const existing = matching[0];
+  const existing = lookup.user;
   if (existing?.id === auth.callerId) return outOfScope();
 
   if (body.resend === true) {
@@ -78,6 +110,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let userId = existing?.id;
   if (!userId) {
+    // Keep GoTrue's initial invitation and Auth hooks. This send precedes the
+    // separate membership transaction, so delivery can precede a refused attachment.
     const { data, error } = await server.auth.admin.inviteUserByEmail(email, { redirectTo });
     if (error || !data.user?.id) return routeFailure('admin/invite.POST', 'create_failed');
     userId = data.user.id;
@@ -87,7 +121,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .select('org_object_id').eq('user_id', userId).eq('is_active', true);
   if (membershipError || !activeMemberships) return routeFailure('admin/invite.POST', 'authorization_check_failed', { status: 503 });
   const alreadyInOrg = activeMemberships.some((membership) => membership.org_object_id === orgId);
-  if (!auth.isSuper && !alreadyInOrg && activeMemberships.length > 0) return outOfScope();
+  if (!auth.isSuper && !alreadyInOrg) {
+    if (activeMemberships.length > 0) return outOfScope();
+    // Granting a shared membership also opens scoped profile and avatar operations.
+    const { data: profile, error } = await server.from('app_user_profile').select('role').eq('id', userId).maybeSingle();
+    if (error || (profile && profile.role !== null && profile.role !== 'tourism_agent')) return outOfScope();
+  }
 
   // Commit the same caller-scoped attachment before returning any account identity.
   const { data: membershipId, error } = await callerApi.rpc('rpc_upsert_membership', {

@@ -13,6 +13,14 @@ const mockedCreate = jest.mocked(createClient);
 const target = { email: 'x@y.z', orgObjectId: 'ORG1', businessRoleCode: 'editor' };
 const candidate = { id: 'target', email: target.email, last_sign_in_at: null };
 const headers = { authorization: 'Bearer t' };
+type SyntheticUser = { id: string; email: string; last_sign_in_at?: string | null; email_confirmed_at?: string; is_sso_user?: boolean };
+type DirectoryPage = { users: SyntheticUser[]; nextPage: number | null; total: number };
+
+function directoryUsers(page: number): SyntheticUser[] {
+  return Array.from({ length: 1000 }, (_, index) => ({
+    id: `directory-${page}-${index}`, email: `directory-${page}-${index}@example.test`,
+  }));
+}
 
 function req(body: unknown, requestHeaders: Record<string, string> = headers): never {
   return { headers: new Headers(requestHeaders), json: async () => body } as never;
@@ -22,7 +30,8 @@ function fixture(options: {
   platform?: boolean;
   rank?: number;
   callerOrg?: string;
-  users?: Array<{ id: string; email: string; last_sign_in_at?: string | null; email_confirmed_at?: string }>;
+  users?: SyntheticUser[];
+  pages?: DirectoryPage[];
   orgExists?: boolean;
   roleExists?: boolean;
   activeOrgs?: string[];
@@ -32,11 +41,12 @@ function fixture(options: {
   attachUnknown?: boolean;
   providerError?: boolean;
   returnedUserId?: string;
+  profileRole?: string | null;
+  profileError?: boolean;
 } = {}) {
   const users = options.users ?? [];
-  const listUsers = jest.fn().mockResolvedValue({
-    data: { users, nextPage: options.nextPage ?? null, total: users.length }, error: null,
-  });
+  const pages = options.pages ?? [{ users, nextPage: options.nextPage ?? null, total: users.length }];
+  const listUsers = jest.fn(async ({ page }: { page: number }) => ({ data: pages[page - 1], error: null }));
   const inviteUserByEmail = jest.fn().mockResolvedValue(options.providerError
     ? { data: { user: null }, error: { message: 'synthetic GoTrue error INVITE_SENTINEL' } }
     : { data: { user: { id: options.returnedUserId ?? 'new-user' } }, error: null });
@@ -51,9 +61,9 @@ function fixture(options: {
     }
     throw new Error(`Unexpected RPC ${name}`);
   });
-  function single(data: object | null) {
+  function single(data: object | null, error: object | null = null) {
     const eq = jest.fn();
-    const chain = { eq, maybeSingle: jest.fn().mockResolvedValue({ data, error: null }) };
+    const chain = { eq, maybeSingle: jest.fn().mockResolvedValue({ data, error }) };
     eq.mockReturnValue(chain);
     return { select: jest.fn(() => chain), eq };
   }
@@ -73,7 +83,10 @@ function fixture(options: {
         eq: () => Promise.resolve({ data: (options.activeOrgs ?? []).map((org_object_id) => ({ org_object_id })), error: null }),
       }) }) };
     }
-    if (table === 'app_user_profile') return { update };
+    if (table === 'app_user_profile') return {
+      update,
+      ...single({ role: options.profileRole ?? null }, options.profileError ? { message: 'synthetic profile failure' } : null),
+    };
     throw new Error(`Unexpected service table ${table}`);
   });
   mockedServer.mockReturnValue({
@@ -178,7 +191,7 @@ describe('POST /api/admin/invite', () => {
   it.each([false, true])('attaches an eligible confirmed account without exposing prior activity (platform=%s)', async (platform) => {
     const { rpc, inviteUserByEmail, update } = fixture({
       users: [{ ...candidate, email_confirmed_at: '2026-07-01T00:00:00Z' }],
-      platform, activeOrgs: platform ? ['ORG2'] : [],
+      platform, activeOrgs: platform ? ['ORG2'] : [], profileRole: platform ? 'owner' : 'tourism_agent',
     });
     const res = await POST(req(target));
     expect(res.status).toBe(409);
@@ -188,6 +201,21 @@ describe('POST /api/admin/invite', () => {
     });
     expect(inviteUserByEmail).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { profileRole: 'owner' },
+    { profileRole: 'super_admin' },
+    { profileError: true },
+  ])('does not attach an unscoped privileged or unverified target for a local admin (%j)', async (options) => {
+    const { rpc, inviteUserByEmail, update, deleteUser } = fixture({ users: [candidate], ...options });
+    const res = await POST(req(target));
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
+    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
   });
 
   it('only reports sign-in status for an already-scoped confirmed account', async () => {
@@ -286,6 +314,74 @@ describe('POST /api/admin/invite', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  it('invites a new address only after a complete large lookup, even when nextPage is truncated', async () => {
+    const total = 9_001;
+    const pages = Array.from({ length: 9 }, (_, index) => ({
+      users: directoryUsers(index + 1), total, nextPage: index === 8 ? 1 : index + 2,
+    }));
+    const { listUsers, inviteUserByEmail } = fixture({
+      pages: [...pages, { users: directoryUsers(10).slice(0, 1), total, nextPage: null }],
+    });
+    const res = await POST(req(target));
+    expect(res.status).toBe(201);
+    expect(listUsers.mock.calls).toEqual(Array.from({ length: 10 }, (_, index) => [{ page: index + 1, perPage: 1000 }]));
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+    expect(inviteUserByEmail.mock.invocationCallOrder[0]).toBeGreaterThan(listUsers.mock.invocationCallOrder.at(-1)!);
+  });
+
+  it('attaches the exact known address on page 2 instead of inviting a new account', async () => {
+    const { listUsers, inviteUserByEmail, rpc } = fixture({
+      pages: [
+        { users: directoryUsers(1), total: 1001, nextPage: 2 },
+        { users: [{ ...candidate, email: 'X@Y.Z', email_confirmed_at: '2026-07-01T00:00:00Z' }], total: 1001, nextPage: null },
+      ],
+    });
+    const res = await POST(req(target));
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: true });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 2, perPage: 1000 });
+    expect(rpc).toHaveBeenCalledWith('rpc_upsert_membership', {
+      p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
+    });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { user: { id: 'directory-1-0', email: 'other@example.test' }, total: 1001 },
+    { user: { id: 'directory-2-0', email: 'other@example.test' }, total: 1000 },
+  ])('refuses an inconsistent directory before any invitation or attachment (%j)', async ({ user, total }) => {
+    const { inviteUserByEmail, rpc } = fixture({
+      pages: [
+        { users: directoryUsers(1), total: 1001, nextPage: 2 },
+        { users: [user], total, nextPage: null },
+      ],
+    });
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const res = await POST(req(target));
+      expect(res.status).toBe(500);
+      await expect(res.json()).resolves.toEqual({ error: 'create_failed' });
+      expect(inviteUserByEmail).not.toHaveBeenCalled();
+      expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('refuses ambiguous email across pages, including an SSO account', async () => {
+    const { inviteUserByEmail, rpc } = fixture({
+      pages: [
+        { users: [candidate, ...directoryUsers(1).slice(1)], total: 1001, nextPage: 2 },
+        { users: [{ ...candidate, id: 'sso-target', is_sso_user: true }], total: 1001, nextPage: null },
+      ],
+    });
+    const res = await POST(req(target));
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
   });
 
   it('500 keeps the invitation fallback without exposing a GoTrue error or logging the email', async () => {

@@ -17,8 +17,7 @@ import { inviteUser, upsertMembership, setAdminRole } from '@/services/rbac';
 beforeEach(() => {
   jest.clearAllMocks();
   (createOrg as jest.Mock).mockResolvedValue('ORGNEW');
-  (inviteUser as jest.Mock).mockResolvedValue({ userId: 'u9', alreadyExisted: false });
-  (upsertMembership as jest.Mock).mockResolvedValue('m9');
+  (inviteUser as jest.Mock).mockResolvedValue({ userId: 'u9', membershipId: 'm9', alreadyExisted: false });
   (setAdminRole as jest.Mock).mockResolvedValue(undefined);
 });
 
@@ -39,8 +38,8 @@ test('crée l’ORG puis invite le premier admin dans l’ordre', async () => {
   fireEvent.change(await screen.findByLabelText(/adresse e.mail/i), { target: { value: 'chef@oti.re' } });
   fireEvent.click(screen.getByRole('button', { name: /inviter comme premier admin/i }));
   await waitFor(() => expect(inviteUser).toHaveBeenCalled());
-  await waitFor(() => expect(upsertMembership).toHaveBeenCalledWith('u9', 'ORGNEW', expect.any(String)));
   await waitFor(() => expect(setAdminRole).toHaveBeenCalledWith('m9', 'org_admin'));
+  expect(upsertMembership).not.toHaveBeenCalled();
 });
 
 test('« Inviter plus tard » ferme sans invitation', async () => {

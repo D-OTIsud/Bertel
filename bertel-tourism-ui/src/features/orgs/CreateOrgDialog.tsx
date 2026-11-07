@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/common/Modal';
 import { createOrg, friendlyOrgError } from '@/services/orgs';
-import { inviteUser, setAdminRole, friendlyRbacError } from '@/services/rbac';
+import { inviteUser, setAdminRole, friendlyRbacError, type InviteResult } from '@/services/rbac';
 import { BUSINESS_ROLE_CODES, businessRoleLabel } from '@/features/team/permission-presets';
 
 // Rôle admin remis au premier membre (rang 30 — vérifié en base : ref_org_admin_role).
@@ -21,8 +21,9 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
   const [orgId, setOrgId] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [roleCode, setRoleCode] = useState('contributor');
+  const [invitation, setInvitation] = useState<(InviteResult & { orgId: string; address: string }) | null>(null);
 
-  function reset() { setStep('infos'); setName(''); setScope('own_objects_only'); setOrgId(null); setEmail(''); setRoleCode('contributor'); }
+  function reset() { setStep('infos'); setName(''); setScope('own_objects_only'); setOrgId(null); setEmail(''); setRoleCode('contributor'); setInvitation(null); }
   function close() { reset(); setOpen(false); }
 
   async function submitInfos() {
@@ -38,13 +39,27 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
 
   async function submitAdmin() {
     if (!orgId) return;
+    const recipient = email.trim();
+    const address = recipient.toLowerCase();
+    const previous = invitation?.orgId === orgId && invitation.address === address ? invitation : null;
+    const resend = previous?.alreadyExisted && previous.neverSignedIn;
     setBusy(true);
     try {
-      const invited = await inviteUser({ email: email.trim(), orgObjectId: orgId, businessRoleCode: roleCode });
+      // A confirmed send or attachment only needs its admin grant retried.
+      const invited = previous && !resend ? previous : await inviteUser({
+        email: recipient, orgObjectId: orgId, businessRoleCode: roleCode, ...(resend ? { resend: true } : {}),
+      });
+      setInvitation({ ...invited, orgId, address });
+      if (invited.alreadyExisted && invited.neverSignedIn) {
+        toast.error('L’invitation est en attente. Cliquez de nouveau sur « Inviter comme premier admin » pour envoyer l’e-mail.');
+        return;
+      }
       // §227 — aucun octroi individuel : le rôle métier confère ses droits. La matrice de la
       // nouvelle ORG est semée côté base par le trigger `trg_seed_org_role_permission`.
       await setAdminRole(invited.membershipId, FIRST_ADMIN_ROLE_CODE);
-      toast.success(`Invitation envoyée à ${email.trim()} — premier admin de l’organisation.`);
+      toast.success(invited.alreadyExisted
+        ? `Le rôle de premier administrateur a été attribué à ${recipient}.`
+        : `Invitation envoyée à ${recipient} — premier admin de l’organisation.`);
       onDone(); close();
     } catch (e) { toast.error(friendlyRbacError(e as { message?: string })); }
     finally { setBusy(false); }
@@ -95,7 +110,11 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
             <p className="muted">L’organisation est créée. Invitez son premier administrateur : il recevra un e-mail et choisira son mot de passe, puis pourra gérer son équipe en autonomie.</p>
             <label className="field-block" htmlFor="org-admin-email">
               <span>Adresse e-mail</span>
-              <input id="org-admin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="direction@oti-ouest.re" disabled={busy} />
+              <input id="org-admin-email" type="email" value={email} onChange={(e) => {
+                const value = e.target.value;
+                if (invitation && invitation.address !== value.trim().toLowerCase()) setInvitation(null);
+                setEmail(value);
+              }} placeholder="direction@oti-ouest.re" disabled={busy} />
             </label>
             <label className="field-block" htmlFor="org-admin-role">
               <span>Rôle métier</span>

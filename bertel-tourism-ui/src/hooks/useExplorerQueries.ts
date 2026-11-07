@@ -833,6 +833,8 @@ export function useRestoreObjectVersionMutation(objectId: string | null) {
       if (next.userId !== previous.userId || next.status !== previous.status
         || next.orgId !== previous.orgId || next.role !== previous.role
         || next.canEditObjects !== previous.canEditObjects
+        || next.adminRank !== previous.adminRank || next.isTestRealm !== previous.isTestRealm
+        || next.demoMode !== previous.demoMode
         || next.authAuthority !== previous.authAuthority) actorEpoch.current += 1;
     });
     return () => { unsubscribe(); actorEpoch.current += 1; };

@@ -58,7 +58,7 @@ async function waitForApp({ origin, server }) {
   throw new Error('Owned Next editor did not start on loopback');
 }
 
-export async function testEditorRaces({ local, objectId, writerId, email, password, secondAccount }) {
+export async function testEditorRaces({ local, objectId, writerId, email, password, secondAccount, realmAccount }) {
   assert.ok(process.platform === 'linux' && objectId === 'HOTRUN999999AR01', 'exact disposable Linux editor fixture required');
   local.sql("BEGIN; SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',true);" +
     "INSERT INTO public.object_location(object_id, city, is_main_location) VALUES ('HOTRUN999999AR01','Saint-Denis',true);" +
@@ -126,7 +126,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         if (!closing && !scene.closed) routeFailure ??= new Error('Editor login attempted a native GET form submission');
         return route.abort().catch(() => {});
       }
-      if (!scene.nativeLoginRequested && url.href === loginUrl && request.isNavigationRequest() && request.method() === 'GET') {
+      if (!scene.nativeLoginRequested && url.href === scene.loginUrl && request.isNavigationRequest() && request.method() === 'GET') {
         scene.nativeLoginRequested = true;
         return route.continue();
       }
@@ -135,11 +135,26 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         scene.reload.nativeDocument = true;
         return route.continue();
       }
+      const realm = scene.realm;
+      if (realm?.reloadUrl && !realm.nativeDocument && url.href === realm.reloadUrl
+        && request.resourceType() === 'document' && request.isNavigationRequest() && request.method() === 'GET') {
+        realm.nativeDocument = true;
+        return route.continue();
+      }
+      const realmPhase = realm && (realm.nativeDocument ? realm.after : !realm.reloadUrl ? realm.before : null);
       const reload = scene.reload?.nativeDocument ? scene.reload : null;
       const draftScope = scene.draftScope;
       let kind;
       if (url.origin === local.origin) {
-        if (reload && request.method() === 'GET' && url.pathname === '/auth/v1/user') {
+        if (realmPhase && request.method() === 'POST' && url.pathname === '/rest/v1/rpc/current_user_test_realm') {
+          kind = 'realm-bootstrap';
+        } else if (realmPhase && request.method() === 'POST' && url.pathname === '/rest/v1/rpc/list_object_resources_filtered_page') {
+          const body = request.postDataJSON();
+          if (body?.p_search === realm.search && body?.p_view === 'card' && Array.isArray(body.p_status)
+            && body.p_status.includes('draft') && body.p_status.includes('published')) {
+            kind = 'realm-catalogue';
+          }
+        } else if (reload && request.method() === 'GET' && url.pathname === '/auth/v1/user') {
           kind = 'reload-auth';
         } else if (draftScope && request.method() === 'POST' && url.pathname === '/auth/v1/logout') {
           kind = 'draft-logout';
@@ -166,8 +181,12 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           const bearer = headers.authorization?.split(' ');
           const claims = JSON.parse(Buffer.from(bearer?.[1]?.split('.')[1] ?? '', 'base64url'));
           assert.ok(headers.apikey === local.anonymous.apikey && bearer?.[0] === 'Bearer'
-            && claims.role === 'authenticated' && claims.sub === (draftScope?.userId ?? writerId),
+            && claims.role === 'authenticated' && claims.sub === (realm?.account.userId ?? draftScope?.userId ?? writerId),
           'browser must use the exact synthetic user JWT and anonymous API key');
+          if (kind === 'realm-bootstrap' || kind === 'realm-catalogue') {
+            if (realmPhase === realm.before) realm.authorization ??= headers.authorization;
+            assert.ok(headers.authorization === realm.authorization, 'realm transition must reuse the exact original JWT');
+          }
           failureStage = 'content-profile';
           if (kind === 'legal-write') assert.equal(headers['content-profile'], 'public');
           else if (kind !== 'patch' && kind !== 'reload-auth' && kind !== 'draft-logout') {
@@ -191,7 +210,16 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           }
           return;
         }
-        if (kind === 'legal-read') {
+        if (kind === 'realm-bootstrap' || kind === 'realm-catalogue') {
+          assert.ok(response.ok());
+          failureStage = 'realm-response';
+          const body = await response.json();
+          if (kind === 'realm-bootstrap') realmPhase.realms.push(body);
+          else {
+            assert.ok(Array.isArray(body?.data), 'expected the real Explorer catalogue response');
+            realmPhase.catalogues.push(body.data.map((row) => row.id));
+          }
+        } else if (kind === 'legal-read') {
           assert.ok(response.ok());
           failureStage = 'fixture-legal-record';
           const records = await response.json();
@@ -245,7 +273,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       }
     }
 
-    async function signInEditor(page, credentials) {
+    async function signInEditor(page, credentials, target = editorUrl) {
       // The prerendered form can be visible before its client handlers are attached.
       const forgotPassword = page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
       const returnToLogin = page.getByRole('button', { name: 'Retour à la connexion', exact: true });
@@ -262,12 +290,15 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await page.getByLabel('Adresse e-mail').fill(credentials.email);
       await page.getByLabel('Mot de passe', { exact: true }).fill(credentials.password);
       await submitLogin.click();
-      await page.waitForURL(editorUrl, { timeout: 60_000 });
+      await page.waitForURL(target, { timeout: 60_000 });
     }
 
-    async function openAuthenticatedEditor(legalMode, draftScope) {
+    async function openAuthenticatedEditor(legalMode, draftScope, realm) {
       const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
-      const scene = { legalMode, draftScope, closed: false, nativeLoginRequested: false, pageErrors: 0,
+      const target = realm?.url ?? editorUrl;
+      const requestedLogin = realm ? app.origin + '/login?from=' + encodeURIComponent(realm.destination) : loginUrl;
+      const scene = { legalMode, draftScope, realm, loginUrl: requestedLogin,
+        closed: false, nativeLoginRequested: false, pageErrors: 0,
         legalReads: 0, legalPermissions: 0, summaryReads: 0, summaryFailures: 0, legalWrites: 0 };
       await context.routeWebSocket('**/*', (route) => {
         const url = new URL(route.url());
@@ -278,10 +309,10 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await context.route('**/*', (route) => routeEditorRequest(route, scene));
       const page = await context.newPage();
       if (draftScope) page.on('pageerror', () => { scene.pageErrors += 1; });
-      const login = await page.goto(loginUrl);
-      assert.ok(scene.nativeLoginRequested && login?.status() === 200 && login.url() === loginUrl
+      const login = await page.goto(requestedLogin);
+      assert.ok(scene.nativeLoginRequested && login?.status() === 200 && login.url() === requestedLogin
         && login.request().redirectedFrom() === null, 'exact native login document must return HTTP 200 without redirects');
-      await signInEditor(page, { email, password });
+      await signInEditor(page, realm?.account ?? { email, password }, target);
       return { page, scene, close: async () => {
         scene.closed = true;
         await context.close();
@@ -493,6 +524,54 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     assert.deepEqual([patches.length, publishCalls, restoreCalls], mutationsBeforeDrafts);
     assert.equal(draftScene.scene.pageErrors, 0);
     await draftScene.close();
+
+    const testId = 'HOTRUN999999AR05', realId = 'HOTRUN999999AR02';
+    const search = 'ACC04RealmWitness';
+    const testName = search + ' test', realName = search + ' real';
+    assert.equal(local.sql(`WITH renamed AS (
+      UPDATE public.object SET name=CASE WHEN id='${testId}' THEN '${testName}' ELSE '${realName}' END
+      WHERE (id='${testId}' AND is_test AND status='published')
+         OR (id='${realId}' AND NOT is_test AND status='draft')
+      RETURNING id
+    ) SELECT count(*) FROM renamed`, 'name the two existing realm witnesses'), '2');
+    const params = new URLSearchParams({ buckets: 'HOT', status: 'published,draft', search });
+    const realmDestination = '/explorer?' + params;
+    const realm = { account: realmAccount, search, destination: realmDestination, url: app.origin + realmDestination,
+      before: { realms: [], catalogues: [] }, after: { realms: [], catalogues: [] } };
+    const realmScene = await openAuthenticatedEditor(undefined, undefined, realm);
+    try {
+      const { page } = realmScene;
+      const testCard = page.getByRole('heading', { name: testName, exact: true });
+      const realCard = page.getByRole('heading', { name: realName, exact: true });
+      const sandbox = page.getByText('Bac à sable', { exact: true });
+      await assertion(testCard).toBeVisible();
+      await assertion(realCard).toHaveCount(0);
+      await assertion(sandbox).toBeVisible();
+      assert.ok(realm.before.realms.length > 0 && realm.before.realms.every((value) => value === true));
+      assert.ok(realm.before.catalogues.some((ids) => ids.includes(testId))
+        && realm.before.catalogues.every((ids) => !ids.includes(realId)), 'test catalogue must have no real witness');
+
+      const moved = local.sql(`WITH changed AS (
+        UPDATE public.user_org_membership SET org_object_id='ORGRUN999999AR02'
+        WHERE id='00000000-0000-4000-a000-00000000ab16' AND user_id='${realmAccount.userId}'
+          AND org_object_id='ORGRUN999999AR03' AND is_active
+        RETURNING id
+      ) SELECT count(*) FROM changed`, 'commit tester realm move');
+      assert.equal(moved, '1');
+      realm.reloadUrl = page.url();
+      const document = await page.reload();
+      assert.ok(realm.nativeDocument && document?.status() === 200 && document.url() === realm.reloadUrl
+        && document.request().redirectedFrom() === null, 'realm witness must use a native document reload');
+      assert.equal(await page.evaluate(() => performance.getEntriesByType('navigation')[0]?.type), 'reload');
+      await assertion(realCard).toBeVisible();
+      await assertion(testCard).toHaveCount(0);
+      await assertion(sandbox).toHaveCount(0);
+      assert.ok(realm.after.realms.length > 0 && realm.after.realms.every((value) => value === false));
+      assert.ok(realm.after.catalogues.some((ids) => ids.includes(realId))
+        && realm.after.catalogues.every((ids) => !ids.includes(testId)), 'real catalogue must have no test witness');
+    } finally {
+      await realmScene.close();
+    }
   } catch (error) {
     throw routeFailure ?? error;
   } finally {

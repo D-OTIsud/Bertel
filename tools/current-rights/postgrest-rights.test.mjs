@@ -106,6 +106,7 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
   let fixtureCreated = false;
   let writerCredentials;
   let otherCredentials;
+  let testerCredentials;
   try {
     const publicationFixtures = local.sql(`SELECT count(*) FROM public.object WHERE id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}')`,
       'initial publication fixtures are absent');
@@ -128,6 +129,7 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       assert.ok(created.id === id && created.email === email && created.email_confirmed_at, 'GoTrue must create the exact confirmed synthetic identity');
       if (browserWitness && key === 'writer') writerCredentials = { email, password };
       if (browserWitness && key === 'other') otherCredentials = { email, password };
+      if (browserWitness && key === 'tester') testerCredentials = { email, password };
       if (key === 'admin') continue; // Only a fixture FK; never used to bypass HTTP assertions.
       const signedIn = await json(await local.request('/auth/v1/token?grant_type=password', local.anonymous,
         { email, password }), 'real synthetic password login');
@@ -156,8 +158,9 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       assert.equal(await canWrite('other', A), true);
       const { testEditorRaces } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
       await testEditorRaces({ local, objectId: A, writerId: ids.writer, ...writerCredentials,
+        realmAccount: { userId: ids.tester, ...testerCredentials },
         secondAccount: { id: ids.other, ...otherCredentials } });
-      t.diagnostic('Authenticated Chromium and PostgREST publication, restore, legal and account draft isolation passed.');
+      t.diagnostic('Authenticated Chromium and PostgREST publication, restore, legal, account draft isolation and same-JWT Explorer realm switch passed.');
       return;
     }
     const versionA = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${A}'`, 'private history witness'));
@@ -241,6 +244,14 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     const testChanged = await json(await local.request(`/rest/v1/object?id=eq.${TEST}`, headers('tester'),
       { name: 'Real JWT test realm positive' }, 'PATCH', { prefer: 'return=representation' }), 'test realm DML positive');
     assert.ok(testChanged.length === 1 && testChanged[0].is_test === true);
+    const spoofedRealm = await local.request(`/rest/v1/object?id=eq.${TEST}`, headers('tester'),
+      { name: 'Forbidden derived realm mutation', is_test: false }, 'PATCH', { prefer: 'return=minimal' });
+    assert.equal(spoofedRealm.status, 403, 'an otherwise authorized test writer cannot set is_test');
+    const realmError = await spoofedRealm.json();
+    assert.equal(realmError.code, '42501');
+    assert.equal(realmError.details, 'object_realm_is_derived');
+    assert.deepEqual((await rows(headers('tester'), TEST)).map(({ name, is_test }) => ({ name, is_test })),
+      [{ name: 'Real JWT test realm positive', is_test: true }], 'the refused PATCH preserves the name and derived realm');
     commit("UPDATE public.user_org_membership SET org_object_id='ORGRUN999999AR02' WHERE id='00000000-0000-4000-a000-00000000ab16'", 'committed realm scope switch');
     assert.ok(await json(await rpc(headers('tester'), 'current_user_test_realm'), 'current production realm') === false);
     assert.ok((await rows(headers('tester'), TEST)).length === 0 && (await rows(headers('tester'), PUBLIC)).length === 1);

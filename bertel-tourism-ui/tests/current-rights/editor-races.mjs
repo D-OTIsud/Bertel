@@ -185,6 +185,13 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         scene.reload.nativeDocument = true;
         return route.continue();
       }
+      const passiveStartup = scene.passiveStartup;
+      if (passiveStartup && !passiveStartup.nativeDocument && url.href === editorUrl
+        && request.resourceType() === 'document' && request.isNavigationRequest() && request.method() === 'GET'
+        && request.frame() === passiveStartup.page.mainFrame() && request.redirectedFrom() === null) {
+        passiveStartup.nativeDocument = true;
+        return route.continue();
+      }
       const realm = scene.realm;
       if (realm?.reloadStarted && !realm.nativeDocument && isRealmDocument(request, realm)) {
         realm.nativeDocument = true;
@@ -519,7 +526,29 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     const draftName = nameField(draftPage);
     const passivePage = await draftScene.context.newPage();
     const passiveName = nameField(passivePage);
-    const waitForDraftWorkspace = (tab) => assertion.poll(() => draftScene.scene.draftScope.workspacePages.has(tab)).toBe(true);
+    const passiveStartup = { page: passivePage, nativeDocument: false, documentStatus: null };
+    draftScene.scene.passiveStartup = passiveStartup;
+    const passiveResponses = { authStatus: null, workspaceStatus: null };
+    passivePage.on('response', (response) => {
+      const url = new URL(response.url());
+      if (url.origin !== local.origin) return;
+      if (url.pathname === '/auth/v1/user' && response.request().method() === 'GET') {
+        passiveResponses.authStatus = response.status();
+      } else if (editorRpcKinds.get(url.pathname) === 'reread' && response.request().method() === 'POST') {
+        passiveResponses.workspaceStatus = response.status();
+      }
+    });
+    function waitForDraftWorkspace(tab) {
+      const observed = () => draftScene.scene.draftScope.workspacePages.has(tab);
+      if (tab !== passivePage) return assertion.poll(observed).toBe(true);
+      return assertion.poll(() => ({
+        observed: observed(),
+        documentStatus: passiveStartup.documentStatus,
+        location: tab.url() === editorUrl ? 'editor' : tab.url() === loginUrl ? 'login' : 'other',
+        pageErrors: draftScene.scene.pageErrors,
+        ...passiveResponses,
+      }), { message: 'Passive editor workspace must respond under the current account' }).toMatchObject({ observed: true });
+    }
     const storedDraft = (userId) => draftPage.evaluate((key) => localStorage.getItem(key),
       `object-editor-draft:${encodeURIComponent(userId)}:${encodeURIComponent(objectId)}`);
     const originalDraftName = 'Synthetic local name for first account only';
@@ -541,6 +570,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     }
     async function signInDraftEditor(userId, credentials) {
       draftScene.scene.draftScope = draftScopeFor(userId);
+      passiveResponses.authStatus = null;
+      passiveResponses.workspaceStatus = null;
       await signInEditor(draftPage, credentials);
       await waitForDraftWorkspace(draftPage);
     }
@@ -552,7 +583,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await assertion.poll(async () => JSON.parse((await storedDraft(writerId)) ?? '{}').draft?.generalInfo?.name)
       .toBe(originalDraftName);
     const firstDraft = await storedDraft(writerId);
-    await passivePage.goto(editorUrl);
+    const passiveDocument = await passivePage.goto(editorUrl, { waitUntil: 'domcontentloaded' });
+    passiveStartup.documentStatus = passiveDocument?.status() ?? null;
+    assert.ok(passiveStartup.nativeDocument && passiveStartup.documentStatus === 200
+      && passiveDocument.url() === editorUrl && passiveDocument.request().redirectedFrom() === null,
+    'the passive editor must open its exact native document with HTTP 200 and no redirect');
     await waitForDraftWorkspace(passivePage);
     await assertion(passiveName).toHaveValue(originalDraftName);
     await signOutDraftEditor();

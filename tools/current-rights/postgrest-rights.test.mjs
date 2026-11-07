@@ -117,6 +117,7 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
   let fixtureCreated = false;
   let writerCredentials;
   let otherCredentials;
+  let testerCredentials;
   try {
     const publicationFixtures = local.sql(`SELECT count(*) FROM public.object WHERE id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}')`,
       'initial publication fixtures are absent');
@@ -139,6 +140,7 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       assert.ok(created.id === id && created.email === email && created.email_confirmed_at, 'GoTrue must create the exact confirmed synthetic identity');
       if (browserWitness && key === 'writer') writerCredentials = { email, password };
       if (browserWitness && key === 'other') otherCredentials = { email, password };
+      if (realtimeWitness && key === 'tester') testerCredentials = { email, password };
       if (key === 'admin') continue; // Only a fixture FK; never used to bypass HTTP assertions.
       const auth = await signIn(id, { email, password });
       sessions.set(key, auth); originalTokens.set(key, auth.authorization);
@@ -168,9 +170,35 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       }
       const identity = (key) => ({ id: ids[key], headers: headers(key) });
       const { testRealtimeSecurity } = await import('../../bertel-tourism-ui/tests/current-rights/realtime-security.mjs');
-      await testRealtimeSecurity({ local, objectId: A, publishedId: PUBLIC, writer: identity('writer'),
+      await testRealtimeSecurity({ local, objectId: A, publishedId: PUBLIC, testObjectId: TEST, writer: identity('writer'),
         foreign: identity('other'), testRealm: identity('tester'), portal: identity('portal'),
         profileless: identity('foreignPortal'),
+        restoreUnaffiliatedProfile: async () => {
+          commit(`DO $fixture$ BEGIN
+            IF EXISTS (SELECT 1 FROM public.user_org_membership WHERE user_id='${ids.foreignPortal}' AND is_active) THEN
+              RAISE EXCEPTION 'unexpected active membership for the unaffiliated fixture';
+            END IF;
+            INSERT INTO public.app_user_profile(id,role,actor_id) VALUES('${ids.foreignPortal}','tourism_agent',NULL);
+          END; $fixture$`, 'restore only a default staff profile without granting an organization');
+          assert.equal((await rows(headers('foreignPortal'), PUBLIC)).length, 1, 'unaffiliated user keeps published read access');
+          return identity('foreignPortal');
+        },
+        markTesterAsDiscovery: async () => {
+          commit(`DO $fixture$ BEGIN
+            UPDATE auth.users SET raw_app_meta_data=jsonb_set(coalesce(raw_app_meta_data,'{}'::jsonb),
+              '{sandbox_discovery}','true'::jsonb)
+            WHERE id='${ids.tester}' AND NOT coalesce(raw_app_meta_data @> '{"sandbox_discovery":true}'::jsonb,false);
+            IF NOT FOUND THEN RAISE EXCEPTION 'missing unmarked synthetic tester'; END IF;
+          END; $fixture$`, 'mark only the existing test editor as public discovery');
+          const auth = await signIn(ids.tester, testerCredentials);
+          const encoded = auth.authorization.split('.')[1];
+          const claims = JSON.parse(Buffer.from(encoded, 'base64url'));
+          assert.equal(claims.app_metadata?.sandbox_discovery, true, 'fresh signed JWT carries the discovery provenance');
+          assert.equal(await json(await rpc(auth, 'current_user_test_realm'), 'discovery realm'), true);
+          assert.equal(await json(await rpc(auth, 'user_can_write_object_canonical', { p_object_id: TEST }),
+            'discovery fixture keeps the same test editor rights'), true);
+          return { id: ids.tester, headers: auth };
+        },
         revokeWriter: async () => {
           commit(`DO $fixture$ BEGIN
             UPDATE public.user_org_membership SET is_active=false

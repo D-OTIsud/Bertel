@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { createClient } from '@supabase/supabase-js';
+import { resetPresenceAfterJoin } from '../../src/lib/realtime-recovery.ts';
 
 const timeout = 7000;
 // CLI v2.78.1's Kong routes this path to Realtime v2.78.10's tenant API.
@@ -13,10 +14,14 @@ async function waitFor(check, failure) {
 }
 
 // Realtime v2.78.10 returns this exact Phoenix reason; the locked SDK wraps it in JSON quotes.
-function join(channel, topic) {
+function join(channel, topic, isPrivate) {
   return Promise.race([
     new Promise((resolve) => channel.subscribe((status, error) => {
-      if (status === 'SUBSCRIBED') return resolve('joined');
+      if (status === 'SUBSCRIBED') {
+        // Use the application boundary on the actual WebSocket. The positive
+        // Presence checks below must still see the server's first clean snapshot.
+        return resolve(!isPrivate || resetPresenceAfterJoin(channel) ? 'joined' : 'unproven');
+      }
       if (status !== 'CHANNEL_ERROR') return resolve('unproven');
       const reason = error?.message?.replace(/^"|"$/g, '');
       if (reason === 'PrivateOnly: This project only allows private channels') return resolve('private-only');
@@ -77,7 +82,7 @@ export async function testRealtimeSecurity({ local, objectId, publishedId, testO
     const seen = new Set();
     channel.on('presence', { event: 'sync' }, () => {});
     channel.on('broadcast', { event: 'field:lock' }, ({ payload }) => seen.add(payload?.probe));
-    return { client, channel, id: identity.id, seen, status: await join(channel, topic) };
+    return { client, channel, id: identity.id, seen, status: await join(channel, topic, isPrivate) };
   };
   const room = `room:${objectId}`;
   const published = `room:${publishedId}`;

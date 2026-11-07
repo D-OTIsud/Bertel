@@ -699,6 +699,8 @@ ROLLBACK;
 -- Separate privileged authority-source hardening; preserve the malformed DB03 shadow witness.
 \ir object_canonical_write_sources.sql
 \ir ../supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql
+\ir ../supabase/migrations/20261107154854_portal_submission_module_binding.sql
+\ir tests/test_portal_submission_module_binding.sql
 \ir tests/test_partner_photo_album_public.sql
 \ir tests/test_object_current_rights.sql
 \ir tests/test_object_canonical_write_sources.sql

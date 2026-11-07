@@ -844,8 +844,9 @@ BEGIN
   -- ---------- (D2) submit_actor_fiche — LE geste « Soumettre pour vérification » ----------
   v_changes := jsonb_build_array(
     jsonb_build_object(
-      'target_table', 'object_description', 'target_pk', NULL, 'action', 'update',
-      'payload', jsonb_build_object('chapo', 'Nouveau chapo'),
+      'target_table', 'contact_channel', 'target_pk', NULL, 'action', 'update',
+      'payload', jsonb_build_object('objectItems', jsonb_build_array(
+        jsonb_build_object('kindCode', 'email', 'value', 'portal-new@example.invalid'))),
       -- (C2) L'enveloppe porte DELIBÉRÉMENT les trois clés d'attestation, au nom de v_editor :
       -- c'est ce qu'un prestataire peut mettre dans son corps de requête, rien ne l'en empêche
       -- côté client. submit_actor_fiche DOIT les retirer — sinon la ligne finirait par affirmer
@@ -898,8 +899,8 @@ BEGIN
   BEGIN
     PERFORM api.submit_actor_fiche(v_objA,
       (SELECT jsonb_agg(jsonb_build_object(
-         'target_table', 'object_description', 'target_pk', NULL, 'action', 'update',
-         'payload', jsonb_build_object('chapo', 'x'),
+         'target_table', 'contact_channel', 'target_pk', NULL, 'action', 'update',
+         'payload', jsonb_build_object('objectItems', '[]'::jsonb),
          'metadata', jsonb_build_object('rpc', NULL, 'section', 'contacts', 'manual_apply', true,
                                         'field', 'Contacts', 'before', 'a', 'after', 'b')))
        FROM generate_series(1, 41)),
@@ -926,6 +927,24 @@ BEGIN
                                      'field','Descriptions','before','','after',''))), NULL);
   EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
   ASSERT v_denied, 'D2: submit refuse un module masqué par la matrice';
+
+  v_msg := '';
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+    jsonb_build_object('target_table','object_description','action','update',
+      'payload',jsonb_build_object('chapo','Description masquée'),
+      'metadata',jsonb_build_object('rpc',NULL,'section','contacts','manual_apply',true))), NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_msg := SQLERRM; END;
+  ASSERT v_msg = 'Les données proposées ne correspondent pas à la rubrique déclarée',
+    'D2: une étiquette contacts ne permet pas de proposer une description masquée';
+
+  v_msg := '';
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+    jsonb_build_object('target_table','object_amenity','action','update',
+      'payload',jsonb_build_object('amenities','[]'::jsonb,'prices','[]'::jsonb),
+      'metadata',jsonb_build_object('rpc','save_object_commercial','section','characteristics','manual_apply',false))), NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_msg := SQLERRM; END;
+  ASSERT v_msg = 'Les données proposées ne correspondent pas à la rubrique déclarée',
+    'D2: le writer commercial du portail ne reçoit pas des clés de tarifs';
 
   -- Refus : writer hors whitelist §120 (cas générique).
   v_denied := false;
@@ -999,11 +1018,11 @@ BEGIN
   v_msg := '';
   BEGIN
     PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
-      jsonb_build_object('target_table','object_commercial','target_pk',NULL,'action','update',
-        'payload', jsonb_build_object('x','y'),
-        'metadata', jsonb_build_object('rpc','save_object_commercial','section','contacts',
+      jsonb_build_object('target_table','object_amenity','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('amenities','[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_commercial','section','characteristics',
                                        'manual_apply',false,'field','Commercial','before','','after','')),
-      jsonb_build_object('target_table','object_description','target_pk',NULL,'action','zzz-invalide',
+      jsonb_build_object('target_table','contact_channel','target_pk',NULL,'action','zzz-invalide',
         'payload','{}'::jsonb,
         'metadata', jsonb_build_object('rpc',NULL,'section','contacts','manual_apply',true,
                                        'field','x','before','','after',''))), NULL);
@@ -1025,8 +1044,8 @@ BEGIN
   v_denied := false;
   BEGIN
     PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
-      jsonb_build_object('target_table', 'object_description', 'target_pk', NULL, 'action', 'update',
-        'payload', jsonb_build_object('chapo', 'Transactionnalité #1'),
+      jsonb_build_object('target_table', 'contact_channel', 'target_pk', NULL, 'action', 'update',
+        'payload', jsonb_build_object('objectItems', '[]'::jsonb),
         'metadata', jsonb_build_object('rpc', NULL, 'section', 'contacts', 'manual_apply', true,
                                        'field', 'Contacts', 'before', 'a', 'after', 'b')),
       jsonb_build_object('target_table', 'opening_period', 'target_pk', NULL, 'action', 'update',
@@ -1637,8 +1656,8 @@ BEGIN
   ASSERT (SELECT metadata->>'section' FROM pending_change WHERE id = v_pc_manual) = 'contacts',
          'F2: l''estampille d''attestation n''écrase pas l''enveloppe d''origine';
   -- AUCUN re-dispatch : c'est la contrepartie de l'attestation. La fiche n'a pas bougé par la
-  -- machine — le payload (chapo « Nouveau chapo ») n'a été écrit nulle part.
-  ASSERT NOT EXISTS (SELECT 1 FROM object_description d WHERE d.object_id = v_objA),
+  -- machine — la proposition de coordonnées n'a été écrite nulle part.
+  ASSERT NOT EXISTS (SELECT 1 FROM contact_channel c WHERE c.object_id = v_objA),
          'F2: approbation attestée ⇒ AUCUN re-dispatch, la machine n''a rien écrit dans la fiche';
 
   -- (F2.5) Idempotence + accents restaurés (décision contrôleur B : les messages vifs étaient

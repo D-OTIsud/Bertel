@@ -171,6 +171,9 @@ export async function testRealtimeSecurity({ local, objectId, publishedId, testO
       [published, unaffiliated, 'default staff profile without affiliation cannot join a published room'],
       [globalTopics.prod, unaffiliated, 'default staff profile without affiliation cannot join the roster'],
     ]);
+    for (const peer of [testGlobal, testCrm, testRoomEditor]) {
+      assert.equal(await peer.client.removeChannel(peer.channel), 'ok');
+    }
     const discovery = await markTesterAsDiscovery();
     await deniedJoins([
       [testRoom, testRealm, 'original tester JWT cannot rejoin after the account becomes public discovery'],

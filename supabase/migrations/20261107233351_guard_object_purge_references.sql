@@ -54,6 +54,15 @@ BEGIN
   --    XOR (object_id OU place_id) : les médias object-keyed partent via object_id CASCADE, et les
   --    médias place-keyed des sous-lieux de l'objet partent via object_place→media.place_id CASCADE.
   --    On collecte les DEUX, sinon les fichiers Storage des médias de sous-lieux orphelineraient.
+  -- A writer can move a place or media row to another authorized object.
+  -- Wait for existing moves, and pin the remaining rows until the cascade.
+  PERFORM p.id FROM public.object_place p
+    WHERE p.object_id = p_object_id ORDER BY p.id FOR UPDATE;
+  PERFORM m.id FROM public.media m
+    WHERE m.object_id = p_object_id
+       OR m.place_id IN (SELECT p.id FROM public.object_place p WHERE p.object_id = p_object_id)
+    ORDER BY m.id FOR UPDATE;
+
   SELECT coalesce(array_agg(m.url), '{}'::text[])
     INTO v_media
     FROM public.media m

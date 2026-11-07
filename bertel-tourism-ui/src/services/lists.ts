@@ -620,6 +620,9 @@ export async function sendListByEmail(listId: string, toEmail: string): Promise<
   });
   if (!res.ok) {
     const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+      if (res.status === 503 && j?.error === 'email_protection_unavailable') {
+        throw new Error("L'envoi est momentanément indisponible. Réessayez dans un instant.");
+      }
     if (res.status === 503) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
     // La route relaie tel quel le message brut d'`ensure_list_share_link` (ex. « forbidden » +
     // detail:"SHARE_NOT_AVAILABLE: …") quand elle ne peut pas générer le lien « sélection

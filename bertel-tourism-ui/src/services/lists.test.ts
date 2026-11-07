@@ -544,6 +544,43 @@ describe('sendListByEmail — messages FR (revue architecte §4)', () => {
     await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow(/SMTP/);
   });
 
+  it('503 email_protection_unavailable gives the approved temporary refusal', async () => {
+    mockAuthClient();
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503,
+      json: async () => ({ error: 'email_protection_unavailable' }) }) as unknown as typeof fetch;
+    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow("L'envoi est momentanément indisponible. Réessayez dans un instant.");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['smtp_not_configured', 'smtp_unavailable', 'other_code'])('503 %s keeps the real legacy SMTP refusal', async (error) => {
+    mockAuthClient();
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503,
+      json: async () => ({ error }) }) as unknown as typeof fetch;
+    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([null, false, 'unstructured', []])('an unstructured 503 body still keeps the existing SMTP refusal: %s', async (body) => {
+    mockAuthClient();
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503,
+      json: async () => body }) as unknown as typeof fetch;
+    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+  });
+
+  it('a non-JSON 503 body still keeps the existing SMTP refusal', async () => {
+    mockAuthClient();
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503,
+      json: async () => { throw new Error('Synthetic invalid JSON'); } }) as unknown as typeof fetch;
+    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+  });
+
+  it('does not reinterpret that code on a different HTTP status', async () => {
+    mockAuthClient();
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 403,
+      json: async () => ({ error: 'email_protection_unavailable' }) }) as unknown as typeof fetch;
+    await expect(sendListByEmail('L1', 'a@example.com')).rejects.not.toThrow("L'envoi est momentanément indisponible. Réessayez dans un instant.");
+  });
+
   it('succès : renvoie trackingUpdated depuis le corps de la réponse', async () => {
     mockAuthClient();
     global.fetch = jest.fn().mockResolvedValue({

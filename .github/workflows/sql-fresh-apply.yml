@@ -712,8 +712,15 @@ jobs:
           image_id="$(docker inspect --format '{{.Image}}' "$container")"
           backend="$(docker exec "$container" printenv STORAGE_BACKEND)"
           global_limit="$(docker exec "$container" printenv UPLOAD_FILE_SIZE_LIMIT)"
-          [[ "$backend" == file && "$global_limit" =~ ^[0-9]+$ ]]
-          printf 'Storage image %s (%s), local %s backend, local global upload limit %s bytes\n' "$image_ref" "$image_id" "$backend" "$global_limit"
+          standard_limit="$(docker exec "$container" sh -c 'printf "%s" "${UPLOAD_FILE_SIZE_LIMIT_STANDARD:-${FILE_SIZE_LIMIT_STANDARD_UPLOAD:-0}}"')"
+          [[ "$backend" == file && "$global_limit" =~ ^[1-9][0-9]{0,14}$ && "$standard_limit" =~ ^(0|[1-9][0-9]{0,14})$ ]]
+          # v1.41.8 uses the global ceiling when the optional standard ceiling is zero.
+          effective_standard="$global_limit"
+          if (( standard_limit > 0 && standard_limit < global_limit )); then
+            effective_standard="$standard_limit"
+          fi
+          printf 'Storage image %s (%s), local %s backend, global %s bytes, standard effective %s bytes\n' "$image_ref" "$image_id" "$backend" "$global_limit" "$effective_standard"
+          (( global_limit > 42305171 && effective_standard > 42305171 ))
           node --test tools/current-rights/storage-db07-profile.test.mjs
 
       - name: Strict private Storage HTTP capability (failure is not tolerated)

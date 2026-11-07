@@ -180,6 +180,7 @@ test('retries only the admin grant once delivery was acknowledged', async () => 
   await fillAdminForm();
   submitInvite();
   await waitFor(() => expect(toast.error).toHaveBeenCalledWith('assignment failed'));
+  expect(screen.getByLabelText(/^Rôle métier/)).toBeDisabled();
   expect(toast.success).not.toHaveBeenCalledWith(sentMessage);
 
   submitInvite();

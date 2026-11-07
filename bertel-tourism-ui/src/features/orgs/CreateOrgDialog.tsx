@@ -123,7 +123,7 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
             </label>
             <label className="field-block" htmlFor="org-admin-role">
               <span>Rôle métier</span>
-              <select id="org-admin-role" className="select" value={roleCode} onChange={(e) => setRoleCode(e.target.value)} disabled={busy}>
+              <select id="org-admin-role" className="select" value={roleCode} onChange={(e) => setRoleCode(e.target.value)} disabled={busy || invitation !== null}>
                 {BUSINESS_ROLE_CODES.map((code) => <option key={code} value={code}>{businessRoleLabel(code)}</option>)}
               </select>
               <span className="muted">Le rôle d’administration « org_admin » (gestion d’équipe) est ajouté automatiquement.</span>

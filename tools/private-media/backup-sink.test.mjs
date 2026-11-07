@@ -8,7 +8,9 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { backupSources, readPrivateBackupInput, verifyBackup } from './backup-sink.mjs';
-import { storageTransport } from './copy-verified.mjs';
+import { inspectManifest, storageTransport } from './copy-verified.mjs';
+import { copyBinding } from './copy-reserved.mjs';
+import { prepareCopyAdmissions } from './prepare-copy-admissions.mjs';
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const projectRef = 'aaaaaaaaaaaaaaaaaaaa';
@@ -263,6 +265,32 @@ test('bound DB07 backup verifies offline and refuses incomplete, tampered or rep
   assert.equal(requests.length, 11);
   assert.ok(requests.every(([method]) => method === 'GET'));
   assert.deepEqual(await verifyBackup(manifest, full), { records: 2, bytes: sources[0].length + sources[1].length });
+  const receiptPath = join(full.backupRoot, 'backup-receipt.json');
+  const inventory = inspectManifest(manifest, projectRef, 2);
+  const config = {
+    mode: 'hosted', project_ref: projectRef, manifest_sha256: inventory.digest,
+    namespace_id: randomUUID(), epoch: randomUUID(), storage_origin_sha256: sha256(inventory.origin),
+  };
+  const configBytes = Buffer.from(JSON.stringify(config));
+  const seedOptions = { ...full, receiptSha256: sha256(await readFile(receiptPath)), bindingConfigSha256: sha256(configBytes) };
+  const prepared = await prepareCopyAdmissions(manifest, configBytes, seedOptions);
+  assert.equal(prepared.records, 2);
+  assert.equal(prepared.backup_receipt_sha256, seedOptions.receiptSha256);
+  assert.equal(prepared.binding_config_sha256, seedOptions.bindingConfigSha256);
+  const payload = /expected CONSTANT pg_catalog.jsonb := '(.*)'::pg_catalog.jsonb;/.exec(prepared.sql);
+  assert.ok(payload);
+  assert.deepEqual(JSON.parse(payload[1]), inventory.records.map((record, index) =>
+    copyBinding(inventory, record, { sha256: sha256(sources[index]), bytes: sources[index].length }, config)));
+  assert.equal([...prepared.sql.matchAll(/^BEGIN;$/gm)].length, 1);
+  assert.equal([...prepared.sql.matchAll(/^COMMIT;$/gm)].length, 1);
+  assert.match(prepared.sql, /INSERT INTO storage_reservation_private\.namespace/);
+  assert.match(prepared.sql, /INSERT INTO storage_reservation_private\.admission/);
+  assert.match(prepared.sql, /20261107041336/);
+  assert.doesNotMatch(prepared.sql, /ON CONFLICT|(?:INSERT INTO|UPDATE|DELETE FROM) storage_reservation_private\.reservation|storage_reservation_api\./i);
+  await assert.rejects(prepareCopyAdmissions(manifest, configBytes, { ...seedOptions, receiptSha256: 'a'.repeat(64) }),
+    /^Error: backup_receipt$/);
+  await assert.rejects(prepareCopyAdmissions(manifest, configBytes, { ...seedOptions, bindingConfigSha256: 'a'.repeat(64) }),
+    /^Error: seed_config_digest$/);
   const secondPath = join(full.backupRoot, receipt.records[1].filename);
   if (linux) {
     await chmod(secondPath, 0o640);
@@ -278,9 +306,15 @@ test('bound DB07 backup verifies offline and refuses incomplete, tampered or rep
   assert.deepEqual(Buffer.concat([decoder.update(sealed.subarray(20, -16)), decoder.final()]), sources[1]);
   sealed[sealed.length - 1] ^= 1;
   await writeFile(secondPath, sealed);
-  await assert.rejects(verifyBackup(manifest, full), /^Error: backup_authentication$/);
-  const receiptPath = join(full.backupRoot, 'backup-receipt.json');
+  await assert.rejects(prepareCopyAdmissions(manifest, configBytes, seedOptions), /^Error: backup_authentication$/);
   await writeFile(receiptPath, JSON.stringify({ ...receipt, records: [receipt.records[0]] }));
   await assert.rejects(verifyBackup(manifest, full), /^Error: backup_receipt$/);
   assert.equal(requests.length, 11);
+});
+
+test('admission CLI has no execution mode and suppresses unexpected argument values', () => {
+  const result = spawnSync(process.execPath, ['tools/private-media/prepare-copy-admissions.mjs', '--execute', 'sensitive-fixture-value'], { encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /arguments/);
+  assert.doesNotMatch(result.stderr, /sensitive-fixture-value/);
 });

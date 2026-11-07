@@ -1,0 +1,208 @@
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { createServer } from 'node:net';
+import { fileURLToPath } from 'node:url';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { chromium, expect } from '@playwright/test';
+
+const appDir = fileURLToPath(new URL('../../', import.meta.url));
+const loopback = '127.0.0.1';
+const assertion = expect.configure({ timeout: 20_000 });
+const editorRpcKinds = new Map([
+  ['/rest/v1/rpc/rpc_publish_object', 'publish'],
+  ['/rest/v1/rpc/rpc_restore_object_version', 'restore'],
+  ['/rest/v1/rpc/get_object_workspace_permissions', 'reread'],
+]);
+
+async function startApp(local) {
+  const socket = createServer();
+  socket.listen(0, loopback);
+  await once(socket, 'listening');
+  const { port } = socket.address();
+  socket.close();
+  await once(socket, 'close');
+  const origin = 'http://' + loopback + ':' + port;
+  const safeEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
+    ['PATH', 'HOME', 'LANG', 'TMPDIR', 'PLAYWRIGHT_BROWSERS_PATH'].includes(key)));
+  const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--hostname', loopback, '--port', String(port)], {
+    cwd: appDir,
+    detached: true,
+    stdio: 'ignore',
+    env: {
+      ...safeEnv, NEXT_TELEMETRY_DISABLED: '1',
+      NEXT_PUBLIC_ENABLE_DEMO_MODE: 'false', NEXT_PUBLIC_SUPABASE_URL: local.origin,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: local.anonymous.apikey, SUPABASE_SERVICE_ROLE_KEY: '',
+    },
+  });
+  return { origin, server, safeEnv };
+}
+
+async function waitForApp({ origin, server }) {
+  const deadline = Date.now() + 90_000;
+  while (Date.now() < deadline && server.exitCode === null && server.signalCode === null) {
+    try {
+      const response = await fetch(origin + '/login', { redirect: 'error', signal: AbortSignal.timeout(2000) });
+      await response.body?.cancel();
+      if (response.ok) return;
+    } catch { /* The owned Next process is still starting. */ }
+    await sleep(250);
+  }
+  throw new Error('Owned Next editor did not start on loopback');
+}
+
+export async function testEditorRaces({ local, objectId, writerId, email, password }) {
+  assert.ok(process.platform === 'linux' && objectId === 'HOTRUN999999AR01', 'exact disposable Linux editor fixture required');
+  local.sql("BEGIN; SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',true);" +
+    "INSERT INTO public.object_location(object_id, city, is_main_location) VALUES ('HOTRUN999999AR01','Saint-Denis',true);" +
+    "INSERT INTO public.object_description(object_id, description, description_chapo, visibility) " +
+    "VALUES ('HOTRUN999999AR01','Synthetic editorial description','Synthetic introduction','public'); COMMIT;",
+  'add editor publication prerequisites');
+  const canonical = () => JSON.parse(local.sql("SELECT json_build_array(name,status)::text FROM public.object WHERE id='HOTRUN999999AR01'",
+    'read synthetic canonical name and status'));
+  const historic = JSON.parse(local.sql("SELECT json_build_array(version_number,data->>'name')::text FROM public.object_version " +
+    "WHERE object_id='HOTRUN999999AR01' ORDER BY version_number, created_at LIMIT 1", 'read synthetic version'));
+  assert.ok(Number.isInteger(historic[0]) && historic[0] > 0 && typeof historic[1] === 'string' && historic[1] !== canonical()[0]);
+
+  const app = await startApp(local);
+  let browser;
+  const holds = new Map();
+  const releases = [];
+  const patches = [];
+  let publishCalls = 0;
+  let restoreCalls = 0;
+  function hold(kind) {
+    const gate = { observed: Promise.withResolvers(), release: Promise.withResolvers() };
+    holds.set(kind, gate);
+    releases.push(gate.release.resolve);
+    return gate;
+  }
+  async function waitForHeldResponse(kind, gate) {
+    const problem = await Promise.race([
+      gate.observed.promise,
+      sleep(40_000, new Error(kind + ' response was not observed'), { ref: false }),
+    ]);
+    if (problem) throw problem;
+  }
+  try {
+    await waitForApp(app);
+    browser = await chromium.launch({ env: app.safeEnv, args: ['--disable-background-networking'] });
+    const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
+    const permitted = new Set([app.origin, local.origin]);
+    await context.routeWebSocket('**/*', (route) => {
+      const url = new URL(route.url());
+      url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+      if (permitted.has(url.origin)) route.connectToServer();
+      else route.close();
+    });
+    await context.route('**/*', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      if (!permitted.has(url.origin)) return route.abort();
+      let kind;
+      if (url.origin === local.origin) {
+        if (request.method() === 'PATCH' && url.pathname === '/rest/v1/object' && url.searchParams.get('id') === 'eq.' + objectId) {
+          kind = 'patch';
+          patches.push(request.postDataJSON().name);
+        } else if (request.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
+          if (editorRpcKinds.has(url.pathname) && request.postDataJSON()?.p_object_id === objectId) kind = editorRpcKinds.get(url.pathname);
+          if (kind === 'publish') publishCalls += 1;
+          if (kind === 'restore') restoreCalls += 1;
+        }
+      }
+      const gate = holds.get(kind);
+      if (gate) holds.delete(kind);
+      try {
+        if (kind) {
+          const headers = await request.allHeaders();
+          const bearer = headers.authorization?.split(' ');
+          const claims = JSON.parse(Buffer.from(bearer?.[1]?.split('.')[1] ?? '', 'base64url'));
+          assert.ok(headers.apikey === local.anonymous.apikey && bearer?.[0] === 'Bearer'
+            && claims.role === 'authenticated' && claims.sub === writerId, 'browser must use the exact synthetic user JWT and anonymous API key');
+          if (kind !== 'patch') assert.equal(headers['content-profile'], 'api');
+        }
+        const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
+        assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
+        if (gate) {
+          assert.ok(response.ok(), kind + ' backend request failed');
+          gate.observed.resolve();
+          await gate.release.promise;
+        }
+        await route.fulfill({ response });
+      } catch {
+        gate?.observed.resolve(new Error(kind + ' did not return a usable authenticated response'));
+        await route.abort();
+      }
+    });
+
+    const page = await context.newPage();
+    const destination = '/objects/' + objectId + '/edit';
+    await page.goto(app.origin + '/login?from=' + encodeURIComponent(destination));
+    await page.getByLabel('Adresse e-mail').fill(email);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+    await page.waitForURL(app.origin + destination, { timeout: 60_000 });
+    const name = page.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
+    const publish = page.getByRole('button', { name: 'Publier', exact: true });
+    const save = page.getByRole('button', { name: 'Enregistrer', exact: true });
+    await assertion(name).toHaveValue(canonical()[0]);
+
+    const patch = hold('patch');
+    await name.fill('Synthetic publication saved first');
+    await publish.click();
+    await waitForHeldResponse('patch', patch);
+    assert.deepEqual(canonical(), ['Synthetic publication saved first', 'draft']);
+    await name.fill('Synthetic publication latest');
+    patch.release.resolve();
+    const deferred = page.getByRole('dialog', { name: 'Publication reportée' });
+    await assertion(deferred).toBeVisible();
+    await assertion(deferred.getByText(/Elle est conservée/)).toBeVisible();
+    assert.equal(publishCalls, 0);
+    await deferred.locator('button.btn.primary').click();
+    await assertion(name).toHaveValue('Synthetic publication latest');
+    await publish.click();
+    await assertion.poll(canonical).toEqual(['Synthetic publication latest', 'published']);
+    await assertion(publish).toBeEnabled();
+    assert.deepEqual(patches, ['Synthetic publication saved first', 'Synthetic publication latest']);
+    assert.equal(publishCalls, 1);
+
+    const restore = hold('restore');
+    await page.getByRole('button', { name: /Versions \/ historique/ }).click();
+    const history = page.getByRole('dialog', { name: 'Versions / historique' });
+    await history.getByRole('button', { name: 'Restaurer la version ' + historic[0], exact: true }).click();
+    await waitForHeldResponse('restore', restore);
+    await history.locator('button.btn.primary').click();
+    await assertion(name).toBeEditable();
+    await name.fill('Synthetic edit during restore');
+    await assertion(save).toBeDisabled();
+    await assertion(publish).toBeDisabled();
+    const reread = hold('reread');
+    restore.release.resolve();
+    await waitForHeldResponse('reread', reread);
+    await assertion(name).toHaveValue('Synthetic edit during restore');
+    await assertion(name).toBeEditable();
+    await name.fill('Synthetic edit during reread');
+    await assertion(save).toBeDisabled();
+    await assertion(publish).toBeDisabled();
+    reread.release.resolve();
+    const keepLocal = page.getByRole('button', { name: 'Garder mes modifications' });
+    const useServer = page.getByRole('button', { name: 'Utiliser les valeurs du serveur' });
+    await assertion(keepLocal).toBeVisible();
+    await assertion(name).toHaveValue('Synthetic edit during reread');
+    assert.equal(canonical()[0], historic[1]);
+    await useServer.click();
+    await assertion(name).toHaveValue(historic[1]);
+    assert.equal(restoreCalls, 1);
+    assert.equal(patches.length, 2);
+    assert.equal(publishCalls, 1);
+  } finally {
+    for (const release of releases) release();
+    try {
+      await browser?.close();
+    } finally {
+      if (app.server.pid && app.server.exitCode === null && app.server.signalCode === null) {
+        try { process.kill(-app.server.pid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+      }
+    }
+  }
+}

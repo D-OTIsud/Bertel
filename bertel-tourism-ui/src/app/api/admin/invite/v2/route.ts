@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { authorizeAdminRoute, MIN_ADMIN_RANK } from '../../_authorize';
+import { authorizeAdminRoute, MIN_ADMIN_RANK, type AdminAuth } from '../../_authorize';
 import { routeFailure } from '../../../_route-failure';
 import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
@@ -49,6 +49,27 @@ function canSendExistingInvite(user: User): boolean {
   return !user.email_confirmed_at && !user.confirmed_at && !user.last_sign_in_at && !user.is_sso_user;
 }
 
+async function checkInviteScope(auth: Extract<AdminAuth, { ok: true }>, orgId: string): Promise<NextResponse | null> {
+  const { asCaller } = auth;
+  if (auth.isSuper) {
+    const { data, error } = await asCaller.schema('api').rpc('is_platform_superuser');
+    if (error) return routeFailure('admin/invite.POST', 'authorization_check_failed', { status: 503 });
+    return data === true ? null : outOfScope();
+  }
+
+  const { data: membership, error } = await asCaller.from('user_org_membership')
+    .select('user_org_admin_role(is_active, ref_org_admin_role(rank))')
+    .eq('user_id', auth.callerId).eq('org_object_id', orgId).eq('is_active', true).maybeSingle();
+  if (error) return routeFailure('admin/invite.POST', 'authorization_check_failed', { status: 503 });
+  const roles = (membership as { user_org_admin_role?: unknown } | null)?.user_org_admin_role;
+  const isOrgAdmin = Array.isArray(roles) && roles.some((role) => {
+    const rank: unknown = role?.ref_org_admin_role?.rank;
+    return role?.is_active === true && typeof rank === 'number'
+      && Number.isFinite(rank) && rank >= MIN_ADMIN_RANK;
+  });
+  return isOrgAdmin ? null : outOfScope();
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const auth = await authorizeAdminRoute(req);
   if (!auth.ok) return auth.response;
@@ -74,19 +95,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const redirectTo = `${origin}/set-password`;
 
   const callerApi = asCaller.schema('api');
-  if (!auth.isSuper) {
-    const { data: membership, error } = await asCaller.from('user_org_membership')
-      .select('user_org_admin_role(is_active, ref_org_admin_role(rank))')
-      .eq('user_id', auth.callerId).eq('org_object_id', orgId).eq('is_active', true).maybeSingle();
-    if (error) return routeFailure('admin/invite.POST', 'authorization_check_failed', { status: 503 });
-    const roles = (membership as { user_org_admin_role?: unknown } | null)?.user_org_admin_role;
-    const isOrgAdmin = Array.isArray(roles) && roles.some((role) => {
-      const rank: unknown = role?.ref_org_admin_role?.rank;
-      return role?.is_active === true && typeof rank === 'number'
-        && Number.isFinite(rank) && rank >= MIN_ADMIN_RANK;
-    });
-    if (!isOrgAdmin) return outOfScope();
-  }
+  const scopeFailure = await checkInviteScope(auth, orgId);
+  if (scopeFailure) return scopeFailure;
   const [org, role] = await Promise.all([
     server.from('object').select('id').eq('id', orgId).eq('object_type', 'ORG').maybeSingle(),
     asCaller.from('ref_org_business_role').select('code').eq('code', roleCode).maybeSingle(),
@@ -105,10 +115,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (body.resend === true) {
     if (!existing) return outOfScope();
-    const { data: membership, error } = await asCaller.from('user_org_membership').select('id')
+    // The caller may administer more than one organisation. RLS on other members
+    // follows the selected organisation, so resolve only this already authorized pair.
+    const { data: membership, error } = await server.from('user_org_membership').select('id')
       .eq('user_id', existing.id).eq('org_object_id', orgId).eq('is_active', true).maybeSingle();
     if (error) return routeFailure('admin/invite.POST', 'authorization_check_failed', { status: 503 });
     if (!membership) return outOfScope();
+    const resendScopeFailure = await checkInviteScope(auth, orgId);
+    if (resendScopeFailure) return resendScopeFailure;
     if (!canSendExistingInvite(existing)) {
       return NextResponse.json({ error: 'already_active' }, { status: 409 });
     }
@@ -119,6 +133,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let userId = existing?.id;
   if (!userId) {
+    const inviteScopeFailure = await checkInviteScope(auth, orgId);
+    if (inviteScopeFailure) return inviteScopeFailure;
     // Keep GoTrue's initial invitation and Auth hooks. This send precedes the
     // separate membership transaction, so delivery can precede a refused attachment.
     const { data, error } = await server.auth.admin.inviteUserByEmail(email, { redirectTo });
@@ -138,6 +154,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // Commit the same caller-scoped attachment before returning any account identity.
+  const attachScopeFailure = await checkInviteScope(auth, orgId);
+  if (attachScopeFailure) return attachScopeFailure;
   const { data: membershipId, error } = await callerApi.rpc('rpc_upsert_membership', {
     p_target_user_id: userId, p_org_object_id: orgId, p_business_role_code: roleCode,
   });
@@ -146,6 +164,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (canSendExistingInvite(existing)) {
       // An existing account can only receive this mail once attachment is confirmed.
       // Auth delivery is separate: failure leaves the committed membership in place.
+      const deliveryScopeFailure = await checkInviteScope(auth, orgId);
+      if (deliveryScopeFailure) return deliveryScopeFailure;
       const { data, error: inviteError } = await server.auth.admin.inviteUserByEmail(email, { redirectTo });
       if (inviteError || data.user?.id !== userId) return routeFailure('admin/invite.POST', 'resend_failed');
       return NextResponse.json({ userId, membershipId, alreadyExisted: false }, { status: 201 });

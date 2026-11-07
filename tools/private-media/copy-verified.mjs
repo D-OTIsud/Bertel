@@ -6,6 +6,7 @@ import { resolve, dirname, basename, join, relative, isAbsolute } from 'node:pat
 import { tmpdir, hostname } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { addAbortSignal } from 'node:stream';
 import { validateManifest, sha256 } from './prepare-cutover.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -320,25 +321,50 @@ export async function copyVerified(inventory, { transport, receipt, checkpoint, 
   return state;
 }
 
+async function readStorageKey(signal) {
+  requireThat(!process.stdin.isTTY, 'service_key_stdin');
+  const chunks = [];
+  let size = 0;
+  try {
+    const input = addAbortSignal(AbortSignal.any([signal, AbortSignal.timeout(10_000)]), process.stdin);
+    for await (const chunk of input) {
+      size += chunk.length;
+      requireThat(size <= 4096, 'service_key_stdin');
+      chunks.push(chunk);
+    }
+  } catch {
+    fail(signal.aborted ? 'interrupted' : 'service_key_stdin');
+  }
+  const key = Buffer.concat(chunks).toString('utf8').replace(/\r?\n$/, '');
+  requireThat(key.length > 0 && !/[^A-Za-z0-9_.-]/.test(key), 'service_key_stdin');
+  return key;
+}
+
 async function run() {
   const options = {};
+  const flags = ['--execute', '--storage-key-stdin'];
   for (let i = 2; i < process.argv.length; i++) {
     const key = process.argv[i];
-    requireThat(['--manifest', '--project-ref', '--source-bucket', '--destination-bucket', '--expect-sha256', '--receipt', '--execute', '--reservation-config', '--python'].includes(key)
+    requireThat(['--manifest', '--project-ref', '--source-bucket', '--destination-bucket', '--expect-sha256', '--receipt',
+      '--reservation-config', '--python', ...flags].includes(key)
       && !Object.hasOwn(options, key), 'arguments');
-    options[key] = key === '--execute' ? true : process.argv[++i];
+    options[key] = flags.includes(key) ? true : process.argv[++i];
     requireThat(options[key] && (options[key] === true || !options[key].startsWith('--')), 'arguments');
   }
   requireThat(options['--manifest'] && options['--project-ref'] && options['--source-bucket'] === 'old_legal_media'
-    && options['--destination-bucket'] === 'legal-documents', 'arguments');
+    && options['--destination-bucket'] === 'legal-documents' && (!options['--storage-key-stdin'] || options['--execute']), 'arguments');
   const manifestPath = await realpath(resolve(options['--manifest']));
-  const repository = spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' });
+  const gitEnv = { ...process.env };
+  for (const name of Object.keys(gitEnv)) {
+    if (name.toUpperCase() === 'DB07_STORAGE_SERVICE_KEY') delete gitEnv[name];
+  }
+  const repository = spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8', env: gitEnv });
   requireThat(repository.status === 0, 'repository');
   const repositoryRoot = await realpath(repository.stdout.trim());
   const privateArtifact = (path, code) => {
     const local = relative(repositoryRoot, path);
     if (!local.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) && !isAbsolute(local)) {
-      requireThat(spawnSync('git', ['check-ignore', '--quiet', '--', path]).status === 0, code);
+      requireThat(spawnSync('git', ['check-ignore', '--quiet', '--', path], { env: gitEnv }).status === 0, code);
     }
   };
   privateArtifact(manifestPath, 'manifest_must_be_private');
@@ -370,7 +396,10 @@ async function run() {
       try { const stat = await lstat(canonicalFilename); requireThat(!stat.isSymbolicLink() && stat.isFile(), 'receipt_file'); receipt = JSON.parse(await readFile(canonicalFilename)); }
       catch (error) { if (error.code !== 'ENOENT') fail('receipt_read_failed'); }
       if (receipt !== undefined) initialReceipt(inventory, receipt);
-      const transport = storageTransport({ projectRef: inventory.projectRef, serviceKey: process.env.DB07_STORAGE_SERVICE_KEY });
+      const envKey = process.env.DB07_STORAGE_SERVICE_KEY;
+      requireThat(!options['--storage-key-stdin'] || envKey === undefined, 'service_key_source');
+      const serviceKey = options['--storage-key-stdin'] ? await readStorageKey(controller.signal) : envKey;
+      const transport = storageTransport({ projectRef: inventory.projectRef, serviceKey });
       return copyReserved(inventory, { transport, receipt, signal: controller.signal,
         reservationConfig, python: options['--python'],
         checkpoint: (next) => saveReceipt(canonicalFilename, next) });

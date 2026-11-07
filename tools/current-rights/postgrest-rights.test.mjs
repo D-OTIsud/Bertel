@@ -4,9 +4,11 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { loadDisposable } from './disposable.mjs';
 
-const local = loadDisposable();
 const browserWitness = process.env.CURRENT_RIGHTS_EDITOR_BROWSER === 'true';
 const realtimeWitness = process.env.CURRENT_RIGHTS_REALTIME_SECURITY === 'true';
+const sandboxWitness = process.env.CURRENT_RIGHTS_SANDBOX_DISCOVERY === 'true';
+assert.ok(!sandboxWitness || (!browserWitness && !realtimeWitness), 'public discovery must run as a standalone witness');
+const local = loadDisposable();
 const ids = {
   writer: '00000000-0000-4000-a000-00000000ae11', other: '00000000-0000-4000-a000-00000000ae12',
   portal: '00000000-0000-4000-a000-00000000ae13', foreignPortal: '00000000-0000-4000-a000-00000000ae14',
@@ -241,10 +243,10 @@ async function testPublicDiscoveryEffects(app, ordinary) {
     await probe('/api/lists/send', ordinary, 400, 'bad_json');
   } finally {
     const registered = await registry();
+    assert.ok(id == null || id === registered, 'cleanup must find the original registered identity');
     // If provisioning never reached the registry, the disposable stack teardown owns cleanup.
     if (registered !== null) {
       assertDedicatedIdentity(registered);
-      assert.ok(id == null || id === registered, 'cleanup must not delete a replacement identity');
       assert.equal(local.sql(`SELECT EXISTS (SELECT 1 FROM auth.users WHERE id='${registered}'
         AND email LIKE 'discovery-%@sandbox.bertel.invalid' AND raw_app_meta_data @> '{"sandbox_discovery":true}')`,
         'confirm the registered disposable discovery account'), 't');
@@ -259,11 +261,12 @@ async function testPublicDiscoveryEffects(app, ordinary) {
 const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
   metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
 
-const testName = browserWitness
-  ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
+const testName = sandboxWitness
+  ? 'real public discovery separates GoTrue sessions and test data and blocks external effects'
+  : browserWitness ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
   : realtimeWitness ? 'real Realtime SDK enforces fixture roster and broadcast boundaries'
   : 'real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation';
-test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
+test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 180000 : 90000 }, async (t) => {
   const createdIds = [];
   let fixtureCreated = false;
   let writerCredentials;
@@ -303,6 +306,18 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     'exactly six identities and five distinct real JWTs are required; the fixture-only admin never authenticates');
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
+    if (sandboxWitness) {
+      const { startApp, waitForApp, stopApp } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
+      const app = await startApp(local, { signDocuments: true });
+      try {
+        await waitForApp(app);
+        await testPublicDiscoveryEffects(app, headers('other'));
+        t.diagnostic('Public discovery provisioned two real GoTrue sessions and refused business mail and AI before admission.');
+      } finally {
+        await stopApp(app);
+      }
+      return;
+    }
     if (realtimeWitness) {
       assert.equal(await canWrite('writer', A), true);
       assert.equal(await canWrite('other', B), true);
@@ -387,7 +402,7 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       END; $fixture$`, 'give both browser accounts current rights on the same synthetic object');
       assert.equal(await canWrite('writer', A), true);
       assert.equal(await canWrite('other', A), true);
-      const { testEditorRaces, startApp, waitForApp, stopApp } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
+      const { testEditorRaces } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
       await testEditorRaces({ local, objectId: A, writerId: ids.writer, ...writerCredentials,
         realmAccount: { userId: ids.tester, ...testerCredentials },
         secondAccount: { id: ids.other, ...otherCredentials } });
@@ -408,17 +423,8 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
           'fresh foreign canonical authority'), expected);
       }
       const { testDocumentLinks } = await import('../../bertel-tourism-ui/tests/current-rights/document-links.mjs');
-      // The local service key belongs only to the Next process serving both HTTP witnesses.
-      const app = await startApp(local, { signDocuments: true });
-      try {
-        await waitForApp(app);
-        await testPublicDiscoveryEffects(app, other);
-        t.diagnostic('Public discovery provisioned two real GoTrue sessions and refused business mail and AI before admission.');
-        await testDocumentLinks({ app, local, commit, objectId: A, documentId: DOC, writerId: ids.writer,
-          writerAuthorization: writer.authorization, foreignAuthorization: other.authorization });
-      } finally {
-        await stopApp(app);
-      }
+      await testDocumentLinks({ local, commit, objectId: A, documentId: DOC, writerId: ids.writer,
+        writerAuthorization: writer.authorization, foreignAuthorization: other.authorization });
       t.diagnostic('Disposable document route verified canonical and legal-only signed bytes, foreign refusal and same-JWT revocation.');
       return;
     }

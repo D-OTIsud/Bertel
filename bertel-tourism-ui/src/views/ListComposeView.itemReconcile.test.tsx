@@ -26,10 +26,7 @@ jest.mock('@/services/lists', () => ({
 jest.mock('@/features/object-editor/useObjectSearch', () => ({ useObjectSearch: jest.fn() }));
 jest.mock('@/hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn() }));
 
-jest.mock('@/store/session-store', () => ({
-  useSessionStore: (selector: (state: { userName: string; email: string; avatarUrl: string | null }) => unknown) =>
-    selector({ userName: 'Conseiller', email: 'conseiller@example.com', avatarUrl: null }),
-}));
+
 
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
@@ -155,7 +152,7 @@ describe('ListComposeView — réconciliation post-enregistrement (rejet vs ajou
     await waitFor(() => expect(setListItems).toHaveBeenCalledTimes(1));
     expect(setListItems).toHaveBeenNthCalledWith(1, 'list-1', [
       expect.objectContaining({ object_id: 'A' }),
-    ]);
+    ], expect.objectContaining({ signal: expect.any(AbortSignal) }));
 
     // Pendant l'attente, un second lieu est ajouté localement (jamais encore envoyé).
     jest.mocked(useObjectSearch).mockReturnValue({

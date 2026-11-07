@@ -20,6 +20,8 @@ import {
   restoreList,
   reviewListFeature,
   sendListByEmail,
+  ListEmailUnknownError,
+  LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE,
   setListFeatured,
 } from './lists';
 
@@ -493,101 +495,105 @@ describe('listsQueryKeys — clés partagées ListsManageView / ListComposeView 
   });
 });
 
-describe('sendListByEmail — messages FR (revue architecte §4)', () => {
+const MAIL_OPERATION = 'd2000000-0000-4000-8000-000000000001';
+const MAIL_PERMIT = 'd2000000-0000-4000-8000-000000000099';
+const MAIL_PROOF = 'a'.repeat(64);
+const mailReply = (status: number, body?: unknown) => ({ ok: status >= 200 && status < 300, status,
+  json: async () => { if (body === undefined) throw new SyntaxError('synthetic opaque reply'); return body; } });
+const permitted = () => mailReply(200, { ok: true, phase: 'prepared', operationId: MAIL_OPERATION, dispatchToken: MAIL_PERMIT });
+function positiveMailFetch() {
+  return jest.fn(async (_path: string, options: RequestInit) => {
+    const body = JSON.parse(String(options.body));
+    if (body.phase === 'prepare') return permitted();
+    if (body.phase === 'dispatch') return mailReply(200, { ok: true, phase: 'accepted', operationId: MAIL_OPERATION, resultToken: MAIL_PROOF, trackingUpdated: true });
+    return mailReply(200, { ok: true, phase: 'acknowledged', operationId: MAIL_OPERATION, acknowledged: true });
+  });
+}
+function testSend(toEmail = 'recipient@example.invalid', extra: Partial<NonNullable<Parameters<typeof sendListByEmail>[2]>> = {}) {
+  return sendListByEmail('L1', toEmail, { operationId: MAIL_OPERATION, context: { generations: {} }, ...extra });
+}
+describe('sendListByEmail — existing mail errors and exact structured phases', () => {
   const originalFetch = global.fetch;
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
   beforeEach(() => {
+    // These are real digest bytes, not a hash stub or a provider call.
+    Object.defineProperty(global.crypto, 'subtle', { configurable: true, value: require('node:crypto').webcrypto.subtle });
+    global.TextEncoder = require('node:util').TextEncoder;
     jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: true });
+    (getApiClient as jest.Mock).mockReturnValue({ auth: { getSession: async () => ({ data: { session: { access_token: 'synthetic-token' } } }) } });
   });
-
-  it('SMTP absent : ne fait aucun POST', async () => {
-    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: false });
-    global.fetch = jest.fn() as unknown as typeof fetch;
-    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow(/SMTP/);
+  afterEach(() => { global.fetch = originalFetch; });
+  it('retains the useful revoked-share-link message', async () => {
+    global.fetch = jest.fn().mockResolvedValue(mailReply(403, { error: 'forbidden', detail: 'SHARE_NOT_AVAILABLE: link disabled' }));
+    await expect(testSend()).rejects.toThrow(/éditeur peut le réactiver/);
+  });
+  it('retains the current-rights message for a structured forbidden', async () => {
+    global.fetch = jest.fn().mockResolvedValue(mailReply(403, { error: 'forbidden', detail: 'not your list' }));
+    await expect(testSend()).rejects.toThrow("n'est pas autorisée avec vos droits actuels");
+  });
+  it('retains SMTP-not-configured only for its exact pre-effect code', async () => {
+    global.fetch = jest.fn().mockResolvedValue(mailReply(503, { error: 'smtp_not_configured' }));
+    await expect(testSend()).rejects.toThrow(/SMTP/);
+  });
+  it('returns success only after a structured accepted response, then ACKs the result proof', async () => {
+    global.fetch = positiveMailFetch() as unknown as typeof fetch;
+    await expect(testSend()).resolves.toEqual({ trackingUpdated: true });
+    expect((global.fetch as jest.Mock).mock.calls.map(([, opts]) => JSON.parse(opts.body).phase)).toEqual(['prepare','dispatch','ack']);
+  });
+  it('known acceptance does not wait for a pending technical ACK or replay prepare/dispatch', async () => {
+    const { waitFor } = require('@testing-library/dom');
+    let release!: (value: ReturnType<typeof mailReply>) => void;
+    const ack = new Promise<ReturnType<typeof mailReply>>((done) => { release = done; });
+    const positive = positiveMailFetch();
+    global.fetch = jest.fn((path: string, options: RequestInit) => JSON.parse(String(options.body)).phase === 'ack' ? ack : positive(path, options)) as unknown as typeof fetch;
+    const accepted = jest.fn(); const pending = testSend().then(accepted);
+    try {
+      await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(accepted).toHaveBeenCalledWith({ trackingUpdated: true }));
+      expect((global.fetch as jest.Mock).mock.calls.map(([,options]) => JSON.parse(options.body).phase)).toEqual(['prepare','dispatch','ack']);
+    } finally { release(mailReply(200, { ok: true, phase: 'acknowledged', operationId: MAIL_OPERATION, acknowledged: true })); await pending; }
+  });
+  it('keeps exact case, stable identity and explicit predecessor confirmation', async () => {
+    const previous = 'd2000000-0000-4000-8000-000000000002'; global.fetch = positiveMailFetch() as unknown as typeof fetch;
+    await testSend('ExactCase@example.invalid', { confirmedPreviousOperationId: previous, confirmResend: true });
+    const opts = (global.fetch as jest.Mock).mock.calls[0][1];
+    expect(opts.headers['Idempotency-Key']).toBe(MAIL_OPERATION);
+    expect(JSON.parse(opts.body)).toMatchObject({ phase: 'prepare', listId: 'L1', toEmail: 'ExactCase@example.invalid', expectedGeneration: '0', confirmResend: true, confirmedPreviousOperationIds: [previous] });
+  });
+  it('lost dispatch HTTP reply remains unknown with the same operation and no second dispatch/ACK', async () => {
+    global.fetch = jest.fn().mockResolvedValueOnce(permitted()).mockRejectedValueOnce(new TypeError('synthetic network loss'));
+    await expect(testSend()).rejects.toMatchObject({ name: 'ListEmailUnknownError', operationId: MAIL_OPERATION });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+  it('lost prepare HTTP reply cannot trigger dispatch and reports protection unavailable', async () => {
+    global.fetch = jest.fn().mockRejectedValueOnce(new TypeError('synthetic network loss'));
+    await expect(testSend()).rejects.toThrow(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE); expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+  it('reads durable unknown discovered without client IDs and preserves the protection error', async () => {
+    const previous = 'd2000000-0000-4000-8000-000000000002';
+    global.fetch = jest.fn().mockResolvedValueOnce(mailReply(409, { error: 'email_delivery_unknown', operationId: previous, operationIds: [previous] }))
+      .mockResolvedValueOnce(mailReply(503, { error: 'email_protection_unavailable' }));
+    await expect(testSend()).rejects.toEqual(new ListEmailUnknownError(previous));
+    await expect(testSend()).rejects.toThrow(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  });
+  it('a session JWT belonging to another account cannot prepare under a captured account scope', async () => {
+    global.fetch = jest.fn();
+    (getApiClient as jest.Mock).mockReturnValue({ auth: { getSession: async () => ({ data: { session: { access_token: 'synthetic-B', user: { id: 'user-B' } } } }) } });
+    await expect(testSend(undefined, { expectedUserId: 'user-A' })).rejects.toMatchObject({ name: 'AbortError' });
     expect(global.fetch).not.toHaveBeenCalled();
   });
-
-  function mockAuthClient() {
-    (getApiClient as jest.Mock).mockReturnValue({
-      auth: { getSession: jest.fn().mockResolvedValue({ data: { session: { access_token: 'tok' } } }) },
-    });
-  }
-
-  it('un lien révoqué/expiré (SHARE_NOT_AVAILABLE relayé par la route) donne un message FR utile, pas le code technique', async () => {
-    mockAuthClient();
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
-      json: async () => ({ error: 'forbidden', detail: 'SHARE_NOT_AVAILABLE: link disabled' }),
-    }) as unknown as typeof fetch;
-
-    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow(/éditeur peut le réactiver/);
+  it('obsolete scope during availability cannot read a replacement JWT or POST', async () => {
+    let resolve!: (value: { translation: boolean; imageAnalysis: boolean; email: boolean }) => void;
+    jest.mocked(getServiceAvailability).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    let current = true; global.fetch = jest.fn(); const pending = testSend(undefined, { isCurrent: () => current });
+    const outcome = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    current = false; resolve({ translation: false, imageAnalysis: false, email: true }); await outcome; expect(global.fetch).not.toHaveBeenCalled();
   });
-
-  it('un forbidden SANS marqueur de lien retombe sur le message générique de droits', async () => {
-    mockAuthClient();
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 403,
-      json: async () => ({ error: 'forbidden', detail: 'RAISE FORBIDDEN: not your list' }),
-    }) as unknown as typeof fetch;
-
-    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow("n'est pas autorisée avec vos droits actuels");
-  });
-
-  it('503 => message SMTP non configuré (comportement existant préservé)', async () => {
-    mockAuthClient();
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({}) }) as unknown as typeof fetch;
-    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow(/SMTP/);
-  });
-
-  it('503 email_protection_unavailable gives the approved temporary refusal', async () => {
-    mockAuthClient();
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503,
-      json: async () => ({ error: 'email_protection_unavailable' }) }) as unknown as typeof fetch;
-    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow("L'envoi est momentanément indisponible. Réessayez dans un instant.");
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it.each(['smtp_not_configured', 'smtp_unavailable', 'other_code'])('503 %s keeps the real legacy SMTP refusal', async (error) => {
-    mockAuthClient();
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503,
-      json: async () => ({ error }) }) as unknown as typeof fetch;
-    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it.each([null, false, 'unstructured', []])('an unstructured 503 body still keeps the existing SMTP refusal: %s', async (body) => {
-    mockAuthClient();
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503,
-      json: async () => body }) as unknown as typeof fetch;
-    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
-  });
-
-  it('a non-JSON 503 body still keeps the existing SMTP refusal', async () => {
-    mockAuthClient();
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503,
-      json: async () => { throw new Error('Synthetic invalid JSON'); } }) as unknown as typeof fetch;
-    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
-  });
-
-  it('does not reinterpret that code on a different HTTP status', async () => {
-    mockAuthClient();
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 403,
-      json: async () => ({ error: 'email_protection_unavailable' }) }) as unknown as typeof fetch;
-    await expect(sendListByEmail('L1', 'a@example.com')).rejects.not.toThrow("L'envoi est momentanément indisponible. Réessayez dans un instant.");
-  });
-
-  it('succès : renvoie trackingUpdated depuis le corps de la réponse', async () => {
-    mockAuthClient();
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ ok: true, trackingUpdated: true }),
-    }) as unknown as typeof fetch;
-    await expect(sendListByEmail('L1', 'a@example.com')).resolves.toEqual({ trackingUpdated: true });
+  it.each([
+    [503, {}], [503, null], [503, 'proxy'], [503, []], [503, undefined],
+    [200, {}], [200, null], [200, { ok: false }], [200, undefined], [204, undefined],
+  ])('opaque HTTP%s after dispatch cannot announce sent or ACK (%j)', async (status, body) => {
+    global.fetch = jest.fn().mockResolvedValueOnce(permitted()).mockResolvedValueOnce(mailReply(status, body));
+    await expect(testSend()).rejects.toMatchObject({ name: 'ListEmailUnknownError', operationId: MAIL_OPERATION });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 });

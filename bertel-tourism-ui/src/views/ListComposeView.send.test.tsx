@@ -5,9 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import ListComposeView from './ListComposeView';
+import { useSessionStore } from '@/store/session-store';
 import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 import {
   getList,
+  ListEmailUnknownError,
+  LIST_EMAIL_UNKNOWN_MESSAGE,
+  LIST_EMAIL_RESEND_CONFIRMATION,
   sendListByEmail,
   setListItems,
   updateList,
@@ -23,6 +27,7 @@ jest.mock('@/services/service-availability', () => ({
 jest.mock('@/services/lists', () => ({
   ...jest.requireActual('@/services/lists'),
   getList: jest.fn(),
+  getListEmailContext: jest.fn(async () => ({ generations: {} })),
   updateList: jest.fn(),
   setListItems: jest.fn(),
   deleteList: jest.fn(),
@@ -34,11 +39,6 @@ jest.mock('@/features/object-editor/useObjectSearch', () => ({
   useObjectSearch: () => ({ results: [], loading: false }),
 }));
 jest.mock('@/hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn() }));
-
-jest.mock('@/store/session-store', () => ({
-  useSessionStore: (selector: (state: { userName: string; email: string; avatarUrl: string | null }) => unknown) =>
-    selector({ userName: 'Conseiller', email: 'conseiller@example.com', avatarUrl: null }),
-}));
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -110,16 +110,15 @@ function baseDetail(overrides: Partial<ObjectListDetail> = {}): ObjectListDetail
 
 function renderView() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ListComposeView listId="list-1" />
-    </QueryClientProvider>,
-  );
+  const ui = (listId: string) => <QueryClientProvider client={queryClient}><ListComposeView listId={listId} /></QueryClientProvider>;
+  const view = render(ui('list-1'));
+  return { ...view, showList: (listId: string) => view.rerender(ui(listId)) };
 }
 
 describe('ListComposeView — envoi et sauvegarde confirmée (MET-02)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useSessionStore.setState({ authAuthority: { userId: 'user-1', epoch: 1, hydrated: true }, status: 'ready', userId: 'user-1', orgId: 'ORG1', role: 'tourism_agent', userName: 'Conseiller', email: 'conseiller@example.invalid', avatarUrl: null, demoMode: false });
     jest.spyOn(window, 'alert').mockImplementation(() => {});
     jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
   });
@@ -158,7 +157,7 @@ describe('ListComposeView — envoi et sauvegarde confirmée (MET-02)', () => {
       resolveUpdate?.(baseDetail({ introFr: 'Nouvelle intro' }));
     });
 
-    await waitFor(() => expect(sendListByEmail).toHaveBeenCalledWith('list-1', 'voyageur@example.com'));
+    await waitFor(() => expect(sendListByEmail).toHaveBeenCalledWith('list-1', 'voyageur@example.com', expect.objectContaining({ operationId: expect.any(String) })));
     expect(updateList).toHaveBeenCalledTimes(1);
   });
 
@@ -232,13 +231,13 @@ describe('ListComposeView — envoi et sauvegarde confirmée (MET-02)', () => {
     fireEvent.click(screen.getByRole('button', { name: /envoyer/i }));
 
     await waitFor(() => expect(sendListByEmail).toHaveBeenCalled());
-    expect(updateList).toHaveBeenCalledWith('list-1', expect.objectContaining({ name: 'Nouveau nom' }));
+    expect(updateList).toHaveBeenCalledWith('list-1', expect.objectContaining({ name: 'Nouveau nom' }), expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(setListItems).toHaveBeenCalledWith(
       'list-1',
       expect.arrayContaining([
         expect.objectContaining({ object_id: 'obj-b', position: 0 }),
         expect.objectContaining({ object_id: 'obj-a', position: 1, note_fr: 'Coup de cœur !' }),
-      ]),
+      ]), expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
 
@@ -371,7 +370,7 @@ describe('ListComposeView — changement de langue (A11Y-07)', () => {
     await waitFor(() =>
       expect(updateList).toHaveBeenCalledWith(
         'list-1',
-        expect.objectContaining({ lang: 'en', intro_fr: 'Bonjour brouillon' }),
+        expect.objectContaining({ lang: 'en', intro_fr: 'Bonjour brouillon' }), expect.objectContaining({ signal: expect.any(AbortSignal) })
       ),
     );
     await waitFor(() => expect(screen.getByLabelText("Mot d'introduction")).toHaveValue('Hello EN'));
@@ -404,4 +403,86 @@ describe('ListComposeView — changement de langue (A11Y-07)', () => {
     await waitFor(() => expect(screen.getByLabelText("Mot d'introduction")).not.toBeDisabled());
     expect(screen.getByLabelText("Mot d'introduction")).toHaveValue('Hello EN');
   });
+});
+
+
+describe('ListComposeView — durable uncertainty and current scope', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useSessionStore.setState({ authAuthority: { userId: 'user-1', epoch: 1, hydrated: true }, status: 'ready', userId: 'user-1', orgId: 'ORG1', role: 'tourism_agent', demoMode: false });
+    jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
+    jest.mocked(getList).mockResolvedValue(baseDetail());
+    jest.spyOn(window, 'prompt').mockReturnValue('recipient@example.invalid');
+  });
+  it('never resends an unknown result automatically; cancel preserves it and confirmation creates a new intention', async () => {
+    const previous = 'd2000000-0000-4000-8000-000000000001';
+    jest.mocked(sendListByEmail).mockRejectedValueOnce(new ListEmailUnknownError(previous)).mockResolvedValue({ trackingUpdated: true });
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    renderView();
+    fireEvent.click(await screen.findByRole('button', { name: /^envoyer$/i }));
+    expect(await screen.findByText(LIST_EMAIL_UNKNOWN_MESSAGE)).toBeInTheDocument();
+    expect(sendListByEmail).toHaveBeenCalledTimes(1); expect(confirm).not.toHaveBeenCalled();
+    const original = jest.mocked(sendListByEmail).mock.calls[0][2]!.operationId;
+    fireEvent.click(screen.getByRole('button', { name: /^envoyer$/i }));
+    expect(confirm).toHaveBeenCalledWith(LIST_EMAIL_RESEND_CONFIRMATION);
+    expect(sendListByEmail).toHaveBeenCalledTimes(1);
+    confirm.mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: /^envoyer$/i }));
+    await waitFor(() => expect(sendListByEmail).toHaveBeenCalledTimes(2));
+    const next = jest.mocked(sendListByEmail).mock.calls[1][2]!;
+    expect(next.operationId).not.toBe(original); expect(next.confirmedPreviousOperationId).toBe(previous);
+    expect(await screen.findByRole('status')).toHaveTextContent('E-mail envoyé');
+  });
+  it('A→B→A without intermediate render cancels a deferred flush before any SMTP request, then allows a fresh gesture', async () => {
+    let resolve!: (detail: ObjectListDetail) => void;
+    jest.mocked(updateList).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    jest.mocked(sendListByEmail).mockResolvedValue({ trackingUpdated: true });
+    renderView();
+    fireEvent.change(await screen.findByLabelText("Mot d'introduction"), { target: { value: 'Synthetic draft C' } });
+    fireEvent.click(screen.getByRole('button', { name: /^envoyer$/i }));
+    await waitFor(() => expect(updateList).toHaveBeenCalledTimes(1));
+    act(() => { useSessionStore.setState({ authAuthority: { userId: 'user-B', epoch: 1, hydrated: true }, userId: 'user-B', orgId: 'ORGB' }); useSessionStore.setState({ authAuthority: { userId: 'user-1', epoch: 1, hydrated: true }, userId: 'user-1', orgId: 'ORG1' }); });
+    await act(async () => { resolve(baseDetail({ introFr: 'Synthetic draft C' })); });
+    expect(sendListByEmail).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Mot d'introduction")).toHaveValue('Synthetic draft C');
+    // The old actor generation's ACK was intentionally not adopted. A fresh
+    // gesture must save the retained C under the current identity before SMTP.
+    jest.mocked(updateList).mockResolvedValue(baseDetail({ introFr: 'Synthetic draft C' }));
+    fireEvent.click(screen.getByRole('button', { name: /^envoyer$/i }));
+    await waitFor(() => expect(sendListByEmail).toHaveBeenCalledTimes(1));
+    expect(updateList).toHaveBeenCalledTimes(2);
+    expect(await screen.findByRole('status')).toHaveTextContent('E-mail envoyé');
+  });
+  it('a late SMTP result after account ABA cannot display an old notice or leave the new view locked', async () => {
+    let resolve!: (result: { trackingUpdated: boolean }) => void;
+    jest.mocked(sendListByEmail).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    renderView();
+    fireEvent.click(await screen.findByRole('button', { name: /^envoyer$/i }));
+    await waitFor(() => expect(sendListByEmail).toHaveBeenCalledTimes(1));
+    const intent = jest.mocked(sendListByEmail).mock.calls[0][2]!;
+    act(() => { useSessionStore.setState({ authAuthority: { userId: 'user-B', epoch: 1, hydrated: true }, userId: 'user-B' }); useSessionStore.setState({ authAuthority: { userId: 'user-1', epoch: 1, hydrated: true }, userId: 'user-1' }); });
+    expect(intent.isCurrent?.()).toBe(false); expect(intent.signal?.aborted).toBe(true);
+    await act(async () => { resolve({ trackingUpdated: true }); });
+    expect(screen.queryByText(/E-mail envoyé à/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^envoyer$/i })).not.toBeDisabled();
+  });
+  it('navigation during a deferred flush never sends list A through the new list B view', async () => {
+    let resolve!: (detail: ObjectListDetail) => void;
+    jest.mocked(getList).mockImplementation(async (id) => baseDetail({ id }));
+    jest.mocked(updateList).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+    jest.mocked(sendListByEmail).mockResolvedValue({ trackingUpdated: true });
+    const view = renderView();
+    fireEvent.change(await screen.findByLabelText("Mot d'introduction"), { target: { value: 'Synthetic list A draft' } });
+    fireEvent.click(screen.getByRole('button', { name: /^envoyer$/i }));
+    await waitFor(() => expect(updateList).toHaveBeenCalledTimes(1));
+    view.showList('list-B');
+    await screen.findByLabelText('Nom de la liste');
+    await act(async () => { resolve(baseDetail({ introFr: 'Synthetic list A draft' })); });
+    expect(sendListByEmail).not.toHaveBeenCalled();
+    jest.mocked(updateList).mockResolvedValue(baseDetail({ id: 'list-B' }));
+    fireEvent.click(screen.getByRole('button', { name: /^envoyer$/i }));
+    await waitFor(() => expect(sendListByEmail).toHaveBeenCalledWith('list-B', 'recipient@example.invalid', expect.any(Object)));
+    expect(await screen.findByRole('status')).toHaveTextContent('E-mail envoyé');
+  });
+
 });

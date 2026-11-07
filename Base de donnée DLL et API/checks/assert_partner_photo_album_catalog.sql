@@ -3,8 +3,15 @@
 -- Expected descriptors come from the declarative SQL on isolated PostgreSQL 17,
 -- with canonical predecessor grants; no production catalog/identity is embedded.
 SET LOCAL search_path=pg_catalog,public,api,internal;
+\if :{?album_post_acc08}
+\else
+\set album_post_acc08 off
+\endif
+SELECT set_config('bertel.album_post_acc08', :'album_post_acc08', true) AS album_catalog_phase \gset
 DO $catalog_contract$
 DECLARE v record; v_json jsonb; v_expected jsonb; v_active boolean;
+ v_post_acc08 boolean := current_setting('bertel.album_post_acc08')::boolean;
+ v_portal_module_helper regprocedure := to_regprocedure('internal.portal_submission_module(text,text,jsonb)');
  v_contract constant jsonb := $contract$
 {
   "functions": [
@@ -808,6 +815,7 @@ DECLARE v record; v_json jsonb; v_expected jsonb; v_active boolean;
       "signature": "api.submit_actor_fiche(text,jsonb,text)",
       "source_md5": "e0b91bc214a91cd7af76672adad363d6",
       "active_source_md5": "e0b91bc214a91cd7af76672adad363d6",
+      "post_acc08_source_md5": "d7ab01f8c9196f34e324b7200571a17f",
       "catalog": {
         "acl": [
           [
@@ -868,6 +876,7 @@ DECLARE v record; v_json jsonb; v_expected jsonb; v_active boolean;
       "signature": "api.approve_pending_change(uuid,text,boolean)",
       "source_md5": "6b397ae9bf5c169c2d84f923b331966e",
       "active_source_md5": "6b397ae9bf5c169c2d84f923b331966e",
+      "post_acc08_source_md5": "e7bf92e333d46c0f6a8be88a5b68183a",
       "catalog": {
         "acl": [
           [
@@ -3227,9 +3236,16 @@ $contract$::jsonb;
 BEGIN
  v_active:=internal.portal_photo_actor_writes_enabled();
  IF v_active IS NULL THEN RAISE EXCEPTION 'Photo flag is missing a boolean state'; END IF;
+ IF v_post_acc08 IS DISTINCT FROM (v_portal_module_helper IS NOT NULL) THEN
+  RAISE EXCEPTION 'Photo catalog is in the wrong ACC08 phase';
+ END IF;
+ IF v_post_acc08 AND (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=v_portal_module_helper)
+    IS DISTINCT FROM 'b08f954a9c76c8394eba39189806686e' THEN
+  RAISE EXCEPTION 'Portal proposal module helper source differs';
+ END IF;
  IF jsonb_array_length(v_contract->'functions')<>57 THEN RAISE EXCEPTION 'Incomplete photo catalog oracle'; END IF;
  FOR v IN SELECT * FROM jsonb_to_recordset(v_contract->'functions')
-  AS x(signature text,source_md5 text,active_source_md5 text,catalog jsonb,active_acl jsonb) LOOP
+  AS x(signature text,source_md5 text,active_source_md5 text,post_acc08_source_md5 text,catalog jsonb,active_acl jsonb) LOOP
   SELECT jsonb_build_object('owner',pg_get_userbyid(p.proowner),'language',l.lanname,'returns',pg_get_function_result(p.oid),'arguments',pg_get_function_arguments(p.oid),'definer',p.prosecdef,'volatility',p.provolatile,'strict',p.proisstrict,'leakproof',p.proleakproof,'parallel',p.proparallel,'kind',p.prokind,'config',COALESCE((SELECT jsonb_agg(regexp_replace(x,'[[:space:]]','','g') ORDER BY regexp_replace(x,'[[:space:]]','','g')) FROM unnest(p.proconfig) x),'[]'::jsonb),'acl',(SELECT jsonb_agg(jsonb_build_array(CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,pg_get_userbyid(a.grantor),a.privilege_type,a.is_grantable) ORDER BY a.grantee=0,pg_get_userbyid(a.grantee),a.privilege_type,a.is_grantable) FROM aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a)) INTO v_json FROM pg_proc p JOIN pg_language l ON l.oid=p.prolang WHERE p.oid=to_regprocedure(v.signature);
   v_expected:=v.catalog;
   IF v_active THEN v_expected:=jsonb_set(v_expected,'{acl}',v.active_acl); END IF;
@@ -3237,7 +3253,8 @@ BEGIN
    RAISE EXCEPTION 'Photo function attributes/required ACL differ (%)',v.signature;
   END IF;
   IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure(v.signature))
-    IS DISTINCT FROM (CASE WHEN v_active THEN v.active_source_md5 ELSE v.source_md5 END) THEN
+    IS DISTINCT FROM (CASE WHEN v_post_acc08 AND v.post_acc08_source_md5 IS NOT NULL THEN v.post_acc08_source_md5
+                           WHEN v_active THEN v.active_source_md5 ELSE v.source_md5 END) THEN
    RAISE EXCEPTION 'Photo function source differs (%)',v.signature;
   END IF;
  END LOOP;

@@ -844,8 +844,9 @@ BEGIN
   -- ---------- (D2) submit_actor_fiche — LE geste « Soumettre pour vérification » ----------
   v_changes := jsonb_build_array(
     jsonb_build_object(
-      'target_table', 'object_description', 'target_pk', NULL, 'action', 'update',
-      'payload', jsonb_build_object('chapo', 'Nouveau chapo'),
+      'target_table', 'contact_channel', 'target_pk', NULL, 'action', 'update',
+      'payload', jsonb_build_object('objectItems', jsonb_build_array(
+        jsonb_build_object('kindCode', 'email', 'value', 'portal-new@example.invalid'))),
       -- (C2) L'enveloppe porte DELIBÉRÉMENT les trois clés d'attestation, au nom de v_editor :
       -- c'est ce qu'un prestataire peut mettre dans son corps de requête, rien ne l'en empêche
       -- côté client. submit_actor_fiche DOIT les retirer — sinon la ligne finirait par affirmer
@@ -898,8 +899,8 @@ BEGIN
   BEGIN
     PERFORM api.submit_actor_fiche(v_objA,
       (SELECT jsonb_agg(jsonb_build_object(
-         'target_table', 'object_description', 'target_pk', NULL, 'action', 'update',
-         'payload', jsonb_build_object('chapo', 'x'),
+         'target_table', 'contact_channel', 'target_pk', NULL, 'action', 'update',
+         'payload', jsonb_build_object('objectItems', '[]'::jsonb),
          'metadata', jsonb_build_object('rpc', NULL, 'section', 'contacts', 'manual_apply', true,
                                         'field', 'Contacts', 'before', 'a', 'after', 'b')))
        FROM generate_series(1, 41)),
@@ -926,6 +927,24 @@ BEGIN
                                      'field','Descriptions','before','','after',''))), NULL);
   EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
   ASSERT v_denied, 'D2: submit refuse un module masqué par la matrice';
+
+  v_msg := '';
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+    jsonb_build_object('target_table','object_description','action','update',
+      'payload',jsonb_build_object('chapo','Description masquée'),
+      'metadata',jsonb_build_object('rpc',NULL,'section','contacts','manual_apply',true))), NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_msg := SQLERRM; END;
+  ASSERT v_msg = 'Les données proposées ne correspondent pas à la rubrique déclarée',
+    'D2: une étiquette contacts ne permet pas de proposer une description masquée';
+
+  v_msg := '';
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+    jsonb_build_object('target_table','object_amenity','action','update',
+      'payload',jsonb_build_object('amenities','[]'::jsonb,'prices','[]'::jsonb),
+      'metadata',jsonb_build_object('rpc','save_object_commercial','section','characteristics','manual_apply',false))), NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_msg := SQLERRM; END;
+  ASSERT v_msg = 'Les données proposées ne correspondent pas à la rubrique déclarée',
+    'D2: le writer commercial du portail ne reçoit pas des clés de tarifs';
 
   -- Refus : writer hors whitelist §120 (cas générique).
   v_denied := false;
@@ -999,11 +1018,11 @@ BEGIN
   v_msg := '';
   BEGIN
     PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
-      jsonb_build_object('target_table','object_commercial','target_pk',NULL,'action','update',
-        'payload', jsonb_build_object('x','y'),
-        'metadata', jsonb_build_object('rpc','save_object_commercial','section','contacts',
+      jsonb_build_object('target_table','object_amenity','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('amenities','[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_commercial','section','characteristics',
                                        'manual_apply',false,'field','Commercial','before','','after','')),
-      jsonb_build_object('target_table','object_description','target_pk',NULL,'action','zzz-invalide',
+      jsonb_build_object('target_table','contact_channel','target_pk',NULL,'action','zzz-invalide',
         'payload','{}'::jsonb,
         'metadata', jsonb_build_object('rpc',NULL,'section','contacts','manual_apply',true,
                                        'field','x','before','','after',''))), NULL);
@@ -1025,8 +1044,8 @@ BEGIN
   v_denied := false;
   BEGIN
     PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
-      jsonb_build_object('target_table', 'object_description', 'target_pk', NULL, 'action', 'update',
-        'payload', jsonb_build_object('chapo', 'Transactionnalité #1'),
+      jsonb_build_object('target_table', 'contact_channel', 'target_pk', NULL, 'action', 'update',
+        'payload', jsonb_build_object('objectItems', '[]'::jsonb),
         'metadata', jsonb_build_object('rpc', NULL, 'section', 'contacts', 'manual_apply', true,
                                        'field', 'Contacts', 'before', 'a', 'after', 'b')),
       jsonb_build_object('target_table', 'opening_period', 'target_pk', NULL, 'action', 'update',
@@ -1508,6 +1527,71 @@ BEGIN
            WHERE submission_id = v_subid AND status = 'pending') = 2,
          'F2: les refus d''autorisation ne laissent AUCUNE écriture derrière eux';
 
+  -- Historical rows can predate submission validation. Put a valid writer
+  -- first in the batch, then verify that a later invalid row rolls it back.
+  DECLARE
+    v_bad_auto uuid;
+    v_bad_manual uuid;
+    v_bad_unclassified uuid;
+    v_preserved_period uuid;
+    v_preserved_price uuid;
+  BEGIN
+    PERFORM set_config('request.jwt.claims', NULL, true);
+    INSERT INTO opening_period(object_id,name) VALUES (v_objA,'Horaires avant approbation')
+      RETURNING id INTO v_preserved_period;
+    INSERT INTO object_price(object_id,kind_id,amount)
+      VALUES (v_objA,(SELECT id FROM ref_code_price_kind ORDER BY code LIMIT 1),42)
+      RETURNING id INTO v_preserved_price;
+
+    INSERT INTO pending_change(object_id,target_table,action,payload,submitted_by,submission_id,metadata,submitted_at)
+      VALUES (v_objA,'object_amenity','update','{"amenities":[],"prices":[]}',v_user,v_subid,
+        '{"rpc":"save_object_commercial","section":"characteristics"}',now()+interval '1 second')
+      RETURNING id INTO v_bad_auto;
+    INSERT INTO pending_change(object_id,target_table,action,payload,submitted_by,submission_id,metadata,submitted_at)
+      VALUES (v_objA,'object_description','update','{"chapo":"Historique"}',v_user,v_subid,
+        '{"section":"contacts","manual_apply":true}',now()+interval '2 seconds')
+      RETURNING id INTO v_bad_manual;
+    INSERT INTO pending_change(object_id,target_table,action,payload,submitted_by,submission_id,metadata,submitted_at)
+      VALUES (v_objA,'object_amenity','update','{"prices":[]}',v_user,v_subid,
+        '{"rpc":"save_object_commercial"}',now()+interval '3 seconds')
+      RETURNING id INTO v_bad_unclassified;
+
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      FOREACH v_persona IN ARRAY ARRAY[v_bad_auto,v_bad_manual,v_bad_unclassified] LOOP
+        v_msg := '';
+        BEGIN PERFORM api.approve_pending_change(v_persona, 'Fixture historique', TRUE);
+        EXCEPTION WHEN SQLSTATE '22023' THEN v_msg := SQLERRM; END;
+        ASSERT v_msg = 'Les données proposées ne correspondent pas à la rubrique déclarée',
+          'F2: la rubrique du portail est vérifiée avant application ou attestation historique';
+      END LOOP;
+      v_msg := '';
+      BEGIN PERFORM api.approve_fiche_submission(v_subid, 'Fixture historique', FALSE);
+      EXCEPTION WHEN SQLSTATE '22023' THEN v_msg := SQLERRM; END;
+      ASSERT v_msg = 'Les données proposées ne correspondent pas à la rubrique déclarée',
+        'F2: le lot refuse une ancienne ligne auto hors périmètre';
+    RESET ROLE;
+    ASSERT EXISTS (SELECT 1 FROM opening_period WHERE id=v_preserved_period)
+       AND EXISTS (SELECT 1 FROM object_price WHERE id=v_preserved_price AND amount=42),
+      'F2: le lot annule les horaires appliqués en tête et préserve les tarifs';
+    ASSERT (SELECT count(*) FROM pending_change WHERE submission_id=v_subid AND status='pending'
+      AND reviewed_at IS NULL AND applied_at IS NULL)=5,
+      'F2: aucun changement du lot n’a été approuvé ou attesté';
+
+    SET LOCAL ROLE authenticated;
+      PERFORM api.reject_pending_change(v_bad_auto, 'Rubrique incompatible');
+      PERFORM api.reject_pending_change(v_bad_manual, 'Rubrique incompatible');
+      PERFORM api.reject_pending_change(v_bad_unclassified, 'Rubrique incompatible');
+    RESET ROLE;
+    ASSERT (SELECT count(*) FROM pending_change
+      WHERE id IN (v_bad_auto,v_bad_manual,v_bad_unclassified) AND status='rejected')=3,
+      'F2: les anciennes propositions invalides restent rejetables';
+    DELETE FROM pending_change WHERE id IN (v_bad_auto,v_bad_manual,v_bad_unclassified);
+    DELETE FROM opening_period WHERE id=v_preserved_period;
+    DELETE FROM object_price WHERE id=v_preserved_price;
+  END;
+
   -- (F2.2) L'attestation n'ouvre PAS la whitelist. Ligne PIÈGE portant un writer RÉEL mais non
   -- whitelisté : une implémentation écrite « IF v_rpc IS NULL OR p_applied_manually THEN
   -- <branche attestée> » passerait TOUS les autres tests de ce bloc et transformerait
@@ -1578,9 +1662,9 @@ BEGIN
   PERFORM set_config('request.jwt.claims', NULL, true);
   INSERT INTO pending_change (object_id, target_table, target_pk, action, payload,
                               submitted_by, status, metadata)
-  VALUES (v_objA, 'opening_period', NULL, 'update', jsonb_build_object('periods', '[]'::jsonb),
+  VALUES (v_objA, 'object_price', NULL, 'update', '{"prices":[]}'::jsonb,
           v_user, 'pending',
-          jsonb_build_object('rpc', 'save_object_openings', 'section', 'openings', 'field', 'Horaires'))
+          jsonb_build_object('rpc', 'save_object_commercial', 'section', 'pricing', 'field', 'Tarifs'))
   RETURNING id INTO v_pc_legacy;
 
   PERFORM set_config('request.jwt.claims',
@@ -1637,8 +1721,8 @@ BEGIN
   ASSERT (SELECT metadata->>'section' FROM pending_change WHERE id = v_pc_manual) = 'contacts',
          'F2: l''estampille d''attestation n''écrase pas l''enveloppe d''origine';
   -- AUCUN re-dispatch : c'est la contrepartie de l'attestation. La fiche n'a pas bougé par la
-  -- machine — le payload (chapo « Nouveau chapo ») n'a été écrit nulle part.
-  ASSERT NOT EXISTS (SELECT 1 FROM object_description d WHERE d.object_id = v_objA),
+  -- machine — la proposition de coordonnées n'a été écrite nulle part.
+  ASSERT NOT EXISTS (SELECT 1 FROM contact_channel c WHERE c.object_id = v_objA),
          'F2: approbation attestée ⇒ AUCUN re-dispatch, la machine n''a rien écrit dans la fiche';
 
   -- (F2.5) Idempotence + accents restaurés (décision contrôleur B : les messages vifs étaient

@@ -65,13 +65,18 @@ on:
         type: boolean
         required: false
         default: false
+      portal_photo_browser:
+        description: 'Run the prestataire photo browser witness on the disposable fresh stack (select alone)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   fresh-apply:
     # Push/PR always run the mandatory application/rights gate. The explicit
     # manual selector below starts a separate upstream capability probe only.
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.sandbox_discovery == true || (inputs.storage_contract != true && inputs.storage_db07_profile != true) }}
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.sandbox_discovery == true) && 'ubuntu-24.04' || 'ubuntu-latest' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true || (inputs.storage_contract != true && inputs.storage_db07_profile != true) }}
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true) && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +85,12 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery == true && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
         run: |
           echo "::error::Select sandbox_discovery alone."
+          exit 1
+
+      - name: Require the standalone prestataire photo selector
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.portal_photo_browser == true && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.sandbox_discovery == true || inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
+        run: |
+          echo "::error::Select portal_photo_browser alone."
           exit 1
 
       - name: Validate Tourinsoft Reunion contract inventory
@@ -209,7 +220,7 @@ jobs:
         # The manifest already runs the before/after public-reader differential
         # in one session. This independently repeats the rolled-back behavior
         # suite after the complete fresh installation; no opt-in flag is needed.
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_album_fresh.sql"
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -v album_post_acc08=on -f "Base de donnée DLL et API/tests/test_partner_photo_album_fresh.sql"
 
       # Current-rights core/surfaces and the eight adapted legacy probes run
       # exactly once, together after the final overlay inside the manifest.
@@ -681,7 +692,7 @@ jobs:
           node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: Set up Node 22 for opt-in authenticated witnesses
-        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.sandbox_discovery == true) && steps.list_email_owned_stack.outcome == 'success' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true) && steps.list_email_owned_stack.outcome == 'success' }}
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -689,7 +700,7 @@ jobs:
           cache-dependency-path: bertel-tourism-ui/package-lock.json
 
       - name: Install Chromium for the authenticated browser witnesses
-        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.sandbox_discovery == true) && steps.list_email_owned_stack.outcome == 'success' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true) && steps.list_email_owned_stack.outcome == 'success' }}
         working-directory: bertel-tourism-ui
         timeout-minutes: 7
         env:
@@ -720,6 +731,17 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
         run: node --test tools/current-rights/postgrest-rights.test.mjs
 
+      - name: Prestataire photo upload through Chromium, Next and Storage (disposable only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.portal_photo_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
+        timeout-minutes: 5
+        env:
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+          CURRENT_RIGHTS_PORTAL_PHOTO_BROWSER: 'true'
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
+        run: node --test bertel-tourism-ui/tests/current-rights/portal-photo-browser.mjs
+
       - name: Install the locked SDK for the Realtime witness
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.realtime_security == true && inputs.editor_browser != true && steps.list_email_owned_stack.outcome == 'success' }}
         working-directory: bertel-tourism-ui
@@ -746,7 +768,7 @@ jobs:
 
   storage-contract:
     name: ${{ inputs.storage_contract == true && 'Strict Storage capability (manual, synthetic only)' || 'DB07 Storage copy profile (manual, synthetic only)' }}
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery != true && (inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery != true && inputs.portal_photo_browser != true && (inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

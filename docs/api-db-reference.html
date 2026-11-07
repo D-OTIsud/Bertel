@@ -19,10 +19,10 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <article class="mini-card"><div class="metric">424</div><b>tables</b><p class="muted">15 vues · 9 enums</p></article>
 <article class="mini-card"><div class="metric">643</div><b>fonctions/RPC</b><p class="muted">647 policies · 1438 triggers</p></article>
 <article class="mini-card"><div class="metric">3174</div><b>valeurs référentielles</b><p class="muted">instantané public attesté</p></article>
-<article class="mini-card"><div class="metric">6316</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
+<article class="mini-card"><div class="metric">6315</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les 3 174 valeurs proviennent de l’instantané public du 6 novembre 2026, entre 20:23 et 20:32 UTC, conservé octet pour octet. Il couvre 28 tables autorisées et 246 documents de scope explicite public. Aucune valeur de seed n’a complété cet instantané.</p>
-<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T16:46:39.869410+00:00, ledger 197, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
+<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T18:17:36.553496+00:00, ledger 198, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
 <p class="muted">Lecture live MCP effectuée sur 28 tables publiques de référence. 0 lignes seed SQL restent disponibles comme filet de secours.</p>
 <details><summary>Écarts de couverture à surveiller</summary>
 <table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>
@@ -4497,17 +4497,16 @@ ponytail: met à jour last_used_at à chaque appel (write par requête) — thro
 <tr><td>lecture</td><td><a href="#table-public-ref_document"><code>public.ref_document</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<details class="rpc" data-search="api.portal_photo_failed_approval(p_claim_id uuid) public.media public.ref_document public.ref_document">
+<details class="rpc" data-search="api.portal_photo_failed_approval(p_claim_id uuid) public.media public.ref_document">
 <summary><code>api.portal_photo_failed_approval(p_claim_id uuid)</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/partner_photo_album_fresh_install.sql:529</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/partner_photo_album_fresh_install.sql:529</code><br><code>supabase/migrations/20261107170341_portal_photo_approval_claim_path.sql:47</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-media"><code>public.media</code></a></td><td>high</td></tr>
-<tr><td>lecture</td><td><a href="#table-public-ref_document"><code>public.ref_document</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-public-ref_document"><code>public.ref_document</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
@@ -4563,8 +4562,9 @@ ponytail: met à jour last_used_at à chaque appel (write par requête) — thro
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/partner_photo_album_fresh_install.sql:428</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/partner_photo_album_fresh_install.sql:428</code><br><code>supabase/migrations/20261107170341_portal_photo_approval_claim_path.sql:4</code></p>
 </div>
+<blockquote>Each claim owns a distinct public Storage key. Existing media URLs are untouched.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-fiche_submission"><code>public.fiche_submission</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -10373,7 +10373,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr id="table-public-ref_code_weekday"><td><code>public.ref_code_weekday</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_all_opening_time_slots(p_period_id uuid)</code>, <code>api.get_opening_slots_by_day(p_period_id uuid)</code>, <code>api.get_opening_time_slots(p_period_id uuid, p_weekday_code text, p_slot_number integer DEFAULT 1)</code>, <code>api.is_object_open_now(p_object_id text)</code> <span class="muted">+2</span></td><td><span class="muted">-</span></td><td>0 policies · 7 triggers · FK → 0 · FK ← 8</td></tr>
 <tr id="table-public-ref_commune"><td><code>public.ref_commune</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_trail(p_trail_id uuid)</code>, <code>api.save_object_places(p_object_id text, p_payload jsonb)</code>, <code>thesaurus.legacy_list_catalog(p_domain text, p_lang text DEFAULT &#x27;fr&#x27;::text)</code></td><td><span class="muted">-</span></td><td>3 policies · 3 triggers · FK → 0 · FK ← 3</td></tr>
 <tr id="table-public-ref_contact_role"><td><code>public.ref_contact_role</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT &#x27;xlsx&#x27;::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)</code>, <code>api.get_actor_data(p_object_id text)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_objects_with_deep_data(p_object_ids text[], p_languages text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_include_media text DEFAULT &#x27;none&#x27;::text, p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code> <span class="muted">+1</span></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 0 · FK ← 2</td></tr>
-<tr id="table-public-ref_document"><td><code>public.ref_document</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)</code>, <code>api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)</code>, <code>api.cancel_portal_photo_upload(p_object_id text, p_document_id uuid)</code>, <code>api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)</code> <span class="muted">+31</span></td><td><code>api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)</code>, <code>api.cancel_portal_photo_upload(p_object_id text, p_document_id uuid)</code>, <code>api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)</code>, <code>api.portal_photo_failed_approval(p_claim_id uuid)</code> <span class="muted">+9</span></td><td>6 policies · 2 triggers · FK → 0 · FK ← 10</td></tr>
+<tr id="table-public-ref_document"><td><code>public.ref_document</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)</code>, <code>api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)</code>, <code>api.cancel_portal_photo_upload(p_object_id text, p_document_id uuid)</code>, <code>api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)</code> <span class="muted">+30</span></td><td><code>api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)</code>, <code>api.cancel_portal_photo_upload(p_object_id text, p_document_id uuid)</code>, <code>api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)</code>, <code>api.portal_photo_failed_approval(p_claim_id uuid)</code> <span class="muted">+9</span></td><td>6 policies · 2 triggers · FK → 0 · FK ← 10</td></tr>
 <tr id="table-public-ref_facet_applicability"><td><code>public.ref_facet_applicability</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.assert_facet_applicable()</code>, <code>api.assert_object_type_change_consistent()</code>, <code>api.facet_applicability_violations()</code></td><td><span class="muted">-</span></td><td>2 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-public-ref_facet_registry"><td><code>public.ref_facet_registry</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.assert_facet_applicable()</code>, <code>api.assert_object_type_change_consistent()</code>, <code>api.facet_applicability_violations()</code></td><td><span class="muted">-</span></td><td>2 policies · 0 triggers · FK → 0 · FK ← 1</td></tr>
 <tr id="table-public-ref_interop_crosswalk"><td><code>public.ref_interop_crosswalk</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_object_interop(p_object_id text, p_profile text)</code>, <code>api.get_object_jsonld(p_object_id text, p_profile text DEFAULT &#x27;jsonld&#x27;::text)</code></td><td><span class="muted">-</span></td><td>2 policies · 1 triggers · FK → 55 · FK ← 0</td></tr>

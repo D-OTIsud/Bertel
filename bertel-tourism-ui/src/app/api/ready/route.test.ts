@@ -1,6 +1,7 @@
 /** @jest-environment node */
 
 const ORIGINAL_ENV = { ...process.env };
+const ORIGINAL_FETCH = global.fetch;
 
 function setEnv(vars: Record<string, string | undefined>) {
   for (const [k, v] of Object.entries(vars)) {
@@ -26,6 +27,11 @@ describe('GET /api/ready', () => {
     });
     fetchMock.mockReset();
     global.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    global.fetch = ORIGINAL_FETCH;
   });
 
   afterAll(() => {
@@ -55,22 +61,63 @@ describe('GET /api/ready', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('probes the Supabase Auth gateway and returns 200 on success', async () => {
+  it.each([
+    ['https://project-a.supabase.test/', 'https://project-a.supabase.test', 'public-key-a'],
+    ['https://project-b.supabase.test/proxy/', 'https://project-b.supabase.test/proxy', 'public-key-b'],
+  ])('probes all three dependencies on the configured tenant %s', async (url, base, apikey) => {
     setEnv({
-      NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      NEXT_PUBLIC_SUPABASE_URL: url,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: apikey,
+      SUPABASE_SERVICE_ROLE_KEY: 'synthetic-service-key-must-not-be-used',
     });
-    fetchMock.mockResolvedValue({ status: 200 });
+    const cancel = jest.fn().mockResolvedValue(undefined);
+    const readBody = jest.fn();
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => ({
+      status: 200,
+      body: init.method === 'HEAD' ? null : { cancel },
+      json: readBody,
+      text: readBody,
+    }));
     const { GET } = await loadRoute();
 
     const res = await GET();
 
     expect(res.status).toBe(200);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
     await expect(res.json()).resolves.toEqual({ ready: true, mode: 'live' });
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://project.supabase.co/auth/v1/health',
-      expect.objectContaining({ method: 'GET', redirect: 'error' }),
-    );
+    const options = {
+      cache: 'no-store',
+      redirect: 'error',
+      signal: expect.any(AbortSignal),
+      headers: { apikey },
+    };
+    expect(fetchMock.mock.calls).toEqual([
+      [base + '/auth/v1/health', { ...options, method: 'GET' }],
+      [base + '/rest/v1/ref_code?select=code&limit=0', { ...options, method: 'HEAD' }],
+      [base + '/storage/v1/status', { ...options, method: 'GET' }],
+    ]);
+    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(readBody).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['/auth/v1/health', 401],
+    ['/rest/v1/ref_code?select=code&limit=0', 503],
+    ['/storage/v1/status', 302],
+  ])('reports generic degradation when only %s returns %i', async (failedPath, status) => {
+    const base = 'https://project.supabase.test';
+    setEnv({
+      NEXT_PUBLIC_SUPABASE_URL: base,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'public-key',
+    });
+    fetchMock.mockImplementation(async (url: string) => ({ status: url === base + failedPath ? status : 200 }));
+    const { GET } = await loadRoute();
+
+    const res = await GET();
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({ ready: false, reason: 'degraded' });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('returns 503 degraded on network failure', async () => {
@@ -103,36 +150,46 @@ describe('GET /api/ready', () => {
     const { GET } = await loadRoute();
 
     const pending = GET();
-    await jest.advanceTimersByTimeAsync(2000);
+    const signals = fetchMock.mock.calls.map(([, init]) => init.signal as AbortSignal);
+    await jest.advanceTimersByTimeAsync(1999);
+    expect(signals.every((signal) => !signal.aborted)).toBe(true);
+    await jest.advanceTimersByTimeAsync(1);
     const res = await pending;
     const body = await res.json();
 
     expect(res.status).toBe(503);
     expect(body).toEqual({ ready: false, reason: 'degraded' });
-    jest.useRealTimers();
+    expect(signals).toHaveLength(3);
+    expect(new Set(signals).size).toBe(1);
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
   });
 
-  it('dedupes concurrent requests into a single fetch, then caches for 5s', async () => {
+  it.each([200, 503])('shares a parallel probe batch and caches status %i for 5s', async (status) => {
     jest.useFakeTimers();
     setEnv({
-      NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.test',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'public-key',
     });
-    fetchMock.mockResolvedValue({ status: 200 });
+    let finishFetch!: (response: { status: number }) => void;
+    fetchMock.mockReturnValue(new Promise((resolve) => { finishFetch = resolve; }));
     const { GET } = await loadRoute();
 
-    const [a, b] = await Promise.all([GET(), GET()]);
-    expect(a.status).toBe(200);
-    expect(b.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const pending = Promise.all([GET(), GET()]);
+    const startedBeforeAnyResponse = fetchMock.mock.calls.length;
+    finishFetch({ status });
+    const [a, b] = await pending;
+    expect(a.status).toBe(status);
+    expect(b.status).toBe(status);
+    expect(startedBeforeAnyResponse).toBe(3);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
 
-    await GET();
-    expect(fetchMock).toHaveBeenCalledTimes(1); // still cached
+    await jest.advanceTimersByTimeAsync(4999);
+    expect((await GET()).status).toBe(status);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
 
-    await jest.advanceTimersByTimeAsync(5001);
-    await GET();
-    expect(fetchMock).toHaveBeenCalledTimes(2); // cache expired
-    jest.useRealTimers();
+    await jest.advanceTimersByTimeAsync(1);
+    expect((await GET()).status).toBe(status);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
   it('rejects a configured URL that embeds credentials', async () => {

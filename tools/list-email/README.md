@@ -72,14 +72,9 @@ Le manifeste fresh inclut `Base de donnée DLL et API/distributed_list_email_int
 Le contrôle de provenance épingle ses 23 369 octets et le corps à intégrer dans
 le garde d’upgrade après retrait des deux seules lignes externes `BEGIN` et
 `COMMIT`. Le miroir de préparation `20261106194635` est retiré des migrations actives.
-Ce paquet qualifie la source en CI. Le reçu de production reste à établir.
-
-Après réconciliation de l’application, épingler la version réellement inscrite
-au ledger et l’empreinte du garde exact dans le contrôle de provenance. Ranger
-ces octets sous `supabase/migrations/<version_reçue>_distributed_list_email_intents.sql`,
-les protéger par `-text` et consigner le reçu vérifié dans le record de production.
-Le manifeste fresh garde son seul chemin canonique. En cas de résultat ambigu,
-réconcilier le catalogue et le ledger avant toute autre opération.
+Le [record de production](../../docs/releases/2026-11-07-distributed-list-email-production.md) décrit
+le reçu observé `20261107031344`. Le contrôle de provenance épingle le DO exact
+et son corps canonique. Le manifeste fresh garde son seul chemin canonique.
 
 ## Validation jetable
 

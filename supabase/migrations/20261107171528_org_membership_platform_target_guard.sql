@@ -1,13 +1,14 @@
 BEGIN;
 
-CREATE OR REPLACE FUNCTION api.rpc_upsert_membership(
+CREATE FUNCTION internal.upsert_org_membership(
   p_target_user_id    uuid,
   p_org_object_id     text,
-  p_business_role_code text
+  p_business_role_code text,
+  p_invitation        boolean
 )
-RETURNS uuid   -- membership_id créé ou réactivé
-LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, api, auth
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY INVOKER
+SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $$
 DECLARE
   v_caller_id          uuid    := auth.uid();
@@ -24,6 +25,13 @@ BEGIN
     RAISE EXCEPTION 'SELF_ACTION_FORBIDDEN: un administrateur ne peut pas gérer son propre membership';
   END IF;
 
+  -- Read the winner's committed state after waiting, including when no row existed
+  -- yet. Use the trigger's user lock in both RPC modes and for platform targets.
+  IF p_invitation AND current_setting('transaction_isolation') <> 'read committed' THEN
+    RAISE EXCEPTION 'Invitation attachment requires READ COMMITTED' USING ERRCODE='25000';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtext(p_target_user_id::text));
+
   -- 2. Autorisation appelant
   v_caller_platform := COALESCE(api.is_platform_superuser(), FALSE);
   IF v_caller_platform THEN
@@ -35,13 +43,17 @@ BEGIN
     JOIN ref_org_admin_role  r   ON r.id = uar.role_id
     WHERE uom.user_id       = v_caller_id
       AND uom.org_object_id = p_org_object_id
-      AND uom.is_active     = TRUE;
+      AND uom.is_active     = TRUE
+    ORDER BY CASE WHEN p_invitation THEN r.rank END DESC NULLS LAST;
 
     IF v_caller_rank IS NULL THEN
       RAISE EXCEPTION 'FORBIDDEN: vous n''avez pas de rôle d''administration dans cette ORG';
     END IF;
     IF v_caller_rank < 20 THEN
       RAISE EXCEPTION 'INSUFFICIENT_RANK: rang minimum requis 20 (org_manager) pour créer un membership';
+    END IF;
+    IF p_invitation AND v_caller_rank < 30 THEN
+      RAISE EXCEPTION 'INSUFFICIENT_RANK: rang minimum requis 30 pour une invitation' USING ERRCODE='42501';
     END IF;
   END IF;
 
@@ -66,11 +78,16 @@ BEGIN
   FROM public.user_org_membership m
   WHERE m.user_id       = p_target_user_id
     AND m.org_object_id = p_org_object_id
+  ORDER BY (p_invitation AND m.is_active) DESC
   FOR UPDATE;
 
   IF NOT v_caller_platform AND v_target_platform IS TRUE
     AND v_existing_active IS DISTINCT FROM TRUE THEN
     RAISE EXCEPTION 'FORBIDDEN: rattachement indisponible pour ce compte' USING ERRCODE='42501';
+  END IF;
+
+  IF p_invitation AND v_existing_active IS TRUE THEN
+    RETURN jsonb_build_object('membership_id', v_existing_id, 'already_active', TRUE);
   END IF;
 
   IF v_existing_id IS NOT NULL THEN
@@ -114,8 +131,36 @@ BEGIN
     v_caller_id, NOW(), NOW(), NOW()
   );
 
-  RETURN v_membership_id;
+  RETURN jsonb_build_object('membership_id', v_membership_id, 'already_active', FALSE);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION internal.upsert_org_membership(uuid,text,text,boolean)
+  FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION api.rpc_upsert_membership(
+  p_target_user_id uuid, p_org_object_id text, p_business_role_code text
+)
+RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  RETURN (internal.upsert_org_membership(p_target_user_id,p_org_object_id,p_business_role_code,FALSE)->>'membership_id')::pg_catalog.uuid;
+END;
+$$;
+
+CREATE FUNCTION api.rpc_attach_invite_membership(
+  p_target_user_id uuid, p_org_object_id text, p_business_role_code text
+)
+RETURNS jsonb
+LANGUAGE sql SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp
+AS $$
+  SELECT internal.upsert_org_membership(p_target_user_id,p_org_object_id,p_business_role_code,TRUE);
+$$;
+
+REVOKE EXECUTE ON FUNCTION api.rpc_attach_invite_membership(uuid,text,text) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION api.rpc_attach_invite_membership(uuid,text,text) TO authenticated;
 
 COMMIT;

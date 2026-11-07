@@ -19,6 +19,7 @@ DECLARE
   v_added_new uuid;
   v_added_missing uuid;
   v_denied boolean;
+  v_receipt jsonb;
 BEGIN
   PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
   INSERT INTO public.object(id,object_type,name,status)
@@ -98,6 +99,35 @@ BEGIN
   ASSERT EXISTS (SELECT 1 FROM public.user_org_business_role b
     JOIN public.ref_org_business_role r ON r.id=b.role_id
     WHERE b.membership_id=v_super_membership AND b.is_active AND r.code='editor');
+
+  ASSERT NOT has_function_privilege('anon','api.rpc_attach_invite_membership(uuid,text,text)','EXECUTE');
+  ASSERT has_function_privilege('authenticated','api.rpc_attach_invite_membership(uuid,text,text)','EXECUTE');
+  ASSERT NOT has_function_privilege('authenticated','internal.upsert_org_membership(uuid,text,text,boolean)','EXECUTE');
+  SET LOCAL ROLE authenticated;
+    v_denied := FALSE;
+    BEGIN
+      PERFORM api.rpc_attach_invite_membership(v_new,v_org,'editor');
+    EXCEPTION WHEN insufficient_privilege THEN
+      v_denied := TRUE;
+    END;
+    ASSERT v_denied, 'A manager can still use the legacy RPC but cannot attach an invitation';
+  RESET ROLE;
+
+  UPDATE public.user_org_admin_role SET role_id=(
+    SELECT id FROM public.ref_org_admin_role WHERE code='org_admin' AND rank=30
+  ) WHERE membership_id=v_manager_membership AND is_active;
+  UPDATE public.user_org_membership SET is_active=FALSE WHERE id=v_legacy_membership;
+  SET LOCAL ROLE authenticated;
+    v_receipt := api.rpc_attach_invite_membership(v_legacy,v_org,'contributor');
+    ASSERT v_receipt=jsonb_build_object('membership_id',v_legacy_membership,'already_active',FALSE),
+      'An inactive membership is reactivated with a distinct receipt';
+    v_receipt := api.rpc_attach_invite_membership(v_legacy,v_org,'editor');
+    ASSERT v_receipt=jsonb_build_object('membership_id',v_legacy_membership,'already_active',TRUE),
+      'An invitation cannot rotate the business role of an active membership';
+  RESET ROLE;
+  ASSERT EXISTS (SELECT 1 FROM public.user_org_business_role b
+    JOIN public.ref_org_business_role r ON r.id=b.role_id
+    WHERE b.membership_id=v_legacy_membership AND b.is_active AND r.code='contributor');
 END;
 $test$;
 ROLLBACK;

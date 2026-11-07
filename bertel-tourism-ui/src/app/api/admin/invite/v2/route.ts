@@ -49,6 +49,13 @@ function canSendExistingInvite(user: User): boolean {
   return !user.email_confirmed_at && !user.confirmed_at && !user.last_sign_in_at && !user.is_sso_user;
 }
 
+function existingInviteResponse(user: User, membershipId: string): NextResponse {
+  return NextResponse.json({
+    userId: user.id, membershipId, alreadyExisted: true,
+    ...(canSendExistingInvite(user) ? { neverSignedIn: true } : {}),
+  }, { status: 409 });
+}
+
 async function checkInviteScope(auth: Extract<AdminAuth, { ok: true }>, orgId: string): Promise<NextResponse | null> {
   const { asCaller } = auth;
   if (auth.isSuper) {
@@ -149,10 +156,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (existing && membershipInOrg) {
     const existingScopeFailure = await checkInviteScope(auth, orgId);
     if (existingScopeFailure) return existingScopeFailure;
-    return NextResponse.json({
-      userId, membershipId: membershipInOrg.id, alreadyExisted: true,
-      ...(canSendExistingInvite(existing) ? { neverSignedIn: true } : {}),
-    }, { status: 409 });
+    return existingInviteResponse(existing, membershipInOrg.id);
   }
 
   if (!auth.isSuper && !membershipInOrg) {
@@ -165,10 +169,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Commit the same caller-scoped attachment before returning any account identity.
   const attachScopeFailure = await checkInviteScope(auth, orgId);
   if (attachScopeFailure) return attachScopeFailure;
-  const { data: membershipId, error } = await callerApi.rpc('rpc_upsert_membership', {
+  const { data: attachment, error } = await callerApi.rpc('rpc_attach_invite_membership', {
     p_target_user_id: userId, p_org_object_id: orgId, p_business_role_code: roleCode,
   });
-  if (error || typeof membershipId !== 'string' || !membershipId) return outOfScope();
+  if (error || typeof attachment?.membership_id !== 'string' || !attachment.membership_id
+    || typeof attachment.already_active !== 'boolean') return outOfScope();
+  const membershipId = attachment.membership_id;
+  if (attachment.already_active) {
+    if (existing) return existingInviteResponse(existing, membershipId);
+    // GoTrue already acknowledged the initial invitation before the concurrent attachment.
+    return NextResponse.json({ userId, membershipId, alreadyExisted: false }, { status: 201 });
+  }
   if (existing) {
     if (canSendExistingInvite(existing)) {
       // An existing account can only receive this mail once attachment is confirmed.

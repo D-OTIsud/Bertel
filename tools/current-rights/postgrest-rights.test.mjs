@@ -144,6 +144,10 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     fixtureCreated = true;
     if (browserWitness) {
       assert.equal(await canWrite('other', A), false, 'the second account starts outside the publisher organization');
+      const { testTaskMultipartHttp } = await import('../../bertel-tourism-ui/tests/current-rights/task-multipart-http.mjs');
+      await testTaskMultipartHttp({ local, commit, objectId: A, writerId: ids.writer,
+        writerAuthorization: headers('writer').authorization, foreignAuthorization: headers('other').authorization });
+      t.diagnostic('Disposable Next HTTP upload bounds, cross-route leases and task document writes passed.');
       // Move the existing fixture membership only in this disposable browser run.
       // Its editor role and cleanup both follow the same membership ID.
       commit(`DO $fixture$ BEGIN

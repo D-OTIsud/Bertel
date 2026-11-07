@@ -54,6 +54,11 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
   let fixtureCreated = false;
   let writerCredentials;
   try {
+    if (browserWitness) {
+      const clean = local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.object WHERE id='${A}')
+        AND NOT EXISTS (SELECT 1 FROM public.object_version WHERE object_id='${A}')`, 'check clean editor fixture');
+      assert.equal(clean, 't', 'the editor fixture and its history must be absent before browser setup');
+    }
     assert.ok(Object.keys(ids).length === 6 && new Set(Object.values(ids)).size === 6, 'the fixture must own exactly six distinct synthetic identities');
     for (const [key, id] of Object.entries(ids)) {
       const email = `${emails[key]}@example.invalid`;

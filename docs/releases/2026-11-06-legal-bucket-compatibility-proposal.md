@@ -1,45 +1,34 @@
-# Legal-documents compatibility — separate proposal, not applied
+# Legal-documents compatibility profile
 
-`tools/private-media/legal-bucket-compatibility.proposal.json` describes a
-configuration change through the Storage bucket API. It is not a migration and
-the copy tool cannot execute it. No bucket, visibility, file or upload control
-has been changed by this preparation.
+On 7 November 2026, a single Storage bucket API request updated the private
+`legal-documents` bucket. The PUT was acknowledged at 05:50:23.702 UTC. A
+separate read-only repeatable-read check at 05:50:43.906955 UTC verified the
+42,305,170-byte limit and exact PDF, JPEG, PNG, DOCX and HEIF allowlist. The
+destination remained private, STANDARD, without versioning or lifecycle
+configuration. Its restrictive ALL policy remained intact, the source bucket
+remained public and the operation touched no objects.
+[Exact request and verification record](../../tools/private-media/legal-bucket-compatibility.proposal.json)
 
-The earlier metadata inventory found a private `legal-documents` bucket with a
-10485760-byte limit and PDF/JPEG allowlist. The classified corpus contains
-22 larger files, maximum42305170 bytes, and these exact five types:
-PDF, JPEG, DOCX, PNG and HEIF. These are metadata observations, not content-type
-sniffing or content hashes. No archive is converted or omitted to fit new uploads.
+The historical private profile allowed PDF and JPEG up to 10,485,760 bytes.
+The inventory identified 22 files above that limit among 1,710 classified
+files, with a maximum of 42,305,170 bytes and the five MIME types now allowed.
+The inventory used metadata. Byte and hash verification belongs to the
+separate backup and copy operation.
 
-The reviewable target keeps the bucket private, raises its limit only to the
-largest observed file (42305170 bytes), and adds the three exact observed MIME
-types without wildcards. The project-wide limit must independently admit that
-size. Broadening the bucket restriction affects every otherwise-authorized upload
-to this bucket, including concurrent native uploads; existing application upload
-validation and RLS are not changed here. The server-only Storage policy from DB07
-must be present before the physical cutover.
+The new per-bucket restrictions apply to all otherwise-authorized uploads.
+The project-wide limit must independently admit the largest object. The
+canonical SQL uses this profile for fresh installations and preserves the
+existing policies. Production used the Storage API. The copy tool consumes
+the configured profile and never updates it.
+[Fresh installation definition](../../Base%20de%20donn%C3%A9e%20DLL%20et%20API/legal_documents_bucket.sql)
 
-Before any future application, refresh the bucket settings and selected corpus;
-stop on unknown drift. Qualify synthetic large PDF/PNG/JPEG and small DOCX/HEIF
-copies on an isolated representative Storage version. The copy operator requires
-explicit compatible limits/MIMEs even where an upstream server-copy implementation
-might bypass upload restrictions. That upstream behavior is not assumed as proof
-of the deployed server.
+The private reservation registry was installed separately. The bucket update
+did not create a reservation, copy an object or cut over a document reference.
+[DB07 production reservation record](2026-11-07-db07-storage-reservations-production.md)
 
-The future operation is a targeted Storage `updateBucket('legal-documents',
-{ public:false, fileSizeLimit:42305170, allowedMimeTypes:[the five exact values] })`
-or its equivalent PUT JSON from the proposal. Preserve other settings and verify
-privacy/limits/MIMEs immediately afterwards; never implement this as SQL changes
-to Storage object metadata. Align the canonical fresh bucket definition and add
-the bounded deployment record when this proposal is actually selected/applied.
+If the former upload restrictions are needed for recovery, reconcile concurrent
+uploads first and keep copied archives intact. Changing restrictions does not
+require removing existing objects.
 
-If recovery needs the former upload limit/allowlist, first reconcile concurrent
-uploads and keep copied archives intact. Restoring upload restrictions is not a
-reason to remove large or additional-type files, alter source visibility, delete
-copies or fabricate a receipt. No compatibility change is necessary to run the
-offline preview or local synthetic tests.
-
-References: [bucket restrictions](https://supabase.com/docs/guides/storage/buckets/creating-buckets),
-[global and per-bucket limits](https://supabase.com/docs/guides/storage/uploads/file-limits),
-[copy API](https://supabase.com/docs/reference/javascript/storage-from-copy),
-[opaque server keys](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys).
+See [bucket restrictions](https://supabase.com/docs/guides/storage/buckets/creating-buckets)
+and [global and per-bucket limits](https://supabase.com/docs/guides/storage/uploads/file-limits).

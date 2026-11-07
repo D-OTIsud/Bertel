@@ -5,6 +5,7 @@ import test from 'node:test';
 import { loadDisposable } from './disposable.mjs';
 
 const local = loadDisposable();
+const browserWitness = process.env.CURRENT_RIGHTS_EDITOR_BROWSER === 'true';
 const ids = {
   writer: '00000000-0000-4000-a000-00000000ae11', other: '00000000-0000-4000-a000-00000000ae12',
   portal: '00000000-0000-4000-a000-00000000ae13', foreignPortal: '00000000-0000-4000-a000-00000000ae14',
@@ -45,10 +46,19 @@ function commit(sql, stage) {
 const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
   metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
 
-test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation', { timeout: 90000 }, async (t) => {
+const testName = browserWitness
+  ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
+  : 'real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation';
+test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
   const createdIds = [];
   let fixtureCreated = false;
+  let writerCredentials;
   try {
+    if (browserWitness) {
+      const clean = local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.object WHERE id='${A}')
+        AND NOT EXISTS (SELECT 1 FROM public.object_version WHERE object_id='${A}')`, 'check clean editor fixture');
+      assert.equal(clean, 't', 'the editor fixture and its history must be absent before browser setup');
+    }
     assert.ok(Object.keys(ids).length === 6 && new Set(Object.values(ids)).size === 6, 'the fixture must own exactly six distinct synthetic identities');
     for (const [key, id] of Object.entries(ids)) {
       const email = `${emails[key]}@example.invalid`;
@@ -60,6 +70,7 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
         { id, email, password, email_confirm: true, app_metadata: appMetadata }), 'confirmed synthetic Auth creation');
       if (typeof created.id === 'string' && /^[0-9a-f-]{36}$/i.test(created.id)) createdIds.push(created.id);
       assert.ok(created.id === id && created.email === email && created.email_confirmed_at, 'GoTrue must create the exact confirmed synthetic identity');
+      if (browserWitness && key === 'writer') writerCredentials = { email, password };
       if (key === 'admin') continue; // Only a fixture FK; never used to bypass HTTP assertions.
       const signedIn = await json(await local.request('/auth/v1/token?grant_type=password', local.anonymous,
         { email, password }), 'real synthetic password login');
@@ -74,6 +85,12 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
     'exactly six identities and five distinct real JWTs are required; the fixture-only admin never authenticates');
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
+    if (browserWitness) {
+      const { testEditorRaces } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
+      await testEditorRaces({ local, objectId: A, writerId: ids.writer, ...writerCredentials });
+      t.diagnostic('Authenticated Chromium and PostgREST publication and restore races passed.');
+      return;
+    }
     const versionA = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${A}'`, 'private history witness'));
     const versionPublic = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${PUBLIC}'`, 'public history witness'));
     assert.ok(Number.isInteger(versionA) && versionA > 0 && Number.isInteger(versionPublic) && versionPublic > 0, 'history positives must be nonempty');

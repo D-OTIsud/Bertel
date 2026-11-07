@@ -110,6 +110,30 @@ puis remplace TLS pour son seul témoin ; il ne qualifie pas TLS déployé.
 
 ## Bascule et retour arrière à préparer séparément
 
+`LIST_EMAIL_MODE` est une configuration serveur runtime du seul envoi manuel.
+Sans valeur, avec `closed` ou avec une valeur inconnue, `prepare` et `dispatch`
+renvoient503 `email_protection_unavailable` avant réglage SMTP, lien partagé,
+réservation ou transport. Seule la valeur exacte `protocol-v1` ouvre l'admission.
+Ce mode ne change ni la disponibilité SMTP commune ni le drain des notifications.
+Le contexte autorisé et l'ACK technique d'un reçu déjà accepté restent accessibles
+en mode fermé ; avant installation des RPC, leurs erreurs sont converties en ce
+même503 métier. Aucun SQL n'est exécuté à l'import de la route.
+
+Changer une configuration de déploiement ne modifie pas instantanément les
+processus existants. Une requête déjà passée au-delà du garde peut encore terminer.
+Avant installation, il faut un artefact de transition dérivé de l'ancienne app
+dont la route est toujours fermée, puis le retrait vérifié de tous les anciens
+processus/voies de relance de cette app. Installer/vérifier SQL, déployer ensuite
+la nouvelle flotte homogène en `closed`, puis seulement ouvrir explicitement.
+Une seule réponse derrière un répartiteur ne prouve pas l'état de chaque instance.
+
+Le retour doit cibler cet artefact dérivé toujours fermé, qui ignore même un mode
+ouvert résiduel ; une image legacy exacte ignorant le garde ne convient pas.
+Conserver SQL, reçus et générations. Aucun retrait de processus ne révoque une
+acceptation déjà faite par le relais ni ne prouve une livraison/déduplication
+rétrospective. Cette source et ses tests ne constituent pas une autorisation de
+bascule ou une qualification de l'artefact de retour.
+
 Aucune application live n’est autorisée par ces tests. Installer/vérifier l’upgrade autonome avant de rendre la nouvelle route disponible. Ne pas lancer `db push` depuis la racine historique, ni repair/renumbering. Le CREATE TABLE refuse un nom préexistant plutôt que masquer une dérive. Les nouvelles fonctions exigent le vrai rôle service avec BYPASSRLS ; anon/authenticated ne gagnent aucun accès. Les grants SELECT/UPDATE sur object_list et SELECT sur l’identité découverte sont limités à service_role pour les invokers et leurs verrous/checks.
 
 Une flotte mixte avec l’ancienne route reste hors garantie : l’ancien serveur ignore les reçus. Prévoir une fenêtre maîtrisée sans ancien worker d’envoi avant réouverture, puis vérifier la version de chaque instance. Les anciens onglets sans protocole valide reçoivent un refus avant SMTP et doivent charger le nouveau client. Une panne du registre ferme le départ avec503 ; aucun fail-open. Ne pas revenir à une route ignorant le registre pendant que l’envoi est ouvert. Garder les reçus existants ; ne pas supprimer les tables pour rollback. Choisir la fenêtre de mesure après livraison contrôlée, exposer sa couverture, puis faire décider les plafonds ; aucune production/collecte réelle n’est effectuée dans ce lot.

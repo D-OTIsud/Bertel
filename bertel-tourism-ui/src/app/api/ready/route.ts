@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
 
-// Readiness probe: checks whether the app can actually serve requests, unlike /api/health
-// (process liveness only). Non-demo mode probes the configured Supabase Auth gateway
-// (GET /auth/v1/health) — this validates reachability of the auth endpoint only, NOT a
-// full DB/Storage/RLS guarantee.
+// Readiness checks the configured Supabase Auth, REST and Storage endpoints.
+// /api/health reports process liveness. The probes use status codes only.
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const CACHE_TTL_MS = 5000;
 const FETCH_TIMEOUT_MS = 2000;
+const SUPABASE_PROBES = [
+  { method: 'GET', path: '/auth/v1/health' },
+  // Depends on the existing anon SELECT grant on public.ref_code.
+  { method: 'HEAD', path: '/rest/v1/ref_code?select=code&limit=0' },
+  { method: 'GET', path: '/storage/v1/status' },
+] as const;
 
 interface ReadyResult {
   status: 200 | 503;
@@ -19,6 +23,8 @@ let cached: { result: ReadyResult; expiresAt: number } | null = null;
 let inFlight: Promise<ReadyResult> | null = null;
 
 function isConfiguredHttpUrl(value: string): boolean {
+  // Reject the delimiters themselves, including an empty query or fragment.
+  if (/[?#]/.test(value)) return false;
   try {
     const parsed = new URL(value);
     return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !parsed.username && !parsed.password;
@@ -27,23 +33,27 @@ function isConfiguredHttpUrl(value: string): boolean {
   }
 }
 
-async function probeSupabaseAuth(url: string, anonKey: string): Promise<boolean> {
+async function probeSupabase(url: string, anonKey: string): Promise<boolean> {
+  const base = url.replace(/\/+$/, '');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${url.replace(/\/+$/, '')}/auth/v1/health`, {
-      method: 'GET',
-      cache: 'no-store',
-      redirect: 'error',
-      signal: controller.signal,
-      headers: { apikey: anonKey },
-    });
-    // Status class only — never read the body (avoids leaking upstream diagnostics).
-    const ready = res.status >= 200 && res.status < 300;
-    await res.body?.cancel().catch(() => {});
-    return ready;
+    const results = await Promise.all(SUPABASE_PROBES.map(async ({ path, method }) => {
+      const res = await fetch(base + path, {
+        method,
+        cache: 'no-store',
+        redirect: 'error',
+        signal: controller.signal,
+        headers: { apikey: anonKey },
+      });
+      // Discard the upstream body without extending the readiness deadline.
+      void res.body?.cancel().catch(() => {});
+      return res.status >= 200 && res.status < 300;
+    }));
+    return results.every(Boolean);
   } catch {
-    // Network failure, non-2xx-via-redirect-error, or abort on timeout.
+    // Abort sibling requests on transport failure.
+    controller.abort();
     return false;
   } finally {
     clearTimeout(timer);
@@ -68,27 +78,29 @@ async function computeReady(): Promise<ReadyResult> {
     return { status: 503, body: { ready: false, reason: 'misconfigured' } };
   }
 
-  const ok = await probeSupabaseAuth(url, anonKey);
+  const ok = await probeSupabase(url, anonKey);
   return ok
     ? { status: 200, body: { ready: true, mode: 'live' } }
     : { status: 503, body: { ready: false, reason: 'degraded' } };
 }
 
-// Shares one in-flight probe across concurrent requests and caches the completed result for
-// CACHE_TTL_MS per process, to avoid a poll storm hammering the Supabase Auth gateway.
-async function getReady(): Promise<ReadyResult> {
-  const now = Date.now();
-  if (cached && cached.expiresAt > now) {
-    return cached.result;
+// Shares one in-flight batch across concurrent requests and caches the completed result for
+// CACHE_TTL_MS per process.
+function getReady(): Promise<ReadyResult> {
+  if (cached && cached.expiresAt > Date.now()) {
+    return Promise.resolve(cached.result);
   }
   if (!inFlight) {
-    inFlight = computeReady().finally(() => {
-      inFlight = null;
-    });
+    inFlight = computeReady()
+      .then((result) => {
+        cached = { result, expiresAt: Date.now() + CACHE_TTL_MS };
+        return result;
+      })
+      .finally(() => {
+        inFlight = null;
+      });
   }
-  const result = await inFlight;
-  cached = { result, expiresAt: Date.now() + CACHE_TTL_MS };
-  return result;
+  return inFlight;
 }
 
 export async function GET(): Promise<NextResponse> {

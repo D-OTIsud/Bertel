@@ -56,7 +56,7 @@ jobs:
     # Push/PR always run the mandatory application/rights gate. The explicit
     # manual selector below starts a separate upstream capability probe only.
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.storage_contract != true }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4

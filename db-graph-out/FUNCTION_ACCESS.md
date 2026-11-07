@@ -2944,6 +2944,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
+### `internal.portal_submission_module(p_target_table text, p_rpc text, p_payload jsonb)`
+- **returns:** `text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+- _The browser sends an editor module as data. Only the module bound to the_
+
 ### `internal.provider_crm_interactions()`
 - **returns:** `SETOF public.crm_interaction`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed

@@ -168,7 +168,12 @@ async function testPublicDiscoveryEffects(app, ordinary) {
   't', 'the disposable stack must have no active AI or business SMTP provider');
   const registry = async () => json(await rpc(local.service, 'get_sandbox_discovery_user'), 'owned discovery registry');
   assert.ok(await registry() === null, 'the disposable discovery identity must be absent before provisioning');
+  const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 
+  function assertDedicatedIdentity(id) {
+    assert.ok(typeof id === 'string' && uuid.test(id) && !Object.values(ids).includes(id),
+      'the registry must identify a separate disposable discovery user');
+  }
   function request(path, options) {
     return fetch(app.origin + path, { ...options, redirect: 'error', signal: AbortSignal.timeout(30_000) });
   }
@@ -186,6 +191,15 @@ async function testPublicDiscoveryEffects(app, ordinary) {
     assert.ok(user.id === id && user.email?.endsWith('@sandbox.bertel.invalid')
       && user.app_metadata?.sandbox_discovery === true, 'GoTrue must verify the same restricted discovery identity');
     assert.equal(await json(await rpc(auth, 'current_user_test_realm'), 'discovery PostgREST realm'), true);
+    let claims;
+    try {
+      claims = JSON.parse(Buffer.from(auth.authorization.split('.')[1], 'base64url').toString('utf8'));
+    } catch {
+      throw new Error('the verified discovery JWT must have decodable claims');
+    }
+    assert.ok(claims?.sub === id && typeof claims.session_id === 'string' && uuid.test(claims.session_id),
+      'the verified discovery JWT must identify a GoTrue session for the dedicated user');
+    return claims.session_id;
   }
   async function probe(path, { authorization }, status, code) {
     // Malformed input can never reach a sender. Discovery must refuse before parsing it.
@@ -194,16 +208,21 @@ async function testPublicDiscoveryEffects(app, ordinary) {
     assert.ok((await response.json()).error === code, `${path} must return the expected refusal code`);
   }
 
-  const first = await open();
-  const id = await registry();
-  assert.ok(typeof id === 'string' && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)
-    && !Object.values(ids).includes(id), 'the public entry must provision a separate disposable identity');
+  let id;
   try {
-    await verify(first, id);
+    const first = await open();
+    id = await registry();
+    assertDedicatedIdentity(id);
+    const firstSession = await verify(first, id);
     const second = await open();
-    assert.ok(second.authorization !== first.authorization, 'the second visitor must receive a distinct GoTrue session');
-    await verify(second, id);
-    await verify(first, id);
+    const secondSession = await verify(second, id);
+    assert.ok(firstSession !== secondSession, 'the second visitor must receive a distinct GoTrue session ID');
+    assert.ok(await verify(first, id) === firstSession, 'the first session must remain valid after the second opening');
+
+    const published = await rows(ordinary, PUBLIC);
+    assert.ok(published.length === 1 && published[0].id === PUBLIC
+      && published[0].status === 'published' && published[0].is_test === false,
+      'the ordinary account must see the published fixture outside the test realm');
 
     const admissions = () => local.sql(`SELECT count(*) FROM internal.ai_request_rate_state WHERE user_id='${id}'`,
       'count discovery AI admissions');
@@ -211,14 +230,29 @@ async function testPublicDiscoveryEffects(app, ordinary) {
     const availability = await request('/api/service-availability', { headers: { authorization: first.authorization } });
     assert.deepEqual(await json(availability, 'discovery availability'), { translation: false, imageAnalysis: false, email: false });
     for (const auth of [first, second]) {
+      const test = await rows(auth, TEST);
+      assert.ok(test.length === 1 && test[0].id === TEST && test[0].status === 'published' && test[0].is_test === true,
+        'each discovery session must see the published test fixture');
+      assert.deepEqual(await rows(auth, PUBLIC), [], 'each discovery session must be isolated from the published fixture outside its realm');
       await probe('/api/lists/send', auth, 403, 'sandbox_external_effects_disabled');
       await probe('/api/ai/translate', auth, 403, 'sandbox_external_effects_disabled');
     }
     assert.equal(admissions(), '0', 'discovery must not reach AI admission');
     await probe('/api/lists/send', ordinary, 400, 'bad_json');
   } finally {
-    const removed = await local.request(`/auth/v1/admin/users/${id}`, local.service, undefined, 'DELETE');
-    assert.ok(removed.ok, 'only the disposable discovery identity must be cleaned up');
+    const registered = await registry();
+    // If provisioning never reached the registry, the disposable stack teardown owns cleanup.
+    if (registered !== null) {
+      assertDedicatedIdentity(registered);
+      assert.ok(id == null || id === registered, 'cleanup must not delete a replacement identity');
+      assert.equal(local.sql(`SELECT EXISTS (SELECT 1 FROM auth.users WHERE id='${registered}'
+        AND email LIKE 'discovery-%@sandbox.bertel.invalid' AND raw_app_meta_data @> '{"sandbox_discovery":true}')`,
+        'confirm the registered disposable discovery account'), 't');
+      const removed = await local.request(`/auth/v1/admin/users/${registered}`, local.service,
+        { should_soft_delete: false }, 'DELETE');
+      assert.ok(removed.ok, 'only the disposable discovery identity must be cleaned up');
+      assert.ok(await registry() === null, 'the discovery registry must be empty after cleanup');
+    }
   }
 }
 

@@ -1546,7 +1546,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `api.object_private_note_author_admin_rank(p_note_id uuid)` _(DEFINER)_
 - **returns:** `integer`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/object_private_note_author_admin_rank`
+- **access:** PostgreSQL owner-only direct execution. Used internally by `api.can_manage_object_private_note(uuid)`.
 - **object types served:** **all object types**
 - _Retourne le rang admin de l'auteur de la note dans l'ORG de la note (NULL si aucun)._
 

@@ -733,6 +733,12 @@ ROLLBACK;
 \echo '== SEC05 manual list mail: durable intentions and user/ORG measurement (no limit) =='
 \ir distributed_list_email_intents.sql
 
+\echo '== DB07 private Storage reservation registry =='
+BEGIN;
+SET LOCAL search_path=pg_catalog,pg_temp;
+\ir ../supabase/migrations/20261107041336_private_storage_copy_reservations.sql
+COMMIT;
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

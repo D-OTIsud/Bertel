@@ -13,3 +13,4 @@
 "/Base de donnée DLL et API/ai_request_admission.sql" -text
 "/Base de donnée DLL et API/distributed_list_email_intents.sql" -text
 /supabase/migrations/20261107031344_distributed_list_email_intents.sql -text
+/supabase/migrations/20261107041336_private_storage_copy_reservations.sql -text

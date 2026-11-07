@@ -3259,6 +3259,50 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
 
+## schema `storage_reservation_api`
+
+### `storage_reservation_api.claim(receipt uuid, b jsonb, owner_secret text, attempt uuid)`
+- **returns:** `jsonb`
+- **access:** storage_reservation_api.claim
+- **object types served:** —
+
+### `storage_reservation_api.inspect(receipt uuid, b jsonb, owner_secret text)`
+- **returns:** `jsonb`
+- **access:** storage_reservation_api.inspect
+- **object types served:** —
+
+### `storage_reservation_api.reserve(b jsonb, owner_hash text)`
+- **returns:** `jsonb`
+- **access:** storage_reservation_api.reserve
+- **object types served:** —
+
+## schema `storage_reservation_private`
+
+### `storage_reservation_private.deny_erasure()`
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
+
+### `storage_reservation_private.guard_namespace()`
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
+
+### `storage_reservation_private.guard_reservation()`
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
+
+### `storage_reservation_private.require_admission(b jsonb, require_active boolean)`
+- **returns:** `void`
+- **access:** storage_reservation_private.require_admission
+- **object types served:** —
+
+### `storage_reservation_private.valid_binding(b jsonb)`
+- **returns:** `boolean`
+- **access:** storage_reservation_private.valid_binding
+- **object types served:** —
+
 ## schema `thesaurus`
 
 ### `thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT '{}'::jsonb)` _(DEFINER)_

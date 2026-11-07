@@ -14,7 +14,7 @@ import { crmQueryKeys } from '../lib/crm-query-keys';
 // Le serveur ne peut pas vérifier ce report, seulement l'IMPUTER (attested_by/attested_at) :
 // cet écran est donc la seule vraie garde. Si l'attestation se cochait par réflexe, le
 // partenaire lirait « validée » sur une fiche publique qui n'a pas bougé, sans moyen de le voir.
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -87,7 +87,11 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: 'Refusée',
 };
 
+const noopSubscribe = () => () => {};
+
 export default function ModerationPage() {
+  // The cache can be ready before the server loading markup finishes hydrating.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   // 18a — Task 19 ouvre /moderation?object=<id> depuis le kanban CRM. Sans cette lecture, la
@@ -204,7 +208,7 @@ export default function ModerationPage() {
     rejectMutation.mutate({ ...rejectTarget, note: rejectNote.trim() });
   }
 
-  if (query.isLoading) {
+  if (!hydrated || query.isLoading) {
     return <section className="panel-card panel-card--wide m-4">Chargement de la modération…</section>;
   }
 

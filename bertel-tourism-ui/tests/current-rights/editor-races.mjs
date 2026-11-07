@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { createServer as createHttpServer } from 'node:http';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -65,6 +66,10 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
   assert.ok(Number.isInteger(historic[0]) && historic[0] > 0 && typeof historic[1] === 'string' && historic[1] !== canonical()[0]);
 
   const app = await startApp(local);
+  // Chromium can follow redirects without reentering the Playwright route handler.
+  const rejectProxy = createHttpServer((_request, response) => response.writeHead(403, { Connection: 'close' }).end());
+  rejectProxy.on('connect', (_request, socket) => socket.destroy());
+  rejectProxy.on('upgrade', (_request, socket) => socket.destroy());
   let browser;
   let closing = false;
   let routeFailure;
@@ -88,9 +93,24 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
   }
   try {
     await waitForApp(app);
-    browser = await chromium.launch({ env: app.safeEnv, args: ['--disable-background-networking'] });
-    const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
     const permitted = new Set([app.origin, local.origin]);
+    const exactPorts = Array.from(permitted, (origin) => {
+      const url = new URL(origin);
+      assert.ok(url.hostname === loopback && url.port, 'browser origins must use explicit owned loopback ports');
+      return url.host;
+    });
+    assert.equal(exactPorts.length, 2, 'two distinct owned browser origins required');
+    rejectProxy.listen(0, loopback);
+    await once(rejectProxy, 'listening');
+    browser = await chromium.launch({ env: app.safeEnv, args: [
+      '--disable-background-networking',
+      '--proxy-server=http://' + loopback + ':' + rejectProxy.address().port,
+      '--proxy-bypass-list=<-loopback>;' + exactPorts.join(';'),
+    ] });
+    const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
+    const destination = '/objects/' + objectId + '/edit';
+    const loginUrl = app.origin + '/login?from=' + encodeURIComponent(destination);
+    let nativeLoginRequested = false;
     await context.routeWebSocket('**/*', (route) => {
       const url = new URL(route.url());
       url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
@@ -105,6 +125,10 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         && (url.searchParams.has('email') || url.searchParams.has('password'))) {
         if (!closing) routeFailure ??= new Error('Editor login attempted a native GET form submission');
         return route.abort().catch(() => {});
+      }
+      if (!nativeLoginRequested && url.href === loginUrl && request.isNavigationRequest() && request.method() === 'GET') {
+        nativeLoginRequested = true;
+        return route.continue();
       }
       let kind;
       if (url.origin === local.origin) {
@@ -151,15 +175,16 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     });
 
     const page = await context.newPage();
-    const destination = '/objects/' + objectId + '/edit';
-    await page.goto(app.origin + '/login?from=' + encodeURIComponent(destination));
+    const login = await page.goto(loginUrl);
+    assert.ok(nativeLoginRequested && login?.status() === 200 && login.url() === loginUrl
+      && login.request().redirectedFrom() === null, 'exact native login document must return HTTP 200 without redirects');
     // The prerendered form can be visible before its client handlers are attached.
     const forgotPassword = page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
     const returnToLogin = page.getByRole('button', { name: 'Retour à la connexion', exact: true });
     await assertion(async () => {
       if (await returnToLogin.isVisible()) return;
       await forgotPassword.click({ timeout: 1000 });
-      assert.ok(await returnToLogin.isVisible(), 'client login controls are not ready');
+      await assertion(returnToLogin).toBeVisible({ timeout: 1000 });
     }).toPass({ timeout: 20_000 });
     await returnToLogin.click();
     await page.getByLabel('Adresse e-mail').fill(email);
@@ -227,6 +252,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     try {
       await browser?.close();
     } finally {
+      rejectProxy.close();
       if (app.server.pid && app.server.exitCode === null && app.server.signalCode === null) {
         try { process.kill(-app.server.pid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
       }

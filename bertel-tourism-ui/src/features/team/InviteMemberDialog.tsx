@@ -5,7 +5,6 @@ import { CheckCircle2, Clock, XCircle, UserCheck } from 'lucide-react';
 import { Modal } from '@/components/common/Modal';
 import {
   inviteUser,
-  upsertMembership,
   friendlyRbacError,
 } from '@/services/rbac';
 import { BUSINESS_ROLE_CODES, businessRoleLabel } from '@/features/team/permission-presets';
@@ -46,19 +45,10 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
     setOpen(false);
   }
 
-  // Rattache le membership. §227 — plus aucun octroi individuel ici : le rôle métier CONFÈRE
-  // ses droits (`org_role_permission`). Le boucle de préréglage qui vivait là créerait douze
-  // exceptions individuelles en doublon du rôle pour chaque invité, et plus rien ne
-  // distinguerait alors une vraie exception d'un droit standard.
-  async function attach(userId: string) {
-    await upsertMembership(userId, orgId, roleCode);
-  }
-
   // Invite (ou ré-invite) une seule adresse et renvoie sa ligne de récap.
   async function inviteOne(email: string, resend: boolean): Promise<InviteRow> {
     try {
       const invited = await inviteUser({ email, orgObjectId: orgId, businessRoleCode: roleCode, resend });
-      await attach(invited.userId);
       if (!invited.alreadyExisted) return { email, status: 'sent' };
       if (resend) return { email, status: 'sent' };
       return invited.neverSignedIn ? { email, status: 'pending' } : { email, status: 'attached' };

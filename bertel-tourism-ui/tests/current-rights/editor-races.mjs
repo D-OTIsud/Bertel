@@ -157,14 +157,18 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       const reload = scene.reload?.nativeDocument ? scene.reload : null;
       const draftScope = scene.draftScope;
       let kind;
+      let catalogueProbe;
       if (url.origin === local.origin) {
         if (realmPhase && request.method() === 'POST' && url.pathname === '/rest/v1/rpc/current_user_test_realm') {
           kind = 'realm-bootstrap';
         } else if (realmPhase && request.method() === 'POST' && url.pathname === '/rest/v1/rpc/list_object_resources_filtered_page') {
           const body = request.postDataJSON();
-          if (body?.p_search === realm.search && body?.p_view === 'card' && Array.isArray(body.p_status)
-            && body.p_status.includes('draft') && body.p_status.includes('published')) {
-            kind = 'realm-catalogue';
+          if (body?.p_search === realm.search) {
+            const statuses = Array.isArray(body.p_status) ? body.p_status : [];
+            catalogueProbe = { card: body.p_view === 'card', draft: statuses.includes('draft'),
+              published: statuses.includes('published') };
+            (realmPhase.catalogueProbes ??= []).push(catalogueProbe);
+            if (catalogueProbe.card && catalogueProbe.draft && catalogueProbe.published) kind = 'realm-catalogue';
           }
         } else if (reload && request.method() === 'GET' && url.pathname === '/auth/v1/user') {
           kind = 'reload-auth';
@@ -208,6 +212,14 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         failureStage = 'response';
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
         assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
+        if (catalogueProbe) {
+          catalogueProbe.status = response.status();
+          const result = response.ok() ? await response.json().catch(() => null) : null;
+          if (Array.isArray(result?.data)) {
+            catalogueProbe.testFixture = result.data.some((row) => row.id === 'HOTRUN999999AR05');
+            catalogueProbe.realFixture = result.data.some((row) => row.id === 'HOTRUN999999AR02');
+          }
+        }
         if (kind === 'legal-summary') {
           assert.ok(response.ok(), 'authorized legal summary must work before fault injection');
           if (scene.legalMode === 'degraded') {
@@ -560,8 +572,9 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await assertion(realCard).toHaveCount(0);
       await assertion(sandbox).toBeVisible();
       assert.ok(realm.before.realms.length > 0 && realm.before.realms.every((value) => value === true));
-      assert.ok(realm.before.catalogues.some((ids) => ids.includes(testId))
-        && realm.before.catalogues.every((ids) => !ids.includes(realId)), 'test catalogue must have no real witness');
+      const beforeProbe = JSON.stringify(realm.before.catalogueProbes ?? []);
+      assert.ok(realm.before.catalogues.every((ids) => !ids.includes(realId)), 'real witness in test catalogue ' + beforeProbe);
+      assert.ok(realm.before.catalogues.some((ids) => ids.includes(testId)), 'missing test witness in full catalogue ' + beforeProbe);
 
       const moved = local.sql(`WITH changed AS (
         UPDATE public.user_org_membership SET org_object_id='ORGRUN999999AR02'

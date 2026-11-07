@@ -2706,6 +2706,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Historical pending proposals become visible immediately after deployment._
 
+### `internal.bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
 ### `internal.build_list_detail_json(p_list_id uuid)` _(DEFINER)_
 - **returns:** `json`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed

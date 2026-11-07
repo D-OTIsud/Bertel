@@ -2017,6 +2017,12 @@
   WHERE ((m_target.user_id = user_permission.user_id) AND (m_target.is_active = true) AND (m_target.org_object_id = api.current_user_org_id())))) AND (EXISTS ( SELECT 1
    FROM (public.user_org_membership m_caller …[truncated — full text in catalog_extra.json or live pg_policies]`
 
+## `realtime.messages`
+- **INSERT** `bertel_realtime_channel_write` — roles ['authenticated']
+  - `((topic = ( SELECT realtime.topic() AS topic)) AND internal.bertel_realtime_channel_allowed(topic, extension, true))`
+- **SELECT** `bertel_realtime_channel_read` — roles ['authenticated']
+  - `((topic = ( SELECT realtime.topic() AS topic)) AND internal.bertel_realtime_channel_allowed(topic, extension, false))`
+
 ## `storage.objects`
 - **ALL RESTRICTIVE** `actor_documents_no_direct_access` — roles ['anon', 'authenticated']
   - `(bucket_id <> 'actor-documents'::text) | (bucket_id <> 'actor-documents'::text)`

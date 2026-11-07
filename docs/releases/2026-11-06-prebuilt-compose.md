@@ -24,7 +24,8 @@ régénérer le secret curseur pour cette livraison.
 Le garde CI exécute le vrai docker compose config avec un environnement synthétique
 isolé, sans credential ni opération de daemon. Il compare les JSON complets au
 Compose courant après les seules transformations prévues, garde des témoins
-service/port/env non vides, vérifie un second SHA et refuse SOURCE_COMMIT absent
+service/env non vides et exige exactement les deux publications TCP
+8081 vers 3000 sur 127.0.0.1 et ::1. Il vérifie un second SHA et refuse SOURCE_COMMIT absent
 ou vide, même avec un dotenv implicite. Il exige Docker Compose, sans skip permissif.
 Ce rendu ne prouve ni la présence d’une image sur l’hôte ni un déploiement Coolify.
 
@@ -46,6 +47,12 @@ la configuration, les tags et les nettoyages d’images pendant la fenêtre. Ce 
 ne bloque pas un autre opérateur privilégié.
 
 ## Garde avant chaque bascule
+
+Confirmer que Traefik joint le service sur le port 3000 du réseau Docker partagé.
+Le port hôte 8081 sert aux sondes en boucle locale. Vérifier que l’hôte prend en
+charge les deux adresses de boucle locale et utilise Docker Engine 28.0.0 ou plus récent.
+Sur les versions antérieures, des hôtes du même segment L2 peuvent atteindre
+un port publié sur localhost. [Publication des ports Docker](https://docs.docker.com/engine/network/port-publishing/)
 
 1. Figer le SHA complet S, son arbre et les résultats réellement acquis sur ce
    candidat. Vérifier run/attempt et empreintes/taille ZIP, manifeste et gzip
@@ -100,6 +107,12 @@ SHA annoncé dans l’interface. Effectuer quatre GET bornés, sans mutation :
 `/api/health`, `/api/ready`, `/api/app-version`, `/runtime-config.js`. Exiger health
 sain, ready live, contrat2/2 et configuration publique attendue.
 
+Vérifier que les liaisons effectives de 3000/tcp sont uniquement 127.0.0.1:8081
+et [::1]:8081. Depuis l’hôte, contrôler les deux sondes GET /api/health en
+boucle locale. Depuis un poste extérieur, vérifier que 8081 est injoignable
+sur les adresses publiques IPv4 et IPv6 disponibles et que le domaine HTTPS
+servi par Traefik reste sain.
+
 La readiness ne qualifie que la joignabilité de la passerelle Auth : ni session
 utilisateur, droits métier, documents, SMTP, IA ou Storage. Compléter par le rendu
 et les interactions concernés, sans effet métier non autorisé. Conserver
@@ -110,7 +123,7 @@ l’attribution et les résultats dans le reçu privé opérateur.
 Avant la fenêtre, préparer un retour R explicitement relu pour le schéma courant
 et le contrat2/2 : archive/manifeste conservés, image exacte chargée, tag
 bertel-candidate:R contrôlé et recette isolée réussie. R doit contenir le même
-Compose préconstruit. Une référence Git dédiée, accessible au clone effectué par
+Compose préconstruit et préserver la publication de 8081 en boucle locale. Une référence Git dédiée, accessible au clone effectué par
 Coolify y compris à sa profondeur shallow configurée, doit résoudre exactement R.
 Vérifier cette disponibilité avant la bascule ; un SHA historique seul ne suffit
 pas à prouver que le checkout peut le récupérer.

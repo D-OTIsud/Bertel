@@ -16,7 +16,8 @@ services:
         NEXT_PUBLIC_MAP_STYLE_SATELLITE: ${NEXT_PUBLIC_MAP_STYLE_SATELLITE:-https://tiles.openfreemap.org/styles/liberty}
         NEXT_PUBLIC_MAP_STYLE_TOPO: ${NEXT_PUBLIC_MAP_STYLE_TOPO:-https://tiles.openfreemap.org/styles/bright}
     ports:
-      - "8081:3000"
+      - "127.0.0.1:8081:3000"
+      - "[::1]:8081:3000"
     environment:
       # Canonical origin used by server-generated notification links.
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}

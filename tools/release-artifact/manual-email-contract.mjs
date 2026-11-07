@@ -3,7 +3,7 @@ import { readFile, lstat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 export const PROOF_VERSION = 'BERTEL_MANUAL_EMAIL_RUNTIME_V1';
-export const CALIBRATION_SOURCE = '50805933d9489974690f9bb208b633cfb5440070';
+export const CALIBRATION_SOURCE = '686b5815199b8a78484a23126c93c745c0ec3ff1';
 export const CALIBRATION_TREE = '2cd09ebcb055313aa0d325709d79eafce9ab04db';
 export const MODES = Object.freeze(['absent', 'closed', 'unknown', 'protocol-v1']);
 export const BRIDGE_CASES = Object.freeze(['legacy', 'context', 'prepare', 'dispatch', 'ack', 'invalid-json', 'no-auth', 'empty-body']);

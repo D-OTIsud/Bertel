@@ -15,7 +15,8 @@ const PREVIOUS_B = '53000000-0000-4000-8000-000000000003';
 const PERMIT = '54000000-0000-4000-8000-000000000001';
 const PROOF = 'ab'.repeat(32);
 const EMAIL = '  Guest@Example.invalid  ';
-const DESTINATION = createHash('sha256').update(EMAIL.trim()).digest('hex');
+const CANONICAL_EMAIL = 'Guest@example.invalid';
+const DESTINATION = createHash('sha256').update(CANONICAL_EMAIL).digest('hex');
 const availability = { translation: false, imageAnalysis: false, email: true };
 type GenerationContext = { generations: Record<string, string> };
 type ContextOptions = { expectedUserId?: string; signal?: AbortSignal; isCurrent?: () => boolean };
@@ -116,9 +117,9 @@ describe('list email client — captured generation, prepare/dispatch/result/ack
     const gesture = { ...intent(), confirmResend: true, confirmedPreviousOperationIds: [PREVIOUS_A, PREVIOUS_B] };
     await expect(lists.sendListByEmail(LIST, EMAIL, gesture)).resolves.toEqual({ trackingUpdated: true });
     expect(net.phases()).toEqual(['prepare', 'dispatch', 'ack']);
-    expect(net.requests[0].body).toMatchObject({ listId: LIST, toEmail: EMAIL.trim(), phase: 'prepare',
+    expect(net.requests[0].body).toMatchObject({ listId: LIST, toEmail: CANONICAL_EMAIL, phase: 'prepare',
       expectedGeneration: '7', confirmResend: true, confirmedPreviousOperationIds: [PREVIOUS_A, PREVIOUS_B] });
-    expect(net.requests[1].body).toMatchObject({ listId: LIST, toEmail: EMAIL.trim(), phase: 'dispatch', dispatchToken: PERMIT });
+    expect(net.requests[1].body).toMatchObject({ listId: LIST, toEmail: CANONICAL_EMAIL, phase: 'dispatch', dispatchToken: PERMIT });
     expect(net.requests[2].body).toEqual({ phase: 'ack', listId: LIST, resultToken: PROOF });
     for (const request of net.requests) {
       expect(new Headers(request.init.headers).get('Idempotency-Key')).toBe(OP);
@@ -148,8 +149,21 @@ describe('list email client — captured generation, prepare/dispatch/result/ack
     const gesture = { operationId: OP, context: { generations: {} } };
     await lists.sendListByEmail(LIST, EMAIL, gesture);
     expect(net.requests[0].body.expectedGeneration).toBe('0');
-    expect(net.requests[0].body.toEmail).toBe('Guest@Example.invalid');
+    expect(net.requests[0].body.toEmail).toBe(CANONICAL_EMAIL);
     expect(net.phases()).toEqual(['prepare', 'dispatch', 'ack']);
+  });
+  it('uses the ASCII IDNA alias for a Unicode domain without changing the local part', async () => {
+    const net = network(happy);
+    const ascii = 'Guest+test@xn--bcher-kva.test';
+    const digest = createHash('sha256').update(ascii).digest('hex');
+    await lists.sendListByEmail(LIST, 'Guest+test@bücher.test', { operationId: OP, context: { generations: { [digest]: '2' } } });
+    expect(net.requests[0].body).toMatchObject({ toEmail: ascii, expectedGeneration: '2' });
+    expect(net.requests[1].body.toEmail).toBe(ascii);
+  });
+  it('rejects a decorated mailbox before sending any request', async () => {
+    const net = network(happy);
+    await expect(lists.sendListByEmail(LIST, '<Guest@example.invalid>', intent())).rejects.toThrow();
+    expect(net.requests).toEqual([]);
   });
 
   it('refuses an omitted context instead of silently acquiring a fresh generation', async () => {

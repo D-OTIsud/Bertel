@@ -8,6 +8,8 @@ jest.mock('../../../hooks/usePresenceRoom');
 const mockUsePresenceRoom = usePresenceRoom as jest.MockedFunction<typeof usePresenceRoom>;
 
 const broadcastSpy = jest.fn();
+const selfId = '00000000-0000-4000-a000-00000000ae11';
+const peerId = '00000000-0000-4000-a000-00000000ae12';
 let lastOptions: { trackExtra?: unknown; onEvent?: (event: string, payload: unknown) => void } | undefined;
 
 const peer = (over: Partial<EditorPeer> & { userId: string }): EditorPeer => ({
@@ -37,20 +39,22 @@ describe('useEditorPresence', () => {
   beforeEach(() => {
     broadcastSpy.mockClear();
     lastOptions = undefined;
-    useSessionStore.setState({ userId: 'me', userName: 'Moi', demoMode: false });
+    useSessionStore.setState({ userId: selfId, userName: 'Moi', demoMode: false, status: 'ready',
+      role: 'tourism_agent', isTestRealm: false, orgId: 'ORGRUN999999AR01', isSandboxDiscovery: false,
+      authAuthority: { userId: selfId, epoch: 1, hydrated: true } });
     setRoom([]);
   });
 
   it('derives the roster and the per-section groups from the room peers', () => {
     setRoom([
-      peer({ userId: 'me', name: 'Moi', activeSection: '01' }),
+      peer({ userId: selfId, name: 'Moi', activeSection: '01' }),
       peer({ userId: 'u1', name: 'Sarah', activeSection: '06' }),
     ]);
     const { result } = renderHook(() =>
       useEditorPresence({ objectId: 'o1', activeSection: '01', dirtySections: {} }),
     );
 
-    expect(result.current.roster.map((r) => r.userId)).toEqual(['me', 'u1']);
+    expect(result.current.roster.map((r) => r.userId)).toEqual([selfId, 'u1']);
     expect(result.current.peersBySection['06'].map((p) => p.userId)).toEqual(['u1']);
   });
 
@@ -67,12 +71,12 @@ describe('useEditorPresence', () => {
       useEditorPresence({ objectId: 'o1', activeSection: '01', dirtySections: {} }),
     );
 
-    act(() => result.current.broadcastSaved(['pricing']));
+    act(() => result.current.broadcastSaved());
 
     expect(broadcastSpy).toHaveBeenCalledTimes(1);
     const [event, payload] = broadcastSpy.mock.calls[0];
     expect(event).toBe('object:saved');
-    expect((payload as { userId: string }).userId).toBe('me');
+    expect(payload).toEqual({ userId: selfId, objectId: 'o1', name: 'Moi', at: expect.any(Number) });
   });
 
   it('surfaces a saved notice for a peer save and clears it on dismiss', () => {
@@ -80,8 +84,9 @@ describe('useEditorPresence', () => {
       useEditorPresence({ objectId: 'o1', activeSection: '01', dirtySections: {} }),
     );
 
-    act(() => lastOptions?.onEvent?.('object:saved', { userId: 'u1', name: 'Sarah', at: 5 }));
-    expect(result.current.savedNotice).toEqual({ name: 'Sarah', at: 5 });
+    const at = Date.now();
+    act(() => lastOptions?.onEvent?.('object:saved', { userId: peerId, objectId: 'o1', name: 'Sarah', at }));
+    expect(result.current.savedNotice).toEqual({ name: 'Sarah', at });
 
     act(() => result.current.dismissSavedNotice());
     expect(result.current.savedNotice).toBeNull();
@@ -92,7 +97,22 @@ describe('useEditorPresence', () => {
       useEditorPresence({ objectId: 'o1', activeSection: '01', dirtySections: {} }),
     );
 
-    act(() => lastOptions?.onEvent?.('object:saved', { userId: 'me', name: 'Moi', at: 5 }));
+    act(() => lastOptions?.onEvent?.('object:saved', { userId: selfId, objectId: 'o1', name: 'Moi', at: Date.now() }));
+    expect(result.current.savedNotice).toBeNull();
+  });
+
+  it('checks the exact object, payload and Auth generation before exposing an advisory', () => {
+    const { result } = renderHook(() =>
+      useEditorPresence({ objectId: 'o1', activeSection: '01', dirtySections: {} }),
+    );
+    const payload = { userId: peerId, objectId: 'o1', name: 'Sarah', at: Date.now() };
+    act(() => lastOptions?.onEvent?.('object:saved', { ...payload, objectId: 'o2' }));
+    act(() => lastOptions?.onEvent?.('object:saved', { ...payload, at: Infinity }));
+    act(() => lastOptions?.onEvent?.('object:saved', { ...payload, name: 'A'.repeat(121) }));
+    expect(result.current.savedNotice).toBeNull();
+    act(() => lastOptions?.onEvent?.('object:saved', payload));
+    expect(result.current.savedNotice).toEqual({ name: 'Sarah', at: payload.at });
+    act(() => useSessionStore.getState().observeAuthUser(peerId));
     expect(result.current.savedNotice).toBeNull();
   });
 
@@ -113,7 +133,7 @@ describe('useEditorPresence', () => {
   });
 
   it('does not synthesize sections for section-less peers outside demo mode', () => {
-    setRoom([peer({ userId: 'me', activeSection: '01' }), peer({ userId: 'u1', name: 'Jean' })]);
+    setRoom([peer({ userId: selfId, activeSection: '01' }), peer({ userId: 'u1', name: 'Jean' })]);
 
     const { result } = renderHook(() =>
       useEditorPresence({ objectId: 'o1', activeSection: '01', dirtySections: {} }),

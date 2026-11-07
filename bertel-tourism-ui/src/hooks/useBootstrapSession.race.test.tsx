@@ -9,6 +9,7 @@ import { useProviderScopeStore } from '../store/provider-scope-store';
 import { useDashboardExplorerStore, useExplorerStore } from '../store/explorer-store';
 import { bindSessionQueryCache } from '../app/session-query-cache';
 import { SANDBOX_MODE_KEY } from '../lib/sandbox-mode';
+import { realtimeScopeKey } from '../lib/realtime-scope';
 
 jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn(), getApiClient: jest.fn() }));
 jest.mock('../services/user-profile', () => ({
@@ -104,6 +105,34 @@ it('bootstraps a real ready session, preserving capabilities and provider prefer
   });
   expect(auth.rpc.mock.calls.map(([name]) => name)).toEqual(PROBES);
   expect(useProviderScopeStore.getState()).toMatchObject({ userId: 'account-a', enabled: true });
+});
+
+it('isolates discovery from a real test-realm member across an Auth subject change', async () => {
+  const tester = { ...user('account-a'), user_metadata: { sandbox_discovery: true } };
+  const discovery = { ...user('account-b'), app_metadata: { role: 'tourism_agent', sandbox_discovery: true } };
+  const auth = authHarness(tester);
+  auth.rpc.mockImplementation(async (name) => ({ data: name === 'current_user_test_realm' ? true : auth.dataFor(name), error: null }));
+  renderHook(() => useBootstrapSession());
+  await waitFor(() => expect(useSessionStore.getState().status).toBe('ready'));
+  expect(realtimeScopeKey(useSessionStore.getState())).not.toBeNull();
+
+  const delayed = deferred<AppUserProfileRow>();
+  jest.mocked(getOrCreateUserProfile).mockReturnValueOnce(delayed.promise);
+  act(() => { auth.emit('SIGNED_IN', discovery); });
+  expect(useSessionStore.getState().userId).toBe(tester.id);
+  expect(realtimeScopeKey(useSessionStore.getState())).toBeNull();
+  await waitFor(() => expect(getOrCreateUserProfile).toHaveBeenCalledWith(discovery, expect.anything()));
+  await finish(delayed, profile(discovery.id));
+  await waitFor(() => expect(useSessionStore.getState().userId).toBe(discovery.id));
+  expect(realtimeScopeKey(useSessionStore.getState())).toBeNull();
+  expect(useSessionStore.getState()).toMatchObject({
+    isSandboxDiscovery: true, demoMode: false, isTestRealm: true, role: 'tourism_agent',
+  });
+
+  act(() => { auth.emit('SIGNED_IN', tester); });
+  await waitFor(() => expect(useSessionStore.getState().userId).toBe(tester.id));
+  expect(useSessionStore.getState()).toMatchObject({ isSandboxDiscovery: false, isTestRealm: true });
+  expect(realtimeScopeKey(useSessionStore.getState())).not.toBeNull();
 });
 
 it('starts all independent probes after the profile, without waiting for any earlier probe, and hydrates only the complete batch', async () => {

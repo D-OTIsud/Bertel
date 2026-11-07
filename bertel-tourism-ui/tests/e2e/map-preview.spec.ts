@@ -1,5 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
-import { dispatchNativeMousePair } from './helpers/native-mouse-pair';
+import { dispatchNativeHoverAfterEntry } from './helpers/native-mouse-pair';
 
 test.use({ launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } });
 test.describe.configure({ retries: 0 });
@@ -173,12 +173,14 @@ test('an unfinished hover of B preserves the displayed A preview focus owner', a
       element.setAttribute('data-ui06-leave-handled', String(performance.now()));
     }, { once: true });
   });
-  // Bypass Mouse.move's per-step acknowledgement: queue centre B and outside B
-  // before awaiting either native CDP response. Observe order/trust below;
-  // missing/coalesced transitions or a slow browser still fail the precondition.
+  // The trusted native entry notification submits the exit without waiting
+  // for the first movement ACK. A slow observer/browser still fails <250ms.
   const input = await page.context().newCDPSession(page);
   try {
-    await dispatchNativeMousePair(input, { x: boxB.x + boxB.width / 2, y: yB }, { x: boxB.x + boxB.width + 8, y: yB });
+    const native = await dispatchNativeHoverAfterEntry(input, b,
+      { x: boxB.x + boxB.width / 2, y: yB }, { x: boxB.x + boxB.width + 8, y: yB });
+    expect(native.entryNotifications).toBe(1);
+    expect(await page.evaluate(name => typeof (globalThis as unknown as Record<string, unknown>)[name], native.bindingName)).toBe('undefined');
   } finally {
     await input.detach();
   }

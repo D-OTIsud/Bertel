@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { dispatchNativeMousePair, type NativeMouseSession } from './helpers/native-mouse-pair';
+import { dispatchNativeHoverAfterEntry, type NativeMouseDispatch } from './helpers/native-mouse-pair';
 
 test.describe.configure({ retries: 0 });
 
@@ -7,7 +7,7 @@ test.describe.configure({ retries: 0 });
 // This is a real Node-side ACK delay, never a fake browser clock or timestamp.
 const ACK_DELAY_MS = 838;
 
-for (const mode of ['await-per-move', 'paired-native'] as const) {
+for (const mode of ['await-per-move', 'observed-entry'] as const) {
   test(`native input timing with delayed first ACK: ${mode}`, async ({ page, browser }) => {
     await page.setContent('<div id="target" style="position:absolute;left:100px;top:100px;width:100px;height:100px">native fixture</div>');
     await page.mouse.move(1, 1);
@@ -24,25 +24,25 @@ for (const mode of ['await-per-move', 'paired-native'] as const) {
     const cdp = await page.context().newCDPSession(page);
     let sent = 0, firstAckReturned = false, secondBeforeFirstAck = false;
     const submitted: number[] = [];
-    const delayed: NativeMouseSession = {
-      send: (method, params) => {
-        submitted.push(performance.now());
-        const index = sent++;
-        if (index === 1) secondBeforeFirstAck = !firstAckReturned;
-        const native = cdp.send(method, params);
-        return index === 0 ? native.then(async value => {
-          await new Promise(resolve => setTimeout(resolve, ACK_DELAY_MS));
-          firstAckReturned = true;
-          return value;
-        }) : native;
-      },
+    const delayed: NativeMouseDispatch = params => {
+      submitted.push(performance.now());
+      const index = sent++;
+      if (index === 1) secondBeforeFirstAck = !firstAckReturned;
+      const native = cdp.send('Input.dispatchMouseEvent', params);
+      return index === 0 ? native.then(async value => {
+        await new Promise(resolve => setTimeout(resolve, ACK_DELAY_MS));
+        firstAckReturned = true;
+        return value;
+      }) : native;
     };
     try {
-      if (mode === 'paired-native') {
-        await dispatchNativeMousePair(delayed, { x: 150, y: 150 }, { x: 220, y: 150 });
+      if (mode === 'observed-entry') {
+        const native = await dispatchNativeHoverAfterEntry(cdp, target, { x: 150, y: 150 }, { x: 220, y: 150 }, delayed);
+        expect(native.entryNotifications).toBe(1);
+        expect(await page.evaluate(name => typeof (globalThis as unknown as Record<string, unknown>)[name], native.bindingName)).toBe('undefined');
       } else {
-        await delayed.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 150, y: 150, buttons: 0 });
-        await delayed.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 220, y: 150, buttons: 0 });
+        await delayed({ type: 'mouseMoved', x: 150, y: 150, buttons: 0 });
+        await delayed({ type: 'mouseMoved', x: 220, y: 150, buttons: 0 });
       }
     } finally {
       await cdp.detach();
@@ -58,7 +58,7 @@ for (const mode of ['await-per-move', 'paired-native'] as const) {
     const driverGap = submitted[1] - submitted[0];
     expect(dwell).toBeGreaterThanOrEqual(0);
     expect(handledDwell).toBeGreaterThanOrEqual(0);
-    if (mode === 'paired-native') {
+    if (mode === 'observed-entry') {
       expect(secondBeforeFirstAck).toBe(true);
       expect(driverGap).toBeLessThan(250);
       expect(dwell).toBeLessThan(250);

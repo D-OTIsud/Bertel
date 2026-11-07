@@ -14,6 +14,7 @@ const ids = {
 const emails = { writer: 'current-rights-writer', other: 'current-rights-email', portal: 'current-rights-portal',
   foreignPortal: 'current-rights-other-portal', admin: 'current-rights-admin', tester: 'current-rights-test-realm' };
 const A = 'HOTRUN999999AR01', B = 'HOTRUN999999AR02', PUBLIC = 'HOTRUN999999AR03', TEST = 'HOTRUN999999AR05';
+const INITIAL_PUBLISHED = 'HOTRUN999999AR06', INITIAL_DRAFT = 'HOTRUN999999AR07';
 const DOC = '00000000-0000-4000-a000-00000000ae41', PHOTO = '00000000-0000-4000-a000-00000000ae42';
 const originalTokens = new Map();
 const sessions = new Map();
@@ -43,6 +44,57 @@ async function denied(response, label) {
 function commit(sql, stage) {
   return local.sql(`BEGIN; SELECT set_config('request.jwt.claims','{"role":"service_role"}',true); ${sql}; COMMIT;`, stage);
 }
+async function testInitialPublication() {
+  const writerRole = (code) => commit(
+    `UPDATE public.user_org_business_role
+       SET role_id=(SELECT id FROM public.ref_org_business_role WHERE code='${code}')
+     WHERE membership_id='00000000-0000-4000-a000-00000000ab11' AND is_active`,
+    `committed writer role: ${code}`,
+  );
+  const permission = () => rpc(headers('writer'), 'user_has_permission', { p_permission_code: 'publish_object' });
+  // A separate GET observes the publisher link created by the AFTER INSERT trigger.
+  const create = (body) => local.request('/rest/v1/object', headers('writer'), body, 'POST',
+    { prefer: 'return=minimal' });
+  async function verifyCreated(id, status) {
+    const inserted = await rows(headers('writer'), id);
+    assert.deepEqual(inserted.map((row) => ({ id: row.id, status: row.status })), [{ id, status }]);
+  }
+  const body = {
+    id: INITIAL_DRAFT, object_type: 'HOT', name: 'Synthetic initial publication', created_by: ids.writer, status: 'published',
+  };
+
+  assert.equal(await json(await permission(), 'editor publication permission'), true);
+  const editor = await create({ ...body, id: INITIAL_PUBLISHED });
+  assert.equal(editor.status, 201, 'current editor/publisher must create an initially published object');
+  await verifyCreated(INITIAL_PUBLISHED, 'published');
+
+  writerRole('contributor');
+  try {
+    assert.equal(await json(await rpc(headers('writer'), 'user_can_create_object'), 'contributor creation permission'), true);
+    assert.equal(await json(await permission(), 'contributor publication permission'), false);
+    const refused = await create(body);
+    assert.equal(refused.status, 403, 'initial publication must refuse the same still-authenticated JWT');
+    const { code, message } = await refused.json();
+    assert.equal(code, '42501');
+    assert.match(message, /^Initial publication requires the publish_object permission and a publisher ORG/);
+    const noEffects = local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.object WHERE id='${INITIAL_DRAFT}')
+      AND NOT EXISTS (SELECT 1 FROM public.object_org_link WHERE object_id='${INITIAL_DRAFT}')`,
+    'refused initial publication left neither object nor publisher link');
+    assert.equal(noEffects, 't');
+    const control = await create({ ...body, status: 'draft' });
+    assert.equal(control.status, 201, 'the same contributor payload must create a draft');
+    await verifyCreated(INITIAL_DRAFT, 'draft');
+    const publisherLinks = local.sql(`SELECT count(DISTINCT l.object_id)
+      FROM public.object_org_link l JOIN public.ref_org_role r ON r.id=l.role_id
+      WHERE l.org_object_id='ORGRUN999999AR01' AND r.code='publisher'
+        AND l.object_id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}')`,
+      'publisher links after each authorized insert');
+    assert.equal(publisherLinks, '2');
+  } finally {
+    writerRole('editor');
+  }
+}
+
 const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
   metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
 
@@ -54,6 +106,9 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
   let fixtureCreated = false;
   let writerCredentials;
   try {
+    const publicationFixtures = local.sql(`SELECT count(*) FROM public.object WHERE id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}')`,
+      'initial publication fixtures are absent');
+    assert.equal(publicationFixtures, '0', 'the publication fixture IDs must be unused before setup and cleanup');
     if (browserWitness) {
       const clean = local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.object WHERE id='${A}')
         AND NOT EXISTS (SELECT 1 FROM public.object_version WHERE object_id='${A}')`, 'check clean editor fixture');
@@ -116,6 +171,8 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     assert.ok(file.authorized === true && file.file?.path === 'synthetic-http.pdf');
     const foreignFile = await json(await rpc(headers('other'), 'get_object_document_file', { p_object_id: A, p_document_id: DOC }), 'foreign private pair');
     assert.ok(foreignFile.authorized === false && foreignFile.file === null);
+
+    await testInitialPublication();
 
     commit("UPDATE public.user_org_business_role SET is_active=false WHERE membership_id='00000000-0000-4000-a000-00000000ab11'", 'committed demotion');
     assert.ok(await canWrite('writer', A) === false && (await rows(headers('writer'), A)).length === 1);

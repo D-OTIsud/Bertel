@@ -745,6 +745,7 @@ COMMIT;
 
 \echo '== DB04 organization enrichment within the current corpus =='
 \ir ../supabase/migrations/20261107131728_object_enrichment_realm_guard.sql
+\ir tests/test_object_enrichment_realm_guard.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

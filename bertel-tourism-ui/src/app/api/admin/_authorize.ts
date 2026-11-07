@@ -5,7 +5,7 @@ import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { isSandboxDiscoveryUser } from '@/lib/sandbox-effects';
 
 /** Rang d'administration d'ORG minimal pour les routes /api/admin/*. */
-const MIN_ADMIN_RANK = 30;
+export const MIN_ADMIN_RANK = 30;
 
 export type AdminAuth =
   | { ok: true; server: SupabaseClient; asCaller: SupabaseClient; callerId: string; isSuper: boolean; rank: number; isSandboxDiscovery: boolean }

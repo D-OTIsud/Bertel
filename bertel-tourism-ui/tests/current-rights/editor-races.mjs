@@ -22,7 +22,7 @@ const legalRpcKinds = new Map([
   ['/rest/v1/rpc/get_object_workspace_permissions', 'legal-permission'],
 ]);
 
-async function startApp(local) {
+async function startApp(local, directory = appDir) {
   const socket = createServer();
   socket.listen(0, loopback);
   await once(socket, 'listening');
@@ -33,7 +33,7 @@ async function startApp(local) {
   const safeEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
     ['PATH', 'HOME', 'LANG', 'TMPDIR', 'PLAYWRIGHT_BROWSERS_PATH'].includes(key)));
   const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--hostname', loopback, '--port', String(port)], {
-    cwd: appDir,
+    cwd: directory,
     detached: true,
     stdio: 'ignore',
     env: {
@@ -58,20 +58,22 @@ async function waitForApp({ origin, server }) {
   throw new Error('Owned Next editor did not start on loopback');
 }
 
-export async function testEditorRaces({ local, objectId, writerId, email, password }) {
+export async function testEditorRaces({ local, objectId, writerId, email, password, benchmark }) {
   assert.ok(process.platform === 'linux' && objectId === 'HOTRUN999999AR01', 'exact disposable Linux editor fixture required');
-  local.sql("BEGIN; SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',true);" +
+  if (!benchmark) local.sql("BEGIN; SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',true);" +
     "INSERT INTO public.object_location(object_id, city, is_main_location) VALUES ('HOTRUN999999AR01','Saint-Denis',true);" +
     "INSERT INTO public.object_description(object_id, description, description_chapo, visibility) " +
     "VALUES ('HOTRUN999999AR01','Synthetic editorial description','Synthetic introduction','public'); COMMIT;",
   'add editor publication prerequisites');
   const canonical = () => JSON.parse(local.sql("SELECT json_build_array(name,status)::text FROM public.object WHERE id='HOTRUN999999AR01'",
     'read synthetic canonical name and status'));
-  const historic = JSON.parse(local.sql("SELECT json_build_array(version_number,data->>'name')::text FROM public.object_version " +
+  const historic = benchmark ? null : JSON.parse(local.sql("SELECT json_build_array(version_number,data->>'name')::text FROM public.object_version " +
     "WHERE object_id='HOTRUN999999AR01' ORDER BY version_number, created_at LIMIT 1", 'read synthetic version'));
-  assert.ok(Number.isInteger(historic[0]) && historic[0] > 0 && typeof historic[1] === 'string' && historic[1] !== canonical()[0]);
+  if (!benchmark) {
+    assert.ok(Number.isInteger(historic[0]) && historic[0] > 0 && typeof historic[1] === 'string' && historic[1] !== canonical()[0]);
+  }
 
-  const app = await startApp(local);
+  const app = await startApp(local, benchmark?.directory);
   // Chromium can follow redirects without reentering the Playwright route handler.
   const rejectProxy = createHttpServer((_request, response) => response.writeHead(403, { Connection: 'close' }).end());
   rejectProxy.on('connect', (_request, socket) => socket.destroy());
@@ -137,6 +139,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       }
       const reload = scene.reload?.nativeDocument ? scene.reload : null;
       let kind;
+      let probe;
       if (url.origin === local.origin) {
         if (reload && request.method() === 'GET' && url.pathname === '/auth/v1/user') {
           kind = 'reload-auth';
@@ -147,8 +150,15 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           && url.searchParams.get('id') === 'eq.' + legalRecordId && request.postDataJSON()?.object_id === objectId) {
           kind = 'legal-write';
         } else if (request.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
-          const rpcKind = editorRpcKinds.get(url.pathname) ?? (scene.legalMode ? legalRpcKinds.get(url.pathname) : undefined);
-          if (rpcKind && request.postDataJSON()?.p_object_id === objectId) kind = rpcKind;
+          const name = url.pathname.slice('/rest/v1/rpc/'.length);
+          if (scene.bootstrap && benchmark.probes.has(name)) {
+            kind = 'bootstrap-' + name;
+            probe = { name, started: performance.now() };
+            scene.bootstrap.trace.push(probe);
+          } else {
+            const rpcKind = editorRpcKinds.get(url.pathname) ?? (scene.legalMode ? legalRpcKinds.get(url.pathname) : undefined);
+            if (rpcKind && request.postDataJSON()?.p_object_id === objectId) kind = rpcKind;
+          }
           if (kind === 'publish') publishCalls += 1;
           if (kind === 'restore') restoreCalls += 1;
         }
@@ -169,8 +179,15 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           else if (kind !== 'patch' && kind !== 'reload-auth') assert.equal(headers['content-profile'], 'api');
         }
         failureStage = 'response';
+        if (probe) probe.dispatched = performance.now();
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
         assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
+        if (probe) {
+          assert.ok(response.ok(), 'bootstrap probe must reach real PostgREST successfully');
+          probe.received = performance.now();
+          if (scene.bootstrap.delayMs) await sleep(scene.bootstrap.delayMs);
+          probe.delivered = performance.now();
+        }
         if (kind === 'legal-summary') {
           assert.ok(response.ok(), 'authorized legal summary must work before fault injection');
           if (scene.legalMode === 'degraded') {
@@ -235,9 +252,9 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       }
     }
 
-    async function openAuthenticatedEditor(legalMode) {
+    async function openAuthenticatedEditor(legalMode, bootstrap) {
       const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
-      const scene = { legalMode, closed: false, nativeLoginRequested: false,
+      const scene = { legalMode, bootstrap, closed: false, nativeLoginRequested: false,
         legalReads: 0, legalPermissions: 0, summaryReads: 0, summaryFailures: 0, legalWrites: 0 };
       await context.routeWebSocket('**/*', (route) => {
         const url = new URL(route.url());
@@ -280,6 +297,24 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         company: legal.getByLabel('Raison sociale', { exact: true }),
         banner: legal.getByText('Résumé de conformité indisponible. Les données juridiques restent modifiables.', { exact: true }),
       };
+    }
+
+    if (benchmark) {
+      const samples = [];
+      for (const [index, delayMs] of [0, ...benchmark.delays].entries()) {
+        const trace = [];
+        const login = await openAuthenticatedEditor(undefined, { trace, delayMs });
+        try {
+          await assertion(login.page.locator('.edit-top__right')
+            .getByRole('button', { name: 'Enregistrer', exact: true })).toBeVisible();
+          const sample = benchmark.summarize(trace, performance.now());
+          if (index > 0) samples.push({ delayMs, ...sample });
+        } finally {
+          await login.close();
+        }
+      }
+      if (routeFailure) throw routeFailure;
+      return samples;
     }
 
     const races = await openAuthenticatedEditor();
@@ -424,7 +459,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     } finally {
       rejectProxy.close();
       if (app.server.pid && app.server.exitCode === null && app.server.signalCode === null) {
+        const exited = benchmark ? once(app.server, 'exit') : null;
         try { process.kill(-app.server.pid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+        if (exited) await Promise.race([exited, sleep(10_000, undefined, { ref: false }).then(() => {
+          throw new Error('Owned benchmark Next process did not exit');
+        })]);
       }
     }
   }

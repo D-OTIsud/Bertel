@@ -5,7 +5,8 @@ import test from 'node:test';
 import { loadDisposable } from './disposable.mjs';
 
 const local = loadDisposable();
-const browserWitness = process.env.CURRENT_RIGHTS_EDITOR_BROWSER === 'true';
+const bootstrapBenchmark = process.env.CURRENT_RIGHTS_BOOTSTRAP_BENCHMARK === 'true';
+const browserWitness = bootstrapBenchmark || process.env.CURRENT_RIGHTS_EDITOR_BROWSER === 'true';
 const ids = {
   writer: '00000000-0000-4000-a000-00000000ae11', other: '00000000-0000-4000-a000-00000000ae12',
   portal: '00000000-0000-4000-a000-00000000ae13', foreignPortal: '00000000-0000-4000-a000-00000000ae14',
@@ -98,10 +99,10 @@ async function testInitialPublication() {
 const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
   metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
 
-const testName = browserWitness
+const testName = bootstrapBenchmark ? 'six bootstrap probes before and after PR87 in the owned browser' : browserWitness
   ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
   : 'real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation';
-test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
+test(testName, { timeout: bootstrapBenchmark ? 420000 : browserWitness ? 300000 : 90000 }, async (t) => {
   const createdIds = [];
   let fixtureCreated = false;
   let writerCredentials;
@@ -140,6 +141,11 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     'exactly six identities and five distinct real JWTs are required; the fixture-only admin never authenticates');
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
+    if (bootstrapBenchmark) {
+      const { testBootstrapTimings } = await import('../../bertel-tourism-ui/tests/current-rights/bootstrap-timings.mjs');
+      await testBootstrapTimings({ local, objectId: A, writerId: ids.writer, ...writerCredentials });
+      return;
+    }
     if (browserWitness) {
       const { testEditorRaces } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
       await testEditorRaces({ local, objectId: A, writerId: ids.writer, ...writerCredentials });

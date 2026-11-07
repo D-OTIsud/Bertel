@@ -55,13 +55,18 @@ on:
         type: boolean
         required: false
         default: false
+      bootstrap_benchmark:
+        description: 'Measure the synthetic FQ03 bootstrap in the owned browser (leave storage selectors off)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   fresh-apply:
     # Push/PR always run the mandatory application/rights gate. The explicit
     # manual selector below starts a separate upstream capability probe only.
     if: ${{ github.event_name != 'workflow_dispatch' || (inputs.storage_contract != true && inputs.storage_db07_profile != true) }}
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && 'ubuntu-24.04' || 'ubuntu-latest' }}
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.bootstrap_benchmark == true) && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -665,7 +670,7 @@ jobs:
           node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: Set up Node 22 for the authenticated editor witness
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.bootstrap_benchmark == true) && steps.list_email_owned_stack.outcome == 'success' }}
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -673,7 +678,7 @@ jobs:
           cache-dependency-path: bertel-tourism-ui/package-lock.json
 
       - name: Install Chromium for the authenticated editor witness
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.bootstrap_benchmark == true) && steps.list_email_owned_stack.outcome == 'success' }}
         working-directory: bertel-tourism-ui
         timeout-minutes: 7
         env:
@@ -683,13 +688,24 @@ jobs:
           node scripts/run-playwright.mjs install --with-deps chromium
 
       - name: Authenticated editor publication and restore races (disposable only)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && inputs.bootstrap_benchmark != true && steps.list_email_owned_stack.outcome == 'success' }}
         timeout-minutes: 6
         env:
           CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
           CURRENT_RIGHTS_DISPOSABLE: 'true'
           CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
           CURRENT_RIGHTS_EDITOR_BROWSER: 'true'
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
+        run: node --test tools/current-rights/postgrest-rights.test.mjs
+
+      - name: FQ03 bootstrap timing with real GoTrue and PostgREST (synthetic only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_benchmark == true && steps.list_email_owned_stack.outcome == 'success' }}
+        timeout-minutes: 8
+        env:
+          CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+          CURRENT_RIGHTS_BOOTSTRAP_BENCHMARK: 'true'
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
         run: node --test tools/current-rights/postgrest-rights.test.mjs
 

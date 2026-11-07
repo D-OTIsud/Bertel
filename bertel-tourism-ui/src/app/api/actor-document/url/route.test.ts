@@ -21,7 +21,7 @@ const ACTOR_ID = '11111111-2222-3333-4444-555555555555';
 const OTHER_ACTOR_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const DOC_ID = '66666666-7777-8888-9999-aaaaaaaaaaaa';
 const DOC_PATH = `actors/${ACTOR_ID}/x.pdf`;
-const SIGNED = 'https://storage.example/signed?token=abc';
+const SIGNED = `https://storage.example/storage/v1/object/sign/actor-documents/${DOC_PATH}?token=abc`;
 
 function callerCan(can: boolean) {
   const rpc = jest.fn().mockResolvedValue({ data: can, error: null });
@@ -56,17 +56,17 @@ function linkTable(rows: Array<{ actor_id: string; document_id: string }>) {
 
 function urlServer(options: {
   links?: Array<{ actor_id: string; document_id: string }>;
-  document?: { storage_bucket?: string; storage_path?: string } | null;
+  document?: { storage_bucket?: string; storage_path?: string; access_scope?: string } | null;
 } = {}) {
   const link = linkTable(options.links ?? [{ actor_id: ACTOR_ID, document_id: DOC_ID }]);
   const documentRow = options.document === undefined
-    ? { storage_bucket: 'actor-documents', storage_path: DOC_PATH }
+    ? { storage_bucket: 'actor-documents', storage_path: DOC_PATH, access_scope: 'crm_private' }
     : options.document;
   const documentEq = jest.fn().mockReturnValue({
     maybeSingle: async () => ({ data: documentRow, error: null }),
   });
-  const createSignedUrl = jest.fn().mockResolvedValue({ data: { signedUrl: SIGNED }, error: null });
-  const storageFrom = jest.fn().mockReturnValue({ createSignedUrl });
+  const createSignedUrl = jest.fn().mockResolvedValue({ data: [{ path: DOC_PATH, signedUrl: SIGNED, error: null }], error: null });
+  const storageFrom = jest.fn().mockReturnValue({ createSignedUrls: createSignedUrl });
   const from = jest.fn((table: string) => (table === 'actor_document'
     ? { select: link.select }
     : { select: () => ({ eq: documentEq }) }));
@@ -190,26 +190,22 @@ describe('/api/actor-document/url', () => {
     const res = await POST(urlReq({ actorId: ACTOR_ID, documentId: DOC_ID }));
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ url: SIGNED });
-    expect(createSignedUrl).toHaveBeenCalledWith(DOC_PATH, 60);
+    expect(createSignedUrl).toHaveBeenCalledWith([DOC_PATH], 60);
     expect(storageFrom).toHaveBeenCalledWith('actor-documents');
     // Filtre sur LA PAIRE (actor_id, document_id), asserté sur les colonnes réellement vues.
     expect(link.eqCalls).toEqual([['actor_id', ACTOR_ID], ['document_id', DOC_ID]]);
     expect(documentEq).toHaveBeenCalledWith('id', DOC_ID);
   });
 
-  it('signe dans le bucket PORTÉ PAR LA LIGNE, pas dans une constante épinglée', async () => {
-    // Comportement ACTUEL, verrouillé ici pour qu'une refonte ne le change pas par
-    // accident. Il diffère de /api/task-document/url, qui épingle le bucket à une
-    // constante — l'écart est documenté dans le rapport de cette passe, il n'est PAS
-    // corrigé ici (ce serait un changement de comportement, hors périmètre).
+  it('conserve la consultation de l’historique public dans documents', async () => {
     const { server, createSignedUrl, storageFrom } = urlServer({
-      document: { storage_bucket: 'documents', storage_path: DOC_PATH },
+      document: { storage_bucket: 'documents', storage_path: DOC_PATH, access_scope: 'public' },
     });
     mockedServer.mockReturnValue(server);
     callerCan(true);
     const res = await POST(urlReq({ actorId: ACTOR_ID, documentId: DOC_ID }));
     expect(res.status).toBe(200);
     expect(storageFrom).toHaveBeenCalledWith('documents');
-    expect(createSignedUrl).toHaveBeenCalledWith(DOC_PATH, 60);
+    expect(createSignedUrl).toHaveBeenCalledWith([DOC_PATH], 60);
   });
 });

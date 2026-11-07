@@ -9,6 +9,7 @@ const CACHE_TTL_MS = 5000;
 const FETCH_TIMEOUT_MS = 2000;
 const SUPABASE_PROBES = [
   { method: 'GET', path: '/auth/v1/health' },
+  // Depends on the existing anon SELECT grant on public.ref_code.
   { method: 'HEAD', path: '/rest/v1/ref_code?select=code&limit=0' },
   { method: 'GET', path: '/storage/v1/status' },
 ] as const;
@@ -22,6 +23,8 @@ let cached: { result: ReadyResult; expiresAt: number } | null = null;
 let inFlight: Promise<ReadyResult> | null = null;
 
 function isConfiguredHttpUrl(value: string): boolean {
+  // Reject the delimiters themselves, including an empty query or fragment.
+  if (/[?#]/.test(value)) return false;
   try {
     const parsed = new URL(value);
     return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !parsed.username && !parsed.password;
@@ -83,19 +86,21 @@ async function computeReady(): Promise<ReadyResult> {
 
 // Shares one in-flight batch across concurrent requests and caches the completed result for
 // CACHE_TTL_MS per process.
-async function getReady(): Promise<ReadyResult> {
-  const now = Date.now();
-  if (cached && cached.expiresAt > now) {
-    return cached.result;
+function getReady(): Promise<ReadyResult> {
+  if (cached && cached.expiresAt > Date.now()) {
+    return Promise.resolve(cached.result);
   }
   if (!inFlight) {
-    inFlight = computeReady().finally(() => {
-      inFlight = null;
-    });
+    inFlight = computeReady()
+      .then((result) => {
+        cached = { result, expiresAt: Date.now() + CACHE_TTL_MS };
+        return result;
+      })
+      .finally(() => {
+        inFlight = null;
+      });
   }
-  const result = await inFlight;
-  cached = { result, expiresAt: Date.now() + CACHE_TTL_MS };
-  return result;
+  return inFlight;
 }
 
 export async function GET(): Promise<NextResponse> {

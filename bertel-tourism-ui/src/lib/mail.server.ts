@@ -16,6 +16,19 @@ export class MailNotConfiguredError extends Error {
   }
 }
 
+/** Only failures known to precede message submission may be retried as a new intention. */
+export type MailRejectionCode = 'EAUTH' | 'EDNS' | 'ENOTFOUND' | 'EENVELOPE' | 'NOT_CONFIGURED' | 'CONFIG_CHANGED' | 'CONFIG_UNAVAILABLE';
+export class MailDeliveryError extends Error {
+  readonly rejectionCode: MailRejectionCode | null;
+  constructor(error: unknown) {
+    super(safeSmtpError(error));
+    this.name = 'MailDeliveryError';
+    const code = (error as { code?: string } | null)?.code;
+    this.rejectionCode = code === 'EAUTH' || code === 'EDNS' || code === 'ENOTFOUND' || code === 'EENVELOPE'
+      || code === 'CONFIG_CHANGED' || code === 'CONFIG_UNAVAILABLE' ? code : null;
+  }
+}
+
 /**
  * Transport RÉUTILISÉ entre les appels, et POOLÉ.
  *
@@ -86,7 +99,10 @@ function getTransport(cfg: SmtpConfig): TransportEntry {
 export async function sendMail(opts: MailContent & { sender?: MailSender }): Promise<void> {
   const cfg = await resolveSmtpConfig();
   if (!cfg) throw new MailNotConfiguredError();
+  return sendMailUsingConfig(cfg, opts);
+}
 
+async function sendMailUsingConfig(cfg: SmtpConfig, opts: MailContent & { sender?: MailSender }): Promise<void> {
   // Sender belongs to the message, never to the cached SMTP transport. Task notifications
   // may use their creator's address while the next list keeps the configured address.
   const sender = opts.sender ? {
@@ -112,7 +128,7 @@ export async function sendMail(opts: MailContent & { sender?: MailSender }): Pro
   } catch (error) {
     // The list route displays this message and the outbox stores it. A SMTP server's raw
     // response can echo authentication data, so keep it out of both surfaces.
-    throw new Error(safeSmtpError(error));
+    throw new MailDeliveryError(error);
   } finally {
     entry.inFlight -= 1;
     if (entry.retired && entry.inFlight === 0) entry.transport.close();
@@ -122,6 +138,29 @@ export async function sendMail(opts: MailContent & { sender?: MailSender }): Pro
 /** Lists always use the configured sender, even if an extra sender property is supplied. */
 export function sendListEmail({ to, subject, html }: MailContent): Promise<void> {
   return sendMail({ to, subject, html });
+}
+
+/** Freeze the configured message identity together with the exact content being receipted.
+ * The closure retains the server-only transport config; neither credentials nor content go to SQL. */
+export async function prepareListEmail({ to, subject, html }: MailContent): Promise<{ sender: MailSender; send: () => Promise<void> }> {
+  const resolved = await resolveSmtpConfig();
+  if (!resolved) throw new MailNotConfiguredError();
+  const cfg = { ...resolved };
+  return {
+    sender: { name: cfg.fromName, address: cfg.fromEmail },
+    send: async () => {
+      // Admission involves remote transactions. Repeat the existing live SMTP gate
+      // just before transmission; a disabled setting must not use an old closure.
+      let current: SmtpConfig | null;
+      try { current = await resolveSmtpConfig(); }
+      catch { throw new MailDeliveryError({ code: 'CONFIG_UNAVAILABLE' }); }
+      if (!current) throw new MailNotConfiguredError();
+      if (current.fromEmail !== cfg.fromEmail || current.fromName !== cfg.fromName) {
+        throw new MailDeliveryError({ code: 'CONFIG_CHANGED' });
+      }
+      await sendMailUsingConfig(current, { to, subject, html });
+    },
+  };
 }
 
 /** Separate, unpooled connection: verification never sends mail or closes the shared send pool. */

@@ -40,7 +40,7 @@ beforeEach(() => {
   jest.mocked(createCallerClient).mockReturnValue({ schema: () => ({ rpc: callerRpc }) } as never);
 });
 
-test.each([['translation',translate],['menu extraction',extract],['notification drain',drain],['AI connection test',testAi]] as const)
+test.each([['translation',translate],['menu extraction',extract],['list email',sendList],['notification drain',drain],['AI connection test',testAi]] as const)
   ('discovery cannot invoke %s, even with an existing valid session', async (_name, handler) => {
     const req=request();
     const result=await handler(req);
@@ -52,18 +52,6 @@ test.each([['translation',translate],['menu extraction',extract],['notification 
     expect(resolveActiveAiProvider).not.toHaveBeenCalled();
     expect(resolveSmtpConfig).not.toHaveBeenCalled();
   });
-
-test('the closed bridge refuses manual email before even reading the discovery session', async () => {
-  const req = request();
-  const result = await sendList(req);
-  expect(result.status).toBe(503);
-  expect(await result.json()).toEqual({ error: 'email_protection_unavailable' });
-  expect(getServerSupabaseClient).not.toHaveBeenCalled();
-  expect(req.json).not.toHaveBeenCalled();
-  expect(server.schema).not.toHaveBeenCalled();
-  expect(createCallerClient).not.toHaveBeenCalled();
-  expect(resolveSmtpConfig).not.toHaveBeenCalled();
-});
 
 test('discovery service availability stays off without reading provider or SMTP settings', async () => {
   const result=await availability(request());

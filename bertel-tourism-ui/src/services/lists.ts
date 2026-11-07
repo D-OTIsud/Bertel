@@ -478,18 +478,29 @@ export async function createDynamicList(
   return data;
 }
 
+export interface ListWriteOptions { signal?: AbortSignal }
+async function withListWriteSignal<T>(request: PromiseLike<T> & { abortSignal(signal: AbortSignal): PromiseLike<T> }, options?: ListWriteOptions): Promise<T> {
+  // The SDK may await Auth before calling fetch. Carry the captured authority
+  // signal all the way to native fetch, where an already-aborted request cannot
+  // be admitted under the next identity's token.
+  if (options?.signal?.aborted) throw new DOMException('Obsolete list write scope', 'AbortError');
+  const response = await (options?.signal ? request.abortSignal(options.signal) : request);
+  if (options?.signal?.aborted) throw new DOMException('Obsolete list write scope', 'AbortError');
+  return response;
+}
+
 // ---------- mises à jour ----------
-export async function updateList(listId: string, patch: ListPatch): Promise<ObjectListDetail | null> {
+export async function updateList(listId: string, patch: ListPatch, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('update_list', { p_list_id: listId, p_patch: patch });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('update_list', { p_list_id: listId, p_patch: patch }), options);
   if (error) throw mapDatabaseError(error, 'Mise à jour impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
 }
 
-export async function setListItems(listId: string, items: ListItemInput[]): Promise<ObjectListDetail | null> {
+export async function setListItems(listId: string, items: ListItemInput[], options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('set_list_items', { p_list_id: listId, p_items: items });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('set_list_items', { p_list_id: listId, p_items: items }), options);
   if (error) throw mapDatabaseError(error, 'Enregistrement des lieux impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
@@ -497,9 +508,9 @@ export async function setListItems(listId: string, items: ListItemInput[]): Prom
 
 // ---------- cycle de vie / mise à la une ----------
 /** Le créateur propose sa liste personnelle à la une de son organisation ; idempotent si déjà en attente. */
-export async function requestListFeature(listId: string): Promise<ObjectListDetail | null> {
+export async function requestListFeature(listId: string, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('request_list_feature', { p_list_id: listId });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('request_list_feature', { p_list_id: listId }), options);
   if (error) throw mapDatabaseError(error, 'Proposition à la une impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
@@ -510,11 +521,11 @@ export async function requestListFeature(listId: string): Promise<ObjectListDeta
  * peut être `null` si l'appelant perd l'accès en lecture après un refus (normal — l'appelant
  * n'était lecteur que via la proposition) : l'écran doit alors revenir à la grille.
  */
-export async function reviewListFeature(listId: string, accept: boolean): Promise<ObjectListDetail | null> {
+export async function reviewListFeature(listId: string, accept: boolean, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client
+  const { data, error } = await withListWriteSignal(client
     .schema('api')
-    .rpc('review_list_feature', { p_list_id: listId, p_accept: accept });
+    .rpc('review_list_feature', { p_list_id: listId, p_accept: accept }), options);
   if (error) throw mapDatabaseError(error, 'Traitement de la proposition impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
@@ -525,20 +536,20 @@ export async function reviewListFeature(listId: string, accept: boolean): Promis
  * organisation. Peut rendre `null` si l'appelant perd l'accès (retrait d'une liste dont il
  * n'était ni créateur ni membre lecteur au sens personnel).
  */
-export async function setListFeatured(listId: string, featured: boolean): Promise<ObjectListDetail | null> {
+export async function setListFeatured(listId: string, featured: boolean, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client
+  const { data, error } = await withListWriteSignal(client
     .schema('api')
-    .rpc('set_list_featured', { p_list_id: listId, p_featured: featured });
+    .rpc('set_list_featured', { p_list_id: listId, p_featured: featured }), options);
   if (error) throw mapDatabaseError(error, 'Mise à la une impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
 }
 
 /** Propriétaire d'une personnelle archivée (ou reprise orpheline) : réactivation explicite, idempotente sur une active. */
-export async function restoreList(listId: string): Promise<ObjectListDetail | null> {
+export async function restoreList(listId: string, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('restore_list', { p_list_id: listId });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('restore_list', { p_list_id: listId }), options);
   if (error) throw mapDatabaseError(error, 'Restauration impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
@@ -549,9 +560,9 @@ export async function restoreList(listId: string): Promise<ObjectListDetail | nu
  * nouveau propriétaire, jamais à la une/proposée, sans token ni destinataire hérités. Renvoie le
  * nouvel id (même contrat que `create_list`).
  */
-export async function duplicateList(listId: string): Promise<string> {
+export async function duplicateList(listId: string, options?: ListWriteOptions): Promise<string> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('duplicate_list', { p_list_id: listId });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('duplicate_list', { p_list_id: listId }), options);
   if (error) throw mapDatabaseError(error, 'Duplication impossible.');
   if (typeof data !== 'string') throw new Error('Réponse RPC sans id.');
   return data;
@@ -586,9 +597,9 @@ export async function getPublicList(token: string): Promise<PublicList | null> {
   };
 }
 
-export async function deleteList(listId: string): Promise<void> {
+export async function deleteList(listId: string, options?: ListWriteOptions): Promise<void> {
   const client = requireApiClient();
-  const { error } = await client.schema('api').rpc('delete_list', { p_list_id: listId });
+  const { error } = await withListWriteSignal(client.schema('api').rpc('delete_list', { p_list_id: listId }), options);
   if (error) throw mapDatabaseError(error, 'Suppression impossible.');
 }
 
@@ -600,40 +611,157 @@ export interface SendListEmailResult {
   trackingUpdated: boolean;
 }
 
-/**
- * Envoie la liste par e-mail via la route serveur POST /api/lists/send (relais SMTP côté VPS).
- * Passe le JWT de l'appelant en Bearer ; la route ré-autorise via get_list (en tant qu'appelant).
- */
-export async function sendListByEmail(listId: string, toEmail: string): Promise<SendListEmailResult> {
-  // A stale visible action must not start an SMTP request after an administrator disables it.
-  const availability = await getServiceAvailability({ force: true });
-  if (!availability.email) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+export const LIST_EMAIL_UNKNOWN_MESSAGE =
+  "Résultat de l'envoi inconnu. Il a peut-être été transmis. Vérifiez avant de lancer un nouvel envoi.";
+export const LIST_EMAIL_RESEND_CONFIRMATION =
+  "L'envoi précédent a peut-être été transmis. Envoyer de nouveau peut créer un doublon. Continuer ?";
+export const LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE =
+  "L'envoi est momentanément indisponible. Réessayez dans un instant.";
+export class ListEmailUnknownError extends Error {
+  readonly operationIds: string[];
+  readonly operationId: string;
+  constructor(operations: string | string[]) {
+    super(LIST_EMAIL_UNKNOWN_MESSAGE);
+    this.name = 'ListEmailUnknownError';
+    this.operationIds = [...new Set(typeof operations === 'string' ? [operations] : operations)];
+    this.operationId = this.operationIds[0] ?? '';
+  }
+}
+export interface ListEmailGenerationContext {
+  generations: Readonly<Record<string, string>>;
+}
+export interface SendListEmailIntent {
+  operationId: string;
+  /** Snapshot loaded with the view and copied synchronously at the gesture. */
+  context: ListEmailGenerationContext;
+  confirmResend?: boolean;
+  confirmedPreviousOperationId?: string;
+  confirmedPreviousOperationIds?: string[];
+  isCurrent?: () => boolean;
+  signal?: AbortSignal;
+  expectedUserId?: string | null;
+}
+const mailUuid = (value: unknown): value is string => typeof value === 'string'
+  && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+const mailProof = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
+const mailGeneration = (value: unknown): value is string => typeof value === 'string'
+  && /^(0|[1-9][0-9]{0,18})$/.test(value) && BigInt(value) <= 9223372036854775807n;
+function generationSnapshot(value: ListEmailGenerationContext | undefined): ListEmailGenerationContext {
+  const input = value && asRecord(value.generations);
+  if (!input || !Object.entries(input).every(([key, generation]) => mailProof(key) && mailGeneration(generation))) {
+    throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  }
+  return { generations: Object.freeze({ ...input } as Record<string, string>) };
+}
+interface MailScope { isCurrent?: () => boolean; signal?: AbortSignal; expectedUserId?: string | null }
+function assertMailScope(scope?: MailScope) {
+  if (scope?.signal?.aborted || scope?.isCurrent?.() === false) throw new DOMException('Obsolete list-mail scope', 'AbortError');
+}
+async function mailSession(scope?: MailScope) {
+  assertMailScope(scope);
   const client = getApiClient();
   if (!client) throw new Error('Supabase non configuré.');
   const { data } = await client.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw new Error('Session expirée — reconnectez-vous.');
-  const res = await fetch('/api/lists/send', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-    body: JSON.stringify({ listId, toEmail }),
-  });
-  if (!res.ok) {
-    const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
-      if (res.status === 503 && j?.error === 'email_protection_unavailable') {
-        throw new Error("L'envoi est momentanément indisponible. Réessayez dans un instant.");
-      }
-    if (res.status === 503) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
-    // La route relaie tel quel le message brut d'`ensure_list_share_link` (ex. « forbidden » +
-    // detail:"SHARE_NOT_AVAILABLE: …") quand elle ne peut pas générer le lien « sélection
-    // complète » qu'embarque l'e-mail : sans ce test, l'utilisateur lirait le libellé générique
-    // « action non autorisée » au lieu de comprendre que le LIEN, pas ses droits, est en cause.
-    const shareFriendly = j.detail ? shareLinkFriendlyMessage(j.detail) : null;
-    if (shareFriendly) throw new Error(shareFriendly);
-    throw new Error(readApiErrorMessage(j, res.status));
+  assertMailScope(scope);
+  if (!data.session?.access_token) throw new Error('Session expirée — reconnectez-vous.');
+  if (scope?.expectedUserId !== undefined && data.session.user?.id !== scope.expectedUserId) {
+    throw new DOMException('Obsolete list-mail scope', 'AbortError');
   }
-  const body = (await res.json().catch(() => ({}))) as { trackingUpdated?: boolean };
-  return { trackingUpdated: body.trackingUpdated === true };
+  return data.session;
+}
+async function mailJson(response: Response): Promise<GenericRecord | null> {
+  return asRecord(await response.json().catch(() => null));
+}
+function mailRefusal(response: Response, body: GenericRecord | null, operationId: string, mayHaveEffect: boolean): Error {
+  const j = body ?? {};
+  if (response.status === 409 && j.error === 'email_delivery_unknown') {
+    const ids = Array.isArray(j.operationIds) ? j.operationIds.filter(mailUuid) : mailUuid(j.operationId) ? [j.operationId] : [];
+    return new ListEmailUnknownError(ids);
+  }
+  if (response.status === 503 && j.error === 'email_protection_unavailable') return new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  if (response.status === 409 && j.error === 'email_context_stale') return new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  if (response.status === 503 && ['smtp_not_configured', 'smtp_unavailable', 'app_origin_unavailable'].includes(String(j.error))) {
+    return new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+  }
+  const certain: Record<number, readonly string[]> = {
+    400: ['bad_json', 'bad_request', 'missing_list', 'invalid_email'], 401: ['unauthenticated'],
+    403: ['forbidden', 'sandbox_external_effects_disabled'], 404: ['not_found'],
+    409: ['bad_request'], 500: ['server_misconfigured', 'share_failed'], 502: ['send_failed'],
+  };
+  if (typeof j.error === 'string' && certain[response.status]?.includes(j.error)) {
+    const friendly = typeof j.detail === 'string' ? shareLinkFriendlyMessage(j.detail) : null;
+    return new Error(friendly ?? readApiErrorMessage(j, response.status));
+  }
+  return mayHaveEffect ? new ListEmailUnknownError(operationId) : new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+}
+
+/** Read-only, authorized context load before a gesture. It never creates a permit. */
+export async function getListEmailContext(listId: string, scope?: MailScope): Promise<ListEmailGenerationContext> {
+  const session = await mailSession(scope);
+  let response: Response;
+  try { response = await fetch('/api/lists/send', { method: 'POST', cache: 'no-store', signal: scope?.signal,
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ phase: 'context', listId }) }); }
+  catch { assertMailScope(scope); throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE); }
+  const body = await mailJson(response); assertMailScope(scope);
+  if (!response.ok) throw mailRefusal(response, body, '', false);
+  if (body?.ok !== true || body.phase !== 'context' || body.listId !== listId || typeof body.userId !== 'string'
+    || (session.user?.id && body.userId !== session.user.id)) throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+  return generationSnapshot({ generations: body.generations as Record<string, string> });
+}
+
+/** No generation reload/retry belongs to this gesture. Prepare acknowledges a
+ * permit, dispatch can only consume it, ACK proves receipt of an accepted result. */
+export async function sendListByEmail(listId: string, toEmail: string, intent?: SendListEmailIntent): Promise<SendListEmailResult> {
+  const context = generationSnapshot(intent?.context); // clone BEFORE the first await
+  const recipient = toEmail.trim();
+  const operationId = intent?.operationId ?? crypto.randomUUID();
+  const parents = [...new Set([...(intent?.confirmedPreviousOperationIds ?? []),
+    ...(intent?.confirmedPreviousOperationId ? [intent.confirmedPreviousOperationId] : [])])];
+  const confirmResend = intent?.confirmResend === true || parents.length > 0;
+  assertMailScope(intent);
+  const availability = await getServiceAvailability({ force: true }); assertMailScope(intent);
+  if (!availability.email) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+  const session = await mailSession(intent);
+  let recipientHash: string;
+  try {
+    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(recipient));
+    recipientHash = [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  } catch { assertMailScope(intent); throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE); }
+  assertMailScope(intent);
+  const expectedGeneration = context.generations[recipientHash] ?? '0';
+  const post = (body: GenericRecord) => fetch('/api/lists/send', { method: 'POST', cache: 'no-store',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${session.access_token}`, 'Idempotency-Key': operationId },
+    body: JSON.stringify({ listId, ...body }), signal: intent?.signal });
+  let prepare: Response;
+  try { prepare = await post({ phase: 'prepare', toEmail: recipient, expectedGeneration, confirmResend, confirmedPreviousOperationIds: parents }); }
+  catch { assertMailScope(intent); throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE); }
+  let result = await mailJson(prepare); assertMailScope(intent);
+  if (!prepare.ok) throw mailRefusal(prepare, result, operationId, false);
+  const accepted = (body: GenericRecord | null) => body?.ok === true && body.phase === 'accepted'
+    && body.operationId === operationId && mailProof(body.resultToken);
+  if (!accepted(result)) {
+    if (result?.ok !== true || result.phase !== 'prepared' || result.operationId !== operationId || !mailUuid(result.dispatchToken)) {
+      throw new Error(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+    }
+    let dispatch: Response;
+    assertMailScope(intent);
+    try { dispatch = await post({ phase: 'dispatch', toEmail: recipient, dispatchToken: result.dispatchToken }); }
+    catch { assertMailScope(intent); throw new ListEmailUnknownError(operationId); }
+    result = await mailJson(dispatch); assertMailScope(intent);
+    if (!dispatch.ok) throw mailRefusal(dispatch, result, operationId, true);
+    if (!accepted(result)) throw new ListEmailUnknownError(operationId);
+  }
+  // A result proof has a different type/value from the prepare permit. A missing
+  // ACK never converts a known relay acceptance into a retryable mail failure.
+  assertMailScope(intent);
+  // This independent best-effort receipt must not hold a known SMTP success or
+  // the view busy. Only the real server ACK can settle durable discovery; an
+  // unreturned/hung request leaves that receipt unresolved after reload.
+  try { void post({ phase: 'ack', resultToken: result!.resultToken }).catch(() => {}); }
+  catch { /* known acceptance remains success even if fetch throws synchronously */ }
+  assertMailScope(intent);
+  return { trackingUpdated: result!.trackingUpdated === true };
 }
 
 // ---------- partage ----------
@@ -651,13 +779,14 @@ export async function shareList(
   listId: string,
   enable: boolean,
   expiresAt: string | null = null,
+  options?: ListWriteOptions,
 ): Promise<ShareInfo> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('share_list', {
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('share_list', {
     p_list_id: listId,
     p_enable: enable,
     p_expires_at: expiresAt,
-  });
+  }), options);
   if (error) throw mapDatabaseError(error, 'Partage impossible.');
   return parseShareInfo(asRecord(data) ?? {});
 }
@@ -687,9 +816,9 @@ function shareLinkFriendlyMessage(raw: string): string | null {
  * expiration. Un lecteur ne peut PAS réactiver un lien explicitement désactivé/expiré — l'éditeur
  * passe par `shareList` pour ça (api.ensure_list_share_link).
  */
-export async function ensureListShareLink(listId: string): Promise<ShareInfo> {
+export async function ensureListShareLink(listId: string, options?: ListWriteOptions): Promise<ShareInfo> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('ensure_list_share_link', { p_list_id: listId });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('ensure_list_share_link', { p_list_id: listId }), options);
   if (error) {
     const friendly = shareLinkFriendlyMessage(readErrorMessage(error));
     if (friendly) throw new Error(friendly);

@@ -5,6 +5,7 @@ from collections import defaultdict
 import html as _html
 import json
 import re
+from .docs import sql_source_path
 from .reference_extract import public_reference_rows
 
 
@@ -123,12 +124,7 @@ def _short_list(values, limit=10):
 def _source_label(source):
     if not source:
         return ""
-    path = str(source.get("path", "")).replace("\\", "/")
-    marker = "Base de donnée DLL et API/"
-    if marker in path:
-        path = marker + path.split(marker, 1)[1]
-    elif "/tools/db-graph/" in path:
-        path = "tools/db-graph/" + path.split("/tools/db-graph/", 1)[1]
+    path = sql_source_path(source.get("path", ""))
     if source.get("line"):
         return "%s:%s" % (path, source["line"])
     return path

@@ -58041,12 +58041,12 @@
     "dynamic_sql": true,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 243
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 243
     }
    }
@@ -58070,7 +58070,7 @@
       "line": 6764
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
+      "path": "supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
       "line": 70
      }
     ]
@@ -58103,7 +58103,7 @@
       "line": 6785
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
+      "path": "supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
       "line": 101
      }
     ]
@@ -58124,12 +58124,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 64
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 64
     }
    }
@@ -58149,12 +58149,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 94
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 94
     }
    }
@@ -58174,12 +58174,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 124
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 124
     }
    }
@@ -58317,12 +58317,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 22
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 22
     }
    }
@@ -58342,12 +58342,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 29
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 29
     }
    }
@@ -58367,12 +58367,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 43
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 43
     }
    }
@@ -58392,12 +58392,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 139
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 139
     }
    }
@@ -58432,12 +58432,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 155
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 155
     }
    }
@@ -58457,12 +58457,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql",
+      "path": "supabase/migrations/20260807124408_actor_prospects_documents.sql",
       "line": 447
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql",
+     "path": "supabase/migrations/20260807124408_actor_prospects_documents.sql",
      "line": 447
     }
    }
@@ -58532,12 +58532,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 222
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 222
     }
    }
@@ -58557,12 +58557,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 237
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 237
     }
    }
@@ -58586,7 +58586,7 @@
       "line": 2185
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 275
      }
     ]
@@ -58697,12 +58697,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 260
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 260
     }
    }
@@ -58837,12 +58837,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 264
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 264
     }
    }
@@ -58952,12 +58952,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 1085
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 1085
     }
    }
@@ -59035,7 +59035,7 @@
       "line": 96
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 65
      }
     ]
@@ -59089,7 +59089,7 @@
       "line": 228
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 167
      }
     ]
@@ -59325,12 +59325,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 390
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 390
     }
    }
@@ -59400,12 +59400,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 545
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 545
     }
    }
@@ -59425,12 +59425,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 362
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 362
     }
    }
@@ -59500,12 +59500,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 366
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+     "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
      "line": 366
     }
    }
@@ -59554,7 +59554,7 @@
       "line": 22
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106200353_distributed_ai_request_admission.sql",
+      "path": "supabase/migrations/20261106200353_distributed_ai_request_admission.sql",
       "line": 56
      }
     ]
@@ -59579,7 +59579,7 @@
       "line": 69
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql",
+      "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 72
      }
     ]
@@ -59829,7 +59829,7 @@
       "line": 269
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 189
      }
     ]
@@ -59854,7 +59854,7 @@
       "line": 285
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 215
      }
     ]
@@ -59950,12 +59950,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 39
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+     "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
      "line": 39
     }
    }
@@ -60000,12 +60000,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 49
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+     "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
      "line": 49
     }
    }
@@ -60050,12 +60050,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906031607_smtp_settings.sql",
+      "path": "supabase/migrations/20260906031607_smtp_settings.sql",
       "line": 27
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906031607_smtp_settings.sql",
+     "path": "supabase/migrations/20260906031607_smtp_settings.sql",
      "line": 27
     }
    }
@@ -60125,12 +60125,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 59
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+     "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
      "line": 59
     }
    }
@@ -60154,7 +60154,7 @@
       "line": 93
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql",
+      "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 96
      }
     ]
@@ -60300,12 +60300,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 70
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+     "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
      "line": 70
     }
    }
@@ -60354,7 +60354,7 @@
       "line": 107
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql",
+      "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 110
      }
     ]
@@ -60540,12 +60540,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 104
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+     "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
      "line": 104
     }
    }
@@ -60573,7 +60573,7 @@
       "line": 46
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 222
      }
     ]
@@ -60648,7 +60648,7 @@
       "line": 332
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 230
      }
     ]
@@ -60677,7 +60677,7 @@
       "line": 62
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 237
      }
     ]
@@ -60706,7 +60706,7 @@
       "line": 287
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql",
+      "path": "supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql",
       "line": 10
      }
     ]
@@ -60940,7 +60940,7 @@
       "line": 201
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql",
+      "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 204
      }
     ]
@@ -60973,7 +60973,7 @@
       "line": 34
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 511
      }
     ]
@@ -61048,7 +61048,7 @@
       "line": 236
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql",
+      "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 239
      }
     ]
@@ -61123,7 +61123,7 @@
       "line": 265
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql",
+      "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 268
      }
     ]
@@ -61148,7 +61148,7 @@
       "line": 280
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql",
+      "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 283
      }
     ]
@@ -61177,15 +61177,15 @@
       "line": 111
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 254
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261019142132_partner_api_identity_initplan.sql",
+      "path": "supabase/migrations/20261019142132_partner_api_identity_initplan.sql",
       "line": 8
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql",
+      "path": "supabase/migrations/20261106100603_object_current_authorization.sql",
       "line": 71
      }
     ]
@@ -61206,12 +61206,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 524
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+     "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
      "line": 524
     }
    }
@@ -61414,7 +61414,7 @@
       "line": 28
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106075113_branding_admin_authorization.sql",
+      "path": "supabase/migrations/20261106075113_branding_admin_authorization.sql",
       "line": 8
      }
     ]
@@ -61497,7 +61497,7 @@
       "line": 232
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql",
+      "path": "supabase/migrations/20261106100603_object_current_authorization.sql",
       "line": 91
      }
     ]
@@ -61763,12 +61763,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 29
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+     "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
      "line": 29
     }
    }
@@ -61788,12 +61788,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 94
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+     "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
      "line": 94
     }
    }
@@ -61842,12 +61842,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 124
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+     "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
      "line": 124
     }
    }
@@ -61917,11 +61917,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 1048
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 304
      }
     ]
@@ -62107,11 +62107,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 942
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 408
      }
     ]
@@ -62269,7 +62269,7 @@
       "line": 236
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql",
+      "path": "supabase/migrations/20261106100603_object_current_authorization.sql",
       "line": 82
      }
     ]
@@ -63377,7 +63377,7 @@
       "line": 3107
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql",
+      "path": "supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql",
       "line": 80
      }
     ]
@@ -64435,7 +64435,7 @@
       "line": 1246
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261026102125_object_places_reconcile_v1.sql",
+      "path": "supabase/migrations/20261026102125_object_places_reconcile_v1.sql",
       "line": 34
      }
     ]
@@ -64564,7 +64564,7 @@
       "line": 1365
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql",
+      "path": "supabase/migrations/20260807124408_actor_prospects_documents.sql",
       "line": 242
      }
     ]
@@ -64729,7 +64729,7 @@
       "line": 65
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+      "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
       "line": 28
      }
     ]
@@ -65912,7 +65912,7 @@
       "line": 74
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 264
      }
     ]
@@ -66262,7 +66262,7 @@
       "line": 97
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
+      "path": "supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
       "line": 72
      }
     ]
@@ -66312,7 +66312,7 @@
       "line": 138
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
+      "path": "supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
       "line": 113
      }
     ]
@@ -66333,12 +66333,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 922
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 922
     }
    }
@@ -66787,7 +66787,7 @@
       "line": 171
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
+      "path": "supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
       "line": 146
      }
     ]
@@ -67008,12 +67008,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 974
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 974
     }
    }
@@ -67133,12 +67133,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
       "line": 25
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
      "line": 25
     }
    }
@@ -67183,12 +67183,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
       "line": 79
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
      "line": 79
     }
    }
@@ -67233,12 +67233,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
       "line": 95
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
      "line": 95
     }
    }
@@ -67258,12 +67258,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
       "line": 142
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
      "line": 142
     }
    }
@@ -67287,7 +67287,7 @@
       "line": 208
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
+      "path": "supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
       "line": 183
      }
     ]
@@ -67412,11 +67412,11 @@
       "line": 729
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 150
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
       "line": 196
      }
     ]
@@ -67482,7 +67482,7 @@
       "line": 1889
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql",
+      "path": "supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql",
       "line": 64
      }
     ]
@@ -67511,11 +67511,11 @@
       "line": 112
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906034134_task_notification_creator_sender.sql",
+      "path": "supabase/migrations/20260906034134_task_notification_creator_sender.sql",
       "line": 7
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
       "line": 289
      }
     ]
@@ -67540,7 +67540,7 @@
       "line": 32
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260731092819_fix_legal_workspace_permission.sql",
+      "path": "supabase/migrations/20260731092819_fix_legal_workspace_permission.sql",
       "line": 4
      }
     ]
@@ -67561,12 +67561,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106092254_object_initial_publication_guard.sql",
+      "path": "supabase/migrations/20261106092254_object_initial_publication_guard.sql",
       "line": 5
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106092254_object_initial_publication_guard.sql",
+     "path": "supabase/migrations/20261106092254_object_initial_publication_guard.sql",
      "line": 5
     }
    }
@@ -67586,12 +67586,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 979
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 979
     }
    }
@@ -67790,7 +67790,7 @@
       "line": 168
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 417
      }
     ]
@@ -67815,11 +67815,11 @@
       "line": 231
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 879
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 340
      }
     ]
@@ -68040,12 +68040,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260729114447_hotel_positioning_axis.sql",
+      "path": "supabase/migrations/20260729114447_hotel_positioning_axis.sql",
       "line": 84
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260729114447_hotel_positioning_axis.sql",
+     "path": "supabase/migrations/20260729114447_hotel_positioning_axis.sql",
      "line": 84
     }
    }
@@ -68140,12 +68140,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
+      "path": "supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
       "line": 9
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
+     "path": "supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
      "line": 9
     }
    }
@@ -68165,12 +68165,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
+      "path": "supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
       "line": 30
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
+     "path": "supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
      "line": 30
     }
    }
@@ -68344,7 +68344,7 @@
       "line": 363
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 666
      }
     ]
@@ -68423,7 +68423,7 @@
       "line": 204
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
       "line": 368
      }
     ]
@@ -68683,7 +68683,7 @@
       "line": 260
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 593
      }
     ]
@@ -68708,7 +68708,7 @@
       "line": 117
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
+      "path": "supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
       "line": 92
      }
     ]
@@ -68788,7 +68788,7 @@
       "line": 160
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
+      "path": "supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
       "line": 135
      }
     ]
@@ -68813,7 +68813,7 @@
       "line": 242
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
+      "path": "supabase/migrations/20261106083901_object_realm_derived_write_guard.sql",
       "line": 217
      }
     ]
@@ -68850,11 +68850,11 @@
       "line": 139
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260904062635_public_sandbox_entry.sql",
+      "path": "supabase/migrations/20260904062635_public_sandbox_entry.sql",
       "line": 12
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 13
      }
     ]
@@ -69410,7 +69410,7 @@
       "line": 10
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260904060259_actor_portal_access_permission.sql",
+      "path": "supabase/migrations/20260904060259_actor_portal_access_permission.sql",
       "line": 10
      }
     ]
@@ -69460,7 +69460,7 @@
       "line": 1605
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql",
+      "path": "supabase/migrations/20260807124408_actor_prospects_documents.sql",
       "line": 337
      }
     ]
@@ -69560,7 +69560,7 @@
       "line": 24
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260904062635_public_sandbox_entry.sql",
+      "path": "supabase/migrations/20260904062635_public_sandbox_entry.sql",
       "line": 24
      }
     ]
@@ -69615,7 +69615,7 @@
       "line": 51
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260904062635_public_sandbox_entry.sql",
+      "path": "supabase/migrations/20260904062635_public_sandbox_entry.sql",
       "line": 51
      }
     ]
@@ -69636,12 +69636,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+      "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
       "line": 407
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
+     "path": "supabase/migrations/20260911152231_internal_pending_change_notifications.sql",
      "line": 407
     }
    }
@@ -70034,7 +70034,7 @@
       "line": 1049
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql",
+      "path": "supabase/migrations/20260807124408_actor_prospects_documents.sql",
       "line": 181
      }
     ]
@@ -70059,11 +70059,11 @@
       "line": 317
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql",
+      "path": "supabase/migrations/20260807124408_actor_prospects_documents.sql",
       "line": 145
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 202
      }
     ]
@@ -70084,12 +70084,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 177
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 177
     }
    }
@@ -70109,12 +70109,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 189
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 189
     }
    }
@@ -70134,12 +70134,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 204
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 204
     }
    }
@@ -70159,12 +70159,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261019145445_partner_admission.sql",
+      "path": "supabase/migrations/20261019145445_partner_admission.sql",
       "line": 4
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261019145445_partner_admission.sql",
+     "path": "supabase/migrations/20261019145445_partner_admission.sql",
      "line": 4
     }
    }
@@ -70184,12 +70184,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 221
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 221
     }
    }
@@ -70234,12 +70234,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 202
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 202
     }
    }
@@ -70259,12 +70259,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
+      "path": "supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
       "line": 58
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
+     "path": "supabase/migrations/20261106101044_sandbox_external_effects_policy.sql",
      "line": 58
     }
    }
@@ -70284,12 +70284,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 564
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 564
     }
    }
@@ -70384,12 +70384,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql",
+      "path": "supabase/migrations/20260807124408_actor_prospects_documents.sql",
       "line": 395
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql",
+     "path": "supabase/migrations/20260807124408_actor_prospects_documents.sql",
      "line": 395
     }
    }
@@ -70409,12 +70409,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+      "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
       "line": 5
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+     "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
      "line": 5
     }
    }
@@ -70434,12 +70434,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+      "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
       "line": 45
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+     "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
      "line": 45
     }
    }
@@ -70459,12 +70459,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 764
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 764
     }
    }
@@ -70488,7 +70488,7 @@
       "line": 82
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 252
      }
     ]
@@ -70509,12 +70509,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 289
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 289
     }
    }
@@ -70542,7 +70542,7 @@
       "line": 91
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 320
      }
     ]
@@ -70563,12 +70563,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 352
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 352
     }
    }
@@ -70588,12 +70588,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 372
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 372
     }
    }
@@ -70613,12 +70613,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 268
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 268
     }
    }
@@ -70638,11 +70638,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 320
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 355
      }
     ]
@@ -70663,12 +70663,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 1036
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 1036
     }
    }
@@ -70688,12 +70688,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 168
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 168
     }
    }
@@ -70713,12 +70713,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 1173
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 1173
     }
    }
@@ -70817,15 +70817,15 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260908051913_active_object_documents.sql",
+      "path": "supabase/migrations/20260908051913_active_object_documents.sql",
       "line": 70
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260908053837_attach_classification_evidence.sql",
+      "path": "supabase/migrations/20260908053837_attach_classification_evidence.sql",
       "line": 15
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+      "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
       "line": 63
      }
     ]
@@ -70846,12 +70846,12 @@
     "dynamic_sql": true,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 516
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 516
     }
    }
@@ -70871,12 +70871,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 783
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 783
     }
    }
@@ -70896,12 +70896,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 1069
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 1069
     }
    }
@@ -70921,12 +70921,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 1094
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 1094
     }
    }
@@ -70946,12 +70946,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 162
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 162
     }
    }
@@ -70971,12 +70971,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 932
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 932
     }
    }
@@ -70996,12 +70996,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 508
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 508
     }
    }
@@ -71021,12 +71021,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 1190
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 1190
     }
    }
@@ -71046,12 +71046,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 606
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 606
     }
    }
@@ -71071,12 +71071,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261026104513_open_status_priority.sql",
+      "path": "supabase/migrations/20261026104513_open_status_priority.sql",
       "line": 46
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261026104513_open_status_priority.sql",
+     "path": "supabase/migrations/20261026104513_open_status_priority.sql",
      "line": 46
     }
    }
@@ -71100,7 +71100,7 @@
       "line": 35
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261026104513_open_status_priority.sql",
+      "path": "supabase/migrations/20261026104513_open_status_priority.sql",
       "line": 136
      }
     ]
@@ -71125,7 +71125,7 @@
       "line": 7
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261026102949_object_rooms_reconcile_v1.sql",
+      "path": "supabase/migrations/20261026102949_object_rooms_reconcile_v1.sql",
       "line": 26
      }
     ]
@@ -71146,12 +71146,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+      "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
       "line": 6
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+     "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
      "line": 6
     }
    }
@@ -71186,12 +71186,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+      "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
       "line": 48
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+     "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
      "line": 48
     }
    }
@@ -71211,11 +71211,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql",
+      "path": "supabase/migrations/20261030123304_provider_scope_preference.sql",
       "line": 61
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 32
      }
     ]
@@ -71236,12 +71236,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql",
+      "path": "supabase/migrations/20261030123304_provider_scope_preference.sql",
       "line": 9
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql",
+     "path": "supabase/migrations/20261030123304_provider_scope_preference.sql",
      "line": 9
     }
    }
@@ -71261,11 +71261,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql",
+      "path": "supabase/migrations/20261030123304_provider_scope_preference.sql",
       "line": 77
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 47
      }
     ]
@@ -71286,12 +71286,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql",
+      "path": "supabase/migrations/20261030123304_provider_scope_preference.sql",
       "line": 98
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql",
+     "path": "supabase/migrations/20261030123304_provider_scope_preference.sql",
      "line": 98
     }
    }
@@ -71311,12 +71311,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql",
+      "path": "supabase/migrations/20261030123304_provider_scope_preference.sql",
       "line": 201
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql",
+     "path": "supabase/migrations/20261030123304_provider_scope_preference.sql",
      "line": 201
     }
    }
@@ -71340,7 +71340,7 @@
       "line": 65
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+      "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
       "line": 66
      }
     ]
@@ -71361,11 +71361,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql",
+      "path": "supabase/migrations/20261030123304_provider_scope_preference.sql",
       "line": 338
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 353
      }
     ]
@@ -71386,12 +71386,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 7
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+     "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
      "line": 7
     }
    }
@@ -71411,12 +71411,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 17
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+     "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
      "line": 17
     }
    }
@@ -71452,7 +71452,7 @@
       "line": 19
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 303
      }
     ]
@@ -71473,12 +71473,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 426
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+     "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
      "line": 426
     }
    }
@@ -71498,12 +71498,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+      "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
       "line": 546
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
+     "path": "supabase/migrations/20261030133440_dashboard_realm_consistency.sql",
      "line": 546
     }
    }
@@ -71523,12 +71523,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030141523_restore_verified_completeness_history.sql",
+      "path": "supabase/migrations/20261030141523_restore_verified_completeness_history.sql",
       "line": 196
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030141523_restore_verified_completeness_history.sql",
+     "path": "supabase/migrations/20261030141523_restore_verified_completeness_history.sql",
      "line": 196
     }
    }
@@ -71548,12 +71548,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+      "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
       "line": 111
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+     "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
      "line": 111
     }
    }
@@ -71598,12 +71598,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+      "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
       "line": 147
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql",
+     "path": "supabase/migrations/20261106105258_private_object_document_access.sql",
      "line": 147
     }
    }
@@ -71756,11 +71756,11 @@
       "line": 8
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
+      "path": "supabase/migrations/20260907073235_actor_test_realm_isolation.sql",
       "line": 246
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql",
+      "path": "supabase/migrations/20261106100603_object_current_authorization.sql",
       "line": 60
      }
     ]
@@ -72156,12 +72156,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 459
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 459
     }
    }
@@ -72206,12 +72206,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 489
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 489
     }
    }
@@ -72265,7 +72265,7 @@
       "line": 38
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 616
      }
     ]
@@ -72290,7 +72290,7 @@
       "line": 389
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 727
      }
     ]
@@ -72315,7 +72315,7 @@
       "line": 424
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 816
      }
     ]
@@ -72340,7 +72340,7 @@
       "line": 437
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 834
      }
     ]
@@ -72361,11 +72361,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 910
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 375
      }
     ]
@@ -72411,11 +72411,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 983
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 234
      }
     ]
@@ -72436,11 +72436,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 1008
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql",
+      "path": "supabase/migrations/20260907085838_list_feature_notifications.sql",
       "line": 265
      }
     ]
@@ -72461,12 +72461,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 1110
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 1110
     }
    }
@@ -72486,12 +72486,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 1162
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 1162
     }
    }
@@ -72511,15 +72511,15 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 1229
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql",
+      "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 3
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql",
+      "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 4
      }
     ]
@@ -72540,12 +72540,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 1258
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 1258
     }
    }
@@ -72565,12 +72565,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+      "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
       "line": 1297
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
+     "path": "supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql",
      "line": 1297
     }
    }
@@ -72590,12 +72590,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906031607_smtp_settings.sql",
+      "path": "supabase/migrations/20260906031607_smtp_settings.sql",
       "line": 43
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906031607_smtp_settings.sql",
+     "path": "supabase/migrations/20260906031607_smtp_settings.sql",
      "line": 43
     }
    }
@@ -72615,12 +72615,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906031607_smtp_settings.sql",
+      "path": "supabase/migrations/20260906031607_smtp_settings.sql",
       "line": 104
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906031607_smtp_settings.sql",
+     "path": "supabase/migrations/20260906031607_smtp_settings.sql",
      "line": 104
     }
    }
@@ -73106,7 +73106,7 @@
       "line": 2619
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql",
+      "path": "supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql",
       "line": 23
      }
     ]
@@ -73127,12 +73127,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 557
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 557
     }
    }
@@ -73152,12 +73152,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 559
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 559
     }
    }
@@ -73206,7 +73206,7 @@
       "line": 35
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 989
      }
     ]
@@ -73243,11 +73243,11 @@
       "line": 149
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261019142132_partner_api_identity_initplan.sql",
+      "path": "supabase/migrations/20261019142132_partner_api_identity_initplan.sql",
       "line": 18
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql",
+      "path": "supabase/migrations/20261106100603_object_current_authorization.sql",
       "line": 100
      }
     ]
@@ -73268,12 +73268,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 355
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 355
     }
    }
@@ -73293,12 +73293,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 434
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 434
     }
    }
@@ -73318,12 +73318,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 446
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 446
     }
    }
@@ -73343,12 +73343,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 503
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 503
     }
    }
@@ -73368,11 +73368,11 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 994
      },
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
+      "path": "supabase/migrations/20261106160017_thesaurus_prepared_publication.sql",
       "line": 60
      }
     ]
@@ -73393,12 +73393,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 570
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 570
     }
    }
@@ -73418,12 +73418,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 590
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 590
     }
    }
@@ -73443,12 +73443,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 927
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 927
     }
    }
@@ -73468,12 +73468,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 998
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 998
     }
    }
@@ -73493,12 +73493,12 @@
     "dynamic_sql": true,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 1013
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 1013
     }
    }
@@ -73518,12 +73518,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 231
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 231
     }
    }
@@ -73543,12 +73543,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 309
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 309
     }
    }
@@ -73568,12 +73568,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 361
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 361
     }
    }
@@ -73593,12 +73593,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+      "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
       "line": 439
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql",
+     "path": "supabase/migrations/20261106112948_thesaurus_publication.sql",
      "line": 439
     }
    }
@@ -73618,12 +73618,12 @@
     "dynamic_sql": true,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+      "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
       "line": 83
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+     "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
      "line": 83
     }
    }
@@ -73643,12 +73643,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+      "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
       "line": 146
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+     "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
      "line": 146
     }
    }
@@ -73668,12 +73668,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+      "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
       "line": 181
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+     "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
      "line": 181
     }
    }
@@ -73693,12 +73693,12 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+      "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
       "line": 226
      }
     ],
     "source": {
-     "path": "C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql",
+     "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
      "line": 226
     }
    }

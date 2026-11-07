@@ -300,7 +300,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           const body = await response.json();
           const detail = body?.object ?? body;
           if (reload && detail?.id === objectId) reload.workspace = true;
-          if (draftScope && detail?.id === objectId) draftScope.workspace = true;
+          if (draftScope && detail?.id === objectId) draftScope.workspacePages.add(request.frame().page());
           if (reread && holds.get(kind) === reread && detail?.id === objectId && detail?.name === historic[1]) {
             gate = reread;
             holds.delete(kind);
@@ -350,13 +350,13 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         closed: false, nativeLoginRequested: false, pageErrors: 0,
         legalReads: 0, legalPermissions: 0, summaryReads: 0, summaryFailures: 0, legalWrites: 0 };
       await context.route('**/*', (route) => routeEditorRequest(route, scene));
+      if (draftScope) context.on('page', (tab) => tab.on('pageerror', () => { scene.pageErrors += 1; }));
       const page = await context.newPage();
-      if (draftScope) page.on('pageerror', () => { scene.pageErrors += 1; });
       const login = await page.goto(requestedLogin);
       assert.ok(scene.nativeLoginRequested && login?.status() === 200 && login.url() === requestedLogin
         && login.request().redirectedFrom() === null, 'exact native login document must return HTTP 200 without redirects');
       await signInEditor(page, realm?.account ?? { email, password }, target);
-      return { page, scene, close: async () => {
+      return { page, context, scene, close: async () => {
         scene.closed = true;
         await context.close();
       } };
@@ -512,9 +512,14 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     assert.ok(secondAccount?.id && secondAccount.id !== writerId, 'two distinct browser accounts are required');
     const canonicalBeforeDrafts = canonical();
     const mutationsBeforeDrafts = [patches.length, publishCalls, restoreCalls];
-    const draftScene = await openAuthenticatedEditor(undefined, { userId: writerId });
+    const draftScopeFor = (userId) => ({ userId, workspacePages: new Set() });
+    const draftScene = await openAuthenticatedEditor(undefined, draftScopeFor(writerId));
     const draftPage = draftScene.page;
-    const draftName = draftPage.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
+    const nameField = (tab) => tab.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
+    const draftName = nameField(draftPage);
+    const passivePage = await draftScene.context.newPage();
+    const passiveName = nameField(passivePage);
+    const waitForDraftWorkspace = (tab) => assertion.poll(() => draftScene.scene.draftScope.workspacePages.has(tab)).toBe(true);
     const storedDraft = (userId) => draftPage.evaluate((key) => localStorage.getItem(key),
       `object-editor-draft:${encodeURIComponent(userId)}:${encodeURIComponent(objectId)}`);
     const originalDraftName = 'Synthetic local name for first account only';
@@ -530,21 +535,26 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await assertion(draftPage).toHaveURL(loginUrl);
       await assertion.poll(() => scope.loggedOut).toBe(true);
       await assertion(draftName).toHaveCount(0);
+      await assertion(passivePage).toHaveURL(loginUrl);
+      await assertion(passivePage.getByRole('button', { name: 'Se connecter', exact: true })).toBeVisible();
+      await assertion(passiveName).toHaveCount(0);
     }
     async function signInDraftEditor(userId, credentials) {
-      const scope = { userId };
-      draftScene.scene.draftScope = scope;
+      draftScene.scene.draftScope = draftScopeFor(userId);
       await signInEditor(draftPage, credentials);
-      await assertion.poll(() => scope.workspace).toBe(true);
+      await waitForDraftWorkspace(draftPage);
     }
 
-    await assertion.poll(() => draftScene.scene.draftScope.workspace).toBe(true);
+    await waitForDraftWorkspace(draftPage);
     await assertion(draftName).toHaveValue(canonicalBeforeDrafts[0]);
     assert.equal(await storedDraft(writerId), null);
     await draftName.fill(originalDraftName);
     await assertion.poll(async () => JSON.parse((await storedDraft(writerId)) ?? '{}').draft?.generalInfo?.name)
       .toBe(originalDraftName);
     const firstDraft = await storedDraft(writerId);
+    await passivePage.goto(editorUrl);
+    await waitForDraftWorkspace(passivePage);
+    await assertion(passiveName).toHaveValue(originalDraftName);
     await signOutDraftEditor();
     assert.equal(await storedDraft(writerId), firstDraft);
 
@@ -552,6 +562,13 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await assertion(draftName).toHaveValue(canonicalBeforeDrafts[0]);
     await assertion(draftName).toBeEditable();
     await assertion(draftPage.getByText(originalDraftName, { exact: true })).toHaveCount(0);
+    // The passive tab switches through native Auth propagation. Only a real workspace
+    // response with the current account's JWT can satisfy its own per-tab probe.
+    await assertion(passivePage).toHaveURL(editorUrl);
+    await waitForDraftWorkspace(passivePage);
+    await assertion(passiveName).toHaveValue(canonicalBeforeDrafts[0]);
+    await assertion(passiveName).toBeEditable();
+    await assertion(passivePage.getByText(originalDraftName, { exact: true })).toHaveCount(0);
     assert.equal(await storedDraft(secondAccount.id), null);
     const otherDraftName = 'Synthetic local name for second account only';
     await draftName.fill(otherDraftName);

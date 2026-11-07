@@ -147,6 +147,65 @@ for (const width of [320, 390, 768, 1180]) {
   });
 }
 
+test.describe('compact map with touch', () => {
+  test.use({ hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+
+  for (const width of [320, 390, 768, 1180]) {
+    test('touch opens the same object from the compact map at ' + width + 'px', async ({ page }, testInfo) => {
+      test.setTimeout(60_000);
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(() => {
+        const pointerTypes: string[] = [];
+        document.addEventListener('pointerdown', (event) => {
+          if (event.isTrusted) pointerTypes.push(event.pointerType);
+        }, true);
+        Object.defineProperty(window, '__mapTouchWitness', { value: pointerTypes });
+      });
+      const { errors, unexpected } = await offlineExplorer(page, testInfo, '/explorer?search=Hotel+Basalte');
+      await expect(page.locator('.explorer-result-card')).toHaveCount(1);
+      expect(await page.evaluate(() => window.innerWidth)).toBe(width);
+      await page.getByRole('button', { name: 'Carte', exact: true }).tap();
+      const pin = page.locator('.map-marker-pin').first();
+      await expect(pin).toBeVisible({ timeout: 20_000 });
+      const name = (await pin.getAttribute('aria-label'))!.replace(/^Ouvrir /, '');
+      await pin.tap();
+
+      const preview = page.getByRole('dialog');
+      await expect(preview.getByText(name, { exact: true })).toBeVisible();
+      await expect(preview.locator('img')).toBeVisible();
+      const open = preview.getByRole('button', { name: 'Ouvrir la fiche', exact: true });
+      await expect(open).toBeVisible();
+      await expect(preview).toHaveAccessibleName(name);
+      const title = await preview.getByRole('heading', { name, exact: true }).boundingBox();
+      const target = await open.boundingBox();
+      expect(target?.height).toBeGreaterThanOrEqual(44);
+      expect(target?.width).toBeGreaterThanOrEqual(44);
+      expect(target!.y).toBeGreaterThanOrEqual(title!.y + title!.height);
+      await open.tap();
+
+      const drawer = page.locator('.drawer-panel');
+      await expect(drawer.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
+      await expect(open).toHaveCount(0);
+      await drawer.getByRole('button', { name: 'Fermer', exact: true }).tap();
+      await expect(drawer).toHaveCount(0);
+      expect(await page.evaluate(() => Reflect.get(window, '__mapTouchWitness')))
+        .toEqual(['touch', 'touch', 'touch', 'touch']);
+
+      if (width === 390) {
+        await pin.focus();
+        await page.keyboard.press('Enter');
+        await expect(open).toBeFocused();
+        await page.keyboard.press('Enter');
+        await expect(drawer.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(drawer).toHaveCount(0);
+      }
+      expect(unexpected).toEqual([]);
+      expect(errors).toEqual([]);
+    });
+  }
+});
+
 test('an unfinished hover of B preserves the displayed A preview focus owner', async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1180, height: 900 });

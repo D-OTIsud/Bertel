@@ -11,7 +11,8 @@ import { useExplorerCardsQuery, useExplorerMarkersQuery, useExplorerReferencesQu
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useExplorerStore } from '../store/explorer-store';
 import { useExplorerViewStore, type ExplorerViewMode } from '../store/explorer-view-store';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useUiStore } from '../store/ui-store';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { EmptyState } from '../components/common/EmptyState';
 import { ExplorerActiveFilters } from '../components/explorer/ExplorerActiveFilters';
 import { buildExplorerErrorBanner } from './explorer-error';
@@ -96,6 +97,7 @@ export default function ExplorerPage() {
   const setVisibleObjectIds = useExplorerStore((state) => state.setVisibleObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
   const clearSelectedCard = useExplorerStore((state) => state.clearSelectedCard);
+  const openDrawer = useUiStore((state) => state.openDrawer);
 
   // A card selected from the map may not be in the lazily-loaded list yet — fall back to markers.
   const selectedCard = selectedCardId
@@ -171,7 +173,7 @@ export default function ExplorerPage() {
           if (!open) clearSelectedCard();
         }}
       >
-        <SheetContent side="bottom" showClose={true} className="border-0 bg-transparent p-0 shadow-none">
+        <SheetContent side="bottom" showClose={true} aria-describedby={undefined} className="border-0 bg-transparent p-0 shadow-none">
           {selectedCard ? (
             <div className="panel-card panel-card--nested" style={{ padding: '0.9rem 1rem' }}>
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -190,7 +192,19 @@ export default function ExplorerPage() {
                 ) : null}
                 <div style={{ display: 'grid', gap: '0.35rem' }}>
                   <div className="eyebrow">Fiche</div>
-                  <strong style={{ fontSize: 18, lineHeight: 1.2 }}>{selectedCard.name}</strong>
+                  <SheetTitle className="font-bold tracking-normal" style={{ fontSize: 18, lineHeight: 1.2 }}>
+                    {selectedCard.name}
+                  </SheetTitle>
+                  <button
+                    type="button"
+                    className="primary-button min-h-[44px]"
+                    onClick={() => {
+                      clearSelectedCard();
+                      openDrawer(selectedCard.id);
+                    }}
+                  >
+                    Ouvrir la fiche
+                  </button>
                 </div>
               </div>
             </div>

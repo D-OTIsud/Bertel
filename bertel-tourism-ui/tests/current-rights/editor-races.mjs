@@ -22,7 +22,7 @@ const legalRpcKinds = new Map([
   ['/rest/v1/rpc/get_object_workspace_permissions', 'legal-permission'],
 ]);
 
-async function startApp(local) {
+export async function startApp(local, { signDocuments = false } = {}) {
   const socket = createServer();
   socket.listen(0, loopback);
   await once(socket, 'listening');
@@ -39,13 +39,14 @@ async function startApp(local) {
     env: {
       ...safeEnv, NEXT_TELEMETRY_DISABLED: '1',
       NEXT_PUBLIC_ENABLE_DEMO_MODE: 'false', NEXT_PUBLIC_SUPABASE_URL: local.origin,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: local.anonymous.apikey, SUPABASE_SERVICE_ROLE_KEY: '',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: local.anonymous.apikey,
+      SUPABASE_SERVICE_ROLE_KEY: signDocuments ? local.service.apikey : '',
     },
   });
   return { origin, server, safeEnv };
 }
 
-async function waitForApp({ origin, server }) {
+export async function waitForApp({ origin, server }) {
   const deadline = Date.now() + 90_000;
   while (Date.now() < deadline && server.exitCode === null && server.signalCode === null) {
     try {
@@ -56,6 +57,13 @@ async function waitForApp({ origin, server }) {
     await sleep(250);
   }
   throw new Error('Owned Next editor did not start on loopback');
+}
+
+export async function stopApp({ server }) {
+  if (!server.pid || server.exitCode !== null || server.signalCode !== null) return;
+  const exited = once(server, 'exit').then(() => true);
+  try { process.kill(-server.pid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+  assert.ok(await Promise.race([exited, sleep(10_000, false, { ref: false })]), 'owned Next editor did not stop');
 }
 
 export async function testEditorRaces({ local, objectId, writerId, email, password, secondAccount }) {
@@ -502,9 +510,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await browser?.close();
     } finally {
       rejectProxy.close();
-      if (app.server.pid && app.server.exitCode === null && app.server.signalCode === null) {
-        try { process.kill(-app.server.pid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
-      }
+      await stopApp(app);
     }
   }
   if (routeFailure) throw routeFailure;

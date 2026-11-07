@@ -1,0 +1,475 @@
+/**
+ * « Envoyer à l'office » — le seul geste qui fait partir quelque chose.
+ *
+ * Trois invariants s'y jouent, et chacun a coûté une revue :
+ *
+ *  1. D12 — le portail surcharge UNIQUEMENT `metadata.field/before/after` par une projection
+ *     lisible. `section`, `rpc`, `manual_apply` et `payload` restent BYTE-IDENTIQUES à ce que
+ *     `buildContributorSubmission` produit : ce sont les seules clés que le serveur valide et
+ *     rejoue à l'approbation. Une projection qui déborderait sur `payload` ferait approuver un
+ *     contenu que personne n'a construit.
+ *
+ *  2. Une rubrique en mode dégradé (`unavailable`) n'est JAMAIS envoyée. Le builder revérifie
+ *     baseline et brouillon pour bloquer aussi une copie locale ancienne ou des rubriques périmées.
+ *
+ *  3. UN SEUL appel : le RPC est transactionnel, un échec ne laisse rien passer.
+ */
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { PortalSendModal } from './PortalSendModal';
+import { buildContributorSubmission } from '../object-editor/contributor-proposal';
+import { buildPortalRubrics, type BuiltPortalRubric } from './portal-rubrics';
+import { portalDraftKey, readPortalSent } from './usePortalDraft';
+import * as portalService from '../../services/portal';
+import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
+import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
+import type { WorkspaceModuleId } from '../../services/object-workspace';
+import { readWriteCompatibility } from '../../services/write-compatibility';
+import { useSessionStore } from '../../store/session-store';
+import { portalModules } from './__fixtures__/portal-fixtures';
+import { portalPhotoDraft } from '../../services/portal-photos';
+
+jest.mock('../../services/portal');
+jest.mock('../../services/write-compatibility', () => ({
+  readWriteCompatibility: jest.fn().mockResolvedValue({ compatible: true, clientVersion: 1, minimumClientVersion: 1, serverWriteContractVersion: 1 }),
+}));
+const mockedPortal = portalService as jest.Mocked<typeof portalService>;
+
+const OBJ = 'RESRUN0001';
+const USER = 'u1';
+
+const modules = (over: Record<string, unknown> = {}) =>
+  ({
+    contacts: { objectItems: [], webItems: [], kindOptions: [], roleOptions: [] },
+    descriptions: { object: { chapo: { baseValue: '', values: {} }, description: { baseValue: '', values: {} } } },
+    openings: { periods: [], periodTypeOptions: [], unavailableReason: null },
+    characteristics: {
+      selectedAmenityCodes: [],
+      selectedPaymentCodes: [],
+      amenityGroups: [],
+      paymentOptions: [],
+      unavailableReason: null,
+    },
+    capacityPolicies: {
+      capacityItems: [],
+      metricOptions: [],
+      petPolicy: { accepted: null, conditions: '' },
+      groupPolicy: {},
+      stayPolicy: {},
+      unavailableReason: null,
+    },
+    pricing: { prices: [], priceKindOptions: [], priceUnitOptions: [], priceTypeOptions: [], discounts: [], promotions: [], unavailableReason: null },
+    activity: { durationMin: '', minParticipants: '', maxParticipants: '', minAge: '', unavailableReason: null },
+    ...over,
+  }) as unknown as ObjectWorkspaceModules;
+
+const baseline = modules();
+const draft = modules({
+  contacts: {
+    objectItems: [
+      { id: 'c1', kindCode: 'phone', kindLabel: 'Téléphone', value: '0692 45 12 30', isPublic: true, isPrimary: true },
+    ],
+    webItems: [],
+    kindOptions: [],
+    roleOptions: [],
+  },
+  openings: {
+    periods: [
+      {
+        recordId: 'p1',
+        label: 'Horaires habituels',
+        isClosure: false,
+        recurrence: 'always',
+        startDate: '',
+        endDate: '',
+        allYears: true,
+        closedDays: [],
+        order: '1',
+        seasonTypeCode: '',
+        weekdays: [{ code: 'monday', label: 'lundi', slots: [{ start: '11:30', end: '14:30' }] }],
+      },
+    ],
+    periodTypeOptions: [],
+    unavailableReason: null,
+  },
+});
+
+function fakeEditor(): ObjectEditorState {
+  return {
+    objectId: OBJ,
+    draft,
+    baseline,
+    dirtySections: { contacts: true, openings: true },
+    isDirty: true,
+    patchModule: jest.fn(),
+    replaceModule: jest.fn(),
+    resetModule: jest.fn(),
+    commitModules: jest.fn(),
+    setSavedStatus: jest.fn(),
+  } as unknown as ObjectEditorState;
+}
+
+const floor = ['legal', 'publication', 'media', 'provider'];
+
+function rubrics(over: Partial<Parameters<typeof buildPortalRubrics>[0]> = {}): BuiltPortalRubric[] {
+  return buildPortalRubrics({
+    archetype: 'RES',
+    draft,
+    dirty: { contacts: true, openings: true },
+    masked: [],
+    floor,
+    pendingModules: new Set(),
+    rejectedModules: new Set(),
+    ...over,
+  });
+}
+
+function setup(over: { rubrics?: BuiltPortalRubric[]; onSent?: jest.Mock; editor?: ObjectEditorState; recoveryConflicts?: WorkspaceModuleId[] } = {}) {
+  const editor = over.editor ?? fakeEditor();
+  const onSent = over.onSent ?? jest.fn();
+  const onNoteChange = jest.fn();
+  render(
+    <PortalSendModal
+      open
+      onOpenChange={jest.fn()}
+      objectId={OBJ}
+      userId={USER}
+      archetype="RES"
+      editor={editor}
+      rubrics={over.rubrics ?? rubrics()}
+      note=""
+      onNoteChange={onNoteChange}
+      onSent={onSent}
+      recoveryConflicts={over.recoveryConflicts}
+    />,
+  );
+  return { editor, onSent, onNoteChange };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  window.localStorage.clear();
+  mockedPortal.submitActorFiche.mockResolvedValue({
+    submissionId: 'sub-1',
+    taskId: 't-1',
+    changeCount: 2,
+    assigneeCount: 1,
+  });
+});
+
+test('les photos seules utilisent leurs identifiants privés sans changer les autres builders', async () => {
+  const photoBase = portalModules();
+  const photoDraft = { ...photoBase, media: { ...photoBase.media, objectItems: [
+    portalPhotoDraft({ id: '00000000-0000-4000-a000-000000008404', title: 'Façade', width: 1800, height: 1200 }, 'Auteur', null, photoBase.media),
+  ] } };
+  const editor = { ...fakeEditor(), baseline: photoBase, draft: photoDraft, dirtySections: { media: true } } as ObjectEditorState;
+  setup({ editor, rubrics: rubrics({ draft: photoDraft, dirty: { media: true }, floor: ['legal', 'publication', 'provider'] }) });
+  await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+  await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+  const envelopes = mockedPortal.submitActorFiche.mock.calls[0][1];
+  expect(envelopes).toHaveLength(1);
+  expect(envelopes[0]).toMatchObject({ targetTable: 'media',
+    payload: { additions: [{ upload_id: '00000000-0000-4000-a000-000000008404', credit: 'Auteur', replace_media_id: null }] },
+    metadata: { rpc: 'publish_portal_photo_additions', manual_apply: false },
+  });
+  expect(JSON.stringify(envelopes[0].payload)).not.toMatch(/https?:|storage:/);
+});
+
+test('Équipements et Accessibilité partent en une seule enveloppe complète et une seule ligne d’envoi', async () => {
+  const base = portalModules();
+  Object.assign(base.characteristics, {
+    selectedAmenityCodes: ['legacy_hidden', 'acc_unknown'], selectedPaymentCodes: ['visa'],
+    selectedLanguages: [{ languageId: '', code: 'fr', label: 'Français', levelId: '', levelCode: '', levelLabel: '' }],
+    selectedEnvironmentCodes: ['mountain'],
+    amenityGroups: [
+      { familyCode: 'general', familyLabel: 'Général', options: [{ id: 'wifi', code: 'wifi', label: 'Wi-Fi', disabilityTypes: [] }] },
+      { familyCode: 'accessibility', familyLabel: 'Accessibilité', options: [{ id: 'parking', code: 'acc_pmr_parking', label: 'Places PMR', disabilityTypes: ['motor'] }] },
+    ],
+  });
+  const next = { ...base, characteristics: { ...base.characteristics,
+    selectedAmenityCodes: [...base.characteristics.selectedAmenityCodes, 'wifi', 'acc_pmr_parking'] } };
+  const editor = { ...fakeEditor(), baseline: base, draft: next, dirtySections: { characteristics: true } } as ObjectEditorState;
+  setup({ editor, rubrics: rubrics({ baseline: base, draft: next, dirty: { characteristics: true } }) });
+  expect(screen.getByText('Équipements et moyens de paiement · Accessibilité')).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })).toHaveLength(1);
+  await userEvent.click(screen.getByRole('button', { name: 'Retirer de l’envoi' }));
+  expect(screen.getByRole('button', { name: 'Envoyer' })).toHaveAttribute('aria-disabled', 'true');
+  await userEvent.click(screen.getByRole('button', { name: 'Remettre dans l’envoi' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+  await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+  const envelopes = mockedPortal.submitActorFiche.mock.calls[0][1];
+  expect(envelopes).toHaveLength(1);
+  const expected = buildContributorSubmission(OBJ, 'characteristics', base, next);
+  expect(envelopes[0]).toEqual({ ...expected, metadata: { ...expected.metadata,
+    field: 'Équipements et moyens de paiement · Accessibilité',
+    before: expect.any(String), after: expect.any(String),
+  } });
+  expect(envelopes[0].payload).toMatchObject({
+    amenities: ['legacy_hidden', 'acc_unknown', 'wifi', 'acc_pmr_parking'].map(amenity_code => ({ amenity_code })),
+    languages: [{ language_id: null, language_code: 'fr', level_id: null, level_code: null }],
+    payment_methods: [{ payment_method_code: 'visa' }], environment_tags: [{ environment_tag_code: 'mountain' }],
+  });
+  expect(envelopes[0].metadata).toMatchObject({ rpc: 'save_object_commercial', section: 'characteristics' });
+  expect(editor.commitModules).toHaveBeenCalledWith(['characteristics'], { sentModules: next });
+});
+
+describe('PortalSendModal', () => {
+  it('bloque l’envoi si le protocole serveur est incompatible', async () => {
+    const priorDemoMode = useSessionStore.getState().demoMode;
+    useSessionStore.setState({ demoMode: false });
+    (readWriteCompatibility as jest.Mock).mockResolvedValueOnce({ compatible: false, clientVersion: 2, minimumClientVersion: 1, serverWriteContractVersion: 1, reason: 'versions incompatibles' });
+    setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(await screen.findByText(/versions incompatibles/)).toBeInTheDocument();
+    expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
+    useSessionStore.setState({ demoMode: priorDemoMode });
+  });
+
+  it('ne soumet pas tant qu’un conflit de reprise du brouillon reste à vérifier', async () => {
+    render(<PortalSendModal open onOpenChange={jest.fn()} objectId={OBJ} userId={USER} archetype="RES" editor={fakeEditor()} rubrics={rubrics()} note="" onNoteChange={jest.fn()} onSent={jest.fn()} recoveryConflicts={['contacts']} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(await screen.findByText(/brouillon a été conservé/)).toBeInTheDocument();
+    expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
+  });
+
+  it('liste les rubriques modifiées avec leur régime, en mots', () => {
+    setup();
+
+    expect(screen.getByText('Vos coordonnées')).toBeInTheDocument();
+    expect(screen.getByText('Vos horaires')).toBeInTheDocument();
+    // `openings` est auto-dispatch, `contacts` non : le partenaire lit ce que l'office fera.
+    expect(screen.getByText('l’office les publiera tout de suite')).toBeInTheDocument();
+    expect(screen.getByText('l’office les recopiera lui-même')).toBeInTheDocument();
+  });
+
+  it('Envoyer construit UNE enveloppe par module modifié, surcharge SEULEMENT field/before/after (D12) et appelle submitActorFiche UNE fois', async () => {
+    setup();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+    const [objectId, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
+    expect(objectId).toBe(OBJ);
+    expect(envelopes).toHaveLength(2);
+
+    for (const module of ['contacts', 'openings'] as const) {
+      const expected = buildContributorSubmission(OBJ, module, baseline, draft);
+      const actual = envelopes.find((entry) => (entry.metadata as { section: string }).section === module);
+      expect(actual).toBeDefined();
+      // Byte-identiques : c'est ce que le serveur valide et rejoue.
+      expect(actual?.payload).toEqual(expected.payload);
+      expect(actual?.targetTable).toBe(expected.targetTable);
+      expect(actual?.action).toBe(expected.action);
+      const metadata = actual?.metadata as Record<string, unknown>;
+      const source = expected.metadata as Record<string, unknown>;
+      expect(metadata.rpc).toEqual(source.rpc);
+      expect(metadata.section).toEqual(source.section);
+      expect(metadata.manual_apply).toEqual(source.manual_apply);
+      // …et SEULES ces trois clés-là changent.
+      expect(Object.keys(metadata).sort()).toEqual(Object.keys(source).sort());
+      expect(metadata.field).not.toEqual(source.field);
+      expect(String(metadata.after)).not.toContain('{');
+    }
+  });
+
+  it('une rubrique INDISPONIBLE mais modifiée n’est JAMAIS envoyée', async () => {
+    // Le filtrage de rubrique écarte d'abord les lectures dégradées visibles dans l'UI.
+    const degraded = rubrics({
+      draft: modules({
+        contacts: { objectItems: [], webItems: [], kindOptions: [], roleOptions: [] },
+        openings: { periods: [], periodTypeOptions: [], unavailableReason: 'Chargement des horaires en échec.' },
+      }),
+    });
+    setup({ rubrics: degraded });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+    const [, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
+    expect(envelopes.map((entry) => (entry.metadata as { section: string }).section)).toEqual(['contacts']);
+  });
+
+  it.each(['baseline', 'draft'] as const)('refuse tout RPC si la tranche %s est indisponible malgré une rubrique dirty', async (source) => {
+    const editor = fakeEditor();
+    const incomplete = modules({ openings: { periods: [], periodTypeOptions: [], unavailableReason: 'Horaires non chargés.' } });
+    const guardedEditor = { ...editor, [source]: incomplete } as ObjectEditorState;
+    setup({ editor: guardedEditor, rubrics: rubrics({ dirty: { openings: true } }) });
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/préparer/i);
+    expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
+    expect(guardedEditor.commitModules).not.toHaveBeenCalled();
+  });
+
+  it('envoie toutes les traductions longues en clair et les conserve dans le récapitulatif envoyé', async () => {
+    const values = { en: 'English '.repeat(300), cre: 'Kréol '.repeat(400), de: 'Deutsch '.repeat(300) };
+    const translated = modules({ descriptions: { object: {
+      chapo: { baseValue: 'Accroche', values: { fr: 'Accroche' } },
+      description: { baseValue: 'Présentation FR', values: { fr: 'Présentation FR', ...values } },
+    } } });
+    const editor = { ...fakeEditor(), draft: translated, dirtySections: { descriptions: true } };
+    setup({ editor, rubrics: rubrics({ draft: translated, dirty: { descriptions: true } }) });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+    const [, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
+    expect(envelopes).toHaveLength(1);
+    expect(envelopes[0].payload).toEqual(translated.descriptions);
+    const after = String(envelopes[0].metadata?.after);
+    const sent = readPortalSent(USER, OBJ)?.lines.descriptions?.join('\n') ?? '';
+    for (const [code, label] of [['en', 'English'], ['cre', 'Créole'], ['de', 'Deutsch']] as const) {
+      const fullTranslation = `Présentation (${label}) : ${values[code].trim()}`;
+      expect(after).toContain(fullTranslation);
+      expect(sent).toContain(fullTranslation);
+    }
+    expect(after.length).toBeGreaterThan(6000);
+  });
+
+  it('« déjà en cours » (PT409) → phrase dédiée DANS la fenêtre, et le brouillon reste intact', async () => {
+    const already = Object.assign(new Error('Une vérification est déjà en cours.'), { code: 'PT409' });
+    mockedPortal.submitActorFiche.mockRejectedValue(already);
+    window.localStorage.setItem(portalDraftKey(USER, OBJ), '{"version":1}');
+    const { editor, onSent } = setup();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    expect(
+      await screen.findByText(
+        'L’office est déjà en train de vérifier cette fiche. Vous pourrez envoyer ces changements quand la vérification sera terminée.',
+      ),
+    ).toBeInTheDocument();
+    expect(onSent).not.toHaveBeenCalled();
+    expect(editor.commitModules).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(portalDraftKey(USER, OBJ))).toBe('{"version":1}');
+  });
+
+  it('« rubrique fermée » (22023) → dit quoi FAIRE : la retirer de l’envoi', async () => {
+    mockedPortal.submitActorFiche.mockRejectedValue(Object.assign(new Error('refus'), { code: '22023' }));
+    setup();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    expect(
+      await screen.findByText(
+        'Une rubrique n’est plus modifiable depuis ici (l’office l’a fermée). Retirez-la de l’envoi, puis réessayez.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('une panne quelconque dit quoi faire — jamais « rien n’est perdu » sans suite', async () => {
+    mockedPortal.submitActorFiche.mockRejectedValue(new Error('Réseau indisponible.'));
+    setup();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Vérifiez votre connexion, puis réessayez');
+    expect(alert).toHaveTextContent('Rien n’est perdu');
+  });
+
+  it('succès : les modules envoyés sont commités, l’instantané est écrit, le brouillon est purgé', async () => {
+    window.localStorage.setItem(portalDraftKey(USER, OBJ), '{"version":1}');
+    const { editor, onSent } = setup();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(onSent).toHaveBeenCalledTimes(1));
+    expect(editor.commitModules).toHaveBeenCalledWith(expect.arrayContaining(['contacts', 'openings']), { sentModules: editor.draft });
+    // Sans instantané, un rechargement remet les valeurs PUBLIÉES dans les champs et le
+    // partenaire croit son envoi perdu.
+    const sent = JSON.parse(window.localStorage.getItem(`portal-sent:${USER}:${OBJ}`) ?? '{}');
+    expect(sent.lines.contacts[0]).toContain('0692 45 12 30');
+    expect(window.localStorage.getItem(portalDraftKey(USER, OBJ))).toBeNull();
+  });
+
+  it('« Retirer de l’envoi » ne DÉTRUIT RIEN : la rubrique sort de l’envoi, la saisie reste', async () => {
+    // Le mot promet « je le garde, je l'enverrai plus tard ». `resetModule` remettrait la
+    // tranche à la baseline — les valeurs tapées seraient perdues, et le brouillon réécrit
+    // sans elles 800 ms plus tard. C'était le seul geste destructif de l'écran sans
+    // confirmation.
+    const { editor } = setup();
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })[0]);
+
+    expect(editor.resetModule).not.toHaveBeenCalled();
+    expect(screen.getByText('Vos coordonnées')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remettre dans l’envoi' })).toBeInTheDocument();
+  });
+
+  it('une rubrique retirée ne part PAS, les autres si', async () => {
+    setup();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })[0]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+    const [, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
+    expect(envelopes.map((entry) => (entry.metadata as { section: string }).section)).toEqual(['openings']);
+  });
+
+  it('« Remettre dans l’envoi » la remet', async () => {
+    setup();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })[0]);
+    await userEvent.click(screen.getByRole('button', { name: 'Remettre dans l’envoi' }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+    const [, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
+    expect(envelopes).toHaveLength(2);
+  });
+
+  it('tout retirer désarme l’envoi au lieu de partir à vide (le serveur refuserait)', async () => {
+    setup();
+    for (const button of screen.getAllByRole('button', { name: 'Retirer de l’envoi' })) {
+      await userEvent.click(button);
+    }
+
+    expect(screen.getByRole('button', { name: 'Envoyer' })).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
+  });
+
+  it('une tranche abîmée dit qu’on n’a pas pu PRÉPARER l’envoi — jamais « vérifiez votre connexion »', async () => {
+    // `buildContributorSubmission` jette sur une tranche incomplète (`toNullableText`
+    // reçoit `undefined`). Le message générique désignerait un problème inexistant : le
+    // partenaire vérifierait son wifi pendant que la vraie panne est ailleurs.
+    // Une période sans `closedDays` : `buildOpeningsPayload` fait `period.closedDays.map`
+    // et jette. C'est bien la TRANCHE de l'éditeur qui est lue, pas celle des rubriques.
+    const brokenDraft = modules({
+      openings: {
+        periods: [{ recordId: null, label: '', isClosure: false, recurrence: 'always', startDate: '', endDate: '', allYears: true, weekdays: [] }],
+        periodTypeOptions: [],
+        unavailableReason: null,
+      },
+    });
+    const brokenEditor = {
+      ...fakeEditor(),
+      draft: brokenDraft,
+      dirtySections: { openings: true },
+    } as unknown as ObjectEditorState;
+    render(
+      <PortalSendModal
+        open
+        onOpenChange={jest.fn()}
+        objectId={OBJ}
+        userId={USER}
+        archetype="RES"
+        editor={brokenEditor}
+        rubrics={rubrics({ draft: brokenDraft, dirty: { openings: true } })}
+        note=""
+        onNoteChange={jest.fn()}
+        onSent={jest.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Nous n’avons pas pu préparer votre envoi');
+    expect(alert).toHaveTextContent('Contactez votre office de tourisme');
+    expect(alert).not.toHaveTextContent('Vérifiez votre connexion');
+    // Et le bouton redevient utilisable : il ne reste pas figé sur « Envoi… ».
+    expect(screen.getByRole('button', { name: 'Envoyer' })).toBeInTheDocument();
+    expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
+  });
+});

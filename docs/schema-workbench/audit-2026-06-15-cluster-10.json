@@ -1,0 +1,272 @@
+{
+  "cluster": 10,
+  "generated_at": "2026-06-15",
+  "scope": [
+    "taxonomy_act", "taxonomy_asc", "taxonomy_camp", "taxonomy_com", "taxonomy_fma",
+    "taxonomy_hlo", "taxonomy_hot", "taxonomy_hpa", "taxonomy_iti", "taxonomy_loi",
+    "taxonomy_org", "taxonomy_pcu", "taxonomy_pna", "taxonomy_prd", "taxonomy_psv",
+    "taxonomy_res", "taxonomy_rva", "taxonomy_spu", "taxonomy_vil"
+  ],
+  "notes": {
+    "source_files": [
+      "Base de donnée DLL et API/seeds_data.sql (lines ~1880-2200): taxonomy_hot, taxonomy_act, taxonomy_com",
+      "Base de donnée DLL et API/old_data_enrichment_20260512/01_enrich_imported_old_data.sql (lines 158-163): taxonomy_hlo, taxonomy_res, taxonomy_loi, taxonomy_org, taxonomy_camp",
+      "Base de donnée DLL et API/old_data_enrichment_20260512/03_correct_old_data_object_types.sql: taxonomy_psv",
+      "Base de donnée DLL et API/migration_object_type_spu.sql: taxonomy_spu (3 initial leaves; 11 more via taxonomy_seeds_coverage)",
+      "Base de donnée DLL et API/migration_object_type_prd.sql: taxonomy_prd (6 leaves)",
+      "Base de donnée DLL et API/migration_taxonomy_seeds_coverage.sql: 8 new domains (pna,pcu,vil,iti,fma,hpa,rva,asc) + spu extensions + com extensions + loi well-being branch",
+      "Base de donnée DLL et API/migration_taxonomy_assignable_cleanup.sql: structural cleanup (is_assignable, merges, PSV flatten)"
+    ],
+    "doc_count_methodology": "doc_count values are from docs/api-db-reference.html '<details><summary><code>taxonomy_*</code> (N valeurs)'. These counts are STALE (generated from a prior db-graph snapshot) and significantly exceed live ref_code counts — the discrepancy is documented as D4 doc drift. The doc generator appears to have counted entries from a database state that pre-dates migration_taxonomy_assignable_cleanup.sql (which pruned near-duplicate HLO nodes and flattened a PSV wrapper) and possibly other cleanups. The inflated counts are NOT a signal of live-only codes — no live-only codes were found. See D4 findings.",
+    "live_db_queried": "2026-06-15 — live Supabase project",
+    "object_type_enum_live": ["RES","PCU","PNA","ORG","ITI","VIL","HPA","ASC","COM","HOT","HLO","LOI","FMA","CAMP","PSV","RVA","ACT","SPU","PRD"],
+    "types_with_zero_objects": ["ASC","FMA","HPA","ITI","PNA","RVA","VIL"],
+    "partition_routing": "ALL 19 taxonomy_* domains route to the DEFAULT partition (ref_code_other). No dedicated partitions exist for any taxonomy domain. This is confirmed: 211 live taxonomy rows are all in ref_code_other."
+  },
+  "matrix": [
+    {
+      "unit": "taxonomy_act",
+      "live_count": 13,
+      "source_count": 13,
+      "doc_count": 39,
+      "db_usage_distinct": 9,
+      "verdict": "MATCH — 12 assignable leaves + 1 root. 9 of 12 used (3 unused: guided_climbing, guided_snorkeling, surf_lessons — legitimately forward-looking). Doc count inflated (stale snapshot D4)."
+    },
+    {
+      "unit": "taxonomy_asc",
+      "live_count": 7,
+      "source_count": 7,
+      "doc_count": 21,
+      "db_usage_distinct": 0,
+      "verdict": "MATCH — 6 assignable leaves + 1 root. 0 objects of type ASC live; all leaves unused (forward-looking, not a gap). Doc count inflated (stale snapshot D4)."
+    },
+    {
+      "unit": "taxonomy_camp",
+      "live_count": 3,
+      "source_count": 3,
+      "doc_count": 10,
+      "db_usage_distinct": 2,
+      "verdict": "MATCH — 2 assignable leaves + 1 root, but structure is depth-3: 'camping' (is_assignable=true) has a child 'camping_chez_l_habitant'. Both leaves used (camping=2, camping_chez_l_habitant=1). Note: 'camping' is both an intermediate and assignable node — this is deliberate (migration_taxonomy_assignable_cleanup.sql rule: every non-root is assignable). Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_com",
+      "live_count": 9,
+      "source_count": 9,
+      "doc_count": 27,
+      "db_usage_distinct": 2,
+      "verdict": "MATCH — 8 assignable leaves + 1 root. Only 2 distinct codes used. 6 of 8 leaves unused (bakery, covered_market, flea_market, pharmacy, supermarket, weekly_market — 0 COM objects tagged to them; 6 COM live objects mapped to souvenir_shop and local_crafts only). Low usage but type has 6 objects. Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_fma",
+      "live_count": 8,
+      "source_count": 8,
+      "doc_count": 24,
+      "db_usage_distinct": 0,
+      "verdict": "MATCH — 7 assignable leaves + 1 root. 0 FMA objects live; all leaves unused (forward-looking). Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_hlo",
+      "live_count": 20,
+      "source_count": 20,
+      "doc_count": 75,
+      "db_usage_distinct": 17,
+      "verdict": "MATCH — 19 assignable leaves + 1 root; tree is depth 3 (chambre_d_hotes, gite_d_etape_et_de_randonnee are mid-level assignable parents with children; per-rule all non-root nodes assignable). 17 of 19 leaves used (2 unused: auberge, gite_d_etape_et_de_randonnee). Doc count 75 is massively inflated (stale snapshot pre-cleanup — chambre_d_hote and table_d_hote pruned by migration_taxonomy_assignable_cleanup.sql; closure rows also included). D4 doc drift."
+    },
+    {
+      "unit": "taxonomy_hot",
+      "live_count": 11,
+      "source_count": 11,
+      "doc_count": 42,
+      "db_usage_distinct": 2,
+      "verdict": "MATCH — 10 assignable leaves + 1 root (depth-3: 'hotel' is assignable mid-level parent). 2 of 10 leaves used; 9 HOT objects live with only 2 taxonomy codes assigned — low taxonomy coverage for a populated type. Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_hpa",
+      "live_count": 5,
+      "source_count": 5,
+      "doc_count": 15,
+      "db_usage_distinct": 0,
+      "verdict": "MATCH — 4 assignable leaves + 1 root. 0 HPA objects live; all leaves unused (forward-looking). Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_iti",
+      "live_count": 7,
+      "source_count": 7,
+      "doc_count": 21,
+      "db_usage_distinct": 0,
+      "verdict": "MATCH — 6 assignable leaves + 1 root. 0 ITI objects live; all leaves unused (forward-looking). Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_loi",
+      "live_count": 33,
+      "source_count": 33,
+      "doc_count": 120,
+      "db_usage_distinct": 22,
+      "verdict": "MATCH WITH NOTE — 32 assignable leaves + 1 root. Tree is multi-depth (depth 3+). 22 of 32 leaves used. STRUCTURAL ANOMALY: code='loi' (name='LOI', parent=root, is_assignable=true) is a residual assignable node that duplicates the root semantics — 1 object ('Au temps pour vous') is assigned to it. This orphan-semantic code should be reviewed: it was not present in migration_taxonomy_seeds_coverage.sql source and may be a pre-migration legacy node that survived deletion guard (no children, 1 assignment). Doc count 120 inflated (massive stale D4 + closure rows)."
+    },
+    {
+      "unit": "taxonomy_org",
+      "live_count": 8,
+      "source_count": 8,
+      "doc_count": 29,
+      "db_usage_distinct": 0,
+      "verdict": "MATCH — 7 assignable leaves + 1 root; depth-3 tree. 0 taxonomy assignments in object_taxonomy for taxonomy_org domain (ORG type has only 1 live object and no taxonomy assignment). All leaves unused but not a gap — ORG taxonomy is architectural (per-type classification for ORG objects, which are rare). Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_pcu",
+      "live_count": 7,
+      "source_count": 7,
+      "doc_count": 21,
+      "db_usage_distinct": 1,
+      "verdict": "MATCH — 6 assignable leaves + 1 root. 1 of 6 leaves used (2 PCU objects live). 5 leaves unused (legitimately small type). Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_pna",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 30,
+      "db_usage_distinct": 0,
+      "verdict": "MATCH — 9 assignable leaves + 1 root. 0 PNA objects live; all leaves unused (forward-looking). Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_prd",
+      "live_count": 7,
+      "source_count": 7,
+      "doc_count": 21,
+      "db_usage_distinct": 5,
+      "verdict": "MATCH — 6 assignable leaves + 1 root. 5 of 6 leaves used (34 PRD live objects). 1 leaf unused: apiculture (0 assignments — valid gap, only 1 confirmed bee farm candidate in import). Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_psv",
+      "live_count": 13,
+      "source_count": 13,
+      "doc_count": 46,
+      "db_usage_distinct": 6,
+      "verdict": "MATCH — 12 assignable leaves + 1 root; depth-3 tree (sub-trees under transport_mobility, autocar_compagnie, services, location_vehicule). 6 of 12 leaves used (18 PSV live objects). 6 unused: autocar_compagnie, excursion_touristique, location_de_voiture_avec_chauffeur, services, v_t_t_autres_cycles, vans_amenages — legitimately sparse. Doc count 46 inflated (stale D4 + pre-flatten of leisure_equipment_rental wrapper removed by assignable_cleanup)."
+    },
+    {
+      "unit": "taxonomy_res",
+      "live_count": 26,
+      "source_count": 26,
+      "doc_count": 99,
+      "db_usage_distinct": 23,
+      "verdict": "MATCH — 25 assignable leaves + 1 root; depth-3 tree. 23 of 25 leaves used (136 RES live objects, highest usage). 2 leaves unused: autre_type_de_restauration, table_d_hotes (parent node — assigned 0 but its sub-children used). Doc count 99 inflated (stale D4 + closure rows)."
+    },
+    {
+      "unit": "taxonomy_rva",
+      "live_count": 4,
+      "source_count": 4,
+      "doc_count": 12,
+      "db_usage_distinct": 0,
+      "verdict": "MATCH — 3 assignable leaves + 1 root. 0 RVA objects live; all leaves unused (forward-looking). Doc count inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_spu",
+      "live_count": 15,
+      "source_count": 15,
+      "doc_count": 45,
+      "db_usage_distinct": 1,
+      "verdict": "MATCH — 14 assignable leaves + 1 root. 1 SPU live object, 1 leaf used. 13 leaves unused but type is very new (§57 2026-06-11). Only 3 leaves have EN i18n (public_toilets, drinking_water, electric_charging — from migration_object_type_spu.sql initial seed); the 11 added by migration_taxonomy_seeds_coverage.sql are FR-only. Doc count 45 inflated (stale D4)."
+    },
+    {
+      "unit": "taxonomy_vil",
+      "live_count": 5,
+      "source_count": 5,
+      "doc_count": 15,
+      "db_usage_distinct": 0,
+      "verdict": "MATCH — 4 assignable leaves + 1 root. 0 VIL objects live; all leaves unused (forward-looking). Doc count inflated (stale D4)."
+    }
+  ],
+  "findings": [
+    {
+      "dimension": "D3",
+      "severity": "INFO",
+      "unit": "ALL",
+      "code": "D3-ENUM-BRANCH-1TO1-OK",
+      "title": "object_type enum ↔ taxonomy branch 1:1 integrity — VERIFIED CLEAN",
+      "evidence": "object_type enum has 19 values: RES,PCU,PNA,ORG,ITI,VIL,HPA,ASC,COM,HOT,HLO,LOI,FMA,CAMP,PSV,RVA,ACT,SPU,PRD. ref_code_domain_registry has exactly 19 taxonomy_* domains each with a distinct object_type FK. Cross-check: every enum value maps to exactly one taxonomy domain (taxonomy_<lower(type)>) and vice versa. No orphan branch (taxonomy domain without matching enum value). No missing branch (enum value without taxonomy domain). SPU and PRD were added last (migration_object_type_spu.sql + migration_object_type_prd.sql) and their registry rows confirmed live.",
+      "recommendation": "No action required. Add this invariant to the CI runbook: fresh-apply must verify COUNT(DISTINCT enumlabel) FROM pg_enum WHERE enumtypid='object_type'::regtype = COUNT(*) FROM ref_code_domain_registry WHERE domain LIKE 'taxonomy_%'."
+    },
+    {
+      "dimension": "D3",
+      "severity": "MEDIUM",
+      "unit": "ALL",
+      "code": "D3-PARTITION-ROUTING-DEFAULT",
+      "title": "All 19 taxonomy_* domains route to the DEFAULT partition (ref_code_other) — no dedicated partitions",
+      "evidence": "pg_inherits query returns 46 named partitions for ref_code; none are taxonomy_*. All 211 taxonomy rows confirmed in ref_code_other (SELECT COUNT(*) FROM ref_code_other WHERE domain LIKE 'taxonomy_%' = 211). Dedicated partitions only exist for non-taxonomy domains (accommodation_type, activity_type, etc.).",
+      "recommendation": "This is architecturally deliberate (taxonomy domains are managed dynamically via ref_code_domain_registry, not DDL partitions). However, it means taxonomy lookups on ref_code_other compete with all other 'other' domain rows for index scans. Verify that the composite index on (domain, code) covers ref_code_other efficiently for taxonomy reads. No action needed unless query plans degrade as taxonomy branches grow. Document the routing choice explicitly in schema_unified.sql comments."
+    },
+    {
+      "dimension": "D3",
+      "severity": "LOW",
+      "unit": "taxonomy_loi",
+      "code": "D3-LOI-ORPHAN-SEMANTIC-NODE",
+      "title": "taxonomy_loi code='loi' (name='LOI') is an assignable node semantically equivalent to the root — 1 object assigned",
+      "evidence": "Live: ref_code (domain='taxonomy_loi', code='loi', name='LOI', is_assignable=true, parent_code='root'). Used by 1 object ('Au temps pour vous', object_type=LOI). This code was not seeded by migration_taxonomy_seeds_coverage.sql (which seeded the branch extensions) and is absent from seeds_data.sql taxonomy seeds. It appears to be a pre-migration legacy node that survived the step-5 deletion guard in migration_loi_prd_cleanup_retype.sql (guard: 'NOT EXISTS object_taxonomy assignments' — this node had 1 assignment, blocking deletion).",
+      "recommendation": "LOW priority. Re-assign 'Au temps pour vous' to a meaningful taxonomy_loi leaf (e.g. wellness or a sub-category), then delete the orphan-semantic code='loi' node. Until then, the object is technically valid (object_type=LOI, domain matches). Track in deferred items."
+    },
+    {
+      "dimension": "D3",
+      "severity": "LOW",
+      "unit": "taxonomy_camp",
+      "code": "D3-CAMP-DUAL-ROLE-NODE",
+      "title": "taxonomy_camp 'camping' node is both a mid-level parent AND directly assignable with active assignments",
+      "evidence": "Live: code='camping' (is_assignable=true, parent=root) has a child 'camping_chez_l_habitant' (is_assignable=true, parent=camping). Per migration_taxonomy_assignable_cleanup.sql rule, all non-root nodes are assignable. 2 objects directly assigned to 'camping'; 1 object assigned to 'camping_chez_l_habitant'. This is architecturally correct under the uniform-assignability rule but means 'camping' acts as both a category label and a specific type.",
+      "recommendation": "INFO-level design note. The dual-role is intentional per §2026-06-08 decision (all non-root nodes are assignable; operators may choose broad or specific classification). No action required. Consider adding a 3rd leaf 'camping_classé' if distinctions become necessary."
+    },
+    {
+      "dimension": "D1",
+      "severity": "LOW",
+      "unit": "taxonomy_com",
+      "code": "D1-COM-LOW-TAXONOMY-COVERAGE",
+      "title": "6 COM objects live but only 2 distinct taxonomy codes assigned — 6 of 8 leaves entirely unused",
+      "evidence": "object_taxonomy shows 2 distinct codes used for taxonomy_com (souvenir_shop, local_crafts). 6 unused assignable leaves: bakery, covered_market, flea_market, pharmacy, supermarket, weekly_market. Yet 6 COM objects exist. Objects may be classified under souvenir_shop/local_crafts only, or 4 COM objects lack taxonomy assignments.",
+      "recommendation": "Review the 6 COM live objects and ensure each has a taxonomy assignment. The 3 market codes (weekly_market, covered_market, flea_market) and bakery/pharmacy/supermarket are legitimately forward-looking for future COM objects."
+    },
+    {
+      "dimension": "D1",
+      "severity": "LOW",
+      "unit": "taxonomy_hot",
+      "code": "D1-HOT-LOW-TAXONOMY-COVERAGE",
+      "title": "9 HOT objects live but only 2 distinct taxonomy codes assigned (2 leaves used of 10)",
+      "evidence": "object_taxonomy shows 2 distinct codes used for taxonomy_hot. 9 HOT objects live. 8 of 10 leaves are unused (boutique_hotel, business_hotel, eco_hotel, family_hotel, heritage_hotel, modern_hotel, romantic_hotel, traditional_hotel). Some HOT objects may lack taxonomy assignments.",
+      "recommendation": "Review the 9 HOT live objects and assign appropriate taxonomy_hot subcategory. Low completeness for a populated type."
+    },
+    {
+      "dimension": "D1",
+      "severity": "INFO",
+      "unit": "taxonomy_prd",
+      "code": "D1-PRD-APICULTURE-UNUSED",
+      "title": "taxonomy_prd 'apiculture' leaf unused — 0 assignments despite 34 PRD live objects",
+      "evidence": "object_taxonomy anti-join shows apiculture code has 0 assignments. 5 of 6 PRD leaves are used. 34 PRD objects exist.",
+      "recommendation": "Forward-looking: only 1 bee-farm candidate (miellerie) exists in the import candidates list. No action needed until that import lands."
+    },
+    {
+      "dimension": "D1",
+      "severity": "INFO",
+      "unit": "ALL",
+      "code": "D1-ZERO-OBJECT-TYPES-UNUSED",
+      "title": "7 object types have 0 live objects — all their taxonomy leaves are unused (forward-looking, not gaps)",
+      "evidence": "Types with 0 objects: ASC (6 leaves), FMA (7), HPA (4), ITI (6), PNA (9), RVA (3), VIL (4). Total 39 unused assignable leaves across these 7 types. All are recently seeded (migration_taxonomy_seeds_coverage.sql 2026-06-11) and await object creation (B1 milestone).",
+      "recommendation": "No action. Document in import backlog (§50/§57 deferred import candidates cover PNA, FMA, HPA, VIL, ASC, RVA objects)."
+    },
+    {
+      "dimension": "D2",
+      "severity": "INFO",
+      "unit": "ALL",
+      "code": "D2-I18N-FR-ONLY",
+      "title": "Taxonomy branches are FR-only — EN/ES/ZH/EL translations absent for 194 of 211 codes",
+      "evidence": "Live query: coalesce(name_i18n->>'en','')<>'' is TRUE for only a handful of codes: taxonomy_act root (en=ACT), taxonomy_com root (en=COM), taxonomy_hot root+hotel (en filled), taxonomy_spu first 3 leaves (public_toilets, drinking_water, electric_charging from migration_object_type_spu.sql which explicitly set name_en). All other 194+ codes are FR-only (name_i18n contains only 'fr' key, no 'en'). The seeds_data.sql i18n block (lines 1803-1817) only covered 10 taxonomy_hot leaf names in en/es; no other domains have i18n.",
+      "recommendation": "Establish scope before launching i18n pass: per CLAUDE.md, FR-fallback is the accepted launch state for taxonomy. Log as a deferred item for the post-MVP i18n pass (machine or human). Priority for EN: taxonomy_act, taxonomy_pna, taxonomy_pcu (international visitor-facing types). No urgency while the platform is FR-market only."
+    },
+    {
+      "dimension": "D4",
+      "severity": "MEDIUM",
+      "unit": "ALL",
+      "code": "D4-DOC-STALE-COUNTS",
+      "title": "docs/api-db-reference.html taxonomy code counts are massively inflated (stale db-graph snapshot)",
+      "evidence": "Doc shows '(N valeurs)' header counts far exceeding live ref_code counts: taxonomy_act doc=39 vs live=13, taxonomy_hlo doc=75 vs live=20, taxonomy_loi doc=120 vs live=33, taxonomy_res doc=99 vs live=26, taxonomy_psv doc=46 vs live=13, taxonomy_spu doc=45 vs live=15. The inflation factor (roughly 3x) matches the closure table entry count (e.g. taxonomy_act: 25 closure rows + 13 ref_code rows = 38, close to doc's 39). The db-graph generator used to produce the doc appears to aggregate both ref_code rows AND ref_code_taxonomy_closure rows into its 'valeurs' count, or was generated from a pre-cleanup DB state with more nodes. Either way the doc is STALE and misleading.",
+      "recommendation": "Regenerate api-db-reference.html using the db-graph tool after confirming the db-graph artifact reflects the post-migration_taxonomy_assignable_cleanup.sql state. Run 'graphify update .' per the WORKFLOW.md instruction. This is the D4 doc drift class already acknowledged in CLAUDE.md for taxonomy_*."
+    }
+  ]
+}

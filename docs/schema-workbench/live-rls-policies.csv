@@ -1,0 +1,385 @@
+schema,table_name,policy_name,command,permissive,roles,qual,with_check
+audit,audit_log,Insertion via triggers,INSERT,PERMISSIVE,"postgres,service_role",,true
+audit,audit_log,Lecture audit (admin/service_role),SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+audit,audit_log_2026_03,Insertion via triggers,INSERT,PERMISSIVE,"postgres,service_role",,true
+audit,audit_log_2026_03,Lecture audit (admin/service_role),SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+audit,audit_log_2026_04,Insertion via triggers,INSERT,PERMISSIVE,"postgres,service_role",,true
+audit,audit_log_2026_04,Lecture audit (admin/service_role),SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+audit,audit_log_2026_05,Insertion via triggers,INSERT,PERMISSIVE,"postgres,service_role",,true
+audit,audit_log_2026_05,Lecture audit (admin/service_role),SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+audit,audit_log_2026_06,Insertion via triggers,INSERT,PERMISSIVE,"postgres,service_role",,true
+audit,audit_log_2026_06,Lecture audit (admin/service_role),SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+audit,audit_log_2026_07,Insertion via triggers,INSERT,PERMISSIVE,"postgres,service_role",,true
+audit,audit_log_2026_07,Lecture audit (admin/service_role),SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+audit,audit_log_default,Insertion via triggers,INSERT,PERMISSIVE,"postgres,service_role",,true
+audit,audit_log_default,Lecture audit (admin/service_role),SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,actor,admin_actor_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,actor,ext_actor_read,SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (id = auth.uid()) OR (EXISTS ( SELECT 1
+   FROM (actor_object_role aor
+     JOIN object o ON ((o.id = aor.object_id)))
+  WHERE ((aor.actor_id = actor.id) AND api.can_read_extended(o.id)))))",
+public,actor_channel,admin_actor_channel_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,actor_channel,ext_actor_channel_read,SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (actor_id = auth.uid()))",
+public,actor_consent,own_actor_consent_read,SELECT,PERMISSIVE,public,(actor_id = auth.uid()),
+public,actor_consent,own_actor_consent_write,ALL,PERMISSIVE,public,(actor_id = auth.uid()),
+public,actor_object_role,admin_actor_object_role_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,actor_object_role,ext_actor_object_role_read,SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (actor_id = auth.uid()) OR api.can_read_extended(object_id))",
+public,app_branding_settings,branding_settings_read_authenticated,SELECT,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['authenticated'::text, 'service_role'::text, 'admin'::text]))",
+public,app_branding_settings,branding_settings_write_platform_admin,ALL,PERMISSIVE,public,api.is_platform_admin(),api.is_platform_admin()
+public,app_user_profile,Administration des profils utilisateur,DELETE,PERMISSIVE,public,api.is_platform_owner(),
+public,app_user_profile,Insertion de son profil utilisateur,INSERT,PERMISSIVE,public,,((id = auth.uid()) OR api.is_platform_owner())
+public,app_user_profile,Lecture de son profil utilisateur,SELECT,PERMISSIVE,public,((id = auth.uid()) OR api.is_platform_owner()),
+public,app_user_profile,Mise à jour de son profil utilisateur,UPDATE,PERMISSIVE,public,((id = auth.uid()) OR api.is_platform_owner()),((id = auth.uid()) OR api.is_platform_owner())
+public,audit_criteria,admin_audit_criteria_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,audit_criteria,pub_audit_criteria_read,SELECT,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM audit_template t
+  WHERE ((t.id = audit_criteria.template_id) AND ((t.is_active = true) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))))))",
+public,audit_result,admin_audit_result,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,audit_session,admin_audit_session,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,audit_template,admin_audit_template_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,audit_template,pub_audit_template_read,SELECT,PERMISSIVE,public,"((is_active = true) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])))",
+public,contact_channel,ext_contacts_org_actor,SELECT,PERMISSIVE,public,api.can_read_extended(object_id),
+public,contact_channel,owner_write_contact,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,contact_channel,pub_contacts_public,SELECT,PERMISSIVE,public,(is_public IS TRUE),
+public,crm_interaction,admin_crm_interaction,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,crm_task,admin_crm_task,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,i18n_translation,Lecture publique des traductions,SELECT,PERMISSIVE,public,true,
+public,i18n_translation,Écriture admin des traductions,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,incident_report,admin_incident_report,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,media,ext_media_org_actor,SELECT,PERMISSIVE,public,api.can_read_extended(object_id),
+public,media,owner_write_media,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,media,pub_media_published,SELECT,PERMISSIVE,public,(is_published IS TRUE),
+public,media_tag,Lecture publique des media_tag,SELECT,PERMISSIVE,public,true,
+public,media_tag,Écriture media_tag par propriétaire,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (EXISTS ( SELECT 1
+   FROM (media m
+     JOIN object o ON ((o.id = m.object_id)))
+  WHERE ((m.id = media_tag.media_id) AND (o.created_by = auth.uid())))))",
+public,meeting_room_equipment,owner_meeting_room_equipment_write,ALL,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object_meeting_room omr
+  WHERE ((omr.id = meeting_room_equipment.room_id) AND api.is_object_owner(omr.object_id))))",
+public,meeting_room_equipment,pub_meeting_room_equipment_read,SELECT,PERMISSIVE,public,true,
+public,object,Accès admin/service_role (object),ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object,extended_objects_org_actor,SELECT,PERMISSIVE,public,api.can_read_extended(id),
+public,object,insert_object_create_permission,INSERT,PERMISSIVE,public,,(api.user_can_create_object() AND (auth.uid() = created_by))
+public,object,owner_delete_object,DELETE,PERMISSIVE,public,(auth.uid() = created_by),
+public,object,owner_update_object,UPDATE,PERMISSIVE,public,(auth.uid() = created_by),(auth.uid() = created_by)
+public,object,public_objects_published,SELECT,PERMISSIVE,public,(status = 'published'::object_status),
+public,object_amenity,pub_amenity_read,SELECT,PERMISSIVE,public,true,
+public,object_capacity,pub_capacity_read,SELECT,PERMISSIVE,public,true,
+public,object_classification,pub_classification_read,SELECT,PERMISSIVE,public,true,
+public,object_description,ext_descriptions_org_actor,SELECT,PERMISSIVE,public,api.can_read_extended(object_id),
+public,object_description,owner_write_description,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_description,pub_descriptions_public,SELECT,PERMISSIVE,public,(visibility = 'public'::text),
+public,object_discount,ext_discounts_org_actor,SELECT,PERMISSIVE,public,api.can_read_extended(object_id),
+public,object_discount,owner_write_discount,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_environment_tag,pub_environment_tag_read,SELECT,PERMISSIVE,public,true,
+public,object_external_id,Accès admin/service_role (object_external_id),ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_external_id,Lecture restreinte identifiants externes,SELECT,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_fma,ext_fma_org_actor,SELECT,PERMISSIVE,public,api.can_read_extended(object_id),
+public,object_fma,pub_fma_published,SELECT,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_fma.object_id) AND (o.status = 'published'::object_status))))",
+public,object_fma_occurrence,owner_fma_occurrence_write,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_fma_occurrence,pub_fma_occurrence_read,SELECT,PERMISSIVE,public,true,
+public,object_group_policy,ext_group_policies_org_actor,SELECT,PERMISSIVE,public,api.can_read_extended(object_id),
+public,object_group_policy,owner_write_group_policy,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_iti,ext_iti_org_actor,SELECT,PERMISSIVE,public,api.can_read_extended(object_id),
+public,object_iti,pub_iti_published,SELECT,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_iti.object_id) AND (o.status = 'published'::object_status))))",
+public,object_iti_associated_object,pub_iti_associated_read,SELECT,PERMISSIVE,public,true,
+public,object_iti_info,pub_iti_info_read,SELECT,PERMISSIVE,public,true,
+public,object_iti_practice,pub_iti_practice_read,SELECT,PERMISSIVE,public,true,
+public,object_iti_profile,Lecture publique des profils ITI,SELECT,PERMISSIVE,public,true,
+public,object_iti_section,pub_iti_section_read,SELECT,PERMISSIVE,public,true,
+public,object_iti_stage,pub_iti_stage_read,SELECT,PERMISSIVE,public,true,
+public,object_iti_stage_media,owner_iti_stage_media_write,ALL,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object_iti_stage ois
+  WHERE ((ois.id = object_iti_stage_media.stage_id) AND api.is_object_owner(ois.object_id))))",
+public,object_iti_stage_media,pub_iti_stage_media_read,SELECT,PERMISSIVE,public,true,
+public,object_language,pub_object_language_read,SELECT,PERMISSIVE,public,true,
+public,object_legal,ext_legal_org_actor,SELECT,PERMISSIVE,public,api.can_read_extended(object_id),
+public,object_legal,owner_write_legal,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_location,Lecture publique des localisations,SELECT,PERMISSIVE,public,true,
+public,object_location,owner_write_location,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_meeting_room,owner_meeting_room_write,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_meeting_room,pub_meeting_room_read,SELECT,PERMISSIVE,public,true,
+public,object_membership,ext_object_membership_read,SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.can_read_extended(COALESCE(object_id, org_object_id)))",
+public,object_membership,owner_object_membership_write,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_object_owner(COALESCE(object_id, org_object_id)))",
+public,object_membership,pub_object_membership_read,SELECT,PERMISSIVE,public,"((object_id IS NOT NULL) AND (status = ANY (ARRAY['invoiced'::text, 'paid'::text])) AND ((starts_at IS NULL) OR (starts_at <= CURRENT_DATE)) AND ((ends_at IS NULL) OR (ends_at >= CURRENT_DATE)) AND (EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_membership.object_id) AND (o.status = 'published'::object_status)))))",
+public,object_menu,owner_menu_write,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_menu,pub_menu_read,SELECT,PERMISSIVE,public,true,
+public,object_menu_item,owner_menu_item_write,ALL,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object_menu om
+  WHERE ((om.id = object_menu_item.menu_id) AND api.is_object_owner(om.object_id))))",
+public,object_menu_item,pub_menu_item_read,SELECT,PERMISSIVE,public,true,
+public,object_menu_item_allergen,owner_menu_item_allergen_write,ALL,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM (object_menu_item omi
+     JOIN object_menu om ON ((om.id = omi.menu_id)))
+  WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.is_object_owner(om.object_id))))",
+public,object_menu_item_allergen,pub_menu_item_allergen_read,SELECT,PERMISSIVE,public,true,
+public,object_menu_item_cuisine_type,owner_menu_item_cuisine_write,ALL,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM (object_menu_item omi
+     JOIN object_menu om ON ((om.id = omi.menu_id)))
+  WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.is_object_owner(om.object_id))))",
+public,object_menu_item_cuisine_type,pub_menu_item_cuisine_read,SELECT,PERMISSIVE,public,true,
+public,object_menu_item_dietary_tag,owner_menu_item_dietary_write,ALL,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM (object_menu_item omi
+     JOIN object_menu om ON ((om.id = omi.menu_id)))
+  WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.is_object_owner(om.object_id))))",
+public,object_menu_item_dietary_tag,pub_menu_item_dietary_read,SELECT,PERMISSIVE,public,true,
+public,object_menu_item_media,owner_menu_item_media_write,ALL,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM (object_menu_item omi
+     JOIN object_menu om ON ((om.id = omi.menu_id)))
+  WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.is_object_owner(om.object_id))))",
+public,object_menu_item_media,pub_menu_item_media_read,SELECT,PERMISSIVE,public,true,
+public,object_org_link,pub_org_link_read,SELECT,PERMISSIVE,public,true,
+public,object_origin,admin_origin_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_origin,pub_origin_read,SELECT,PERMISSIVE,public,true,
+public,object_payment_method,pub_payment_method_read,SELECT,PERMISSIVE,public,true,
+public,object_pet_policy,owner_pet_policy_write,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_pet_policy,pub_pet_policy_read,SELECT,PERMISSIVE,public,true,
+public,object_place,Lecture publique des places,SELECT,PERMISSIVE,public,true,
+public,object_place,owner_write_place,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_place_description,admin_place_description_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_place_description,pub_place_description_read,SELECT,PERMISSIVE,public,true,
+public,object_price,owner_price_write,ALL,PERMISSIVE,public,api.is_object_owner(object_id),
+public,object_price,pub_price_read,SELECT,PERMISSIVE,public,true,
+public,object_price_period,owner_price_period_write,ALL,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object_price op
+  WHERE ((op.id = object_price_period.price_id) AND api.is_object_owner(op.object_id))))",
+public,object_price_period,pub_price_period_read,SELECT,PERMISSIVE,public,true,
+public,object_private_description,ext_private_descriptions_org_actor,SELECT,PERMISSIVE,public,(api.can_read_object_private_notes(object_id) AND (org_object_id = api.current_user_org_id())),
+public,object_private_description,manage_delete_private_description,DELETE,PERMISSIVE,public,api.can_delete_object_private_note(id),
+public,object_private_description,manage_update_private_description,UPDATE,PERMISSIVE,public,api.can_manage_object_private_note(id),api.can_manage_object_private_note(id)
+public,object_private_description,org_insert_private_description,INSERT,PERMISSIVE,public,,(api.can_write_object_private_notes(object_id) AND (org_object_id = api.current_user_org_id()) AND (created_by_user_id = auth.uid()) AND (audience = 'private'::text))
+public,object_relation,admin_relation_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_relation,pub_relation_read,SELECT,PERMISSIVE,public,true,
+public,object_review,Lecture publique des avis,SELECT,PERMISSIVE,public,(is_published = true),
+public,object_review,Écriture admin des avis,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,object_room_type,Lecture publique des types de chambre,SELECT,PERMISSIVE,public,(is_published = true),
+public,object_room_type,Lecture étendue des types de chambre,SELECT,PERMISSIVE,public,api.can_read_extended(object_id),
+public,object_room_type,Écriture types de chambre par propriétaire,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_room_type.object_id) AND (o.created_by = auth.uid())))))",
+public,object_room_type_amenity,Lecture publique amenities chambre,SELECT,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object_room_type rt
+  WHERE ((rt.id = object_room_type_amenity.room_type_id) AND (rt.is_published = true))))",
+public,object_room_type_amenity,Écriture amenities chambre par propriétaire,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (EXISTS ( SELECT 1
+   FROM (object_room_type rt
+     JOIN object o ON ((o.id = rt.object_id)))
+  WHERE ((rt.id = object_room_type_amenity.room_type_id) AND (o.created_by = auth.uid())))))",
+public,object_room_type_media,Lecture publique médias chambre,SELECT,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object_room_type rt
+  WHERE ((rt.id = object_room_type_media.room_type_id) AND (rt.is_published = true))))",
+public,object_room_type_media,Écriture médias chambre par propriétaire,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (EXISTS ( SELECT 1
+   FROM (object_room_type rt
+     JOIN object o ON ((o.id = rt.object_id)))
+  WHERE ((rt.id = object_room_type_media.room_type_id) AND (o.created_by = auth.uid())))))",
+public,object_sustainability_action,Accès admin/service_role (object_sustainability_action),ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,object_sustainability_action,pub_object_sustainability_action_read,SELECT,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object o
+  WHERE (o.id = object_sustainability_action.object_id)))",
+public,object_sustainability_action_label,Accès admin/service_role (object_sustainability_action_label),ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,object_sustainability_action_label,pub_object_sustainability_action_label_read,SELECT,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM (object_sustainability_action osa
+     JOIN object o ON ((o.id = osa.object_id)))
+  WHERE (osa.id = object_sustainability_action_label.object_sustainability_action_id)))",
+public,object_taxonomy,pub_object_taxonomy_read,SELECT,PERMISSIVE,public,"(EXISTS ( SELECT 1
+   FROM object o
+  WHERE (o.id = object_taxonomy.object_id)))",
+public,object_version,admin_object_version,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_version_2026_03,admin_object_version,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_version_2026_04,admin_object_version,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_version_2026_05,admin_object_version,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_version_default,admin_object_version,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,object_zone,pub_zone_read,SELECT,PERMISSIVE,public,true,
+public,opening_period,pub_opening_period_read,SELECT,PERMISSIVE,public,true,
+public,opening_schedule,pub_opening_schedule_read,SELECT,PERMISSIVE,public,true,
+public,opening_time_frame,pub_opening_time_frame_read,SELECT,PERMISSIVE,public,true,
+public,opening_time_period,pub_opening_time_period_read,SELECT,PERMISSIVE,public,true,
+public,opening_time_period_weekday,pub_opening_time_period_weekday_read,SELECT,PERMISSIVE,public,true,
+public,org_config,member_org_config_read,SELECT,PERMISSIVE,public,"(api.is_platform_superuser() OR (EXISTS ( SELECT 1
+   FROM user_org_membership m
+  WHERE ((m.org_object_id = org_config.org_object_id) AND (m.user_id = auth.uid()) AND (m.is_active = true)))))",
+public,org_config,superuser_org_config_write,ALL,PERMISSIVE,public,api.is_platform_superuser(),api.is_platform_superuser()
+public,org_permission,admin_org_permission_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))","(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+public,org_permission,member_org_permission_read,SELECT,PERMISSIVE,public,"(api.is_platform_superuser() OR ((is_active = true) AND (EXISTS ( SELECT 1
+   FROM user_org_membership m
+  WHERE ((m.org_object_id = org_permission.org_object_id) AND (m.user_id = auth.uid()) AND (m.is_active = true))))))",
+public,pending_change,admin_pending_change,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,promotion,Lecture publique des promotions,SELECT,PERMISSIVE,public,((is_public = true) AND (is_active = true)),
+public,promotion,Écriture admin des promotions,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,promotion_object,Lecture publique des liaisons promotions,SELECT,PERMISSIVE,public,true,
+public,promotion_object,Écriture admin des liaisons promotions,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,promotion_usage,Lecture admin des usages promotions,SELECT,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,promotion_usage,Écriture admin des usages promotions,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,publication,admin_publication,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,publication_object,admin_publication_object,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_actor_role,admin_actor_role_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_actor_role,pub_actor_role_read,SELECT,PERMISSIVE,public,true,
+public,ref_amenity,Lecture publique des équipements,SELECT,PERMISSIVE,public,true,
+public,ref_amenity,Écriture admin des équipements,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_capacity_applicability,Lecture publique des applicabilités de capacité,SELECT,PERMISSIVE,public,true,
+public,ref_capacity_applicability,Écriture admin des applicabilités de capacité,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_capacity_metric,Lecture publique des métriques de capacité,SELECT,PERMISSIVE,public,true,
+public,ref_capacity_metric,Écriture admin des métriques de capacité,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_classification_scheme,Lecture publique des schémas de classification,SELECT,PERMISSIVE,public,true,
+public,ref_classification_scheme,Écriture admin des schémas de classification,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_classification_value,Lecture publique des valeurs de classification,SELECT,PERMISSIVE,public,true,
+public,ref_classification_value,Écriture admin des valeurs de classification,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_code,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_accommodation_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_accommodation_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_activity_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_activity_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_allergen,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_allergen,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_amenity_family,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_amenity_family,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_amenity_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_amenity_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_assistance_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_assistance_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_booking_status,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_booking_status,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_client_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_client_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_contact_kind,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_contact_kind,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_cuisine_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_cuisine_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_demand_subtopic,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_demand_subtopic,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_demand_topic,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_demand_topic,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_destination_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_destination_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_dietary_tag,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_dietary_tag,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_document_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_document_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_domain_registry,Lecture publique du registre ref_code,SELECT,PERMISSIVE,public,true,
+public,ref_code_environment_tag,Lecture publique des tags d'environnement,SELECT,PERMISSIVE,public,true,
+public,ref_code_environment_tag,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_environment_tag,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_environment_tag,Écriture admin des tags d'environnement,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_code_event_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_event_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_feedback_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_feedback_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_incident_category,admin_incident_category_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_incident_category,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_incident_category,pub_incident_category_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_incident_category,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_insurance_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_insurance_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_iti_practice,Lecture publique des pratiques ITI,SELECT,PERMISSIVE,public,true,
+public,ref_code_iti_practice,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_iti_practice,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_language_level,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_language_level,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_media_tag,Lecture publique des tags média,SELECT,PERMISSIVE,public,true,
+public,ref_code_media_tag,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_media_tag,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_media_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_media_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_meeting_equipment,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_meeting_equipment,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_membership_campaign,admin_membership_campaign_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_membership_campaign,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_membership_campaign,pub_membership_campaign_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_membership_campaign,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_membership_tier,admin_membership_tier_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_membership_tier,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_membership_tier,pub_membership_tier_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_membership_tier,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_menu_category,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_menu_category,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_mood,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_mood,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_opening_schedule_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_opening_schedule_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_other,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_other,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_package_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_package_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_partnership_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_partnership_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_payment_method,Lecture publique des moyens de paiement,SELECT,PERMISSIVE,public,true,
+public,ref_code_payment_method,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_payment_method,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_payment_method,Écriture admin des moyens de paiement,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_code_price_kind,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_price_kind,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_price_unit,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_price_unit,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_promotion_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_promotion_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_room_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_room_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_season_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_season_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_service_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_service_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_social_network,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_social_network,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_taxonomy_closure,Lecture publique de la clôture taxonomique,SELECT,PERMISSIVE,public,true,
+public,ref_code_tourism_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_tourism_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_transport_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_transport_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_view_type,Lecture publique des types de vue,SELECT,PERMISSIVE,public,true,
+public,ref_code_view_type,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_view_type,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_code_view_type,Écriture admin des types de vue,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_code_weekday,admin_ref_code_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_code_weekday,pub_ref_code_read,SELECT,PERMISSIVE,public,true,
+public,ref_contact_role,admin_contact_role_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_contact_role,pub_contact_role_read,SELECT,PERMISSIVE,public,true,
+public,ref_document,Lecture publique des documents de référence,SELECT,PERMISSIVE,public,true,
+public,ref_document,Écriture admin des documents de référence,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_iti_assoc_role,Lecture publique des rôles ITI,SELECT,PERMISSIVE,public,true,
+public,ref_language,Lecture publique des langues,SELECT,PERMISSIVE,public,true,
+public,ref_language,Écriture admin des langues,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_legal_type,admin_legal_type_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_legal_type,pub_legal_type_read,SELECT,PERMISSIVE,public,true,
+public,ref_object_relation_type,admin_object_relation_type_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_object_relation_type,pub_object_relation_type_read,SELECT,PERMISSIVE,public,true,
+public,ref_org_admin_role,admin_ref_org_admin_role_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))","(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+public,ref_org_admin_role,authed_ref_org_admin_role_read,SELECT,PERMISSIVE,public,"((auth.uid() IS NOT NULL) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])))",
+public,ref_org_business_role,admin_ref_org_business_role_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))","(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+public,ref_org_business_role,authed_ref_org_business_role_read,SELECT,PERMISSIVE,public,"((auth.uid() IS NOT NULL) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])))",
+public,ref_org_role,Lecture publique des rôles d'organisation,SELECT,PERMISSIVE,public,true,
+public,ref_permission,admin_ref_permission_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))","(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+public,ref_permission,authed_ref_permission_read,SELECT,PERMISSIVE,public,"((auth.uid() IS NOT NULL) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])))",
+public,ref_review_source,Lecture publique des sources d'avis,SELECT,PERMISSIVE,public,true,
+public,ref_review_source,Écriture admin des sources d'avis,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_sustainability_action,Lecture publique des actions DD,SELECT,PERMISSIVE,public,true,
+public,ref_sustainability_action,Écriture admin des actions DD,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_sustainability_action_category,Lecture publique des catégories DD,SELECT,PERMISSIVE,public,true,
+public,ref_sustainability_action_category,Écriture admin des catégories DD,ALL,PERMISSIVE,public,"((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+public,ref_tag,admin_tag_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,ref_tag,pub_tag_read,SELECT,PERMISSIVE,public,true,
+public,tag_link,admin_tag_link_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+public,tag_link,pub_tag_link_read,SELECT,PERMISSIVE,public,true,
+public,user_org_admin_role,admin_user_org_admin_role_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))","(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+public,user_org_admin_role,member_user_org_admin_role_read,SELECT,PERMISSIVE,public,"(api.is_platform_superuser() OR ((is_active = true) AND (EXISTS ( SELECT 1
+   FROM user_org_membership m
+  WHERE ((m.id = user_org_admin_role.membership_id) AND (m.is_active = true) AND ((m.user_id = auth.uid()) OR (m.org_object_id = api.current_user_org_id())))))))",
+public,user_org_business_role,admin_user_org_business_role_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))","(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+public,user_org_business_role,member_user_org_business_role_read,SELECT,PERMISSIVE,public,"(api.is_platform_superuser() OR ((is_active = true) AND (EXISTS ( SELECT 1
+   FROM user_org_membership m
+  WHERE ((m.id = user_org_business_role.membership_id) AND (m.is_active = true) AND ((m.user_id = auth.uid()) OR (m.org_object_id = api.current_user_org_id())))))))",
+public,user_org_membership,admin_user_org_membership_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))","(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+public,user_org_membership,member_user_org_membership_read,SELECT,PERMISSIVE,public,(api.is_platform_superuser() OR ((is_active = true) AND ((user_id = auth.uid()) OR (org_object_id = api.current_user_org_id())))),
+public,user_permission,admin_user_permission_write,ALL,PERMISSIVE,public,"(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))","(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+public,user_permission,member_user_permission_read,SELECT,PERMISSIVE,public,"(api.is_platform_superuser() OR ((is_active = true) AND (user_id = auth.uid())) OR ((is_active = true) AND (EXISTS ( SELECT 1
+   FROM user_org_membership m_target
+  WHERE ((m_target.user_id = user_permission.user_id) AND (m_target.is_active = true) AND (m_target.org_object_id = api.current_user_org_id())))) AND (EXISTS ( SELECT 1
+   FROM (user_org_membership m_caller
+     JOIN user_org_admin_role uar ON (((uar.membership_id = m_caller.id) AND (uar.is_active = true))))
+  WHERE ((m_caller.user_id = auth.uid()) AND (m_caller.is_active = true))))))",

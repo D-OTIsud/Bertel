@@ -1,0 +1,115 @@
+schema,view_name,kind,owner,has_select_rule,security_invoker,comment,definition_excerpt
+internal,mv_filtered_objects,MATERIALIZED VIEW,postgres,t,,," SELECT o.id,
+    o.object_type,
+    o.status,
+    o.commercial_visibility,
+    o.updated_at,
+    o.name_normalized,
+    o.name_search_vector,
+    ol.city_search_vector,
+    ol.latitude,
+    ol.longitude,
+    ol.geog2,
+    o.cached_min_price,
+    o.cached_main_image_url,
+    o.cached_rating,
+    o.cached_is_open_now,
+    o.cached_amenity_codes,
+    o.cached_payment_codes,
+    o.cached_environment_tags,
+    o.cached_language_codes,
+    o.cached_classification_codes,
+    o.cached_taxonomy_codes
+   FROM object o
+     LEFT JOIN object_location ol ON ol.object_id = o.id AND ol.is_main_location IS T"
+internal,mv_ref_data_json,MATERIALIZED VIEW,postgres,t,,," SELECT 'amenity'::text AS ref_type,
+    ra.id,
+    ra.code,
+    jsonb_build_object('code', ra.code, 'name', ra.name, 'name_i18n', ra.name_i18n, 'icon_url', ra.icon_url, 'family_code', fam.code, 'family_name', fam.name, 'family_icon_url', fam.icon_url) AS json_data
+   FROM ref_amenity ra
+     LEFT JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
+UNION ALL
+ SELECT 'language'::text AS ref_type,
+    rl.id,
+    rl.code,
+    jsonb_build_object('code', rl.code, 'name', rl.name) AS json_data
+   FROM ref_language rl
+UNION ALL
+ SELECT 'media_type'::text AS ref_type,
+    mt.id,
+    mt.code,
+   "
+public,v_active_legal_records,VIEW,postgres,t,t,," SELECT ol.id,
+    ol.object_id,
+    o.name AS object_name,
+    o.object_type,
+    rlt.code AS type_code,
+    rlt.name AS type_name,
+    rlt.category,
+    ol.value,
+    ol.document_id,
+    ol.valid_from,
+    ol.valid_to,
+    ol.validity_mode,
+    ol.status,
+    ol.document_requested_at,
+    ol.document_delivered_at,
+    ol.note,
+        CASE
+            WHEN ol.valid_to IS NOT NULL THEN ol.valid_to - CURRENT_DATE
+            ELSE NULL::integer
+        END AS days_until_expiry
+   FROM object_legal ol
+     JOIN object o ON o.id = ol.object_id
+     JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+ "
+public,v_expiring_legal_records,VIEW,postgres,t,t,," SELECT id,
+    object_id,
+    object_name,
+    object_type,
+    type_code,
+    type_name,
+    category,
+    value,
+    document_id,
+    valid_from,
+    valid_to,
+    validity_mode,
+    status,
+    document_requested_at,
+    document_delivered_at,
+    note,
+    days_until_expiry
+   FROM v_active_legal_records
+  WHERE valid_to IS NOT NULL AND valid_to >= CURRENT_DATE AND valid_to <= (CURRENT_DATE + '30 days'::interval)
+  ORDER BY valid_to;"
+public,v_object_classification_coverage,VIEW,postgres,t,,," WITH expected_actions AS (
+         SELECT ref_classification_equivalent_action.scheme_id,
+            ref_classification_equivalent_action.action_id,
+            ref_classification_equivalent_action.requirement_type
+           FROM ref_classification_equivalent_action
+        UNION
+         SELECT rceg.scheme_id,
+            rsa.id AS action_id,
+            rceg.requirement_type
+           FROM ref_classification_equivalent_group rceg
+             JOIN ref_sustainability_action rsa ON rsa.group_id = rceg.group_id
+        ), expected_dedup AS (
+         SELECT expected_actions.scheme_id,
+    "
+public,v_object_classification_or_equivalent_scheme,VIEW,postgres,t,,," WITH equivalent_actions AS (
+         SELECT rcea.scheme_id,
+            rcea.action_id
+           FROM ref_classification_equivalent_action rcea
+        UNION
+         SELECT rceg.scheme_id,
+            rsa.id AS action_id
+           FROM ref_classification_equivalent_group rceg
+             JOIN ref_sustainability_action rsa ON rsa.group_id = rceg.group_id
+        ), explicit_labels AS (
+         SELECT DISTINCT oc.object_id,
+            oc.scheme_id,
+            'classification'::text AS match_source
+           FROM object_classification oc
+        ), equivalent_matches AS (
+         SELEC"

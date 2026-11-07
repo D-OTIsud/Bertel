@@ -1,0 +1,1004 @@
+import type { ExplorerFilters, ExplorerReferenceOption, ObjectCard } from '../types/domain';
+import {
+  applyClientPreviewFilters,
+  buildBucketRpcFilters,
+  canMergeExplorerBuckets,
+  filterOptionsBySelectedBuckets,
+  resolveCapacityBounds,
+  DEFAULT_EXPLORER_FILTERS,
+  EXPLORER_BUCKET_TYPE_MAP,
+  EXPLORER_STATUS_OPTIONS,
+  EXPLORER_TYPE_CODE_FAMILIES,
+  getEffectiveBackendTypesForBucket,
+  resolveExplorerStatuses,
+  hasServerOnlyFilters,
+  normalizeExplorerObjectType,
+  normalizeExplorerFilters,
+  refineCardsByPolygon,
+  sortExplorerCards,
+} from './facets';
+
+describe('normalizeExplorerFilters', () => {
+  it('fills missing accessibility and sustainability arrays from legacy snapshots', () => {
+    const normalized = normalizeExplorerFilters({
+      common: {
+        search: 'hotel',
+        cities: ['Saint-Pierre'],
+      } as ExplorerFilters['common'],
+    });
+
+    expect(normalized.common.accessibilityDisabilityTypesAny).toEqual([]);
+    expect(normalized.common.accessibilityAmenityCodesAny).toEqual([]);
+    expect(normalized.common.sustainabilityCategoryCodesAny).toEqual([]);
+    expect(normalized.common.sustainabilityActionCodesAny).toEqual([]);
+    expect(normalized.common.rankedLabelSchemeCode).toBeNull();
+  });
+});
+
+describe('explorer type families', () => {
+  it('keeps backend-to-family correspondence explicit (aligned on archetypes, §2a)', () => {
+    expect(EXPLORER_TYPE_CODE_FAMILIES.HOT).toEqual(['HOT', 'HPA', 'HLO', 'CAMP', 'RVA']);
+    expect(EXPLORER_TYPE_CODE_FAMILIES.ACT).toEqual(['ASC', 'ACT']);
+    expect(EXPLORER_TYPE_CODE_FAMILIES.VIS).toEqual(['LOI', 'PCU', 'PNA', 'PRD']);
+    expect(EXPLORER_TYPE_CODE_FAMILIES.SRV).toEqual(['PSV', 'VIL', 'COM', 'SPU']);
+  });
+
+  it('maps backend codes to the right explorer family (== editor archetype)', () => {
+    expect(normalizeExplorerObjectType('HOT')).toBe('HOT');
+    expect(normalizeExplorerObjectType('HLO')).toBe('HOT');
+    expect(normalizeExplorerObjectType('ACT')).toBe('ACT');
+    expect(normalizeExplorerObjectType('LOI')).toBe('VIS'); // §2a : Loisir = archétype VIS
+    expect(normalizeExplorerObjectType('FMA')).toBe('EVT');
+    expect(normalizeExplorerObjectType('PCU')).toBe('VIS');
+    expect(normalizeExplorerObjectType('ASC')).toBe('ACT'); // §2a : ASC sous Activités
+    expect(normalizeExplorerObjectType('VIL')).toBe('SRV'); // §2a : Ville = archétype SRV
+  });
+
+  it('keeps the explorer bucket map aligned with the backend type families', () => {
+    expect(EXPLORER_BUCKET_TYPE_MAP.ACT).toEqual(EXPLORER_TYPE_CODE_FAMILIES.ACT);
+    expect(EXPLORER_BUCKET_TYPE_MAP.HOT).toEqual(EXPLORER_TYPE_CODE_FAMILIES.HOT);
+    expect(EXPLORER_BUCKET_TYPE_MAP.SRV).toEqual(EXPLORER_TYPE_CODE_FAMILIES.SRV);
+  });
+});
+
+function buildFilters(overrides: Partial<ExplorerFilters> = {}): ExplorerFilters {
+  return {
+    ...DEFAULT_EXPLORER_FILTERS,
+    common: {
+      ...DEFAULT_EXPLORER_FILTERS.common,
+      ...overrides.common,
+    },
+    hot: {
+      ...DEFAULT_EXPLORER_FILTERS.hot,
+      ...overrides.hot,
+    },
+    res: {
+      ...DEFAULT_EXPLORER_FILTERS.res,
+      ...overrides.res,
+    },
+    iti: {
+      ...DEFAULT_EXPLORER_FILTERS.iti,
+      ...overrides.iti,
+    },
+    evt: {
+      ...DEFAULT_EXPLORER_FILTERS.evt,
+      ...overrides.evt,
+    },
+    selectedBuckets: overrides.selectedBuckets ?? DEFAULT_EXPLORER_FILTERS.selectedBuckets,
+    vis: overrides.vis ?? DEFAULT_EXPLORER_FILTERS.vis,
+    srv: overrides.srv ?? DEFAULT_EXPLORER_FILTERS.srv,
+  };
+}
+
+function makeCard(input: Partial<ObjectCard> & Pick<ObjectCard, 'id' | 'type' | 'name'>): ObjectCard {
+  return {
+    status: 'published',
+    labels: [],
+    open_now: true,
+    location: { lat: 45.0, lon: 6.0, city: 'Annecy', lieu_dit: 'Centre', address: 'Rue du Lac' },
+    ...input,
+  };
+}
+
+describe('applyClientPreviewFilters', () => {
+  it('filtre les cartes VIS par sous-type (3.2)', () => {
+    const cards = [
+      makeCard({ id: 'loi', type: 'LOI', name: 'Loisir' }),
+      makeCard({ id: 'pna', type: 'PNA', name: 'Site naturel' }),
+    ];
+    const filters = buildFilters({ selectedBuckets: ['VIS'], vis: { subtypes: ['PNA'] } });
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['pna']);
+  });
+
+  it('filtre les cartes SRV par sous-type (3.2)', () => {
+    const cards = [
+      makeCard({ id: 'com', type: 'COM', name: 'Commerce' }),
+      makeCard({ id: 'spu', type: 'SPU', name: 'Service public' }),
+    ];
+    const filters = buildFilters({ selectedBuckets: ['SRV'], srv: { subtypes: ['SPU'] } });
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['spu']);
+  });
+
+  it('filters by selected bucket', () => {
+    const cards = [
+      makeCard({ id: 'hot-1', type: 'HOT', name: 'Hotel' }),
+      makeCard({ id: 'res-1', type: 'RES', name: 'Restaurant' }),
+    ];
+    const filters = buildFilters({ selectedBuckets: ['RES'] });
+
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['res-1']);
+  });
+
+  it('matches search text accent-insensitively', () => {
+    const cards = [makeCard({ id: 'evt-1', type: 'FMA', name: 'Evenement musical' })];
+    const filters = buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, search: 'événement' } });
+
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result).toHaveLength(1);
+  });
+
+  it('filters cities case-insensitively', () => {
+    const cards = [
+      makeCard({ id: 'a', type: 'HOT', name: 'A', location: { city: 'Annecy' } }),
+      makeCard({ id: 'b', type: 'HOT', name: 'B', location: { city: 'Lyon' } }),
+    ];
+    const filters = buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, cities: ['annecy'] } });
+
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['a']);
+  });
+
+  it('keeps only open cards when openNow is enabled', () => {
+    const cards = [
+      makeCard({ id: 'open', type: 'HOT', name: 'Open', open_now: true }),
+      makeCard({ id: 'closed', type: 'HOT', name: 'Closed', open_now: false }),
+    ];
+    const filters = buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, openNow: true } });
+
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['open']);
+  });
+
+  it('excludes cards without coordinates when bbox is active', () => {
+    const cards = [
+      makeCard({ id: 'in', type: 'HOT', name: 'In bounds', location: { lat: 45.1, lon: 6.1 } }),
+      makeCard({ id: 'missing', type: 'HOT', name: 'No coords', location: { city: 'Annecy' } }),
+    ];
+    const filters = buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, bbox: [5.9, 45.0, 6.2, 45.2] } });
+
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['in']);
+  });
+
+  it('filters using polygon membership', () => {
+    const cards = [
+      makeCard({ id: 'inside', type: 'HOT', name: 'Inside', location: { lat: 45.05, lon: 6.05 } }),
+      makeCard({ id: 'outside', type: 'HOT', name: 'Outside', location: { lat: 45.3, lon: 6.3 } }),
+    ];
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        polygon: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [6.0, 45.0],
+              [6.2, 45.0],
+              [6.2, 45.2],
+              [6.0, 45.2],
+              [6.0, 45.0],
+            ],
+          ],
+        },
+      },
+    });
+
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['inside']);
+  });
+
+  it('keeps server-only filters as no-op in preview', () => {
+    const cards = [makeCard({ id: 'one', type: 'HOT', name: 'One' })];
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, pmr: true },
+      hot: { ...DEFAULT_EXPLORER_FILTERS.hot, capacityFilters: [{ code: 'beds', min: 2 }] },
+      iti: { ...DEFAULT_EXPLORER_FILTERS.iti, distanceMinKm: 5 },
+    });
+
+    const result = applyClientPreviewFilters(cards, filters);
+    expect(result.map((card) => card.id)).toEqual(['one']);
+  });
+});
+
+describe('hasServerOnlyFilters', () => {
+  it('is false for default explorer filters', () => {
+    expect(hasServerOnlyFilters(DEFAULT_EXPLORER_FILTERS)).toBe(false);
+  });
+
+  it('detects pmr and pets', () => {
+    expect(hasServerOnlyFilters(buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, pmr: true } }))).toBe(true);
+    expect(hasServerOnlyFilters(buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, petsAccepted: true } }))).toBe(
+      true,
+    );
+  });
+
+  it('detects accessibility detail and sustainability filters', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            accessibilityDisabilityTypesAny: ['motor'],
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            sustainable: true,
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            sustainabilityActionCodesAny: ['MA_SORTING_BINS'],
+          },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('detects ranked label search', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            rankedLabelSchemeCode: 'LBL_CLEF_VERTE',
+          },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('detects taxonomy (§155), HOT capacity, and meeting room', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            taxonomyAny: [{ domain: 'taxonomy_hot', code: 'X' }],
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          hot: { ...DEFAULT_EXPLORER_FILTERS.hot, capacityFilters: [{ code: 'beds', min: 1 }] },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          hot: { ...DEFAULT_EXPLORER_FILTERS.hot, meetingRoom: { minCount: 1 } },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('detects RES capacity filters', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          res: { capacityFilters: [{ code: 'covers', min: 10 }] },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('detects ITI filters', () => {
+    expect(hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, isLoop: true } }))).toBe(true);
+    expect(
+      hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, difficultyMin: 1 } })),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, distanceMinKm: 1 } })),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, durationMaxH: 2 } })),
+    ).toBe(true);
+    expect(
+      hasServerOnlyFilters(buildFilters({ iti: { ...DEFAULT_EXPLORER_FILTERS.iti, practicesAny: ['trail'] } })),
+    ).toBe(true);
+  });
+
+  it('detects environment tags (transverse §154)', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: { ...DEFAULT_EXPLORER_FILTERS.common, environmentTagsAny: ['foret'] },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('detects tag filters', () => {
+    expect(
+      hasServerOnlyFilters(
+        buildFilters({
+          common: { ...DEFAULT_EXPLORER_FILTERS.common, tagsAny: [{ slug: 'wellness', name: 'Bien-être' }] },
+        }),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('buildBucketRpcFilters', () => {
+  it('emits search_mode=global by default when a search term is present (Explorer)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, search: 'jacuzzi' },
+    });
+    expect(buildBucketRpcFilters(filters, 'VIS').search_mode).toBe('global');
+  });
+
+  it('does NOT broaden when searchScope=name (editor object pickers)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, search: 'jacuzzi', searchScope: 'name' },
+    });
+    expect(buildBucketRpcFilters(filters, 'VIS')).not.toHaveProperty('search_mode');
+  });
+
+  it('does not emit search_mode when there is no search term', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, search: '   ' },
+    });
+    expect(buildBucketRpcFilters(filters, 'VIS')).not.toHaveProperty('search_mode');
+  });
+
+  it('émet accessibility_any pour le toggle PMR seul (équipements OU label T&H, §162)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, pmr: true },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      accessibility_any: true,
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('amenity_families_any');
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('amenities_any', ['wheelchair_access']);
+  });
+
+  it('PMR + familles Services & équipements ne se clobbent plus (clés séparées, §162)', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        pmr: true,
+        amenityFamiliesAny: ['wellness', 'parking'],
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      accessibility_any: true,
+      amenity_families_any: ['wellness', 'parking'],
+    });
+  });
+
+  it('adds disability types and precise amenities when selected', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        pmr: true,
+        accessibilityDisabilityTypesAny: ['motor', 'hearing'],
+        accessibilityAmenityCodesAny: ['acc_step_removal'],
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      disability_types_any: ['motor', 'hearing'],
+      amenities_any: ['acc_step_removal'],
+    });
+  });
+
+  it('adds broad and detailed sustainability filters', () => {
+    expect(
+      buildBucketRpcFilters(
+        buildFilters({
+          common: { ...DEFAULT_EXPLORER_FILTERS.common, sustainable: true },
+        }),
+        'ACT',
+      ),
+    ).toMatchObject({ sustainability_any: true });
+
+    expect(
+      buildBucketRpcFilters(
+        buildFilters({
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            sustainable: true,
+            sustainabilityCategoryCodesAny: ['CAT_WASTE'],
+            sustainabilityActionCodesAny: ['MA_SORTING_BINS'],
+          },
+        }),
+        'ACT',
+      ),
+    ).toMatchObject({
+      sustainability_categories_any: ['CAT_WASTE'],
+      sustainability_actions_any: ['MA_SORTING_BINS'],
+    });
+  });
+
+  it('sends ranked label scheme searches to the Explorer RPC', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        rankedLabelSchemeCode: 'LBL_CLEF_VERTE',
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      label_scheme_ranked: 'LBL_CLEF_VERTE',
+    });
+  });
+
+  it('sends selected tag slugs as tags_any for every bucket', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        tagsAny: [
+          { slug: 'wellness', name: 'Bien-être' },
+          { slug: 'panorama', name: 'Panorama' },
+        ],
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({ tags_any: ['wellness', 'panorama'] });
+    expect(buildBucketRpcFilters(filters, 'ACT')).toMatchObject({ tags_any: ['wellness', 'panorama'] });
+  });
+
+  it('omits tags_any when no tags are selected', () => {
+    expect(buildBucketRpcFilters(DEFAULT_EXPLORER_FILTERS, 'HOT')).not.toHaveProperty('tags_any');
+  });
+
+  it('sends both certified and equipment family filters for ranked Tourisme & Handicap', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        pmr: true,
+        rankedLabelSchemeCode: 'LBL_TOURISME_HANDICAP',
+        accessibilityDisabilityTypesAny: ['motor', 'visual'],
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      label_scheme_ranked: 'LBL_TOURISME_HANDICAP',
+      label_disability_types_any: ['motor', 'visual'],
+      disability_types_any: ['motor', 'visual'],
+    });
+  });
+});
+
+describe('getEffectiveBackendTypesForBucket (§125 — subtypes pushed to p_types)', () => {
+  it('returns all bucket types when no subtype is selected (UI default = all)', () => {
+    const filters = buildFilters({ hot: { ...DEFAULT_EXPLORER_FILTERS.hot, subtypes: [] } });
+    expect(getEffectiveBackendTypesForBucket(filters, 'HOT')).toEqual(EXPLORER_BUCKET_TYPE_MAP.HOT);
+  });
+
+  it('narrows to the selected HOT subtypes', () => {
+    const filters = buildFilters({ hot: { ...DEFAULT_EXPLORER_FILTERS.hot, subtypes: ['HOT', 'HLO'] } });
+    expect(getEffectiveBackendTypesForBucket(filters, 'HOT')).toEqual(['HOT', 'HLO']);
+  });
+
+  it('returns [] for a stale subtype with no live object_type (so the bucket is skipped)', () => {
+    const filters = buildFilters({ hot: { ...DEFAULT_EXPLORER_FILTERS.hot, subtypes: ['CHLO'] as never } });
+    expect(getEffectiveBackendTypesForBucket(filters, 'HOT')).toEqual([]);
+  });
+
+  it('narrows VIS by its subtypes', () => {
+    const filters = buildFilters({ vis: { subtypes: ['LOI'] } as ExplorerFilters['vis'] });
+    expect(getEffectiveBackendTypesForBucket(filters, 'VIS')).toEqual(['LOI']);
+  });
+
+  it('returns all RES types (RES has no subtype concept)', () => {
+    expect(getEffectiveBackendTypesForBucket(buildFilters(), 'RES')).toEqual(EXPLORER_BUCKET_TYPE_MAP.RES);
+  });
+});
+
+describe('refineCardsByPolygon (§125 — only client-side filter left)', () => {
+  const inside = makeCard({ id: 'in', type: 'HOT', name: 'Inside', location: { lat: 45.0, lon: 6.0 } });
+  const outside = makeCard({ id: 'out', type: 'HOT', name: 'Outside', location: { lat: 50.0, lon: 10.0 } });
+
+  it('returns cards unchanged when no polygon is set', () => {
+    expect(refineCardsByPolygon([inside, outside], buildFilters())).toEqual([inside, outside]);
+  });
+
+  it('keeps only cards inside the drawn polygon', () => {
+    const filters = buildFilters({
+      common: {
+        polygon: {
+          type: 'Polygon',
+          coordinates: [[[5.9, 44.9], [6.1, 44.9], [6.1, 45.1], [5.9, 45.1], [5.9, 44.9]]],
+        },
+      } as ExplorerFilters['common'],
+    });
+    expect(refineCardsByPolygon([inside, outside], filters).map((c) => c.id)).toEqual(['in']);
+  });
+});
+
+describe('sortExplorerCards', () => {
+  it('keeps certified ranked label results ahead of evidence-only results', () => {
+    const cards = [
+      makeCard({
+        id: 'evidence',
+        type: 'HOT',
+        name: 'A evidence',
+        label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 1, source: 'sustainability_action', evidence_count: 2 },
+      }),
+      makeCard({
+        id: 'certified',
+        type: 'HOT',
+        name: 'Z certified',
+        label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 0, source: 'certified_label', evidence_count: 1 },
+      }),
+    ];
+
+    expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['certified', 'evidence']);
+  });
+
+  it('classe par relevance décroissante avant le nom (recherche active)', () => {
+    const cards = [
+      makeCard({ id: 'b', type: 'HLO', name: 'A la Kaz', relevance: 2.1 }),
+      makeCard({ id: 'a', type: 'HLO', name: 'Le Jardin Créole', relevance: 5.2 }),
+    ];
+
+    expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['a', 'b']);
+  });
+
+  it("sans relevance (ou 0 partout), conserve l'ordre alphabétique historique", () => {
+    const cards = [
+      makeCard({ id: 'b', type: 'HLO', name: 'Zebre', relevance: 0 }),
+      makeCard({ id: 'a', type: 'HLO', name: 'Abri' }),
+    ];
+
+    expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['a', 'b']);
+  });
+
+  it("le rang label prime toujours sur la relevance (miroir de l'ORDER BY SQL)", () => {
+    const cards = [
+      makeCard({
+        id: 'ev',
+        type: 'HLO',
+        name: 'B',
+        relevance: 5.5,
+        label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 1, source: 'accessibility_amenity', evidence_count: 1 },
+      }),
+      makeCard({
+        id: 'ce',
+        type: 'HLO',
+        name: 'Z',
+        relevance: 2.2,
+        label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 0, source: 'certified_label', evidence_count: 1 },
+      }),
+    ];
+
+    expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['ce', 'ev']);
+  });
+});
+
+describe('buildBucketRpcFilters — cadre & environnement (§154, transverse)', () => {
+  it('émet environment_tags_any pour TOUS les buckets (plus de gating ACT)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, environmentTagsAny: ['volcan', 'bord_mer'] },
+    });
+    expect(buildBucketRpcFilters(filters, 'RES').environment_tags_any).toEqual(['volcan', 'bord_mer']);
+    expect(buildBucketRpcFilters(filters, 'HOT').environment_tags_any).toEqual(['volcan', 'bord_mer']);
+    expect(buildBucketRpcFilters(filters, 'ACT').environment_tags_any).toEqual(['volcan', 'bord_mer']);
+  });
+
+  it("n'émet rien sans sélection", () => {
+    expect(buildBucketRpcFilters(buildFilters(), 'RES').environment_tags_any).toBeUndefined();
+  });
+});
+
+describe('buildBucketRpcFilters — sous-catégories (§155, partition par bucket)', () => {
+  const withTaxonomy = () =>
+    buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        taxonomyAny: [
+          { domain: 'taxonomy_res', code: 'pizzeria' },
+          { domain: 'taxonomy_hlo', code: 'gite_villa' },
+          { domain: 'taxonomy_hot', code: 'hotel' },
+        ],
+      },
+    });
+
+  it("chaque bucket ne reçoit QUE ses paires (une sélection RES ne contraint jamais HOT)", () => {
+    expect(buildBucketRpcFilters(withTaxonomy(), 'RES').taxonomy_any).toEqual([
+      { domain: 'taxonomy_res', code: 'pizzeria' },
+    ]);
+    expect(buildBucketRpcFilters(withTaxonomy(), 'HOT').taxonomy_any).toEqual([
+      { domain: 'taxonomy_hlo', code: 'gite_villa' },
+      { domain: 'taxonomy_hot', code: 'hotel' },
+    ]);
+    expect(buildBucketRpcFilters(withTaxonomy(), 'ITI').taxonomy_any).toBeUndefined();
+  });
+
+  it('taxonomy_org est ignoré (hors buckets Explorer)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, taxonomyAny: [{ domain: 'taxonomy_org', code: 'office' }] },
+    });
+    for (const bucket of ['HOT', 'RES', 'ITI', 'ACT', 'EVT', 'VIS', 'SRV'] as const) {
+      expect(buildBucketRpcFilters(filters, bucket).taxonomy_any).toBeUndefined();
+    }
+  });
+});
+
+describe('buildBucketRpcFilters — ouvert à … + dates Événements (§157)', () => {
+  it('émet open_at en timestamptz Réunion (+04:00) pour tous les buckets', () => {
+    const filters = buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, openAt: '2026-07-03T18:00' } });
+    expect(buildBucketRpcFilters(filters, 'RES').open_at).toBe('2026-07-03T18:00:00+04:00');
+    expect(buildBucketRpcFilters(filters, 'HOT').open_at).toBe('2026-07-03T18:00:00+04:00');
+  });
+
+  it("n'émet jamais un open_at mal formé (garde URL trafiquée)", () => {
+    const filters = buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, openAt: "1'; DROP--" } });
+    expect(buildBucketRpcFilters(filters, 'RES').open_at).toBeUndefined();
+  });
+
+  it("émet event UNIQUEMENT pour le bucket EVT (l'arm object_fma viderait les autres)", () => {
+    const filters = buildFilters({ evt: { eventFrom: '2026-07-10', eventTo: '2026-07-20' } });
+    expect(buildBucketRpcFilters(filters, 'EVT').event).toEqual({ from: '2026-07-10', to: '2026-07-20' });
+    expect(buildBucketRpcFilters(filters, 'RES').event).toBeUndefined();
+  });
+
+  it('réordonne une plage événement inversée (§156)', () => {
+    const filters = buildFilters({ evt: { eventFrom: '2026-07-20', eventTo: '2026-07-10' } });
+    expect(buildBucketRpcFilters(filters, 'EVT').event).toEqual({ from: '2026-07-10', to: '2026-07-20' });
+  });
+});
+
+describe('buildBucketRpcFilters — services & équipements (§159, transverse)', () => {
+  it('émet amenity_families_any pour tous les buckets', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, amenityFamiliesAny: ['wellness', 'parking'] },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT').amenity_families_any).toEqual(['wellness', 'parking']);
+    expect(buildBucketRpcFilters(filters, 'VIS').amenity_families_any).toEqual(['wellness', 'parking']);
+  });
+});
+
+describe('buildBucketRpcFilters — label sections (§173, exact-only)', () => {
+  it('omits label_scheme_ranked_exact_only by default (equivalents included)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelSchemeCode: 'LBL_CLEF_VERTE' },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({ label_scheme_ranked: 'LBL_CLEF_VERTE' });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('label_scheme_ranked_exact_only');
+  });
+
+  it('emits label_scheme_ranked_exact_only=true when equivalents are excluded', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        rankedLabelSchemeCode: 'LBL_CLEF_VERTE',
+        rankedLabelIncludeEquivalents: false,
+      },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      label_scheme_ranked: 'LBL_CLEF_VERTE',
+      label_scheme_ranked_exact_only: true,
+    });
+  });
+
+  it('does not emit exact-only when no scheme is selected', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelIncludeEquivalents: false },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('label_scheme_ranked_exact_only');
+  });
+
+  it('normalizes rankedLabelIncludeEquivalents to true by default', () => {
+    const normalized = normalizeExplorerFilters(buildFilters({}));
+    expect(normalized.common.rankedLabelIncludeEquivalents).toBe(true);
+  });
+});
+
+describe('buildBucketRpcFilters — classement levels (§174)', () => {
+  it('emits classifications_any for the selected scheme + value codes', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelSchemeCode: 'meuble_stars', rankedLabelValueCodes: ['3', '4', '5'] },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      label_scheme_ranked: 'meuble_stars',
+      classifications_any: [
+        { scheme_code: 'meuble_stars', value_code: '3' },
+        { scheme_code: 'meuble_stars', value_code: '4' },
+        { scheme_code: 'meuble_stars', value_code: '5' },
+      ],
+    });
+  });
+  it('omits classifications_any when no level is selected', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelSchemeCode: 'meuble_stars' },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('classifications_any');
+  });
+  it('omits classifications_any when levels set but no scheme', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelValueCodes: ['3'] },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('classifications_any');
+  });
+  it('defaults rankedLabelValueCodes to [] on normalize', () => {
+    expect(normalizeExplorerFilters(buildFilters({})).common.rankedLabelValueCodes).toEqual([]);
+  });
+});
+
+/**
+ * Garde de contrat : tout critère de `ExplorerCommonFilters` doit être CONSOMMÉ quelque part.
+ *
+ * Le bug qu'elle attrape : `labelsAny` a vécu des mois avec une UI complète (pastilles
+ * cliquables, chips, compteur, paramètre d'URL) alors que `buildBucketRpcFilters` n'émettait
+ * aucune clé pour lui et que son seul consommateur client vivait dans le chemin démo — un
+ * filtre visible qui ne filtrait rien en production. Toute nouvelle clé de filtre doit donc
+ * soit produire une clé de payload RPC, soit être inscrite ici comme volontairement
+ * client/query-level, avec sa raison.
+ */
+describe('buildBucketRpcFilters — aucun critère muet', () => {
+  /** Critères NON portés par le payload de `buildBucketRpcFilters`, par construction. */
+  const CONSUMED_ELSEWHERE: Record<string, string> = {
+    search: 'passé en p_search par listExplorerPage (buildBucketRpcFilters ne pose que search_mode)',
+    searchScope: 'commute search_mode, ne produit pas de clé propre',
+    statuses: 'passé en p_status par listExplorerPage',
+    polygon: 'raffinement client exact (refineCardsByPolygon) — la bbox porte la part serveur',
+    rankedLabelIncludeEquivalents: 'affine label_scheme_ranked, émis seulement à false',
+    includeEquivalentPredecessors: 'affine taxonomy_any, émis seulement avec un concept sélectionné',
+    rankedLabelValueCodes: 'émis en classifications_any avec le scheme actif',
+  };
+
+  /** Une valeur non-défaut, plausible, pour chaque critère commun. */
+  const ACTIVE_COMMON: ExplorerFilters['common'] = {
+    ...DEFAULT_EXPLORER_FILTERS.common,
+    providerOnly: true,
+    search: 'gite',
+    cities: ['Saint-Paul'],
+    lieuDit: 'Bois-Rouge',
+    pmr: true,
+    accessibilityDisabilityTypesAny: ['motor'],
+    accessibilityAmenityCodesAny: ['acc_pmr_parking'],
+    sustainable: true,
+    sustainabilityCategoryCodesAny: ['CAT_ENERGY'],
+    sustainabilityActionCodesAny: ['SA_ONSITE_RENEWABLE_ENERGY'],
+    petsAccepted: true,
+    openNow: true,
+    openAt: '2026-07-27T18:00',
+    accommodationUnitTypesAny: ['bubble'],
+    accommodationPositioningsAny: ['boutique_hotel'],
+    environmentTagsAny: ['bord_de_mer'],
+    amenityFamiliesAny: ['wellness'],
+    taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'gite' }],
+    includeEquivalentPredecessors: true,
+    tagsAny: [{ slug: 'spa', name: 'Spa' }],
+    rankedLabelSchemeCode: 'hot_stars',
+    rankedLabelIncludeEquivalents: false,
+    rankedLabelValueCodes: ['3'],
+    statuses: ['draft'],
+    missingEssentialsBuckets: ['many'],
+    missingEssentialsAny: ['photos'],
+    bbox: [55.2, -21.4, 55.6, -20.9],
+    polygon: { type: 'Polygon', coordinates: [[[55.2, -21.4], [55.6, -21.4], [55.6, -20.9], [55.2, -21.4]]] },
+  };
+
+  // Un critère commun est transverse : il doit peser sur CHAQUE bucket, pas seulement HOT.
+  const BUCKETS = Object.keys(EXPLORER_BUCKET_TYPE_MAP) as Array<keyof typeof EXPLORER_BUCKET_TYPE_MAP>;
+
+  it.each(BUCKETS)('émet un payload non vide pour le bucket %s', (bucket) => {
+    const payload = buildBucketRpcFilters({ ...DEFAULT_EXPLORER_FILTERS, common: ACTIVE_COMMON }, bucket);
+    expect(Object.keys(payload).length).toBeGreaterThan(0);
+  });
+
+  it('chaque critère commun actif produit une clé de payload, ou est déclaré consommé ailleurs', () => {
+    const base = buildBucketRpcFilters({ ...DEFAULT_EXPLORER_FILTERS, common: DEFAULT_EXPLORER_FILTERS.common }, 'HOT');
+    const muets: string[] = [];
+
+    for (const key of Object.keys(ACTIVE_COMMON) as Array<keyof ExplorerFilters['common']>) {
+      if (key in CONSUMED_ELSEWHERE) continue;
+      const filters: ExplorerFilters = {
+        ...DEFAULT_EXPLORER_FILTERS,
+        common: { ...DEFAULT_EXPLORER_FILTERS.common, [key]: ACTIVE_COMMON[key] },
+      };
+      // taxonomy_hlo appartient au bucket HOT : on interroge le bucket qui porte le critère.
+      const payload = buildBucketRpcFilters(filters, 'HOT');
+      const added = Object.keys(payload).filter((payloadKey) => !(payloadKey in base));
+      if (added.length === 0) muets.push(String(key));
+    }
+
+    expect(muets).toEqual([]);
+  });
+
+  it('hasServerOnlyFilters voit tous les critères communs actifs', () => {
+    expect(hasServerOnlyFilters({ ...DEFAULT_EXPLORER_FILTERS, common: ACTIVE_COMMON })).toBe(true);
+  });
+
+  it('transmet les prédécesseurs au moteur de taxonomie du bucket sélectionné', () => {
+    const filters = { ...DEFAULT_EXPLORER_FILTERS, common: { ...DEFAULT_EXPLORER_FILTERS.common,
+      taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'gite' }], includeEquivalentPredecessors: true } };
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      taxonomy_any: [{ domain: 'taxonomy_hlo', code: 'gite' }], include_equivalent_predecessors: true,
+    });
+    expect(buildBucketRpcFilters(filters, 'RES')).not.toHaveProperty('include_equivalent_predecessors');
+    expect(buildBucketRpcFilters({ ...filters, common: { ...filters.common, includeEquivalentPredecessors: false } }, 'HOT'))
+      .not.toHaveProperty('include_equivalent_predecessors');
+  });
+});
+
+describe('filterOptionsBySelectedBuckets (16n — applicabilité des distinctions)', () => {
+  // Typées sur le contrat réel de la fonction : le fixture dérive du modèle, pas l'inverse.
+  const HOTEL: ExplorerReferenceOption = { code: 'hot_stars', name: 'Classement hôtelier', objectTypes: ['HOT'] };
+  const PATRIMOINE: ExplorerReferenceOption = { code: 'monument_historique', name: 'Monument Historique', objectTypes: ['PCU'] };
+  const TRANSVERSE: ExplorerReferenceOption = { code: 'LBL_QUALITE_TOURISME', name: 'Qualité Tourisme' }; // pas de objectTypes
+  const OPTIONS: ExplorerReferenceOption[] = [HOTEL, PATRIMOINE, TRANSVERSE];
+
+  it('ne restreint rien quand aucun bucket n’est sélectionné', () => {
+    expect(filterOptionsBySelectedBuckets(OPTIONS, []).map((o) => o.code)).toEqual([
+      'hot_stars', 'monument_historique', 'LBL_QUALITE_TOURISME',
+    ]);
+  });
+
+  it('retire les distinctions d’hébergement quand seul VIS est coché (le signalement PO)', () => {
+    const codes = filterOptionsBySelectedBuckets(OPTIONS, ['VIS']).map((o) => o.code);
+    expect(codes).not.toContain('hot_stars');
+    expect(codes).toContain('monument_historique'); // PCU appartient au bucket VIS
+  });
+
+  it('garde une distinction sans applicabilité déclarée (fail-open du registre)', () => {
+    expect(filterOptionsBySelectedBuckets(OPTIONS, ['VIS']).map((o) => o.code)).toContain('LBL_QUALITE_TOURISME');
+    // Un tableau VIDE se comporte comme l'absence : jamais « applicable à rien ».
+    const vide = [{ code: 'x', name: 'X', objectTypes: [] }];
+    expect(filterOptionsBySelectedBuckets(vide, ['VIS'])).toHaveLength(1);
+  });
+
+  it('garde le scheme SÉLECTIONNÉ même devenu inapplicable (sinon filtre actif sans contrôle)', () => {
+    const codes = filterOptionsBySelectedBuckets(OPTIONS, ['VIS'], 'hot_stars').map((o) => o.code);
+    expect(codes).toContain('hot_stars');
+  });
+
+  it('unionne les types de plusieurs buckets', () => {
+    const codes = filterOptionsBySelectedBuckets(OPTIONS, ['HOT', 'VIS']).map((o) => o.code);
+    expect(codes).toEqual(['hot_stars', 'monument_historique', 'LBL_QUALITE_TOURISME']);
+  });
+});
+
+describe('resolveCapacityBounds (16o)', () => {
+  const BOUNDS = {
+    beds: {
+      HOT: { min: 4, max: 120, sampleSize: 6 },
+      HLO: { min: 2, max: 14, sampleSize: 22 },
+    },
+  };
+
+  it('unionne les bornes des types visés et somme les effectifs', () => {
+    expect(resolveCapacityBounds(BOUNDS, 'beds', ['HOT', 'HLO'])).toEqual({ min: 2, max: 120, sampleSize: 28 });
+  });
+
+  it('se restreint au type visé', () => {
+    expect(resolveCapacityBounds(BOUNDS, 'beds', ['HOT'])).toEqual({ min: 4, max: 120, sampleSize: 6 });
+  });
+
+  it('sans type visé, prend tout le corpus connu de la métrique', () => {
+    expect(resolveCapacityBounds(BOUNDS, 'beds', [])).toEqual({ min: 2, max: 120, sampleSize: 28 });
+  });
+
+  it('renvoie null quand aucun type visé ne porte de valeur — bornes inconnues, pas filtre absent', () => {
+    expect(resolveCapacityBounds(BOUNDS, 'beds', ['CAMP'])).toBeNull();
+    expect(resolveCapacityBounds(BOUNDS, 'pitches', ['CAMP'])).toBeNull();
+    expect(resolveCapacityBounds(undefined, 'beds', ['HOT'])).toBeNull();
+  });
+});
+
+describe('§204 — payload du filtre remplissage', () => {
+  test('rien n’est émis quand aucun critère de remplissage n’est actif', () => {
+    const payload = buildBucketRpcFilters(buildFilters({}), 'HOT');
+    expect(payload).not.toHaveProperty('missing_essentials_buckets');
+    expect(payload).not.toHaveProperty('missing_essentials_any');
+  });
+
+  test('les paliers partent sous la clé missing_essentials_buckets', () => {
+    const payload = buildBucketRpcFilters(
+      buildFilters({ common: { missingEssentialsBuckets: ['many', 'complete'] } as never }),
+      'HOT',
+    );
+    expect(payload.missing_essentials_buckets).toEqual(['many', 'complete']);
+  });
+
+  test('la facette part sous la clé missing_essentials_any', () => {
+    const payload = buildBucketRpcFilters(
+      buildFilters({ common: { missingEssentialsAny: ['photos'] } as never }),
+      'HOT',
+    );
+    expect(payload.missing_essentials_any).toEqual(['photos']);
+  });
+
+  test('un tableau vide n’émet PAS la clé — le RPC la traiterait comme « pas de filtre »', () => {
+    const payload = buildBucketRpcFilters(
+      buildFilters({ common: { missingEssentialsBuckets: [], missingEssentialsAny: [] } as never }),
+      'HOT',
+    );
+    expect(payload).not.toHaveProperty('missing_essentials_buckets');
+    expect(payload).not.toHaveProperty('missing_essentials_any');
+  });
+});
+
+// §205 — le filtre Statut est réservé aux éditeurs et plus (canEditObjects) ;
+// « archivé » est un choix explicite, jamais un défaut.
+describe('resolveExplorerStatuses', () => {
+  test('un non-éditeur est TOUJOURS ramené à published — même avec une sélection explicite (URL partagée)', () => {
+    expect(resolveExplorerStatuses([], false)).toEqual(['published']);
+    expect(resolveExplorerStatuses(['draft', 'archived'], false)).toEqual(['published']);
+    expect(resolveExplorerStatuses(['published', 'draft'], false)).toEqual(['published']);
+  });
+
+  test('défaut éditeur = published + draft (archivé jamais implicite)', () => {
+    expect(resolveExplorerStatuses([], true)).toEqual(['published', 'draft']);
+  });
+
+  test('la sélection explicite d’un éditeur gagne, dédupliquée', () => {
+    expect(resolveExplorerStatuses(['archived'], true)).toEqual(['archived']);
+    expect(resolveExplorerStatuses(['published', 'published', 'archived'], true)).toEqual(['published', 'archived']);
+  });
+});
+
+describe('EXPLORER_STATUS_OPTIONS', () => {
+  test('vocabulaire = published/draft/archived — jamais hidden (invariant Explorer)', () => {
+    expect(EXPLORER_STATUS_OPTIONS.map((option) => option.code)).toEqual(['published', 'draft', 'archived']);
+  });
+});
+
+// B2 (spec 2026-08-26) — la condition d'armement de la fusion des appels par bucket.
+// L'enjeu : fusionner à tort enverrait un filtre propre à un bucket à TOUS les autres.
+describe('canMergeExplorerBuckets', () => {
+  it('arme la fusion par défaut (aucune facette propre à un bucket)', () => {
+    expect(canMergeExplorerBuckets(DEFAULT_EXPLORER_FILTERS)).toBe(true);
+  });
+
+  it('arme la fusion quand un seul bucket est sélectionné (fusion triviale)', () => {
+    const filters: ExplorerFilters = { ...DEFAULT_EXPLORER_FILTERS, selectedBuckets: ['HOT'] };
+    expect(canMergeExplorerBuckets(filters)).toBe(true);
+  });
+
+  it('DÉSARME la fusion dès qu une facette propre à un bucket diverge', () => {
+    const filters: ExplorerFilters = {
+      ...DEFAULT_EXPLORER_FILTERS,
+      iti: { ...DEFAULT_EXPLORER_FILTERS.iti, isLoop: true },
+    };
+
+    // Garde anti-vacuité : on prouve d'abord que les payloads DIVERGENT réellement.
+    // Sans elle, un `false` pourrait venir d'autre chose et le test ne prouverait rien.
+    const itiPayload = buildBucketRpcFilters(filters, 'ITI');
+    const hotPayload = buildBucketRpcFilters(filters, 'HOT');
+    expect(itiPayload).toHaveProperty('itinerary');
+    expect(hotPayload).not.toHaveProperty('itinerary');
+
+    expect(canMergeExplorerBuckets(filters)).toBe(false);
+  });
+
+  it('garde la fusion armée quand la facette ITI est active mais ITI est le seul bucket', () => {
+    const filters: ExplorerFilters = {
+      ...DEFAULT_EXPLORER_FILTERS,
+      selectedBuckets: ['ITI'],
+      iti: { ...DEFAULT_EXPLORER_FILTERS.iti, isLoop: true },
+    };
+    expect(canMergeExplorerBuckets(filters)).toBe(true);
+  });
+});

@@ -1,0 +1,472 @@
+fk_schema,fk_table,fk_name,fk_columns,ref_schema,ref_table,ref_columns,on_update,on_delete,deferrable,initially_deferred
+public,actor,actor_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,actor,actor_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,actor_channel,actor_channel_actor_id_fkey,actor_id,public,actor,id,NO ACTION,CASCADE,f,f
+public,actor_channel,actor_channel_kind_id_fkey,kind_id,public,ref_code_contact_kind,id,NO ACTION,RESTRICT,f,f
+public,actor_channel,actor_channel_role_id_fkey,role_id,public,ref_contact_role,id,NO ACTION,SET NULL,f,f
+public,actor_consent,actor_consent_actor_id_fkey,actor_id,public,actor,id,NO ACTION,CASCADE,f,f
+public,actor_consent,actor_consent_document_id_fkey,document_id,public,ref_document,id,NO ACTION,SET NULL,f,f
+public,actor_object_role,actor_object_role_actor_id_fkey,actor_id,public,actor,id,NO ACTION,CASCADE,f,f
+public,actor_object_role,actor_object_role_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,actor_object_role,actor_object_role_role_id_fkey,role_id,public,ref_actor_role,id,NO ACTION,RESTRICT,f,f
+public,app_branding_settings,app_branding_settings_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,app_branding_settings,app_branding_settings_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,app_user_profile,app_user_profile_actor_id_fkey,actor_id,public,actor,id,NO ACTION,SET NULL,f,f
+public,app_user_profile,app_user_profile_id_fkey,id,auth,users,id,NO ACTION,CASCADE,f,f
+public,audit_criteria,audit_criteria_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,audit_criteria,audit_criteria_template_id_fkey,template_id,public,audit_template,id,NO ACTION,CASCADE,f,f
+public,audit_criteria,audit_criteria_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,audit_result,audit_result_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,audit_result,audit_result_criteria_id_fkey,criteria_id,public,audit_criteria,id,NO ACTION,CASCADE,f,f
+public,audit_result,audit_result_session_id_fkey,session_id,public,audit_session,id,NO ACTION,CASCADE,f,f
+public,audit_result,audit_result_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,audit_session,audit_session_auditor_id_fkey,auditor_id,auth,users,id,NO ACTION,SET NULL,f,f
+public,audit_session,audit_session_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,audit_session,audit_session_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,audit_session,audit_session_template_id_fkey,template_id,public,audit_template,id,NO ACTION,RESTRICT,f,f
+public,audit_session,audit_session_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,audit_template,audit_template_classification_value_id_fkey,classification_value_id,public,ref_classification_value,id,NO ACTION,RESTRICT,f,f
+public,audit_template,audit_template_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,audit_template,audit_template_scheme_id_fkey,scheme_id,public,ref_classification_scheme,id,NO ACTION,RESTRICT,f,f
+public,audit_template,audit_template_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,contact_channel,contact_channel_kind_id_fkey,kind_id,public,ref_code_contact_kind,id,NO ACTION,RESTRICT,f,f
+public,contact_channel,contact_channel_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,contact_channel,contact_channel_role_id_fkey,role_id,public,ref_contact_role,id,NO ACTION,RESTRICT,f,f
+public,crm_interaction,crm_interaction_actor_id_fkey,actor_id,public,actor,id,NO ACTION,SET NULL,f,f
+public,crm_interaction,crm_interaction_demand_subtopic_id_fkey,demand_subtopic_id,public,ref_code_demand_subtopic,id,NO ACTION,RESTRICT,f,f
+public,crm_interaction,crm_interaction_demand_topic_id_fkey,demand_topic_id,public,ref_code_demand_topic,id,NO ACTION,RESTRICT,f,f
+public,crm_interaction,crm_interaction_handled_by_actor_id_fkey,handled_by_actor_id,public,actor,id,NO ACTION,SET NULL,f,f
+public,crm_interaction,crm_interaction_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,crm_interaction,crm_interaction_owner_fkey,owner,auth,users,id,NO ACTION,SET NULL,f,f
+public,crm_interaction,crm_interaction_request_mood_id_fkey,request_mood_id,public,ref_code_mood,id,NO ACTION,SET NULL,f,f
+public,crm_interaction,crm_interaction_response_mood_id_fkey,response_mood_id,public,ref_code_mood,id,NO ACTION,SET NULL,f,f
+public,crm_task,crm_task_actor_id_fkey,actor_id,public,actor,id,NO ACTION,SET NULL,f,f
+public,crm_task,crm_task_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,crm_task,crm_task_owner_fkey,owner,auth,users,id,NO ACTION,SET NULL,f,f
+public,crm_task,crm_task_related_interaction_id_fkey,related_interaction_id,public,crm_interaction,id,NO ACTION,SET NULL,f,f
+public,i18n_translation,i18n_translation_language_id_fkey,language_id,public,ref_language,id,NO ACTION,RESTRICT,f,f
+public,incident_report,incident_report_category_id_fkey,category_id,public,ref_code_incident_category,id,NO ACTION,RESTRICT,f,f
+public,incident_report,incident_report_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,incident_report,incident_report_crm_interaction_id_fkey,crm_interaction_id,public,crm_interaction,id,NO ACTION,SET NULL,f,f
+public,incident_report,incident_report_crm_task_id_fkey,crm_task_id,public,crm_task,id,NO ACTION,SET NULL,f,f
+public,incident_report,incident_report_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,incident_report,incident_report_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,media,media_media_type_id_fkey,media_type_id,public,ref_code_media_type,id,NO ACTION,RESTRICT,f,f
+public,media,media_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,media,media_org_object_id_fkey,org_object_id,public,object,id,NO ACTION,SET NULL,f,f
+public,media,media_place_id_fkey,place_id,public,object_place,id,NO ACTION,CASCADE,f,f
+public,media_tag,media_tag_media_id_fkey,media_id,public,media,id,NO ACTION,CASCADE,f,f
+public,media_tag,media_tag_tag_id_fkey,tag_id,public,ref_code_media_tag,id,NO ACTION,RESTRICT,f,f
+public,meeting_room_equipment,meeting_room_equipment_equipment_id_fkey,equipment_id,public,ref_code_meeting_equipment,id,NO ACTION,RESTRICT,f,f
+public,meeting_room_equipment,meeting_room_equipment_room_id_fkey,room_id,public,object_meeting_room,id,NO ACTION,CASCADE,f,f
+public,object,object_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,object,object_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,object_act,object_act_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_amenity,object_amenity_amenity_id_fkey,amenity_id,public,ref_amenity,id,NO ACTION,CASCADE,f,f
+public,object_amenity,object_amenity_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_capacity,object_capacity_metric_id_fkey,metric_id,public,ref_capacity_metric,id,NO ACTION,RESTRICT,f,f
+public,object_capacity,object_capacity_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_classification,object_classification_document_id_fkey,document_id,public,ref_document,id,NO ACTION,SET NULL,f,f
+public,object_classification,object_classification_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_classification,object_classification_scheme_id_fkey,scheme_id,public,ref_classification_scheme,id,NO ACTION,RESTRICT,f,f
+public,object_classification,object_classification_value_id_fkey,value_id,public,ref_classification_value,id,NO ACTION,RESTRICT,f,f
+public,object_description,object_description_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_description,object_description_org_object_id_fkey,org_object_id,public,object,id,NO ACTION,SET NULL,f,f
+public,object_discount,object_discount_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_environment_tag,object_environment_tag_environment_tag_id_fkey,environment_tag_id,public,ref_code_environment_tag,id,NO ACTION,CASCADE,f,f
+public,object_environment_tag,object_environment_tag_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_external_id,object_external_id_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_external_id,object_external_id_organization_object_id_fkey,organization_object_id,public,object,id,NO ACTION,RESTRICT,f,f
+public,object_fma,object_fma_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_fma_occurrence,object_fma_occurrence_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_group_policy,object_group_policy_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_iti,object_iti_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_iti,object_iti_status_document_id_fkey,status_document_id,public,ref_document,id,NO ACTION,SET NULL,f,f
+public,object_iti_associated_object,object_iti_associated_object_associated_object_id_fkey,associated_object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_iti_associated_object,object_iti_associated_object_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_iti_associated_object,object_iti_associated_object_role_id_fkey,role_id,public,ref_iti_assoc_role,id,NO ACTION,RESTRICT,f,f
+public,object_iti_info,object_iti_info_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_iti_practice,object_iti_practice_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_iti_practice,object_iti_practice_practice_id_fkey,practice_id,public,ref_code_iti_practice,id,NO ACTION,RESTRICT,f,f
+public,object_iti_profile,object_iti_profile_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_iti_section,object_iti_section_parent_object_id_fkey,parent_object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_iti_stage,object_iti_stage_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_iti_stage_media,object_iti_stage_media_media_id_fkey,media_id,public,media,id,NO ACTION,CASCADE,f,f
+public,object_iti_stage_media,object_iti_stage_media_stage_id_fkey,stage_id,public,object_iti_stage,id,NO ACTION,CASCADE,f,f
+public,object_language,object_language_language_id_fkey,language_id,public,ref_language,id,NO ACTION,CASCADE,f,f
+public,object_language,object_language_level_id_fkey,level_id,public,ref_code_language_level,id,NO ACTION,SET NULL,f,f
+public,object_language,object_language_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_legal,object_legal_document_id_fkey,document_id,public,ref_document,id,NO ACTION,SET NULL,f,f
+public,object_legal,object_legal_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_legal,object_legal_type_id_fkey,type_id,public,ref_legal_type,id,NO ACTION,RESTRICT,f,f
+public,object_location,object_location_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_location,object_location_place_id_fkey,place_id,public,object_place,id,NO ACTION,CASCADE,f,f
+public,object_meeting_room,object_meeting_room_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_membership,object_membership_campaign_id_fkey,campaign_id,public,ref_code_membership_campaign,id,NO ACTION,RESTRICT,f,f
+public,object_membership,object_membership_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,object_membership,object_membership_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_membership,object_membership_org_object_id_fkey,org_object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_membership,object_membership_tier_id_fkey,tier_id,public,ref_code_membership_tier,id,NO ACTION,RESTRICT,f,f
+public,object_membership,object_membership_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,object_menu,object_menu_category_id_fkey,category_id,public,ref_code_menu_category,id,NO ACTION,RESTRICT,f,f
+public,object_menu,object_menu_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_menu_item,object_menu_item_kind_id_fkey,kind_id,public,ref_code_price_kind,id,NO ACTION,RESTRICT,f,f
+public,object_menu_item,object_menu_item_media_id_fkey,media_id,public,media,id,NO ACTION,SET NULL,f,f
+public,object_menu_item,object_menu_item_menu_id_fkey,menu_id,public,object_menu,id,NO ACTION,CASCADE,f,f
+public,object_menu_item,object_menu_item_unit_id_fkey,unit_id,public,ref_code_price_unit,id,NO ACTION,RESTRICT,f,f
+public,object_menu_item_allergen,object_menu_item_allergen_allergen_id_fkey,allergen_id,public,ref_code_allergen,id,NO ACTION,CASCADE,f,f
+public,object_menu_item_allergen,object_menu_item_allergen_menu_item_id_fkey,menu_item_id,public,object_menu_item,id,NO ACTION,CASCADE,f,f
+public,object_menu_item_cuisine_type,object_menu_item_cuisine_type_cuisine_type_id_fkey,cuisine_type_id,public,ref_code_cuisine_type,id,NO ACTION,CASCADE,f,f
+public,object_menu_item_cuisine_type,object_menu_item_cuisine_type_menu_item_id_fkey,menu_item_id,public,object_menu_item,id,NO ACTION,CASCADE,f,f
+public,object_menu_item_dietary_tag,object_menu_item_dietary_tag_dietary_tag_id_fkey,dietary_tag_id,public,ref_code_dietary_tag,id,NO ACTION,CASCADE,f,f
+public,object_menu_item_dietary_tag,object_menu_item_dietary_tag_menu_item_id_fkey,menu_item_id,public,object_menu_item,id,NO ACTION,CASCADE,f,f
+public,object_menu_item_media,object_menu_item_media_media_id_fkey,media_id,public,media,id,NO ACTION,CASCADE,f,f
+public,object_menu_item_media,object_menu_item_media_menu_item_id_fkey,menu_item_id,public,object_menu_item,id,NO ACTION,CASCADE,f,f
+public,object_org_link,object_org_link_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_org_link,object_org_link_org_object_id_fkey,org_object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_org_link,object_org_link_role_id_fkey,role_id,public,ref_org_role,id,NO ACTION,RESTRICT,f,f
+public,object_origin,object_origin_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_payment_method,object_payment_method_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_payment_method,object_payment_method_payment_method_id_fkey,payment_method_id,public,ref_code_payment_method,id,NO ACTION,CASCADE,f,f
+public,object_pet_policy,object_pet_policy_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_place,object_place_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_place_description,object_place_description_place_id_fkey,place_id,public,object_place,id,NO ACTION,CASCADE,f,f
+public,object_price,object_price_kind_id_fkey,kind_id,public,ref_code_price_kind,id,NO ACTION,RESTRICT,f,f
+public,object_price,object_price_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_price,object_price_unit_id_fkey,unit_id,public,ref_code_price_unit,id,NO ACTION,RESTRICT,f,f
+public,object_price_period,object_price_period_price_id_fkey,price_id,public,object_price,id,NO ACTION,CASCADE,f,f
+public,object_private_description,object_private_description_created_by_user_id_fkey,created_by_user_id,auth,users,id,NO ACTION,SET NULL,f,f
+public,object_private_description,object_private_description_language_id_fkey,language_id,public,ref_language,id,NO ACTION,SET NULL,f,f
+public,object_private_description,object_private_description_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_private_description,object_private_description_org_object_id_fkey,org_object_id,public,object,id,NO ACTION,SET NULL,f,f
+public,object_relation,object_relation_relation_type_id_fkey,relation_type_id,public,ref_object_relation_type,id,NO ACTION,RESTRICT,f,f
+public,object_relation,object_relation_source_object_id_fkey,source_object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_relation,object_relation_target_object_id_fkey,target_object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_review,object_review_language_id_fkey,language_id,public,ref_language,id,NO ACTION,SET NULL,f,f
+public,object_review,object_review_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_review,object_review_source_id_fkey,source_id,public,ref_review_source,id,NO ACTION,RESTRICT,f,f
+public,object_room_type,object_room_type_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_room_type,object_room_type_view_type_id_fkey,view_type_id,public,ref_code_view_type,id,NO ACTION,SET NULL,f,f
+public,object_room_type_amenity,object_room_type_amenity_amenity_id_fkey,amenity_id,public,ref_amenity,id,NO ACTION,CASCADE,f,f
+public,object_room_type_amenity,object_room_type_amenity_room_type_id_fkey,room_type_id,public,object_room_type,id,NO ACTION,CASCADE,f,f
+public,object_room_type_media,object_room_type_media_media_id_fkey,media_id,public,media,id,NO ACTION,CASCADE,f,f
+public,object_room_type_media,object_room_type_media_room_type_id_fkey,room_type_id,public,object_room_type,id,NO ACTION,CASCADE,f,f
+public,object_sustainability_action,object_sustainability_action_action_id_fkey,action_id,public,ref_sustainability_action,id,NO ACTION,RESTRICT,f,f
+public,object_sustainability_action,object_sustainability_action_document_id_fkey,document_id,public,ref_document,id,NO ACTION,SET NULL,f,f
+public,object_sustainability_action,object_sustainability_action_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_sustainability_action_label,object_sustainability_action__object_sustainability_action_fkey,object_sustainability_action_id,public,object_sustainability_action,id,NO ACTION,CASCADE,f,f
+public,object_sustainability_action_label,object_sustainability_action_labe_object_classification_id_fkey,object_classification_id,public,object_classification,id,NO ACTION,CASCADE,f,f
+public,object_taxonomy,fk_object_taxonomy_domain,domain,public,ref_code_domain_registry,domain,NO ACTION,RESTRICT,f,f
+public,object_taxonomy,fk_object_taxonomy_ref_code,"ref_code_id,domain",public,ref_code,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey,"ref_code_id,domain",public,ref_code_accommodation_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey1,"ref_code_id,domain",public,ref_code_activity_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey10,"ref_code_id,domain",public,ref_code_demand_subtopic,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey11,"ref_code_id,domain",public,ref_code_demand_topic,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey12,"ref_code_id,domain",public,ref_code_destination_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey13,"ref_code_id,domain",public,ref_code_dietary_tag,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey14,"ref_code_id,domain",public,ref_code_document_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey15,"ref_code_id,domain",public,ref_code_environment_tag,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey16,"ref_code_id,domain",public,ref_code_event_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey17,"ref_code_id,domain",public,ref_code_feedback_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey18,"ref_code_id,domain",public,ref_code_incident_category,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey19,"ref_code_id,domain",public,ref_code_insurance_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey2,"ref_code_id,domain",public,ref_code_allergen,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey20,"ref_code_id,domain",public,ref_code_iti_practice,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey21,"ref_code_id,domain",public,ref_code_language_level,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey22,"ref_code_id,domain",public,ref_code_media_tag,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey23,"ref_code_id,domain",public,ref_code_media_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey24,"ref_code_id,domain",public,ref_code_meeting_equipment,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey25,"ref_code_id,domain",public,ref_code_membership_campaign,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey26,"ref_code_id,domain",public,ref_code_membership_tier,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey27,"ref_code_id,domain",public,ref_code_menu_category,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey28,"ref_code_id,domain",public,ref_code_mood,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey29,"ref_code_id,domain",public,ref_code_opening_schedule_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey3,"ref_code_id,domain",public,ref_code_amenity_family,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey30,"ref_code_id,domain",public,ref_code_package_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey31,"ref_code_id,domain",public,ref_code_partnership_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey32,"ref_code_id,domain",public,ref_code_payment_method,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey33,"ref_code_id,domain",public,ref_code_price_kind,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey34,"ref_code_id,domain",public,ref_code_price_unit,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey35,"ref_code_id,domain",public,ref_code_promotion_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey36,"ref_code_id,domain",public,ref_code_room_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey37,"ref_code_id,domain",public,ref_code_season_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey38,"ref_code_id,domain",public,ref_code_service_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey39,"ref_code_id,domain",public,ref_code_social_network,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey4,"ref_code_id,domain",public,ref_code_amenity_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey40,"ref_code_id,domain",public,ref_code_tourism_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey41,"ref_code_id,domain",public,ref_code_transport_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey42,"ref_code_id,domain",public,ref_code_view_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey43,"ref_code_id,domain",public,ref_code_weekday,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey44,"ref_code_id,domain",public,ref_code_other,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey5,"ref_code_id,domain",public,ref_code_assistance_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey6,"ref_code_id,domain",public,ref_code_booking_status,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey7,"ref_code_id,domain",public,ref_code_client_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey8,"ref_code_id,domain",public,ref_code_contact_kind,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_taxonomy,object_taxonomy_ref_code_id_domain_fkey9,"ref_code_id,domain",public,ref_code_cuisine_type,"id,domain",NO ACTION,RESTRICT,f,f
+public,object_version,object_version_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,object_version,object_version_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_version_2026_03,object_version_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,object_version_2026_03,object_version_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_version_2026_04,object_version_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,object_version_2026_04,object_version_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_version_2026_05,object_version_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,object_version_2026_05,object_version_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_version_default,object_version_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,object_version_default,object_version_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,object_zone,object_zone_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,opening_period,opening_period_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,opening_schedule,opening_schedule_period_id_fkey,period_id,public,opening_period,id,NO ACTION,CASCADE,f,f
+public,opening_schedule,opening_schedule_schedule_type_id_fkey,schedule_type_id,public,ref_code_opening_schedule_type,id,NO ACTION,RESTRICT,f,f
+public,opening_time_frame,opening_time_frame_time_period_id_fkey,time_period_id,public,opening_time_period,id,NO ACTION,CASCADE,f,f
+public,opening_time_period,opening_time_period_schedule_id_fkey,schedule_id,public,opening_schedule,id,NO ACTION,CASCADE,f,f
+public,opening_time_period_weekday,opening_time_period_weekday_time_period_id_fkey,time_period_id,public,opening_time_period,id,NO ACTION,CASCADE,f,f
+public,opening_time_period_weekday,opening_time_period_weekday_weekday_id_fkey,weekday_id,public,ref_code_weekday,id,NO ACTION,CASCADE,f,f
+public,org_config,org_config_org_object_id_fkey,org_object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,org_permission,org_permission_granted_by_fkey,granted_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,org_permission,org_permission_org_object_id_fkey,org_object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,org_permission,org_permission_permission_id_fkey,permission_id,public,ref_permission,id,NO ACTION,CASCADE,f,f
+public,pending_change,pending_change_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,pending_change,pending_change_reviewed_by_fkey,reviewed_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,pending_change,pending_change_submitted_by_fkey,submitted_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,promotion,promotion_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,promotion,promotion_partner_org_id_fkey,partner_org_id,public,object,id,NO ACTION,SET NULL,f,f
+public,promotion,promotion_season_id_fkey,season_id,public,ref_code_season_type,id,NO ACTION,SET NULL,f,f
+public,promotion,promotion_type_id_fkey,type_id,public,ref_code_promotion_type,id,NO ACTION,RESTRICT,f,f
+public,promotion_object,promotion_object_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,promotion_object,promotion_object_promotion_id_fkey,promotion_id,public,promotion,id,NO ACTION,CASCADE,f,f
+public,promotion_usage,promotion_usage_object_id_fkey,object_id,public,object,id,NO ACTION,SET NULL,f,f
+public,promotion_usage,promotion_usage_promotion_id_fkey,promotion_id,public,promotion,id,NO ACTION,CASCADE,f,f
+public,promotion_usage,promotion_usage_user_id_fkey,user_id,auth,users,id,NO ACTION,SET NULL,f,f
+public,publication,publication_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,publication,publication_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,publication_object,publication_object_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,publication_object,publication_object_object_id_fkey,object_id,public,object,id,NO ACTION,CASCADE,f,f
+public,publication_object,publication_object_publication_id_fkey,publication_id,public,publication,id,NO ACTION,CASCADE,f,f
+public,publication_object,publication_object_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,ref_amenity,ref_amenity_family_id_fkey,family_id,public,ref_code_amenity_family,id,NO ACTION,RESTRICT,f,f
+public,ref_capacity_applicability,ref_capacity_applicability_metric_id_fkey,metric_id,public,ref_capacity_metric,id,NO ACTION,CASCADE,f,f
+public,ref_classification_equivalent_action,ref_classification_equivalent_action_action_id_fkey,action_id,public,ref_sustainability_action,id,NO ACTION,CASCADE,f,f
+public,ref_classification_equivalent_action,ref_classification_equivalent_action_scheme_id_fkey,scheme_id,public,ref_classification_scheme,id,NO ACTION,CASCADE,f,f
+public,ref_classification_equivalent_group,ref_classification_equivalent_group_group_id_fkey,group_id,public,ref_sustainability_action_group,id,NO ACTION,CASCADE,f,f
+public,ref_classification_equivalent_group,ref_classification_equivalent_group_scheme_id_fkey,scheme_id,public,ref_classification_scheme,id,NO ACTION,CASCADE,f,f
+public,ref_classification_value,ref_classification_value_parent_id_fkey,parent_id,public,ref_classification_value,id,NO ACTION,CASCADE,f,f
+public,ref_classification_value,ref_classification_value_scheme_id_fkey,scheme_id,public,ref_classification_scheme,id,NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,fk_ref_code_taxonomy_closure_ancestor,"ancestor_id,domain",public,ref_code,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,fk_ref_code_taxonomy_closure_descendant,"descendant_id,domain",public,ref_code,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,fk_ref_code_taxonomy_closure_domain,domain,public,ref_code_domain_registry,domain,NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey,"ancestor_id,domain",public,ref_code_accommodation_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey1,"ancestor_id,domain",public,ref_code_activity_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey10,"ancestor_id,domain",public,ref_code_demand_subtopic,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey11,"ancestor_id,domain",public,ref_code_demand_topic,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey12,"ancestor_id,domain",public,ref_code_destination_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey13,"ancestor_id,domain",public,ref_code_dietary_tag,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey14,"ancestor_id,domain",public,ref_code_document_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey15,"ancestor_id,domain",public,ref_code_environment_tag,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey16,"ancestor_id,domain",public,ref_code_event_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey17,"ancestor_id,domain",public,ref_code_feedback_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey18,"ancestor_id,domain",public,ref_code_incident_category,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey19,"ancestor_id,domain",public,ref_code_insurance_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey2,"ancestor_id,domain",public,ref_code_allergen,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey20,"ancestor_id,domain",public,ref_code_iti_practice,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey21,"ancestor_id,domain",public,ref_code_language_level,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey22,"ancestor_id,domain",public,ref_code_media_tag,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey23,"ancestor_id,domain",public,ref_code_media_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey24,"ancestor_id,domain",public,ref_code_meeting_equipment,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey25,"ancestor_id,domain",public,ref_code_membership_campaign,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey26,"ancestor_id,domain",public,ref_code_membership_tier,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey27,"ancestor_id,domain",public,ref_code_menu_category,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey28,"ancestor_id,domain",public,ref_code_mood,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey29,"ancestor_id,domain",public,ref_code_opening_schedule_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey3,"ancestor_id,domain",public,ref_code_amenity_family,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey30,"ancestor_id,domain",public,ref_code_package_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey31,"ancestor_id,domain",public,ref_code_partnership_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey32,"ancestor_id,domain",public,ref_code_payment_method,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey33,"ancestor_id,domain",public,ref_code_price_kind,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey34,"ancestor_id,domain",public,ref_code_price_unit,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey35,"ancestor_id,domain",public,ref_code_promotion_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey36,"ancestor_id,domain",public,ref_code_room_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey37,"ancestor_id,domain",public,ref_code_season_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey38,"ancestor_id,domain",public,ref_code_service_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey39,"ancestor_id,domain",public,ref_code_social_network,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey4,"ancestor_id,domain",public,ref_code_amenity_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey40,"ancestor_id,domain",public,ref_code_tourism_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey41,"ancestor_id,domain",public,ref_code_transport_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey42,"ancestor_id,domain",public,ref_code_view_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey43,"ancestor_id,domain",public,ref_code_weekday,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey44,"ancestor_id,domain",public,ref_code_other,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey5,"ancestor_id,domain",public,ref_code_assistance_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey6,"ancestor_id,domain",public,ref_code_booking_status,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey7,"ancestor_id,domain",public,ref_code_client_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey8,"ancestor_id,domain",public,ref_code_contact_kind,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_ancestor_id_domain_fkey9,"ancestor_id,domain",public,ref_code_cuisine_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey,"descendant_id,domain",public,ref_code_accommodation_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey1,"descendant_id,domain",public,ref_code_activity_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey10,"descendant_id,domain",public,ref_code_demand_subtopic,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey11,"descendant_id,domain",public,ref_code_demand_topic,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey12,"descendant_id,domain",public,ref_code_destination_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey13,"descendant_id,domain",public,ref_code_dietary_tag,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey14,"descendant_id,domain",public,ref_code_document_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey15,"descendant_id,domain",public,ref_code_environment_tag,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey16,"descendant_id,domain",public,ref_code_event_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey17,"descendant_id,domain",public,ref_code_feedback_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey18,"descendant_id,domain",public,ref_code_incident_category,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey19,"descendant_id,domain",public,ref_code_insurance_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey2,"descendant_id,domain",public,ref_code_allergen,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey20,"descendant_id,domain",public,ref_code_iti_practice,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey21,"descendant_id,domain",public,ref_code_language_level,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey22,"descendant_id,domain",public,ref_code_media_tag,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey23,"descendant_id,domain",public,ref_code_media_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey24,"descendant_id,domain",public,ref_code_meeting_equipment,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey25,"descendant_id,domain",public,ref_code_membership_campaign,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey26,"descendant_id,domain",public,ref_code_membership_tier,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey27,"descendant_id,domain",public,ref_code_menu_category,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey28,"descendant_id,domain",public,ref_code_mood,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey29,"descendant_id,domain",public,ref_code_opening_schedule_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey3,"descendant_id,domain",public,ref_code_amenity_family,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey30,"descendant_id,domain",public,ref_code_package_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey31,"descendant_id,domain",public,ref_code_partnership_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey32,"descendant_id,domain",public,ref_code_payment_method,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey33,"descendant_id,domain",public,ref_code_price_kind,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey34,"descendant_id,domain",public,ref_code_price_unit,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey35,"descendant_id,domain",public,ref_code_promotion_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey36,"descendant_id,domain",public,ref_code_room_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey37,"descendant_id,domain",public,ref_code_season_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey38,"descendant_id,domain",public,ref_code_service_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey39,"descendant_id,domain",public,ref_code_social_network,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey4,"descendant_id,domain",public,ref_code_amenity_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey40,"descendant_id,domain",public,ref_code_tourism_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey41,"descendant_id,domain",public,ref_code_transport_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey42,"descendant_id,domain",public,ref_code_view_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey43,"descendant_id,domain",public,ref_code_weekday,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey44,"descendant_id,domain",public,ref_code_other,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey5,"descendant_id,domain",public,ref_code_assistance_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey6,"descendant_id,domain",public,ref_code_booking_status,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey7,"descendant_id,domain",public,ref_code_client_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey8,"descendant_id,domain",public,ref_code_contact_kind,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_code_taxonomy_closure,ref_code_taxonomy_closure_descendant_id_domain_fkey9,"descendant_id,domain",public,ref_code_cuisine_type,"id,domain",NO ACTION,CASCADE,f,f
+public,ref_sustainability_action,ref_sustainability_action_category_id_fkey,category_id,public,ref_sustainability_action_category,id,NO ACTION,RESTRICT,f,f
+public,ref_sustainability_action,ref_sustainability_action_group_id_fkey,group_id,public,ref_sustainability_action_group,id,NO ACTION,RESTRICT,f,f
+public,ref_sustainability_action_group,ref_sustainability_action_group_category_id_fkey,category_id,public,ref_sustainability_action_category,id,NO ACTION,RESTRICT,f,f
+public,ref_tag,ref_tag_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,ref_tag,ref_tag_updated_by_fkey,updated_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,tag_link,tag_link_created_by_fkey,created_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,tag_link,tag_link_tag_id_fkey,tag_id,public,ref_tag,id,NO ACTION,CASCADE,f,f
+public,user_org_admin_role,user_org_admin_role_assigned_by_fkey,assigned_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,user_org_admin_role,user_org_admin_role_membership_id_fkey,membership_id,public,user_org_membership,id,NO ACTION,CASCADE,f,f
+public,user_org_admin_role,user_org_admin_role_role_id_fkey,role_id,public,ref_org_admin_role,id,NO ACTION,RESTRICT,f,f
+public,user_org_business_role,user_org_business_role_assigned_by_fkey,assigned_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,user_org_business_role,user_org_business_role_membership_id_fkey,membership_id,public,user_org_membership,id,NO ACTION,CASCADE,f,f
+public,user_org_business_role,user_org_business_role_role_id_fkey,role_id,public,ref_org_business_role,id,NO ACTION,RESTRICT,f,f
+public,user_org_membership,user_org_membership_invited_by_fkey,invited_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,user_org_membership,user_org_membership_org_object_id_fkey,org_object_id,public,object,id,NO ACTION,RESTRICT,f,f
+public,user_org_membership,user_org_membership_user_id_fkey,user_id,auth,users,id,NO ACTION,CASCADE,f,f
+public,user_permission,user_permission_granted_by_fkey,granted_by,auth,users,id,NO ACTION,SET NULL,f,f
+public,user_permission,user_permission_permission_id_fkey,permission_id,public,ref_permission,id,NO ACTION,CASCADE,f,f
+public,user_permission,user_permission_user_id_fkey,user_id,auth,users,id,NO ACTION,CASCADE,f,f
+staging,actor_channel_temp,actor_channel_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,actor_consent_temp,actor_consent_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,actor_object_role_temp,actor_object_role_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,actor_temp,actor_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,audit_audit_log_temp,audit_audit_log_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,audit_criteria_temp,audit_criteria_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,audit_result_temp,audit_result_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,audit_session_temp,audit_session_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,audit_template_temp,audit_template_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,batch_commit_ledger,batch_commit_ledger_batch_id_fkey,batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,batch_commit_ledger_item,batch_commit_ledger_item_ledger_id_fkey,ledger_id,staging,batch_commit_ledger,id,NO ACTION,CASCADE,f,f
+staging,contact_channel_temp,contact_channel_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,crm_comment_temp,crm_comment_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,crm_interaction_temp,crm_interaction_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,crm_task_temp,crm_task_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,i18n_translation_temp,i18n_translation_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,import_events,import_events_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,incident_report_temp,incident_report_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,mapping_contract,mapping_contract_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,mapping_contract_field,mapping_contract_field_contract_id_fkey,contract_id,staging,mapping_contract,id,NO ACTION,CASCADE,f,f
+staging,mapping_contract_sheet,mapping_contract_sheet_contract_id_fkey,contract_id,staging,mapping_contract,id,NO ACTION,CASCADE,f,f
+staging,mapping_relation_hypothesis,mapping_relation_hypothesis_contract_id_fkey,contract_id,staging,mapping_contract,id,NO ACTION,CASCADE,f,f
+staging,mapping_review_decision,mapping_review_decision_contract_id_fkey,contract_id,staging,mapping_contract,id,NO ACTION,CASCADE,f,f
+staging,media_galerie_lot1_temp,media_galerie_lot1_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,media_tag_temp,media_tag_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,media_temp,media_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,meeting_room_equipment_temp,meeting_room_equipment_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_amenity_temp,object_amenity_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_capacity_temp,object_capacity_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_classification_temp,object_classification_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_description_temp,object_description_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_discount_temp,object_discount_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_environment_tag_temp,object_environment_tag_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_external_id_temp,object_external_id_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_fma_occurrence_temp,object_fma_occurrence_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_fma_temp,object_fma_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_group_policy_temp,object_group_policy_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_iti_associated_object_temp,object_iti_associated_object_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_iti_info_temp,object_iti_info_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_iti_practice_temp,object_iti_practice_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_iti_profile_temp,object_iti_profile_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_iti_section_temp,object_iti_section_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_iti_stage_media_temp,object_iti_stage_media_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_iti_stage_temp,object_iti_stage_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_iti_temp,object_iti_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_language_temp,object_language_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_legal_temp,object_legal_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_location_temp,object_location_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_meeting_room_temp,object_meeting_room_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_membership_temp,object_membership_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_menu_item_allergen_temp,object_menu_item_allergen_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_menu_item_cuisine_type_temp,object_menu_item_cuisine_type_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_menu_item_dietary_tag_temp,object_menu_item_dietary_tag_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_menu_item_media_temp,object_menu_item_media_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_menu_item_temp,object_menu_item_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_menu_temp,object_menu_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_org_link_temp,object_org_link_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_origin_temp,object_origin_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_payment_method_temp,object_payment_method_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_pet_policy_temp,object_pet_policy_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_place_description_temp,object_place_description_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_place_temp,object_place_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_price_period_temp,object_price_period_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_price_temp,object_price_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_private_description_temp,object_private_description_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_relation_temp,object_relation_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_review_temp,object_review_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_room_type_amenity_temp,object_room_type_amenity_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_room_type_media_temp,object_room_type_media_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_room_type_temp,object_room_type_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_sustainability_action_label_temp,object_sustainability_action_label_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_sustainability_action_temp,object_sustainability_action_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_temp,object_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_version_temp,object_version_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,object_zone_temp,object_zone_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,opening_period_temp,opening_period_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,opening_schedule_temp,opening_schedule_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,opening_time_frame_temp,opening_time_frame_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,opening_time_period_temp,opening_time_period_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,opening_time_period_weekday_temp,opening_time_period_weekday_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,org_temp,org_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,pending_change_temp,pending_change_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,promotion_object_temp,promotion_object_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,promotion_temp,promotion_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,promotion_usage_temp,promotion_usage_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,publication_object_temp,publication_object_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,publication_temp,publication_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_actor_role_temp,ref_actor_role_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_amenity_temp,ref_amenity_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_capacity_applicability_temp,ref_capacity_applicability_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_capacity_metric_temp,ref_capacity_metric_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_classification_scheme_temp,ref_classification_scheme_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_classification_value_temp,ref_classification_value_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_code_temp,ref_code_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_contact_role_temp,ref_contact_role_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_document_temp,ref_document_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_iti_assoc_role_temp,ref_iti_assoc_role_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_language_temp,ref_language_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_legal_type_temp,ref_legal_type_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_object_relation_type_temp,ref_object_relation_type_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_org_role_temp,ref_org_role_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_review_source_temp,ref_review_source_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_sustainability_action_category_temp,ref_sustainability_action_category_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_sustainability_action_temp,ref_sustainability_action_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,ref_tag_temp,ref_tag_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f
+staging,tag_link_temp,tag_link_temp_import_batch_id_fkey,import_batch_id,staging,import_batches,batch_id,NO ACTION,CASCADE,f,f

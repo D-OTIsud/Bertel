@@ -1,0 +1,777 @@
+{
+  "date": "2026-09-05",
+  "revision": "5873ec69879e61ff34030d196c65f2eb0ac14de0",
+  "meaning": "Paquets signales par npm audit, pas nombre de failles distinctes exploitables. Aucun correctif applique.",
+  "all": {
+    "info": 0,
+    "low": 9,
+    "moderate": 34,
+    "high": 16,
+    "critical": 0,
+    "total": 59
+  },
+  "omit_dev": {
+    "info": 0,
+    "low": 1,
+    "moderate": 27,
+    "high": 7,
+    "critical": 0,
+    "total": 35
+  },
+  "packages_omit_dev": [
+    {
+      "name": "@tiptap/core",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        {
+          "title": "Tiptap: mergeAttributes() turns an own __proto__ key into inherited executable DOM attributes",
+          "url": "https://github.com/advisories/GHSA-cp6q-959q-f8rh",
+          "severity": "moderate",
+          "range": ">=2.0.0-alpha.0 <3.30.4"
+        }
+      ],
+      "fixAvailable": {
+        "name": "@tiptap/react",
+        "version": "3.31.3",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@tiptap/extension-blockquote",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-bold",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-bubble-menu",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": {
+        "name": "@tiptap/react",
+        "version": "3.31.3",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@tiptap/extension-bullet-list",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-code",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-code-block",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-document",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-dropcursor",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": {
+        "name": "@tiptap/starter-kit",
+        "version": "3.31.3",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@tiptap/extension-floating-menu",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-gapcursor",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-hard-break",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-heading",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-history",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-horizontal-rule",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-italic",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-link",
+      "severity": "moderate",
+      "isDirect": true,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": {
+        "name": "@tiptap/extension-link",
+        "version": "3.31.3",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@tiptap/extension-list-item",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-ordered-list",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-paragraph",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-strike",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-text",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "@tiptap/extension-text-style",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": {
+        "name": "@tiptap/starter-kit",
+        "version": "3.31.3",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@tiptap/react",
+      "severity": "moderate",
+      "isDirect": true,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core",
+        "@tiptap/extension-bubble-menu",
+        "@tiptap/extension-floating-menu"
+      ],
+      "fixAvailable": {
+        "name": "@tiptap/react",
+        "version": "3.31.3",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "@tiptap/starter-kit",
+      "severity": "moderate",
+      "isDirect": true,
+      "versions": [
+        "2.27.2"
+      ],
+      "via": [
+        "@tiptap/core",
+        "@tiptap/extension-blockquote",
+        "@tiptap/extension-bold",
+        "@tiptap/extension-bullet-list",
+        "@tiptap/extension-code",
+        "@tiptap/extension-code-block",
+        "@tiptap/extension-document",
+        "@tiptap/extension-dropcursor",
+        "@tiptap/extension-gapcursor",
+        "@tiptap/extension-hard-break",
+        "@tiptap/extension-heading",
+        "@tiptap/extension-history",
+        "@tiptap/extension-horizontal-rule",
+        "@tiptap/extension-italic",
+        "@tiptap/extension-list-item",
+        "@tiptap/extension-ordered-list",
+        "@tiptap/extension-paragraph",
+        "@tiptap/extension-strike",
+        "@tiptap/extension-text",
+        "@tiptap/extension-text-style"
+      ],
+      "fixAvailable": {
+        "name": "@tiptap/starter-kit",
+        "version": "3.31.3",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "linkify-it",
+      "severity": "high",
+      "isDirect": false,
+      "versions": [
+        "5.0.1"
+      ],
+      "via": [
+        {
+          "title": "linkify-it: Quadratic-complexity DoS via the `mailto:` validator scan-loop on attacker text",
+          "url": "https://github.com/advisories/GHSA-v245-v573-v5vm",
+          "severity": "high",
+          "range": "<=5.0.1"
+        }
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "nanoid",
+      "severity": "high",
+      "isDirect": false,
+      "versions": [
+        "3.3.11",
+        "5.1.7"
+      ],
+      "via": [
+        {
+          "title": "nanoid: non-secure generators can loop indefinitely with negative size",
+          "url": "https://github.com/advisories/GHSA-28wg-ghj8-5hjv",
+          "severity": "high",
+          "range": ">=4.0.0 <5.1.16"
+        },
+        {
+          "title": "nanoid: non-secure generators can loop indefinitely with negative size",
+          "url": "https://github.com/advisories/GHSA-28wg-ghj8-5hjv",
+          "severity": "high",
+          "range": "<3.3.16"
+        },
+        {
+          "title": "nanoid: custom generators can loop indefinitely when size is zero",
+          "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+          "severity": "high",
+          "range": "<3.3.18"
+        },
+        {
+          "title": "nanoid: Integer Overflow or Wraparound",
+          "url": "https://github.com/advisories/GHSA-xwg4-73v4-xw9w",
+          "severity": "high",
+          "range": ">=4.0.0 <5.1.11"
+        },
+        {
+          "title": "nanoid: Integer Overflow or Wraparound",
+          "url": "https://github.com/advisories/GHSA-xwg4-73v4-xw9w",
+          "severity": "high",
+          "range": "<3.3.12"
+        }
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "next",
+      "severity": "high",
+      "isDirect": true,
+      "versions": [
+        "16.1.6"
+      ],
+      "via": [
+        {
+          "title": "Next.js: HTTP request smuggling in rewrites",
+          "url": "https://github.com/advisories/GHSA-ggv3-7p47-pfv8",
+          "severity": "moderate",
+          "range": ">=16.0.0-beta.0 <16.1.7"
+        },
+        {
+          "title": "Next.js: Unbounded next/image disk cache growth can exhaust storage",
+          "url": "https://github.com/advisories/GHSA-3x4c-7xq6-9pq8",
+          "severity": "moderate",
+          "range": ">=16.0.0-beta.0 <16.1.7"
+        },
+        {
+          "title": "Next.js: Unbounded postponed resume buffering can lead to DoS",
+          "url": "https://github.com/advisories/GHSA-h27x-g6w4-24gq",
+          "severity": "moderate",
+          "range": ">=16.0.1 <16.1.7"
+        },
+        {
+          "title": "Next.js: null origin can bypass Server Actions CSRF checks",
+          "url": "https://github.com/advisories/GHSA-mq59-m269-xvcx",
+          "severity": "moderate",
+          "range": ">=16.0.1 <16.1.7"
+        },
+        {
+          "title": "Next.js: null origin can bypass dev HMR websocket CSRF checks",
+          "url": "https://github.com/advisories/GHSA-jcc7-9wpm-mj36",
+          "severity": "low",
+          "range": ">=16.0.1 <16.1.7"
+        },
+        {
+          "title": "Next.js has a Denial of Service with Server Components",
+          "url": "https://github.com/advisories/GHSA-q4gf-8mx6-v5v3",
+          "severity": "high",
+          "range": ">=16.0.0-beta.0 <16.2.3"
+        },
+        {
+          "title": "Next.js Vulnerable to Denial of Service with Server Components",
+          "url": "https://github.com/advisories/GHSA-8h8q-6873-q5fj",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - Incomplete Fix Follow-Up",
+          "url": "https://github.com/advisories/GHSA-26hh-7cqf-hhc6",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.6"
+        },
+        {
+          "title": "Next.js's Middleware / Proxy redirects can be cache-poisoned",
+          "url": "https://github.com/advisories/GHSA-3g8h-86w9-wvmq",
+          "severity": "low",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js vulnerable to cross-site scripting in App Router applications using CSP nonces",
+          "url": "https://github.com/advisories/GHSA-ffhc-5mcf-pf4q",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js vulnerable to cache poisoning via collisions in React Server Component cache-busting",
+          "url": "https://github.com/advisories/GHSA-vfv6-92ff-j949",
+          "severity": "low",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js has cross-site scripting in beforeInteractive scripts with untrusted input",
+          "url": "https://github.com/advisories/GHSA-gx5p-jg67-6x7h",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js vulnerable to Denial of Service via connection exhaustion in applications using Cache Components",
+          "url": "https://github.com/advisories/GHSA-mg66-mrh9-m8jx",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js has a Denial of Service in the Image Optimization API",
+          "url": "https://github.com/advisories/GHSA-h64f-5h5j-jqjh",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js vulnerable to server-side request forgery in applications using WebSocket upgrades",
+          "url": "https://github.com/advisories/GHSA-c4j6-fc7j-m34r",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js has a Middleware / Proxy bypass through dynamic route parameter injection",
+          "url": "https://github.com/advisories/GHSA-492v-c6pp-mqqv",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js vulnerable to cache poisoning in React Server Component responses",
+          "url": "https://github.com/advisories/GHSA-wfc6-r584-vfw7",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes",
+          "url": "https://github.com/advisories/GHSA-267c-6grr-h53f",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js has a Middleware / Proxy bypass in Pages Router applications using i18n",
+          "url": "https://github.com/advisories/GHSA-36qx-fr4f-26g5",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.5"
+        },
+        {
+          "title": "Next.js: Middleware / Proxy bypass in App Router applications using Turbopack and single locale",
+          "url": "https://github.com/advisories/GHSA-6gpp-xcg3-4w24",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.11"
+        },
+        {
+          "title": "Next.js: Denial of Service in App Router using Server Actions",
+          "url": "https://github.com/advisories/GHSA-m99w-x7hq-7vfj",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.11"
+        },
+        {
+          "title": "Next.js: Server-Side Request Forgery in Server Actions on custom servers",
+          "url": "https://github.com/advisories/GHSA-89xv-2m56-2m9x",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.11"
+        },
+        {
+          "title": "Next.js: Cache confusion of response bodies for requests with bodies",
+          "url": "https://github.com/advisories/GHSA-68g3-v927-f742",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.2.11"
+        },
+        {
+          "title": "Next.js: Cache confusion of response bodies for requests with bodies containing invalid UTF-8 byte sequences",
+          "url": "https://github.com/advisories/GHSA-4633-3j49-mh5q",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.2.11"
+        },
+        {
+          "title": "Next.js: Unbounded Server Action payload in Edge runtime",
+          "url": "https://github.com/advisories/GHSA-4c39-4ccg-62r3",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.2.11"
+        },
+        {
+          "title": "Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname",
+          "url": "https://github.com/advisories/GHSA-p9j2-gv94-2wf4",
+          "severity": "high",
+          "range": ">=16.0.0 <16.2.11"
+        },
+        {
+          "title": "Next.js: Denial of Service in the Image Optimization API using SVGs",
+          "url": "https://github.com/advisories/GHSA-q8wf-6r8g-63ch",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.2.11"
+        },
+        {
+          "title": "Next.js: Unauthenticated disclosure of internal Server Function endpoints",
+          "url": "https://github.com/advisories/GHSA-955p-x3mx-jcvp",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.2.11"
+        },
+        "postcss",
+        "sharp"
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "picomatch",
+      "severity": "high",
+      "isDirect": false,
+      "versions": [
+        "2.3.1",
+        "4.0.3"
+      ],
+      "via": [
+        {
+          "title": "Picomatch: Method Injection in POSIX Character Classes causes incorrect Glob Matching",
+          "url": "https://github.com/advisories/GHSA-3v7f-55p6-f55p",
+          "severity": "moderate",
+          "range": "<2.3.2"
+        },
+        {
+          "title": "Picomatch: Method Injection in POSIX Character Classes causes incorrect Glob Matching",
+          "url": "https://github.com/advisories/GHSA-3v7f-55p6-f55p",
+          "severity": "moderate",
+          "range": ">=4.0.0 <4.0.4"
+        },
+        {
+          "title": "Picomatch has a ReDoS vulnerability via extglob quantifiers",
+          "url": "https://github.com/advisories/GHSA-c2c7-rcm5-vvqj",
+          "severity": "high",
+          "range": "<2.3.2"
+        },
+        {
+          "title": "Picomatch has a ReDoS vulnerability via extglob quantifiers",
+          "url": "https://github.com/advisories/GHSA-c2c7-rcm5-vvqj",
+          "severity": "high",
+          "range": ">=4.0.0 <4.0.4"
+        }
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "postcss",
+      "severity": "high",
+      "isDirect": true,
+      "versions": [
+        "8.4.31",
+        "8.5.8"
+      ],
+      "via": [
+        {
+          "title": "PostCSS has XSS via Unescaped </style> in its CSS Stringify Output",
+          "url": "https://github.com/advisories/GHSA-qx2v-qp2m-jg93",
+          "severity": "moderate",
+          "range": "<8.5.10"
+        },
+        {
+          "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+          "url": "https://github.com/advisories/GHSA-6g55-p6wh-862q",
+          "severity": "high",
+          "range": "<=8.5.11"
+        },
+        {
+          "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+          "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+          "severity": "moderate",
+          "range": "<=8.5.22"
+        },
+        {
+          "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+          "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+          "severity": "high",
+          "range": "<=8.5.17"
+        }
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "postcss-selector-parser",
+      "severity": "low",
+      "isDirect": false,
+      "versions": [
+        "6.1.2"
+      ],
+      "via": [
+        {
+          "title": "postcss-selector-parser allows denial of service through uncontrolled AST recursion",
+          "url": "https://github.com/advisories/GHSA-w9m9-85wc-3x92",
+          "severity": "low",
+          "range": ">=6.1.0 <6.1.3"
+        }
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "protocol-buffers-schema",
+      "severity": "moderate",
+      "isDirect": false,
+      "versions": [
+        "3.6.0"
+      ],
+      "via": [
+        {
+          "title": "Mafintosh's protocol-buffers-schema is vulnerable to prototype pollution",
+          "url": "https://github.com/advisories/GHSA-j452-xhg8-qg39",
+          "severity": "moderate",
+          "range": "<3.6.1"
+        }
+      ],
+      "fixAvailable": true
+    },
+    {
+      "name": "sharp",
+      "severity": "high",
+      "isDirect": true,
+      "versions": [
+        "0.34.5"
+      ],
+      "via": [
+        {
+          "title": "sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591",
+          "url": "https://github.com/advisories/GHSA-f88m-g3jw-g9cj",
+          "severity": "high",
+          "range": "<0.35.0"
+        }
+      ],
+      "fixAvailable": {
+        "name": "sharp",
+        "version": "0.35.4",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "tiptap-markdown",
+      "severity": "moderate",
+      "isDirect": true,
+      "versions": [
+        "0.8.10"
+      ],
+      "via": [
+        "@tiptap/core"
+      ],
+      "fixAvailable": {
+        "name": "tiptap-markdown",
+        "version": "0.9.0",
+        "isSemVerMajor": true
+      }
+    },
+    {
+      "name": "ws",
+      "severity": "high",
+      "isDirect": false,
+      "versions": [
+        "8.20.1"
+      ],
+      "via": [
+        {
+          "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks",
+          "url": "https://github.com/advisories/GHSA-96hv-2xvq-fx4p",
+          "severity": "high",
+          "range": ">=8.0.0 <8.21.0"
+        }
+      ],
+      "fixAvailable": true
+    }
+  ]
+}

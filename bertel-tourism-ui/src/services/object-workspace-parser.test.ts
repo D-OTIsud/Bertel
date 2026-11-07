@@ -1,0 +1,929 @@
+import {
+  ACTOR_NOTE_RESTRICTED_REASON,
+  ACTOR_NOTE_UNKNOWN_REASON,
+  parseObjectWorkspace,
+} from './object-workspace-parser';
+import type { ObjectDetail } from '../types/domain';
+
+describe('parseObjectWorkspace', () => {
+  it('keeps object and sub-place descriptions separated and preserves language maps', () => {
+    const detail: ObjectDetail = {
+      id: 'HOTRUN0000000001',
+      name: 'Hotel Basalte',
+      type: 'HOT',
+      raw: {
+        name_i18n: {
+          fr: 'Hotel Basalte',
+          en: 'Basalt Hotel',
+        },
+        business_timezone: 'Indian/Reunion',
+        commercial_visibility: 'active',
+        region_code: 'RUN',
+        status: 'draft',
+        published_at: '2026-03-27T08:00:00Z',
+        is_editing: true,
+        taxonomy: {
+          domains: [
+            {
+              domain: 'taxonomy_hot',
+              domain_name: 'Taxonomie HOT',
+              object_type: 'HOT',
+              assigned_node: {
+                id: 'node-hotel-familial',
+                code: 'family_hotel',
+                name: 'Hôtel familial',
+                description: 'Hotels adaptes aux familles',
+                depth: 1,
+              },
+              path: [
+                {
+                  id: 'node-hotel',
+                  code: 'hotel',
+                  name: 'Hotel',
+                  description: 'Hotellerie',
+                  depth: 0,
+                },
+                {
+                  id: 'node-hotel-familial',
+                  code: 'family_hotel',
+                  name: 'Hôtel familial',
+                  description: 'Hotels adaptes aux familles',
+                  depth: 1,
+                },
+              ],
+              updated_at: '2026-01-10T00:00:00Z',
+              source: 'migration_taxonomy',
+            },
+          ],
+        },
+        object_location: {
+          id: 'location-1',
+          address1: '12 promenade du lagon',
+          postcode: '97410',
+          city: 'Saint-Pierre',
+          latitude: '-21.3391',
+          longitude: '55.4781',
+        },
+        object_description: {
+          id: 'description-1',
+          visibility: 'public',
+          description: 'Description principale FR',
+          description_i18n: {
+            fr: 'Description principale FR',
+            en: 'Main description EN',
+          },
+          description_chapo: 'Chapo FR',
+          description_chapo_i18n: {
+            fr: 'Chapo FR',
+            en: 'Lead EN',
+          },
+        },
+        media: [
+          {
+            id: 'media-1',
+            url: 'https://example.com/facade.jpg',
+            title: 'Facade',
+            type_code: 'photo',
+            visibility: 'public',
+            position: 1,
+            is_main: true,
+            tags: ['hero', 'facade'],
+          },
+        ],
+        contacts: [
+          {
+            id: 'contact-1',
+            kind_code: 'phone',
+            kind_name: 'Telephone',
+            role: 'accueil',
+            value: '+262 262 00 00 00',
+            is_public: true,
+            is_primary: true,
+            position: 0,
+          },
+        ],
+        languages: [
+          { code: 'fr', name: 'Francais' },
+          { code: 'en', name: 'Anglais' },
+        ],
+        payment_methods: [
+          { code: 'cb', name: 'Carte bancaire' },
+        ],
+        environment_tags: [
+          { code: 'lagoon', name: 'Lagon' },
+        ],
+        amenities: [
+          {
+            code: 'pool',
+            name: 'Piscine',
+            family: {
+              code: 'comfort',
+              name: 'Confort',
+            },
+          },
+        ],
+        capacity: [
+          {
+            metric_code: 'ROOM_COUNT',
+            metric_name: 'Nombre de chambres',
+            value: 24,
+            unit: 'unites',
+          },
+        ],
+        group_policies: [
+          {
+            min_size: 8,
+            max_size: 40,
+            group_only: false,
+            notes: 'Sur reservation',
+          },
+        ],
+        pet_policy: {
+          accepted: true,
+          conditions: 'Supplement menage',
+        },
+        prices: [
+          {
+            id: 'price-1',
+            kind: { id: 'kind-room', code: 'ROOM', name: 'Chambre' },
+            unit: { id: 'unit-night', code: 'NIGHT', name: 'Nuit' },
+            amount: 120,
+            amount_max: 160,
+            currency: 'EUR',
+            valid_from: '2026-06-01',
+            valid_to: '2026-09-30',
+            conditions: 'Petit-dejeuner inclus',
+            periods: [
+              {
+                id: 'period-1',
+                start_date: '2026-07-01',
+                end_date: '2026-08-31',
+                note: 'Haute saison',
+              },
+            ],
+          },
+        ],
+        discounts: [
+          {
+            id: 'discount-1',
+            conditions: 'A partir de 10 personnes',
+            discount_percent: 12,
+            min_group_size: 10,
+            valid_from: '2026-05-01',
+            valid_to: '2026-10-31',
+          },
+        ],
+        opening_times: {
+          periods_current: [
+            {
+              id: 'opening-period-current-1',
+              order: 1,
+              label: 'Saison courante',
+              period_type_code: 'high_season',
+              date_start: '2026-01-01',
+              date_end: '2026-12-31',
+              weekday_slots: {
+                monday: [{ start: '09:30', end: '17:00' }],
+                sunday: [{ start: '09:30', end: '17:00' }],
+              },
+            },
+          ],
+          periods_next_year: [
+            {
+              id: 'opening-period-next-1',
+              order: 1,
+              label: 'Annee suivante',
+              date_start: '2027-01-01',
+              date_end: '2027-12-31',
+              weekday_slots: {
+                monday: [{ start: '10:00', end: '16:00' }],
+              },
+            },
+          ],
+        },
+        current_membership: {
+          id: 'membership-current-1',
+          org_object_id: 'ORG0001',
+          object_id: 'HOTRUN0000000001',
+          campaign_id: 'campaign-1',
+          campaign_code: '2026',
+          campaign_name: 'Campagne 2026',
+          tier_id: 'tier-1',
+          tier_code: 'PREMIUM',
+          tier_name: 'Premium',
+          status: 'paid',
+          starts_at: '2026-01-01',
+          ends_at: '2026-12-31',
+          payment_date: '2026-01-10',
+          metadata: {
+            invoice: 'INV-2026-01',
+          },
+          visibility_impact: 'Visibilite active',
+        },
+        private_notes: [
+          {
+            id: 'follow-up-note-1',
+            body: 'Prestataire relance pour finaliser la convention 2026.',
+            audience: 'private',
+            category: 'followup',
+            is_pinned: true,
+            is_archived: false,
+            can_edit: true,
+            can_delete: true,
+            language: 'fr',
+            created_at: '2026-03-25T08:00:00Z',
+            updated_at: '2026-03-26T09:30:00Z',
+            created_by: {
+              id: 'user-1',
+              display_name: 'Equipe RUN',
+              avatar_url: null,
+            },
+          },
+        ],
+        organizations: [
+          {
+            id: 'ORG0001',
+            type: 'ORG',
+            name: 'Office de tourisme',
+            status: 'published',
+            role: {
+              id: 'org-role-1',
+              code: 'publisher',
+              name: 'Diffuseur',
+            },
+            note: 'Structure porteuse',
+            contacts: [
+              {
+                id: 'org-contact-1',
+                kind: {
+                  code: 'phone',
+                  name: 'Telephone',
+                },
+                role: {
+                  code: 'accueil',
+                  name: 'Accueil',
+                },
+                value: '0262 00 00 00',
+                is_primary: true,
+                is_public: true,
+                position: 1,
+              },
+            ],
+          },
+        ],
+        org_links: [
+          {
+            id: 'ORG0002',
+            type: 'ORG',
+            name: 'Reseau hotelier',
+            status: 'draft',
+            role: {
+              id: 'org-role-2',
+              code: 'network',
+              name: 'Reseau',
+            },
+            note: 'Rattachement secondaire',
+            contacts: [],
+          },
+        ],
+        actors: [
+          {
+            id: 'actor-1',
+            display_name: 'Claire Martin',
+            first_name: 'Claire',
+            last_name: 'Martin',
+            gender: 'f',
+            role: {
+              id: 'actor-role-1',
+              code: 'manager',
+              name: 'Gestionnaire',
+            },
+            is_primary: true,
+            valid_from: '2026-01-01',
+            visibility: 'extended',
+            note: 'Interlocutrice principale',
+            contacts: [
+              {
+                id: 'actor-contact-1',
+                kind: {
+                  code: 'email',
+                  name: 'Email',
+                },
+                role: {
+                  code: 'direct',
+                  name: 'Direct',
+                },
+                value: 'claire@example.com',
+                is_primary: true,
+                is_public: false,
+                position: 1,
+              },
+            ],
+          },
+        ],
+        parent_objects: [
+          {
+            id: 'PCU0001',
+            type: 'PCU',
+            name: 'Belvedere des hauts',
+            status: 'published',
+            relation_type: {
+              id: 'relation-type-1',
+              name: 'Etape',
+            },
+            note: 'Etape recommandee',
+            distance_m: 2400,
+          },
+        ],
+        outgoing_relations: [
+          {
+            id: 'relation-out-1',
+            target: {
+              id: 'SRV0001',
+              type: 'SRV',
+              name: 'Navette port',
+              status: 'published',
+            },
+            relation_type: {
+              id: 'relation-type-2',
+              code: 'ACCESS',
+              name: 'Acces',
+            },
+            note: 'Navette sur reservation',
+            distance_m: 800,
+          },
+        ],
+        incoming_relations: [
+          {
+            id: 'relation-in-1',
+            source: {
+              id: 'ACT0001',
+              type: 'ACT',
+              name: 'Guide local',
+              status: 'published',
+            },
+            relation_type: {
+              id: 'relation-type-3',
+              code: 'ANIMATE',
+              name: 'Anime',
+            },
+            note: 'Anime les visites privees',
+            distance_m: 0,
+          },
+        ],
+        legal_records: [
+          {
+            id: 'legal-1',
+            type: {
+              id: 'legal-type-1',
+              code: 'safety_certificate',
+              name: 'Certificat de securite',
+              category: 'accommodation',
+              is_public: true,
+              is_required: true,
+            },
+            value: {
+              issuer: 'Prefecture',
+              reference: 'SAFE-2026',
+            },
+            document_id: '11111111-1111-4111-8111-111111111111',
+            valid_from: '2026-01-01',
+            valid_to: '2026-12-31',
+            validity_mode: 'fixed_end_date',
+            status: 'active',
+            document_requested_at: '2026-01-03T09:00:00Z',
+            document_delivered_at: '2026-01-10T09:00:00Z',
+            note: 'Controle annuel OK',
+            days_until_expiry: 200,
+          },
+        ],
+        places: [
+          {
+            id: 'place-1',
+            name: 'Spa lagon',
+            is_primary: true,
+            position: 0,
+            location: {
+              address1: 'Niveau 1',
+              city: 'Saint-Pierre',
+            },
+            descriptions: [
+              {
+                id: 'place-description-1',
+                visibility: 'public',
+                description: 'Texte spa FR',
+                description_i18n: {
+                  fr: 'Texte spa FR',
+                  en: 'Spa text EN',
+                },
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr', 'en']);
+
+    expect(parsed.generalInfo.name).toBe('Hotel Basalte');
+    expect(parsed.generalInfo.nameTranslations).toEqual({
+      fr: 'Hotel Basalte',
+      en: 'Basalt Hotel',
+    });
+    expect(parsed.publication).toMatchObject({
+      status: 'draft',
+      publishedAt: '2026-03-27T08:00:00Z',
+      isEditing: true,
+    });
+    expect(parsed.taxonomy.domains).toHaveLength(1);
+    expect(parsed.taxonomy.domains[0]).toMatchObject({
+      domain: 'taxonomy_hot',
+      label: 'Taxonomie HOT',
+      objectType: 'HOT',
+    });
+    expect(parsed.taxonomy.domains[0].assignment).toMatchObject({
+      code: 'family_hotel',
+      label: 'Hôtel familial',
+      source: 'migration_taxonomy',
+    });
+    expect(parsed.taxonomy.domains[0].assignment?.path).toEqual([
+      expect.objectContaining({ code: 'hotel', label: 'Hotel', depth: 0 }),
+      expect.objectContaining({ code: 'family_hotel', label: 'Hôtel familial', depth: 1 }),
+    ]);
+    expect(parsed.taxonomy.domains[0].nodes).toEqual([]);
+
+    expect(parsed.location.main).toMatchObject({
+      address1: '12 promenade du lagon',
+      city: 'Saint-Pierre',
+      postcode: '97410',
+      latitude: '-21.3391',
+      longitude: '55.4781',
+    });
+
+    expect(parsed.descriptions.localLanguage).toBe('fr');
+    expect(parsed.descriptions.availableLanguages).toEqual(expect.arrayContaining(['fr', 'en']));
+    expect(parsed.descriptions.object.scope).toBe('object');
+    expect(parsed.descriptions.object.description.baseValue).toBe('Description principale FR');
+    expect(parsed.descriptions.object.description.values.en).toBe('Main description EN');
+
+    expect(parsed.places.items).toHaveLength(1);
+    expect(parsed.places.items[0]).toMatchObject({
+      recordId: 'place-1',
+      label: 'Spa lagon',
+    });
+    expect(parsed.places.items[0].description.baseValue).toBe('Texte spa FR');
+    expect(parsed.places.items[0].description.values.en).toBe('Spa text EN');
+    expect(parsed.media.objectItems[0]).toMatchObject({
+      title: 'Facade',
+      typeCode: 'photo',
+      visibility: 'public',
+      isMain: true,
+      tags: ['hero', 'facade'],
+    });
+    expect(parsed.contacts.objectItems[0]).toMatchObject({
+      kindCode: 'phone',
+      roleCode: 'accueil',
+      value: '+262 262 00 00 00',
+      isPublic: true,
+      isPrimary: true,
+    });
+    expect(parsed.characteristics.selectedLanguages.map((item) => item.code)).toEqual(expect.arrayContaining(['fr', 'en']));
+    expect(parsed.characteristics.selectedPaymentCodes).toEqual(['cb']);
+    expect(parsed.characteristics.selectedEnvironmentCodes).toEqual(['lagoon']);
+    expect(parsed.characteristics.selectedAmenityCodes).toEqual(['pool']);
+    expect(parsed.distinctions).toEqual({
+      distinctionGroups: [],
+      accessibilityLabels: [],
+      accessibilityAmenityCoverage: [],
+      schemeOptions: [],
+      unavailableReason: null,
+    });
+    expect(parsed.pricing.prices[0]).toMatchObject({
+      kindCode: 'ROOM',
+      unitCode: 'NIGHT',
+      amount: '120',
+      amountMax: '160',
+      currency: 'EUR',
+      validFrom: '2026-06-01',
+      validTo: '2026-09-30',
+      conditions: 'Petit-dejeuner inclus',
+    });
+    expect(parsed.pricing.prices[0].periods[0]).toMatchObject({
+      startDate: '2026-07-01',
+      endDate: '2026-08-31',
+      note: 'Haute saison',
+    });
+    expect(parsed.pricing.discounts[0]).toMatchObject({
+      discountPercent: '12',
+      minGroupSize: '10',
+      validFrom: '2026-05-01',
+      validTo: '2026-10-31',
+    });
+    expect(parsed.openings.periods).toHaveLength(2);
+    expect(parsed.openings.periods[0]).toMatchObject({
+      recordId: 'opening-period-current-1',
+      bucket: 'current',
+      label: 'Saison courante',
+      seasonTypeCode: 'high_season',
+      startDate: '2026-01-01',
+      endDate: '2026-12-31',
+    });
+    expect(parsed.openings.periods[0].weekdays[0]).toMatchObject({
+      code: 'monday',
+      label: 'Lundi',
+    });
+    expect(parsed.openings.periods[0].weekdays[0].slots[0]).toMatchObject({
+      start: '09:30',
+      end: '17:00',
+    });
+    expect(parsed.openings.periods[1]).toMatchObject({
+      bucket: 'next-year',
+      label: 'Annee suivante',
+    });
+    expect(parsed.providerFollowUp.notes).toHaveLength(1);
+    expect(parsed.providerFollowUp.notes[0]).toMatchObject({
+      category: 'followup',
+      isPinned: true,
+      createdByName: 'Equipe RUN',
+    });
+    expect(parsed.providerFollowUp.notes[0].body).toContain('convention 2026');
+    expect(parsed.relationships.organizationLinks).toHaveLength(2);
+    expect(parsed.relationships.organizationLinks[0]).toMatchObject({
+      name: 'Office de tourisme',
+      roleCode: 'publisher',
+    });
+    expect(parsed.relationships.actors[0]).toMatchObject({
+      displayName: 'Claire Martin',
+      roleCode: 'manager',
+      visibility: 'extended',
+    });
+    expect(parsed.relationships.actors[0].contacts[0]).toMatchObject({
+      kindCode: 'email',
+      value: 'claire@example.com',
+      isPublic: false,
+    });
+    expect(parsed.relationships.relatedObjects).toHaveLength(3);
+    expect(parsed.relationships.relatedObjects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Belvedere des hauts', direction: 'associated', relationTypeLabel: 'Etape' }),
+      expect.objectContaining({ name: 'Navette port', direction: 'out', relationTypeCode: 'ACCESS' }),
+      expect.objectContaining({ name: 'Guide local', direction: 'in', relationTypeCode: 'ANIMATE' }),
+    ]));
+    expect(parsed.memberships.items).toHaveLength(1);
+    expect(parsed.memberships.items[0]).toMatchObject({
+      scope: 'object',
+      orgObjectId: 'ORG0001',
+      campaignCode: '2026',
+      tierCode: 'PREMIUM',
+      status: 'paid',
+      visibilityImpact: 'Visibilite active',
+    });
+    expect(parsed.memberships.items[0].metadataJson).toContain('INV-2026-01');
+    expect(parsed.legal.records[0]).toMatchObject({
+      typeCode: 'safety_certificate',
+      typeLabel: 'Certificat de securite',
+      category: 'accommodation',
+      isPublic: true,
+      isRequired: true,
+      documentId: '11111111-1111-4111-8111-111111111111',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
+      validityMode: 'fixed_end_date',
+      status: 'active',
+      note: 'Controle annuel OK',
+      daysUntilExpiry: '200',
+    });
+    expect(parsed.legal.records[0].valueJson).toContain('SAFE-2026');
+    expect(parsed.capacityPolicies.capacityItems[0]).toMatchObject({
+      metricCode: 'ROOM_COUNT',
+      metricLabel: 'Nombre de chambres',
+      value: '24',
+      unit: 'unites',
+    });
+    expect(parsed.capacityPolicies.groupPolicy).toMatchObject({
+      minSize: '8',
+      maxSize: '40',
+      groupOnly: false,
+      notes: 'Sur reservation',
+    });
+    expect(parsed.capacityPolicies.petPolicy).toMatchObject({
+      accepted: true,
+      conditions: 'Supplement menage',
+    });
+  });
+
+  it('recovers initial coordinates from geometry sources when direct latitude fields are absent', () => {
+    const detail: ObjectDetail = {
+      id: 'HOTRUN0000000002',
+      name: 'Cote Volcan',
+      type: 'HOT',
+      raw: {
+        address: {
+          address1: '45 route du volcan',
+          postcode: '97418',
+          city: 'Le Tampon',
+        },
+        location: {
+          geometry: {
+            type: 'Point',
+            coordinates: [55.517913, -21.219988],
+          },
+        },
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.location.main).toMatchObject({
+      address1: '45 route du volcan',
+      postcode: '97418',
+      city: 'Le Tampon',
+      latitude: '-21.219988',
+      longitude: '55.517913',
+    });
+  });
+
+  it('uses flat resource description fields as the editable object description', () => {
+    const detail: ObjectDetail = {
+      id: 'HLO0001',
+      name: 'Case du lagon',
+      type: 'HLO',
+      raw: {
+        description: 'Maison de charme a deux pas du lagon.',
+        description_chapo: 'Une case creole intime.',
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.descriptions.object.description.baseValue).toBe('Maison de charme a deux pas du lagon.');
+    expect(parsed.descriptions.object.chapo.baseValue).toBe('Une case creole intime.');
+    expect(parsed.descriptions.availableLanguages).toEqual(['fr']);
+  });
+
+  it('preserves ordered restaurant menu item media from legacy and join payloads', () => {
+    const detail: ObjectDetail = {
+      id: 'RESRUN0000000001',
+      name: 'Table Corail',
+      type: 'RES',
+      raw: {
+        menus: [
+          {
+            id: 'menu-1',
+            category: { id: 'category-1', code: 'lunch', name: 'Dejeuner' },
+            name: 'Carte',
+            items: [
+              {
+                id: 'item-1',
+                name: 'Cari legumes',
+                media_id: 'media-primary',
+                object_menu_item_media: [
+                  { media_id: 'media-secondary' },
+                  { media: { id: 'media-tertiary' } },
+                  { media_id: 'media-primary' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.menus.items[0].items[0].mediaIds).toEqual([
+      'media-primary',
+      'media-secondary',
+      'media-tertiary',
+    ]);
+  });
+
+  it('sets provider.companyName from object_legal raison_sociale only', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Gîte test',
+      type: 'HLO',
+      raw: {
+        legal_records: [
+          {
+            id: 'lr-rs',
+            type: { code: 'raison_sociale', name: 'Raison sociale' },
+            value: 'SARL Domaine du Bel Air',
+            status: 'active',
+          },
+        ],
+        actors: [
+          {
+            display_name: 'Mme Florence GIRARD',
+            role: { code: 'operator' },
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.provider.companyName).toBe('SARL Domaine du Bel Air');
+    expect(parsed.provider.directorFullName).toBe('Mme Florence GIRARD');
+  });
+
+  it('uses object_legal siret row for provider.siret (not separate siren row)', () => {
+    const detail: ObjectDetail = {
+      id: 'RES0000000000001',
+      name: 'Restaurant test',
+      type: 'RES',
+      raw: {
+        legal_records: [
+          {
+            id: 'lr-siren',
+            type: { code: 'siren', name: 'SIREN' },
+            value: { siren: '123456789' },
+            status: 'active',
+          },
+          {
+            id: 'lr-siret',
+            type: { code: 'siret', name: 'SIRET' },
+            value: { siret: '12345678900012' },
+            status: 'active',
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.provider.siret).toBe('12345678900012');
+  });
+
+  it('does not treat nine-digit siren row as establishment siret', () => {
+    const detail: ObjectDetail = {
+      id: 'RES0000000000002',
+      name: 'Restaurant incomplet',
+      type: 'RES',
+      raw: {
+        legal_records: [
+          {
+            id: 'lr-siren-only',
+            type: { code: 'siren', name: 'SIREN' },
+            value: { siren: '123456789' },
+            status: 'active',
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.provider.siret).toBe('');
+  });
+
+  it('does not use actor display_name as provider.companyName', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Gîte test',
+      type: 'HLO',
+      raw: {
+        actors: [
+          {
+            display_name: 'Mme Florence GIRARD',
+            role: { code: 'operator' },
+          },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.provider.companyName).toBe('');
+    expect(parsed.provider.directorFullName).toBe('Mme Florence GIRARD');
+  });
+
+  it('§208 — parses actors[].contacts_restricted (distinct from a note simply not filled in)', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Gîte test',
+      type: 'HLO',
+      raw: {
+        actors: [
+          { id: 'a1', display_name: 'Mme Florence GIRARD', role: { code: 'operator' }, note: null, contacts_restricted: true },
+          { id: 'a2', display_name: 'M. Paul Robert', role: { code: 'guide' }, note: '', contacts_restricted: false },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+    const byId = (id: string) => parsed.relationships.actors.find((actor) => actor.id === id);
+
+    expect(byId('a1')).toMatchObject({ contactsRestricted: true });
+    expect(byId('a2')).toMatchObject({ contactsRestricted: false });
+  });
+
+  // §208 — le verdict est PAR APPELANT + PAR FICHE : il se résout une fois, à la source.
+  it.each([
+    ['aucun lien acteur : pas de signal dans le payload ⇒ fail-closed « inconnu »', [] as Record<string, unknown>[], ACTOR_NOTE_UNKNOWN_REASON],
+    [
+      'liens rédigés par le serveur ⇒ motif « réservé »',
+      [{ id: 'a1', display_name: 'Mme Florence GIRARD', contacts_restricted: true }],
+      ACTOR_NOTE_RESTRICTED_REASON,
+    ],
+    [
+      'liens complets ⇒ note saisissable',
+      [{ id: 'a1', display_name: 'Mme Florence GIRARD', contacts_restricted: false }],
+      null,
+    ],
+  ])('§208 — verdict par fiche sur la note prestataire — %s', (_label, actors, expected) => {
+    const detail: ObjectDetail = { id: 'HLORUN00000000TV', name: 'Gîte test', type: 'HLO', raw: { actors } };
+    expect(parseObjectWorkspace(detail, ['fr']).relationships.actorNoteWriteUnavailableReason).toBe(expected);
+  });
+
+  it('parses object.secondary_types into generalInfo.secondaryTypes', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Table d hotes test',
+      type: 'HLO',
+      raw: {
+        secondary_types: ['RES'],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.generalInfo.secondaryTypes).toEqual(['RES']);
+  });
+
+  it('defaults generalInfo.secondaryTypes to an empty array when object.secondary_types is absent', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Gite sans famille secondaire',
+      type: 'HLO',
+      raw: {},
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+
+    expect(parsed.generalInfo.secondaryTypes).toEqual([]);
+  });
+});
+
+describe('descriptions org overlay', () => {
+  it('parses canonical_description (with i18n) and org_description into two scopes', () => {
+    const detail = { id: 'o1', name: 'O', raw: {
+      canonical_description: {
+        id: 'c1', org_object_id: null,
+        description_chapo: 'Chapo canon FR', description_chapo_i18n: { fr: 'Chapo canon FR', en: 'Canon hook EN' },
+        description: 'Desc canon', description_adapted: 'Accès canon',
+      },
+      org_description: {
+        id: 'g1', org_object_id: 'ORG-OTI',
+        description_chapo: 'Chapo OTI FR', description_chapo_i18n: { fr: 'Chapo OTI FR' },
+        description: 'Desc OTI',
+      },
+    } } as unknown as import('../types/domain').ObjectDetail;
+
+    const parsed = parseObjectWorkspace(detail, ['fr', 'en']);
+    expect(parsed.descriptions.object.chapo.values.en).toBe('Canon hook EN');
+    expect(parsed.descriptions.orgOverlay).not.toBeNull();
+    expect(parsed.descriptions.orgOverlay?.chapo.baseValue).toBe('Chapo OTI FR');
+    expect(parsed.descriptions.orgOverlay?.description.baseValue).toBe('Desc OTI');
+  });
+
+  it('leaves orgOverlay null when org_description is absent', () => {
+    const detail = { id: 'o2', name: 'O', raw: {
+      canonical_description: { id: 'c2', org_object_id: null, description: 'Only canon' },
+    } } as unknown as import('../types/domain').ObjectDetail;
+    expect(parseObjectWorkspace(detail, ['fr']).descriptions.orgOverlay).toBeNull();
+  });
+
+  it('parses a place description base from description_raw (stripped flat key ignored)', () => {
+    const detail = { raw: { places: [{ id: 'p1', name: 'Point de RDV', descriptions: [{
+      id: 'd1', description: 'Voir le volcan actif.', description_raw: 'Voir le **volcan** actif.',
+      description_md: 'Voir le **volcan** actif.', description_i18n: null, visibility: 'public',
+    }] }] } } as unknown as import('../types/domain').ObjectDetail;
+    const modules = parseObjectWorkspace(detail, ['fr']);
+    expect(modules.places.items[0].description.baseValue).toBe('Voir le **volcan** actif.');
+  });
+
+  it('parses place description i18n translations into values (§110 C1 editor leg survives)', () => {
+    const detail = { raw: { places: [{ id: 'p1', name: 'Point de RDV', descriptions: [{
+      id: 'd1', description: 'Voir le volcan actif.', description_raw: 'Voir le **volcan** actif.',
+      description_md: 'Voir le **volcan** actif.',
+      description_i18n: { fr: 'Voir le **volcan** actif.', en: 'See the **active** volcano.' },
+      visibility: 'public',
+    }] }] } } as unknown as import('../types/domain').ObjectDetail;
+    const modules = parseObjectWorkspace(detail, ['fr']);
+    // The raw *_i18n map is the editor's per-language leg — its EN translation must survive raw
+    // (the subtract-*_i18n form NULLed it on the next §16 save).
+    expect(modules.places.items[0].description.values.en).toBe('See the **active** volcano.');
+  });
+
+  it('normalizes legacy place visibility aliases at parse time (partner→partners, internal→private)', () => {
+    const detail = { raw: { places: [
+      { id: 'p1', name: 'Site A', descriptions: [{ id: 'd1', visibility: 'partner' }] },
+      { id: 'p2', name: 'Site B', descriptions: [{ id: 'd2', visibility: 'internal' }] },
+      { id: 'p3', name: 'Site C', descriptions: [{ id: 'd3', visibility: 'public' }] },
+    ] } } as unknown as import('../types/domain').ObjectDetail;
+    const modules = parseObjectWorkspace(detail, ['fr']);
+    expect(modules.places.items[0].visibility).toBe('partners');
+    expect(modules.places.items[1].visibility).toBe('private');
+    expect(modules.places.items[2].visibility).toBe('public');
+  });
+});

@@ -1,0 +1,212 @@
+{
+  "cluster": 6,
+  "generated_at": "2026-06-15",
+  "scope": [
+    "demand_topic",
+    "demand_subtopic",
+    "crm_sentiment",
+    "distribution_channel",
+    "feedback_type",
+    "incident_category",
+    "booking_status",
+    "client_type",
+    "partnership_type",
+    "insurance_type",
+    "document_type",
+    "domain_registry",
+    "opening_schedule_type",
+    "weekday"
+  ],
+  "notes": {
+    "zh_el_i18n": "zh and el name_i18n are 100% absent across all cluster-6 domains (confirmed globally). Not flagged per domain — noted once here. Not an actionable gap for a back-office FR-primary platform.",
+    "domain_registry_classification": "domain_registry is NOT a ref_code domain/partition. It is a separate table ref_code_domain_registry (schema: domain,name,description,object_type,is_hierarchical,is_taxonomy,position,is_active,name_i18n,description_i18n,metadata,created_at,updated_at) with 19 live rows. Included in scope for completeness; findings treat it as a separate registry, not a ref_code vocabulary."
+  },
+  "matrix": [
+    {
+      "unit": "demand_topic",
+      "live_count": 20,
+      "source_count": 20,
+      "doc_count": 20,
+      "db_usage_distinct": "crm_interaction.demand_topic_id (FK → ref_code_demand_topic): 1344/3175 rows populated (42%); 1831 rows NULL (not every interaction has a topic)",
+      "verdict": "ALIGNED — source=live=doc=20. FK active, partially populated (42%). No en/es translations — intentional (internal OTI back-office FR vocab; explicitly documented in seeds_data.sql §61 note line 1389)."
+    },
+    {
+      "unit": "demand_subtopic",
+      "live_count": 0,
+      "source_count": 0,
+      "doc_count": 0,
+      "db_usage_distinct": "crm_interaction.demand_subtopic_id (FK → ref_code_demand_subtopic): 0 rows populated. No FE reference.",
+      "verdict": "EMPTY — FORWARD-LOOKING. Partition deliberately preserved per migration_crm_module.sql lines 21-23 ('Conservés volontairement (vides) : la partition ref_code_demand_subtopic, la colonne crm_interaction.demand_subtopic_id et sa FK — emplacement d'un futur vocabulaire de sous-sujets'). Correct state."
+    },
+    {
+      "unit": "crm_sentiment",
+      "live_count": 6,
+      "source_count": 6,
+      "doc_count": 6,
+      "db_usage_distinct": "crm_interaction.request_sentiment_id (FK → ref_code_crm_sentiment): 3175/3175 rows populated (100%). crm_interaction.response_sentiment_id: 0/3175 rows populated (NULL everywhere).",
+      "verdict": "ALIGNED — source=live=doc=6. request_sentiment fully populated; response_sentiment column orphaned (FK exists, 0 rows). No en/es — internal CRM vocab, intentional. Documented deferred gap: response_sentiment_id always NULL (§61/§63 deferred list)."
+    },
+    {
+      "unit": "distribution_channel",
+      "live_count": 4,
+      "source_count": 4,
+      "doc_count": 4,
+      "db_usage_distinct": "FE: referenced in object-workspace-parser.ts line 2818 as a domain key for parser logic. No FK from any business table. No FE consumer beyond parser domain-list.",
+      "verdict": "ALIGNED values — source=live=doc=4. PARTITION DEFECT: domain routes to DEFAULT partition (ref_code_other) — no dedicated ref_code_distribution_channel partition exists. Data is stored and readable, but no partition-level RLS/index isolation. No en/es — internal back-office label. See finding D3-01."
+    },
+    {
+      "unit": "feedback_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": "FK consumers: object_taxonomy.domain + ref_code_taxonomy_closure (partition FK machinery only). No direct business-table FK. No FE consumer found in bertel-tourism-ui/src.",
+      "verdict": "ALIGNED — source=live=doc=10. en/es present (10/10). DEAD DOMAIN: no business-table FK or FE consumer. Forward-looking speculative vocabulary only. See finding D1-02."
+    },
+    {
+      "unit": "incident_category",
+      "live_count": 0,
+      "source_count": 0,
+      "doc_count": 0,
+      "db_usage_distinct": "incident_report.category_id (FK → ref_code_incident_category): 0 rows (incident_report table exists, 0 data rows — module deferred per §61/§63).",
+      "verdict": "EMPTY — FORWARD-LOOKING. Partition exists, no seeds anywhere. incident_report table has the FK but no data. The deferred 'module demandes/board' (§61) will seed this when implemented. Correct state. NOTE: ref_code_incident_category has 4 RLS policies (duplicate pair: both admin_ref_code_write + admin_incident_category_write are FOR ALL write — see finding D3-02)."
+    },
+    {
+      "unit": "booking_status",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": "FK consumers: object_taxonomy.domain + ref_code_taxonomy_closure (partition FK machinery only). No direct business-table FK. No FE consumer found.",
+      "verdict": "ALIGNED — source=live=doc=10. en/es present (10/10). DEAD DOMAIN: no business-table FK or FE consumer beyond partition machinery. Forward-looking speculative vocabulary only. See finding D1-02."
+    },
+    {
+      "unit": "client_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": "FK consumers: object_taxonomy.domain + ref_code_taxonomy_closure (partition FK machinery only). No direct business-table FK. No FE consumer found.",
+      "verdict": "ALIGNED — source=live=doc=10. en/es present (10/10). DEAD DOMAIN: no business-table FK or FE consumer beyond partition machinery. Forward-looking speculative vocabulary only. See finding D1-02."
+    },
+    {
+      "unit": "partnership_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": "FK consumers: object_taxonomy.domain + ref_code_taxonomy_closure (partition FK machinery only). No direct business-table FK. No FE consumer found.",
+      "verdict": "ALIGNED — source=live=doc=10. en/es present (10/10). DEAD DOMAIN: no business-table FK or FE consumer beyond partition machinery. Forward-looking speculative vocabulary only. See finding D1-02."
+    },
+    {
+      "unit": "insurance_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": "FK consumers: object_taxonomy.domain + ref_code_taxonomy_closure (partition FK machinery only). No direct business-table FK. No FE consumer found.",
+      "verdict": "ALIGNED — source=live=doc=10. en/es present (10/10). DEAD DOMAIN: no business-table FK or FE consumer beyond partition machinery. Forward-looking speculative vocabulary only. See finding D1-02."
+    },
+    {
+      "unit": "document_type",
+      "live_count": 0,
+      "source_count": 0,
+      "doc_count": 0,
+      "db_usage_distinct": "FK consumers: object_taxonomy.domain + ref_code_taxonomy_closure (partition FK machinery only). No direct business-table FK. No FE consumer. seeds_data.sql line 925 RAISE NOTICE lists document_type as 'domaines ajoutés' but no INSERT block exists in the file — the NOTICE is from a schema DDL block that predates the seed split.",
+      "verdict": "EMPTY — FORWARD-LOOKING. Partition exists, no seeds in any source file. Mentioned in a historical DDL notice (schema setup era) but never actually seeded. Correct empty state for a planned future feature (document upload by section — deferred per §59 decision log)."
+    },
+    {
+      "unit": "domain_registry",
+      "live_count": 19,
+      "source_count": 19,
+      "doc_count": 19,
+      "db_usage_distinct": "Consumed by: api.get_object_taxonomy_compact, api.is_ref_code_taxonomy_domain, api.trg_refresh_ref_code_taxonomy_closure, api.validate_object_taxonomy_assignment, api.validate_ref_code_taxonomy_hierarchy; FE: object-workspace.ts:1129, explorer-reference.ts:357, dashboard-reference.ts:79 — all reading ref_code_domain_registry directly.",
+      "verdict": "SEPARATE TABLE — NOT a ref_code partition. ref_code_domain_registry is a standalone registry table (schema differs from ref_code). Live=source=doc=19. Fully consumed. No issue. Scope classification artifact: this is not a ref_code vocabulary."
+    },
+    {
+      "unit": "opening_schedule_type",
+      "live_count": 5,
+      "source_count": 5,
+      "doc_count": 5,
+      "db_usage_distinct": "api.save_object_openings reads ref_code_opening_schedule_type (doc confirmed). opening_schedule table presumably has a FK (high confidence per FK-4 triggers doc). Active operational vocabulary.",
+      "verdict": "ALIGNED — source=live=doc=5. en/es present (5/5). Active consumer confirmed."
+    },
+    {
+      "unit": "weekday",
+      "live_count": 7,
+      "source_count": 7,
+      "doc_count": 7,
+      "db_usage_distinct": "api.save_object_openings reads ref_code_weekday (doc confirmed). opening_time_period_weekday.weekday_id presumably FK. Active operational vocabulary.",
+      "verdict": "ALIGNED values — source=live=doc=7. en/es present (7/7). CRITICAL DEFECT: dow_number is NULL for all 7 rows on live. Source seeds_data.sql inserts position (1-7) in the 3rd positional column, NOT dow_number; the i18n block (lines 1221-1227) explicitly passes NULL for dow_number. dow_number was never populated in any seed or migration. See finding D4-01."
+    }
+  ],
+  "findings": [
+    {
+      "dimension": "D4",
+      "severity": "HIGH",
+      "unit": "weekday",
+      "code": "WEEKDAY-DOW-NULL",
+      "title": "dow_number NULL for all 7 weekday rows — ISO day-of-week ordering unavailable",
+      "evidence": "SELECT code, dow_number FROM ref_code WHERE domain='weekday' ORDER BY dow_number returns NULL for all 7 rows. seeds_data.sql lines 78-84 insert (domain,code,name,position) — the 4th column is 'position', not 'dow_number'. The i18n update block (lines 1221-1227) explicitly passes NULL,NULL as the last two arguments (dow_number placeholder). No migration ever sets this column.",
+      "recommendation": "Add a targeted UPDATE in seeds_data.sql (idempotent, ON CONFLICT DO NOTHING guard not applicable — use WHERE dow_number IS NULL): UPDATE ref_code SET dow_number = CASE code WHEN 'monday' THEN 1 WHEN 'tuesday' THEN 2 WHEN 'wednesday' THEN 3 WHEN 'thursday' THEN 4 WHEN 'friday' THEN 5 WHEN 'saturday' THEN 6 WHEN 'sunday' THEN 7 END WHERE domain='weekday' AND dow_number IS NULL. Convention: use ISO 8601 (Mon=1..Sun=7). Apply as a standalone migration."
+    },
+    {
+      "dimension": "D3",
+      "severity": "MEDIUM",
+      "unit": "distribution_channel",
+      "code": "DIST-CHAN-DEFAULT-PARTITION",
+      "title": "distribution_channel rows stored in DEFAULT partition (ref_code_other) — no dedicated partition table",
+      "evidence": "pg_inherits scan shows no ref_code_distribution_channel partition. SELECT count(*) FROM ref_code_other WHERE domain='distribution_channel' returns 4. The 4 rows exist and are accessible but bypass domain-level partition isolation, dedicated index, and per-partition RLS granularity that other ref_code domains receive.",
+      "recommendation": "Create ref_code_distribution_channel PARTITION OF ref_code FOR VALUES IN ('distribution_channel') with the standard uq_ref_code_distribution_channel_id and uq_ref_code_distribution_channel_code unique indexes, RLS enabled, and the standard pub_ref_code_read / admin_ref_code_write policy pair. Row movement from ref_code_other to the new partition is automatic on Postgres 14+ (UPDATE domain=domain triggers tuple routing). Add to seeds_data.sql DDL block and to the manifest."
+    },
+    {
+      "dimension": "D3",
+      "severity": "LOW",
+      "unit": "incident_category",
+      "code": "INCIDENT-CAT-DUPLICATE-POLICY",
+      "title": "ref_code_incident_category carries 4 RLS policies — two FOR ALL write policies are redundant duplicates",
+      "evidence": "pg_policy query returns: admin_ref_code_write (FOR ALL, standard ref_code pair) AND admin_incident_category_write (FOR ALL, identical predicate: auth.role() = ANY(['service_role','admin'])). Both are permissive FOR ALL on the same table. The duplicate is harmless for security (both allow the same principals) but violates the 'one per-command write policy family per table' invariant (CLAUDE.md write-policies rule).",
+      "recommendation": "DROP POLICY admin_incident_category_write ON ref_code_incident_category; — the standard admin_ref_code_write inherited from the ref_code family is sufficient. Apply inline in seeds_data.sql or as a targeted cleanup migration."
+    },
+    {
+      "dimension": "D1",
+      "severity": "MEDIUM",
+      "unit": "booking_status, client_type, partnership_type, insurance_type, feedback_type",
+      "code": "OPS-VOCAB-DEAD-DOMAINS",
+      "title": "5 ops vocabulary domains (booking_status, client_type, partnership_type, insurance_type, feedback_type) have no business-table FK consumer and no FE usage — dead domains",
+      "evidence": "Full FK scan: the only FK targets for these 5 partition tables are object_taxonomy.domain (partition routing FK machinery) and ref_code_taxonomy_closure (closure table). No direct FK from any business entity table. Grep of bertel-tourism-ui/src returns zero matches for booking_status, client_type, partnership_type, insurance_type, feedback_type (beyond this code comment context). These were seeded as speculative 'Lot 1' data (seeds_data.sql lines 713-816) with no associated data model columns or API consumers yet built.",
+      "recommendation": "Classify as FORWARD-LOOKING — do not delete. Each has full en/es translations and will be needed when the corresponding modules are built (booking engine, CRM client profiling, partnership registry, insurance tracking, feedback collection). Document this status in the deferred-items tracker (WORKFLOW.md). No action required now; flag for revisit when each module is planned."
+    },
+    {
+      "dimension": "D1",
+      "severity": "LOW",
+      "unit": "crm_sentiment",
+      "code": "RESP-SENTIMENT-NULL",
+      "title": "crm_interaction.response_sentiment_id is NULL for all 3175 rows despite FK being defined",
+      "evidence": "SELECT count(*), count(response_sentiment_id) FROM crm_interaction returns total=3175, with_resp_sentiment=0. The column and FK (ref_code_crm_sentiment) exist but the import/save path never writes this field. The §61/§63 deferred list explicitly notes: 'response_sentiment_id (source NULL)'.",
+      "recommendation": "Already tracked in deferred list (WORKFLOW.md §61 CRM différés). No new action — confirm deferred status is documented. When the CRM interaction edit flow is built, wire response_sentiment_id to the crm_sentiment picker."
+    },
+    {
+      "dimension": "D2",
+      "severity": "LOW",
+      "unit": "demand_topic, crm_sentiment, distribution_channel",
+      "code": "CRM-VOCAB-NO-EN-ES",
+      "title": "demand_topic (20 codes), crm_sentiment (6 codes), distribution_channel (4 codes) have no en/es translations",
+      "evidence": "Initial live query: en=false, es=false for all rows in these three domains. seeds_data.sql line 1389 explicitly documents: 'les traductions des 11 demand_topic génériques + 22 demand_subtopic ont été [retirées] — sujets OTI du domaine demand_topic n'ont pas de traduction en/es (vocabulaire interne FR).' crm_sentiment and distribution_channel are similarly internal back-office French vocabularies.",
+      "recommendation": "No action required. These are internal back-office FR-only vocabularies used exclusively by OTI staff. en/es translations are not expected per §61 design decision. If the platform ever opens to multilingual staff, add translations then. Note once in WORKFLOW.md deferred list as 'by-design'."
+    },
+    {
+      "dimension": "D4",
+      "severity": "INFO",
+      "unit": "demand_subtopic, incident_category, document_type",
+      "code": "EMPTY-PARTITIONS-FORWARD-LOOKING",
+      "title": "3 empty partitions (demand_subtopic, incident_category, document_type) — correctly forward-looking, no gap",
+      "evidence": "SELECT count(*) from each partition table returns 0. No INSERT block exists for demand_subtopic or document_type in any seed or migration file. incident_category has no seed either. migration_crm_module.sql lines 21-23 explicitly preserve demand_subtopic as future. document_type is mentioned in a RAISE NOTICE (schema DDL era) but never seeded. incident_category is targeted by the deferred 'module demandes/board'.",
+      "recommendation": "No action. Document in WORKFLOW.md deferred tracker: demand_subtopic = subtopic vocabulary for future CRM topic hierarchy; incident_category = blocked on module demandes/board implementation; document_type = blocked on document upload by section (§59 deferred list)."
+    },
+    {
+      "dimension": "D4",
+      "severity": "INFO",
+      "unit": "domain_registry",
+      "code": "DOMAIN-REGISTRY-NOT-REF-CODE",
+      "title": "domain_registry is a separate table (ref_code_domain_registry), not a ref_code partition — scope classification artifact",
+      "evidence": "ref_code_domain_registry columns differ from ref_code (includes object_type, is_hierarchical, is_taxonomy — absent from ref_code). COUNT(*) FROM ref_code WHERE domain='domain_registry' = 0. COUNT(*) FROM ref_code_domain_registry = 19. FE accesses it directly (.from('ref_code_domain_registry')). Fully populated and consumed.",
+      "recommendation": "No data action. Remove domain_registry from future ref_code audit scope and maintain it in a separate 'registry tables' audit cluster. Confirm in audit index that ref_code_domain_registry is treated as a standalone registry, not a ref_code vocabulary partition."
+    }
+  ]
+}

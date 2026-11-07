@@ -1,0 +1,263 @@
+import { useState } from 'react';
+import { ChipMultiSelect, EditorModal, Field, Input, Select, Textarea, Toggle } from '../primitives';
+import type {
+  ObjectWorkspaceCapacityPoliciesModule,
+  ObjectWorkspaceCharacteristicsModule,
+} from '../../../services/object-workspace-parser';
+import { ChoiceConfirmationNotice, ModuleUnavailableNotice } from './blocks/block-notes';
+
+function hasText(value: string): boolean {
+  return value.trim().length > 0;
+}
+
+/**
+ * « Cadre / environnement » — rendu partagé §06 (HEB) / §07 (autres types).
+ * Catalogue large (~60 codes ref_environment_tag) ⇒ sélection par MODAL (recherche +
+ * Sélectionnés/Disponibles). Source d'état unique : editor.draft.characteristics.
+ */
+export function EnvironmentChips({
+  characteristics,
+  onChange,
+}: {
+  characteristics: ObjectWorkspaceCharacteristicsModule;
+  onChange: (next: ObjectWorkspaceCharacteristicsModule) => void;
+}) {
+  return (
+    <>
+      <div className="chip-group__label" style={{ marginTop: 16 }}>
+        Cadre / environnement
+      </div>
+      {characteristics.unavailableReason ? (
+        <ModuleUnavailableNotice reason={characteristics.unavailableReason} />
+      ) : (
+        <ChipMultiSelect
+          options={characteristics.environmentOptions}
+          selected={characteristics.selectedEnvironmentCodes}
+          modalTitle="Choisir un cadre / environnement"
+          searchPlaceholder="Rechercher un environnement…"
+          onChange={(codes) => onChange({ ...characteristics, selectedEnvironmentCodes: codes })}
+        />
+      )}
+    </>
+  );
+}
+
+/** Résumé compact + « Modifier », ou bouton « + {addLabel} » si rien n'est défini. */
+function PolicyTrigger({
+  isSet,
+  summary,
+  addLabel,
+  onOpen,
+}: {
+  isSet: boolean;
+  summary: string;
+  addLabel: string;
+  onOpen: () => void;
+}) {
+  if (isSet) {
+    return (
+      <div className="policy-summary">
+        <span>{summary}</span>
+        <button type="button" className="btn-link" onClick={onOpen}>
+          Modifier
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button type="button" className="rep-add" onClick={onOpen}>
+      + {addLabel}
+    </button>
+  );
+}
+
+/**
+ * Politique de groupe — bouton « + Définir une politique de groupe » → modale staged
+ * (Annuler/Valider). Quand elle est définie, n'affiche qu'un résumé + « Modifier ».
+ */
+export function GroupPolicyButton({
+  capacity,
+  onChange,
+}: {
+  capacity: ObjectWorkspaceCapacityPoliciesModule;
+  onChange: (next: ObjectWorkspaceCapacityPoliciesModule) => void;
+}) {
+  const gp = capacity.groupPolicy;
+  const isSet = hasText(gp.minSize) || hasText(gp.maxSize) || hasText(gp.notes) || gp.groupOnly;
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(gp);
+
+  const sizePart = hasText(gp.minSize) || hasText(gp.maxSize) ? `${gp.minSize || '—'}–${gp.maxSize || '—'} pers.` : '';
+  const summary =
+    [sizePart, gp.groupOnly ? 'groupes uniquement' : '', hasText(gp.notes) ? 'avec notes' : '']
+      .filter(Boolean)
+      .join(' · ') || 'Politique définie';
+
+  return (
+    <>
+      <div className="chip-group__label" style={{ marginTop: 16 }}>
+        Politique de groupe
+      </div>
+      <PolicyTrigger
+        isSet={isSet}
+        summary={summary}
+        addLabel="Définir une politique de groupe"
+        onOpen={() => {
+          setDraft(gp);
+          setOpen(true);
+        }}
+      />
+      <EditorModal
+        open={open}
+        title="Politique de groupe"
+        saveLabel="Valider"
+        onClose={() => setOpen(false)}
+        onSave={() => {
+          onChange({ ...capacity, groupPolicy: draft });
+          setOpen(false);
+        }}
+      >
+        <div className="grid-2">
+          <Field label="Taille min.">
+            <Input value={draft.minSize} placeholder="Min" mono onChange={(minSize) => setDraft({ ...draft, minSize })} />
+          </Field>
+          <Field label="Taille max.">
+            <Input value={draft.maxSize} placeholder="Max" mono onChange={(maxSize) => setDraft({ ...draft, maxSize })} />
+          </Field>
+        </div>
+        <Toggle
+          label="Groupes uniquement"
+          sub="Refuse les réservations individuelles."
+          on={draft.groupOnly}
+          onChange={(groupOnly) => setDraft({ ...draft, groupOnly })}
+        />
+        <Field label="Notes ou informations complémentaires">
+          <Textarea
+            value={draft.notes}
+            rows={3}
+            onChange={(notes) => setDraft({ ...draft, notes })}
+          />
+        </Field>
+        {draft.groupOnly && (
+          <ChoiceConfirmationNotice>
+            Les réservations individuelles ne sont pas acceptées.
+          </ChoiceConfirmationNotice>
+        )}
+      </EditorModal>
+    </>
+  );
+}
+
+/**
+ * Arrivée & départ (politique de séjour) — bouton → modale staged (§64 pattern), miroir de
+ * GroupPolicyButton. Pour les HEB (location/gîte) : heure d'arrivée (de–à) + heure de départ
+ * (avant) + conditions. Heures contraintes (type="time"). Tout vide ⇒ le saver supprime la ligne.
+ */
+export function StayPolicyButton({
+  capacity,
+  onChange,
+}: {
+  capacity: ObjectWorkspaceCapacityPoliciesModule;
+  onChange: (next: ObjectWorkspaceCapacityPoliciesModule) => void;
+}) {
+  const sp = capacity.stayPolicy;
+  const isSet = hasText(sp.checkInFrom) || hasText(sp.checkInUntil) || hasText(sp.checkOutUntil) || hasText(sp.conditions);
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(sp);
+
+  const arrival =
+    hasText(sp.checkInFrom) || hasText(sp.checkInUntil) ? `arrivée ${sp.checkInFrom || '—'}–${sp.checkInUntil || '—'}` : '';
+  const departure = hasText(sp.checkOutUntil) ? `départ avant ${sp.checkOutUntil}` : '';
+  const summary = [arrival, departure, hasText(sp.conditions) ? 'avec conditions' : ''].filter(Boolean).join(' · ') || 'Horaires définis';
+
+  return (
+    <>
+      <div className="chip-group__label" style={{ marginTop: 16 }}>
+        Arrivée &amp; départ
+      </div>
+      <PolicyTrigger
+        isSet={isSet}
+        summary={summary}
+        addLabel="Définir l'arrivée &amp; le départ"
+        onOpen={() => {
+          setDraft(sp);
+          setOpen(true);
+        }}
+      />
+      <EditorModal
+        open={open}
+        title="Arrivée & départ"
+        saveLabel="Valider"
+        onClose={() => setOpen(false)}
+        onSave={() => {
+          onChange({ ...capacity, stayPolicy: draft });
+          setOpen(false);
+        }}
+      >
+        <div className="grid-2">
+          <Field label="Arrivée à partir de">
+            <Input type="time" aria-label="Arrivée à partir de" value={draft.checkInFrom} onChange={(checkInFrom) => setDraft({ ...draft, checkInFrom })} />
+          </Field>
+          <Field label="Arrivée jusqu'à">
+            <Input type="time" aria-label="Arrivée jusqu'à" value={draft.checkInUntil} onChange={(checkInUntil) => setDraft({ ...draft, checkInUntil })} />
+          </Field>
+        </div>
+        <Field label="Départ avant">
+          <Input type="time" aria-label="Départ avant" value={draft.checkOutUntil} onChange={(checkOutUntil) => setDraft({ ...draft, checkOutUntil })} />
+        </Field>
+        <Field label="Conditions (arrivée tardive, boîte à clés…)">
+          <Textarea value={draft.conditions} rows={3} onChange={(conditions) => setDraft({ ...draft, conditions })} />
+        </Field>
+      </EditorModal>
+    </>
+  );
+}
+
+/**
+ * Politique d'accueil des animaux — INLINE (PO §66 : pas besoin de modale, c'est un seul
+ * champ tri-état). « Non renseigné » = pas de ligne DB (jamais publié « non acceptés » par défaut).
+ */
+export function PetPolicyInline({
+  capacity,
+  onChange,
+}: {
+  capacity: ObjectWorkspaceCapacityPoliciesModule;
+  onChange: (next: ObjectWorkspaceCapacityPoliciesModule) => void;
+}) {
+  const pp = capacity.petPolicy;
+  return (
+    <>
+      <div className="chip-group__label" style={{ marginTop: 16 }}>
+        Politique animaux
+      </div>
+      <div className="grid-3">
+        <div>
+          <Field label="Animaux">
+            <Select
+              value={pp.accepted === null ? '' : pp.accepted ? 'accepted' : 'refused'}
+              options={[
+                { v: '', l: '— Non renseigné —' },
+                { v: 'accepted', l: 'Acceptés' },
+                { v: 'refused', l: 'Non acceptés' },
+              ]}
+              aria-label="Animaux"
+              onChange={(next) =>
+                onChange({ ...capacity, petPolicy: { ...pp, accepted: next === '' ? null : next === 'accepted' } })
+              }
+            />
+          </Field>
+          {pp.accepted !== null && (
+            <Field label="Conditions d'accueil des animaux">
+              <Textarea
+                aria-label="Conditions d'accueil des animaux"
+                value={pp.conditions}
+                rows={3}
+                onChange={(conditions) => onChange({ ...capacity, petPolicy: { ...pp, conditions } })}
+              />
+            </Field>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}

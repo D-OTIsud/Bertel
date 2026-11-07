@@ -1,0 +1,342 @@
+/**
+ * @jest-environment node
+ */
+jest.mock('server-only', () => ({}));
+jest.mock('next/server', () => ({ ...jest.requireActual('next/server'), after: jest.fn() }));
+jest.mock('@/lib/partner-auth', () => ({ authenticatePartner: jest.fn(), checkPartnerRate: jest.fn(), logPartnerCall: jest.fn(), admitPartner: jest.fn() }));
+jest.mock('@/lib/public-api', () => ({
+  callPublicRpc: jest.fn(),
+  publicHeaders: () => ({ 'X-Bertel-Api-Version': '1.0.0' }),
+  PUBLIC_API_CONTRACT_VERSION: '1.0.0',
+}));
+jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
+
+import { after, NextRequest } from 'next/server';
+import { GET } from './route';
+import { authenticatePartner, checkPartnerRate, admitPartner, logPartnerCall } from '@/lib/partner-auth';
+import { callPublicRpc } from '@/lib/public-api';
+import { getServerSupabaseClient } from '@/lib/supabase-server';
+
+const authMock = authenticatePartner as jest.Mock;
+const checkMock = checkPartnerRate as jest.Mock;
+const rpcMock = callPublicRpc as jest.Mock;
+const serverMock = getServerSupabaseClient as jest.Mock;
+
+const VALID_ID = 'HOTRUN0000000001';
+
+function req(id = VALID_ID) {
+  return new NextRequest(`http://localhost/api/public/objects/${id}?lang=fr`, {
+    headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+  });
+}
+function ctx(id = VALID_ID) {
+  return { params: Promise.resolve({ id }) };
+}
+/** Mock the service-role status-guard query: `.from('object').select('status').eq('id',id).maybeSingle()`. */
+function mockStatus(row: { status: string } | null, error: unknown = null) {
+  serverMock.mockReturnValue({
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: row, error }) }) }) }),
+  });
+}
+
+beforeAll(() => { jest.spyOn(console, 'info').mockImplementation(() => {}); });
+afterAll(() => { jest.restoreAllMocks(); });
+beforeEach(() => {
+  (after as jest.Mock).mockReset();
+  (logPartnerCall as jest.Mock).mockReset();
+  (admitPartner as jest.Mock).mockImplementation(async () => {
+    const partner = await authMock();
+    return partner ? { partner, rate: await checkMock() } : null;
+  });
+  authMock.mockReset();
+  checkMock.mockReset();
+  rpcMock.mockReset();
+  serverMock.mockReset();
+  authMock.mockResolvedValue({ keyId: 'k1', label: 'P', scopes: [] }); // authenticated + under rate by default
+  checkMock.mockResolvedValue({ allowed: true, retryAfter: 0, limit: 120, remaining: 119 });
+});
+
+describe('GET /api/public/objects/[id]', () => {
+  it('401 when the partner key is missing/invalid', async () => {
+    authMock.mockResolvedValue(null);
+    const res = await GET(req(), ctx());
+    expect(res.status).toBe(401);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('400 on a malformed object id (never reaches the DB)', async () => {
+    const res = await GET(req('not-an-id'), ctx('not-an-id'));
+    expect(res.status).toBe(400);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('SECURITY: a DRAFT object is 404 and get_object_resource is NEVER called (no draft leak)', async () => {
+    mockStatus({ status: 'draft' });
+    const res = await GET(req(), ctx());
+    expect(res.status).toBe(404);
+    expect(rpcMock).not.toHaveBeenCalled(); // the published-gate blocks before the resource fetch
+  });
+
+  it('SECURITY: an unknown id is 404 (indistinguishable from a draft)', async () => {
+    mockStatus(null);
+    const res = await GET(req(), ctx());
+    expect(res.status).toBe(404);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('200 for a PUBLISHED object — fetches the resource and wraps it with the contract version', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } });
+    const res = await GET(req(), ctx());
+    expect(res.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    const json = await res.json();
+    expect(json.meta.contract_version).toBe('1.0.0');
+    expect(json.data).toEqual({ id: VALID_ID, name: 'Hôtel' });
+  });
+
+  it('trims editor-only raw-i18n legs (canonical_description/org_description) from the partner payload', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({
+      ok: true, status: 200,
+      body: { id: VALID_ID, name: 'Hôtel', canonical_description: { fr: 'raw' }, org_description: { fr: 'raw' } },
+    });
+    const res = await GET(req(), ctx());
+    const json = await res.json();
+    expect(json.data.canonical_description).toBeUndefined();
+    expect(json.data.org_description).toBeUndefined();
+    expect(json.data.i18n).toBeUndefined(); // no i18n block unless ?lang=all
+  });
+
+  it('?lang=all — resolves FR and receives i18n within one coherent content/release RPC', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 7 }, data: {
+      id: VALID_ID, name: 'Hôtel', i18n: { description: { fr: 'Bonjour', en: 'Hello' } },
+    } } });
+    const reqAll = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?lang=all`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqAll, ctx());
+    expect(res.status).toBe(200);
+    // base resource resolved in FR (not "all")
+    expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_lang_prefs: ['fr'], p_i18n_all: true }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    const json = await res.json();
+    expect(json.data.i18n).toEqual({ description: { fr: 'Bonjour', en: 'Hello' } });
+    expect(json.meta.vocabulary_release).toBe(7);
+  });
+
+  it('?lang=all — preserves the base resource when SQL omits unavailable optional i18n', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 7 }, data: { id: VALID_ID, name: 'Hôtel' } } });
+    const reqAll = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?lang=all`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqAll, ctx());
+    expect(res.status).toBe(200); // still 200 — the object is fully returned
+    const json = await res.json();
+    expect(json.data.id).toBe(VALID_ID);
+    expect(json.data.i18n).toBeUndefined(); // block omitted on failure, not an error
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('?format=jsonld — merges the additive schema.org jsonld block, base keys untouched (I4)', async () => {
+    mockStatus({ status: 'published' });
+    const doc = { '@context': 'https://schema.org', '@type': 'Hotel', name: 'Hôtel' };
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 8 }, data: { id: VALID_ID, name: 'Hôtel', jsonld: doc } } });
+    const reqJl = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=jsonld`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqJl, ctx());
+    expect(res.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID, p_format: 'jsonld' }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    const json = await res.json();
+    expect(json.data.id).toBe(VALID_ID); // base keys untouched
+    expect(json.data.jsonld).toEqual(doc);
+    expect(json.meta.vocabulary_release).toBe(8);
+  });
+
+  it('?format=jsonld — preserves the base resource when SQL omits an unavailable optional pivot', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 8 }, data: { id: VALID_ID, name: 'Hôtel' } } });
+    const reqJl = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=jsonld`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqJl, ctx());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.id).toBe(VALID_ID);
+    expect(json.data.jsonld).toBeUndefined(); // block omitted on failure, not an error
+  });
+
+  it('?format=jsonld — omits the block when the RPC returns null (unmapped type / unpublished)', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 8 }, data: { id: VALID_ID, name: 'Hôtel' } } });
+    const reqJl = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=jsonld`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqJl, ctx());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.jsonld).toBeUndefined(); // null body => no jsonld key (not `null`)
+  });
+
+  it.each(['datatourisme', 'apidae', 'tourinsoft'])(
+    '?format=%s — receives the additive interop block in the atomic wrapper, base keys untouched',
+    async (fmt) => {
+      mockStatus({ status: 'published' });
+      const doc = { profile: fmt, ok: true };
+      rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 9 }, data: { id: VALID_ID, name: 'Hôtel', [fmt]: doc } } });
+      const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=${fmt}`, {
+        headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+      });
+      const res = await GET(r, ctx());
+      expect(res.status).toBe(200);
+      expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID, p_format: fmt }));
+      expect(rpcMock).toHaveBeenCalledTimes(1);
+      const json = await res.json();
+      expect(json.data.id).toBe(VALID_ID); // base keys untouched
+      expect(json.data[fmt]).toEqual(doc); // merged under a key named after the profile
+      expect(json.data.jsonld).toBeUndefined(); // jsonld RPC not called for interop formats
+    },
+  );
+
+  it('?format=apidae — preserves a base resource when SQL omits an unavailable optional pivot', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: {}, data: { id: VALID_ID, name: 'Hôtel' } } });
+    const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=apidae`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(r, ctx());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.id).toBe(VALID_ID);
+    expect(json.data.apidae).toBeUndefined();
+  });
+
+  it('?format=tourinsoft — omits the block when the RPC returns null (unmapped type)', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: {}, data: { id: VALID_ID, name: 'Hôtel' } } });
+    const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(r, ctx());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.tourinsoft).toBeUndefined();
+  });
+
+  it.each(['reunion-hebergement-v1', 'reunion-regional-v1'] as const)(
+    '?format=tourinsoft&variant=%s — passes the regional variant into the atomic wrapper',
+    async (variant) => {
+      mockStatus({ status: 'published' });
+      const regional = { SyndicObjectID: VALID_ID, ObjectTypeName: 'Hôtellerie' };
+      rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: {}, data: { id: VALID_ID, name: 'Hôtel', tourinsoft: regional } } });
+      const r = new NextRequest(
+        `http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft&variant=${variant}`,
+        { headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) } },
+      );
+      const res = await GET(r, ctx());
+      expect(res.status).toBe(200);
+      expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID, p_format: 'tourinsoft', p_variant: variant }));
+      expect(rpcMock).toHaveBeenCalledTimes(1);
+      expect(rpcMock).not.toHaveBeenCalledWith('get_object_interop', expect.anything());
+      expect((await res.json()).data.tourinsoft).toEqual(regional);
+    },
+  );
+
+  it('?format=tourinsoft&variant=legacy-v1 — forwards the historical variant within the wrapper', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { id: VALID_ID } });
+    const r = new NextRequest(
+      `http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft&variant=legacy-v1`,
+      { headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) } },
+    );
+    await GET(r, ctx());
+    expect(rpcMock).toHaveBeenCalledWith('get_partner_object_with_vocabulary', expect.objectContaining({ p_object_id: VALID_ID, p_format: 'tourinsoft', p_variant: 'legacy-v1' }));
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(rpcMock).not.toHaveBeenCalledWith('get_object_tourinsoft', expect.anything());
+  });
+
+  it('rejects an unknown Tourinsoft variant and a variant attached to another format', async () => {
+    for (const query of ['format=tourinsoft&variant=v99', 'format=apidae&variant=legacy-v1']) {
+      const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?${query}`, {
+        headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+      });
+      const res = await GET(r, ctx());
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe('bad_request');
+    }
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(serverMock).not.toHaveBeenCalled();
+  });
+
+  it('?format=<unknown> — ignored: no interop/jsonld call, no extra key', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } });
+    const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=xml`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(r, ctx());
+    expect(res.status).toBe(200);
+    expect(rpcMock).not.toHaveBeenCalledWith('get_object_interop', expect.anything());
+    expect(rpcMock).not.toHaveBeenCalledWith('get_object_jsonld', expect.anything());
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 404 if the object is unpublished between the preliminary gate and the atomic SQL snapshot', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: null });
+    const result = await GET(req(), ctx());
+    expect(result.status).toBe(404);
+    expect((await result.json()).error).toBe('not_found');
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the release paired with content without exposing internal wrapper metadata', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: 13, private_state: 'secret' }, data: {
+      id: VALID_ID, name: 'Version 13', canonical_description: { fr: 'private markdown' }, org_description: {},
+    } } });
+    const json = await (await GET(req(), ctx())).json();
+    expect(json.meta).toEqual({ contract_version: '1.0.0', vocabulary_release: 13 });
+    expect(json.data).toEqual({ id: VALID_ID, name: 'Version 13' });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not manufacture vocabulary metadata before the first publication', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { vocabulary_release: null }, data: { id: VALID_ID } } });
+    const json = await (await GET(req(), ctx())).json();
+    expect(json.meta).toEqual({ contract_version: '1.0.0' });
+  });
+});
+
+
+describe('deferred audit and server measurements', () => {
+  it.each([200, 429, 502])('registers one audit before returning %s, executes it only after response', async (status) => {
+    mockStatus({ status: 'published' });
+    checkMock.mockResolvedValue({ allowed: status !== 429, retryAfter: 42, limit: 120, remaining: 0 });
+    rpcMock.mockResolvedValue({ ok: status === 200, status, body: { id: VALID_ID, name: 'Hôtel' } });
+    const response = await GET(req(), ctx());
+    expect(response.status).toBe(status);
+    expect(after).toHaveBeenCalledTimes(1);
+    expect(logPartnerCall).not.toHaveBeenCalled();
+    const timing = response.headers.get('Server-Timing');
+    expect(timing).toMatch(/admission;dur=\d+\.\d{2}/);
+    expect(timing).toMatch(/serialization;dur=\d+\.\d{2}/);
+    expect(timing).toMatch(/total;dur=\d+\.\d{2}/);
+    const text = await response.text();
+    const event = (console.info as jest.Mock).mock.calls.at(-1)![0];
+    expect(event.bytes).toBe(Buffer.byteLength(text, 'utf8'));
+    expect(JSON.stringify(event)).not.toMatch(/bk_live_|Hôtel|k1|localhost/);
+    (logPartnerCall as jest.Mock).mockRejectedValueOnce(new Error('audit unavailable'));
+    await expect((after as jest.Mock).mock.calls[0][0]()).resolves.toBeUndefined();
+    expect(logPartnerCall).toHaveBeenCalledTimes(1);
+    expect(logPartnerCall).toHaveBeenCalledWith('k1', 'GET /api/public/objects/{id}', status);
+    expect(response.status).toBe(status);
+    expect(response.headers.get('Server-Timing')).toBe(timing);
+  });
+});

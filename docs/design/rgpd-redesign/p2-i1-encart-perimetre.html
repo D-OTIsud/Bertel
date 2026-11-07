@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RGPD — Encart périmètre (maquette à valider)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#eef1f4; --bg-tint:#f3f6f8; --surface:#fff; --surface-2:#e8edf1;
+    --line:rgba(24,49,59,.10); --ink:#18313b; --ink-2:#3a525c; --ink-3:#6a7a82;
+    --teal:#176b6a; --teal-soft:#e2efee;
+    /* NOUVELLE famille info (dérivée du bleu de marque #327090) */
+    --info-bg:#e9f0f7; --info-border:#cdddea; --info-ink:#21465e; --info-accent:#327090;
+    --radius-md:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:'Manrope',system-ui,sans-serif;color:var(--ink);
+    background:
+      radial-gradient(ellipse 60% 40% at 8% 0%, rgba(23,107,106,.10), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(242,139,84,.10), transparent 55%),
+      radial-gradient(ellipse 50% 60% at 100% 100%, rgba(50,112,144,.08), transparent 55%),
+      linear-gradient(180deg,var(--bg-tint) 0%,var(--bg) 100%); background-attachment:fixed;}
+  .wrap{max-width:672px;margin:0 auto;padding:44px 16px}
+  h1{font-family:'Sora';font-size:21px;font-weight:700;margin:0 0 4px}
+  .sub{font-size:14px;color:var(--ink-2);margin:0 0 22px}
+
+  /* AVANT (cassé) — bg-info-bg / border-info-border ne résolvent vers rien */
+  .before{border:1px solid transparent;background:transparent;border-radius:12px;padding:12px;font-size:13px;line-height:1.6;color:var(--ink-2);margin-bottom:10px;position:relative}
+  .before::before{content:"AVANT — tokens cassés (aucun fond, aucune bordure)";position:absolute;top:-9px;left:10px;background:var(--surface);padding:0 6px;font-size:10px;font-weight:700;letter-spacing:.03em;color:var(--ink-3);text-transform:uppercase}
+
+  /* APRÈS — encart info reconstruit */
+  .callout{display:flex;gap:13px;background:var(--info-bg);border:1px solid var(--info-border);border-radius:var(--radius-md);padding:15px 16px}
+  .callout__ico{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:#fff;color:var(--info-accent);border:1px solid var(--info-border)}
+  .callout__ico svg{width:19px;height:19px}
+  .callout__body{flex:1 1 auto}
+  .callout__title{font-size:13.5px;font-weight:700;color:var(--info-ink);margin:1px 0 5px;display:flex;align-items:center;gap:8px}
+  .callout__text{font-size:13px;line-height:1.6;color:var(--info-ink);margin:0}
+  .callout__text strong{font-weight:700}
+  .callout__chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:#fff;border:1px solid var(--info-border);color:var(--info-ink);display:inline-flex;align-items:center;gap:5px}
+  .chip svg{width:12px;height:12px;color:var(--info-accent)}
+  .label-after{font-size:10px;font-weight:700;letter-spacing:.03em;color:var(--info-accent);text-transform:uppercase;margin:18px 0 7px}
+  .note{margin:16px 0 0;font-size:12px;color:var(--ink-3);text-align:center}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Effacement RGPD (Art. 17)</h1>
+    <p class="sub">Traitement d'une demande d'effacement / anonymisation, par sujet identifié.</p>
+
+    <div class="before">
+      Bertel est un référentiel touristique : la quasi-totalité des données est publique. Cet outil agit
+      uniquement sur les données personnelles d'un sujet précis… (ce bloc flotte sans surface : le « stop and read » est perdu.)
+    </div>
+
+    <p class="label-after">Après — encart « périmètre » reconstruit</p>
+    <div class="callout" role="note" aria-label="Périmètre de l'outil">
+      <span class="callout__ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4M12 8h.01M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg></span>
+      <div class="callout__body">
+        <p class="callout__title">Ce que cet outil touche — et ce qu'il ne touche pas</p>
+        <p class="callout__text">
+          Bertel est un référentiel touristique : la quasi-totalité des données est publique (établissements = personnes morales).
+          Cet outil agit <strong>uniquement</strong> sur les données personnelles d'un sujet précis (acteur, contacts privés, CRM, déclarant, avis…),
+          <strong>jamais</strong> sur le référentiel public. L'anonymisation conserve la structure ; la suppression est une cascade dure.
+          Chaque opération est journalisée et le journal d'audit est purgé de la PII du sujet.
+        </p>
+        <div class="callout__chips">
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Données personnelles du sujet</span>
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>Référentiel public préservé</span>
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>Tracé au registre des effacements</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="note">Maquette à valider — l'encart utilise la nouvelle famille de tokens <code>info</code> (fond, bordure, texte ≈ 8:1).</p>
+  </div>
+</body>
+</html>

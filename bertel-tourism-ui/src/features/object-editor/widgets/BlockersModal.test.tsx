@@ -1,0 +1,123 @@
+import { render, screen, fireEvent } from '@testing-library/react';
+import { BlockersModal } from './BlockersModal';
+
+const sectionLabels = { '02': 'Localisation', '04': 'Descriptions & langues parlées' };
+
+const baseProps = {
+  open: true,
+  onClose: jest.fn(),
+  context: 'publish' as const,
+  requiredBlockers: [],
+  saveErrors: [],
+  warnings: [],
+  sectionLabels,
+  onGoToSection: jest.fn(),
+};
+
+describe('BlockersModal', () => {
+  it('titles the modal from the context', () => {
+    const { rerender } = render(<BlockersModal {...baseProps} context="publish" />);
+    expect(screen.getByText('Publication impossible')).toBeInTheDocument();
+    rerender(<BlockersModal {...baseProps} context="save" />);
+    expect(screen.getByText('Enregistrement incomplet')).toBeInTheDocument();
+  });
+
+  it('groups required blockers by section with their label and navigates on click', () => {
+    const onGoToSection = jest.fn();
+    render(
+      <BlockersModal
+        {...baseProps}
+        requiredBlockers={[{ section: '02', message: 'La commune est obligatoire.', tone: 'req' }]}
+        onGoToSection={onGoToSection}
+      />,
+    );
+    expect(screen.getByText(/Section 02 — Localisation/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('La commune est obligatoire.'));
+    expect(onGoToSection).toHaveBeenCalledWith('02');
+  });
+
+  it('renders save errors under their own group, labelled by module', () => {
+    render(
+      <BlockersModal
+        {...baseProps}
+        context="save"
+        saveErrors={[{ section: 'Tarifs, paiement & extras', message: 'Remise invalide.', tone: 'req' }]}
+      />,
+    );
+    expect(screen.getByText("Erreurs d'enregistrement")).toBeInTheDocument();
+    expect(screen.getByText('Tarifs, paiement & extras')).toBeInTheDocument();
+    expect(screen.getByText('Remise invalide.')).toBeInTheDocument();
+  });
+
+  it('lists warnings under a separate non-blocking heading', () => {
+    render(
+      <BlockersModal
+        {...baseProps}
+        warnings={[{ section: '04', message: 'Descriptif court.', tone: 'warn' }]}
+      />,
+    );
+    expect(screen.getByText('Alertes non bloquantes')).toBeInTheDocument();
+    expect(screen.getByText('Descriptif court.')).toBeInTheDocument();
+  });
+
+  it('does not render empty groups', () => {
+    render(<BlockersModal {...baseProps} />);
+    expect(screen.queryByText("Erreurs d'enregistrement")).not.toBeInTheDocument();
+    expect(screen.queryByText('Alertes non bloquantes')).not.toBeInTheDocument();
+  });
+
+  it('fires onClose from the footer button', () => {
+    const onClose = jest.fn();
+    render(<BlockersModal {...baseProps} onClose={onClose} />);
+    const footerButton = screen.getByText('Fermer', { selector: 'button.btn.primary' });
+    expect(footerButton).toHaveAccessibleName('Fermer');
+    fireEvent.click(footerButton);
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
+// Chantier 2026-08-28 n°4, lot C — le bloc « Erreurs d'enregistrement » était le SEUL sans
+// bouton « Aller › », faute de numéro de section exploitable dans `Issue.section` (un libellé
+// de module). `Issue.nums` fournit la cible.
+describe('BlockersModal — saut depuis une erreur d’enregistrement (chantier 2026-08-28)', () => {
+  it('offre « Aller › » et saute à la première section du module', () => {
+    const onGoToSection = jest.fn();
+    render(
+      <BlockersModal
+        {...baseProps}
+        context="save"
+        saveErrors={[{ section: 'Localisation', message: 'Refus RLS.', tone: 'req', nums: ['02'] }]}
+        onGoToSection={onGoToSection}
+      />,
+    );
+    const row = screen.getByRole('button', { name: /Localisation/ });
+    expect(row).toHaveTextContent('Aller ›');
+    fireEvent.click(row);
+    expect(onGoToSection).toHaveBeenCalledWith('02');
+  });
+
+  it('reste STATIQUE quand aucune section n’est rattachée — lisible, simplement sans action', () => {
+    render(
+      <BlockersModal
+        {...baseProps}
+        context="save"
+        saveErrors={[{ section: 'Module inconnu', message: 'Erreur.', tone: 'req' }]}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Module inconnu/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Module inconnu')).toBeInTheDocument();
+  });
+});
+
+it('uses the approved deferred-publication notice in the existing modal', () => {
+  render(<BlockersModal {...baseProps} context="publish-deferred"
+    requiredBlockers={[{ section: '02', message: 'A later required-field issue', tone: 'req' }]}
+    saveErrors={[{ section: 'Transport', message: 'An unrelated save error', tone: 'req' }]}
+    warnings={[{ section: '04', message: 'An unrelated warning', tone: 'warn' }]} />);
+  expect(screen.getByRole('heading', { name: 'Publication reportée' })).toBeInTheDocument();
+  expect(screen.queryByText('A later required-field issue')).not.toBeInTheDocument();
+  expect(screen.queryByText('An unrelated save error')).not.toBeInTheDocument();
+  expect(screen.queryByText('An unrelated warning')).not.toBeInTheDocument();
+  expect(screen.getByText('Une modification a été saisie pendant l’enregistrement. Elle est conservée. Relancez la publication pour enregistrer et publier la dernière version.')).toBeInTheDocument();
+  expect(screen.getByText('Fermer', { selector: 'button.btn.primary' })).toHaveAccessibleName('Fermer');
+});

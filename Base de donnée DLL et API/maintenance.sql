@@ -1,0 +1,224 @@
+-- =====================================================
+-- Database Maintenance Script
+-- Run daily via cron or as needed
+-- =====================================================
+
+-- =====================================================
+-- Refresh Materialized Views
+-- =====================================================
+SELECT 'Refreshing materialized views...' AS info;
+
+-- Refresh reference data cache (concurrently to allow reads during refresh)
+REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;
+-- Refresh hot-path filtered object projection
+REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;
+
+-- =====================================================
+-- Update Statistics
+-- =====================================================
+SELECT 'Updating statistics...' AS info;
+
+ANALYZE object;
+ANALYZE object_location;
+ANALYZE media;
+ANALYZE object_price;
+ANALYZE object_description;
+ANALYZE object_org_link;
+ANALYZE object_iti;
+ANALYZE object_iti_stage;
+ANALYZE object_sustainability_action;
+ANALYZE object_classification;
+ANALYZE actor;
+ANALYZE actor_object_role;
+ANALYZE contact_channel;
+
+-- =====================================================
+-- Vacuum Tables
+-- =====================================================
+SELECT 'Vacuuming tables...' AS info;
+
+-- NOTE (Supabase SQL Editor): VACUUM cannot run inside a transaction block.
+-- If you run this file as a single batch in Supabase, it may be wrapped in a transaction and fail with:
+--   ERROR: 25001: VACUUM cannot run inside a transaction block
+-- Run VACUUM separately using a non-transactional client (psql with autocommit) or vacuumdb.
+-- VACUUM (ANALYZE, VERBOSE) object;
+-- VACUUM (ANALYZE, VERBOSE) object_location;
+-- VACUUM (ANALYZE, VERBOSE) media;
+-- VACUUM (ANALYZE, VERBOSE) object_price;
+
+-- =====================================================
+-- Rebuild Indexes (if fragmented)
+-- =====================================================
+-- Uncomment if indexes are fragmented (check with pg_stat_user_indexes)
+-- REINDEX TABLE CONCURRENTLY object;
+-- REINDEX TABLE CONCURRENTLY object_location;
+
+-- =====================================================
+-- Update Cached Aggregates (if needed)
+-- =====================================================
+SELECT 'Updating cached aggregates...' AS info;
+
+-- Update cached prices for all objects
+UPDATE object o
+SET cached_min_price = subq.min_price
+FROM (
+  SELECT 
+    object_id,
+    MIN(amount) as min_price
+  FROM object_price
+  WHERE (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+    AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+  GROUP BY object_id
+) subq
+WHERE o.id = subq.object_id
+  AND (o.cached_min_price IS DISTINCT FROM subq.min_price OR o.cached_min_price IS NULL);
+
+-- Update cached main images for all objects
+UPDATE object o
+SET cached_main_image_url = subq.main_image_url
+FROM (
+  SELECT DISTINCT ON (object_id)
+    object_id,
+    url as main_image_url
+  FROM media
+  WHERE is_published = TRUE
+    AND is_main = TRUE
+    AND (kind IS NULL OR kind = 'illustration')
+    -- §59 (14a): the public cover pick excludes private/partners media
+    AND (visibility IS NULL OR visibility = 'public')
+  ORDER BY object_id, position NULLS LAST
+) subq
+WHERE o.id = subq.object_id
+  AND (o.cached_main_image_url IS DISTINCT FROM subq.main_image_url OR o.cached_main_image_url IS NULL);
+
+-- =====================================================
+-- Regenerate GPX Cache (if needed)
+-- =====================================================
+SELECT 'Checking GPX cache...' AS info;
+
+-- Update any itineraries where GPX cache is missing
+UPDATE object_iti
+SET updated_at = updated_at  -- Trigger will regenerate cache
+WHERE geom IS NOT NULL 
+  AND cached_gpx IS NULL;
+
+-- =====================================================
+-- Check Database Health
+-- =====================================================
+SELECT 'Database health check...' AS info;
+
+-- Table sizes
+SELECT 
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
+  pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS table_size,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) AS index_size
+FROM pg_tables
+WHERE schemaname IN ('public', 'api')
+  AND tablename IN ('object', 'object_location', 'media', 'object_iti', 'object_price')
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+
+-- Index usage statistics
+SELECT
+  schemaname,
+  relname AS tablename,
+  indexrelname AS indexname,
+  idx_scan as scans,
+  idx_tup_read as tuples_read,
+  idx_tup_fetch as tuples_fetched,
+  pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+FROM pg_stat_user_indexes
+WHERE schemaname IN ('public', 'api')
+  AND relname IN ('object', 'object_location')
+ORDER BY idx_scan DESC
+LIMIT 20;
+
+-- Materialized view status
+SELECT 
+  m.schemaname,
+  m.matviewname,
+  pg_size_pretty(pg_total_relation_size(m.schemaname||'.'||m.matviewname)) as size,
+  s.last_vacuum,
+  s.last_autovacuum,
+  s.last_analyze,
+  s.last_autoanalyze
+FROM pg_matviews m
+LEFT JOIN pg_stat_all_tables s
+  ON s.schemaname = m.schemaname
+ AND s.relname = m.matviewname
+WHERE m.schemaname IN ('public', 'api', 'internal');
+
+-- =====================================================
+-- Ensure pg_cron schedules are present (idempotent)
+-- =====================================================
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'refresh-mv-filtered-objects') THEN
+      PERFORM cron.schedule(
+        'refresh-mv-filtered-objects',
+        '*/5 * * * *',
+        $cron$REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects$cron$
+      );
+    END IF;
+
+    -- Enforce 5-minute cadence for open-now cache freshness.
+    PERFORM cron.unschedule(j.jobid)
+    FROM cron.job j
+    WHERE j.jobname = 'refresh-open-status'
+      AND j.schedule <> '*/5 * * * *';
+
+    IF NOT EXISTS (
+      SELECT 1
+      FROM cron.job
+      WHERE jobname = 'refresh-open-status'
+        AND schedule = '*/5 * * * *'
+    ) THEN
+      PERFORM cron.schedule(
+        'refresh-open-status',
+        '*/5 * * * *',
+        $cron$SELECT api.refresh_open_status()$cron$
+      );
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'maintain-partitions') THEN
+      PERFORM cron.schedule(
+        'maintain-partitions',
+        '0 2 * * *',
+        $cron$SELECT audit.maintain_partitions()$cron$
+      );
+    END IF;
+
+    -- Brique 2 (manifest 14s): registre temporel des stats dashboard, snapshot quotidien.
+    IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'capture-metric-snapshots') THEN
+      PERFORM cron.schedule(
+        'capture-metric-snapshots',
+        '0 3 * * *',
+        $cron$SELECT api.capture_metric_snapshots()$cron$
+      );
+    END IF;
+
+    -- Listes personnelles / cycle de vie (2026-09-07) : purge annuelle des
+    -- listes non mises à la une, inactives depuis 1 an (last_activity_at).
+    -- maintenance.sql s'applique AVANT la migration dans ci_fresh_apply :
+    -- vérifier que la fonction existe déjà, sinon cron.schedule enregistrerait
+    -- un job dont le corps SQL ne résoudrait qu'à l'exécution (revue SQL).
+    IF to_regprocedure('internal.purge_expired_lists()') IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'purge-expired-lists') THEN
+      PERFORM cron.schedule(
+        'purge-expired-lists',
+        '0 4 * * *',
+        $cron$SELECT internal.purge_expired_lists()$cron$
+      );
+    END IF;
+  ELSE
+    RAISE NOTICE 'pg_cron extension is not installed; skipping schedule creation.';
+  END IF;
+EXCEPTION
+  WHEN undefined_table THEN
+    RAISE NOTICE 'cron.job table is unavailable; skipping schedule creation.';
+END $$;
+
+SELECT 'Maintenance complete!' AS info;
+

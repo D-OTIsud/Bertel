@@ -1,0 +1,6437 @@
+import type { WorkspaceSaveResult } from './workspace-save-result';
+import { buildGalleryWritePayload, galleryBaseline, parseGalleryWriteSnapshot, withGalleryWriteSnapshot } from './media-write-contract';
+import { withPendingGalleryRequest } from './gallery-save-request';
+import {
+  toNullableText,
+  toNullableNumber,
+  toNullableInteger,
+  toRpcUuid,
+  isUuid,
+  normalizeOpeningWeekdayCode,
+  buildCodeIdMap,
+  ensureKnownCodes,
+  workspaceNameForSave,
+} from './object-workspace-payloads/input';
+import { buildCharacteristicsRpcPayload } from './object-workspace-payloads/characteristics';
+export {
+  ACCESSIBILITY_AMENITY_FAMILY,
+  filterEstablishmentAmenityGroups,
+  mergeEstablishmentAmenitySelection,
+  buildEstablishmentAmenityPayload,
+  buildCharacteristicsRpcPayload,
+} from './object-workspace-payloads/characteristics';
+import { buildOpeningsPayload } from './object-workspace-payloads/openings';
+export { buildOpeningsPayload } from './object-workspace-payloads/openings';
+import {
+  buildSustainabilityRpcPayload,
+  buildTagsRpcPayload,
+} from './object-workspace-payloads/sustainability';
+export {
+  buildSustainabilityRpcPayload,
+  buildTagsRpcPayload,
+} from './object-workspace-payloads/sustainability';
+import {
+  buildMeetingRoomSavePayload,
+  buildMeetingRoomEquipmentReconcile,
+  buildMeetingRoomDeletedIds,
+  buildRoomsRpcPayload,
+} from './object-workspace-payloads/rooms';
+export {
+  buildMeetingRoomSavePayload,
+  buildMeetingRoomEquipmentReconcile,
+  buildMeetingRoomDeletedIds,
+  buildRoomsRpcPayload,
+} from './object-workspace-payloads/rooms';
+import {
+  buildItineraryUpsertPayload,
+  buildItineraryStagesPayload,
+  buildItineraryInfoPayload,
+  buildItineraryAssociatedObjectsPayload,
+} from './object-workspace-payloads/itinerary';
+export {
+  buildItineraryUpsertPayload,
+  buildItineraryStagesPayload,
+  buildItineraryInfoPayload,
+  buildItineraryAssociatedObjectsPayload,
+} from './object-workspace-payloads/itinerary';
+import { buildRelationshipsRpcPayload } from './object-workspace-payloads/relationships';
+export {
+  buildRelationsPayload,
+  buildOrgLinksPayload,
+  buildActorLinksPayload,
+  buildRelationshipsRpcPayload,
+} from './object-workspace-payloads/relationships';
+import { buildZonesPayload, buildPlacesRpcPayload } from './object-workspace-payloads/places';
+export { buildZonesPayload, buildPlacesRpcPayload } from './object-workspace-payloads/places';
+import {
+  buildDescriptionPayload,
+  orgOverlayHasContent,
+  buildOrgDescriptionPayload,
+} from './object-workspace-payloads/descriptions';
+export {
+  buildDescriptionPayload,
+  orgOverlayHasContent,
+  buildOrgDescriptionPayload,
+} from './object-workspace-payloads/descriptions';
+
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
+import {
+  readCoercingString as readString,
+  readPermissiveBoolean as readBoolean,
+  readTrimmedStringList as readStringList,
+  readRecord,
+} from '../lib/json-read';
+import { useSessionStore } from '../store/session-store';
+import type { ObjectDetail } from '../types/domain';
+import { mockPendingChanges, mockPublicationCards } from '../data/mock';
+import { classificationSchemeAppliesTo, type ReferenceCatalogs } from './reference-catalogs';
+import {
+  type ObjectWorkspaceCapacityItem,
+  type ObjectWorkspaceCapacityPoliciesModule,
+  type ObjectWorkspaceActivityModule,
+  type ObjectWorkspaceAccessibilityAmenityItem,
+  type ObjectWorkspaceAmenityGroup,
+  type ObjectWorkspaceAmenityOption,
+  type ObjectWorkspaceCharacteristicsModule,
+  parseObjectWorkspace,
+  parseWorkspacePlacesModule,
+  parseWorkspaceOpeningPeriodRows,
+  type ObjectWorkspaceContactItem,
+  type ObjectWorkspaceContactsModule,
+  type ObjectWorkspaceDescriptionScope,
+  type ObjectWorkspaceDescriptionsModule,
+  type ObjectWorkspaceDistinctionGroup,
+  type ObjectWorkspaceDistinctionItem,
+  type ObjectWorkspaceDistinctionSchemeOption,
+  type ObjectWorkspaceDistinctionsModule,
+  type ObjectWorkspaceGeneralInfo,
+  type ObjectWorkspaceLanguageItem,
+  type ObjectWorkspaceLocationModule,
+  type ObjectWorkspaceMediaItem,
+  type ObjectWorkspaceMediaModule,
+  type ObjectWorkspaceModerationItem,
+  type ObjectWorkspaceModules,
+  type ObjectWorkspacePublicationModule,
+  type ObjectWorkspacePublicationSelectionItem,
+  type ObjectWorkspacePricingModule,
+  type ObjectWorkspacePlacesModule,
+  type ObjectWorkspaceOpeningPeriodTypeOption,
+  type ObjectWorkspaceOpeningsModule,
+  type ObjectWorkspaceSyncIdentifiersModule,
+  type ObjectWorkspaceMembershipItem,
+  type ObjectWorkspaceMembershipModule,
+  type ObjectWorkspaceMembershipScopeOption,
+  type ObjectWorkspaceRelationshipsModule,
+  type ObjectWorkspaceLegalComplianceDetail,
+  type ObjectWorkspaceLegalComplianceSummary,
+  type ObjectWorkspaceLegalModule,
+  type ObjectWorkspaceLegalRecord,
+  type ObjectWorkspaceLegalTypeOption,
+  type ObjectWorkspaceMeetingRoomsModule,
+  type ObjectWorkspaceMenuItem,
+  type ObjectWorkspaceMenusModule,
+  type ObjectWorkspaceCuisineModule,
+  type ObjectWorkspaceSustainabilityModule,
+  type ObjectWorkspaceTagItem,
+  type ObjectWorkspaceTagsModule,
+  type ObjectWorkspaceEventModule,
+  type ObjectWorkspaceItineraryModule,
+  type ObjectWorkspacePriceItem,
+  type ObjectWorkspacePricePeriod,
+  type ObjectWorkspacePromotionSummary,
+  type ObjectWorkspaceProviderFollowUpModule,
+  type ObjectWorkspaceDiscountItem,
+  type ObjectWorkspaceRoomsModule,
+  type ObjectWorkspaceRoomBed,
+  type ObjectWorkspaceTaxonomyAssignment,
+  type ObjectWorkspaceTaxonomyDomain,
+  type ObjectWorkspaceTaxonomyModule,
+  type ObjectWorkspaceUnitTypes,
+  type ObjectWorkspacePositionings,
+  EMPTY_UNIT_TYPES,
+  EMPTY_POSITIONINGS,
+  type ObjectWorkspaceTaxonomyNodeOption,
+  type ObjectWorkspaceTaxonomyPathNode,
+  type WorkspaceReferenceOption,
+  type WorkspaceMediaOption,
+  normalizeTagColor,
+} from './object-workspace-parser';
+import { validateDiscountRowsForSave } from '../features/object-editor/sections/discount-row';
+import { listObjectCrm } from './crm';
+import { mapDatabaseError } from './api-error';
+import {
+  assertWorkspaceSaveAvailable,
+  knownWorkspaceIdsPresent,
+  LEGAL_SUMMARY_UNAVAILABLE,
+  workspaceReadRows,
+} from './object-workspace-safety';
+
+// Re-export normalizeTagColor so callers and tests that import from this entry point can reach it
+// without importing from object-workspace-parser directly.
+export { normalizeTagColor } from './object-workspace-parser';
+
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'cuisine' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider' | 'places';
+
+export interface ObjectWorkspaceModuleAccess {
+  canDirectWrite: boolean;
+  canPrepareProposal: boolean;
+  canSubmitProposal: boolean;
+  disabledReason: string | null;
+}
+
+export interface ObjectWorkspacePermissions {
+  generalInfo: ObjectWorkspaceModuleAccess;
+  taxonomy: ObjectWorkspaceModuleAccess;
+  publication: ObjectWorkspaceModuleAccess;
+  syncIdentifiers: ObjectWorkspaceModuleAccess;
+  /** §108 — suppression définitive : superuser plateforme uniquement. */
+  delete: ObjectWorkspaceModuleAccess;
+  location: ObjectWorkspaceModuleAccess & {
+    canEditZones: boolean;
+  };
+  places: ObjectWorkspaceModuleAccess;
+  descriptions: ObjectWorkspaceModuleAccess & {
+    canEditCanonical: boolean;
+    canEditOrgEnrichment: boolean;
+  };
+  media: ObjectWorkspaceModuleAccess & {
+    canEditPlaceMedia: boolean;
+  };
+  contacts: ObjectWorkspaceModuleAccess;
+  characteristics: ObjectWorkspaceModuleAccess;
+  distinctions: ObjectWorkspaceModuleAccess;
+  capacityPolicies: ObjectWorkspaceModuleAccess;
+  pricing: ObjectWorkspaceModuleAccess;
+  rooms: ObjectWorkspaceModuleAccess;
+  meetingRooms: ObjectWorkspaceModuleAccess;
+  menus: ObjectWorkspaceModuleAccess;
+  cuisine: ObjectWorkspaceModuleAccess;
+  activity: ObjectWorkspaceModuleAccess;
+  event: ObjectWorkspaceModuleAccess;
+  itinerary: ObjectWorkspaceModuleAccess;
+  openings: ObjectWorkspaceModuleAccess;
+  providerFollowUp: ObjectWorkspaceModuleAccess;
+  /** §19 CRM authoring — per-object gate (api.user_can_write_crm), NOT the global write_crm_notes helper. */
+  crm: ObjectWorkspaceModuleAccess;
+  relationships: ObjectWorkspaceModuleAccess;
+  memberships: ObjectWorkspaceModuleAccess;
+  legal: ObjectWorkspaceModuleAccess;
+  tags: ObjectWorkspaceModuleAccess;
+  sustainability: ObjectWorkspaceModuleAccess;
+  distribution: ObjectWorkspaceModuleAccess;
+  provider: ObjectWorkspaceModuleAccess;
+}
+
+export interface ObjectWorkspaceResource {
+  id: string;
+  name: string;
+  type?: string;
+  detail: ObjectDetail;
+  modules: ObjectWorkspaceModules;
+  permissions: ObjectWorkspacePermissions;
+  /** Type/facet applicability from the current reference registry; distinct from load failures. */
+  nonApplicableModules?: readonly WorkspaceModuleId[];
+}
+
+/**
+ * Chantier 2026-08-28 n°4 — la PRIORITÉ est inversée, et c'est tout l'enjeu.
+ *
+ * AVANT : seule la famille RLS/42501 était traduite ; tout le reste renvoyait `resolved`, c'est-à-dire
+ * le message PostgREST BRUT (anglais). Or les 101 sites d'appel passent tous un `fallback` FRANÇAIS
+ * — 101 beaux messages qui n'étaient donc quasi jamais atteints, `error.message` n'étant presque
+ * jamais vide. C'était du code mort de fait.
+ *
+ * APRÈS : `mapDatabaseError` mappe les SQLSTATE connus, laisse passer nos propres `P0001` (déjà
+ * français) et, à défaut, rend le `fallback` du site d'appel — le brut partant au `console.warn`.
+ * Un seul mappeur, partagé avec `lists`, `moderation` et `selection-emails`.
+ */
+function mapMutationError(error: unknown, fallback: string): Error {
+  return mapDatabaseError(error, fallback);
+}
+
+async function callObjectWorkspaceRpc(
+  functionName: string,
+  objectId: string,
+  payload: Record<string, unknown>,
+  fallback: string,
+): Promise<Record<string, unknown>> {
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error(fallback);
+  }
+
+  const { data, error } = await apiClient.schema('api').rpc(functionName, {
+    p_object_id: objectId,
+    p_payload: payload,
+  });
+
+  if (error) {
+    // Keep the database outcome for retry/idempotency decisions while retaining
+    // the existing translated message. A refusal is not an uncertain transport failure.
+    throw Object.assign(mapMutationError(error, fallback), { code: error.code });
+  }
+
+  const result = readRecord(data);
+  if (result.success === false) {
+    throw new Error(fallback);
+  }
+
+  return result;
+}
+
+/**
+ * §17 — create-on-the-go membership campaign/tier (mirror createWorkspaceTag). Gated per-object by the
+ * RPC (workspace_assert_can_write_object); returns the existing-or-created ref option for the combobox.
+ */
+async function createMembershipRef(
+  fnName: 'create_membership_campaign' | 'create_membership_tier',
+  objectId: string,
+  name: string,
+): Promise<WorkspaceReferenceOption> {
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error("Connexion backend indisponible pour creer la valeur d'adhesion.");
+  }
+  const { data, error } = await apiClient.schema('api').rpc(fnName, {
+    p_anchor_object_id: objectId,
+    p_name: name,
+  });
+  if (error) {
+    throw mapMutationError(error, "Creation de la valeur d'adhesion impossible.");
+  }
+  const row = readRecord(data);
+  return {
+    id: readString(row.ref_id),
+    code: readString(row.code),
+    label: readString(row.name, readString(row.code)),
+  };
+}
+
+export function createMembershipCampaign(objectId: string, name: string): Promise<WorkspaceReferenceOption> {
+  return createMembershipRef('create_membership_campaign', objectId, name);
+}
+
+export function createMembershipTier(objectId: string, name: string): Promise<WorkspaceReferenceOption> {
+  return createMembershipRef('create_membership_tier', objectId, name);
+}
+
+// P2.1 (§120) — résumé lisible d'une suggestion à partir des colonnes dérivées par
+// api.list_pending_changes (field_label / before_value / after_value), plus de payload/metadata bruts ici.
+function normalizePendingChangeSummary(input: {
+  targetTable: string;
+  action: string;
+  field: string;
+  beforeValue: string;
+  afterValue: string;
+}): string {
+  if (input.field && (input.beforeValue || input.afterValue)) {
+    return `${input.field} · ${input.beforeValue} -> ${input.afterValue}`;
+  }
+  if (input.field) {
+    return `${input.action} · ${input.field}`;
+  }
+  return `${input.action} · ${input.targetTable}`;
+}
+
+function normalizePendingChangeItem(row: Record<string, unknown>): ObjectWorkspaceModerationItem {
+  const targetTable = readString(row.target_table);
+  const action = readString(row.action);
+  // Colonnes dérivées par api.list_pending_changes (§120).
+  const field = readString(row.field_label);
+  const beforeValue = readString(row.before_value);
+  const afterValue = readString(row.after_value);
+  const submittedByLabel = readString(row.submitter_label);
+
+  return {
+    id: readString(row.id),
+    targetTable,
+    action,
+    status: readString(row.status, 'pending'),
+    submittedAt: readString(row.submitted_at),
+    reviewedAt: readString(row.reviewed_at),
+    appliedAt: readString(row.applied_at),
+    reviewNote: readString(row.review_note),
+    field,
+    beforeValue,
+    afterValue,
+    submittedByLabel,
+    summary: normalizePendingChangeSummary({ targetTable, action, field, beforeValue, afterValue }),
+  };
+}
+
+async function getObjectWorkspaceSyncIdentifiersModule(
+  _objectId: string,
+  baseModule: ObjectWorkspaceSyncIdentifiersModule,
+): Promise<ObjectWorkspaceSyncIdentifiersModule> {
+  const session = useSessionStore.getState();
+
+  return {
+    ...baseModule,
+    externalIdentifiersVisibilityNote:
+      baseModule.externalIdentifiers.length > 0
+        ? null
+        : session.demoMode
+          ? null
+          : "Les identifiants externes sont soumis a une lecture restreinte cote backend; l'absence de ligne ici ne prouve pas l'absence en base.",
+    originsVisibilityNote:
+      baseModule.origins.length > 0
+        ? null
+        : 'Aucune provenance amont n est actuellement exposee pour cette fiche.',
+  };
+}
+
+function normalizePublicationSelectionItem(row: Record<string, unknown>): ObjectWorkspacePublicationSelectionItem {
+  const publication = readRecord(row.publication);
+
+  return {
+    publicationId: readString(row.publication_id),
+    publicationCode: readString(publication.code),
+    publicationName: readString(publication.name),
+    publicationYear: readString(publication.year),
+    publicationStatus: readString(publication.status),
+    workflowStatus: readString(row.workflow_status, 'selected'),
+    pageNumber: readString(row.page_number),
+    customPrintText: readString(row.custom_print_text),
+    proofSentAt: readString(row.proof_sent_at),
+    validatedAt: readString(row.validated_bat_at),
+  };
+}
+
+function buildDemoModerationItems(objectName: string, objectId: string): ObjectWorkspaceModerationItem[] {
+  return mockPendingChanges
+    .filter((item) => item.objectName === objectName || item.objectId === objectId)
+    .map((item) => ({
+      id: item.id,
+      targetTable: 'object_location',
+      action: 'update',
+      status: 'pending',
+      submittedAt: item.submittedAt,
+      reviewedAt: '',
+      appliedAt: '',
+      reviewNote: '',
+      field: item.field,
+      beforeValue: item.before,
+      afterValue: item.after,
+      submittedByLabel: item.author,
+      summary: `${item.field} · ${item.before} -> ${item.after}`,
+    }));
+}
+
+function buildDemoPublicationItems(): ObjectWorkspacePublicationSelectionItem[] {
+  return mockPublicationCards.map((item) => ({
+    publicationId: item.id,
+    publicationCode: item.id,
+    publicationName: item.title,
+    publicationYear: '',
+    publicationStatus: item.lane === 'ready' ? 'published' : item.lane === 'layout' ? 'proofing' : 'planning',
+    workflowStatus: item.lane === 'ready' ? 'validated_bat' : item.lane === 'layout' ? 'proof_sent' : 'selected',
+    pageNumber: String(item.page),
+    customPrintText: '',
+    proofSentAt: '',
+    validatedAt: '',
+  }));
+}
+
+function referenceAvailability(row: Record<string, unknown>): { disabled?: boolean } {
+  return row.thesaurus_assignable === false || row.is_active === false || row.is_assignable === false ? { disabled: true } : {};
+}
+
+function normalizeReferenceOption(row: Record<string, unknown>): WorkspaceReferenceOption {
+  return {
+    id: readString(row.id),
+    code: readString(row.code),
+    label: readString(row.name, readString(row.code)),
+    ...referenceAvailability(row),
+  };
+}
+
+function sortReferenceOptions<T extends WorkspaceReferenceOption>(options: T[]): T[] {
+  return [...options].sort((left, right) => left.label.localeCompare(right.label, 'fr'));
+}
+
+function dedupeReferenceOptions(options: WorkspaceReferenceOption[]): WorkspaceReferenceOption[] {
+  const seen = new Set<string>();
+  const normalized: WorkspaceReferenceOption[] = [];
+
+  for (const option of options) {
+    const key = option.code.toLowerCase();
+    if (!option.code || !option.label || seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    normalized.push(option);
+  }
+
+  return sortReferenceOptions(normalized);
+}
+
+interface AmenityRef {
+  id: string;
+  code: string;
+  label: string;
+  familyId: string;
+  familyCode: string;
+  familyLabel: string;
+  disabilityTypes: string[];
+  position: number;
+  disabled?: boolean;
+}
+
+function normalizeAmenityRef(row: Record<string, unknown>): AmenityRef {
+  const familyRecord = readRecord(row.family);
+  const extra = readRecord(row.extra);
+  return {
+    id: readString(row.id),
+    code: readString(row.code),
+    label: readString(row.name, readString(row.code)),
+    familyId: readString(row.family_id),
+    familyCode: readString(familyRecord.code, 'misc'),
+    familyLabel: readString(familyRecord.name, 'Autres equipements'),
+    disabilityTypes: readStringList(extra.disability_types),
+    ...referenceAvailability(row),
+    position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
+  };
+}
+
+function normalizeLanguageSelection(params: {
+  row: Record<string, unknown>;
+  languageById: Map<string, WorkspaceReferenceOption>;
+  levelById: Map<string, WorkspaceReferenceOption>;
+}): ObjectWorkspaceLanguageItem | null {
+  const languageId = readString(params.row.language_id);
+  const levelId = readString(params.row.level_id);
+  const languageRef = params.languageById.get(languageId);
+  if (!languageRef) {
+    return null;
+  }
+
+  const levelRef = params.levelById.get(levelId);
+  return {
+    languageId,
+    code: languageRef.code,
+    label: languageRef.label,
+    levelId,
+    levelCode: levelRef?.code ?? '',
+    levelLabel: levelRef?.label ?? '',
+  };
+}
+
+function buildAmenityGroups(amenities: AmenityRef[], selectedCodes: Set<string>): ObjectWorkspaceAmenityGroup[] {
+  const groups = new Map<string, ObjectWorkspaceAmenityGroup>();
+
+  for (const amenity of amenities) {
+    const current = groups.get(amenity.familyCode) ?? {
+      familyCode: amenity.familyCode,
+      familyLabel: amenity.familyLabel,
+      options: [],
+    };
+
+    const option: ObjectWorkspaceAmenityOption = {
+      id: amenity.id,
+      code: amenity.code,
+      label: amenity.label,
+      disabilityTypes: amenity.disabilityTypes,
+      ...(amenity.disabled ? { disabled: true } : {}),
+    };
+    current.options.push(option);
+
+    groups.set(amenity.familyCode, current);
+  }
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      options: [...group.options].sort((left, right) => left.label.localeCompare(right.label, 'fr')),
+    }))
+    .sort((left, right) => {
+      const leftSelected = left.options.some((option) => selectedCodes.has(option.code));
+      const rightSelected = right.options.some((option) => selectedCodes.has(option.code));
+      if (leftSelected !== rightSelected) {
+        return Number(rightSelected) - Number(leftSelected);
+      }
+      return left.familyLabel.localeCompare(right.familyLabel, 'fr');
+    });
+}
+
+/**
+ * §73 — room equipment grouped by family in INDUSTRY-POPULARITY order (not alphabetical):
+ * `rows` arrive ordered by `ref_amenity.position` (usage rank), so options keep that order
+ * and families are sorted by `ref_code_amenity_family.position` (family usage rank). Distinct
+ * from `buildAmenityGroups` (which re-sorts alphabetically for §10/§05).
+ */
+function buildRoomAmenityGroups(rows: Record<string, unknown>[]): ObjectWorkspaceAmenityGroup[] {
+  const map = new Map<string, { group: ObjectWorkspaceAmenityGroup; familyPos: number }>();
+  for (const row of rows) {
+    const family = readRecord(row.family);
+    const familyCode = readString(family.code, 'misc');
+    const familyLabel = readString(family.name, 'Autres equipements');
+    const familyPos = toNullableInteger(readString(family.position)) ?? Number.MAX_SAFE_INTEGER;
+    const entry = map.get(familyCode) ?? { group: { familyCode, familyLabel, options: [] }, familyPos };
+    entry.group.options.push({
+      id: readString(row.id),
+      code: readString(row.code),
+      label: readString(row.name, readString(row.code)),
+      disabilityTypes: readStringList(readRecord(row.extra).disability_types),
+      ...referenceAvailability(row),
+    });
+    map.set(familyCode, entry);
+  }
+  return Array.from(map.values()).sort((a, b) => a.familyPos - b.familyPos).map((entry) => entry.group);
+}
+
+export async function getObjectWorkspaceCharacteristicsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceCharacteristicsModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceCharacteristicsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Connexion backend indisponible pour charger les caracteristiques.',
+    };
+  }
+
+  // Les 5 catalogues (ref_language, 3 domaines ref_code, ref_amenity) viennent du
+  // cache de session : ce module passe de 9 requetes a 4.
+  const languageRefs = catalogs.tables.ref_language ?? [];
+  const languageLevelRefs = catalogs.refCodeByDomain.language_level ?? [];
+  const paymentRefs = catalogs.refCodeByDomain.payment_method ?? [];
+  const environmentRefs = catalogs.refCodeByDomain.environment_tag ?? [];
+  // Le filtre de `scope` etait fait cote serveur ; il l'est desormais en memoire,
+  // la table entiere etant chargee une seule fois pour tous ses consommateurs.
+  const amenityRefsRows = (catalogs.tables.ref_amenity ?? []).filter((row) => {
+    const scope = readString(row.scope);
+    return scope === 'object' || scope === 'both';
+  });
+
+  const [
+    objectLanguagesResult,
+    objectPaymentsResult,
+    objectEnvironmentsResult,
+    objectAmenitiesResult,
+  ] = await Promise.all([
+    client.from('object_language').select('language_id, level_id').eq('object_id', objectId),
+    client.from('object_payment_method').select('payment_method_id').eq('object_id', objectId),
+    client.from('object_environment_tag').select('environment_tag_id').eq('object_id', objectId),
+    client.from('object_amenity').select('amenity_id').eq('object_id', objectId),
+  ]);
+
+  if (
+    objectLanguagesResult.error
+    || objectPaymentsResult.error
+    || objectEnvironmentsResult.error
+    || objectAmenitiesResult.error
+  ) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore un module C1 complet pour ce profil.',
+    };
+  }
+
+  const languageOptions = dedupeReferenceOptions(
+    languageRefs.map((row) => normalizeReferenceOption(row)),
+  );
+  const languageLevelOptions = dedupeReferenceOptions(
+    languageLevelRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
+  );
+  const languageById = new Map(languageOptions.map((option) => [option.id, option]));
+  const levelById = new Map(languageLevelOptions.map((option) => [option.id, option]));
+  const selectedLanguages = ((objectLanguagesResult.data ?? []) as Record<string, unknown>[])
+    .map((row) => normalizeLanguageSelection({
+      row,
+      languageById,
+      levelById,
+    }))
+    .filter((item): item is ObjectWorkspaceLanguageItem => item !== null)
+    .sort((left, right) => left.label.localeCompare(right.label, 'fr'));
+
+  const paymentOptions = dedupeReferenceOptions(
+    paymentRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
+  );
+  const paymentById = new Map(paymentOptions.map((option) => [option.id, option.code]));
+  const selectedPaymentCodes = Array.from(new Set(
+    ((objectPaymentsResult.data ?? []) as Record<string, unknown>[])
+      .map((row) => paymentById.get(readString(row.payment_method_id)) ?? '')
+      .filter(Boolean),
+  )).sort();
+
+  const environmentOptions = dedupeReferenceOptions(
+    environmentRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
+  );
+  const environmentById = new Map(environmentOptions.map((option) => [option.id, option.code]));
+  const selectedEnvironmentCodes = Array.from(new Set(
+    ((objectEnvironmentsResult.data ?? []) as Record<string, unknown>[])
+      .map((row) => environmentById.get(readString(row.environment_tag_id)) ?? '')
+      .filter(Boolean),
+  )).sort();
+
+  const amenityRefs = amenityRefsRows.map(normalizeAmenityRef);
+  const selectedAmenityCodes = new Set(
+    ((objectAmenitiesResult.data ?? []) as Record<string, unknown>[])
+      .map((row) => amenityRefs.find((amenity) => amenity.id === readString(row.amenity_id))?.code ?? '')
+      .filter(Boolean),
+  );
+
+  return {
+    languageOptions,
+    languageLevelOptions,
+    selectedLanguages,
+    paymentOptions,
+    selectedPaymentCodes,
+    environmentOptions,
+    selectedEnvironmentCodes,
+    amenityGroups: buildAmenityGroups(amenityRefs, selectedAmenityCodes),
+    selectedAmenityCodes: Array.from(selectedAmenityCodes).sort(),
+    unavailableReason: null,
+  };
+}
+
+function normalizeCapacityItem(params: {
+  row: Record<string, unknown>;
+  metricById: Map<string, WorkspaceReferenceOption>;
+}): ObjectWorkspaceCapacityItem | null {
+  const metricId = readString(params.row.metric_id);
+  const metricRef = params.metricById.get(metricId);
+  if (!metricRef) {
+    return null;
+  }
+
+  return {
+    recordId: readString(params.row.id) || null,
+    metricId,
+    metricCode: metricRef.code,
+    metricLabel: metricRef.label,
+    unit: readString(params.row.unit),
+    value: readString(params.row.value_integer),
+    effectiveFrom: readString(params.row.effective_from),
+    effectiveTo: readString(params.row.effective_to),
+  };
+}
+
+export async function getObjectWorkspaceCapacityPoliciesModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceCapacityPoliciesModule,
+  objectType: string,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceCapacityPoliciesModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Connexion backend indisponible pour charger capacites et politiques.',
+    };
+  }
+
+  // 2 catalogues depuis le cache de session : 6 requetes -> 4. Le filtre par
+  // object_type de l applicabilite passe du serveur a la memoire.
+  const metricRefs = catalogs.tables.ref_capacity_metric ?? [];
+  const applicabilityRows = objectType
+    ? (catalogs.tables.ref_capacity_applicability ?? []).filter((row) => readString(row.object_type) === objectType)
+    : [];
+
+  const [capacitiesResult, groupPolicyResult, petPolicyResult, stayPolicyResult] = await Promise.all([
+    client.from('object_capacity').select('id, metric_id, value_integer, unit, effective_from, effective_to').eq('object_id', objectId),
+    client.from('object_group_policy').select('min_size, max_size, group_only, notes').eq('object_id', objectId).maybeSingle(),
+    client.from('object_pet_policy').select('accepted, conditions').eq('object_id', objectId).maybeSingle(),
+    client.from('object_stay_policy').select('check_in_from, check_in_until, check_out_until, conditions').eq('object_id', objectId).maybeSingle(),
+  ]);
+
+  if (capacitiesResult.error || groupPolicyResult.error || petPolicyResult.error || stayPolicyResult.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore un module C4 complet pour ce profil.',
+    };
+  }
+
+  const allMetricOptions = dedupeReferenceOptions(
+    metricRefs.map((row) => normalizeReferenceOption(row)),
+  );
+  const metricById = new Map(allMetricOptions.map((option) => [option.id, option]));
+  const capacityItems = ((capacitiesResult.data ?? []) as Record<string, unknown>[])
+    .map((row) => normalizeCapacityItem({
+      row,
+      metricById,
+    }))
+    .filter((item): item is ObjectWorkspaceCapacityItem => item !== null)
+    .sort((left, right) => left.metricLabel.localeCompare(right.metricLabel, 'fr'));
+
+  // §07 review: offer only the metrics applicable to the object's type
+  // (ref_capacity_applicability, 13c) — FAIL-OPEN on probe failure or an empty
+  // matrix (a type with 0 rows must not brick the section), and a non-applicable
+  // metric the object ALREADY carries stays selectable (no data loss).
+  const applicableIds =
+    objectType && applicabilityRows.length > 0
+      ? new Set(
+          applicabilityRows.map((row) => readString(row.metric_id)),
+        )
+      : null;
+  const usedMetricIds = new Set(capacityItems.map((item) => item.metricId));
+  const metricOptions = applicableIds
+    ? allMetricOptions.filter((option) => applicableIds.has(option.id) || usedMetricIds.has(option.id))
+    : allMetricOptions;
+  const groupPolicy = readRecord(groupPolicyResult.data);
+  const petPolicy = readRecord(petPolicyResult.data);
+  const stayPolicy = readRecord(stayPolicyResult.data);
+  const toHm = (value: string): string => (value.length >= 5 ? value.slice(0, 5) : value);
+
+  return {
+    metricOptions,
+    capacityItems,
+    groupPolicy: {
+      minSize: readString(groupPolicy.min_size),
+      maxSize: readString(groupPolicy.max_size),
+      groupOnly: readBoolean(groupPolicy.group_only),
+      notes: readString(groupPolicy.notes),
+    },
+    petPolicy: {
+      // Absent row = « non renseigné » (tri-state) — coercing to false would publish
+      // « Animaux non acceptés » on the first save of an untouched §07.
+      accepted: petPolicy.accepted == null ? null : readBoolean(petPolicy.accepted),
+      conditions: readString(petPolicy.conditions),
+    },
+    stayPolicy: {
+      checkInFrom: toHm(readString(stayPolicy.check_in_from)),
+      checkInUntil: toHm(readString(stayPolicy.check_in_until)),
+      checkOutUntil: toHm(readString(stayPolicy.check_out_until)),
+      conditions: readString(stayPolicy.conditions),
+    },
+    unavailableReason: null,
+  };
+}
+
+interface ClassificationSchemeRef {
+  id: string;
+  code: string;
+  label: string;
+  description: string;
+  selectionMode: 'single' | 'multiple';
+  displayGroup: string;
+  position: number;
+  disabled?: boolean;
+}
+
+interface ClassificationValueRef {
+  id: string;
+  schemeId: string;
+  code: string;
+  label: string;
+  ordinal: number;
+  disabilityType: string | null;
+  disabled?: boolean;
+}
+
+function normalizeClassificationSchemeRef(row: Record<string, unknown>): ClassificationSchemeRef {
+  const selection = readString(row.selection, 'single');
+  return {
+    id: readString(row.id),
+    code: readString(row.code),
+    label: readString(row.name, readString(row.code)),
+    description: readString(row.description),
+    selectionMode: selection === 'multiple' ? 'multiple' : 'single',
+    ...referenceAvailability(row),
+    displayGroup: readString(row.display_group),
+    position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
+  };
+}
+
+function normalizeClassificationValueRef(row: Record<string, unknown>): ClassificationValueRef {
+  const metadata = readRecord(row.metadata);
+  return {
+    id: readString(row.id),
+    schemeId: readString(row.scheme_id),
+    code: readString(row.code),
+    label: readString(row.name, readString(row.code)),
+    ordinal: toNullableInteger(readString(row.ordinal)) ?? Number.MAX_SAFE_INTEGER,
+    disabilityType: readString(metadata.disability_type) || null,
+    ...referenceAvailability(row),
+  };
+}
+
+function isDistinctionClassificationScheme(row: Record<string, unknown>): boolean {
+  const displayGroup = readString(row.display_group);
+  // §08 authors official classements, quality labels AND sustainability/eco labels
+  // (Clef Verte, Pavillon Bleu, Destination d'excellence…). Only accessibility labels
+  // are excluded — §10 owns those via the separate accessibilityLabels path. The §11
+  // Durabilité section authors sustainability *actions*, not these *labels* (§71 E).
+  return row.is_distinction === true && displayGroup !== 'accessibility_labels';
+}
+
+function isAccessibilityClassificationScheme(row: Record<string, unknown>): boolean {
+  const displayGroup = readString(row.display_group);
+  const code = readString(row.code);
+  return displayGroup === 'accessibility_labels' || code === 'LBL_TOURISME_HANDICAP';
+}
+
+function readDisabilityTypesCovered(
+  subvalueIds: unknown,
+  valueById: Map<string, ClassificationValueRef>,
+): string[] {
+  if (!Array.isArray(subvalueIds)) {
+    return [];
+  }
+
+  const types = subvalueIds
+    .map((subvalueId) => valueById.get(readString(subvalueId))?.disabilityType ?? '')
+    .filter(Boolean);
+
+  return Array.from(new Set(types)).sort((left, right) => left.localeCompare(right, 'fr'));
+}
+
+/**
+ * Write mirror of {@link readDisabilityTypesCovered}: resolve the covered disability-type codes
+ * (motor/hearing/visual/cognitive) of a LBL_TOURISME_HANDICAP label to the UUIDs of the matching
+ * `granted_*` sub-values, scoped to the label's scheme. The sub-values carry
+ * `metadata.disability_type` (seeds_data.sql B-2b §3711-3754); we join by (scheme_id,
+ * disability_type) so the result is the UUID[] for `object_classification.subvalue_ids` — never
+ * hard-coded UUIDs. Codes with no matching sub-value are dropped, the array is de-duplicated, and an
+ * empty input clears `subvalue_ids`. Used by {@link saveObjectWorkspaceDistinctions} to close the
+ * §10 silent write-trap (CLAUDE.md "Editor — no silent write-traps").
+ */
+export function buildClassificationSubvalueIds(
+  disabilityTypesCovered: readonly string[],
+  schemeId: string,
+  subvalueRefs: readonly { id: string; schemeId: string; disabilityType: string | null }[],
+): string[] {
+  const idByType = new Map<string, string>();
+  for (const ref of subvalueRefs) {
+    if (ref.schemeId === schemeId && ref.disabilityType) {
+      idByType.set(ref.disabilityType, ref.id);
+    }
+  }
+
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const type of disabilityTypesCovered) {
+    const id = idByType.get(type);
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      out.push(id);
+    }
+  }
+  return out;
+}
+
+function normalizeWorkspaceDistinctionItem(params: {
+  row: Record<string, unknown>;
+  schemeById: Map<string, ClassificationSchemeRef>;
+  valueById: Map<string, ClassificationValueRef>;
+  documentById?: Map<string, { url: string; title: string }>;
+}): ObjectWorkspaceDistinctionItem | null {
+  const schemeId = readString(params.row.scheme_id);
+  const valueId = readString(params.row.value_id);
+  const schemeRef = params.schemeById.get(schemeId);
+  const valueRef = params.valueById.get(valueId);
+
+  if (!schemeRef || !valueRef) {
+    return null;
+  }
+
+  const documentId = readString(params.row.document_id);
+  const document = documentId ? params.documentById?.get(documentId) : undefined;
+
+  return {
+    recordId: readString(params.row.id) || null,
+    schemeId,
+    schemeCode: schemeRef.code,
+    schemeLabel: schemeRef.label,
+    valueId,
+    valueCode: valueRef.code,
+    valueLabel: valueRef.label,
+    status: readString(params.row.status),
+    awardedAt: readString(params.row.awarded_at),
+    validUntil: readString(params.row.valid_until),
+    disabilityTypesCovered: readDisabilityTypesCovered(params.row.subvalue_ids, params.valueById),
+    documentId,
+    documentUrl: document?.url ?? '',
+    documentTitle: document?.title ?? '',
+  };
+}
+
+function isAccessibilityAmenity(amenity: AmenityRef): boolean {
+  return amenity.familyCode === 'accessibility' || amenity.code.startsWith('acc_') || amenity.disabilityTypes.length > 0;
+}
+
+interface TaxonomyDomainRef {
+  domain: string;
+  label: string;
+  description: string;
+  objectType: string;
+  position: number;
+}
+
+interface TaxonomyNodeRef {
+  id: string;
+  domain: string;
+  code: string;
+  label: string;
+  description: string;
+  parentId: string | null;
+  isAssignable: boolean;
+  isActive?: boolean;
+  position: number;
+  axis: 'famille' | 'nature' | 'sous_type' | 'type_unite' | 'positionnement' | null;
+  family: string | null;
+  aliases: string[];
+  sourceRef: string | null;
+}
+
+function normalizeTaxonomyDomainRef(row: Record<string, unknown>): TaxonomyDomainRef {
+  return {
+    domain: readString(row.domain),
+    label: readString(row.name, readString(row.domain)),
+    description: readString(row.description),
+    objectType: readString(row.object_type),
+    position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
+  };
+}
+
+function normalizeTaxonomyNodeRef(row: Record<string, unknown>): TaxonomyNodeRef {
+  const metadata = readRecord(row.metadata);
+  const axis = readString(metadata.axis);
+  return {
+    id: readString(row.id),
+    domain: readString(row.domain),
+    code: readString(row.code),
+    label: readString(row.name, readString(row.code)),
+    description: readString(row.description),
+    parentId: readString(row.parent_id) || null,
+    isAssignable: !referenceAvailability(row).disabled,
+    isActive: row.is_active !== false,
+    position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
+    axis: axis === 'famille' || axis === 'nature' || axis === 'sous_type'
+      || axis === 'type_unite' || axis === 'positionnement' ? axis : null,
+    family: readString(metadata.famille) || null,
+    aliases: readStringList(metadata.aliases),
+    sourceRef: readString(metadata.source_ref) || null,
+  };
+}
+
+function computeTaxonomyDepth(
+  nodeId: string,
+  nodeById: Map<string, TaxonomyNodeRef>,
+  cache: Map<string, number>,
+): number {
+  const cached = cache.get(nodeId);
+  if (cached != null) {
+    return cached;
+  }
+
+  const current = nodeById.get(nodeId);
+  if (!current || !current.parentId) {
+    cache.set(nodeId, 0);
+    return 0;
+  }
+
+  const depth = computeTaxonomyDepth(current.parentId, nodeById, cache) + 1;
+  cache.set(nodeId, depth);
+  return depth;
+}
+
+function buildTaxonomyPath(
+  nodeId: string,
+  nodeById: Map<string, TaxonomyNodeRef>,
+): ObjectWorkspaceTaxonomyPathNode[] {
+  const path: ObjectWorkspaceTaxonomyPathNode[] = [];
+  let cursor = nodeById.get(nodeId) ?? null;
+
+  while (cursor) {
+    if (cursor.code !== 'root') {
+      path.push({
+        id: cursor.id,
+        code: cursor.code,
+        label: cursor.label,
+        description: cursor.description,
+        depth: 0,
+      });
+    }
+    cursor = cursor.parentId ? (nodeById.get(cursor.parentId) ?? null) : null;
+  }
+
+  return path.reverse().map((node, index) => ({
+    ...node,
+    depth: index,
+  }));
+}
+
+function buildTaxonomyNodeOptions(domainNodes: TaxonomyNodeRef[]): ObjectWorkspaceTaxonomyNodeOption[] {
+  const nodeById = new Map(domainNodes.map((node) => [node.id, node]));
+  const depthCache = new Map<string, number>();
+
+  return domainNodes
+    .filter((node) => node.code !== 'root')
+    .map((node) => {
+      const parent = node.parentId ? (nodeById.get(node.parentId) ?? null) : null;
+      return {
+        id: node.id,
+        code: node.code,
+        label: node.label,
+        description: node.description,
+        parentId: parent?.code === 'root' ? null : node.parentId,
+        parentCode: parent && parent.code !== 'root' ? parent.code : null,
+        depth: Math.max(0, computeTaxonomyDepth(node.id, nodeById, depthCache) - 1),
+        isAssignable: node.isAssignable,
+        isActive: node.isActive,
+        position: node.position,
+        axis: node.axis,
+        family: node.family,
+        aliases: node.aliases,
+        sourceRef: node.sourceRef,
+      };
+    })
+    .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
+}
+
+function normalizeWorkspaceTaxonomyAssignment(params: {
+  row: Record<string, unknown>;
+  nodeById: Map<string, TaxonomyNodeRef>;
+}): ObjectWorkspaceTaxonomyAssignment | null {
+  const nodeId = readString(params.row.ref_code_id);
+  const node = params.nodeById.get(nodeId);
+
+  if (!node) {
+    return null;
+  }
+
+  const path = buildTaxonomyPath(nodeId, params.nodeById);
+
+  return {
+    recordId: readString(params.row.id) || null,
+    nodeId,
+    code: node.code,
+    label: node.label,
+    description: node.description,
+    depth: Math.max(0, path.length - 1),
+    path,
+    updatedAt: readString(params.row.updated_at),
+    source: readString(params.row.source),
+  };
+}
+
+function reconcileTaxonomyAssignment(params: {
+  domain: ObjectWorkspaceTaxonomyDomain;
+  row?: Record<string, unknown>;
+}): ObjectWorkspaceTaxonomyDomain {
+  const liveNodeRefs = params.domain.nodes.map((node) => ({
+    id: node.id,
+    domain: params.domain.domain,
+    code: node.code,
+    label: node.label,
+    description: node.description,
+    parentId: node.parentId,
+    isAssignable: node.isAssignable,
+    isActive: node.isActive,
+    position: node.position,
+    axis: node.axis ?? null,
+    family: node.family ?? null,
+    aliases: node.aliases ?? [],
+    sourceRef: node.sourceRef ?? null,
+  }));
+  const nodeById = new Map(liveNodeRefs.map((node) => [node.id, node]));
+  const nodeByCode = new Map(liveNodeRefs.map((node) => [node.code.toLowerCase(), node]));
+  const liveAssignment = params.row
+    ? normalizeWorkspaceTaxonomyAssignment({
+        row: params.row,
+        nodeById,
+      })
+    : null;
+
+  if (liveAssignment) {
+    return {
+      ...params.domain,
+      assignment: liveAssignment,
+    };
+  }
+
+  const fallback = params.domain.assignment;
+  if (!fallback) {
+    return params.domain;
+  }
+
+  const liveNode = nodeById.get(fallback.nodeId) ?? nodeByCode.get(fallback.code.toLowerCase()) ?? null;
+  if (!liveNode) {
+    return params.domain;
+  }
+
+  const path = buildTaxonomyPath(liveNode.id, nodeById);
+  return {
+    ...params.domain,
+    assignment: {
+      ...fallback,
+      nodeId: liveNode.id,
+      code: liveNode.code,
+      label: liveNode.label,
+      description: liveNode.description,
+      depth: Math.max(0, path.length - 1),
+      path,
+    },
+  };
+}
+
+export async function getObjectWorkspaceTaxonomyModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceTaxonomyModule,
+  catalogs: ReferenceCatalogs,
+  objectType: string,
+): Promise<ObjectWorkspaceTaxonomyModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Connexion backend indisponible pour charger la taxonomie structurante.',
+    };
+  }
+
+  // `object_type` est DEJA connu : il vient de `detail.type`, charge par la
+  // vague 0. Le relire ici coutait un aller-retour complet (220-310 ms depuis La
+  // Reunion) en tete d une cascade serialisee.
+  const resolvedObjectType = objectType.trim();
+  const fallbackByDomain = new Map(baseModule.domains.map((domain) => [domain.domain, domain]));
+  // Registre depuis le cache de session ; les filtres is_taxonomy / is_active
+  // etaient faits cote serveur, ils le sont desormais en memoire. Ce saut
+  // sérialisé disparait : le module passe de 3 hops a 2.
+  const domainRegistryRows = (catalogs.tables.ref_code_domain_registry ?? [])
+    .filter((row) => row.is_taxonomy === true && row.is_active === true);
+
+  const domainRefs = domainRegistryRows
+    .map(normalizeTaxonomyDomainRef)
+    .filter((domain) => !domain.objectType || domain.objectType === resolvedObjectType || fallbackByDomain.has(domain.domain))
+    .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
+
+  const domainCodes = domainRefs.map((domain) => domain.domain);
+  const [nodeRefsResult, assignmentsResult] = await Promise.all([
+    catalogs.vocabularyRelease !== undefined
+      ? Promise.resolve({ data: domainCodes.flatMap((domain) => catalogs.refCodeByDomain[domain] ?? []), error: null })
+      : domainCodes.length > 0
+      ? client
+          .from('ref_code')
+          .select('id, domain, code, name, description, parent_id, is_assignable, position, is_active, metadata')
+          .in('domain', domainCodes)
+          .order('position', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    client
+      .from('object_taxonomy')
+      .select('id, domain, ref_code_id, source, note, updated_at')
+      .eq('object_id', objectId)
+      .order('created_at', { ascending: true }),
+  ]);
+
+  if (nodeRefsResult.error || assignmentsResult.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore une taxonomie structurante complete pour ce profil.',
+    };
+  }
+
+  const nodeRefs = ((nodeRefsResult.data ?? []) as Record<string, unknown>[]).map(normalizeTaxonomyNodeRef);
+  const knownNodeIds = new Set(nodeRefs.map((node) => node.id));
+  const unresolvedAssignment = ((assignmentsResult.data ?? []) as Record<string, unknown>[])
+    .some((row) => domainCodes.includes(readString(row.domain)) && !knownNodeIds.has(readString(row.ref_code_id)));
+  if (unresolvedAssignment) {
+    return { ...baseModule, unavailableReason: 'Une nature existante est absente du catalogue chargé. Rechargez la fiche avant de modifier sa taxonomie.' };
+  }
+  const nodesByDomain = new Map<string, TaxonomyNodeRef[]>();
+  for (const node of nodeRefs) {
+    const current = nodesByDomain.get(node.domain) ?? [];
+    current.push(node);
+    nodesByDomain.set(node.domain, current);
+  }
+
+  const assignmentRowsByDomain = new Map(
+    ((assignmentsResult.data ?? []) as Record<string, unknown>[])
+      .map((row) => [readString(row.domain), row] as const),
+  );
+  const [unitTypes, positionings] = await Promise.all([
+    loadAccommodationUnitTypes(client, objectId, resolvedObjectType, catalogs),
+    loadHotelPositionings(client, objectId, resolvedObjectType, catalogs),
+  ]);
+
+  return {
+    domains: [
+      ...domainRefs.map((domainRef) =>
+        reconcileTaxonomyAssignment({
+          row: assignmentRowsByDomain.get(domainRef.domain),
+          domain: {
+            domain: domainRef.domain,
+            label: domainRef.label,
+            description: domainRef.description,
+            objectType: domainRef.objectType,
+            nodes: buildTaxonomyNodeOptions(nodesByDomain.get(domainRef.domain) ?? []),
+            assignment: fallbackByDomain.get(domainRef.domain)?.assignment ?? null,
+          },
+        })),
+      ...baseModule.domains.filter((domain) => !domainCodes.includes(domain.domain)),
+    ].sort((left, right) => left.label.localeCompare(right.label, 'fr')),
+    unitTypes,
+    positionings,
+    unavailableReason: null,
+  };
+}
+
+/** §201 — types d'unité applicables à l'hébergement, et ceux déjà posés sur la fiche. */
+const ACCOMMODATION_UNIT_TYPE_OBJECT_TYPES = new Set(['HOT', 'HLO', 'RVA', 'CAMP', 'HPA']);
+
+async function loadAccommodationUnitTypes(
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  objectId: string,
+  objectType: string,
+  catalogs?: ReferenceCatalogs,
+): Promise<ObjectWorkspaceUnitTypes> {
+  // L'axe ne concerne que l'hébergement : l'exposer ailleurs serait un contrôle
+  // qui ne veut rien dire pour un restaurant ou un itinéraire.
+  if (!ACCOMMODATION_UNIT_TYPE_OBJECT_TYPES.has(objectType.toUpperCase())) {
+    return EMPTY_UNIT_TYPES;
+  }
+
+  const [catalogResult, selectedResult] = await Promise.all([
+    catalogs?.vocabularyRelease !== undefined
+      ? Promise.resolve({ data: catalogs.refCodeByDomain.accommodation_unit_type ?? [], error: null })
+      : client
+      .from('ref_code')
+      .select('id,code,name,description,position,is_active,is_assignable')
+      .eq('domain', 'accommodation_unit_type')
+      .order('position', { ascending: true }),
+    client
+      .from('object_accommodation_unit_type')
+      .select('unit_type_id')
+      .eq('object_id', objectId),
+  ]);
+
+  // Catalogue absent = taxo6 pas encore appliquée. On rend le motif plutôt que
+  // de laisser un sélecteur vide dont l'agent conclurait qu'il n'y a rien à choisir.
+  if (catalogResult.error || selectedResult.error) {
+    return {
+      ...EMPTY_UNIT_TYPES,
+      unavailableReason: "Le catalogue des types d'unité n'est pas encore disponible sur cette base.",
+    };
+  }
+
+  const options = ((catalogResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    id: readString(row.id),
+    code: readString(row.code),
+    label: readString(row.name),
+    description: readString(row.description),
+    isAssignable: !referenceAvailability(row).disabled,
+  }));
+  const codeById = new Map(options.map((option) => [option.id, option.code]));
+  if (((selectedResult.data ?? []) as Array<Record<string, unknown>>).some((row) => !codeById.has(readString(row.unit_type_id)))) {
+    return { ...EMPTY_UNIT_TYPES, unavailableReason: "Un type d'unité existant est absent du catalogue chargé. Son affectation est conservée." };
+  }
+  const selectedCodes = ((selectedResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => codeById.get(readString(row.unit_type_id)))
+    .filter((code): code is string => Boolean(code));
+
+  return {
+    options: options.map(({ code, label, description, isAssignable }) => ({ code, label, description, isAssignable })),
+    selectedCodes,
+    unavailableReason: null,
+  };
+}
+
+/** Positionnements commerciaux disponibles uniquement sur les fiches HOT. */
+async function loadHotelPositionings(
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  objectId: string,
+  objectType: string,
+  catalogs?: ReferenceCatalogs,
+): Promise<ObjectWorkspacePositionings> {
+  if (objectType.toUpperCase() !== 'HOT') {
+    return EMPTY_POSITIONINGS;
+  }
+
+  const [catalogResult, selectedResult] = await Promise.all([
+    catalogs?.vocabularyRelease !== undefined
+      ? Promise.resolve({ data: catalogs.refCodeByDomain.taxonomy_hot ?? [], error: null })
+      : client
+      .from('ref_code')
+      .select('id,code,name,description,position,metadata,is_active,is_assignable')
+      .eq('domain', 'taxonomy_hot')
+      .order('position', { ascending: true }),
+    client
+      .from('object_hotel_positioning')
+      .select('positioning_id')
+      .eq('object_id', objectId),
+  ]);
+
+  if (catalogResult.error || selectedResult.error) {
+    return {
+      ...EMPTY_POSITIONINGS,
+      unavailableReason: "Le catalogue des positionnements d'hôtel n'est pas encore disponible sur cette base.",
+    };
+  }
+
+  const options = ((catalogResult.data ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => readString(readRecord(row.metadata).axis) === 'positionnement')
+    .map((row) => ({
+      id: readString(row.id),
+      code: readString(row.code),
+      label: readString(row.name),
+      description: readString(row.description),
+      isAssignable: !referenceAvailability(row).disabled,
+    }));
+  const codeById = new Map(options.map((option) => [option.id, option.code]));
+  if (((selectedResult.data ?? []) as Array<Record<string, unknown>>).some((row) => !codeById.has(readString(row.positioning_id)))) {
+    return { ...EMPTY_POSITIONINGS, unavailableReason: "Un positionnement existant est absent du catalogue chargé. Son affectation est conservée." };
+  }
+  const selectedCodes = ((selectedResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => codeById.get(readString(row.positioning_id)))
+    .filter((code): code is string => Boolean(code));
+
+  return {
+    options: options.map(({ code, label, description, isAssignable }) => ({ code, label, description, isAssignable })),
+    selectedCodes,
+    unavailableReason: null,
+  };
+}
+
+async function getObjectWorkspaceDistinctionsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceDistinctionsModule,
+  catalogs: ReferenceCatalogs,
+  objectType: string,
+): Promise<ObjectWorkspaceDistinctionsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Connexion backend indisponible pour charger distinctions et accessibilite.',
+    };
+  }
+
+  // 3 catalogues depuis le cache de session : 5 requetes -> 3. Les filtres
+  // serveur (is_distinction / display_group, tri par position et ordinal)
+  // passent en memoire. ref_amenity etait lu ici SANS filtre de scope : c est un
+  // sur-ensemble des deux autres lectures, d ou une seule table partagee.
+  const classificationSchemeRows = (catalogs.tables.ref_classification_scheme ?? [])
+    .filter((row) => row.is_distinction === true || readString(row.display_group) === 'accessibility_labels')
+    .sort((left, right) => Number(left.position ?? 0) - Number(right.position ?? 0));
+  const classificationValueRows = [...(catalogs.tables.ref_classification_value ?? [])]
+    .sort((left, right) => Number(left.ordinal ?? 0) - Number(right.ordinal ?? 0));
+  const distinctionAmenityRows = catalogs.tables.ref_amenity ?? [];
+
+  const [
+    objectClassificationsResult,
+    objectAmenitiesResult,
+  ] = await Promise.allSettled([
+    client
+      .from('object_classification')
+      .select('id, scheme_id, value_id, status, awarded_at, valid_until, subvalue_ids, document_id')
+      .eq('object_id', objectId)
+      .order('created_at', { ascending: true }),
+    client
+      .from('object_amenity')
+      .select('amenity_id')
+      .eq('object_id', objectId),
+  ]);
+
+  if (objectClassificationsResult.status !== 'fulfilled' || objectClassificationsResult.value.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore un module C2 complet pour ce profil.',
+    };
+  }
+
+  const schemeRows = classificationSchemeRows;
+  const distinctionSchemes = schemeRows
+    .filter(isDistinctionClassificationScheme)
+    .map(normalizeClassificationSchemeRef)
+    .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
+  const accessibilitySchemes = schemeRows
+    .filter(isAccessibilityClassificationScheme)
+    .map(normalizeClassificationSchemeRef)
+    .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
+  const valueRefs = classificationValueRows.map(normalizeClassificationValueRef);
+  const valueById = new Map(valueRefs.map((value) => [value.id, value]));
+  const distinctionSchemeById = new Map(distinctionSchemes.map((scheme) => [scheme.id, scheme]));
+  const accessibilitySchemeById = new Map(accessibilitySchemes.map((scheme) => [scheme.id, scheme]));
+
+  const distinctionItemsBySchemeId = new Map<string, ObjectWorkspaceDistinctionItem[]>();
+  const accessibilityLabels: ObjectWorkspaceDistinctionItem[] = [];
+
+  // Resolve attached justificatifs (ref_document) so each item can show its document.
+  const documentById = new Map<string, { url: string; title: string }>();
+  const documentIds = Array.from(
+    new Set(
+      ((objectClassificationsResult.value.data ?? []) as Record<string, unknown>[])
+        .map((row) => readString(row.document_id))
+        .filter(Boolean),
+    ),
+  );
+  if (documentIds.length > 0) {
+    const docResult = await client.from('ref_document').select('id, url, title').in('id', documentIds);
+    for (const row of (docResult.data ?? []) as Record<string, unknown>[]) {
+      documentById.set(readString(row.id), { url: readString(row.url), title: readString(row.title) });
+    }
+  }
+
+  for (const row of (objectClassificationsResult.value.data ?? []) as Record<string, unknown>[]) {
+    const schemeId = readString(row.scheme_id);
+
+    if (distinctionSchemeById.has(schemeId)) {
+      const item = normalizeWorkspaceDistinctionItem({
+        row,
+        schemeById: distinctionSchemeById,
+        valueById,
+        documentById,
+      });
+      if (!item) {
+        continue;
+      }
+
+      const current = distinctionItemsBySchemeId.get(schemeId) ?? [];
+      current.push(item);
+      distinctionItemsBySchemeId.set(schemeId, current);
+      continue;
+    }
+
+    if (accessibilitySchemeById.has(schemeId)) {
+      const item = normalizeWorkspaceDistinctionItem({
+        row,
+        schemeById: accessibilitySchemeById,
+        valueById,
+        documentById,
+      });
+      if (item) {
+        accessibilityLabels.push(item);
+      }
+    }
+  }
+
+  const distinctionGroups: ObjectWorkspaceDistinctionGroup[] = distinctionSchemes
+    .map((scheme) => ({
+      schemeCode: scheme.code,
+      schemeLabel: scheme.label,
+      items: (distinctionItemsBySchemeId.get(scheme.id) ?? []).sort((left, right) =>
+        left.valueLabel.localeCompare(right.valueLabel, 'fr'),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const allDistinctionSchemesForOptions = [...distinctionSchemes, ...accessibilitySchemes];
+  const applicabilityUnavailable = catalogs.failedTables?.includes('ref_classification_scheme_applicability') === true;
+  const schemeOptions: ObjectWorkspaceDistinctionSchemeOption[] = allDistinctionSchemesForOptions
+    .filter((scheme) => !applicabilityUnavailable && classificationSchemeAppliesTo(scheme.id, objectType, catalogs))
+    .map((scheme) => ({
+    id: scheme.id,
+    code: scheme.code,
+    label: scheme.label,
+    selectionMode: scheme.selectionMode,
+    ...(scheme.disabled ? { disabled: true } : {}),
+    isAccessibility: accessibilitySchemes.some((s) => s.id === scheme.id),
+    displayGroup: scheme.displayGroup,
+    valueOptions: valueRefs
+      .filter((value) => value.schemeId === scheme.id)
+      .sort((left, right) => left.ordinal - right.ordinal || left.label.localeCompare(right.label, 'fr'))
+      .map((value) => ({ id: value.id, code: value.code, label: value.label, ...(value.disabled ? { disabled: true } : {}) })),
+  }));
+
+  let accessibilityAmenityCoverage: ObjectWorkspaceAccessibilityAmenityItem[] = [];
+  let unavailableReason: string | null = null;
+
+  if (
+    distinctionAmenityRows.length > 0
+    && objectAmenitiesResult.status === 'fulfilled'
+    && objectAmenitiesResult.value.error == null
+  ) {
+    const amenityRefs = distinctionAmenityRows.map(normalizeAmenityRef);
+    const amenityById = new Map(amenityRefs.map((amenity) => [amenity.id, amenity]));
+    const selectedAmenities = ((objectAmenitiesResult.value.data ?? []) as Record<string, unknown>[])
+      .map((row) => amenityById.get(readString(row.amenity_id)) ?? null)
+      .filter((amenity): amenity is AmenityRef => amenity !== null)
+      .filter(isAccessibilityAmenity);
+
+    accessibilityAmenityCoverage = Array.from(
+      new Map(
+        selectedAmenities.map((amenity) => [amenity.code, {
+          code: amenity.code,
+          label: amenity.label,
+          disabilityTypes: amenity.disabilityTypes,
+        } satisfies ObjectWorkspaceAccessibilityAmenityItem]),
+      ).values(),
+    ).sort((left, right) => left.label.localeCompare(right.label, 'fr'));
+  } else {
+    unavailableReason = "La couverture accessibilite par equipements n'est pas encore lisible dans le live actuel.";
+  }
+
+  return {
+    distinctionGroups,
+    accessibilityLabels: accessibilityLabels.sort((left, right) =>
+      left.schemeLabel.localeCompare(right.schemeLabel, 'fr')
+      || left.valueLabel.localeCompare(right.valueLabel, 'fr'),
+    ),
+    accessibilityAmenityCoverage,
+    schemeOptions,
+    unavailableReason: applicabilityUnavailable ? 'Les labels adaptés à ce type de fiche ne peuvent pas être chargés. Réessayez le chargement de la fiche.' : unavailableReason,
+  };
+}
+
+export function normalizeWorkspaceMediaItem(params: {
+  row: Record<string, unknown>;
+  typeById: Map<string, WorkspaceReferenceOption>;
+  tagsByMediaId: Map<string, string[]>;
+  placeLabelById: Map<string, string>;
+}): ObjectWorkspaceMediaItem {
+  const placeId = readString(params.row.place_id) || null;
+  const typeId = readString(params.row.media_type_id);
+  const typeRef = params.typeById.get(typeId);
+
+  return {
+    id: readString(params.row.id),
+    scope: placeId ? 'place' : 'object',
+    placeId,
+    scopeLabel: placeId ? params.placeLabelById.get(placeId) ?? 'Sous-lieu' : 'Objet principal',
+    typeId,
+    typeCode: typeRef?.code ?? '',
+    typeLabel: typeRef?.label ?? '',
+    title: readString(params.row.title),
+    titleTranslations: readRecord(params.row.title_i18n) as Record<string, string>,
+    description: readString(params.row.description),
+    descriptionTranslations: readRecord(params.row.description_i18n) as Record<string, string>,
+    url: readString(params.row.url),
+    credit: readString(params.row.credit),
+    // No 'public' default — keep a NULL DB visibility as '' so saves don't widen it
+    // (the 8t read gate treats NULL as extended-scope-only). INSERTs default at the call site.
+    visibility: readString(params.row.visibility),
+    position: readString(params.row.position),
+    width: readString(params.row.width),
+    height: readString(params.row.height),
+    rightsExpiresAt: readString(params.row.rights_expires_at),
+    kind: readString(params.row.kind),
+    isMain: params.row.is_main == null ? false : params.row.is_main === true,
+    isPublished: params.row.is_published == null ? true : params.row.is_published === true,
+    tags: params.tagsByMediaId.get(readString(params.row.id)) ?? [],
+  };
+}
+
+export async function getObjectWorkspaceMediaModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceMediaModule,
+  placeLabelById: Map<string, string>,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceMediaModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return {
+      ...baseModule,
+      typeOptions: [
+        { id: 'demo-photo', code: 'photo', label: 'Photo' },
+        { id: 'demo-video', code: 'video', label: 'Video' },
+      ],
+      tagOptions: [
+        { id: 'demo-prefere', code: 'prefere', label: 'Prefere' },
+        { id: 'demo-hero', code: 'hero', label: 'Hero' },
+      ],
+    };
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Connexion backend indisponible pour charger les médias.',
+      placeScopeUnavailableReason: 'Connexion backend indisponible pour charger le module media.',
+    };
+  }
+
+  const placeIds = Array.from(placeLabelById.keys());
+  // 2 catalogues depuis le cache de session : 4 requetes -> 2.
+  const mediaTypeRefs = catalogs.refCodeByDomain.media_type ?? [];
+  const mediaTagRefs = catalogs.refCodeByDomain.media_tag ?? [];
+
+  const [objectMediaResult, placeMediaResult] = await Promise.allSettled([
+    client
+      .from('media')
+      .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind, updated_at, extra')
+      .eq('object_id', objectId)
+      .order('is_main', { ascending: false })
+      .order('position', { ascending: true }),
+    placeIds.length > 0
+      ? client
+          .from('media')
+          .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind, updated_at, extra')
+          .in('place_id', placeIds)
+          .order('position', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const typeOptions = mediaTypeRefs.length > 0
+    ? mediaTypeRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>))
+    : baseModule.typeOptions;
+
+  const tagOptions = mediaTagRefs.length > 0
+    ? mediaTagRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>))
+    : baseModule.tagOptions;
+
+  // R1 no-clobber: a failed object-media select must NOT silently become an empty
+  // grid — the saver's delete reconcile would interpret it as "delete everything".
+  // Surface the failure; the section hides its controls and the saver throws.
+  const objectLegFailed = !(objectMediaResult.status === 'fulfilled' && objectMediaResult.value.error == null);
+  if (objectLegFailed) {
+    return {
+      ...baseModule,
+      typeOptions,
+      tagOptions,
+      objectItems: [],
+      placeItems: [],
+      unavailableReason: 'Lecture des médias indisponible — édition désactivée pour éviter toute perte.',
+      placeScopeUnavailableReason: null,
+    };
+  }
+
+  const mediaRows = [
+    ...(objectMediaResult.value.data ?? []),
+    ...(placeMediaResult.status === 'fulfilled' && placeMediaResult.value.error == null ? placeMediaResult.value.data ?? [] : []),
+  ] as Record<string, unknown>[];
+
+  const mediaIds = mediaRows.map((row) => readString(row.id)).filter(Boolean);
+  const tagLinksResult = mediaIds.length > 0
+    ? await client.from('media_tag').select('media_id, tag_id').in('media_id', mediaIds)
+    : { data: [], error: null };
+
+  const typeById = new Map(typeOptions.map((option) => [option.id, option]));
+  const tagById = new Map(tagOptions.map((option) => [option.id, option]));
+  const tagsByMediaId = new Map<string, string[]>();
+
+  if (tagLinksResult.error == null) {
+    for (const link of (tagLinksResult.data ?? []) as Record<string, unknown>[]) {
+      const mediaId = readString(link.media_id);
+      const tagId = readString(link.tag_id);
+      const tagCode = tagById.get(tagId)?.code;
+      if (!mediaId || !tagCode) {
+        continue;
+      }
+
+      const current = tagsByMediaId.get(mediaId) ?? [];
+      if (!current.includes(tagCode)) {
+        current.push(tagCode);
+      }
+      tagsByMediaId.set(mediaId, current);
+    }
+  }
+
+  const normalizedMedia = mediaRows.map((row) =>
+    normalizeWorkspaceMediaItem({
+      row,
+      typeById,
+      tagsByMediaId,
+      placeLabelById,
+    }),
+  );
+
+  const placeScopeUnavailableReason =
+    placeMediaResult.status === 'fulfilled' && placeMediaResult.value.error == null
+      ? null
+      : 'Les medias de sous-lieu ne sont pas exposes completement par le live actuel.';
+
+  const result: ObjectWorkspaceMediaModule = {
+    ...baseModule,
+    typeOptions,
+    tagOptions,
+    objectItems: normalizedMedia
+      .filter((item) => item.scope === 'object')
+      .sort((left, right) => Number(left.position || 0) - Number(right.position || 0)),
+    placeItems: normalizedMedia
+      .filter((item) => item.scope === 'place')
+      .sort((left, right) => Number(left.position || 0) - Number(right.position || 0)),
+    placeScopeUnavailableReason,
+    unavailableReason: null,
+  };
+  return { ...result, galleryWriteBaseline: galleryBaseline(result,
+    (objectMediaResult.value.data ?? []).filter(row => row.place_id == null) as Record<string, unknown>[]) };
+}
+
+function normalizeWorkspaceContactItem(params: {
+  row: Record<string, unknown>;
+  kindById: Map<string, WorkspaceReferenceOption>;
+  roleById: Map<string, WorkspaceReferenceOption>;
+}): ObjectWorkspaceContactItem {
+  const kindId = readString(params.row.kind_id);
+  const roleId = readString(params.row.role_id);
+  const kindRef = params.kindById.get(kindId);
+  const roleRef = params.roleById.get(roleId);
+
+  return {
+    id: readString(params.row.id),
+    kindId,
+    kindCode: kindRef?.code ?? '',
+    kindLabel: kindRef?.label ?? 'Contact',
+    roleId,
+    roleCode: roleRef?.code ?? '',
+    roleLabel: roleRef?.label ?? '',
+    value: readString(params.row.value),
+    isPublic: params.row.is_public == null ? true : params.row.is_public === true,
+    isPrimary: params.row.is_primary === true,
+    position: readString(params.row.position),
+  };
+}
+
+async function getObjectWorkspaceContactsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceContactsModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceContactsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return {
+      ...baseModule,
+      kindOptions: [
+        { id: 'demo-phone', code: 'phone', label: 'Telephone' },
+        { id: 'demo-email', code: 'email', label: 'Email' },
+        { id: 'demo-website', code: 'website', label: 'Site web' },
+      ],
+      roleOptions: [
+        { id: 'demo-accueil', code: 'accueil', label: 'Accueil' },
+      ],
+      webKindOptions: [
+        { id: 'demo-facebook', code: 'facebook', label: 'Facebook' },
+        { id: 'demo-instagram', code: 'instagram', label: 'Instagram' },
+        { id: 'demo-booking', code: 'booking', label: 'Booking.com' },
+      ],
+    };
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return baseModule;
+  }
+
+  // 3 catalogues depuis le cache de session : 5 requetes -> 2.
+  const kindRefs = catalogs.refCodeByDomain.contact_kind ?? [];
+  const roleRefs = catalogs.tables.ref_contact_role ?? [];
+  const webKindRows = [
+    ...(catalogs.refCodeByDomain.social_network ?? []),
+    ...(catalogs.refCodeByDomain.distribution_channel ?? []),
+  ];
+
+  const [contactsResult, webChannelsResult] = await Promise.all([
+    client.from('contact_channel').select('id, kind_id, value, role_id, is_public, is_primary, position').eq('object_id', objectId).order('is_primary', { ascending: false }).order('position', { ascending: true }),
+    // §90 object-scoped réseaux sociaux + distribution (object_web_channel, direct PostgREST — §40/§41 precedent)
+    client.from('object_web_channel').select('id, kind_id, kind_domain, value, is_public, position').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+
+  if (contactsResult.error) {
+    return baseModule;
+  }
+
+  const kindOptions = kindRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>));
+  const roleOptions = roleRefs.map((row) => normalizeReferenceOption(row));
+  const kindById = new Map(kindOptions.map((option) => [option.id, option]));
+  const roleById = new Map(roleOptions.map((option) => [option.id, option]));
+
+  // §90 web channels degrade gracefully: a missing/unexposed table keeps the parser-derived
+  // baseModule.webItems and an empty catalog rather than breaking the whole contacts load.
+  const webKindOptions = webKindRows.map((row) => normalizeReferenceOption(row as Record<string, unknown>));
+  const webKindById = new Map(
+    webKindRows.map((row) => {
+      const r = row as Record<string, unknown>;
+      return [readString(r.id), { code: readString(r.code), name: readString(r.name), domain: readString(r.domain) }] as const;
+    }),
+  );
+  const webItems = webChannelsResult.error
+    ? baseModule.webItems
+    : (webChannelsResult.data ?? []).map((row, index) => {
+        const r = row as Record<string, unknown>;
+        const kindId = readString(r.kind_id);
+        const ref = webKindById.get(kindId);
+        return {
+          id: readString(r.id, `web-${index}`),
+          kindId,
+          kindCode: ref?.code ?? '',
+          kindLabel: ref?.name || ref?.code || 'Présence web',
+          kindDomain: readString(r.kind_domain, ref?.domain ?? ''),
+          value: readString(r.value),
+          isPublic: r.is_public == null ? true : r.is_public === true,
+          position: readString(r.position, String(index)),
+        };
+      });
+
+  return {
+    ...baseModule,
+    kindOptions,
+    roleOptions,
+    webKindOptions,
+    webItems,
+    objectItems: (contactsResult.data ?? []).map((row) =>
+      normalizeWorkspaceContactItem({
+        row: row as Record<string, unknown>,
+        kindById,
+        roleById,
+      }),
+    ),
+  };
+}
+
+/**
+ * §48 relationships loader. The org-link ROWS come from direct PostgREST reads (§41 pattern)
+ * instead of the parsed get_object_resource payload, because NEITHER of that JSON's two
+ * org-link shapes is save-grade: the raw `org_links` array (to_jsonb) DOES carry `is_primary`
+ * but lacks the org id/name/role-code decoration, and the decorated `organizations` LATERAL
+ * lacks `is_primary`. A delete+reinsert save built from either would silently drop one half.
+ * Also loads the §17 authoring catalogs (ref_org_role, ORG objects, ref_actor_role).
+ */
+async function getObjectWorkspaceRelationshipsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceRelationshipsModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceRelationshipsModule> {
+  const session = useSessionStore.getState();
+
+  if (session.demoMode) {
+    return {
+      ...baseModule,
+      organizationLinkWriteUnavailableReason: 'Mode démo — écriture désactivée.',
+      actorWriteUnavailableReason: 'Mode démo — écriture désactivée.',
+      actorConsentUnavailableReason: "Les consentements d'acteurs ne sont pas exposés dans le workspace objet actuel.",
+      relatedObjectWriteUnavailableReason: null,
+    };
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      organizationLinkWriteUnavailableReason: 'Connexion backend indisponible pour charger les rattachements.',
+      actorWriteUnavailableReason: 'Connexion backend indisponible pour charger les acteurs.',
+      actorConsentUnavailableReason: "Les consentements `actor_consent` restent hors du module.",
+      relatedObjectWriteUnavailableReason: null,
+    };
+  }
+
+  // 2 catalogues depuis le cache de session. La liste des ORG reste une requete :
+  // elle passe par la RLS, donc elle depend de l utilisateur et n a rien a faire
+  // dans un cache partage entre tous les utilisateurs du navigateur.
+  const orgRoleRows = catalogs.tables.ref_org_role ?? [];
+  const actorRoleRows = catalogs.tables.ref_actor_role ?? [];
+
+  const [orgLinksResult, orgObjectsResult] = await Promise.all([
+    client
+      .from('object_org_link')
+      .select('org_object_id, role_id, is_primary, note, org:org_object_id(id, name, object_type, status), role:role_id(id, code, name)')
+      .eq('object_id', objectId)
+      // nullable is_primary: legacy NULL rows must not float on top; created_at keeps the order deterministic.
+      .order('is_primary', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: true }),
+    client.from('object').select('id, name').eq('object_type', 'ORG').order('name', { ascending: true }),
+  ]);
+
+  // Anti-clobber: when org links can't be read reliably, keep the parser rows AND a reason —
+  // the saver omits the org_links key on a set reason, so existing rows can never be wiped blind.
+  const orgLinksReadable = orgLinksResult.error == null;
+  const organizationLinks = orgLinksReadable
+    ? ((orgLinksResult.data ?? []) as Record<string, unknown>[]).map((row, index) => {
+        const org = readRecord(row.org);
+        const role = readRecord(row.role);
+        return {
+          id: readString(org.id, readString(row.org_object_id)),
+          source: 'org_link' as const,
+          type: readString(org.object_type, 'ORG'),
+          name: readString(org.name, `Organisation ${index + 1}`),
+          status: readString(org.status),
+          roleId: readString(row.role_id),
+          roleCode: readString(role.code),
+          roleLabel: readString(role.name, 'Rattachement'),
+          isPrimary: readBoolean(row.is_primary),
+          note: readString(row.note),
+          contacts: [],
+        };
+      })
+    : baseModule.organizationLinks;
+
+  return {
+    ...baseModule,
+    organizationLinks,
+    orgRoleOptions: orgRoleRows.length > 0
+      ? orgRoleRows.map((row) => normalizeReferenceOption(row))
+      : [],
+    orgOptions: orgObjectsResult.error == null
+      ? ((orgObjectsResult.data ?? []) as Record<string, unknown>[]).map((row) => ({
+          id: readString(row.id),
+          name: readString(row.name),
+        }))
+      : [],
+    actorRoleOptions: actorRoleRows.length > 0
+      ? actorRoleRows.map((row) => normalizeReferenceOption(row))
+      : [],
+    organizationLinkWriteUnavailableReason: orgLinksReadable
+      ? null
+      : "Les rattachements n'ont pas pu être chargés — édition désactivée pour éviter toute perte.",
+    // §48 Task 7 — the parser-supplied actor rows ARE save-grade (the resource JSON's actors
+    // carry role/visibility/is_primary/valid_from/valid_to/note), so actor authoring is open.
+    actorWriteUnavailableReason: null,
+    actorConsentUnavailableReason: "Les consentements `actor_consent` restent hors du module (contrat dédié).",
+    relatedObjectWriteUnavailableReason: null,
+  };
+}
+
+function normalizeWorkspacePricePeriod(row: Record<string, unknown>): ObjectWorkspacePricePeriod {
+  return {
+    recordId: readString(row.id) || null,
+    startDate: readString(row.start_date),
+    endDate: readString(row.end_date),
+    startTime: readString(row.start_time),
+    endTime: readString(row.end_time),
+    note: readString(row.note),
+  };
+}
+
+function normalizeWorkspacePriceItem(params: {
+  row: Record<string, unknown>;
+  kindById: Map<string, WorkspaceReferenceOption>;
+  unitById: Map<string, WorkspaceReferenceOption>;
+  periodsByPriceId: Map<string, ObjectWorkspacePricePeriod[]>;
+}): ObjectWorkspacePriceItem {
+  const kindId = readString(params.row.kind_id);
+  const unitId = readString(params.row.unit_id);
+  const kindRef = params.kindById.get(kindId);
+  const unitRef = params.unitById.get(unitId);
+  const recordId = readString(params.row.id);
+
+  return {
+    recordId: recordId || null,
+    kindId,
+    kindCode: kindRef?.code ?? '',
+    kindLabel: kindRef?.label ?? 'Tarif',
+    unitId,
+    unitCode: unitRef?.code ?? '',
+    unitLabel: unitRef?.label ?? '',
+    amount: readString(params.row.amount),
+    amountMax: readString(params.row.amount_max),
+    currency: readString(params.row.currency, 'EUR'),
+    seasonCode: readString(params.row.season_code),
+    indicationCode: readString(params.row.indication_code),
+    ageMinEnfant: readString(params.row.age_min_enfant),
+    ageMaxEnfant: readString(params.row.age_max_enfant),
+    ageMinJunior: readString(params.row.age_min_junior),
+    ageMaxJunior: readString(params.row.age_max_junior),
+    validFrom: readString(params.row.valid_from),
+    validTo: readString(params.row.valid_to),
+    conditions: readString(params.row.conditions),
+    source: readString(params.row.source),
+    periods: params.periodsByPriceId.get(recordId) ?? [],
+  };
+}
+
+function normalizeWorkspaceDiscountItem(row: Record<string, unknown>): ObjectWorkspaceDiscountItem {
+  return {
+    recordId: readString(row.id) || null,
+    conditions: readString(row.conditions),
+    discountPercent: readString(row.discount_percent),
+    discountAmount: readString(row.discount_amount),
+    currency: readString(row.currency),
+    minGroupSize: readString(row.min_group_size),
+    maxGroupSize: readString(row.max_group_size),
+    validFrom: readString(row.valid_from),
+    validTo: readString(row.valid_to),
+    source: readString(row.source),
+  };
+}
+
+function normalizePromotionSummary(row: Record<string, unknown>): ObjectWorkspacePromotionSummary {
+  const promotion = readRecord(row.promotion);
+
+  return {
+    promotionId: readString(row.promotion_id, readString(promotion.id)),
+    code: readString(promotion.code),
+    name: readString(promotion.name, readString(promotion.code, 'Promotion')),
+    discountType: readString(promotion.discount_type),
+    discountValue: readString(promotion.discount_value),
+    currency: readString(promotion.currency),
+    validFrom: readString(promotion.valid_from),
+    validTo: readString(promotion.valid_to),
+    isActive: promotion.is_active === true,
+    isPublic: promotion.is_public == null ? true : promotion.is_public === true,
+  };
+}
+
+function deriveMembershipVisibilityImpact(status: string): string {
+  switch (status.trim().toLowerCase()) {
+    case 'paid':
+      return 'Visibilite active';
+    case 'invoiced':
+      return 'Activation conditionnee au paiement';
+    case 'lapsed':
+      return 'Visibilite commerciale lapsed';
+    case 'canceled':
+      return 'Adhesion arretee';
+    default:
+      return 'Suivi adhesion interne';
+  }
+}
+
+function normalizeMembershipScopeOption(params: {
+  orgObjectId: string;
+  label: string;
+  isPrimary: boolean;
+}): ObjectWorkspaceMembershipScopeOption {
+  return {
+    orgObjectId: params.orgObjectId,
+    label: params.label,
+    isPrimary: params.isPrimary,
+  };
+}
+
+function normalizeWorkspaceMembershipItem(params: {
+  row: Record<string, unknown>;
+  objectId: string;
+  campaignById: Map<string, WorkspaceReferenceOption>;
+  tierById: Map<string, WorkspaceReferenceOption>;
+  orgLabelById: Map<string, string>;
+}): ObjectWorkspaceMembershipItem {
+  const campaignId = readString(params.row.campaign_id);
+  const tierId = readString(params.row.tier_id);
+  const campaignRef = params.campaignById.get(campaignId);
+  const tierRef = params.tierById.get(tierId);
+  const orgObjectId = readString(params.row.org_object_id);
+  const objectId = readString(params.row.object_id);
+  const status = readString(params.row.status, 'prospect');
+
+  return {
+    recordId: readString(params.row.id) || null,
+    scope: objectId ? 'object' : 'organization',
+    orgObjectId,
+    orgLabel: params.orgLabelById.get(orgObjectId) ?? 'Organisation',
+    campaignId,
+    campaignCode: campaignRef?.code ?? '',
+    campaignLabel: campaignRef?.label ?? 'Adhesion',
+    tierId,
+    tierCode: tierRef?.code ?? '',
+    tierLabel: tierRef?.label ?? 'Standard',
+    status,
+    startsAt: readString(params.row.starts_at),
+    endsAt: readString(params.row.ends_at),
+    paymentDate: readString(params.row.payment_date),
+    metadataJson: stringifyLegalValue(params.row.metadata),
+    visibilityImpact: deriveMembershipVisibilityImpact(status),
+  };
+}
+
+function membershipStatusRank(status: string): number {
+  switch (status.trim().toLowerCase()) {
+    case 'paid':
+      return 0;
+    case 'invoiced':
+      return 1;
+    case 'prospect':
+      return 2;
+    case 'lapsed':
+      return 3;
+    case 'canceled':
+      return 4;
+    default:
+      return 5;
+  }
+}
+
+function sortMembershipItems(items: ObjectWorkspaceMembershipItem[]): ObjectWorkspaceMembershipItem[] {
+  return [...items].sort((left, right) =>
+    membershipStatusRank(left.status) - membershipStatusRank(right.status)
+    || Number(right.scope === 'object') - Number(left.scope === 'object')
+    || right.endsAt.localeCompare(left.endsAt, 'fr')
+    || right.startsAt.localeCompare(left.startsAt, 'fr')
+    || left.campaignLabel.localeCompare(right.campaignLabel, 'fr'),
+  );
+}
+
+async function getObjectWorkspaceMembershipModule(
+  objectId: string,
+  detail: ObjectDetail,
+  baseModule: ObjectWorkspaceMembershipModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceMembershipModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Connexion backend indisponible pour charger les adhesions.',
+    };
+  }
+
+  const linkedOrgResult = await client
+    .from('object_org_link')
+    .select('org_object_id, is_primary')
+    .eq('object_id', objectId);
+
+  if (linkedOrgResult.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore les rattachements ORG necessaires au module D3.',
+    };
+  }
+
+  const linkedOrgRows = (linkedOrgResult.data ?? []) as Record<string, unknown>[];
+  const linkedOrgIds = linkedOrgRows.map((row) => readString(row.org_object_id)).filter(Boolean);
+  const scopeOrgIds = Array.from(new Set([
+    ...(detail.type === 'ORG' ? [objectId] : []),
+    ...linkedOrgIds,
+  ]));
+
+  // 2 catalogues depuis le cache de session.
+  const campaignRefs = catalogs.refCodeByDomain.membership_campaign ?? [];
+  const tierRefs = catalogs.refCodeByDomain.membership_tier ?? [];
+
+  const [directMembershipsResult, orgMembershipsResult] = await Promise.all([
+    client
+      .from('object_membership')
+      .select('id, org_object_id, object_id, campaign_id, tier_id, status, starts_at, ends_at, payment_date, metadata')
+      .eq('object_id', objectId)
+      .order('starts_at', { ascending: false }),
+    scopeOrgIds.length > 0
+      ? client
+          .from('object_membership')
+          .select('id, org_object_id, object_id, campaign_id, tier_id, status, starts_at, ends_at, payment_date, metadata')
+          .in('org_object_id', scopeOrgIds)
+          .is('object_id', null)
+          .order('starts_at', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (directMembershipsResult.error || orgMembershipsResult.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore un module D3 complet pour ce profil.',
+    };
+  }
+
+  const membershipRows = [
+    ...((directMembershipsResult.data ?? []) as Record<string, unknown>[]),
+    ...((orgMembershipsResult.data ?? []) as Record<string, unknown>[]),
+  ];
+  const orgIdsFromRows = membershipRows.map((row) => readString(row.org_object_id)).filter(Boolean);
+  const allOrgIds = Array.from(new Set([...scopeOrgIds, ...orgIdsFromRows]));
+
+  const orgObjectsResult = allOrgIds.length > 0
+    ? await client.from('object').select('id, name').in('id', allOrgIds)
+    : { data: [], error: null };
+
+  if (orgObjectsResult.error) {
+    return {
+      ...baseModule,
+      unavailableReason: "Les libelles d'organisation ne sont pas encore tous lisibles pour le module D3.",
+    };
+  }
+
+  const campaignOptions = dedupeReferenceOptions(
+    campaignRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
+  );
+  const tierOptions = dedupeReferenceOptions(
+    tierRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
+  );
+  const campaignById = new Map(campaignOptions.map((option) => [option.id, option]));
+  const tierById = new Map(tierOptions.map((option) => [option.id, option]));
+  const orgLabelById = new Map(
+    ((orgObjectsResult.data ?? []) as Record<string, unknown>[]).map((row) => [readString(row.id), readString(row.name, readString(row.id))]),
+  );
+
+  const primaryOrgIds = new Set(
+    linkedOrgRows
+      .filter((row) => row.is_primary === true)
+      .map((row) => readString(row.org_object_id))
+      .filter(Boolean),
+  );
+
+  const scopeOptions = allOrgIds
+    .map((orgId) => normalizeMembershipScopeOption({
+      orgObjectId: orgId,
+      label: orgLabelById.get(orgId) ?? (orgId === objectId ? detail.name : orgId),
+      isPrimary: primaryOrgIds.has(orgId) || (detail.type === 'ORG' && orgId === objectId),
+    }))
+    .sort((left, right) =>
+      Number(right.isPrimary) - Number(left.isPrimary)
+      || left.label.localeCompare(right.label, 'fr'),
+    );
+
+  return {
+    campaignOptions,
+    tierOptions,
+    scopeOptions,
+    items: sortMembershipItems(membershipRows.map((row) => normalizeWorkspaceMembershipItem({
+      row,
+      objectId,
+      campaignById,
+      tierById,
+      orgLabelById,
+    }))),
+    unavailableReason: null,
+  };
+}
+
+function stringifyLegalValue(value: unknown): string {
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  if (Array.isArray(value) || (value && typeof value === 'object')) {
+    return JSON.stringify(value, null, 2);
+  }
+
+  return '';
+}
+
+function normalizeLegalTypeOption(row: Record<string, unknown>): ObjectWorkspaceLegalTypeOption {
+  return {
+    id: readString(row.id),
+    code: readString(row.code),
+    label: readString(row.name, readString(row.code)),
+    ...referenceAvailability(row),
+    description: readString(row.description),
+    category: readString(row.category),
+    isPublic: readBoolean(row.is_public),
+    isRequired: readBoolean(row.is_required),
+  };
+}
+
+function normalizeWorkspaceLegalRecord(
+  row: Record<string, unknown>,
+  typeByCode: Map<string, ObjectWorkspaceLegalTypeOption>,
+): ObjectWorkspaceLegalRecord {
+  const type = readRecord(row.type);
+  const typeCode = readString(type.code, readString(row.type_code));
+  const typeRef = typeByCode.get(typeCode.toLowerCase());
+
+  return {
+    recordId: readString(row.id) || null,
+    typeId: typeRef?.id ?? readString(type.id),
+    typeCode,
+    typeLabel: typeRef?.label ?? readString(type.name, typeCode),
+    category: typeRef?.category ?? readString(type.category),
+    isPublic: typeRef?.isPublic ?? readBoolean(type.is_public),
+    isRequired: typeRef?.isRequired ?? readBoolean(type.is_required),
+    valueJson: stringifyLegalValue(row.value),
+    documentId: readString(row.document_id),
+    documentUrl: readString(readRecord(row.document).url, readString(row.document_url)),
+    documentTitle: readString(readRecord(row.document).title, readString(row.document_title)),
+    validFrom: readString(row.valid_from),
+    validTo: readString(row.valid_to),
+    validityMode: readString(row.validity_mode, 'fixed_end_date'),
+    status: readString(row.status, 'active'),
+    documentRequestedAt: readString(row.document_requested_at),
+    documentDeliveredAt: readString(row.document_delivered_at),
+    note: readString(row.note),
+    daysUntilExpiry: readString(row.days_until_expiry),
+  };
+}
+
+/**
+ * Batch-resolve each record's `document_id` to its ref_document url/title for display.
+ * Display-only enrichment (the saver persists document_id, not the url/title). Any failure
+ * falls back to the records as-is — a missing link never breaks the load.
+ */
+async function resolveLegalDocumentLinks(
+  client: ReturnType<typeof getSupabaseClient>,
+  records: ObjectWorkspaceLegalRecord[],
+): Promise<ObjectWorkspaceLegalRecord[]> {
+  if (!client) {
+    return records;
+  }
+  const documentIds = Array.from(
+    new Set(records.map((record) => record.documentId).filter((id): id is string => Boolean(id))),
+  );
+  if (documentIds.length === 0) {
+    return records;
+  }
+  const docResult = await client.from('ref_document').select('id, url, title').in('id', documentIds);
+  if (docResult.error || !Array.isArray(docResult.data)) {
+    return records;
+  }
+  const byId = new Map(
+    docResult.data.map((row) => {
+      const record = row as Record<string, unknown>;
+      return [readString(record.id), { url: readString(record.url), title: readString(record.title) }] as const;
+    }),
+  );
+  return records.map((record) => {
+    const doc = record.documentId ? byId.get(record.documentId) : undefined;
+    return doc ? { ...record, documentUrl: doc.url, documentTitle: doc.title } : record;
+  });
+}
+
+function normalizeWorkspaceLegalComplianceDetail(row: Record<string, unknown>): ObjectWorkspaceLegalComplianceDetail {
+  return {
+    typeCode: readString(row.type_code),
+    typeLabel: readString(row.type_name, readString(row.type_code)),
+    category: readString(row.category),
+    isRequired: readBoolean(row.is_required),
+    hasRecord: readBoolean(row.has_record),
+    isValid: readBoolean(row.is_valid),
+    status: readString(row.status, 'missing'),
+    validTo: readString(row.valid_to),
+    daysUntilExpiry: readString(row.days_until_expiry),
+  };
+}
+
+function normalizeWorkspaceLegalComplianceSummary(value: unknown): ObjectWorkspaceLegalComplianceSummary {
+  const record = readRecord(value);
+  const summary = readRecord(record.summary);
+
+  return {
+    complianceStatus: readString(record.compliance_status, 'unknown'),
+    requiredCount: toNullableInteger(readString(summary.required_count)) ?? 0,
+    validCount: toNullableInteger(readString(summary.valid_count)) ?? 0,
+    expiringCount: toNullableInteger(readString(summary.expiring_count)) ?? 0,
+    missingCount: toNullableInteger(readString(summary.missing_count)) ?? 0,
+    compliancePercentage: toNullableNumber(readString(summary.compliance_percentage)) ?? 0,
+    details: Array.isArray(record.details)
+      ? (record.details as unknown[]).map((entry) => normalizeWorkspaceLegalComplianceDetail(readRecord(entry)))
+      : [],
+  };
+}
+
+export async function getObjectWorkspaceLegalModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceLegalModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceLegalModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  const apiClient = getApiClient();
+  if (!client || !apiClient) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Connexion backend indisponible pour charger la conformite juridique.',
+    };
+  }
+
+  // 1 catalogue depuis le cache de session. Le tri (obligatoires d abord, puis
+  // categorie, puis nom) etait fait cote serveur ; il l est desormais en memoire.
+  const legalTypeRows = [...(catalogs.tables.ref_legal_type ?? [])].sort((left, right) => {
+    const requiredDelta = Number(right.is_required === true) - Number(left.is_required === true);
+    if (requiredDelta !== 0) return requiredDelta;
+    const categoryDelta = readString(left.category).localeCompare(readString(right.category), 'fr');
+    if (categoryDelta !== 0) return categoryDelta;
+    return readString(left.name).localeCompare(readString(right.name), 'fr');
+  });
+
+  const [legalDataResult, complianceResult] = await Promise.allSettled([
+    apiClient.schema('api').rpc('get_object_legal_data', {
+      p_object_id: objectId,
+    }),
+    apiClient.schema('api').rpc('get_object_legal_compliance', {
+      p_object_id: objectId,
+    }),
+  ]);
+
+  const legalRows = workspaceReadRows(legalDataResult);
+  if (!legalRows || !knownWorkspaceIdsPresent(baseModule.records, legalRows)
+    || legalRows.some((row) => !readString(readRecord(row.type).code, readString(row.type_code)).trim())) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore un module D6 exploitable pour ce profil.',
+    };
+  }
+
+  const typeOptions = dedupeReferenceOptions(
+    legalTypeRows.map((row) => normalizeReferenceOption(row)),
+  ).map((option) => {
+    const source = legalTypeRows
+      .map(normalizeLegalTypeOption)
+      .find((item) => item.code === option.code);
+    return source ?? {
+      id: option.id,
+      code: option.code,
+      label: option.label,
+      description: '',
+      category: '',
+      isPublic: false,
+      isRequired: false,
+    };
+  });
+  const typeByCode = new Map(typeOptions.map((option) => [option.code.toLowerCase(), option]));
+  const records = legalRows.map((row) => normalizeWorkspaceLegalRecord(row, typeByCode));
+
+  // Resolve attached justificatifs (document_id → url/title) for display. get_object_legal_data
+  // returns only document_id; the editor needs a clickable link, so batch-select ref_document
+  // (same pattern as the media loader). Display-only — the saver still persists document_id.
+  const recordsWithDocuments = await resolveLegalDocumentLinks(client, records);
+
+  const compliance =
+    complianceResult.status === 'fulfilled' && complianceResult.value.error == null
+      ? normalizeWorkspaceLegalComplianceSummary(complianceResult.value.data)
+      : baseModule.compliance;
+
+  return {
+    typeOptions,
+    records: recordsWithDocuments,
+    compliance,
+    unavailableReason:
+      complianceResult.status === 'fulfilled' && complianceResult.value.error == null
+        ? null
+        : LEGAL_SUMMARY_UNAVAILABLE,
+  };
+}
+
+async function getObjectWorkspacePricingModule(
+  objectId: string,
+  baseModule: ObjectWorkspacePricingModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspacePricingModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Connexion backend indisponible pour charger les tarifs.',
+      promotionsUnavailableReason: 'Connexion backend indisponible pour charger les promotions liees.',
+    };
+  }
+
+  // 4 catalogues (price_kind / price_type / season_type / price_unit) depuis le
+  // cache de session : ce module passe de 7 requetes a 3.
+  const kindRefs = catalogs.refCodeByDomain.price_kind ?? [];
+  const typeRefs = catalogs.refCodeByDomain.price_type ?? [];
+  const seasonRefs = catalogs.refCodeByDomain.season_type ?? [];
+  const unitRefs = catalogs.refCodeByDomain.price_unit ?? [];
+
+  const [pricesResult, discountsResult, promotionsResult] = await Promise.allSettled([
+    client
+      .from('object_price')
+      .select('id, kind_id, unit_id, amount, amount_max, currency, season_code, indication_code, age_min_enfant, age_max_enfant, age_min_junior, age_max_junior, valid_from, valid_to, conditions, source')
+      .eq('object_id', objectId)
+      .order('valid_from', { ascending: true }),
+    client
+      .from('object_discount')
+      .select('id, conditions, discount_percent, discount_amount, currency, min_group_size, max_group_size, valid_from, valid_to, source')
+      .eq('object_id', objectId)
+      .order('valid_from', { ascending: true }),
+    client
+      .from('promotion_object')
+      .select('promotion_id, promotion:promotion_id(id, code, name, discount_type, discount_value, currency, valid_from, valid_to, is_active, is_public)')
+      .eq('object_id', objectId),
+  ]);
+
+  if (pricesResult.status !== 'fulfilled' || pricesResult.value.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore un module C5 exploitable pour ce profil.',
+    };
+  }
+
+  const priceRows = (pricesResult.value.data ?? []) as Record<string, unknown>[];
+  const priceIds = priceRows.map((row) => readString(row.id)).filter(Boolean);
+  const periodsResult = priceIds.length > 0
+    ? await client
+        .from('object_price_period')
+        .select('id, price_id, start_date, end_date, start_time, end_time, note')
+        .in('price_id', priceIds)
+        .order('start_date', { ascending: true })
+    : { data: [], error: null };
+
+  const kindOptions = dedupeReferenceOptions(
+    kindRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
+  );
+  // §13 price_type catalog — graceful fallback to the parser-derived options when the
+  // domain is not exposed (older live / restricted profile), like the other ref fetches.
+  // §13 : repli sur les options derivees du parser quand le domaine est vide
+  // (live ancien / profil restreint) — meme semantique qu'avant, la source du
+  // catalogue ayant seule change.
+  const typeOptions = typeRefs.length > 0
+    ? dedupeReferenceOptions(typeRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.priceTypeOptions;
+  const seasonOptions = seasonRefs.length > 0
+    ? dedupeReferenceOptions(seasonRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.priceSeasonOptions;
+  const unitOptions = dedupeReferenceOptions(
+    unitRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
+  );
+  const kindById = new Map(kindOptions.map((option) => [option.id, option]));
+  const unitById = new Map(unitOptions.map((option) => [option.id, option]));
+  const periodsByPriceId = new Map<string, ObjectWorkspacePricePeriod[]>();
+
+  if (periodsResult.error == null) {
+    for (const row of (periodsResult.data ?? []) as Record<string, unknown>[]) {
+      const priceId = readString(row.price_id);
+      const current = periodsByPriceId.get(priceId) ?? [];
+      current.push(normalizeWorkspacePricePeriod(row));
+      periodsByPriceId.set(priceId, current);
+    }
+  }
+
+  const promotionsUnavailableReason =
+    promotionsResult.status === 'fulfilled' && promotionsResult.value.error == null
+      ? null
+      : 'Les promotions liees restent en lecture seule ou non exposees pour ce profil.';
+  const unavailableReason =
+    discountsResult.status === 'fulfilled' && discountsResult.value.error == null
+      ? periodsResult.error == null ? null : 'Les periodes tarifaires detaillees ne sont pas completement lisibles depuis le live.'
+      : 'Les remises bornees ne sont pas completement lisibles depuis le live actuel.';
+
+  return {
+    priceKindOptions: kindOptions,
+    priceTypeOptions: typeOptions,
+    priceSeasonOptions: seasonOptions,
+    priceUnitOptions: unitOptions,
+    prices: priceRows.map((row) => normalizeWorkspacePriceItem({
+      row,
+      kindById,
+      unitById,
+      periodsByPriceId,
+    })),
+    discounts:
+      discountsResult.status === 'fulfilled' && discountsResult.value.error == null
+        ? ((discountsResult.value.data ?? []) as Record<string, unknown>[]).map(normalizeWorkspaceDiscountItem)
+        : baseModule.discounts,
+    promotions:
+      promotionsResult.status === 'fulfilled' && promotionsResult.value.error == null
+        ? ((promotionsResult.value.data ?? []) as Record<string, unknown>[]).map(normalizePromotionSummary)
+        : [],
+    promotionsUnavailableReason,
+    unavailableReason,
+  };
+}
+
+function optionMapById(options: WorkspaceReferenceOption[]): Map<string, WorkspaceReferenceOption> {
+  return new Map(options.map((option) => [option.id, option]));
+}
+
+function normalizeMediaOption(row: Record<string, unknown>): WorkspaceMediaOption {
+  const id = readString(row.id);
+  return {
+    id,
+    code: id,
+    label: readString(row.title, readString(row.name, readString(row.url, id))),
+    url: readString(row.url),
+  };
+}
+
+// §19 CRM enrichment — fills the providerFollowUp module's interactions/topics from
+// api.list_object_crm (RPC-only DEFINER; crm_* tables are NOT PostgREST-readable).
+// Same post-parse placement as the rooms module: the parser leaves the empty defaults
+// + "not loaded" reasons, this enrichment clears them on success. Parsing is shared
+// with SectionCrm's post-save refresh via services/crm.listObjectCrm (one source of truth).
+async function getObjectWorkspaceCrmModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceProviderFollowUpModule,
+): Promise<ObjectWorkspaceProviderFollowUpModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+  if (!getApiClient()) {
+    return baseModule; // raisons par défaut déjà posées par le parser
+  }
+
+  try {
+    const snapshot = await listObjectCrm(objectId);
+    return { ...baseModule, ...snapshot, interactionsUnavailableReason: null, tasksUnavailableReason: null };
+  } catch (error) {
+    // listObjectCrm rethrow l'erreur PostgREST brute (jamais un Error enveloppé) : .code
+    // survit. 42501 = assert publisher-org du RPC DEFINER (migration_crm_module.sql) →
+    // raison « réservé ». Toute AUTRE erreur (réseau, RPC absent…) garde les raisons
+    // « non chargé » par défaut du parser — ne pas déguiser une panne en interdiction.
+    const code = error && typeof error === 'object' ? (error as { code?: unknown }).code : undefined;
+    if (code === '42501') {
+      return {
+        ...baseModule,
+        interactionsUnavailableReason: 'Suivi CRM réservé aux membres de l’organisation publicatrice.',
+        tasksUnavailableReason: 'Suivi CRM réservé aux membres de l’organisation publicatrice.',
+      };
+    }
+    return baseModule;
+  }
+}
+
+export async function getObjectWorkspaceRoomsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceRoomsModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceRoomsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les chambres et unites.' };
+  }
+
+  // 4 catalogues depuis le cache de session : 6 requetes -> 2. Le filtre de
+  // scope sur ref_amenity passe du serveur a la memoire (table chargee une fois).
+  const roomRefs = {
+    view: catalogs.refCodeByDomain.view_type ?? [],
+    roomType: catalogs.refCodeByDomain.room_type ?? [],
+    bedType: catalogs.refCodeByDomain.bed_type ?? [],
+    amenity: (catalogs.tables.ref_amenity ?? []).filter((row) => {
+      const scope = readString(row.scope);
+      return scope === 'room' || scope === 'both';
+    }),
+  };
+
+  const [roomsResult, mediaResult] = await Promise.allSettled([
+    client
+      .from('object_room_type')
+      .select('id, code, name, name_i18n, description, description_i18n, extra, capacity_adults, capacity_children, capacity_total, size_sqm, bed_config, bed_config_i18n, total_rooms, floor_level, view_type_id, room_type_id, base_price, currency, is_accessible, is_published, position')
+      .eq('object_id', objectId)
+      .order('position', { ascending: true }),
+    client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+
+  const rows = workspaceReadRows(roomsResult);
+  if (!rows || !knownWorkspaceIdsPresent(baseModule.items, rows)) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore les chambres et unites pour ce profil.',
+    };
+  }
+
+  const roomIds = rows.map((row) => readString(row.id)).filter(Boolean);
+  const [amenityLinksResult, mediaLinksResult, bedLinksResult] = roomIds.length > 0
+    ? await Promise.allSettled([
+        client.from('object_room_type_amenity').select('room_type_id, amenity_id').in('room_type_id', roomIds),
+        client.from('object_room_type_media').select('room_type_id, media_id').in('room_type_id', roomIds),
+        client.from('object_room_type_bed').select('room_type_id, bed_type_id, quantity, position').in('room_type_id', roomIds),
+      ])
+    : [
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+      ];
+
+  if ([amenityLinksResult, mediaLinksResult, bedLinksResult].some((result) => workspaceReadRows(result) === null)) {
+    return { ...baseModule, unavailableReason: 'Les équipements, médias ou lits des chambres ne sont pas complètement chargés. Rechargez la fiche avant de sauvegarder.' };
+  }
+
+  const viewTypeOptions = roomRefs.view.length > 0
+    ? dedupeReferenceOptions(roomRefs.view.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.viewTypeOptions;
+  const roomTypeOptions = roomRefs.roomType.length > 0
+    ? dedupeReferenceOptions(roomRefs.roomType.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.roomTypeOptions;
+  const amenityOptions = roomRefs.amenity.length > 0
+    ? dedupeReferenceOptions(roomRefs.amenity.map((row) => normalizeReferenceOption(row)))
+    : baseModule.amenityOptions;
+  const amenityGroups = roomRefs.amenity.length > 0
+    ? buildRoomAmenityGroups(roomRefs.amenity)
+    : baseModule.amenityGroups;
+  const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
+    ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
+    : baseModule.mediaOptions;
+  const bedTypeOptions = roomRefs.bedType.length > 0
+    ? dedupeReferenceOptions(roomRefs.bedType.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.bedTypeOptions;
+  const viewTypeById = optionMapById(viewTypeOptions);
+  const roomTypeById = optionMapById(roomTypeOptions);
+  const amenityById = optionMapById(amenityOptions);
+  const bedTypeById = optionMapById(bedTypeOptions);
+  if (rows.some((row) => (row.view_type_id && !viewTypeById.has(readString(row.view_type_id)))
+    || (row.room_type_id && !roomTypeById.has(readString(row.room_type_id))))
+    || workspaceReadRows(amenityLinksResult)!.some((row) => !roomIds.includes(readString(row.room_type_id)) || !amenityById.has(readString(row.amenity_id)))
+    || workspaceReadRows(bedLinksResult)!.some((row) => !roomIds.includes(readString(row.room_type_id)) || !bedTypeById.has(readString(row.bed_type_id)))
+    || workspaceReadRows(mediaLinksResult)!.some((row) => !roomIds.includes(readString(row.room_type_id)) || !readString(row.media_id))) {
+    return { ...baseModule, unavailableReason: 'Certaines références des chambres ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
+  const amenityCodesByRoom = new Map<string, string[]>();
+  const mediaIdsByRoom = new Map<string, string[]>();
+  const bedsByRoom = new Map<string, ObjectWorkspaceRoomBed[]>();
+
+  if (amenityLinksResult.status === 'fulfilled' && amenityLinksResult.value.error == null) {
+    for (const row of (amenityLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const roomId = readString(row.room_type_id);
+      const option = amenityById.get(readString(row.amenity_id));
+      if (!roomId || !option) {
+        continue;
+      }
+      amenityCodesByRoom.set(roomId, [...(amenityCodesByRoom.get(roomId) ?? []), option.code]);
+    }
+  }
+
+  if (mediaLinksResult.status === 'fulfilled' && mediaLinksResult.value.error == null) {
+    for (const row of (mediaLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const roomId = readString(row.room_type_id);
+      const mediaId = readString(row.media_id);
+      if (!roomId || !mediaId) {
+        continue;
+      }
+      mediaIdsByRoom.set(roomId, [...(mediaIdsByRoom.get(roomId) ?? []), mediaId]);
+    }
+  }
+
+  // §70 structured beds — resolve bed_type_id → option, group per room, ordered by position.
+  if (bedLinksResult.status === 'fulfilled' && bedLinksResult.value.error == null) {
+    const bedRows = [...((bedLinksResult.value.data ?? []) as Record<string, unknown>[])].sort(
+      (a, b) => (Number.parseInt(readString(a.position), 10) || 0) - (Number.parseInt(readString(b.position), 10) || 0),
+    );
+    for (const row of bedRows) {
+      const roomId = readString(row.room_type_id);
+      const option = bedTypeById.get(readString(row.bed_type_id));
+      if (!roomId || !option) {
+        continue;
+      }
+      bedsByRoom.set(roomId, [
+        ...(bedsByRoom.get(roomId) ?? []),
+        {
+          bedTypeId: option.id,
+          bedTypeCode: option.code,
+          bedTypeLabel: option.label,
+          quantity: readString(row.quantity, '1'),
+          position: Number.isFinite(Number.parseInt(readString(row.position), 10)) ? Number.parseInt(readString(row.position), 10) : null,
+        },
+      ]);
+    }
+  }
+
+  if (baseModule.items.some((room) => room.recordId && (
+    room.amenityCodes.some((code) => !(amenityCodesByRoom.get(room.recordId!) ?? []).includes(code))
+    || room.mediaIds.some((id) => !(mediaIdsByRoom.get(room.recordId!) ?? []).includes(id))
+    || room.beds.some((bed) => !(bedsByRoom.get(room.recordId!) ?? []).some((loaded) =>
+      // The resource getter exposes code/name without an ID; the parser uses code as ID fallback.
+      isUuid(bed.bedTypeId) ? loaded.bedTypeId === bed.bedTypeId : loaded.bedTypeCode === bed.bedTypeCode))
+  ))) {
+    return { ...baseModule, unavailableReason: 'Certaines données associées aux chambres ont changé ou ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
+
+  return {
+    viewTypeOptions,
+    roomTypeOptions,
+    amenityOptions,
+    amenityGroups,
+    bedTypeOptions,
+    mediaOptions,
+    items: rows.map((row, index) => {
+      const viewType = viewTypeById.get(readString(row.view_type_id));
+      const roomType = roomTypeById.get(readString(row.room_type_id));
+      const roomId = readString(row.id);
+      return {
+        recordId: roomId || null,
+        code: readString(row.code, `room-${index + 1}`),
+        name: readString(row.name),
+        rawName: typeof row.name === 'string' ? row.name : null,
+        extra: row.extra !== null && typeof row.extra === 'object' && !Array.isArray(row.extra)
+          ? row.extra as Record<string, unknown> : null,
+        nameTranslations: readRecord(row.name_i18n) as Record<string, string>,
+        description: readString(row.description),
+        descriptionTranslations: readRecord(row.description_i18n) as Record<string, string>,
+        capacityAdults: readString(row.capacity_adults),
+        capacityChildren: readString(row.capacity_children),
+        capacityTotal: readString(row.capacity_total),
+        sizeSqm: readString(row.size_sqm),
+        bedConfig: readString(row.bed_config),
+        bedConfigTranslations: readRecord(row.bed_config_i18n) as Record<string, string>,
+        quantity: readString(row.total_rooms),
+        floorLevel: readString(row.floor_level),
+        viewTypeId: readString(row.view_type_id),
+        viewTypeCode: viewType?.code ?? '',
+        viewTypeLabel: viewType?.label ?? '',
+        roomTypeId: readString(row.room_type_id),
+        roomTypeCode: roomType?.code ?? '',
+        roomTypeLabel: roomType?.label ?? '',
+        basePrice: readString(row.base_price),
+        currency: readString(row.currency),
+        accessible: readBoolean(row.is_accessible),
+        rawAccessible: row.is_accessible == null ? null : readBoolean(row.is_accessible),
+        published: row.is_published == null ? true : readBoolean(row.is_published),
+        rawPublished: row.is_published == null ? null : readBoolean(row.is_published),
+        position: readString(row.position),
+        amenityCodes: amenityCodesByRoom.get(roomId) ?? [],
+        mediaIds: mediaIdsByRoom.get(roomId) ?? [],
+        beds: bedsByRoom.get(roomId) ?? [],
+      };
+    }),
+    knownRoomIds: rows.map((row) => readString(row.id)).filter(Boolean),
+    unavailableReason: null,
+  };
+}
+
+export async function getObjectWorkspaceMeetingRoomsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceMeetingRoomsModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceMeetingRoomsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les salles MICE.' };
+  }
+
+  // 1 catalogue depuis le cache de session.
+  const equipmentRefs = catalogs.refCodeByDomain.meeting_equipment ?? [];
+
+  const [roomsResult] = await Promise.allSettled([
+    client
+      .from('object_meeting_room')
+      .select('id, name, name_i18n, extra, area_m2, cap_theatre, cap_u, cap_classroom, cap_boardroom')
+      .eq('object_id', objectId)
+      .order('name', { ascending: true }),
+  ]);
+
+  const rows = workspaceReadRows(roomsResult);
+  if (!rows || !knownWorkspaceIdsPresent(baseModule.items, rows)) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore les salles MICE pour ce profil.',
+    };
+  }
+
+  const roomIds = rows.map((row) => readString(row.id)).filter(Boolean);
+  const [linksResult] = await Promise.allSettled([
+    roomIds.length > 0
+      ? client.from('meeting_room_equipment').select('room_id, equipment_id, position, note').in('room_id', roomIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  const links = workspaceReadRows(linksResult);
+  if (!links) {
+    return { ...baseModule, unavailableReason: 'Les équipements des salles ne sont pas complètement chargés. Rechargez la fiche avant de sauvegarder.' };
+  }
+  const equipmentOptions = equipmentRefs.length > 0
+    ? dedupeReferenceOptions(equipmentRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.equipmentOptions;
+  const equipmentById = optionMapById(equipmentOptions);
+  if (links.some((row) => !roomIds.includes(readString(row.room_id)) || !equipmentById.has(readString(row.equipment_id)))) {
+    return { ...baseModule, unavailableReason: 'Certaines références des salles ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
+  const equipmentCodesByRoom = new Map<string, string[]>();
+  const equipmentDetailsByRoom = new Map<string, { equipmentId: string; note: string | null; position: number | null }[]>();
+
+  for (const row of links) {
+    const roomId = readString(row.room_id);
+    const option = equipmentById.get(readString(row.equipment_id));
+    if (roomId && option) {
+      equipmentCodesByRoom.set(roomId, [...(equipmentCodesByRoom.get(roomId) ?? []), option.code]);
+      equipmentDetailsByRoom.set(roomId, [...(equipmentDetailsByRoom.get(roomId) ?? []), {
+        equipmentId: option.id,
+        note: typeof row.note === 'string' ? row.note : null,
+        position: row.position == null ? null : Number(row.position),
+      }]);
+    }
+  }
+  if (baseModule.items.some((room) => room.recordId && room.equipmentCodes.some((code) =>
+    !(equipmentCodesByRoom.get(room.recordId!) ?? []).includes(code)))) {
+    return { ...baseModule, unavailableReason: 'Certains équipements des salles ont changé ou ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
+
+  return {
+    equipmentOptions,
+    items: rows.map((row) => {
+      const roomId = readString(row.id);
+      return {
+        recordId: roomId || null,
+        name: readString(row.name),
+        rawName: typeof row.name === 'string' ? row.name : null,
+        extra: row.extra !== null && typeof row.extra === 'object' && !Array.isArray(row.extra)
+          ? row.extra as Record<string, unknown> : null,
+        equipmentDetails: equipmentDetailsByRoom.get(roomId) ?? [],
+        nameTranslations: readRecord(row.name_i18n) as Record<string, string>,
+        areaM2: readString(row.area_m2),
+        capacityTheatre: readString(row.cap_theatre),
+        capacityU: readString(row.cap_u),
+        capacityClassroom: readString(row.cap_classroom),
+        capacityBoardroom: readString(row.cap_boardroom),
+        equipmentCodes: equipmentCodesByRoom.get(roomId) ?? [],
+      };
+    }),
+    knownRoomIds: rows.map((row) => readString(row.id)).filter(Boolean),
+    unavailableReason: null,
+  };
+}
+
+/**
+ * §06 P1 — enrich the object-level cuisine facet: the FULL `ref_code` `cuisine_type` catalog (so
+ * empty/new objects can ADD cuisines, not just display existing ones) + the object's
+ * `object_cuisine_type` links (authoritative codes, ordered by position). Direct PostgREST under
+ * `read_object_cuisine_type`. Decoupled from the menus load — cuisine works without any menu. On
+ * catalog-read failure → `unavailableReason` ⇒ the saver skips persistence (no clobber). Mirrors
+ * the §41 zones / §42 enrichment precedent.
+ */
+async function getObjectWorkspaceCuisineModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceCuisineModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceCuisineModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les cuisines.' };
+  }
+
+  // 1 catalogue depuis le cache de session : 2 requetes -> 1.
+  const cuisineRefs = catalogs.refCodeByDomain.cuisine_type ?? [];
+
+  const [linksResult] = await Promise.allSettled([
+    client.from('object_cuisine_type').select('cuisine_type_id, position').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+
+  if (cuisineRefs.length === 0) {
+    return { ...baseModule, unavailableReason: 'Le catalogue des types de cuisine n’a pas pu être chargé.' };
+  }
+  const options = dedupeReferenceOptions(
+    cuisineRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
+  );
+  const codeById = new Map(options.map((option) => [option.id, option.code]));
+
+  let codes = baseModule.codes;
+  if (linksResult.status === 'fulfilled' && linksResult.value.error == null) {
+    codes = (linksResult.value.data ?? [])
+      .map((row) => codeById.get(readString((row as Record<string, unknown>).cuisine_type_id)))
+      .filter((code): code is string => Boolean(code));
+  }
+  return { codes, options, unavailableReason: null };
+}
+
+export async function getObjectWorkspaceMenusModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceMenusModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceMenusModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les menus.' };
+  }
+
+  // 6 catalogues depuis le cache de session : ce module passe de 8 requetes a 2
+  // sur son premier saut. C'etait le plus gros emetteur du chargement, execute
+  // meme pour un HEB sans aucun menu.
+  const menuRefs = {
+    category: catalogs.refCodeByDomain.menu_category ?? [],
+    dietary: catalogs.refCodeByDomain.dietary_tag ?? [],
+    allergen: catalogs.refCodeByDomain.allergen ?? [],
+    cuisine: catalogs.refCodeByDomain.cuisine_type ?? [],
+    priceKind: catalogs.refCodeByDomain.price_kind ?? [],
+    priceUnit: catalogs.refCodeByDomain.price_unit ?? [],
+  };
+
+  const [menusResult, mediaResult] = await Promise.allSettled([
+    client.from('object_menu').select('id, category_id, name, description, is_active, visibility, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+
+  const menus = workspaceReadRows(menusResult);
+  if (!menus || !knownWorkspaceIdsPresent(baseModule.items, menus)) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore les menus pour ce profil.',
+    };
+  }
+
+  const menuIds = menus.map((row) => readString(row.id)).filter(Boolean);
+  const [itemRowsResult] = await Promise.allSettled([menuIds.length > 0
+    ? client
+        .from('object_menu_item')
+        .select('id, menu_id, name, description, price, currency, kind_id, unit_id, media_id, is_available, position, section_id')
+        .in('menu_id', menuIds)
+        .order('position', { ascending: true })
+    : Promise.resolve({ data: [], error: null })]);
+  const itemRows = workspaceReadRows(itemRowsResult);
+  if (!itemRows || !knownWorkspaceIdsPresent(baseModule.items.flatMap((menu) => menu.items), itemRows)
+    || itemRows.some((row) => !menuIds.includes(readString(row.menu_id)))) {
+    return { ...baseModule, unavailableReason: 'Les plats des menus ne sont pas complètement chargés. Rechargez la fiche avant de sauvegarder.' };
+  }
+  const itemIds = itemRows.map((row) => readString(row.id)).filter(Boolean);
+  const [mediaLinksResult, dietaryLinksResult, allergenLinksResult, cuisineLinksResult] = itemIds.length > 0
+    ? await Promise.allSettled([
+        client
+          .from('object_menu_item_media')
+          .select('menu_item_id, media_id, position')
+          .in('menu_item_id', itemIds)
+          .order('position', { ascending: true }),
+        client.from('object_menu_item_dietary_tag').select('menu_item_id, dietary_tag_id').in('menu_item_id', itemIds),
+        client.from('object_menu_item_allergen').select('menu_item_id, allergen_id').in('menu_item_id', itemIds),
+        client.from('object_menu_item_cuisine_type').select('menu_item_id, cuisine_type_id').in('menu_item_id', itemIds),
+      ])
+    : [
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+        { status: 'fulfilled' as const, value: { data: [], error: null } },
+      ];
+  if ([mediaLinksResult, dietaryLinksResult, allergenLinksResult, cuisineLinksResult].some((result) => workspaceReadRows(result) === null)) {
+    return { ...baseModule, unavailableReason: 'Les médias, régimes, allergènes ou cuisines des plats ne sont pas complètement chargés. Rechargez la fiche avant de sauvegarder.' };
+  }
+  const categoryOptions = menuRefs.category.length > 0
+    ? dedupeReferenceOptions(menuRefs.category.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.categoryOptions;
+  const dietaryTagOptions = menuRefs.dietary.length > 0
+    ? dedupeReferenceOptions(menuRefs.dietary.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.dietaryTagOptions;
+  const allergenOptions = menuRefs.allergen.length > 0
+    ? dedupeReferenceOptions(menuRefs.allergen.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.allergenOptions;
+  const cuisineTypeOptions = menuRefs.cuisine.length > 0
+    ? dedupeReferenceOptions(menuRefs.cuisine.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.cuisineTypeOptions;
+  const priceKindOptions = menuRefs.priceKind.length > 0
+    ? dedupeReferenceOptions(menuRefs.priceKind.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.priceKindOptions;
+  const priceUnitOptions = menuRefs.priceUnit.length > 0
+    ? dedupeReferenceOptions(menuRefs.priceUnit.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
+    : baseModule.priceUnitOptions;
+  const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
+    ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
+    : baseModule.mediaOptions;
+  const categoryById = optionMapById(categoryOptions);
+  const kindById = optionMapById(priceKindOptions);
+  const unitById = optionMapById(priceUnitOptions);
+  const dietaryById = optionMapById(dietaryTagOptions);
+  const allergenById = optionMapById(allergenOptions);
+  const cuisineById = optionMapById(cuisineTypeOptions);
+  if (menus.some((row) => row.category_id && !categoryById.has(readString(row.category_id)))
+    || itemRows.some((row) => (row.kind_id && !kindById.has(readString(row.kind_id)))
+      || (row.unit_id && !unitById.has(readString(row.unit_id)))
+      || (row.section_id && !categoryById.has(readString(row.section_id))))
+    || workspaceReadRows(mediaLinksResult)!.some((row) => !itemIds.includes(readString(row.menu_item_id)) || !readString(row.media_id))
+    || workspaceReadRows(dietaryLinksResult)!.some((row) => !itemIds.includes(readString(row.menu_item_id)) || !dietaryById.has(readString(row.dietary_tag_id)))
+    || workspaceReadRows(allergenLinksResult)!.some((row) => !itemIds.includes(readString(row.menu_item_id)) || !allergenById.has(readString(row.allergen_id)))
+    || workspaceReadRows(cuisineLinksResult)!.some((row) => !itemIds.includes(readString(row.menu_item_id)) || !cuisineById.has(readString(row.cuisine_type_id)))) {
+    return { ...baseModule, unavailableReason: 'Certaines références des menus ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
+  const mediaIdsByItem = new Map<string, string[]>();
+  const tagCodesByItem = new Map<string, string[]>();
+  const allergenCodesByItem = new Map<string, string[]>();
+  const cuisineCodesByItem = new Map<string, string[]>();
+
+  if (mediaLinksResult.status === 'fulfilled' && mediaLinksResult.value.error == null) {
+    for (const row of (mediaLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const itemId = readString(row.menu_item_id);
+      const mediaId = readString(row.media_id);
+      if (itemId && mediaId) {
+        mediaIdsByItem.set(itemId, [...(mediaIdsByItem.get(itemId) ?? []), mediaId]);
+      }
+    }
+  }
+  if (dietaryLinksResult.status === 'fulfilled' && dietaryLinksResult.value.error == null) {
+    for (const row of (dietaryLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const itemId = readString(row.menu_item_id);
+      const option = dietaryById.get(readString(row.dietary_tag_id));
+      if (itemId && option) {
+        tagCodesByItem.set(itemId, [...(tagCodesByItem.get(itemId) ?? []), option.code]);
+      }
+    }
+  }
+  if (allergenLinksResult.status === 'fulfilled' && allergenLinksResult.value.error == null) {
+    for (const row of (allergenLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const itemId = readString(row.menu_item_id);
+      const option = allergenById.get(readString(row.allergen_id));
+      if (itemId && option) {
+        allergenCodesByItem.set(itemId, [...(allergenCodesByItem.get(itemId) ?? []), option.code]);
+      }
+    }
+  }
+  if (cuisineLinksResult.status === 'fulfilled' && cuisineLinksResult.value.error == null) {
+    for (const row of (cuisineLinksResult.value.data ?? []) as Record<string, unknown>[]) {
+      const itemId = readString(row.menu_item_id);
+      const option = cuisineById.get(readString(row.cuisine_type_id));
+      if (itemId && option) {
+        cuisineCodesByItem.set(itemId, [...(cuisineCodesByItem.get(itemId) ?? []), option.code]);
+      }
+    }
+  }
+
+  const itemsByMenuId = new Map<string, ObjectWorkspaceMenuItem[]>();
+  for (const row of itemRows) {
+    const itemId = readString(row.id);
+    const menuId = readString(row.menu_id);
+    const kind = kindById.get(readString(row.kind_id));
+    const unit = unitById.get(readString(row.unit_id));
+    const section = categoryById.get(readString(row.section_id));
+    const legacyMediaId = readString(row.media_id);
+    const item: ObjectWorkspaceMenuItem = {
+      recordId: itemId || null,
+      name: readString(row.name),
+      description: readString(row.description),
+      price: readString(row.price),
+      currency: readString(row.currency, 'EUR'),
+      kindId: readString(row.kind_id),
+      kindCode: kind?.code ?? '',
+      kindLabel: kind?.label ?? '',
+      unitId: readString(row.unit_id),
+      unitCode: unit?.code ?? '',
+      unitLabel: unit?.label ?? '',
+      mediaIds: Array.from(new Set([legacyMediaId, ...(mediaIdsByItem.get(itemId) ?? [])].filter(Boolean))),
+      available: row.is_available == null ? true : readBoolean(row.is_available),
+      position: readString(row.position),
+      dietaryTagCodes: tagCodesByItem.get(itemId) ?? [],
+      allergenCodes: allergenCodesByItem.get(itemId) ?? [],
+      cuisineTypeCodes: cuisineCodesByItem.get(itemId) ?? [],
+      sectionCode: section?.code ?? '',
+      sectionId: readString(row.section_id),
+      sectionLabel: section?.label ?? '',
+    };
+    itemsByMenuId.set(menuId, [...(itemsByMenuId.get(menuId) ?? []), item]);
+  }
+
+  if (baseModule.items.some((menu) => menu.recordId && menu.items.some((item) => {
+    if (!item.recordId) return false;
+    const loaded = (itemsByMenuId.get(menu.recordId!) ?? []).find((row) => row.recordId === item.recordId);
+    return !loaded || item.mediaIds.some((id) => !loaded.mediaIds.includes(id))
+      || item.dietaryTagCodes.some((code) => !loaded.dietaryTagCodes.includes(code))
+      || item.allergenCodes.some((code) => !loaded.allergenCodes.includes(code))
+      || item.cuisineTypeCodes.some((code) => !loaded.cuisineTypeCodes.includes(code));
+  }))) {
+    return { ...baseModule, unavailableReason: 'Certaines données associées aux plats ont changé ou ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
+
+  return {
+    categoryOptions,
+    dietaryTagOptions,
+    allergenOptions,
+    cuisineTypeOptions,
+    priceKindOptions,
+    priceUnitOptions,
+    mediaOptions,
+    items: menus.map((row, index) => {
+      const menuId = readString(row.id);
+      const category = categoryById.get(readString(row.category_id));
+      return {
+        recordId: menuId || null,
+        categoryId: readString(row.category_id),
+        categoryCode: category?.code ?? '',
+        categoryLabel: category?.label ?? '',
+        name: readString(row.name),
+        rawName: typeof row.name === 'string' ? row.name : null,
+        description: readString(row.description),
+        active: row.is_active == null ? true : readBoolean(row.is_active),
+        visibility: readString(row.visibility, 'public'),
+        rawVisibility: typeof row.visibility === 'string' ? row.visibility : null,
+        position: readString(row.position, String(index + 1)),
+        items: itemsByMenuId.get(menuId) ?? [],
+      };
+    }),
+    unavailableReason: null,
+  };
+}
+
+export async function getObjectWorkspaceActivityModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceActivityModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceActivityModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger le detail activite.' };
+  }
+
+  // 1 catalogue depuis le cache de session : 2 requetes -> 1.
+  const difficultyRefs = catalogs.refCodeByDomain.iti_difficulty ?? [];
+
+  const [dataResult] = await Promise.all([
+    client
+      .from('object_act')
+      .select('duration_min, min_participants, max_participants, difficulty_level, guide_required, min_age, equipment_provided')
+      .eq('object_id', objectId)
+      .maybeSingle(),
+  ]);
+
+  if (dataResult.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore le detail activite pour ce profil.',
+    };
+  }
+
+  const difficultyOptions = difficultyRefs.length === 0
+    ? baseModule.difficultyOptions
+    : dedupeReferenceOptions(difficultyRefs.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)));
+
+  if (!dataResult.data) {
+    return { ...baseModule, difficultyOptions, unavailableReason: null };
+  }
+
+  const row = readRecord(dataResult.data);
+  return {
+    durationMin: readString(row.duration_min),
+    minParticipants: readString(row.min_participants),
+    maxParticipants: readString(row.max_participants),
+    difficultyLevel: readString(row.difficulty_level),
+    guideRequired: readBoolean(row.guide_required),
+    minAge: readString(row.min_age),
+    equipmentProvided: readBoolean(row.equipment_provided),
+    equipmentProvidedDetails: '',
+    difficultyOptions,
+    unavailableReason: null,
+  };
+}
+
+async function getObjectWorkspaceEventModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceEventModule,
+): Promise<ObjectWorkspaceEventModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger la programmation.' };
+  }
+
+  const [eventResult, occurrencesResult] = await Promise.allSettled([
+    client
+      .from('object_fma')
+      .select('event_start_date, event_end_date, event_start_time, event_end_time, is_recurring, recurrence_pattern')
+      .eq('object_id', objectId)
+      .maybeSingle(),
+    client
+      .from('object_fma_occurrence')
+      .select('id, start_at, end_at, state')
+      .eq('object_id', objectId)
+      .order('start_at', { ascending: true }),
+  ]);
+
+  if (eventResult.status !== 'fulfilled' || eventResult.value.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore la programmation pour ce profil.',
+    };
+  }
+
+  const eventRow = readRecord(eventResult.value.data);
+  const occurrences = occurrencesResult.status === 'fulfilled' && occurrencesResult.value.error == null
+    ? ((occurrencesResult.value.data ?? []) as Record<string, unknown>[]).map((row) => ({
+        recordId: readString(row.id) || null,
+        startAt: readString(row.start_at),
+        endAt: readString(row.end_at),
+        state: readString(row.state, 'scheduled'),
+      }))
+    : baseModule.occurrences;
+
+  return {
+    startDate: readString(eventRow.event_start_date, baseModule.startDate),
+    endDate: readString(eventRow.event_end_date, baseModule.endDate),
+    startTime: readString(eventRow.event_start_time, baseModule.startTime),
+    endTime: readString(eventRow.event_end_time, baseModule.endTime),
+    recurring: eventRow.is_recurring == null ? baseModule.recurring : readBoolean(eventRow.is_recurring),
+    recurrenceText: readString(eventRow.recurrence_pattern, baseModule.recurrenceText),
+    occurrences,
+    unavailableReason: occurrencesResult.status === 'fulfilled' && occurrencesResult.value.error == null
+      ? null
+      : 'Les occurrences detaillees ne sont pas completement exposees pour ce profil.',
+  };
+}
+
+async function getObjectWorkspaceItineraryModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceItineraryModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceItineraryModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger l itineraire.' };
+  }
+
+  // §111 C: stages come from baseModule (parser of get_object_resource.itinerary_details.stages),
+  // which now carries kind / lng / lat / mediaIds — richer than a direct object_iti_stage select
+  // (lng/lat need ST_X/ST_Y, only available server-side). No stage re-fetch here.
+  // 5 catalogues (4 domaines ref_code + ref_iti_assoc_role) depuis le cache de
+  // session : 8 requetes -> 3. Elles partaient pour TOUT objet, y compris ceux
+  // dont ref_facet_applicability interdit object_iti.
+  const itiRefs = {
+    practice: catalogs.refCodeByDomain.iti_practice ?? [],
+    difficulty: catalogs.refCodeByDomain.iti_difficulty ?? [],
+    openStatus: catalogs.refCodeByDomain.iti_open_status ?? [],
+    stageKind: catalogs.refCodeByDomain.iti_stage_kind ?? [],
+    assocRole: catalogs.tables.ref_iti_assoc_role ?? [],
+  };
+
+  const [itiResult, practicesResult, mediaResult, stageTranslationsResult] = await Promise.allSettled([
+    client
+      .from('object_iti')
+      .select('distance_km, duration_min, difficulty_level, elevation_gain, elevation_loss, is_loop, open_status, status_note, geom')
+      .eq('object_id', objectId)
+      .maybeSingle(),
+    client.from('object_iti_practice').select('practice_id').eq('object_id', objectId),
+    // §111 stage-photos closeout: the object's §05 media rows, to curate per stage (object_iti_stage_media).
+    // Stages LINK existing object media (single-writer); same source as the rooms loader's mediaOptions.
+    client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('object_iti_stage').select('id, name_i18n, description_i18n').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+
+  if (itiResult.status !== 'fulfilled' || itiResult.value.error) {
+    return {
+      ...baseModule,
+      unavailableReason: 'Le live actuel ne fournit pas encore le detail itineraire pour ce profil.',
+    };
+  }
+
+  const row = readRecord(itiResult.value.data);
+  const translatedStages = workspaceReadRows(stageTranslationsResult);
+  if (!translatedStages || !knownWorkspaceIdsPresent(baseModule.stages, translatedStages)
+    || translatedStages.some((stage) => !baseModule.stages.some((base) => base.recordId === readString(stage.id)))) {
+    return { ...baseModule, unavailableReason: 'Les traductions des étapes ne sont pas complètement chargées. Rechargez la fiche avant de sauvegarder.' };
+  }
+  const stageById = new Map(translatedStages.map((stage) => [readString(stage.id), stage]));
+  const practiceOptions = itiRefs.practice.length > 0
+    ? dedupeReferenceOptions(itiRefs.practice.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
+    : baseModule.practiceOptions;
+  const difficultyOptions = itiRefs.difficulty.length > 0
+    ? dedupeReferenceOptions(itiRefs.difficulty.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
+    : baseModule.difficultyOptions;
+  const openStatusOptions = itiRefs.openStatus.length > 0
+    ? dedupeReferenceOptions(itiRefs.openStatus.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
+    : baseModule.openStatusOptions;
+  const stageKindOptions = itiRefs.stageKind.length > 0
+    ? dedupeReferenceOptions(itiRefs.stageKind.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
+    : baseModule.stageKindOptions;
+  const assocRoleOptions = itiRefs.assocRole.length > 0
+    ? dedupeReferenceOptions(itiRefs.assocRole.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
+    : baseModule.assocRoleOptions;
+  // §111 stage-photos: the object's media rows for the per-stage link picker (mirror the rooms loader).
+  const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
+    ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
+    : baseModule.mediaOptions;
+  const practiceById = optionMapById(practiceOptions);
+  const practiceCodes = practicesResult.status === 'fulfilled' && practicesResult.value.error == null
+    ? ((practicesResult.value.data ?? []) as Record<string, unknown>[])
+        .map((entry) => practiceById.get(readString(entry.practice_id))?.code ?? '')
+        .filter(Boolean)
+    : baseModule.practiceCodes;
+  const stages = baseModule.stages.map((stage) => {
+    const translated = stage.recordId ? stageById.get(stage.recordId) : undefined;
+    return translated ? {
+      ...stage,
+      nameTranslations: readRecord(translated.name_i18n) as Record<string, string>,
+      descriptionTranslations: readRecord(translated.description_i18n) as Record<string, string>,
+    } : stage;
+  });
+
+  // object_iti.duration_min is stored in minutes (greenfield retype from duration_hours); read it
+  // directly — no hours->minutes round-trip. elevation_loss carries descent (was unavailable before).
+  return {
+    ...baseModule,
+    distanceKm: readString(row.distance_km, baseModule.distanceKm),
+    durationMin: readString(row.duration_min, baseModule.durationMin),
+    difficultyLevel: readString(row.difficulty_level, baseModule.difficultyLevel),
+    elevationPositiveM: readString(row.elevation_gain, baseModule.elevationPositiveM),
+    elevationNegativeM: readString(row.elevation_loss, baseModule.elevationNegativeM),
+    loop: row.is_loop == null ? baseModule.loop : readBoolean(row.is_loop),
+    openStatus: readString(row.open_status, baseModule.openStatus || 'open'),
+    statusNote: readString(row.status_note, baseModule.statusNote),
+    practiceOptions,
+    practiceCodes,
+    difficultyOptions,
+    openStatusOptions,
+    stageKindOptions,
+    assocRoleOptions,
+    mediaOptions,
+    associatedObjects: baseModule.associatedObjects,
+    stages,
+    geometrySummary: row.geom ? 'geometrie presente' : baseModule.geometrySummary,
+    traceEditable: false,
+    unavailableReason: null,
+  };
+}
+
+/**
+ * §81: the admin-extensible period-type catalog (ref_code domain `opening_period_type`,
+ * public read). Mirrors the §41 zones pattern — a direct ref_code select, not bundled in
+ * get_object_resource. Best-effort: returns [] on failure (the modal then shows no types).
+ */
+function loadOpeningPeriodTypeOptions(
+  catalogs: ReferenceCatalogs,
+): ObjectWorkspaceOpeningPeriodTypeOption[] {
+  // Catalogue depuis le cache de session. Le filtre `is_active` etait fait cote
+  // serveur ; il l'est desormais en memoire (le select du cache porte la colonne).
+  const data = catalogs.refCodeByDomain.opening_period_type ?? [];
+  return data.map((row) => {
+    const metadata = (row.metadata ?? {}) as { color?: unknown; all_year?: unknown };
+    return {
+      code: String(row.code ?? ''),
+      label: String(row.name ?? row.code ?? ''),
+      ...referenceAvailability(row as unknown as Record<string, unknown>),
+      color: typeof metadata.color === 'string' ? metadata.color : '',
+      allYear: metadata.all_year === true,
+    };
+  });
+}
+
+export async function getObjectWorkspaceOpeningsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceOpeningsModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceOpeningsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+          ...baseModule,
+          unavailableReason: 'Connexion backend indisponible pour charger les horaires et periodes.',
+        };
+  }
+
+  const periodTypeOptions = loadOpeningPeriodTypeOptions(catalogs);
+  const unavailable = () => ({
+    ...baseModule, periodTypeOptions,
+    unavailableReason: 'Les horaires ou leurs données associées ne sont pas complètement chargés. Rechargez la fiche avant de les enregistrer.',
+  });
+  // Exact counts detect a PostgREST page cap. An error/partial child read must never look like [].
+  const rowsOf = (result: { data: unknown; error: unknown; count?: number | null }) => {
+    if (result.error || !Array.isArray(result.data)
+      || result.data.some((row) => row === null || typeof row !== 'object' || Array.isArray(row))) return null;
+    const rows = result.data as Record<string, unknown>[];
+    if (typeof result.count === 'number' ? result.count !== rows.length : rows.length >= 1000) return null;
+    return rows;
+  };
+  try {
+    const periods = rowsOf(await client.from('opening_period')
+      .select('id, name, date_start, date_end, source_period_id, all_years, name_i18n, extra, period_type_id, is_closure', { count: 'exact' })
+      .eq('object_id', objectId).order('id'));
+    if (!periods || !knownWorkspaceIdsPresent(baseModule.periods, periods)) return unavailable();
+    if (periods.length === 0) return { periods: [], periodTypeOptions, unavailableReason: null };
+
+    const schedules = rowsOf(await client.from('opening_schedule')
+      .select('id, period_id, schedule_type_id, name, note, name_i18n, note_i18n, extra', { count: 'exact' })
+      .in('period_id', periods.map((row) => row.id)).order('id'));
+    const knownSchedules = baseModule.periods.flatMap((period) => period.schedules ?? []);
+    if (!schedules || !knownWorkspaceIdsPresent(knownSchedules.map((schedule) => ({ recordId: schedule.id })), schedules)) return unavailable();
+    const timePeriods = schedules.length ? rowsOf(await client.from('opening_time_period')
+      .select('id, schedule_id, closed, note', { count: 'exact' })
+      .in('schedule_id', schedules.map((row) => row.id)).order('id')) : [];
+    const knownTimePeriods = knownSchedules.flatMap((schedule) => schedule.time_periods);
+    if (!timePeriods || !knownWorkspaceIdsPresent(knownTimePeriods.map((period) => ({ recordId: period.id })), timePeriods)) return unavailable();
+    const timePeriodIds = timePeriods.map((row) => row.id);
+    const [weekdayResult, frameResult] = timePeriods.length ? await Promise.all([
+      client.from('opening_time_period_weekday').select('time_period_id, weekday_id', { count: 'exact' }).in('time_period_id', timePeriodIds),
+      client.from('opening_time_frame').select('id, time_period_id, start_time, end_time, recurrence', { count: 'exact' }).in('time_period_id', timePeriodIds).order('start_time').order('id'),
+    ]) : [{ data: [], error: null, count: 0 }, { data: [], error: null, count: 0 }];
+    const weekdays = rowsOf(weekdayResult);
+    const frames = rowsOf(frameResult);
+    if (!weekdays || !frames || !knownWorkspaceIdsPresent(knownTimePeriods.flatMap((period) =>
+      period.time_frames.map((frame) => ({ recordId: frame.id }))), frames)) return unavailable();
+    const weekdayById = new Map((catalogs.refCodeByDomain.weekday ?? []).map((row) => [row.id, row.code]));
+    if (weekdays.some((row) => !weekdayById.has(readString(row.weekday_id)))) return unavailable();
+    const readDayLinks = new Set(weekdays.map((row) => `${row.time_period_id}:${normalizeOpeningWeekdayCode(weekdayById.get(readString(row.weekday_id))!)}`));
+    if (knownTimePeriods.some((period) => period.id && period.weekdays.some((day) =>
+      !readDayLinks.has(`${period.id}:${normalizeOpeningWeekdayCode(day.weekday_code)}`)))) return unavailable();
+    const periodTypeById = new Map((catalogs.refCodeByDomain.opening_period_type ?? []).map((row) => [row.id, row.code]));
+    const baseById = new Map(baseModule.periods.map((period) => [period.recordId, period]));
+    const enriched = periods.map((period) => ({
+      ...period,
+      // Keep a missing name empty in the model. A display fallback must not become a saved name.
+      label: readString(period.name),
+      bucket: baseById.get(readString(period.id))?.bucket ?? 'undated',
+      period_type_code: periodTypeById.get(readString(period.period_type_id)) ?? '',
+      schedules: schedules.filter((schedule) => schedule.period_id === period.id).map((schedule) => ({
+        ...schedule,
+        time_periods: timePeriods.filter((timePeriod) => timePeriod.schedule_id === schedule.id).map((timePeriod) => ({
+          ...timePeriod,
+          weekdays: weekdays.filter((day) => day.time_period_id === timePeriod.id)
+            .map((day) => ({ weekday_code: weekdayById.get(readString(day.weekday_id)) })),
+          time_frames: frames.filter((frame) => frame.time_period_id === timePeriod.id),
+        })),
+      })),
+    }));
+    const parsed = parseWorkspaceOpeningPeriodRows(enriched);
+    return { periods: parsed, periodTypeOptions, unavailableReason: null };
+  } catch {
+    return unavailable();
+  }
+}
+
+async function getObjectWorkspacePublicationModule(
+  objectId: string,
+  detail: ObjectDetail,
+  baseModule: ObjectWorkspacePublicationModule,
+): Promise<ObjectWorkspacePublicationModule> {
+  const session = useSessionStore.getState();
+
+  if (session.demoMode) {
+    const moderationItems = buildDemoModerationItems(detail.name, objectId);
+    const publicationItems = buildDemoPublicationItems();
+
+    return {
+      ...baseModule,
+      moderation: {
+        availability: 'available',
+        pendingCount: moderationItems.length,
+        unavailableReason: null,
+        items: moderationItems,
+      },
+      printPublications: {
+        availability: 'available',
+        selectionCount: publicationItems.length,
+        unavailableReason: null,
+        items: publicationItems,
+      },
+    };
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return {
+      ...baseModule,
+      moderation: {
+        availability: 'unavailable',
+        pendingCount: 0,
+        unavailableReason: 'Connexion backend indisponible pour charger la moderation.',
+        items: [],
+      },
+      printPublications: {
+        availability: 'unavailable',
+        selectionCount: 0,
+        unavailableReason: 'Connexion backend indisponible pour charger les publications.',
+        items: [],
+      },
+    };
+  }
+
+  const [pendingResult, publicationResult] = await Promise.allSettled([
+    // P2.1 (§120) — pending_change est admin-only en RLS : on passe par l'RPC DEFINER
+    // auto-autorisée (la file n'est visible que d'un modérateur de l'objet), jamais en direct.
+    client.schema('api').rpc('list_pending_changes', { p_object_id: objectId, p_status: 'pending', p_limit: 10, p_offset: 0 }),
+    client
+      .from('publication_object')
+      .select('publication_id, workflow_status, page_number, custom_print_text, proof_sent_at, validated_bat_at, publication:publication_id(code, name, year, status)')
+      .eq('object_id', objectId)
+      .order('updated_at', { ascending: false }),
+  ]);
+
+  const moderation =
+    pendingResult.status === 'fulfilled' && pendingResult.value.error == null
+      ? {
+          availability: 'available' as const,
+          pendingCount: (pendingResult.value.data ?? []).length,
+          unavailableReason: null,
+          items: (((pendingResult.value.data as unknown[] | null) ?? [])).map((row) =>
+            normalizePendingChangeItem(row as Record<string, unknown>),
+          ),
+        }
+      : {
+          availability: 'unavailable' as const,
+          pendingCount: 0,
+          unavailableReason: 'La file de moderation n est pas lisible depuis ce contexte applicatif.',
+          items: [] as ObjectWorkspaceModerationItem[],
+        };
+
+  const printPublications =
+    publicationResult.status === 'fulfilled' && publicationResult.value.error == null
+      ? {
+          availability: 'available' as const,
+          selectionCount: (publicationResult.value.data ?? []).length,
+          unavailableReason: null,
+          items: (publicationResult.value.data ?? []).map((row) =>
+            normalizePublicationSelectionItem(row as Record<string, unknown>),
+          ),
+        }
+      : {
+          availability: 'unavailable' as const,
+          selectionCount: 0,
+          unavailableReason: 'Le workflow print n est pas encore expose a ce profil dans le live.',
+          items: [] as ObjectWorkspacePublicationSelectionItem[],
+        };
+
+  return {
+    ...baseModule,
+    moderation,
+    printPublications,
+  };
+}
+
+async function getObjectWorkspaceSustainabilityModule(
+  baseModule: ObjectWorkspaceSustainabilityModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceSustainabilityModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return baseModule;
+  }
+
+  // Ce module est 100 % catalogue : il ne prend meme pas d objectId. Ses 2
+  // requetes disparaissent entierement du chemin par fiche.
+  const categoryRows = catalogs.tables.ref_sustainability_action_category ?? [];
+  const actionRows = catalogs.tables.ref_sustainability_action ?? [];
+
+  if (categoryRows.length === 0) {
+    return baseModule;
+  }
+
+  const selectedById = new Map<string, { note: string; documentId: string }>();
+  for (const category of baseModule.categories) {
+    for (const action of category.actions) {
+      if (action.selected) {
+        selectedById.set(action.id, { note: action.note, documentId: action.documentId });
+      }
+    }
+  }
+
+  const categories = categoryRows.map((row) => {
+    const categoryId = readString(row.id);
+    const categoryActions = actionRows
+      .filter((action) => readString(action.category_id) === categoryId)
+      .map((action) => {
+        const actionId = readString(action.id);
+        const selected = selectedById.get(actionId);
+        return {
+          id: actionId,
+          code: readString(action.code),
+          label: readString(action.label, readString(action.code)),
+          description: readString(action.description),
+          selected: Boolean(selected),
+          ...referenceAvailability(action),
+          note: selected?.note ?? '',
+          documentId: selected?.documentId ?? '',
+        };
+      });
+
+    return {
+      id: categoryId,
+      code: readString(row.code),
+      label: readString(row.name, readString(row.code)),
+      description: readString(row.description),
+      actions: categoryActions,
+    };
+  }).filter((category) => category.actions.length > 0);
+
+  return {
+    categories: categories.length > 0 ? categories : baseModule.categories,
+    equivalentLabels: baseModule.equivalentLabels,
+  };
+}
+
+async function getObjectWorkspaceTagsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceTagsModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceTagsModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    return baseModule;
+  }
+
+  // Fetch all ref_tag rows for the library picker (tags not yet displayed on this object).
+  // Also fetch tag_link rows for this object ordered by position so the displayed list
+  // reflects the drag-and-drop order saved by save_object_workspace_tags, and so the
+  // per-object color override (tag_link.extra.color_variant) takes precedence over ref_tag.color.
+  // 1 catalogue depuis le cache de session : 2 requetes -> 1.
+  const tagRows = catalogs.tables.ref_tag ?? [];
+
+  const [tagLinkResult] = await Promise.all([
+    client
+      .from('tag_link')
+      .select('tag_id, extra, position')
+      .eq('target_table', 'object')
+      .eq('target_pk', objectId)
+      .order('position', { ascending: true }),
+  ]);
+
+  const refTagById = new Map(
+    tagRows.map((row) => [readString(row.id), row]),
+  );
+
+  // Rebuild displayed list from tag_link (authoritative position + extra), joined with ref_tag for
+  // slug/name/color. Fall back to baseModule.displayed if tag_link fetch fails (e.g. RLS).
+  let displayed: ObjectWorkspaceTagsModule['displayed'];
+  if (!tagLinkResult.error) {
+    displayed = ((tagLinkResult.data ?? []) as Record<string, unknown>[])
+      .map((link) => {
+        const refTag = refTagById.get(readString(link.tag_id)) ?? {};
+        const slug = readString((refTag as Record<string, unknown>).slug);
+        const label = readString((refTag as Record<string, unknown>).name, slug);
+        return {
+          tagId: readString(link.tag_id),
+          slug,
+          label,
+          // Color is GLOBAL per tag (ref_tag.color, hex) — no per-object tag_link.extra override.
+          color: normalizeTagColor((refTag as Record<string, unknown>).color),
+        };
+      })
+      .filter((item) => item.slug || item.label);
+  } else {
+    displayed = baseModule.displayed;
+  }
+
+  const displayedTagIds = new Set(displayed.map((tag) => tag.tagId));
+  const library = tagRows
+    .map((row) => ({
+      tagId: readString(row.id),
+      slug: readString(row.slug),
+      label: readString(row.name, readString(row.slug)),
+      color: normalizeTagColor(row.color),
+    }))
+    .filter((tag) => tag.slug && !displayedTagIds.has(tag.tagId));
+
+  return {
+    ...baseModule,
+    displayed,
+    library,
+  };
+}
+
+/** Pure: derive per-layer description edit rights from the resolved capability flags. */
+export function describeDescriptionsAccess(flags: {
+  directWrite: boolean;
+  canonical: boolean;
+  enrichment: boolean;
+}): { canEditCanonical: boolean; canEditOrgEnrichment: boolean } {
+  return {
+    canEditCanonical: flags.directWrite || flags.canonical,
+    canEditOrgEnrichment: flags.directWrite || flags.enrichment,
+  };
+}
+
+/**
+ * Pure (SP-3): can the user write canonical sections directly?
+ * Mirrors the backend authorization established by SP-1 + SP-1b
+ * (api.user_can_write_object_canonical = is_object_owner OR user_can_write_canonical):
+ * platform superuser / demo (directWrite), legacy actor-owner (objectOwner), or a
+ * publisher-ORG member holding edit_canonical_when_publisher (canonical).
+ */
+export function canWriteCanonicalDirect(flags: {
+  directWrite: boolean;
+  objectOwner: boolean;
+  canonical: boolean;
+}): boolean {
+  return flags.directWrite || flags.objectOwner || flags.canonical;
+}
+
+/** Pure: mirror api.user_can_manage_object_legal for the editor's legal module gate. */
+export function canManageObjectLegalDirect(flags: {
+  directWrite: boolean;
+  legal: boolean;
+}): boolean {
+  return flags.directWrite || flags.legal;
+}
+
+export async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWorkspacePermissions> {
+  const session = useSessionStore.getState();
+  const directWrite = session.demoMode || session.role === 'owner' || session.role === 'super_admin';
+  const apiClient = getApiClient();
+
+  let canPrepareProposal = directWrite;
+  let canWriteSafeWorkspaceRpc = directWrite;
+  let canPublishObject = directWrite || session.demoMode;
+  let canWriteProviderFollowUp = session.demoMode;
+  let crmWrite = false;
+  let canonical = false;
+  let enrichment = false;
+  let objectOwner = false;
+  let canManageLegal = directWrite;
+  let isOrgAdmin = directWrite;
+  let isPlatformSuperuser = directWrite;
+  if (!session.demoMode) {
+    try {
+      if (!apiClient) throw new Error('Permission client unavailable');
+      // UN seul aller-retour pour les neuf sondes. La resilience par sonde n'est pas
+      // perdue : elle a migre DANS la fonction SQL (un bloc EXCEPTION par sonde),
+      // qui conserve la semantique Promise.allSettled — une sonde en echec rend
+      // false sans faire echouer les huit autres.
+      // Les gates metier restent identiques :
+      //  - §19 CRM : `crm` est la garde PAR OBJET (adhesion a l'ORG publisher +
+      //    write_crm_notes) ; le helper global userCanWriteCrmNotes() n'est PAS
+      //    object-scoped et ne doit pas servir ici.
+      //  - §22 identifiants externes : `org_admin`, miroir exact du gate du RPC.
+      //  - §108 : `platform_superuser`, miroir exact de api.rpc_delete_object.
+      const { data: probes, error: probesError } = await apiClient
+        .schema('api')
+        .rpc('get_object_workspace_permissions', { p_object_id: objectId });
+      if (probesError) throw probesError;
+      const p = probes as Record<string, unknown> | null;
+      // Unknown permissions must never select the contributor save path: that
+      // would queue an editor's work instead of saving it directly.
+      const keys = ['canonical', 'enrichment', 'owner', 'publish', 'private_notes', 'crm', 'legal', 'org_admin', 'platform_superuser'];
+      if (!p || Array.isArray(p) || keys.some((key) => typeof p[key] !== 'boolean')) {
+        throw new Error('Invalid workspace permissions response');
+      }
+
+      canonical = p.canonical === true;
+      enrichment = p.enrichment === true;
+      objectOwner = p.owner === true;
+      canPublishObject = directWrite || p.publish === true;
+      canWriteProviderFollowUp = p.private_notes === true;
+      crmWrite = p.crm === true;
+      canManageLegal = canManageObjectLegalDirect({ directWrite, legal: p.legal === true });
+      isOrgAdmin = directWrite || p.org_admin === true;
+      isPlatformSuperuser = directWrite || p.platform_superuser === true;
+
+      canPrepareProposal = directWrite || canonical || enrichment;
+      canWriteSafeWorkspaceRpc = canWriteCanonicalDirect({ directWrite, objectOwner, canonical });
+    } catch (cause) {
+      throw new Error('Vos droits de modification n’ont pas pu être vérifiés. Réessayez dans quelques instants.', { cause });
+    }
+  }
+
+  const proposalUnavailableReason = canPrepareProposal
+    ? "Le flux de proposition moderee n'est pas encore branche pour ce module."
+    : "Vos droits actuels ne permettent pas cette modification.";
+
+  // SP-3: canonical writers (publisher-ORG members with edit_canonical_when_publisher) and
+  // legacy actor-owners can edit canonical sections directly, matching the backend (SP-1 + SP-1b).
+  const canDirectCanonical = canWriteCanonicalDirect({ directWrite, objectOwner, canonical });
+  const directOrBlocked = (canEditScope = true): ObjectWorkspaceModuleAccess => ({
+    canDirectWrite: canDirectCanonical,
+    canPrepareProposal,
+    canSubmitProposal: false,
+    disabledReason: canDirectCanonical && canEditScope ? null : proposalUnavailableReason,
+  });
+
+  return {
+    generalInfo: directOrBlocked(),
+    taxonomy: directOrBlocked(),
+    publication: {
+      canDirectWrite: canPublishObject,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canPublishObject ? null : "Vos droits actuels ne permettent pas de publier ou de depublier cette fiche.",
+    },
+    syncIdentifiers: {
+      canDirectWrite: isOrgAdmin,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: isOrgAdmin
+        ? null
+        : "Réservé aux administrateurs d'organisation — l'administration des identifiants externes nécessite un rôle admin.",
+    },
+    delete: {
+      canDirectWrite: isPlatformSuperuser,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: isPlatformSuperuser
+        ? null
+        : 'Réservé aux administrateurs plateforme — la suppression définitive est limitée au superadmin.',
+    },
+    location: {
+      ...directOrBlocked(),
+      canEditZones: canDirectCanonical || session.demoMode,
+    },
+    places: directOrBlocked(),
+    descriptions: {
+      ...directOrBlocked(),
+      ...describeDescriptionsAccess({ directWrite, canonical, enrichment }),
+    },
+    media: {
+      ...directOrBlocked(),
+      canEditPlaceMedia: false,
+    },
+    contacts: directOrBlocked(),
+    characteristics: {
+      canDirectWrite: canWriteSafeWorkspaceRpc,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'utiliser le contrat d'ecriture commercial.",
+    },
+    distinctions: directOrBlocked(),
+    capacityPolicies: {
+      canDirectWrite: canWriteSafeWorkspaceRpc,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'utiliser le contrat d'ecriture commercial.",
+    },
+    pricing: {
+      canDirectWrite: canWriteSafeWorkspaceRpc,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'utiliser le contrat d'ecriture commercial.",
+    },
+    rooms: directOrBlocked(),
+    meetingRooms: directOrBlocked(),
+    menus: directOrBlocked(),
+    cuisine: directOrBlocked(),
+    activity: directOrBlocked(),
+    event: directOrBlocked(),
+    itinerary: {
+      ...directOrBlocked(),
+      disabledReason: directWrite
+        ? 'Les champs descriptifs sont enregistrables. La trace et la geometrie restent en lecture seule sans contrat d ecriture stable.'
+        : proposalUnavailableReason,
+    },
+    openings: {
+      canDirectWrite: canWriteSafeWorkspaceRpc,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'utiliser le contrat d'ecriture des horaires.",
+    },
+    providerFollowUp: {
+      canDirectWrite: directWrite || canWriteProviderFollowUp,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason:
+        directWrite || canWriteProviderFollowUp
+          ? null
+          : "Vos droits actuels ne permettent pas de gerer le suivi relation prestataire sur cette fiche.",
+    },
+    // §19 CRM authoring (interactions/tâches) — gated by the PER-OBJECT api.user_can_write_crm
+    // (publisher-ORG member with write_crm_notes), with the superuser/demo directWrite arm kept.
+    crm: {
+      canDirectWrite: directWrite || crmWrite,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: (directWrite || crmWrite)
+        ? null
+        : 'Permission « Écrire des notes CRM » requise (administration d’équipe).',
+    },
+    // §48: the relationships save path goes through api.save_object_relations, which enforces
+    // workspace_assert_can_write_object server-side — same gate as the other save_object_* RPCs.
+    // (The previous hard-false here routed every §15/§17 edit to `blocked`, orphaning the §29 saver.)
+    relationships: {
+      canDirectWrite: canWriteSafeWorkspaceRpc,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canWriteSafeWorkspaceRpc
+        ? null
+        : "Vos droits actuels ne permettent pas de modifier les liens et rattachements de cette fiche.",
+    },
+    memberships: {
+      canDirectWrite: directWrite,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: directWrite ? null : "Vos droits actuels ne permettent pas de gerer les adhesions de cette fiche.",
+    },
+    legal: {
+      canDirectWrite: canManageLegal,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canManageLegal ? null : "Permission « Gérer la conformité juridique » requise pour cette fiche.",
+    },
+    tags: {
+      canDirectWrite: canWriteSafeWorkspaceRpc,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'enregistrer les tags de cette fiche.",
+    },
+    sustainability: {
+      canDirectWrite: canWriteSafeWorkspaceRpc,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: canWriteSafeWorkspaceRpc ? null : "Vos droits actuels ne permettent pas d'enregistrer la demarche durable.",
+    },
+    distribution: {
+      canDirectWrite: false,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: "Les canaux de distribution restent en lecture seule tant que le contrat d'ecriture actor_channel n'est pas verrouille.",
+    },
+    provider: {
+      canDirectWrite: false,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: "Le fournisseur reste en lecture seule — les complements passent par les modules Legal et Acteurs.",
+    },
+  };
+}
+
+// §46 — type→facet applicability (mirror of ref_facet_applicability + the DB triggers).
+// A non-applicable module is disabled-with-reason (its saver skips persistence: same anti-clobber
+// machinery as §28/§40/§41). Fail-open on fetch failure / missing rows — the DB trigger stays the
+// hard gate, the UI gate is comfort. NOT a regression of §42 (that was an env flag hiding catalogs
+// from everyone; this is per-type semantics sourced from the DB registry).
+export interface FacetApplicabilityRow {
+  facetTable: string;
+  objectType: string;
+}
+
+export const TYPE_SPECIFIC_MODULE_FACETS = {
+  rooms: 'object_room_type',
+  meetingRooms: 'object_meeting_room',
+  menus: 'object_menu',
+  activity: 'object_act',
+  event: 'object_fma',
+  itinerary: 'object_iti',
+} as const;
+
+export function facetUnavailableReason(
+  facetTable: string,
+  objectType: string,
+  rows: FacetApplicabilityRow[],
+): string | null {
+  if (!objectType) return null;
+  const allowed = rows.filter((row) => row.facetTable === facetTable).map((row) => row.objectType);
+  if (allowed.length === 0 || allowed.includes(objectType)) return null;
+  return `Module non applicable au type ${objectType} (référentiel ref_facet_applicability).`;
+}
+
+export function getNonApplicableWorkspaceModules(objectType: string, rows: FacetApplicabilityRow[]): WorkspaceModuleId[] {
+  return (Object.keys(TYPE_SPECIFIC_MODULE_FACETS) as Array<keyof typeof TYPE_SPECIFIC_MODULE_FACETS>)
+    .filter((key) => facetUnavailableReason(TYPE_SPECIFIC_MODULE_FACETS[key], objectType, rows) !== null)
+    .map((key) => key === 'meetingRooms' ? 'meeting-rooms' : key);
+}
+
+function getFacetApplicabilityRows(catalogs: ReferenceCatalogs): FacetApplicabilityRow[] {
+  const session = useSessionStore.getState();
+  if (session.demoMode) return [];
+  // Catalogue depuis le cache de session ; le filtre sur les facettes surfacees
+  // par l'editeur passe du serveur a la memoire. Fail open inchange : catalogue
+  // vide => aucun gating, le trigger DB reste la garde dure (§46).
+  const facetTables = new Set<string>(Object.values(TYPE_SPECIFIC_MODULE_FACETS));
+  return (catalogs.tables.ref_facet_applicability ?? [])
+    .filter((row) => facetTables.has(readString(row.facet_table)))
+    .map((row) => ({
+    facetTable: readString((row as Record<string, unknown>).facet_table),
+    objectType: readString((row as Record<string, unknown>).object_type),
+  }));
+}
+
+/**
+ * `detail` est FOURNI par l'appelant, jamais recharge ici. Le tiroir vient de
+ * l'obtenir sous la cle React Query `['object-detail', id, langPrefs]` ; le
+ * rappeler ici executait une SECONDE fois `api.get_object_with_deep_data`
+ * (469 ms de moyenne en production) pour un resultat identique.
+ * Passer par `loadObjectWorkspace` (hooks) garantit la deduplication, y compris
+ * quand la requete du tiroir est encore EN VOL.
+ */
+export async function getObjectWorkspaceResource(
+  objectId: string,
+  langPrefs: string[],
+  catalogs: ReferenceCatalogs,
+  detail: ObjectDetail,
+): Promise<ObjectWorkspaceResource> {
+  const parsedModules = parseObjectWorkspace(detail, langPrefs);
+
+  // §42: catalog enrichment for the type-specific / optional modules — moved OUT of the old
+  // `ENABLE_OPTIONAL_WORKSPACE_REST_ENRICHMENT` gate so empty/new objects can ADD catalog values
+  // (room types, price kinds/units, menu categories, capacity metrics, …), not just display
+  // existing ones. Each fn degrades gracefully (base + `unavailableReason`, or Promise.allSettled
+  // with per-result fallback) ⇒ a table not exposed via PostgREST shows "unavailable" for that
+  // module, never breaks the load. Extends the §32 (characteristics) / §41 (zones) precedent.
+  const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
+
+  // UN SEUL point de synchronisation. Les 26 enrichissements etaient repartis en
+  // DEUX vagues awaitees l une apres l autre, alors qu aucun argument de la
+  // seconde ne provenait de la premiere : ils ne consomment que `parsedModules`,
+  // `detail`, `objectId`, `catalogs` et `placeLabelById` — tous produits avant.
+  // C etait une latence reseau complete (220-310 ms depuis La Reunion) payee pour
+  // rien. `object-workspace.waves.test.ts` garde cet invariant.
+  const [
+    taxonomyModule,
+    distinctionsModule,
+    publicationModule,
+    syncIdentifiersModule,
+    openingsModule,
+    relationshipsModule,
+    legalModule,
+    sustainabilityModule,
+    tagsModule,
+    contactsModule,
+    characteristicsModule,
+    locationModule,
+    placesModule,
+    permissions,
+    mediaModule,
+    capacityPoliciesModule,
+    pricingModule,
+    roomsModule,
+    meetingRoomsModule,
+    menusModule,
+    cuisineModule,
+    activityModule,
+    eventModule,
+    itineraryModule,
+    membershipsModule,
+    crmFollowUpModule,
+  ] = await Promise.all([
+    getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy, catalogs, detail.type ?? ''),
+    getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions, catalogs, detail.type ?? ''),
+    getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
+    getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),
+    getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings, catalogs),
+    getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships, catalogs),
+    getObjectWorkspaceLegalModule(objectId, parsedModules.legal, catalogs),
+    getObjectWorkspaceSustainabilityModule(parsedModules.sustainability, catalogs),
+    getObjectWorkspaceTagsModule(objectId, parsedModules.tags, catalogs),
+    // Contacts kind/role reference data lives in ref_code (domain contact_kind) and
+    // ref_contact_role — basic, all-object-type reference tables that the save path
+    // (saveObjectWorkspaceContacts) already queries. Enriched unconditionally so the
+    // editor's contact type/role dropdowns are populated, not behind the optional gate.
+    getObjectWorkspaceContactsModule(objectId, parsedModules.contacts, catalogs),
+    // Amenity / payment / environment / language CATALOGS live in ref_amenity, ref_code and
+    // ref_language — basic reference tables the save path already queries. Enriched unconditionally
+    // (like contacts above) so the editor's selectors are populated with the full catalog from the
+    // database, not just the object's existing values (which is all get_object_resource carries).
+    // Without this, §10 accessibility equipment panels showed "0 / 0" and nothing was selectable.
+    // See lot1_mapping_decisions §32.
+    getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics, catalogs),
+    // Zones (communes desservies): ref_commune catalog (public read) + the object's object_zone
+    // (can_read_object). Enriched unconditionally like contacts/characteristics (§41).
+    getObjectWorkspaceZonesModule(objectId, parsedModules.location, catalogs),
+    getObjectWorkspacePlacesModule(objectId, parsedModules.places),
+    getObjectWorkspacePermissions(objectId),
+    getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById, catalogs),
+    getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? '', catalogs),
+    getObjectWorkspacePricingModule(objectId, parsedModules.pricing, catalogs),
+    getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms, catalogs),
+    getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms, catalogs),
+    getObjectWorkspaceMenusModule(objectId, parsedModules.menus, catalogs),
+    getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine, catalogs),
+    getObjectWorkspaceActivityModule(objectId, parsedModules.activity, catalogs),
+    getObjectWorkspaceEventModule(objectId, parsedModules.event),
+    getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary, catalogs),
+    getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships, catalogs),
+    getObjectWorkspaceCrmModule(objectId, parsedModules.providerFollowUp),
+  ]);
+
+  const facetRows = getFacetApplicabilityRows(catalogs);
+
+  const modules: ObjectWorkspaceModules = {
+    ...parsedModules,
+    location: locationModule,
+    places: placesModule,
+    taxonomy: taxonomyModule,
+    distinctions: distinctionsModule,
+    publication: publicationModule,
+    syncIdentifiers: syncIdentifiersModule,
+    openings: openingsModule,
+    relationships: relationshipsModule,
+    legal: legalModule,
+    sustainability: sustainabilityModule,
+    tags: tagsModule,
+    contacts: contactsModule,
+    characteristics: characteristicsModule,
+    distribution: parsedModules.distribution,
+    provider: parsedModules.provider,
+  };
+
+  Object.assign(modules, {
+    media: mediaModule,
+    capacityPolicies: capacityPoliciesModule,
+    pricing: pricingModule,
+    rooms: roomsModule,
+    meetingRooms: meetingRoomsModule,
+    menus: menusModule,
+    cuisine: cuisineModule,
+    activity: activityModule,
+    event: eventModule,
+    itinerary: itineraryModule,
+    memberships: membershipsModule,
+    providerFollowUp: crmFollowUpModule,
+  });
+
+  // §46: registry-driven type gating for the 6 type-specific modules. A non-applicable type
+  // disables the module (its saver throws if invoked — defense-in-depth). Fail-open: empty
+  // facetRows (fetch failed / unenrolled) ⇒ no gating; the DB trigger is the hard gate.
+  const objectType = (detail.type ?? '').toUpperCase();
+  for (const [moduleId, facetTable] of Object.entries(TYPE_SPECIFIC_MODULE_FACETS)) {
+    const reason = facetUnavailableReason(facetTable, objectType, facetRows);
+    if (!reason) continue;
+    const current = modules[moduleId as keyof ObjectWorkspaceModules] as { unavailableReason?: string | null };
+    if (current && typeof current === 'object') {
+      current.unavailableReason = current.unavailableReason ?? reason;
+    }
+  }
+
+  return {
+    id: detail.id,
+    name: detail.name,
+    type: detail.type,
+    detail,
+    modules,
+    permissions,
+    nonApplicableModules: getNonApplicableWorkspaceModules(objectType, facetRows),
+  };
+}
+
+export async function publishObjectWorkspace(objectId: string, publish: boolean): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Connexion backend indisponible pour gerer la publication.');
+  }
+
+  const { error } = await apiClient.schema('api').rpc('rpc_publish_object', {
+    p_object_id: objectId,
+    p_publish: publish,
+  });
+
+  if (error) {
+    throw mapMutationError(error, publish
+      ? "Impossible de publier cette fiche."
+      : "Impossible de retirer cette fiche de la publication.");
+  }
+}
+
+export type ObjectLifecycleStatus = 'draft' | 'published' | 'hidden' | 'archived';
+
+/** Maps rpc_set_object_status error codes to French UI messages. */
+export function friendlyStatusError(error: { message?: string } | null | undefined): string {
+  const msg = error?.message ?? '';
+  if (msg.includes('FORBIDDEN')) return "Vos droits ne permettent pas de changer le statut de publication (permission publish_object requise).";
+  if (msg.includes('INVALID_TRANSITION')) return "Ce changement de statut n'est pas autorisé depuis l'état actuel.";
+  if (msg.includes('INVALID_STATUS')) return "Statut de publication inconnu.";
+  if (msg.includes('NOT_FOUND')) return "Fiche introuvable.";
+  if (msg.includes('NO_AUTH_CONTEXT')) return "Session expirée — reconnectez-vous.";
+  return msg || "Changement de statut impossible.";
+}
+
+/** Sets object.status through the lifecycle RPC. Returns the resolved status. */
+export async function setObjectStatus(objectId: string, status: ObjectLifecycleStatus): Promise<ObjectLifecycleStatus> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return status;
+  }
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Connexion backend indisponible pour gerer le statut.');
+  }
+  const { data, error } = await apiClient.schema('api').rpc('rpc_set_object_status', {
+    p_object_id: objectId,
+    p_status: status,
+  });
+  if (error) {
+    throw new Error(friendlyStatusError(error));
+  }
+  return (data as ObjectLifecycleStatus) ?? status;
+}
+
+/**
+ * §22 — admin-gated upsert of one external identifier. The org is server-derived
+ * (api.current_user_org_id), canonical sources are rejected by the RPC, and the table's
+ * admin_* RLS is bypassed (the RPC is SECURITY DEFINER ⇒ the in-function gate is the boundary).
+ * Returns the row id.
+ */
+export async function upsertObjectExternalId(input: {
+  objectId: string;
+  sourceSystem: string;
+  externalId: string;
+  lastSyncedAt: string | null;
+}): Promise<string> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return 'demo-external-id';
+  }
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error("Connexion backend indisponible pour enregistrer l'identifiant externe.");
+  }
+  const { data, error } = await apiClient.schema('api').rpc('rpc_upsert_object_external_id', {
+    p_object_id: input.objectId,
+    p_source_system: input.sourceSystem,
+    p_external_id: input.externalId,
+    p_last_synced_at: input.lastSyncedAt,
+  });
+  if (error) {
+    throw mapMutationError(error, "Enregistrement de l'identifiant externe impossible.");
+  }
+  return readString(data);
+}
+
+/** §22 — admin-gated delete of one external identifier (must belong to the caller's ORG, non-canonical). */
+export async function deleteObjectExternalId(id: string): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error("Connexion backend indisponible pour supprimer l'identifiant externe.");
+  }
+  const { error } = await apiClient.schema('api').rpc('rpc_delete_object_external_id', { p_id: id });
+  if (error) {
+    throw mapMutationError(error, "Suppression de l'identifiant externe impossible.");
+  }
+}
+
+export async function saveObjectWorkspaceGeneralInfo(objectId: string, input: ObjectWorkspaceGeneralInfo): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les informations generales.');
+  }
+
+  const { error } = await client
+    .from('object')
+    .update({
+      name: input.name,
+      commercial_visibility: toNullableText(input.commercialVisibility) ?? 'active',
+    })
+    .eq('id', objectId);
+
+  if (error) {
+    throw mapMutationError(error, "Impossible d'enregistrer les informations generales.");
+  }
+}
+
+export async function saveObjectWorkspaceTaxonomy(objectId: string, input: ObjectWorkspaceTaxonomyModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  assertWorkspaceSaveAvailable('taxonomy', input);
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer la taxonomie structurante.');
+  }
+
+  const managedDomains = Array.from(new Set(
+    input.domains
+      .map((domain) => domain.domain.trim())
+      .filter(Boolean),
+  ));
+
+  const [taxonomyNodesResult, existingAssignmentsResult] = await Promise.all([
+    managedDomains.length > 0
+      ? client
+          .from('ref_code')
+          .select('id, domain, code, is_assignable, is_active')
+          .in('domain', managedDomains)
+      : Promise.resolve({ data: [], error: null }),
+    managedDomains.length > 0
+      ? client
+          .from('object_taxonomy')
+          .select('id, domain, ref_code_id, source, note')
+          .eq('object_id', objectId)
+          .in('domain', managedDomains)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (taxonomyNodesResult.error) {
+    throw mapMutationError(taxonomyNodesResult.error, 'Impossible de charger les noeuds de taxonomie.');
+  }
+
+  if (existingAssignmentsResult.error) {
+    throw mapMutationError(existingAssignmentsResult.error, 'Impossible de charger les affectations de taxonomie.');
+  }
+
+  const nodeRows = ((taxonomyNodesResult.data ?? []) as Record<string, unknown>[])
+    .map((row) => ({
+      id: readString(row.id),
+      domain: readString(row.domain),
+      code: readString(row.code),
+      isAssignable: row.is_active !== false && (row.is_assignable == null || readBoolean(row.is_assignable)),
+    }));
+  const nodeByDomainAndId = new Map(nodeRows.map((row) => [`${row.domain}:${row.id}`, row]));
+  const nodeByDomainAndCode = new Map(nodeRows.map((row) => [`${row.domain}:${row.code.toLowerCase()}`, row]));
+  const existingByDomain = new Map(
+    ((existingAssignmentsResult.data ?? []) as Record<string, unknown>[])
+      .map((row) => [readString(row.domain), row] as const),
+  );
+
+  const upsertRows: Array<Record<string, unknown>> = [];
+  const keptDomains = new Set<string>();
+
+  for (const domain of input.domains) {
+    if (!domain.assignment) {
+      continue;
+    }
+
+    const selectedNode =
+      (domain.assignment.nodeId
+        ? nodeByDomainAndId.get(`${domain.domain}:${domain.assignment.nodeId}`)
+        : null)
+      ?? nodeByDomainAndCode.get(`${domain.domain}:${domain.assignment.code.toLowerCase()}`)
+      ?? null;
+
+    if (!selectedNode) {
+      throw new Error(`Noeud de taxonomie inconnu pour le domaine ${domain.label || domain.domain}.`);
+    }
+
+    const existing = existingByDomain.get(domain.domain);
+    const isUnchanged = readString(existing?.ref_code_id) === selectedNode.id;
+    if (!selectedNode.isAssignable && !isUnchanged) {
+      throw new Error(`Le noeud ${domain.assignment.label || domain.assignment.code} ne peut pas etre assigne.`);
+    }
+
+    keptDomains.add(domain.domain);
+    // Retired references are preserved as-is; they are not a new assignment.
+    if (isUnchanged) {
+      continue;
+    }
+    upsertRows.push({
+      object_id: objectId,
+      domain: domain.domain,
+      ref_code_id: selectedNode.id,
+      source: 'workspace_taxonomy',
+      note: existing ? existing.note ?? null : null,
+    });
+  }
+
+  if (upsertRows.length > 0) {
+    const { error } = await client
+      .from('object_taxonomy')
+      .upsert(upsertRows, { onConflict: 'object_id,domain' });
+
+    if (error) {
+      throw mapMutationError(error, "Impossible d'enregistrer la taxonomie structurante.");
+    }
+  }
+
+  const domainsToDelete = managedDomains.filter((domain) => !keptDomains.has(domain));
+  if (domainsToDelete.length > 0) {
+    const { error } = await client
+      .from('object_taxonomy')
+      .delete()
+      .eq('object_id', objectId)
+      .in('domain', domainsToDelete);
+
+    if (error) {
+      throw mapMutationError(error, "Impossible de supprimer les affectations de taxonomie retirees.");
+    }
+  }
+
+  await saveAccommodationUnitTypes(client, objectId, input.unitTypes);
+  await saveHotelPositionings(client, objectId, input.positionings);
+}
+
+/**
+ * §201 — réconcilie les types d'unité (multi-valués).
+ *
+ * Garde anti-clobber : si le module s'est chargé en échec (`unavailableReason`),
+ * `selectedCodes` est vide par DÉFAUT, pas parce que l'agent a tout décoché.
+ * Enregistrer effacerait alors des unités réelles. On ne touche à rien.
+ *
+ * Réconciliation par différence (et non delete-all + reinsert) : la table n'a
+ * pas d'autre colonne à préserver aujourd'hui, mais un delete global ferait
+ * disparaître les lignes puis les recréer, ce qui casse `created_at` et fait
+ * du bruit inutile dans les triggers.
+ */
+async function saveAccommodationUnitTypes(
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  objectId: string,
+  unitTypes: ObjectWorkspaceUnitTypes | undefined,
+): Promise<void> {
+  if (!unitTypes || unitTypes.unavailableReason) {
+    return;
+  }
+
+  const wanted = Array.from(new Set(unitTypes.selectedCodes.map((code: string) => code.trim()).filter(Boolean)));
+  const knownCodes = new Set(unitTypes.options.map((option: { code: string }) => option.code));
+  const unknown = wanted.filter((code) => !knownCodes.has(code));
+  if (unknown.length > 0) {
+    throw new Error(`Type d'unité inconnu : ${unknown.join(', ')}.`);
+  }
+
+  const [catalogResult, existingResult] = await Promise.all([
+    client
+      .from('ref_code')
+      .select('id,code,is_active,is_assignable')
+      .eq('domain', 'accommodation_unit_type'),
+    client
+      .from('object_accommodation_unit_type')
+      .select('unit_type_id')
+      .eq('object_id', objectId),
+  ]);
+
+  if (catalogResult.error) {
+    throw mapMutationError(catalogResult.error, "Impossible de lire le catalogue des types d'unité.");
+  }
+  if (existingResult.error) {
+    throw mapMutationError(existingResult.error, "Impossible de lire les types d'unité actuels.");
+  }
+
+  const catalogRows = (catalogResult.data ?? []) as Array<Record<string, unknown>>;
+  const rowByCode = new Map(catalogRows.map((row) => [readString(row.code), row]));
+  const existingIds = new Set(((existingResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => readString(row.unit_type_id)));
+  const wantedIds = new Set(wanted.map((code) => {
+    const row = rowByCode.get(code);
+    const id = readString(row?.id);
+    if (!id) throw new Error(`Type d'unité inconnu : ${code}.`);
+    if (!existingIds.has(id) && (row?.is_active === false || row?.is_assignable === false)) {
+      throw new Error(`Le type d'unité ${code} ne peut plus être attribué.`);
+    }
+    return id;
+  }));
+
+  const toInsert = [...wantedIds].filter((id) => !existingIds.has(id));
+  const toDelete = [...existingIds].filter((id) => !wantedIds.has(id));
+
+  if (toInsert.length > 0) {
+    const { error } = await client
+      .from('object_accommodation_unit_type')
+      .insert(toInsert.map((unit_type_id) => ({ object_id: objectId, unit_type_id })));
+    if (error) {
+      throw mapMutationError(error, "Impossible d'ajouter le type d'unité.");
+    }
+  }
+
+  if (toDelete.length > 0) {
+    const { error } = await client
+      .from('object_accommodation_unit_type')
+      .delete()
+      .eq('object_id', objectId)
+      .in('unit_type_id', toDelete);
+    if (error) {
+      throw mapMutationError(error, "Impossible de retirer le type d'unité.");
+    }
+  }
+}
+
+/** Réconciliation par différence des positionnements hôteliers multi-valués. */
+async function saveHotelPositionings(
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  objectId: string,
+  positionings: ObjectWorkspacePositionings | undefined,
+): Promise<void> {
+  if (!positionings || positionings.unavailableReason) {
+    return;
+  }
+
+  const wanted = Array.from(new Set(positionings.selectedCodes.map((code) => code.trim()).filter(Boolean)));
+  const knownCodes = new Set(positionings.options.map((option) => option.code));
+  const unknown = wanted.filter((code) => !knownCodes.has(code));
+  if (unknown.length > 0) {
+    throw new Error(`Positionnement d'hôtel inconnu : ${unknown.join(', ')}.`);
+  }
+
+  const [catalogResult, existingResult] = await Promise.all([
+    client
+      .from('ref_code')
+      .select('id,code,metadata,is_active,is_assignable')
+      .eq('domain', 'taxonomy_hot'),
+    client
+      .from('object_hotel_positioning')
+      .select('positioning_id')
+      .eq('object_id', objectId),
+  ]);
+
+  if (catalogResult.error) {
+    throw mapMutationError(catalogResult.error, "Impossible de lire le catalogue des positionnements d'hôtel.");
+  }
+  if (existingResult.error) {
+    throw mapMutationError(existingResult.error, "Impossible de lire les positionnements d'hôtel actuels.");
+  }
+
+  const rowByCode = new Map(((catalogResult.data ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => readString(readRecord(row.metadata).axis) === 'positionnement')
+    .map((row) => [readString(row.code), row] as const));
+  const existingIds = new Set(((existingResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => readString(row.positioning_id)));
+  const wantedIds = new Set(wanted.map((code) => {
+    const row = rowByCode.get(code);
+    const id = readString(row?.id);
+    if (!id) throw new Error(`Positionnement d'hôtel inconnu : ${code}.`);
+    if (!existingIds.has(id) && (row?.is_active === false || row?.is_assignable === false)) {
+      throw new Error(`Le positionnement ${code} ne peut plus être attribué.`);
+    }
+    return id;
+  }));
+
+  const toInsert = [...wantedIds].filter((id) => !existingIds.has(id));
+  const toDelete = [...existingIds].filter((id) => !wantedIds.has(id));
+
+  if (toInsert.length > 0) {
+    const { error } = await client
+      .from('object_hotel_positioning')
+      .insert(toInsert.map((positioning_id) => ({ object_id: objectId, positioning_id })));
+    if (error) {
+      throw mapMutationError(error, "Impossible d'ajouter le positionnement d'hôtel.");
+    }
+  }
+
+  if (toDelete.length > 0) {
+    const { error } = await client
+      .from('object_hotel_positioning')
+      .delete()
+      .eq('object_id', objectId)
+      .in('positioning_id', toDelete);
+    if (error) {
+      throw mapMutationError(error, "Impossible de retirer le positionnement d'hôtel.");
+    }
+  }
+}
+
+export async function saveObjectWorkspaceDistinctions(objectId: string, input: ObjectWorkspaceDistinctionsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  // No-clobber guard (mirrors the §07 savers): a degraded load leaves distinctionGroups /
+  // accessibilityLabels empty/stale. Running the delete-reconcile below against the fresh
+  // DB rows would mass-delete real §08/§10 classifications. Throw instead of saving — both
+  // §08 (SectionClassification) and §10 (SectionAccessibility) gate their controls on this.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les labels et distinctions.');
+  }
+
+  const [schemeRefsResult, valueRefsResult, existingClassificationsResult] = await Promise.all([
+    client
+      .from('ref_classification_scheme')
+      .select('id, code, name, description, selection, position, display_group, is_distinction')
+      .or('is_distinction.eq.true,display_group.eq.accessibility_labels')
+      .order('position', { ascending: true }),
+    client.from('ref_classification_value').select('id, scheme_id, code, name, ordinal, metadata'),
+    client.from('object_classification').select('id, scheme_id, value_id').eq('object_id', objectId),
+  ]);
+
+  if (schemeRefsResult.error) {
+    throw mapMutationError(schemeRefsResult.error, 'Impossible de charger les schemas de distinction.');
+  }
+  if (valueRefsResult.error) {
+    throw mapMutationError(valueRefsResult.error, 'Impossible de charger les valeurs de distinction.');
+  }
+  if (existingClassificationsResult.error) {
+    throw mapMutationError(existingClassificationsResult.error, 'Impossible de charger les labels existants.');
+  }
+
+  const schemeRows = (schemeRefsResult.data ?? []) as Record<string, unknown>[];
+  const allSchemes = [
+    ...schemeRows.filter(isDistinctionClassificationScheme).map(normalizeClassificationSchemeRef),
+    ...schemeRows.filter(isAccessibilityClassificationScheme).map(normalizeClassificationSchemeRef),
+  ];
+  const schemeById = new Map(allSchemes.map((scheme) => [scheme.id, scheme]));
+  const allowedSchemeIds = new Set(allSchemes.map((scheme) => scheme.id));
+
+  const valueRefs = (valueRefsResult.data ?? [])
+    .map((row) => row as Record<string, unknown>)
+    .map(normalizeClassificationValueRef)
+    .filter((value) => allowedSchemeIds.has(value.schemeId));
+  const valueByCompositeKey = new Map(valueRefs.map((value) => [`${value.schemeId}:${value.code.toLowerCase()}`, value]));
+
+  const existingRows = ((existingClassificationsResult.data ?? []) as Record<string, unknown>[])
+    .filter((row) => allowedSchemeIds.has(readString(row.scheme_id)));
+  const existingIds = new Set(existingRows.map((row) => readString(row.id)).filter(Boolean));
+  const reusableRowsByKey = new Map(existingRows.map((row) => [`${readString(row.scheme_id)}:${readString(row.value_id)}`, readString(row.id)]));
+  const keptIds = new Set<string>();
+
+  const allItems: ObjectWorkspaceDistinctionItem[] = [
+    ...input.distinctionGroups.flatMap((group) => group.items),
+    ...input.accessibilityLabels,
+  ];
+
+  for (const item of allItems) {
+    const normalizedSchemeId = item.schemeId || (allSchemes.find((s) => s.code === item.schemeCode)?.id ?? '');
+    const schemeRef = schemeById.get(normalizedSchemeId);
+    if (!schemeRef) {
+      continue;
+    }
+
+    const normalizedValue = valueByCompositeKey.get(`${schemeRef.id}:${item.valueCode.toLowerCase()}`);
+    if (!normalizedValue) {
+      throw new Error(`Valeur de distinction inconnue: ${item.valueCode || 'vide'}.`);
+    }
+
+    const payload = {
+      object_id: objectId,
+      scheme_id: schemeRef.id,
+      value_id: normalizedValue.id,
+      status: toNullableText(item.status),
+      awarded_at: toNullableText(item.awardedAt),
+      valid_until: toNullableText(item.validUntil),
+      // §10 T&H per-disability-type coverage: resolve the chip codes to granted_* sub-value UUIDs.
+      // Empty for non-accessibility distinctions (their disabilityTypesCovered is always []).
+      subvalue_ids: buildClassificationSubvalueIds(item.disabilityTypesCovered, schemeRef.id, valueRefs),
+      // §71 C — justificatif (ref_document) created by /api/document/upload; NULL = none.
+      document_id: item.documentId ? item.documentId : null,
+    };
+
+    const existingId =
+      (item.recordId && existingIds.has(item.recordId) ? item.recordId : null)
+      ?? reusableRowsByKey.get(`${schemeRef.id}:${normalizedValue.id}`)
+      ?? null;
+
+    if (existingId) {
+      const { error } = await client.from('object_classification').update(payload).eq('id', existingId);
+      if (error) {
+        throw mapMutationError(error, "Impossible d'enregistrer un label ou une distinction.");
+      }
+      keptIds.add(existingId);
+    } else {
+      const { data, error } = await client.from('object_classification').insert(payload).select('id').single();
+      if (error) {
+        throw mapMutationError(error, "Impossible de creer un label ou une distinction.");
+      }
+      keptIds.add(readString((data as Record<string, unknown>).id));
+    }
+  }
+
+  const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id));
+  if (idsToDelete.length > 0) {
+    const { error } = await client.from('object_classification').delete().in('id', idsToDelete);
+    if (error) {
+      throw mapMutationError(error, "Impossible de supprimer les labels retires.");
+    }
+  }
+}
+
+/** Strict integer literal (optional leading '-'), no decimals, no trailing garbage. */
+const STRICT_INTEGER_PATTERN = /^-?\d+$/;
+
+function isStrictInteger(trimmed: string): boolean {
+  return STRICT_INTEGER_PATTERN.test(trimmed);
+}
+
+/** Pure validation before persisting object_act (activity facet). */
+export function validateActivityModule(input: ObjectWorkspaceActivityModule): void {
+  const difficulty = input.difficultyLevel.trim();
+  if (difficulty) {
+    if (!isStrictInteger(difficulty) || Number.parseInt(difficulty, 10) < 1 || Number.parseInt(difficulty, 10) > 5) {
+      throw new Error('La difficulté doit être un niveau entre 1 et 5.');
+    }
+  }
+  const duration = input.durationMin.trim();
+  if (duration && (!isStrictInteger(duration) || Number.parseInt(duration, 10) <= 0)) {
+    throw new Error('La durée doit être strictement positive.');
+  }
+  const minParticipants = input.minParticipants.trim();
+  if (minParticipants && (!isStrictInteger(minParticipants) || Number.parseInt(minParticipants, 10) < 1)) {
+    throw new Error('Le nombre minimum de participants doit être au moins 1.');
+  }
+  const maxParticipants = input.maxParticipants.trim();
+  if (maxParticipants && !isStrictInteger(maxParticipants)) {
+    throw new Error('Le nombre maximum de participants doit être un entier valide.');
+  }
+  if (
+    maxParticipants && minParticipants &&
+    isStrictInteger(maxParticipants) && isStrictInteger(minParticipants) &&
+    Number.parseInt(maxParticipants, 10) < Number.parseInt(minParticipants, 10)
+  ) {
+    throw new Error('Le maximum de participants doit être supérieur ou égal au minimum.');
+  }
+  const minAge = input.minAge.trim();
+  if (minAge && (!isStrictInteger(minAge) || Number.parseInt(minAge, 10) < 0)) {
+    throw new Error("L'âge minimum doit être positif ou nul.");
+  }
+}
+
+export async function saveObjectWorkspaceCharacteristics(objectId: string, input: ObjectWorkspaceCharacteristicsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  // §07 review no-clobber guard: saving the degraded parser-fallback module would
+  // rewrite object_language with the parser's empty level_ids (language levels
+  // wiped) and reset the other three legs from partial data.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+
+  await callObjectWorkspaceRpc(
+    'save_object_commercial',
+    objectId,
+    buildCharacteristicsRpcPayload(input),
+    'Impossible d enregistrer les caracteristiques.',
+  );
+}
+
+export async function saveObjectWorkspaceCapacityPolicies(objectId: string, input: ObjectWorkspaceCapacityPoliciesModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  // §07 review no-clobber guard (§28/§40/§05 precedent): the capacities leg is a
+  // delete-reinsert — saving the degraded fallback module (no recordIds, no
+  // effective dates) would silently wipe effective_from/to on every row.
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+
+  await callObjectWorkspaceRpc('save_object_commercial', objectId, {
+    capacities: input.capacityItems.map((item) => ({
+      id: toRpcUuid(item.recordId),
+      metric_id: toRpcUuid(item.metricId),
+      metric_code: item.metricCode || null,
+      value_integer: toNullableInteger(item.value),
+      effective_from: toNullableText(item.effectiveFrom),
+      effective_to: toNullableText(item.effectiveTo),
+    })),
+    group_policy: {
+      min_size: toNullableInteger(input.groupPolicy.minSize),
+      max_size: toNullableInteger(input.groupPolicy.maxSize),
+      group_only: input.groupPolicy.groupOnly,
+      notes: toNullableText(input.groupPolicy.notes),
+    },
+    // Tri-state: « non renseigné » sends null — the RPC deletes the row instead of
+    // materialising a public « Animaux non acceptés » from an untouched form.
+    pet_policy: input.petPolicy.accepted === null
+      ? null
+      : {
+          accepted: input.petPolicy.accepted,
+          conditions: toNullableText(input.petPolicy.conditions),
+        },
+  }, 'Impossible d enregistrer capacites et politiques.');
+
+  // §85 stay policy (heure d'arrivée / départ) — direct PostgREST write, gated by the
+  // canonical_* RLS on object_stay_policy (§40/§41 child-write precedent). All-empty ⇒ delete
+  // the row (so an untouched form never materialises an empty policy).
+  const client = getSupabaseClient();
+  if (client) {
+    const sp = input.stayPolicy;
+    const stayEmpty = ![sp.checkInFrom, sp.checkInUntil, sp.checkOutUntil, sp.conditions].some((value) => value.trim().length > 0);
+    const { error } = stayEmpty
+      ? await client.from('object_stay_policy').delete().eq('object_id', objectId)
+      : await client.from('object_stay_policy').upsert({
+          object_id: objectId,
+          check_in_from: sp.checkInFrom.trim() || null,
+          check_in_until: sp.checkInUntil.trim() || null,
+          check_out_until: sp.checkOutUntil.trim() || null,
+          conditions: sp.conditions.trim() || null,
+        });
+    if (error) {
+      throw new Error('Impossible d enregistrer la politique de séjour.');
+    }
+  }
+}
+
+export async function saveObjectWorkspacePricing(objectId: string, input: ObjectWorkspacePricingModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  assertWorkspaceSaveAvailable('pricing', input);
+
+  // §48 — mirror the object_discount DB CHECKs client-side before the RPC (FMA occurrence-saver precedent).
+  const discounts = validateDiscountRowsForSave(input.discounts);
+
+  await callObjectWorkspaceRpc('save_object_commercial', objectId, {
+    discounts: discounts.map((discount) => ({
+      id: toRpcUuid(discount.recordId),
+      conditions: toNullableText(discount.conditions),
+      discount_percent: toNullableNumber(discount.discountPercent),
+      discount_amount: toNullableNumber(discount.discountAmount),
+      currency: toNullableText(discount.currency),
+      min_group_size: toNullableInteger(discount.minGroupSize),
+      max_group_size: toNullableInteger(discount.maxGroupSize),
+      valid_from: toNullableText(discount.validFrom),
+      valid_to: toNullableText(discount.validTo),
+      source: toNullableText(discount.source),
+    })),
+    prices: input.prices.map((price) => ({
+      id: toRpcUuid(price.recordId),
+      kind_id: toRpcUuid(price.kindId),
+      kind_code: price.kindCode || null,
+      unit_id: toRpcUuid(price.unitId),
+      unit_code: price.unitCode || null,
+      amount: toNullableNumber(price.amount),
+      amount_max: toNullableNumber(price.amountMax),
+      currency: toNullableText(price.currency) ?? 'EUR',
+      season_code: toNullableText(price.seasonCode),
+      indication_code: toNullableText(price.indicationCode),
+      age_min_enfant: toNullableInteger(price.ageMinEnfant),
+      age_max_enfant: toNullableInteger(price.ageMaxEnfant),
+      age_min_junior: toNullableInteger(price.ageMinJunior),
+      age_max_junior: toNullableInteger(price.ageMaxJunior),
+      valid_from: toNullableText(price.validFrom),
+      valid_to: toNullableText(price.validTo),
+      conditions: toNullableText(price.conditions),
+      source: toNullableText(price.source),
+      periods: price.periods.map((period) => ({
+        id: toRpcUuid(period.recordId),
+        start_date: toNullableText(period.startDate),
+        end_date: toNullableText(period.endDate),
+        start_time: toNullableText(period.startTime),
+        end_time: toNullableText(period.endTime),
+        note: toNullableText(period.note),
+      })),
+    })),
+  }, 'Impossible d enregistrer les tarifs.');
+}
+
+export async function saveObjectWorkspaceOpenings(objectId: string, input: ObjectWorkspaceOpeningsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  assertWorkspaceSaveAvailable('openings', input);
+
+  await callObjectWorkspaceRpc(
+    'save_object_openings',
+    objectId,
+    { periods: buildOpeningsPayload(input.periods) },
+    'Impossible d enregistrer les horaires.',
+  );
+}
+
+export async function saveObjectWorkspaceSustainability(
+  objectId: string,
+  input: ObjectWorkspaceSustainabilityModule,
+): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  await callObjectWorkspaceRpc(
+    'save_object_workspace_sustainability',
+    objectId,
+    buildSustainabilityRpcPayload(input),
+    'Impossible d enregistrer la demarche durable.',
+  );
+}
+
+export async function saveObjectWorkspaceTags(objectId: string, input: ObjectWorkspaceTagsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  await callObjectWorkspaceRpc(
+    'save_object_workspace_tags',
+    objectId,
+    buildTagsRpcPayload(input),
+    'Impossible d enregistrer les tags.',
+  );
+}
+
+/**
+ * §09 — create a GLOBAL tag (or return the existing one) via api.create_tag.
+ * Dedup-guarded server-side on ref_tag.name_normalized; gated per-object by the anchor object.
+ * Returns the canonical {tagId, slug, label, color} to merge into the editor draft (id reconciliation:
+ * a later reorder/save must carry the real tag_id, never an empty one). demoMode → local optimistic tag.
+ */
+export async function createWorkspaceTag(
+  anchorObjectId: string,
+  name: string,
+  color: string,
+): Promise<ObjectWorkspaceTagItem> {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error('Le nom du tag est requis.');
+  }
+  const normalizedColor = normalizeTagColor(color);
+
+  if (useSessionStore.getState().demoMode) {
+    return { tagId: '', slug: trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-'), label: trimmed, color: normalizedColor };
+  }
+
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Connexion backend indisponible pour créer le tag.');
+  }
+  const { data, error } = await apiClient.schema('api').rpc('create_tag', {
+    p_anchor_object_id: anchorObjectId,
+    p_name: trimmed,
+    p_color: normalizedColor,
+  });
+  if (error) {
+    throw mapMutationError(error, 'Impossible de créer le tag.');
+  }
+  const row = readRecord(data);
+  return {
+    tagId: readString(row.tag_id),
+    slug: readString(row.slug),
+    label: readString(row.name, trimmed),
+    color: normalizeTagColor(row.color),
+  };
+}
+
+/**
+ * §09 — set a tag's GLOBAL color (ref_tag.color) via api.set_tag_color. Affects every object/surface
+ * (color is global per tag). Gated per-object by the anchor object. demoMode → no-op echo.
+ */
+export async function setWorkspaceTagColor(
+  anchorObjectId: string,
+  tagId: string,
+  color: string,
+): Promise<string> {
+  const normalizedColor = normalizeTagColor(color);
+  if (useSessionStore.getState().demoMode) {
+    return normalizedColor;
+  }
+  if (!tagId) {
+    throw new Error('Identifiant de tag manquant pour le changement de couleur.');
+  }
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Connexion backend indisponible pour changer la couleur du tag.');
+  }
+  const { data, error } = await apiClient.schema('api').rpc('set_tag_color', {
+    p_anchor_object_id: anchorObjectId,
+    p_tag_id: tagId,
+    p_color: normalizedColor,
+  });
+  if (error) {
+    throw mapMutationError(error, 'Impossible de changer la couleur du tag.');
+  }
+  return normalizeTagColor(readRecord(data).color, normalizedColor);
+}
+
+export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWorkspaceRoomsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  assertWorkspaceSaveAvailable('rooms', input);
+
+  await callObjectWorkspaceRpc(
+    'save_object_rooms',
+    objectId,
+    buildRoomsRpcPayload(input),
+    'Impossible de sauvegarder les chambres.',
+  );
+}
+
+export async function saveObjectWorkspaceMeetingRooms(objectId: string, input: ObjectWorkspaceMeetingRoomsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  assertWorkspaceSaveAvailable('meeting-rooms', input);
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les salles MICE.');
+  }
+
+  const [equipmentRefsResult, existingRoomsResult] = await Promise.all([
+    client.from('ref_code').select('id, code').eq('domain', 'meeting_equipment'),
+    client.from('object_meeting_room').select('id').eq('object_id', objectId),
+  ]);
+
+  if (equipmentRefsResult.error) {
+    throw mapMutationError(equipmentRefsResult.error, 'Impossible de charger les equipements MICE.');
+  }
+  if (existingRoomsResult.error) {
+    throw mapMutationError(existingRoomsResult.error, 'Impossible de charger les salles MICE existantes.');
+  }
+
+  const equipmentIdByCode = buildCodeIdMap(equipmentRefsResult.data ?? []);
+  ensureKnownCodes(input.items.flatMap((item) => item.equipmentCodes), equipmentIdByCode, 'Equipement MICE');
+  const existingRoomIds = (existingRoomsResult.data ?? [])
+    .map((row) => readString((row as Record<string, unknown>).id))
+    .filter(Boolean);
+  const knownIds = new Set(input.knownRoomIds ?? input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id)));
+  const existingIdSet = new Set(existingRoomIds);
+  const currentIds = input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id));
+  if (new Set(currentIds).size !== currentIds.length || currentIds.some((id) => !knownIds.has(id) || !existingIdSet.has(id))) {
+    throw new Error('Les salles MICE ont changé depuis leur chargement. Rechargez la fiche avant de sauvegarder.');
+  }
+  let writesStarted = false;
+  for (const item of input.items) {
+    const payload = buildMeetingRoomSavePayload(objectId, item);
+    const roomId = readString(payload.id);
+    const { error } = await client.from('object_meeting_room').upsert(payload, { onConflict: 'id' });
+    if (error) {
+      const detail = mapMutationError(error, 'Impossible de sauvegarder une salle MICE.');
+      const message = detail instanceof Error ? detail.message : detail;
+      throw new Error(writesStarted ? `Enregistrement partiel des salles MICE : ${message}` : message);
+    }
+    writesStarted = true;
+    const reconcile = buildMeetingRoomEquipmentReconcile(roomId, item, equipmentIdByCode);
+    if (reconcile.removedIds.length > 0) {
+      const { error: removeError } = await client.from('meeting_room_equipment').delete().eq('room_id', roomId).in('equipment_id', reconcile.removedIds);
+      if (removeError) throw new Error(`Enregistrement partiel des salles MICE : ${mapMutationError(removeError, 'Impossible de retirer un équipement.')}`);
+    }
+    const equipmentRows = reconcile.upsertRows;
+    if (equipmentRows.length > 0) {
+      const { error: equipmentError } = await client.from('meeting_room_equipment').upsert(equipmentRows, { onConflict: 'room_id,equipment_id' });
+      if (equipmentError) {
+        throw new Error(`Enregistrement partiel des salles MICE : ${mapMutationError(equipmentError, 'Impossible de sauvegarder les equipements MICE.')}`);
+      }
+    }
+  }
+  const deletedIds = buildMeetingRoomDeletedIds([...knownIds], input.items);
+  if (deletedIds.length > 0) {
+    const { error } = await client.from('object_meeting_room').delete().eq('object_id', objectId).in('id', deletedIds);
+    if (error) {
+      const detail = mapMutationError(error, 'Impossible de supprimer les salles retirées.');
+      const message = detail instanceof Error ? detail.message : detail;
+      throw new Error(writesStarted ? `Enregistrement partiel des salles MICE : ${message}` : message);
+    }
+  }
+}
+
+/**
+ * §06 P1 — persist the object-level cuisine facet. Resolve codes → `ref_code` ids, then delete-all +
+ * insert `object_cuisine_type` with position = order index (1st = principale). Direct PostgREST under
+ * the per-command `canonical_*` policies. Guard: `unavailableReason` set ⇒ throw before any write
+ * (a degraded load must not clobber). Mirrors the saveObjectWorkspaceCapacityPolicies guard.
+ */
+export async function saveObjectWorkspaceCuisine(objectId: string, input: ObjectWorkspaceCuisineModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les cuisines.');
+  }
+
+  const catalog = await client.from('ref_code').select('id, code').eq('domain', 'cuisine_type');
+  if (catalog.error) {
+    throw mapMutationError(catalog.error, 'Impossible de charger le catalogue des cuisines.');
+  }
+  const idByCode = new Map(
+    (catalog.data ?? []).map((row) => [
+      readString((row as Record<string, unknown>).code),
+      readString((row as Record<string, unknown>).id),
+    ]),
+  );
+
+  const uniqueCodes = Array.from(new Set(input.codes.filter(Boolean)));
+  const rows = uniqueCodes.map((code, index) => {
+    const id = idByCode.get(code);
+    if (!id) {
+      throw new Error(`Type de cuisine inconnu : ${code}`);
+    }
+    return { object_id: objectId, cuisine_type_id: id, position: index + 1 };
+  });
+
+  const del = await client.from('object_cuisine_type').delete().eq('object_id', objectId);
+  if (del.error) {
+    throw mapMutationError(del.error, 'Impossible de réinitialiser les cuisines.');
+  }
+  if (rows.length > 0) {
+    const ins = await client.from('object_cuisine_type').insert(rows);
+    if (ins.error) {
+      throw mapMutationError(ins.error, "Impossible d'enregistrer les cuisines.");
+    }
+  }
+}
+
+export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWorkspaceMenusModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  assertWorkspaceSaveAvailable('menus', input);
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les menus.');
+  }
+
+  const [
+    categoryRefsResult,
+    dietaryRefsResult,
+    allergenRefsResult,
+    cuisineRefsResult,
+    kindRefsResult,
+    unitRefsResult,
+    existingMenusResult,
+  ] = await Promise.all([
+    client.from('ref_code').select('id, code').eq('domain', 'menu_category'),
+    client.from('ref_code').select('id, code').eq('domain', 'dietary_tag'),
+    client.from('ref_code').select('id, code').eq('domain', 'allergen'),
+    client.from('ref_code').select('id, code').eq('domain', 'cuisine_type'),
+    client.from('ref_code').select('id, code').eq('domain', 'price_kind'),
+    client.from('ref_code').select('id, code').eq('domain', 'price_unit'),
+    client.from('object_menu').select('id').eq('object_id', objectId),
+  ]);
+
+  if (categoryRefsResult.error) {
+    throw mapMutationError(categoryRefsResult.error, 'Impossible de charger les categories de menu.');
+  }
+  if (dietaryRefsResult.error) {
+    throw mapMutationError(dietaryRefsResult.error, 'Impossible de charger les tags alimentaires.');
+  }
+  if (allergenRefsResult.error) {
+    throw mapMutationError(allergenRefsResult.error, 'Impossible de charger les allergenes.');
+  }
+  if (cuisineRefsResult.error) {
+    throw mapMutationError(cuisineRefsResult.error, 'Impossible de charger les cuisines.');
+  }
+  if (kindRefsResult.error) {
+    throw mapMutationError(kindRefsResult.error, 'Impossible de charger les types de prix.');
+  }
+  if (unitRefsResult.error) {
+    throw mapMutationError(unitRefsResult.error, 'Impossible de charger les unites de prix.');
+  }
+  if (existingMenusResult.error) {
+    throw mapMutationError(existingMenusResult.error, 'Impossible de charger les menus existants.');
+  }
+
+  const categoryIdByCode = buildCodeIdMap(categoryRefsResult.data ?? []);
+  const dietaryIdByCode = buildCodeIdMap(dietaryRefsResult.data ?? []);
+  const allergenIdByCode = buildCodeIdMap(allergenRefsResult.data ?? []);
+  const cuisineIdByCode = buildCodeIdMap(cuisineRefsResult.data ?? []);
+  const kindIdByCode = buildCodeIdMap(kindRefsResult.data ?? []);
+  const unitIdByCode = buildCodeIdMap(unitRefsResult.data ?? []);
+  ensureKnownCodes(input.items.map((menu) => menu.categoryCode).filter(Boolean), categoryIdByCode, 'Categorie de menu');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.map((item) => item.kindCode).filter(Boolean)), kindIdByCode, 'Type de prix');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.map((item) => item.unitCode).filter(Boolean)), unitIdByCode, 'Unite de prix');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.dietaryTagCodes)), dietaryIdByCode, 'Tag alimentaire');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.allergenCodes)), allergenIdByCode, 'Allergene');
+  ensureKnownCodes(input.items.flatMap((menu) => menu.items.flatMap((item) => item.cuisineTypeCodes)), cuisineIdByCode, 'Cuisine');
+
+  const existingMenuIds = (existingMenusResult.data ?? [])
+    .map((row) => readString((row as Record<string, unknown>).id))
+    .filter(Boolean);
+  if (existingMenuIds.length > 0) {
+    const existingItems = await client.from('object_menu_item').select('id').in('menu_id', existingMenuIds);
+    if (existingItems.error) {
+      throw mapMutationError(existingItems.error, 'Impossible de charger les lignes de menu existantes.');
+    }
+    const existingItemIds = (existingItems.data ?? [])
+      .map((row) => readString((row as Record<string, unknown>).id))
+      .filter(Boolean);
+    if (existingItemIds.length > 0) {
+      const [deleteMedia, deleteDietary, deleteAllergens, deleteCuisine] = await Promise.all([
+        client.from('object_menu_item_media').delete().in('menu_item_id', existingItemIds),
+        client.from('object_menu_item_dietary_tag').delete().in('menu_item_id', existingItemIds),
+        client.from('object_menu_item_allergen').delete().in('menu_item_id', existingItemIds),
+        client.from('object_menu_item_cuisine_type').delete().in('menu_item_id', existingItemIds),
+      ]);
+      if (deleteMedia.error) {
+        throw mapMutationError(deleteMedia.error, 'Impossible de reinitialiser les medias de menu.');
+      }
+      if (deleteDietary.error) {
+        throw mapMutationError(deleteDietary.error, 'Impossible de reinitialiser les tags alimentaires.');
+      }
+      if (deleteAllergens.error) {
+        throw mapMutationError(deleteAllergens.error, 'Impossible de reinitialiser les allergenes.');
+      }
+      if (deleteCuisine.error) {
+        throw mapMutationError(deleteCuisine.error, 'Impossible de reinitialiser les cuisines.');
+      }
+    }
+    const { error: deleteItemsError } = await client.from('object_menu_item').delete().in('menu_id', existingMenuIds);
+    if (deleteItemsError) {
+      throw mapMutationError(deleteItemsError, 'Impossible de reinitialiser les lignes de menu.');
+    }
+  }
+  const { error: deleteMenusError } = await client.from('object_menu').delete().eq('object_id', objectId);
+  if (deleteMenusError) {
+    throw mapMutationError(deleteMenusError, 'Impossible de reinitialiser les menus.');
+  }
+
+  for (const menu of input.items) {
+    const menuPayload = {
+      object_id: objectId,
+      category_id: menu.categoryCode ? categoryIdByCode.get(menu.categoryCode.toLowerCase()) ?? null : null,
+      name: workspaceNameForSave(menu.name, menu.rawName) ?? '',
+      description: toNullableText(menu.description),
+      is_active: menu.active,
+      visibility: toNullableText(menu.visibility) ?? (menu.rawVisibility === null ? null : 'public'),
+      position: toNullableInteger(menu.position),
+    };
+    const { data: menuData, error: menuError } = await client.from('object_menu').insert(menuPayload).select('id').single();
+    if (menuError) {
+      throw mapMutationError(menuError, 'Impossible de sauvegarder un menu.');
+    }
+    const menuId = readString((menuData as Record<string, unknown>).id);
+    for (const item of menu.items) {
+      const mediaIds = Array.from(new Set(item.mediaIds ?? [])).filter((mediaId) => isUuid(mediaId));
+      const itemPayload = {
+        menu_id: menuId,
+        name: toNullableText(item.name) ?? 'Ligne',
+        description: toNullableText(item.description),
+        price: toNullableNumber(item.price),
+        currency: toNullableText(item.currency) ?? 'EUR',
+        kind_id: item.kindCode ? kindIdByCode.get(item.kindCode.toLowerCase()) ?? null : null,
+        unit_id: item.unitCode ? unitIdByCode.get(item.unitCode.toLowerCase()) ?? null : null,
+        media_id: mediaIds[0] ?? null,
+        is_available: item.available,
+        position: toNullableInteger(item.position),
+        // §06 P2b — section du plat (menu_category) ; même catalogue que la catégorie de menu.
+        section_id: item.sectionCode ? categoryIdByCode.get(item.sectionCode.toLowerCase()) ?? null : null,
+      };
+      const { data: itemData, error: itemError } = await client.from('object_menu_item').insert(itemPayload).select('id').single();
+      if (itemError) {
+        throw mapMutationError(itemError, 'Impossible de sauvegarder une ligne de menu.');
+      }
+      const itemId = readString((itemData as Record<string, unknown>).id);
+      const dietaryRows = Array.from(new Set(item.dietaryTagCodes)).map((code) => ({
+        menu_item_id: itemId,
+        dietary_tag_id: dietaryIdByCode.get(code.toLowerCase()) as string,
+      }));
+      const allergenRows = Array.from(new Set(item.allergenCodes)).map((code) => ({
+        menu_item_id: itemId,
+        allergen_id: allergenIdByCode.get(code.toLowerCase()) as string,
+      }));
+      const cuisineRows = Array.from(new Set(item.cuisineTypeCodes)).map((code) => ({
+        menu_item_id: itemId,
+        cuisine_type_id: cuisineIdByCode.get(code.toLowerCase()) as string,
+      }));
+      const mediaRows = mediaIds.map((mediaId, mediaIndex) => ({
+        menu_item_id: itemId,
+        media_id: mediaId,
+        position: mediaIndex + 1,
+      }));
+      if (mediaRows.length > 0) {
+        const { error } = await client.from('object_menu_item_media').insert(mediaRows);
+        if (error) {
+          throw mapMutationError(error, 'Impossible de sauvegarder les medias de menu.');
+        }
+      }
+      if (dietaryRows.length > 0) {
+        const { error } = await client.from('object_menu_item_dietary_tag').insert(dietaryRows);
+        if (error) {
+          throw mapMutationError(error, 'Impossible de sauvegarder les tags alimentaires.');
+        }
+      }
+      if (allergenRows.length > 0) {
+        const { error } = await client.from('object_menu_item_allergen').insert(allergenRows);
+        if (error) {
+          throw mapMutationError(error, 'Impossible de sauvegarder les allergenes.');
+        }
+      }
+      if (cuisineRows.length > 0) {
+        const { error } = await client.from('object_menu_item_cuisine_type').insert(cuisineRows);
+        if (error) {
+          throw mapMutationError(error, 'Impossible de sauvegarder les cuisines.');
+        }
+      }
+    }
+  }
+}
+
+export async function saveObjectWorkspaceActivity(objectId: string, input: ObjectWorkspaceActivityModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+  // The deployed object_act schema stores only the boolean. Do not silently
+  // discard unsupported free text from the office editor or a restored draft.
+  if (input.equipmentProvidedDetails.trim()) {
+    throw new Error('Le détail du matériel fourni ne peut pas être enregistré pour le moment. Votre saisie est conservée.');
+  }
+
+  validateActivityModule(input);
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer le detail activite.');
+  }
+
+  const difficulty = input.difficultyLevel.trim();
+  const { error } = await client.from('object_act').upsert({
+    object_id: objectId,
+    duration_min: toNullableInteger(input.durationMin),
+    min_participants: toNullableInteger(input.minParticipants),
+    max_participants: toNullableInteger(input.maxParticipants),
+    difficulty_level: difficulty ? Number.parseInt(difficulty, 10) : null,
+    guide_required: input.guideRequired,
+    min_age: toNullableInteger(input.minAge),
+    equipment_provided: input.equipmentProvided,
+  }, { onConflict: 'object_id' });
+
+  if (error) {
+    throw mapMutationError(error, 'Impossible de sauvegarder le detail activite.');
+  }
+}
+
+export async function saveObjectWorkspaceEvent(objectId: string, input: ObjectWorkspaceEventModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  // (event also deletes all object_fma_occurrence rows before reinserting — worst clobber risk.)
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer la programmation.');
+  }
+
+  // §48 — validate BEFORE the delete-all+reinsert: a constraint-violating row would
+  // otherwise wipe every saved occurrence (two non-atomic PostgREST calls).
+  const occurrenceRows = input.occurrences.filter((occurrence) => occurrence.startAt || occurrence.endAt);
+  const missingStart = occurrenceRows.find((occurrence) => !occurrence.startAt);
+  if (missingStart) {
+    throw new Error('Chaque occurrence doit avoir une date de début.');
+  }
+  const inverted = occurrenceRows.find((occurrence) =>
+    occurrence.endAt && new Date(occurrence.endAt).getTime() < new Date(occurrence.startAt).getTime());
+  if (inverted) {
+    throw new Error("La fin d'une occurrence doit être postérieure à son début.");
+  }
+
+  const { error } = await client.from('object_fma').upsert({
+    object_id: objectId,
+    event_start_date: toNullableText(input.startDate),
+    event_end_date: toNullableText(input.endDate),
+    event_start_time: toNullableText(input.startTime),
+    event_end_time: toNullableText(input.endTime),
+    is_recurring: input.recurring,
+    recurrence_pattern: toNullableText(input.recurrenceText),
+  }, { onConflict: 'object_id' });
+
+  if (error) {
+    throw mapMutationError(error, 'Impossible de sauvegarder la programmation.');
+  }
+
+  const { error: deleteOccurrencesError } = await client.from('object_fma_occurrence').delete().eq('object_id', objectId);
+  if (deleteOccurrencesError) {
+    throw mapMutationError(deleteOccurrencesError, 'Impossible de reinitialiser les occurrences.');
+  }
+
+  const occurrenceInsertRows = occurrenceRows.map((occurrence) => ({
+    object_id: objectId,
+    start_at: toNullableText(occurrence.startAt),
+    end_at: toNullableText(occurrence.endAt),
+    state: toNullableText(occurrence.state) ?? 'scheduled',
+  }));
+  if (occurrenceInsertRows.length > 0) {
+    const { error: occurrencesError } = await client.from('object_fma_occurrence').insert(occurrenceInsertRows);
+    if (occurrencesError) {
+      throw mapMutationError(occurrencesError, 'Impossible de sauvegarder les occurrences.');
+    }
+  }
+}
+
+export async function saveObjectWorkspaceItinerary(objectId: string, input: ObjectWorkspaceItineraryModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
+  // (the §28 stages guard only covers stages; this top guard also protects the object_iti upsert
+  // and the object_iti_practice delete/reinsert.)
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer l itineraire.');
+  }
+
+  const practiceRefsResult = await client.from('ref_code').select('id, code').eq('domain', 'iti_practice');
+  if (practiceRefsResult.error) {
+    throw mapMutationError(practiceRefsResult.error, 'Impossible de charger les pratiques itineraire.');
+  }
+  const practiceIdByCode = buildCodeIdMap(practiceRefsResult.data ?? []);
+  ensureKnownCodes(input.practiceCodes, practiceIdByCode, 'Pratique itineraire');
+
+  const { error } = await client.from('object_iti')
+    .upsert(buildItineraryUpsertPayload(objectId, input), { onConflict: 'object_id' });
+
+  if (error) {
+    throw mapMutationError(error, 'Impossible de sauvegarder l itineraire.');
+  }
+
+  const { error: deletePracticesError } = await client.from('object_iti_practice').delete().eq('object_id', objectId);
+  if (deletePracticesError) {
+    throw mapMutationError(deletePracticesError, 'Impossible de reinitialiser les pratiques itineraire.');
+  }
+
+  const practiceRows = Array.from(new Set(input.practiceCodes)).map((code) => ({
+    object_id: objectId,
+    practice_id: practiceIdByCode.get(code.toLowerCase()) as string,
+  }));
+  if (practiceRows.length > 0) {
+    const { error: practicesError } = await client.from('object_iti_practice').insert(practiceRows);
+    if (practicesError) {
+      throw mapMutationError(practicesError, 'Impossible de sauvegarder les pratiques itineraire.');
+    }
+  }
+
+  // Phase 1: persist itinerary stages (object_iti_stage) via api.save_object_itinerary_nested, which
+  // replaces all stages (delete + reinsert). buildItineraryStagesPayload returns null when the module
+  // did not load, so a partial/failed load cannot clobber existing stages. Only `stages` is sent —
+  // sections / profiles / associated objects / geom are out of scope (Phase 1; geom stays read-only).
+  const stagesPayload = buildItineraryStagesPayload(input);
+  const infoPayload = buildItineraryInfoPayload(input);
+  const assocPayload = buildItineraryAssociatedObjectsPayload(input);
+  const nestedPayload: Record<string, unknown> = {};
+  if (stagesPayload !== null) {
+    nestedPayload.stages = stagesPayload;
+  }
+  if (infoPayload !== null) {
+    nestedPayload.info = infoPayload;
+  }
+  if (assocPayload !== null) {
+    nestedPayload.associated_objects = assocPayload;
+  }
+  if (Object.keys(nestedPayload).length > 0) {
+    await callObjectWorkspaceRpc(
+      'save_object_itinerary_nested',
+      objectId,
+      nestedPayload,
+      'Impossible de sauvegarder les etapes itineraire.',
+    );
+  }
+}
+
+/**
+ * §111 Persist an imported GPX/KML trace via api.set_itinerary_track: writes object_iti.geom (2D) and
+ * auto-derives distance / elevation / profile server-side (PostGIS). Pass null to clear the trace.
+ * Returns the server-derived metrics (as strings, for the steppers). No-op in demo mode.
+ */
+export async function saveObjectWorkspaceItineraryTrack(
+  objectId: string,
+  geojson: { type: string; coordinates: number[][] } | null,
+): Promise<{ distanceKm: string; elevationGain: string; elevationLoss: string; hasElevation: boolean }> {
+  if (useSessionStore.getState().demoMode) {
+    return { distanceKm: '', elevationGain: '', elevationLoss: '', hasElevation: false };
+  }
+  const result = await callObjectWorkspaceRpc(
+    'set_itinerary_track',
+    objectId,
+    { geojson: geojson ?? null },
+    'Impossible d enregistrer le trace importe.',
+  );
+  const toStr = (v: unknown): string => (v == null ? '' : String(v));
+  return {
+    distanceKm: toStr(result.distance_km),
+    elevationGain: toStr(result.elevation_gain),
+    elevationLoss: toStr(result.elevation_loss),
+    hasElevation: result.has_3d === true,
+  };
+}
+
+function parseLegalValueInput(value: string): unknown {
+  const normalized = value.trim();
+  if (!normalized) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(normalized);
+  } catch {
+    return normalized;
+  }
+}
+
+function parseMembershipMetadataInput(value: string): unknown {
+  const normalized = value.trim();
+  if (!normalized) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(normalized);
+  } catch {
+    return normalized;
+  }
+}
+
+export async function saveObjectWorkspaceLegal(objectId: string, input: ObjectWorkspaceLegalModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  assertWorkspaceSaveAvailable('legal', input);
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer la conformite juridique.');
+  }
+
+  const [typeRefsResult, existingRecordsResult] = await Promise.all([
+    client.from('ref_legal_type').select('id, code'),
+    client.from('object_legal').select('id').eq('object_id', objectId),
+  ]);
+
+  if (typeRefsResult.error) {
+    throw mapMutationError(typeRefsResult.error, 'Impossible de charger les types juridiques.');
+  }
+
+  if (existingRecordsResult.error) {
+    throw mapMutationError(existingRecordsResult.error, 'Impossible de charger les enregistrements juridiques existants.');
+  }
+
+  const typeIdByCode = new Map(
+    (typeRefsResult.data ?? []).map((row) => [
+      readString((row as Record<string, unknown>).code).toLowerCase(),
+      readString((row as Record<string, unknown>).id),
+    ]),
+  );
+  const existingIds = new Set(
+    (existingRecordsResult.data ?? []).map((row) => readString((row as Record<string, unknown>).id)).filter(Boolean),
+  );
+
+  const unknownType = input.records.find((record) => !record.typeCode || !typeIdByCode.has(record.typeCode.toLowerCase()));
+  if (unknownType) {
+    throw new Error(`Type juridique inconnu: ${unknownType.typeCode || 'vide'}.`);
+  }
+
+  const invalidDocumentId = input.records.find((record) => record.documentId.trim() && !isUuid(record.documentId));
+  if (invalidDocumentId) {
+    throw new Error(`Identifiant de document invalide pour ${invalidDocumentId.typeLabel || invalidDocumentId.typeCode}.`);
+  }
+
+  for (const record of input.records) {
+    if ((record.validityMode || 'fixed_end_date') === 'fixed_end_date' && !record.validTo.trim()) {
+      throw new Error(`La date de fin est requise pour ${record.typeLabel || record.typeCode}.`);
+    }
+  }
+
+  const existingRecordIds = input.records
+    .map((record) => record.recordId)
+    .filter((recordId): recordId is string => Boolean(recordId && existingIds.has(recordId)));
+  const idsToDelete = Array.from(existingIds).filter((id) => !existingRecordIds.includes(id));
+
+  if (idsToDelete.length > 0) {
+    const { error } = await client.from('object_legal').delete().in('id', idsToDelete);
+    if (error) {
+      throw mapMutationError(error, 'Impossible de supprimer les enregistrements juridiques retires.');
+    }
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  for (const record of input.records) {
+    const validityMode = (record.validityMode || 'fixed_end_date').trim() || 'fixed_end_date';
+    const payload = {
+      object_id: objectId,
+      type_id: typeIdByCode.get(record.typeCode.toLowerCase()) as string,
+      value: parseLegalValueInput(record.valueJson),
+      document_id: toNullableText(record.documentId),
+      valid_from: toNullableText(record.validFrom) ?? today,
+      valid_to: validityMode === 'forever' ? null : toNullableText(record.validTo),
+      validity_mode: validityMode,
+      status: toNullableText(record.status) ?? 'active',
+      document_requested_at: toNullableText(record.documentRequestedAt),
+      document_delivered_at: toNullableText(record.documentDeliveredAt),
+      note: toNullableText(record.note),
+    };
+
+    if (record.recordId && existingIds.has(record.recordId)) {
+      const { error } = await client.from('object_legal').update(payload).eq('id', record.recordId);
+      if (error) {
+        throw mapMutationError(error, "Impossible d'enregistrer un document juridique.");
+      }
+    } else {
+      const { error } = await client.from('object_legal').insert(payload).select('id').single();
+      if (error) {
+        throw mapMutationError(error, "Impossible de creer un document juridique.");
+      }
+    }
+
+  }
+}
+
+export interface ActorSearchResult {
+  id: string;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  /** Civilité (`Mme`/`M.`/`F`/`M`…) — déjà incluse dans displayName, exposée pour l'avatar/affichage. */
+  gender: string;
+  /** E-mail principal (actor_channel kind 'email') ; '' si l'acteur n'en a pas. §95b picker card. */
+  email: string;
+}
+
+/** §48 — actor picker search via api.search_actors (SECURITY DEFINER, editor-gated and
+ *  scoped to caller-readable actors server-side; wildcard-escaped, LIMIT 20). */
+export async function searchActors(query: string): Promise<ActorSearchResult[]> {
+  const client = getSupabaseClient();
+  if (!client || query.trim().length < 2) {
+    return [];
+  }
+  const { data, error } = await client.schema('api').rpc('search_actors', { p_query: query.trim() });
+  if (error) {
+    return [];
+  }
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: readString(row.id),
+    displayName: readString(row.display_name),
+    firstName: readString(row.first_name),
+    lastName: readString(row.last_name),
+    gender: readString(row.gender),
+    email: readString(row.email),
+  }));
+}
+
+export async function saveObjectWorkspaceRelationships(
+  objectId: string,
+  input: ObjectWorkspaceRelationshipsModule,
+): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  await callObjectWorkspaceRpc(
+    'save_object_relations',
+    objectId,
+    buildRelationshipsRpcPayload(input),
+    "Impossible de sauvegarder les liens vers d'autres fiches.",
+  );
+}
+
+export async function saveObjectWorkspaceMemberships(objectId: string, input: ObjectWorkspaceMembershipModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  assertWorkspaceSaveAvailable('memberships', input);
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les adhesions.');
+  }
+
+  const [
+    currentObjectResult,
+    orgLinksResult,
+    campaignRefsResult,
+    tierRefsResult,
+    objectMembershipsResult,
+  ] = await Promise.all([
+    client.from('object').select('id, object_type').eq('id', objectId).maybeSingle(),
+    client.from('object_org_link').select('org_object_id').eq('object_id', objectId),
+    client.from('ref_code').select('id, code').eq('domain', 'membership_campaign'),
+    client.from('ref_code').select('id, code').eq('domain', 'membership_tier'),
+    client.from('object_membership').select('id').eq('object_id', objectId),
+  ]);
+
+  if (currentObjectResult.error) {
+    throw mapMutationError(currentObjectResult.error, "Impossible de charger l'objet courant pour les adhesions.");
+  }
+  if (orgLinksResult.error) {
+    throw mapMutationError(orgLinksResult.error, 'Impossible de charger les organisations rattachees.');
+  }
+  if (campaignRefsResult.error) {
+    throw mapMutationError(campaignRefsResult.error, 'Impossible de charger les campagnes d adhesion.');
+  }
+  if (tierRefsResult.error) {
+    throw mapMutationError(tierRefsResult.error, "Impossible de charger les paliers d'adhesion.");
+  }
+  if (objectMembershipsResult.error) {
+    throw mapMutationError(objectMembershipsResult.error, "Impossible de charger les adhesions objet existantes.");
+  }
+
+  const allowedOrgIds = new Set<string>(
+    ((orgLinksResult.data ?? []) as Record<string, unknown>[])
+      .map((row) => readString(row.org_object_id))
+      .filter(Boolean),
+  );
+  const currentObjectType = readString(readRecord(currentObjectResult.data).object_type).toUpperCase();
+  if (currentObjectType === 'ORG') {
+    allowedOrgIds.add(objectId);
+  }
+
+  const campaignIdByCode = new Map(
+    (campaignRefsResult.data ?? []).map((row) => [
+      readString((row as Record<string, unknown>).code).toLowerCase(),
+      readString((row as Record<string, unknown>).id),
+    ]),
+  );
+  const tierIdByCode = new Map(
+    (tierRefsResult.data ?? []).map((row) => [
+      readString((row as Record<string, unknown>).code).toLowerCase(),
+      readString((row as Record<string, unknown>).id),
+    ]),
+  );
+
+  const unknownCampaign = input.items.find((item) => !item.campaignCode || !campaignIdByCode.has(item.campaignCode.toLowerCase()));
+  if (unknownCampaign) {
+    throw new Error(`Campagne d'adhesion inconnue: ${unknownCampaign.campaignCode || 'vide'}.`);
+  }
+
+  const unknownTier = input.items.find((item) => !item.tierCode || !tierIdByCode.has(item.tierCode.toLowerCase()));
+  if (unknownTier) {
+    throw new Error(`Palier d'adhesion inconnu: ${unknownTier.tierCode || 'vide'}.`);
+  }
+
+  const invalidScope = input.items.find((item) => !allowedOrgIds.has(item.orgObjectId));
+  if (invalidScope) {
+    throw new Error(`Organisation d'adhesion invalide: ${invalidScope.orgObjectId || 'vide'}.`);
+  }
+
+  const validStatuses = new Set(['prospect', 'invoiced', 'paid', 'canceled', 'lapsed']);
+  const invalidStatus = input.items.find((item) => !validStatuses.has(item.status));
+  if (invalidStatus) {
+    throw new Error(`Statut d'adhesion invalide: ${invalidStatus.status || 'vide'}.`);
+  }
+
+  let organizationMembershipIds = new Set<string>();
+  if (allowedOrgIds.size > 0) {
+    const organizationMembershipsResult = await client
+      .from('object_membership')
+      .select('id')
+      .is('object_id', null)
+      .in('org_object_id', Array.from(allowedOrgIds));
+
+    if (organizationMembershipsResult.error) {
+      throw mapMutationError(organizationMembershipsResult.error, "Impossible de charger les adhesions organisationnelles existantes.");
+    }
+
+    organizationMembershipIds = new Set(
+      (organizationMembershipsResult.data ?? []).map((row) => readString((row as Record<string, unknown>).id)).filter(Boolean),
+    );
+  }
+
+  const existingIds = new Set([
+    ...(objectMembershipsResult.data ?? []).map((row) => readString((row as Record<string, unknown>).id)).filter(Boolean),
+    ...Array.from(organizationMembershipIds),
+  ]);
+  const keptIds = new Set<string>();
+
+  for (const item of input.items) {
+    const payload = {
+      org_object_id: item.orgObjectId,
+      object_id: item.scope === 'object' ? objectId : null,
+      campaign_id: campaignIdByCode.get(item.campaignCode.toLowerCase()) as string,
+      tier_id: tierIdByCode.get(item.tierCode.toLowerCase()) as string,
+      status: item.status,
+      starts_at: toNullableText(item.startsAt),
+      ends_at: toNullableText(item.endsAt),
+      payment_date: toNullableText(item.paymentDate),
+      metadata: parseMembershipMetadataInput(item.metadataJson),
+    };
+
+    if (item.recordId && existingIds.has(item.recordId)) {
+      const { error } = await client.from('object_membership').update(payload).eq('id', item.recordId);
+      if (error) {
+        throw mapMutationError(error, "Impossible d'enregistrer une adhesion.");
+      }
+      keptIds.add(item.recordId);
+      continue;
+    }
+
+    const { data, error } = await client.from('object_membership').insert(payload).select('id').single();
+    if (error) {
+      throw mapMutationError(error, "Impossible de creer une adhesion.");
+    }
+    keptIds.add(readString((data as Record<string, unknown>).id));
+  }
+
+  const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id));
+  if (idsToDelete.length > 0) {
+    const { error } = await client.from('object_membership').delete().in('id', idsToDelete);
+    if (error) {
+      throw mapMutationError(error, "Impossible de supprimer les adhesions retirees.");
+    }
+  }
+}
+
+/** The partner projection omits address columns, location IDs and secondary locations. */
+export async function getObjectWorkspacePlacesModule(
+  objectId: string,
+  baseModule: ObjectWorkspacePlacesModule,
+): Promise<ObjectWorkspacePlacesModule> {
+  if (useSessionStore.getState().demoMode) return baseModule;
+  const client = getSupabaseClient();
+  const unavailable = () => ({
+    ...baseModule,
+    unavailableReason: 'Les sites ou leurs données associées ne sont pas complètement chargés. Rechargez la fiche avant de les enregistrer.',
+  });
+  if (!client) return unavailable();
+
+  try {
+    // All three start in the existing workspace wave. Join through place_id because a
+    // place location may have no object_id of its own. Counts catch PostgREST page caps.
+    const results = await Promise.allSettled([
+      client.from('object_place').select('*', { count: 'exact' }).eq('object_id', objectId).order('position').order('id'),
+      client.from('object_location').select('*, object_place!inner(object_id)', { count: 'exact' })
+        .eq('object_place.object_id', objectId).order('position').order('id'),
+      client.from('object_place_description').select('*, object_place!inner(object_id)', { count: 'exact' })
+        .eq('object_place.object_id', objectId).order('position').order('id'),
+    ]);
+    const rows = results.map((result) => {
+      const data = workspaceReadRows(result);
+      if (!data || result.status !== 'fulfilled' || result.value.count !== data.length
+        || !knownWorkspaceIdsPresent([], data)) return null;
+      return data;
+    });
+    const [places, locations, descriptions] = rows;
+    if (!places || !locations || !descriptions || !knownWorkspaceIdsPresent(baseModule.items, places)) return unavailable();
+    const placeIds = new Set(places.map((row) => readString(row.id)));
+    if ([...locations, ...descriptions].some((row) => !placeIds.has(readString(row.place_id)))) return unavailable();
+    for (const item of baseModule.items) {
+      if (!item.recordId) continue;
+      const loadedLocations = locations.filter((row) => row.place_id === item.recordId);
+      const loadedDescriptions = descriptions.filter((row) => row.place_id === item.recordId);
+      const knownLocations = [...(item.rawLocations ?? []).map((row) => ({ recordId: readString(row.id) || null })), { recordId: item.location.recordId }];
+      const knownDescriptions = [...(item.rawDescriptions ?? []).map((row) => ({ recordId: readString(row.id) || null })), { recordId: item.descriptionRecordId }];
+      if (!knownWorkspaceIdsPresent(knownLocations, loadedLocations)
+        || !knownWorkspaceIdsPresent(knownDescriptions, loadedDescriptions)) return unavailable();
+    }
+    const withoutJoin = ({ object_place: _joinedPlace, ...row }: Record<string, unknown>) => row;
+    const loaded = parseWorkspacePlacesModule({
+      places: places.map((place) => ({
+        ...place,
+        locations: locations.filter((row) => row.place_id === place.id).map(withoutJoin),
+        descriptions: descriptions.filter((row) => row.place_id === place.id).map(withoutJoin),
+      })),
+    });
+    // A first address/description on an existing site also needs a client ID that
+    // survives a failed save and retry. Capture it at load, never in the builder.
+    return { ...loaded, items: loaded.items.map((item) => ({
+      ...item,
+      location: { ...item.location, recordId: item.location.recordId ?? crypto.randomUUID() },
+      descriptionRecordId: item.descriptionRecordId ?? crypto.randomUUID(),
+    })) };
+  } catch {
+    return unavailable();
+  }
+}
+
+export async function saveObjectWorkspacePlaces(objectId: string, input: ObjectWorkspacePlacesModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+  await callObjectWorkspaceRpc(
+    'save_object_places',
+    objectId,
+    buildPlacesRpcPayload(input),
+    'Impossible de sauvegarder les sites secondaires.',
+  );
+}
+
+/**
+ * §41: enrich the location module with the commune catalog (`ref_commune`, public read) and the
+ * object's selected zones (`object_zone`, gated by `can_read_object`). Mirrors the §32 characteristics
+ * enrichment. On read failure sets `zonesUnavailableReason` ⇒ the saver skips zone persistence (no clobber).
+ */
+async function getObjectWorkspaceZonesModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceLocationModule,
+  catalogs?: ReferenceCatalogs,
+): Promise<ObjectWorkspaceLocationModule> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return baseModule;
+  }
+  const client = getSupabaseClient();
+  if (!client) {
+    return { ...baseModule, zonesUnavailableReason: 'Connexion backend indisponible pour charger les communes.' };
+  }
+  const [communeRefs, objectZones] = await Promise.all([
+    catalogs?.vocabularyRelease !== undefined && catalogs.tables.ref_commune
+      ? Promise.resolve({ data: catalogs.tables.ref_commune, error: null })
+      : client.from('ref_commune').select('insee_code, name, position, is_active').order('position', { ascending: true }),
+    client.from('object_zone').select('insee_commune, position').eq('object_id', objectId).order('position', { ascending: true }),
+  ]);
+  if (communeRefs.error || objectZones.error) {
+    return { ...baseModule, zonesUnavailableReason: 'Le live actuel ne fournit pas encore le référentiel des communes.' };
+  }
+  const zoneOptions = (communeRefs.data ?? [])
+    .map((row) => ({
+      code: readString((row as Record<string, unknown>).insee_code),
+      label: readString((row as Record<string, unknown>).name),
+      ...referenceAvailability(row as Record<string, unknown>),
+    }))
+    .filter((option) => option.code !== '');
+  const zoneCodes = (objectZones.data ?? [])
+    .map((row) => readString((row as Record<string, unknown>).insee_commune))
+    .filter(Boolean);
+  return { ...baseModule, zoneOptions, zoneCodes, zonesUnavailableReason: null };
+}
+
+export async function saveObjectWorkspaceLocation(objectId: string, input: ObjectWorkspaceLocationModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer la localisation.');
+  }
+
+  const payload = {
+    object_id: objectId,
+    is_main_location: true,
+    address1: toNullableText(input.main.address1),
+    address1_suite: toNullableText(input.main.address1Suite),
+    address2: toNullableText(input.main.address2),
+    address3: toNullableText(input.main.address3),
+    postcode: toNullableText(input.main.postcode),
+    city: toNullableText(input.main.city),
+    code_insee: toNullableText(input.main.codeInsee),
+    lieu_dit: toNullableText(input.main.lieuDit),
+    direction: toNullableText(input.main.direction),
+    latitude: toNullableNumber(input.main.latitude),
+    longitude: toNullableNumber(input.main.longitude),
+    zone_touristique: toNullableText(input.main.zoneTouristique),
+  };
+
+  const existingLocationId = input.main.recordId || await (async () => {
+    const { data, error } = await client
+      .from('object_location')
+      .select('id')
+      .eq('object_id', objectId)
+      .eq('is_main_location', true)
+      .maybeSingle();
+
+    if (error) {
+      throw mapMutationError(error, "Impossible de charger la localisation principale.");
+    }
+
+    return data?.id ?? null;
+  })();
+
+  if (existingLocationId) {
+    const { error } = await client.from('object_location').update(payload).eq('id', existingLocationId);
+    if (error) {
+      throw mapMutationError(error, "Impossible d'enregistrer la localisation principale.");
+    }
+  } else {
+    const { error } = await client.from('object_location').insert(payload);
+    if (error) {
+      throw mapMutationError(error, "Impossible de creer la localisation principale.");
+    }
+  }
+
+  // §41: persist "communes desservies" (object_zone) via the zones-only save_object_places payload,
+  // unless the commune catalog / object_zone read failed on load (guard against clobbering).
+  if (!input.zonesUnavailableReason) {
+    await callObjectWorkspaceRpc(
+      'save_object_places',
+      objectId,
+      { zones: buildZonesPayload(input.zoneCodes) },
+      "Impossible d'enregistrer les communes desservies.",
+    );
+  }
+}
+
+export async function saveObjectWorkspaceMedia(
+  objectId: string,
+  input: ObjectWorkspaceMediaModule,
+  _options: { canEditPlaceMedia: boolean },
+): Promise<void | WorkspaceSaveResult> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) return;
+  if (input.unavailableReason) throw new Error(input.unavailableReason);
+  const payload = buildGalleryWritePayload(input);
+  const result = await withPendingGalleryRequest(session.userId, objectId, payload,
+    request => callObjectWorkspaceRpc('save_object_gallery', objectId, request,
+      'Impossible d’enregistrer la galerie. Votre saisie est conservée.'),
+    response => { parseGalleryWriteSnapshot(response.snapshot); },
+    {
+      baselineReadId: input.galleryWriteBaseline?.readId,
+      resolve: async requestId => {
+        const api = getApiClient();
+        if (!api) throw new Error('Le service est indisponible. Votre saisie est conservée.');
+        const response = await api.schema('api').rpc('get_gallery_write_receipt', {
+          p_object_id: objectId, p_request_id: requestId,
+        });
+        if (response.error) throw Object.assign(new Error('La dernière demande ne peut pas être vérifiée.'), { code: readRecord(response.error).code });
+        return response.data == null ? null : readRecord(response.data);
+      },
+    });
+  return { media: withGalleryWriteSnapshot(input, parseGalleryWriteSnapshot(result.snapshot)) };
+}
+
+export async function saveObjectWorkspaceContacts(objectId: string, input: ObjectWorkspaceContactsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les contacts.');
+  }
+
+  const [kindRefsResult, roleRefsResult, existingContactsResult] = await Promise.all([
+    client.from('ref_code').select('id, code').eq('domain', 'contact_kind'),
+    client.from('ref_contact_role').select('id, code'),
+    client.from('contact_channel').select('id').eq('object_id', objectId),
+  ]);
+
+  if (kindRefsResult.error) {
+    throw mapMutationError(kindRefsResult.error, 'Impossible de charger les types de contact.');
+  }
+
+  if (roleRefsResult.error) {
+    throw mapMutationError(roleRefsResult.error, 'Impossible de charger les roles de contact.');
+  }
+
+  if (existingContactsResult.error) {
+    throw mapMutationError(existingContactsResult.error, 'Impossible de charger les contacts existants.');
+  }
+
+  const kindByCode = new Map(
+    (kindRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
+  );
+  const roleByCode = new Map(
+    (roleRefsResult.data ?? []).map((row) => [readString((row as Record<string, unknown>).code).toLowerCase(), readString((row as Record<string, unknown>).id)]),
+  );
+  const existingIds = new Set((existingContactsResult.data ?? []).map((row) => readString((row as Record<string, unknown>).id)).filter(Boolean));
+
+  const unknownKind = input.objectItems.find((item) => !kindByCode.has(item.kindCode.toLowerCase()));
+  if (unknownKind) {
+    throw new Error(`Type de contact inconnu: ${unknownKind.kindCode || 'vide'}.`);
+  }
+
+  const primaryByKind = new Set<string>();
+  const keptIds = new Set<string>();
+
+  for (let index = 0; index < input.objectItems.length; index += 1) {
+    const item = input.objectItems[index];
+    const normalizedKindCode = item.kindCode.toLowerCase();
+    const shouldBePrimary = item.isPrimary && !primaryByKind.has(normalizedKindCode);
+    if (shouldBePrimary) {
+      primaryByKind.add(normalizedKindCode);
+    }
+
+    const payload = {
+      object_id: objectId,
+      kind_id: kindByCode.get(normalizedKindCode) ?? null,
+      value: item.value.trim(),
+      role_id: item.roleCode ? roleByCode.get(item.roleCode.toLowerCase()) ?? null : null,
+      is_public: item.isPublic,
+      is_primary: shouldBePrimary,
+      position: toNullableInteger(item.position) ?? index,
+    };
+
+    let contactId = item.id;
+    if (existingIds.has(item.id)) {
+      // WRITE-TRAP SILENCIEUX (corrigé 2026-08-28, chantier 1). Sans `.select()`, un UPDATE
+      // écarté par la RLS rend `{ data: null, error: null }` : 0 ligne touchée, aucune erreur —
+      // la sauvegarde PARAÎT réussir et la modification (typiquement la bascule Public/Interne)
+      // est perdue en silence au rechargement. La branche INSERT juste en dessous avait bien son
+      // `.select('id')` ; celle-ci ne l'avait pas.
+      const { data, error } = await client
+        .from('contact_channel')
+        .update(payload)
+        .eq('id', item.id)
+        .select('id');
+      if (error) {
+        throw mapMutationError(error, "Impossible d'enregistrer un contact objet.");
+      }
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("Cette action n'est pas autorisée avec vos droits actuels.");
+      }
+    } else {
+      const { data, error } = await client.from('contact_channel').insert(payload).select('id').single();
+      if (error) {
+        throw mapMutationError(error, "Impossible de creer un contact objet.");
+      }
+      contactId = readString((data as Record<string, unknown>).id);
+    }
+
+    keptIds.add(contactId);
+  }
+
+  const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id));
+  if (idsToDelete.length > 0) {
+    const { error } = await client.from('contact_channel').delete().in('id', idsToDelete);
+    if (error) {
+      throw mapMutationError(error, "Impossible de supprimer les contacts retires.");
+    }
+  }
+
+  // §90 — reconcile object_web_channel (réseaux sociaux + distribution OTA) from input.webItems.
+  // Resolve kind code -> (id, domain) for the composite FK; upsert/insert each, delete removed.
+  // Empty-value rows are skipped (blank draft rows / chk_web_channel_value_not_empty). Direct
+  // PostgREST under the per-command canonical write RLS (§40/§41 child-table precedent).
+  const webItems = (input.webItems ?? []).filter((item) => item.value.trim().length > 0);
+  const [webKindRefsResult, existingWebResult] = await Promise.all([
+    client.from('ref_code').select('id, code, domain').in('domain', ['social_network', 'distribution_channel']),
+    client.from('object_web_channel').select('id').eq('object_id', objectId),
+  ]);
+  if (webKindRefsResult.error) {
+    throw mapMutationError(webKindRefsResult.error, 'Impossible de charger les types de réseaux / distribution.');
+  }
+  if (existingWebResult.error) {
+    throw mapMutationError(existingWebResult.error, 'Impossible de charger les réseaux / canaux existants.');
+  }
+
+  const webKindByCode = new Map(
+    (webKindRefsResult.data ?? []).map((row) => {
+      const r = row as Record<string, unknown>;
+      return [readString(r.code).toLowerCase(), { id: readString(r.id), domain: readString(r.domain) }] as const;
+    }),
+  );
+  const existingWebIds = new Set(
+    (existingWebResult.data ?? []).map((row) => readString((row as Record<string, unknown>).id)).filter(Boolean),
+  );
+
+  const unknownWebKind = webItems.find((item) => !webKindByCode.has(item.kindCode.toLowerCase()));
+  if (unknownWebKind) {
+    throw new Error(`Type de réseau / canal inconnu: ${unknownWebKind.kindCode || 'vide'}.`);
+  }
+
+  const keptWebIds = new Set<string>();
+  for (let index = 0; index < webItems.length; index += 1) {
+    const item = webItems[index];
+    const ref = webKindByCode.get(item.kindCode.toLowerCase());
+    const payload = {
+      object_id: objectId,
+      kind_id: ref?.id ?? null,
+      kind_domain: ref?.domain ?? null,
+      value: item.value.trim(),
+      is_public: item.isPublic,
+      position: toNullableInteger(item.position) ?? index,
+    };
+
+    let webId = item.id;
+    if (existingWebIds.has(item.id)) {
+      const { error } = await client.from('object_web_channel').update(payload).eq('id', item.id);
+      if (error) {
+        throw mapMutationError(error, "Impossible d'enregistrer un réseau / canal.");
+      }
+    } else {
+      const { data, error } = await client.from('object_web_channel').insert(payload).select('id').single();
+      if (error) {
+        throw mapMutationError(error, 'Impossible de créer un réseau / canal.');
+      }
+      webId = readString((data as Record<string, unknown>).id);
+    }
+    keptWebIds.add(webId);
+  }
+
+  const webIdsToDelete = Array.from(existingWebIds).filter((id) => !keptWebIds.has(id));
+  if (webIdsToDelete.length > 0) {
+    const { error } = await client.from('object_web_channel').delete().in('id', webIdsToDelete);
+    if (error) {
+      throw mapMutationError(error, 'Impossible de supprimer les réseaux / canaux retirés.');
+    }
+  }
+}
+
+async function upsertObjectDescription(
+  objectId: string,
+  scope: ObjectWorkspaceDescriptionsModule['object'],
+): Promise<void> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer les descriptions.');
+  }
+
+  const payload = {
+    object_id: objectId,
+    org_object_id: null,
+    ...buildDescriptionPayload(scope),
+  };
+
+  const existingId = scope.recordId || await (async () => {
+    const { data, error } = await client
+      .from('object_description')
+      .select('id')
+      .eq('object_id', objectId)
+      .is('org_object_id', null)
+      .maybeSingle();
+
+    if (error) {
+      throw mapMutationError(error, "Impossible de charger la description principale.");
+    }
+
+    return data?.id ?? null;
+  })();
+
+  if (existingId) {
+    const { error } = await client.from('object_description').update(payload).eq('id', existingId);
+    if (error) {
+      throw mapMutationError(error, "Impossible d'enregistrer la description principale.");
+    }
+    return;
+  }
+
+  // A brand-new editor-authored canonical description is public by default;
+  // updates above preserve whatever visibility the row already carries.
+  const { error } = await client
+    .from('object_description')
+    .insert({ ...payload, visibility: payload.visibility ?? 'public' });
+  if (error) {
+    throw mapMutationError(error, "Impossible de creer la description principale.");
+  }
+}
+
+async function writeOrgDescription(objectId: string, overlay: ObjectWorkspaceDescriptionScope | null): Promise<void> {
+  const apiClient = getApiClient();
+  if (!apiClient) {
+    throw new Error('Connexion backend indisponible pour enregistrer la description ORG.');
+  }
+  // Empty overlay → send {} so the RPC deletes any existing row (fallback to canonical).
+  const payload = overlay && orgOverlayHasContent(overlay) ? buildOrgDescriptionPayload(overlay) : {};
+  const { error } = await apiClient.schema('api').rpc('rpc_write_org_description', {
+    p_object_id: objectId,
+    p_payload: payload,
+  });
+  if (error) {
+    throw mapMutationError(error, "Impossible d'enregistrer la description propre à votre organisation.");
+  }
+}
+
+export interface PlacesReconcilePlan {
+  toInsert: ObjectWorkspaceDescriptionScope[];
+  toUpdate: ObjectWorkspaceDescriptionScope[];
+  toDelete: string[];
+}
+
+/**
+ * Pure (T1b §40): turn the existing `object_place` id set + the draft place scopes into an
+ * insert / update / delete plan. New places (null `placeId`) → insert; existing → update
+ * (idempotent label + description); loaded-but-now-absent → delete. Non-destructive — only
+ * places the editor removed are deleted (no `save_object_places` blanket replace, so a
+ * place's locations/media authored elsewhere are never collaterally wiped).
+ */
+export function computePlacesReconcile(
+  existingPlaceIds: string[],
+  draftPlaces: ObjectWorkspaceDescriptionScope[],
+): PlacesReconcilePlan {
+  const toInsert = draftPlaces.filter((place) => !place.placeId);
+  const toUpdate = draftPlaces.filter((place) => Boolean(place.placeId));
+  const keptIds = new Set(toUpdate.map((place) => place.placeId as string));
+  const toDelete = existingPlaceIds.filter((id) => !keptIds.has(id));
+  return { toInsert, toUpdate, toDelete };
+}
+
+export async function saveObjectWorkspaceDescriptions(
+  objectId: string,
+  input: ObjectWorkspaceDescriptionsModule,
+  options: { canEditCanonical: boolean; canEditOrgEnrichment: boolean },
+): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  if (options.canEditCanonical) {
+    await upsertObjectDescription(objectId, input.object);
+  }
+
+  if (options.canEditOrgEnrichment) {
+    await writeOrgDescription(objectId, input.orgOverlay);
+  }
+}

@@ -1,0 +1,715 @@
+import { render, fireEvent, waitFor, within } from '@testing-library/react';
+import { CrmTimeline, Pav, type CrmTimelineCardItem } from './crm-primitives';
+import type { CrmInteractionReply as CrmInteractionReplyT } from '../../types/domain';
+
+// Repli portrait acteur (revue) : une photo cassée/404 retombe sur les initiales teintées —
+// jamais de tuile vide (le GC des orphelins storage est différé ⇒ des url mortes existeront).
+describe('Pav — portrait acteur', () => {
+  it('rend l img quand photoUrl est fourni', () => {
+    const { container } = render(<Pav name="Marie Hoarau" tintKey="actor-1" photoUrl="https://cdn/p.jpg" />);
+    const img = container.querySelector('.pav--photo img');
+    expect(img).not.toBeNull();
+    expect(img).toHaveAttribute('src', 'https://cdn/p.jpg');
+    // alt décoratif (le nom est rendu à côté).
+    expect(img).toHaveAttribute('alt', '');
+  });
+
+  it('rend les initiales quand photoUrl est absent', () => {
+    const { container, getByText } = render(<Pav name="Marie Hoarau" tintKey="actor-1" />);
+    expect(container.querySelector('.pav--photo')).toBeNull();
+    expect(getByText('MH')).toBeInTheDocument();
+  });
+
+  it('une photo cassée retombe sur les initiales', () => {
+    const { container, queryByText, getByText } = render(
+      <Pav name="Marie Hoarau" tintKey="actor-1" photoUrl="https://cdn/dead.jpg" />,
+    );
+    const img = container.querySelector('.pav--photo img');
+    expect(img).not.toBeNull();
+    expect(queryByText('MH')).toBeNull(); // encore l'image, pas d'initiales
+
+    fireEvent.error(img as Element);
+
+    // L'image a disparu ⇒ repli sur la tuile d'initiales teintées.
+    expect(container.querySelector('.pav--photo')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
+    expect(getByText('MH')).toBeInTheDocument();
+  });
+
+  it('change de photoUrl ⇒ l état d erreur est remis à zéro (pas de repli qui colle)', () => {
+    const { container, rerender } = render(
+      <Pav name="Marie Hoarau" tintKey="actor-1" photoUrl="https://cdn/dead.jpg" />,
+    );
+    fireEvent.error(container.querySelector('.pav--photo img') as Element);
+    expect(container.querySelector('.pav--photo')).toBeNull(); // cassée → initiales
+
+    // Nouvel acteur avec une photo valide : on retente l'image (l'erreur ne colle pas).
+    rerender(<Pav name="Jean Payet" tintKey="actor-2" photoUrl="https://cdn/fresh.jpg" />);
+    const img = container.querySelector('.pav--photo img');
+    expect(img).not.toBeNull();
+    expect(img).toHaveAttribute('src', 'https://cdn/fresh.jpg');
+  });
+});
+
+// Rectif PO v5 points 4+5 : la carte timeline porte le SUJET en titre + le référent en pied,
+// et devient cliquable → fiche acteur quand onOpenActor + actorId sont fournis.
+function makeItem(overrides: Partial<CrmTimelineCardItem> = {}): CrmTimelineCardItem {
+  return {
+    id: 'i1',
+    interactionType: 'note',
+    subject: 'Note interne',
+    body: 'Corps de la note.',
+    occurredAt: '2026-06-04T10:00:00Z',
+    topicName: 'Modification infos BDD',
+    sentimentCode: 'positif',
+    sentimentName: 'Positif',
+    objectId: 'obj-1',
+    objectName: 'Hotel Basalte & Lagon',
+    ownerName: 'Florence',
+    actorName: 'Mme Marie Hoarau',
+    actorId: 'actor-1',
+    interlocutorEmail: null,
+    source: 'bertel_ui',
+    status: 'resolved',
+    resolvedAt: '2026-06-05T10:00:00Z',
+    replies: [],
+    ...overrides,
+  };
+}
+
+describe('CrmTimeline / TlCard (rectif PO v5 points 4+5)', () => {
+  it('titre = sujet normalisé (topicName) prioritaire, type relégué en pastille', () => {
+    const { container, getByText } = render(<CrmTimeline items={[makeItem()]} />);
+    // Le titre (strong) porte le sujet normalisé, PAS le type d'interaction.
+    expect(container.querySelector('.tl-card__top strong')?.textContent).toBe('Modification infos BDD');
+    // Le type reste affiché, en pastille secondaire seulement.
+    expect(getByText('Note interne')).toBeInTheDocument();
+  });
+
+  it('titre : sans topicName, retombe sur subject (ex. « Note interne » des lignes importées)', () => {
+    const { container } = render(<CrmTimeline items={[makeItem({ topicName: null, subject: 'Note interne' })]} />);
+    expect(container.querySelector('.tl-card__top strong')?.textContent).toBe('Note interne');
+  });
+
+  it('titre : sans topicName ni subject, retombe sur le libellé du type', () => {
+    const { container } = render(<CrmTimeline items={[makeItem({ topicName: null, subject: '', interactionType: 'call' })]} />);
+    expect(container.querySelector('.tl-card__top strong')?.textContent).toBe('Appel');
+  });
+
+  it('référent affiché en pied : « par {ownerName} », « par Système » si absent', () => {
+    const { getByText, rerender } = render(<CrmTimeline items={[makeItem()]} />);
+    expect(getByText('par Florence')).toBeInTheDocument();
+    rerender(<CrmTimeline items={[makeItem({ ownerName: null })]} />);
+    expect(getByText('par Système')).toBeInTheDocument();
+  });
+
+  it('clic sur la région navigable → onOpenActor(actorId) quand le callback est fourni', () => {
+    const onOpenActor = jest.fn();
+    const { container } = render(<CrmTimeline items={[makeItem()]} showContext={false} onOpenActor={onOpenActor} />);
+    // A11y (§66) : c'est la sous-région .tl-card__nav qui porte role=button, pas la carte.
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).toHaveAttribute('role', 'button');
+    // La carte conteneur reste un <div> neutre (plus de role=button qui imbriquerait des boutons).
+    expect(container.querySelector('.tl-card')).not.toHaveAttribute('role', 'button');
+    fireEvent.click(nav);
+    expect(onOpenActor).toHaveBeenCalledWith('actor-1');
+  });
+
+  it('Entrée/Espace au clavier sur la région navigable déclenchent aussi onOpenActor (a11y)', () => {
+    const onOpenActor = jest.fn();
+    const { container } = render(<CrmTimeline items={[makeItem()]} showContext={false} onOpenActor={onOpenActor} />);
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    fireEvent.keyDown(nav, { key: 'Enter' });
+    expect(onOpenActor).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(nav, { key: ' ' });
+    expect(onOpenActor).toHaveBeenCalledTimes(2);
+  });
+
+  it('sans onOpenActor (fiche acteur), la région navigable n est pas un bouton (pas d auto-lien)', () => {
+    const { container } = render(<CrmTimeline items={[makeItem()]} />);
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).not.toHaveAttribute('role', 'button');
+    expect(container.querySelector('.tl-card')).not.toHaveClass('is-clickable');
+  });
+
+  it('actorId absent : région navigable non cliquable même avec onOpenActor', () => {
+    const onOpenActor = jest.fn();
+    const { container } = render(<CrmTimeline items={[makeItem({ actorId: null })]} onOpenActor={onOpenActor} />);
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).not.toHaveAttribute('role', 'button');
+    fireEvent.click(nav);
+    expect(onOpenActor).not.toHaveBeenCalled();
+  });
+
+  it('le tag de contexte garde son propre clic → onOpenObject (stopPropagation, pas l acteur)', () => {
+    const onOpenActor = jest.fn();
+    const onOpenObject = jest.fn();
+    const { container } = render(
+      <CrmTimeline items={[makeItem()]} onOpenActor={onOpenActor} onOpenObject={onOpenObject} />,
+    );
+    // Le tag de contexte est un bouton .ctx-tag DANS la région navigable (role=button) — on le
+    // cible par sa classe car le nom accessible de la région englobe « Hotel Basalte & Lagon »
+    // (deux boutons matcheraient sinon).
+    const ctxTag = container.querySelector('.ctx-tag') as HTMLElement;
+    fireEvent.click(ctxTag);
+    expect(onOpenObject).toHaveBeenCalledWith('obj-1');
+    // stopPropagation : le clic sur le tag NE déclenche PAS l'ouverture de l'acteur.
+    expect(onOpenActor).not.toHaveBeenCalled();
+  });
+});
+
+// §65/§66 — fil de discussion + fix « par Système » + chip de statut.
+describe('TlCard — fil de discussion (§65/§66)', () => {
+  it('auteur du pied via interactionAuthorOf : interlocuteur quand owner null', () => {
+    const { getByText, queryByText } = render(
+      <CrmTimeline items={[makeItem({ ownerName: null, interlocutorEmail: 'demande@etab.re', source: 'import_berta2_crm' })]} />,
+    );
+    // L'interlocuteur connu prime sur « Système » (et même sur l'étiquette import).
+    expect(getByText('par demande@etab.re')).toBeInTheDocument();
+    expect(queryByText('par Système')).toBeNull();
+  });
+
+  it('« par Import initial » quand owner+interlocuteur null mais source import (plus jamais « Système »)', () => {
+    const { getByText } = render(
+      <CrmTimeline items={[makeItem({ ownerName: null, interlocutorEmail: null, source: 'import_berta2_crm' })]} />,
+    );
+    expect(getByText('par Import initial')).toBeInTheDocument();
+  });
+
+  it('rend les réponses NICHÉES sous la racine (auteur · date + corps + pastille)', () => {
+    const item = makeItem({
+      replies: [
+        { id: 'r1', interactionType: 'note', body: 'Première réponse.', occurredAt: '2026-06-06T08:00:00Z',
+          createdAt: '2026-06-06T08:01:00Z', sentimentCode: 'positif', sentimentName: 'Positif',
+          ownerName: 'Florence', interlocutorEmail: null, source: 'bertel_ui' },
+        { id: 'r2', interactionType: 'note', body: 'Deuxième réponse.', occurredAt: '2026-06-07T08:00:00Z',
+          createdAt: '2026-06-07T08:01:00Z', sentimentCode: null, sentimentName: null,
+          ownerName: null, interlocutorEmail: 'client@etab.re', source: 'bertel_ui' },
+      ],
+    });
+    const { container, getByText } = render(<CrmTimeline items={[item]} />);
+    const replies = container.querySelectorAll('.tl-replies .tl-reply');
+    expect(replies).toHaveLength(2);
+    expect(getByText('Première réponse.')).toBeInTheDocument();
+    expect(getByText('Deuxième réponse.')).toBeInTheDocument();
+    // Auteur de la 2e réponse résolu sur l'interlocuteur (owner null) — fix « par Système ».
+    expect(getByText(/client@etab\.re/)).toBeInTheDocument();
+  });
+
+  it('aucune réponse → pas de bloc .tl-replies', () => {
+    const { container } = render(<CrmTimeline items={[makeItem({ replies: [] })]} />);
+    expect(container.querySelector('.tl-replies')).toBeNull();
+  });
+
+  it('chip de statut : « En attente de traitement » si new, « Traitée » si resolved', () => {
+    const { getByText, queryByText, rerender } = render(
+      <CrmTimeline items={[makeItem({ status: 'new', resolvedAt: null })]} />,
+    );
+    expect(getByText('En attente de traitement')).toBeInTheDocument();
+    expect(queryByText('Traitée')).toBeNull();
+    rerender(<CrmTimeline items={[makeItem({ status: 'resolved', resolvedAt: '2026-06-05T10:00:00Z' })]} />);
+    expect(getByText('Traitée')).toBeInTheDocument();
+    expect(queryByText('En attente de traitement')).toBeNull();
+  });
+});
+
+// §65/§66 — composer de réponse inline + bascule « Marquer traitée / Rouvrir », gatés.
+describe('TlCard — répondre + résoudre (§65/§66)', () => {
+  it('sans onReply/onChangeStatus (lecture), aucune action « Répondre » / « Marquer traitée »', () => {
+    const { queryByRole } = render(<CrmTimeline items={[makeItem({ status: 'new' })]} />);
+    expect(queryByRole('button', { name: /répondre/i })).toBeNull();
+    expect(queryByRole('button', { name: /marquer traitée|rouvrir/i })).toBeNull();
+  });
+
+  it('« Répondre » ouvre le composer inline et envoie onReply(rootId, body, sentimentCode)', async () => {
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, getByPlaceholderText, getByLabelText } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new' })]} canWrite onReply={onReply} />,
+    );
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    fireEvent.change(getByPlaceholderText(/votre réponse/i), { target: { value: 'Ma réponse au fil.' } });
+    fireEvent.change(getByLabelText('Sentiment de la réponse'), { target: { value: 'positif' } });
+    fireEvent.click(getByRole('button', { name: /envoyer/i }));
+    await waitFor(() => expect(onReply).toHaveBeenCalledWith('root-1', 'Ma réponse au fil.', 'positif'));
+  });
+
+  it('« Répondre » place le focus dans le textarea du composer (a11y §66)', () => {
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, getByPlaceholderText } = render(
+      <CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onReply={onReply} />,
+    );
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    // À l'ouverture, le curseur est dans le champ de réponse (le composer n'est monté qu'alors).
+    expect(getByPlaceholderText(/votre réponse/i)).toHaveFocus();
+  });
+
+  it('le composer de réponse a un textarea (≥ 3 lignes) ; « Envoyer » désactivé tant que vide', () => {
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, getByPlaceholderText } = render(
+      <CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onReply={onReply} />,
+    );
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    const field = getByPlaceholderText(/votre réponse/i);
+    expect(field.tagName).toBe('TEXTAREA');
+    expect(Number(field.getAttribute('rows'))).toBeGreaterThanOrEqual(3);
+    expect(getByRole('button', { name: /envoyer/i })).toBeDisabled();
+  });
+
+  it('a11y : aucun contrôle interactif n est imbriqué dans la région role=button (séparation)', () => {
+    // §66 — la carte cliquable expose une région de navigation (role=button) ; les contrôles
+    // du fil (Répondre / Statut + composer) sont des FRÈRES de cette région, jamais
+    // ses descendants — sinon <button>/<textarea> dans role=button = ARIA/clavier invalides.
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const onChangeStatus = jest.fn().mockResolvedValue(undefined);
+    const { container, getByRole, getByPlaceholderText } = render(
+      <CrmTimeline
+        items={[makeItem({ status: 'new' })]}
+        canWrite
+        onReply={onReply}
+        onChangeStatus={onChangeStatus}
+        onOpenActor={jest.fn()}
+      />,
+    );
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).toHaveAttribute('role', 'button');
+    // Les boutons d'action du fil ne sont PAS dans la région de navigation.
+    expect(nav.contains(getByRole('button', { name: /répondre/i }))).toBe(false);
+    expect(nav.contains(getByRole('button', { name: /^statut :/i }))).toBe(false);
+    // …et le composer (textarea/select/boutons) non plus, une fois ouvert.
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    expect(nav.contains(getByPlaceholderText(/votre réponse/i))).toBe(false);
+    expect(nav.contains(getByRole('button', { name: /envoyer/i }))).toBe(false);
+    // Garde-fou : sous le role=button, aucun contrôle de fil (textarea/select + boutons
+    // Répondre/Statut/Envoyer/Annuler). Le tag de contexte (.ctx-tag) reste
+    // volontairement dans la région (navigation objet, stopPropagation) — il est exclu du compte.
+    const threadControls = Array.from(nav.querySelectorAll('button, textarea, select')).filter(
+      (el) => !el.classList.contains('ctx-tag'),
+    );
+    expect(threadControls).toHaveLength(0);
+  });
+
+  it('clic sur la région navigable → onOpenActor même avec des contrôles d action présents', () => {
+    // La séparation ne casse pas la navigation : cliquer la région ouvre toujours l'acteur.
+    const onOpenActor = jest.fn();
+    const { container } = render(
+      <CrmTimeline
+        items={[makeItem({ status: 'new' })]}
+        canWrite
+        onReply={jest.fn()}
+        onChangeStatus={jest.fn()}
+        onOpenActor={onOpenActor}
+      />,
+    );
+    fireEvent.click(container.querySelector('.tl-card__nav') as HTMLElement);
+    expect(onOpenActor).toHaveBeenCalledWith('actor-1');
+  });
+
+  it('les contrôles du composer stopPropagation (clic ne navigue PAS vers l acteur)', async () => {
+    const onReply = jest.fn().mockResolvedValue(undefined);
+    const onOpenActor = jest.fn();
+    // La carte cliquable (actorId + onOpenActor) est elle-même role="button" et son nom
+    // accessible englobe les libellés ⇒ on scope les requêtes au pied d'actions / composer.
+    const { container, getByPlaceholderText } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new' })]} canWrite onReply={onReply} onOpenActor={onOpenActor} />,
+    );
+    const actionsBar = container.querySelector('.tl-actions') as HTMLElement;
+    // Ouvrir le composer ne doit pas ouvrir la fiche acteur.
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /répondre/i }));
+    expect(onOpenActor).not.toHaveBeenCalled();
+    fireEvent.change(getByPlaceholderText(/votre réponse/i), { target: { value: 'Réponse.' } });
+    const composer = container.querySelector('.tl-reply-composer') as HTMLElement;
+    // Envoyer ne déclenche pas non plus la navigation.
+    fireEvent.click(within(composer).getByRole('button', { name: /envoyer/i }));
+    await waitFor(() => expect(onReply).toHaveBeenCalled());
+    expect(onOpenActor).not.toHaveBeenCalled();
+  });
+
+  it('le bouton porte le LIBELLÉ du statut courant et ouvre le sélecteur à six états', async () => {
+    const onChangeStatus = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, rerender } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new', resolvedAt: null })]} canWrite onChangeStatus={onChangeStatus} />,
+    );
+    expect(getByRole('button', { name: /statut : en attente de traitement/i })).toBeInTheDocument();
+
+    fireEvent.click(getByRole('button', { name: /^statut :/i }));
+    fireEvent.click(getByRole('button', { name: 'Attente prestataire' }));
+    fireEvent.click(getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() => expect(onChangeStatus).toHaveBeenCalledWith('root-1', 'awaiting_provider'));
+
+    // Le libellé du bouton SUIT le statut : il ne bascule plus entre deux positions.
+    rerender(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'resolved', resolvedAt: '2026-06-05T10:00:00Z' })]} canWrite onChangeStatus={onChangeStatus} />,
+    );
+    expect(getByRole('button', { name: /statut : traitée/i })).toBeInTheDocument();
+  });
+
+  it('statut inconnu du registre (ex. « draft ») → « non reconnu », JAMAIS « traitée »', async () => {
+    // Régression défensive du commit 0f036b6, PORTÉE sur la nouvelle surface : un code absent
+    // du registre crm-status.ts (import futur, faute de frappe) ne doit pas se faire passer
+    // pour un statut connu — et surtout pas pour un statut FERMÉ. L'ancien bouton bascule
+    // aurait proposé « Rouvrir », c'est-à-dire affirmé que la demande était traitée.
+    const onChangeStatus = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, queryByRole, getAllByRole } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'draft', resolvedAt: null })]} canWrite onChangeStatus={onChangeStatus} />,
+    );
+    expect(getByRole('button', { name: /statut : non reconnu/i })).toBeInTheDocument();
+    expect(queryByRole('button', { name: /statut : traitée/i })).toBeNull();
+
+    // …et dans le sélecteur, il ne présélectionne AUCUN des six.
+    fireEvent.click(getByRole('button', { name: /^statut :/i }));
+    expect(getAllByRole('button').filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(0);
+  });
+
+  it('le bouton Statut stopPropagation (pas de navigation vers l acteur)', () => {
+    const onChangeStatus = jest.fn().mockResolvedValue(undefined);
+    const onOpenActor = jest.fn();
+    // Carte cliquable ⇒ scope au pied d'actions (le nom accessible de la carte englobe le libellé).
+    const { container, getByRole } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new' })]} canWrite onChangeStatus={onChangeStatus} onOpenActor={onOpenActor} />,
+    );
+    const actionsBar = container.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^statut :/i }));
+    expect(getByRole('button', { name: 'Clôturée' })).toBeInTheDocument();
+    expect(onOpenActor).not.toHaveBeenCalled();
+  });
+
+  it('gating : sans permission, actions désactivées avec raison (no-write-trap)', () => {
+    const onReply = jest.fn();
+    const onChangeStatus = jest.fn();
+    const { getByRole } = render(
+      <CrmTimeline
+        items={[makeItem({ status: 'new' })]}
+        canWrite={false}
+        readOnlyReason="Lecture seule : permission requise"
+        onReply={onReply}
+        onChangeStatus={onChangeStatus}
+      />,
+    );
+    const replyBtn = getByRole('button', { name: /répondre/i });
+    const resolveBtn = getByRole('button', { name: /^statut :/i });
+    expect(replyBtn).toBeDisabled();
+    expect(resolveBtn).toBeDisabled();
+    expect(replyBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
+  });
+
+  it('échec d envoi → erreur visible inline, composer conservé (pas de double-submit)', async () => {
+    const onReply = jest.fn().mockRejectedValue(new Error('refus RLS'));
+    const { getByRole, getByPlaceholderText, findByText } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new' })]} canWrite onReply={onReply} />,
+    );
+    fireEvent.click(getByRole('button', { name: /répondre/i }));
+    fireEvent.change(getByPlaceholderText(/votre réponse/i), { target: { value: 'Texte conservé' } });
+    fireEvent.click(getByRole('button', { name: /envoyer/i }));
+    expect(await findByText(/refus RLS/)).toBeInTheDocument();
+    // Saisie conservée pour retenter.
+    expect(getByPlaceholderText(/votre réponse/i)).toHaveValue('Texte conservé');
+  });
+});
+
+// §66 (PO) — l'auteur d'un commentaire (comme le super admin) peut le MODIFIER ou l'EFFACER.
+// Édition inline (textarea préremplie + sentiment) → onEditInteraction(id, body, sentimentCode) ;
+// suppression avec confirm (cascade des réponses signalée sur une racine) → onDeleteInteraction(id).
+// Gatés canWrite, stopPropagation (hors region role=button), isolation d'état par commentaire.
+function replyOf(overrides: Partial<CrmInteractionReplyT> = {}): CrmInteractionReplyT {
+  return {
+    id: 'r1',
+    interactionType: 'note',
+    body: 'Réponse existante.',
+    occurredAt: '2026-06-06T08:00:00Z',
+    createdAt: '2026-06-06T08:01:00Z',
+    sentimentCode: 'positif',
+    sentimentName: 'Positif',
+    ownerName: 'Florence',
+    interlocutorEmail: null,
+    source: 'bertel_ui',
+    ...overrides,
+  };
+}
+
+describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
+  it('sans onEdit/onDelete (lecture), aucune action « Modifier » / « Supprimer » sur la racine', () => {
+    const { queryByRole } = render(<CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onReply={jest.fn()} />);
+    expect(queryByRole('button', { name: /^modifier$/i })).toBeNull();
+    expect(queryByRole('button', { name: /^supprimer$/i })).toBeNull();
+  });
+
+  it('gating : sans permission, « Modifier » / « Supprimer » désactivés avec raison (no-write-trap)', () => {
+    const { getByRole } = render(
+      <CrmTimeline
+        items={[makeItem({ status: 'new' })]}
+        canWrite={false}
+        readOnlyReason="Lecture seule : permission requise"
+        onEditInteraction={jest.fn()}
+        onDeleteInteraction={jest.fn()}
+      />,
+    );
+    const editBtn = getByRole('button', { name: /^modifier$/i });
+    const deleteBtn = getByRole('button', { name: /^supprimer$/i });
+    expect(editBtn).toBeDisabled();
+    expect(deleteBtn).toBeDisabled();
+    expect(editBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
+  });
+
+  it('« Modifier » ouvre un éditeur inline prérempli (corps + sentiment) et enregistre', async () => {
+    const onEditInteraction = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, getByLabelText } = render(
+      <CrmTimeline
+        items={[makeItem({ id: 'root-1', body: 'Corps de la note.', sentimentCode: 'positif', status: 'new' })]}
+        canWrite
+        onEditInteraction={onEditInteraction}
+      />,
+    );
+    fireEvent.click(getByRole('button', { name: /^modifier$/i }));
+    // L'éditeur est prérempli avec le corps ET le sentiment courant.
+    const area = getByLabelText('Modifier le commentaire') as HTMLTextAreaElement;
+    expect(area.value).toBe('Corps de la note.');
+    expect((getByLabelText('Sentiment du commentaire') as HTMLSelectElement).value).toBe('positif');
+    fireEvent.change(area, { target: { value: 'Corps corrigé.' } });
+    fireEvent.change(getByLabelText('Sentiment du commentaire'), { target: { value: 'inquiet' } });
+    fireEvent.click(getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() => expect(onEditInteraction).toHaveBeenCalledWith('root-1', 'Corps corrigé.', 'inquiet'));
+  });
+
+  it('« Enregistrer » désactivé tant que le corps est vide', () => {
+    const onEditInteraction = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, getByLabelText } = render(
+      <CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onEditInteraction={onEditInteraction} />,
+    );
+    fireEvent.click(getByRole('button', { name: /^modifier$/i }));
+    fireEvent.change(getByLabelText('Modifier le commentaire'), { target: { value: '   ' } });
+    expect(getByRole('button', { name: /enregistrer/i })).toBeDisabled();
+  });
+
+  it('« Annuler » ferme l éditeur sans appeler onEditInteraction', () => {
+    const onEditInteraction = jest.fn();
+    const { getByRole, queryByLabelText } = render(
+      <CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onEditInteraction={onEditInteraction} />,
+    );
+    fireEvent.click(getByRole('button', { name: /^modifier$/i }));
+    expect(queryByLabelText('Modifier le commentaire')).not.toBeNull();
+    fireEvent.click(getByRole('button', { name: /annuler/i }));
+    expect(queryByLabelText('Modifier le commentaire')).toBeNull();
+    expect(onEditInteraction).not.toHaveBeenCalled();
+  });
+
+  it('édition : envoie null quand le sentiment courant est absent et non choisi', async () => {
+    const onEditInteraction = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, getByLabelText } = render(
+      <CrmTimeline
+        items={[makeItem({ id: 'root-2', body: 'Sans sentiment.', sentimentCode: null, status: 'new' })]}
+        canWrite
+        onEditInteraction={onEditInteraction}
+      />,
+    );
+    fireEvent.click(getByRole('button', { name: /^modifier$/i }));
+    expect((getByLabelText('Sentiment du commentaire') as HTMLSelectElement).value).toBe('');
+    fireEvent.change(getByLabelText('Modifier le commentaire'), { target: { value: 'Toujours sans sentiment.' } });
+    fireEvent.click(getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() => expect(onEditInteraction).toHaveBeenCalledWith('root-2', 'Toujours sans sentiment.', null));
+  });
+
+  it('« Supprimer » demande confirmation puis appelle onDeleteInteraction(id)', async () => {
+    const onDeleteInteraction = jest.fn().mockResolvedValue(undefined);
+    const { getByRole } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', replies: [] })]} canWrite onDeleteInteraction={onDeleteInteraction} />,
+    );
+    fireEvent.click(getByRole('button', { name: /^supprimer$/i }));
+    // Pas d'appel avant confirmation.
+    expect(onDeleteInteraction).not.toHaveBeenCalled();
+    fireEvent.click(getByRole('button', { name: /^oui$/i }));
+    await waitFor(() => expect(onDeleteInteraction).toHaveBeenCalledWith('root-1'));
+  });
+
+  it('« Non » annule la confirmation de suppression (pas d appel)', () => {
+    const onDeleteInteraction = jest.fn();
+    const { getByRole, queryByRole } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', replies: [] })]} canWrite onDeleteInteraction={onDeleteInteraction} />,
+    );
+    fireEvent.click(getByRole('button', { name: /^supprimer$/i }));
+    fireEvent.click(getByRole('button', { name: /^non$/i }));
+    expect(queryByRole('button', { name: /^oui$/i })).toBeNull();
+    expect(onDeleteInteraction).not.toHaveBeenCalled();
+  });
+
+  it('racine AVEC réponses : la confirmation avertit de la cascade (N réponses)', () => {
+    const item = makeItem({ id: 'root-1', replies: [replyOf({ id: 'r1' }), replyOf({ id: 'r2' })] });
+    const { getByRole, getByText } = render(
+      <CrmTimeline items={[item]} canWrite onDeleteInteraction={jest.fn()} />,
+    );
+    const actionsBar = document.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^supprimer$/i }));
+    // L'avertissement de cascade mentionne le nombre de réponses supprimées.
+    expect(getByText(/et ses 2 réponse/i)).toBeInTheDocument();
+    void getByRole;
+  });
+
+  it('réponse : « Modifier » → onEditInteraction(replyId, body, sentiment) ; « Supprimer » → onDeleteInteraction(replyId)', async () => {
+    const onEditInteraction = jest.fn().mockResolvedValue(undefined);
+    const onDeleteInteraction = jest.fn().mockResolvedValue(undefined);
+    const item = makeItem({
+      id: 'root-1',
+      replies: [replyOf({ id: 'r1', body: 'Réponse à corriger.', sentimentCode: 'positif' })],
+    });
+    const { container, getByRole, getByLabelText } = render(
+      <CrmTimeline items={[item]} canWrite onEditInteraction={onEditInteraction} onDeleteInteraction={onDeleteInteraction} />,
+    );
+    const reply = container.querySelector('.tl-reply') as HTMLElement;
+    // Édition de la réponse.
+    fireEvent.click(within(reply).getByRole('button', { name: /^modifier$/i }));
+    const area = getByLabelText('Modifier le commentaire') as HTMLTextAreaElement;
+    expect(area.value).toBe('Réponse à corriger.');
+    fireEvent.change(area, { target: { value: 'Réponse corrigée.' } });
+    fireEvent.click(getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() => expect(onEditInteraction).toHaveBeenCalledWith('r1', 'Réponse corrigée.', 'positif'));
+    // Suppression de la réponse (confirm Oui) — pas d'avertissement de cascade (une réponse n'a pas de fil).
+    fireEvent.click(within(reply).getByRole('button', { name: /^supprimer$/i }));
+    fireEvent.click(within(reply).getByRole('button', { name: /^oui$/i }));
+    await waitFor(() => expect(onDeleteInteraction).toHaveBeenCalledWith('r1'));
+  });
+
+  it('isolation : modifier la racine n ouvre pas l éditeur d une réponse ni d une autre carte', () => {
+    const itemA = makeItem({ id: 'root-A', body: 'Racine A.', replies: [replyOf({ id: 'rA', body: 'Réponse A.' })] });
+    const itemB = makeItem({ id: 'root-B', body: 'Racine B.' });
+    const { container, getAllByLabelText } = render(
+      <CrmTimeline items={[itemA, itemB]} canWrite onEditInteraction={jest.fn()} />,
+    );
+    const cards = container.querySelectorAll('.tl-card');
+    const cardA = cards[0] as HTMLElement;
+    // Ouvrir l'éditeur de la RACINE A.
+    const actionsA = cardA.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsA).getByRole('button', { name: /^modifier$/i }));
+    // Un seul éditeur ouvert dans tout le document (pas la réponse rA, pas la carte B).
+    expect(getAllByLabelText('Modifier le commentaire')).toHaveLength(1);
+    // …et il est dans la carte A (avant le bloc des réponses), prérempli avec le corps de A.
+    expect((getAllByLabelText('Modifier le commentaire')[0] as HTMLTextAreaElement).value).toBe('Racine A.');
+  });
+
+  it('a11y : « Modifier » / « Supprimer » sont hors de la région role=button (séparation)', () => {
+    const { container, getByRole } = render(
+      <CrmTimeline
+        items={[makeItem({ status: 'new' })]}
+        canWrite
+        onEditInteraction={jest.fn()}
+        onDeleteInteraction={jest.fn()}
+        onOpenActor={jest.fn()}
+      />,
+    );
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).toHaveAttribute('role', 'button');
+    expect(nav.contains(getByRole('button', { name: /^modifier$/i }))).toBe(false);
+    expect(nav.contains(getByRole('button', { name: /^supprimer$/i }))).toBe(false);
+  });
+
+  it('stopPropagation : cliquer « Modifier » / « Supprimer » ne navigue PAS vers l acteur', () => {
+    const onOpenActor = jest.fn();
+    const { container } = render(
+      <CrmTimeline
+        items={[makeItem({ id: 'root-1', status: 'new' })]}
+        canWrite
+        onEditInteraction={jest.fn()}
+        onDeleteInteraction={jest.fn()}
+        onOpenActor={onOpenActor}
+      />,
+    );
+    const card = container.querySelector('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^modifier$/i }));
+    expect(onOpenActor).not.toHaveBeenCalled();
+    // Refermer (l'éditeur est frère de .tl-actions, hors region role=button) puis tester Supprimer.
+    fireEvent.click(within(card).getByRole('button', { name: /annuler/i }));
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^supprimer$/i }));
+    expect(onOpenActor).not.toHaveBeenCalled();
+  });
+
+  it('échec d enregistrement → erreur visible inline, éditeur conservé', async () => {
+    const onEditInteraction = jest.fn().mockRejectedValue(new Error('refus RLS'));
+    const { getByRole, getByLabelText, findByText } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', body: 'Corps.', status: 'new' })]} canWrite onEditInteraction={onEditInteraction} />,
+    );
+    fireEvent.click(getByRole('button', { name: /^modifier$/i }));
+    fireEvent.change(getByLabelText('Modifier le commentaire'), { target: { value: 'Tentative' } });
+    fireEvent.click(getByRole('button', { name: /enregistrer/i }));
+    expect(await findByText(/refus RLS/)).toBeInTheDocument();
+    // L'éditeur reste ouvert avec la saisie pour retenter.
+    expect((getByLabelText('Modifier le commentaire') as HTMLTextAreaElement).value).toBe('Tentative');
+  });
+
+  it('échec de suppression → erreur visible inline', async () => {
+    const onDeleteInteraction = jest.fn().mockRejectedValue(new Error('refus RLS'));
+    const { getByRole, findByText } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', replies: [] })]} canWrite onDeleteInteraction={onDeleteInteraction} />,
+    );
+    fireEvent.click(getByRole('button', { name: /^supprimer$/i }));
+    fireEvent.click(getByRole('button', { name: /^oui$/i }));
+    expect(await findByText(/refus RLS/)).toBeInTheDocument();
+  });
+});
+
+// « Créer une tâche » depuis une demande. La primitive ne monte AUCUN modal (elle n'a pas
+// d'accès service, cf. l'en-tête du fichier) : elle remonte la carte à l'hôte, qui décide.
+describe('TlThreadActions — créer une tâche depuis la demande', () => {
+  it('sans onCreateTask : aucun bouton (l’action n’existe pas pour cet hôte)', () => {
+    const { queryByRole } = render(<CrmTimeline items={[makeItem()]} canWrite onReply={jest.fn()} />);
+    expect(queryByRole('button', { name: /créer une tâche/i })).not.toBeInTheDocument();
+  });
+
+  it('remonte la carte ENTIÈRE à l’hôte (objectId/objectName/id sont ce dont le modal a besoin)', () => {
+    const onCreateTask = jest.fn();
+    const { getByRole } = render(
+      <CrmTimeline items={[makeItem({ id: 'int-42' })]} canWrite onCreateTask={onCreateTask} />,
+    );
+    fireEvent.click(getByRole('button', { name: /créer une tâche/i }));
+    expect(onCreateTask).toHaveBeenCalledTimes(1);
+    expect(onCreateTask).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'int-42', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon' }),
+    );
+  });
+
+  it('lecture seule : bouton DÉSACTIVÉ avec la raison, jamais masqué (no-write-trap)', () => {
+    const onCreateTask = jest.fn();
+    const { getByRole } = render(
+      <CrmTimeline
+        items={[makeItem()]}
+        canWrite={false}
+        readOnlyReason="Vous n’avez pas la permission."
+        onCreateTask={onCreateTask}
+      />,
+    );
+    const button = getByRole('button', { name: /créer une tâche/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('title', 'Vous n’avez pas la permission.');
+  });
+
+  // Une interaction « Générale » n'a pas d'établissement ; `api.save_crm_task` refuserait le
+  // lien (22023, cohérence d'objet). On le DIT au lieu de laisser un bouton qui échouerait.
+  it('demande sans établissement : bouton désactivé avec SA raison propre', () => {
+    const onCreateTask = jest.fn();
+    const { getByRole } = render(
+      <CrmTimeline items={[makeItem({ objectId: null, objectName: null })]} canWrite onCreateTask={onCreateTask} />,
+    );
+    const button = getByRole('button', { name: /créer une tâche/i });
+    expect(button).toBeDisabled();
+    expect(button.getAttribute('title')).toMatch(/aucun établissement/i);
+    fireEvent.click(button);
+    expect(onCreateTask).not.toHaveBeenCalled();
+  });
+
+  // Même invariant que les autres contrôles du fil : un <button> dans un role="button" est
+  // invalide (ARIA/clavier). Le test global l'exige déjà à 0 contrôle sous la région, mais on
+  // le nomme ici pour que la cause soit lisible si ce bouton-ci régresse.
+  it('a11y : le bouton est un FRÈRE de la région role=button, pas son descendant', () => {
+    const { container, getByRole } = render(
+      <CrmTimeline items={[makeItem()]} canWrite onCreateTask={jest.fn()} onOpenActor={jest.fn()} />,
+    );
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).toHaveAttribute('role', 'button');
+    expect(nav.contains(getByRole('button', { name: /créer une tâche/i }))).toBe(false);
+  });
+
+  // La barre d'actions ne doit pas dépendre de la PRÉSENCE d'une autre action : un hôte qui
+  // ne passerait que `onCreateTask` doit quand même la voir (piège de câblage `hasThreadActions`).
+  it('seule action du fil : la barre d’actions est tout de même rendue', () => {
+    const { getByRole } = render(<CrmTimeline items={[makeItem()]} canWrite onCreateTask={jest.fn()} />);
+    expect(getByRole('button', { name: /créer une tâche/i })).toBeInTheDocument();
+  });
+});

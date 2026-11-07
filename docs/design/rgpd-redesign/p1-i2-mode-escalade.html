@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RGPD — Mode à escalade visuelle (maquette à valider)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#eef1f4; --bg-tint:#f3f6f8; --surface:#fff; --surface-2:#e8edf1;
+    --line:rgba(24,49,59,.10); --line-soft:rgba(24,49,59,.06); --line-strong:rgba(24,49,59,.18);
+    --ink:#18313b; --ink-2:#3a525c; --ink-3:#6a7a82; --ink-4:#94a1a8;
+    --teal:#176b6a; --teal-2:#0d4f4e; --teal-soft:#e2efee; --teal-tint:rgba(23,107,106,.08);
+    --red:#c85c48; --danger-bg:#fbece9; --danger-border:#eccabf; --danger-ink:#8f3322;
+    --shadow-m:0 1px 0 rgba(24,49,59,.04),0 14px 30px -16px rgba(24,49,59,.18);
+    --radius-md:14px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:'Manrope',system-ui,sans-serif;color:var(--ink);
+    background:
+      radial-gradient(ellipse 60% 40% at 8% 0%, rgba(23,107,106,.10), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(242,139,84,.10), transparent 55%),
+      linear-gradient(180deg,var(--bg-tint) 0%,var(--bg) 100%); background-attachment:fixed;}
+  .wrap{max-width:600px;margin:0 auto;padding:40px 16px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-m);padding:22px}
+  .legend{font-size:13px;font-weight:600;color:var(--ink-2);margin:0 0 10px;display:flex;align-items:center;gap:7px}
+  .legend svg{width:15px;height:15px;color:var(--ink-3)}
+  .modes{display:grid;gap:10px}
+  .mode{display:flex;gap:12px;align-items:flex-start;padding:13px 14px;border:1.5px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);cursor:pointer;transition:border-color .15s,background .15s}
+  .mode:hover{border-color:var(--line-strong)}
+  .mode__radio{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:2px solid var(--line-strong);margin-top:2px;display:grid;place-items:center}
+  .mode__radio::after{content:"";width:8px;height:8px;border-radius:50%;background:transparent}
+  .mode__ico{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--surface-2);color:var(--ink-3)}
+  .mode__ico svg{width:18px;height:18px}
+  .mode__body{flex:1 1 auto}
+  .mode__title{font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .mode__desc{font-size:12.5px;color:var(--ink-2);margin:3px 0 0;line-height:1.45}
+  .tag{font-size:10.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;padding:2px 8px;border-radius:999px}
+  .tag.reco{background:var(--teal-soft);color:var(--teal-2)}
+  .tag.irr{background:var(--danger-bg);color:var(--danger-ink);border:1px solid var(--danger-border);display:inline-flex;align-items:center;gap:5px}
+  .tag.irr svg{width:11px;height:11px}
+  /* selected: anonymize (teal) */
+  .mode.sel-teal{border-color:var(--teal);background:var(--teal-tint)}
+  .mode.sel-teal .mode__radio{border-color:var(--teal)}
+  .mode.sel-teal .mode__radio::after{background:var(--teal)}
+  .mode.sel-teal .mode__ico{background:var(--teal-soft);color:var(--teal-2)}
+  /* selected: delete (red) */
+  .mode.sel-red{border-color:var(--red);background:var(--danger-bg)}
+  .mode.sel-red .mode__radio{border-color:var(--red)}
+  .mode.sel-red .mode__radio::after{background:var(--red)}
+  .mode.sel-red .mode__ico{background:#f6d8d0;color:var(--red)}
+  /* submit */
+  .foot{margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .submit{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border-radius:var(--radius-sm);border:1px solid var(--teal);background:var(--teal);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .submit:hover{background:var(--teal-2);border-color:var(--teal-2)}
+  .submit svg{width:17px;height:17px}
+  .submit.danger{background:var(--red);border-color:var(--red)}
+  .submit.danger:hover{filter:brightness(1.05)}
+  .submit:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  .foot__note{font-size:12px;color:var(--ink-3)}
+  .foot__note.danger{color:var(--danger-ink);font-weight:600;display:inline-flex;align-items:center;gap:6px}
+  .foot__note svg{width:14px;height:14px}
+  .note{max-width:600px;margin:14px auto 0;font-size:12px;color:var(--ink-3);text-align:center}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <p class="legend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Mode de traitement</p>
+      <div class="modes" role="radiogroup" aria-label="Mode de traitement">
+
+        <div class="mode sel-teal" id="m-anon" role="radio" aria-checked="true" tabindex="0">
+          <span class="mode__radio" aria-hidden="true"></span>
+          <span class="mode__ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0z"/><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7z" opacity=".5"/><path d="M3 3l18 18"/></svg></span>
+          <span class="mode__body">
+            <span class="mode__title">Anonymiser <span class="tag reco">Recommandé</span></span>
+            <span class="mode__desc">Conserve la structure : les liens sont préservés, l'identité du sujet est remplacée. Réversible dans son effet sur le graphe.</span>
+          </span>
+        </div>
+
+        <div class="mode" id="m-del" role="radio" aria-checked="false" tabindex="-1">
+          <span class="mode__radio" aria-hidden="true"></span>
+          <span class="mode__ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
+          <span class="mode__body">
+            <span class="mode__title">Supprimer définitivement
+              <span class="tag irr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Irréversible</span>
+            </span>
+            <span class="mode__desc">Cascade dure : toutes les données personnelles sont effacées. Demande une confirmation par saisie. À réserver aux cas exigeant l'effacement total.</span>
+          </span>
+        </div>
+
+      </div>
+
+      <div class="foot">
+        <button class="submit" id="submit" type="button">
+          <svg id="submit-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0z"/><path d="M3 3l18 18"/></svg>
+          <span id="submit-label">Anonymiser le sujet</span>
+        </button>
+        <span class="foot__note" id="foot-note">Action journalisée. Une confirmation sera demandée.</span>
+      </div>
+    </div>
+  </div>
+  <p class="note">Maquette à valider — cliquez sur « Supprimer définitivement » pour voir l'escalade visuelle (rouge) du mode et du bouton.</p>
+
+  <script>
+    var anon=document.getElementById('m-anon'), del=document.getElementById('m-del');
+    var submit=document.getElementById('submit'), label=document.getElementById('submit-label'), note=document.getElementById('foot-note');
+    function pick(mode){
+      var isDel = mode==='del';
+      anon.classList.toggle('sel-teal', !isDel); anon.setAttribute('aria-checked', String(!isDel)); anon.tabIndex = isDel?-1:0;
+      del.classList.toggle('sel-red', isDel); del.setAttribute('aria-checked', String(isDel)); del.tabIndex = isDel?0:-1;
+      submit.classList.toggle('danger', isDel);
+      label.textContent = isDel ? 'Supprimer le sujet' : 'Anonymiser le sujet';
+      note.classList.toggle('danger', isDel);
+      note.innerHTML = isDel
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Irréversible — confirmation par saisie requise.'
+        : 'Action journalisée. Une confirmation sera demandée.';
+    }
+    anon.addEventListener('click',function(){pick('anon');});
+    del.addEventListener('click',function(){pick('del');});
+    [anon,del].forEach(function(el){el.addEventListener('keydown',function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();pick(el===del?'del':'anon');}});});
+  </script>
+</body>
+</html>

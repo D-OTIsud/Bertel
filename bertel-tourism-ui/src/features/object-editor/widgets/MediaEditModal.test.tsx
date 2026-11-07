@@ -1,0 +1,245 @@
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { MediaEditModal } from './MediaEditModal';
+import type { ObjectWorkspaceMediaItem } from '../../../services/object-workspace-parser';
+
+jest.mock('../../../lib/supabase', () => ({
+  getSupabaseClient: () => ({
+    auth: { getSession: async () => ({ data: { session: { access_token: 'fake-jwt' } } }) },
+  }),
+}));
+
+jest.mock('./MediaUploadField', () => ({
+  MediaUploadField: ({ onUploaded }: { onUploaded: (m: { url: string; width: number; height: number; mimeType: string }) => void }) => (
+    <button type="button" onClick={() => onUploaded({ url: 'https://cdn.test/x.jpg', width: 800, height: 600, mimeType: 'image/jpeg' })}>
+      mock-upload
+    </button>
+  ),
+}));
+
+const media: ObjectWorkspaceMediaItem = {
+  id: 'm1', scope: 'object', placeId: null, scopeLabel: 'Objet',
+  typeId: 'mt1', typeCode: 'photo', typeLabel: 'Photo',
+  title: 'Façade', titleTranslations: {}, description: '', descriptionTranslations: {},
+  url: 'https://x/y.jpg', credit: '', visibility: 'public', position: '0',
+  width: '', height: '', rightsExpiresAt: '', kind: '', isMain: true, isPublished: true, tags: [],
+};
+
+describe('MediaEditModal', () => {
+  it('edits base metadata and returns the patched media on save', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={media} languages={['fr', 'en', 'cre']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }, { id: 'mt2', code: 'brochure_pdf', label: 'Brochure PDF' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Nouvelle façade' } });
+    fireEvent.change(screen.getByLabelText('Crédit / auteur'), { target: { value: 'OTI Sud' } });
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.title).toBe('Nouvelle façade');
+    expect(saved.credit).toBe('OTI Sud');
+  });
+
+  it('edits a non-primary-language title into titleTranslations', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={media} languages={['fr', 'en', 'cre']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'EN' })); });
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Front view' } });
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.title).toBe('Façade');                  // base FR untouched
+    expect(saved.titleTranslations.en).toBe('Front view');
+  });
+
+  it('writes the primary-language title and description into the i18n maps too', () => {
+    // An imported row can carry title_i18n.fr; public readers prefer the i18n map
+    // over the flat column, so a flat-only edit would be silently shadowed.
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={media} languages={['fr', 'en', 'cre']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Nouvelle façade' } });
+    fireEvent.change(screen.getByLabelText('Description (texte alternatif)'), { target: { value: 'Vue de la façade' } });
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.title).toBe('Nouvelle façade');
+    expect(saved.titleTranslations.fr).toBe('Nouvelle façade');
+    expect(saved.descriptionTranslations.fr).toBe('Vue de la façade');
+  });
+
+  it('clearing the primary-language title removes the stale i18n key', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, titleTranslations: { fr: 'Façade' } }} languages={['fr', 'en', 'cre']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.title).toBe('');
+    expect(saved.titleTranslations.fr).toBeUndefined();
+  });
+
+  it('shows « non définie » for a NULL visibility and saves an explicit choice with the audience vocabulary', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, visibility: '' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    // NULL visibility renders honestly instead of a fake "public" display (§16 precedent).
+    expect(screen.getAllByText('Visibilité non définie')).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Tout le monde' })).toHaveAttribute('aria-pressed', 'false');
+    // Audience vocabulary (§52): public / partners / private — 'private' = Interne.
+    fireEvent.click(screen.getByRole('button', { name: 'Interne' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.visibility).toBe('private');
+  });
+
+  it('changes the segmented type with its reference ID and keeps the other metadata', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, tags: ['existing'], rightsExpiresAt: '2027-12-31' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }, { id: 'mt2', code: 'video', label: 'Vidéo' }]}
+        objectId="m1" onClose={() => {}} onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Vidéo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+    expect(onSave.mock.calls[0][0]).toMatchObject({ typeCode: 'video', typeId: 'mt2', typeLabel: 'Vidéo',
+      visibility: 'public', isMain: true, isPublished: true, tags: ['existing'], rightsExpiresAt: '2027-12-31' });
+  });
+
+  it('shows and preserves an unknown audience until an explicit supported choice is made', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, visibility: 'legacy-audience' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1" onClose={() => {}} onSave={onSave}
+      />,
+    );
+    expect(screen.getByText('Visibilité actuelle : legacy-audience')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tout le monde' })).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+    expect(onSave.mock.calls[0][0].visibility).toBe('legacy-audience');
+    fireEvent.click(screen.getByRole('button', { name: 'Partenaires' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+    expect(onSave.mock.calls[1][0].visibility).toBe('partners');
+  });
+
+  it('keeps an untouched NULL visibility empty on save (no silent widening)', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, visibility: '' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.visibility).toBe('');
+  });
+
+  it('disables Enregistrer until the media has a file (url)', async () => {
+    render(
+      <MediaEditModal
+        open media={{ ...media, url: '' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ })).toBeDisabled();
+    const uploadBtn = await screen.findByRole('button', { name: 'mock-upload' });
+    fireEvent.click(uploadBtn);
+    expect(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ })).toBeEnabled();
+  });
+
+  it('renders a non-authorable type (document) read-only, without upload or type select', async () => {
+    // Documents are uploaded from their owning sections (§05 decision) — an existing
+    // document row stays visible/metadata-editable here, but its type and file are not.
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open
+        media={{ ...media, typeCode: 'brochure_pdf', typeLabel: 'Brochure PDF', url: 'https://x/menu.pdf' }}
+        languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={onSave}
+      />,
+    );
+    expect(screen.getByText('Brochure PDF')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Type de média')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'mock-upload' })).not.toBeInTheDocument();
+    // Metadata stays editable and saves.
+    fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Menu du restaurant' } });
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    expect((onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem).title).toBe('Menu du restaurant');
+  });
+
+  it('previews a video item with a <video> element, never a broken <img>', () => {
+    const { container } = render(
+      <MediaEditModal
+        open
+        media={{ ...media, typeCode: 'video', typeLabel: 'Vidéo', url: 'https://x/presentation.mp4' }}
+        languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }, { id: 'mt2', code: 'video', label: 'Vidéo' }]}
+        objectId="m1"
+        onClose={() => {}} onSave={() => {}}
+      />,
+    );
+    expect(document.querySelector('video.ed-modal__preview')).not.toBeNull();
+    expect(document.querySelector('img.ed-modal__preview')).toBeNull();
+    void container;
+  });
+
+  it('captures upload result (url, width, height) into the saved draft', async () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open
+        media={media}
+        languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="obj-edit-1"
+        onClose={() => {}}
+        onSave={onSave}
+      />,
+    );
+    const uploadBtn = await screen.findByRole('button', { name: 'mock-upload' });
+    fireEvent.click(uploadBtn);
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
+    expect(saved.url).toBe('https://cdn.test/x.jpg');
+    expect(saved.width).toBe('800');
+    expect(saved.height).toBe('600');
+  });
+});

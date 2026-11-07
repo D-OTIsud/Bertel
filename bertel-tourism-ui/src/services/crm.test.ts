@@ -1,0 +1,1387 @@
+import {
+  deleteActorChannel,
+  linkActorToObject,
+  listActorCrm,
+  listContactKinds,
+  listCrmAssignees,
+  listCrmDirectory,
+  listCrmStatusEvents,
+  listCrmTimeline,
+  listDemandTopics,
+  listObjectDocumentTypes,
+  listObjectContactSuggestions,
+  matchesCrmDirectorySearch,
+  parseActorCrmSnapshot,
+  parseActorSupport,
+  parseContactSuggestion,
+  parseCrmAssignee,
+  parseCrmDirectoryEntry,
+  parseCrmInteraction,
+  parseCrmTask,
+  parseCrmTimelinePage,
+  awaitingSinceOf,
+  parseObjectCrmSnapshot,
+  saveActorChannel,
+  saveCrmActor,
+  saveCrmInteraction,
+  saveCrmTask,
+  uploadActorPhoto,
+  userCanWriteCrmNotes,
+} from './crm';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
+import { mockCrmDirectory } from '../data/mock';
+import { useSessionStore } from '../store/session-store';
+import { getServiceAvailability } from './service-availability';
+
+// Rectifs PO §61 : les tests de contrat RPC (paramètres réellement envoyés) mockent le
+// client API ; les chemins démo/parse n'y touchent pas (getApiClient → undefined = le
+// comportement « non configuré » d'origine).
+jest.mock('../lib/supabase', () => ({
+  ...jest.requireActual('../lib/supabase'),
+  getApiClient: jest.fn(),
+  getSupabaseClient: jest.fn(),
+}));
+jest.mock('./service-availability', () => ({ getServiceAvailability: jest.fn() }));
+
+const mockedGetApiClient = jest.mocked(getApiClient);
+const mockedGetSupabaseClient = jest.mocked(getSupabaseClient);
+
+/** Client API factice : capture les appels .schema('api').rpc(fn, args). */
+function fakeRpcClient(result: unknown = null) {
+  const rpc = jest.fn(async () => ({ data: result, error: null }));
+  mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+  return rpc;
+}
+
+describe('crm parsers', () => {
+  it('parse le rôle par défaut et les documents privés d’un acteur en accompagnement', () => {
+    expect(parseActorSupport({
+      default_role: { code: 'guide', name: 'Guide' },
+      documents: [{
+        document_id: 'doc-1', title: 'Prévisionnel.pdf', status: 'active',
+        intended_role_code: 'brochure', intended_role_name: 'Brochure',
+        mime_type: 'application/pdf', size_bytes: 2048, created_at: '2026-08-07T10:00:00Z',
+      }],
+    })).toEqual({
+      defaultRole: { code: 'guide', name: 'Guide' },
+      documents: [expect.objectContaining({
+        documentId: 'doc-1', title: 'Prévisionnel.pdf', status: 'active',
+        intendedRoleCode: 'brochure', sizeBytes: 2048,
+      })],
+    });
+  });
+
+  it('parse une tâche RPC en CrmTask (snake_case → camelCase, enums DB, rattachement acteur)', () => {
+    const task = parseCrmTask({
+      id: 't1', object_id: 'HOT123', object_name: 'Hôtel Test', title: 'Rappeler',
+      description: null, status: 'in_progress', priority: 'urgent',
+      due_at: '2026-06-12T09:00:00Z', created_at: '2026-06-01T08:00:00Z', owner_id: 'u-42', owner_name: 'Marie', related_interaction_subject: null,
+      related_interaction_id: null, related_interaction_status: null,
+      actor_id: 'a1', actor_name: 'Mme Marie Hoarau',
+      // 16w — la fixture est calquée sur une sortie RÉELLE de list_crm_tasks : elle porte
+      // les assignés et le créateur, sinon le test court-circuiterait ce qu'il éprouve.
+      assignees: [
+        { user_id: 'u-42', display_name: 'Marie D.' },
+        { user_id: 'u-7', display_name: 'Jean P.' },
+      ],
+      created_by_id: 'u-7', created_by_name: 'Jean P.',
+    });
+    expect(task).toEqual({
+      id: 't1', objectId: 'HOT123', objectName: 'Hôtel Test', title: 'Rappeler',
+      description: null, status: 'in_progress', priority: 'urgent',
+      dueAt: '2026-06-12T09:00:00Z', createdAt: '2026-06-01T08:00:00Z', ownerId: 'u-42', ownerName: 'Marie', relatedInteractionSubject: null,
+      relatedInteractionId: null, relatedInteractionStatus: null,
+      actorId: 'a1', actorName: 'Mme Marie Hoarau',
+      assignees: [
+        { userId: 'u-42', displayName: 'Marie D.' },
+        { userId: 'u-7', displayName: 'Jean P.' },
+      ],
+      createdById: 'u-7', createdByName: 'Jean P.',
+      documents: [], // 17i — absent du payload RPC de cette fixture ⇒ [].
+      extra: null, // 18a — absent du payload RPC de cette fixture ⇒ null.
+    });
+  });
+
+  // 18a §8.4 — `crm_task` n'a PAS de colonne `kind` : c'est `extra.kind` qui distingue une
+  // tâche de vérification de fiche d'une tâche CRM ordinaire, et `api.list_crm_tasks` émet
+  // désormais `extra` BRUT (jsonb libre — tout cast abattrait la liste entière). Sans ce
+  // report dans le parseur, la puce du kanban est éteinte SANS qu'aucune erreur ne se lève.
+  it('reporte `extra` brut — c’est la SEULE clé qui type une tâche de vérification', () => {
+    const task = parseCrmTask({
+      id: 't2', object_id: 'HOT123', object_name: 'Hôtel Test', title: 'Vérifier la fiche',
+      status: 'todo', priority: 'medium',
+      extra: { kind: 'fiche_verification', submission_id: 'sub-1' },
+    });
+    expect(task.extra).toEqual({ kind: 'fiche_verification', submission_id: 'sub-1' });
+  });
+
+  it('`extra` non-objet (null, tableau, scalaire) retombe à null — jamais une forme inventée', () => {
+    expect(parseCrmTask({ id: 't3', extra: null }).extra).toBeNull();
+    expect(parseCrmTask({ id: 't3', extra: 'texte' }).extra).toBeNull();
+    expect(parseCrmTask({ id: 't3', extra: [1, 2] }).extra).toBeNull();
+    expect(parseCrmTask({ id: 't3' }).extra).toBeNull();
+  });
+
+  describe('16w — assignés et créateur', () => {
+    it('clé absente, null ou malformée ⇒ [] (jamais null : le kanban itère dessus)', () => {
+      const base = { id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo' };
+      expect(parseCrmTask(base).assignees).toEqual([]);
+      expect(parseCrmTask({ ...base, assignees: null }).assignees).toEqual([]);
+      expect(parseCrmTask({ ...base, assignees: 'pas-un-tableau' }).assignees).toEqual([]);
+      expect(parseCrmTask({ ...base, assignees: {} }).assignees).toEqual([]);
+    });
+
+    it('une entrée abîmée est IGNORÉE, les autres survivent (pas de kanban vide)', () => {
+      const task = parseCrmTask({
+        id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo',
+        assignees: [
+          null,
+          'texte',
+          { display_name: 'Sans id' },
+          { user_id: '', display_name: 'Id vide' },
+          { user_id: 'u-ok', display_name: 'Valide' },
+        ],
+      });
+      expect(task.assignees).toEqual([{ userId: 'u-ok', displayName: 'Valide' }]);
+    });
+
+    it('un assigné sans nom garde son uuid (identité) et un libellé vide', () => {
+      const task = parseCrmTask({
+        id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo',
+        assignees: [{ user_id: 'u-ok' }],
+      });
+      expect(task.assignees).toEqual([{ userId: 'u-ok', displayName: '' }]);
+    });
+
+    it('créateur absent ⇒ null (l’UI dira « Créateur inconnu », elle ne devinera pas)', () => {
+      const task = parseCrmTask({ id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo' });
+      expect(task.createdById).toBeNull();
+      expect(task.createdByName).toBeNull();
+    });
+  });
+
+  // §66 — lien tâche → interaction : list_crm_tasks porte désormais id + subject + status.
+  it('parse le lien interaction (related_interaction_id/subject/status → camelCase)', () => {
+    const task = parseCrmTask({
+      id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo',
+      related_interaction_id: 'int-9', related_interaction_subject: 'Demande de visite',
+      related_interaction_status: 'new',
+    });
+    expect(task.relatedInteractionId).toBe('int-9');
+    expect(task.relatedInteractionSubject).toBe('Demande de visite');
+    expect(task.relatedInteractionStatus).toBe('new');
+  });
+
+  it('lien interaction absent → relatedInteractionId/Status null', () => {
+    const task = parseCrmTask({ id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo' });
+    expect(task.relatedInteractionId).toBeNull();
+    expect(task.relatedInteractionStatus).toBeNull();
+    expect(task.relatedInteractionSubject).toBeNull();
+    expect(task.ownerId).toBeNull();
+  });
+
+  it('rattachement acteur optionnel : actor_id/actor_name absents → null', () => {
+    const task = parseCrmTask({ id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo' });
+    expect(task.actorId).toBeNull();
+    expect(task.actorName).toBeNull();
+  });
+
+  it('borne un status inconnu sur todo (défense contre la dérive d enum)', () => {
+    const task = parseCrmTask({ id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'doing' });
+    expect(task.status).toBe('todo');
+  });
+
+  // 17i — pièces jointes de tâche : `id` EST le document_id (consommé tel quel par les routes
+  // /api/task-document de la Task 8, pas l'id de la ligne de liaison crm_task_document).
+  describe('parseCrmTask — documents', () => {
+    it('parse les documents et ignore les entrées sans id', () => {
+      const task = parseCrmTask({
+        id: 't-1', object_id: 'OBJ1', object_name: 'Hôtel', title: 'T',
+        documents: [
+          { id: 'd-1', title: 'Devis.pdf', mime_type: 'application/pdf', size_bytes: 1234, created_at: '2026-08-31T00:00:00Z' },
+          { title: 'sans-id-ignoré' },
+          'malformé',
+        ],
+      });
+      expect(task.documents).toEqual([
+        { id: 'd-1', title: 'Devis.pdf', mimeType: 'application/pdf', sizeBytes: 1234, createdAt: '2026-08-31T00:00:00Z' },
+      ]);
+    });
+
+    it('clé absente ou malformée ⇒ []', () => {
+      expect(parseCrmTask({ id: 't-1' }).documents).toEqual([]);
+      expect(parseCrmTask({ id: 't-1', documents: 'nope' }).documents).toEqual([]);
+    });
+  });
+
+  it('parse une page timeline { items, has_more }', () => {
+    const page = parseCrmTimelinePage({
+      items: [{ id: 'i1', object_id: 'o1', object_name: 'Obj', interaction_type: 'note',
+        direction: 'internal', status: 'resolved', subject: 'Note interne', body: 'corps',
+        occurred_at: '2026-01-01T00:00:00Z', actor_name: 'A', topic_code: 'boutique',
+        topic_name: 'Boutique', sentiment_code: 'positif', sentiment_name: 'Positif',
+        owner_name: null, source: 'import_berta2_crm' }],
+      has_more: true,
+    });
+    expect(page.hasMore).toBe(true);
+    expect(page.items[0]).toMatchObject({ id: 'i1', objectId: 'o1', topicName: 'Boutique', sentimentCode: 'positif' });
+  });
+
+  it('rend une page vide sur payload nul/malformé', () => {
+    expect(parseCrmTimelinePage(null)).toEqual({ items: [], hasMore: false });
+  });
+
+  // §19 — snapshot objet (list_object_crm) : la forme workspace consommée par
+  // l'enrichissement object-workspace ET le refresh post-save de SectionCrm.
+  it('parse le payload list_object_crm en snapshot workspace (interactions + topics)', () => {
+    const snapshot = parseObjectCrmSnapshot({
+      interactions: [{
+        id: 'i1', interaction_type: 'call', direction: 'outbound', status: 'resolved',
+        subject: 'Demande de visite', body: 'RDV fixé au 12.',
+        occurred_at: '2026-06-01T08:00:00Z', created_at: '2026-06-01T08:05:00Z',
+        actor_id: 'a1', actor_name: 'M. Payet', topic_code: 'demande_de_visite', topic_name: 'Demande de visite',
+        sentiment_code: 'positif', sentiment_name: 'Positif', owner_name: 'Marie', source: 'bertel_ui',
+        interlocutor_email: 'contact@palmistes.re', resolved_at: '2026-06-02T08:00:00Z',
+        replies: [{
+          id: 'r1', interaction_type: 'note', body: 'Réponse interne.', occurred_at: '2026-06-01T09:00:00Z',
+          created_at: '2026-06-01T09:01:00Z', sentiment_code: null, sentiment_name: null,
+          owner_name: 'Florence', interlocutor_email: null, source: 'bertel_ui',
+        }],
+      }],
+      tasks: [{ id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', due_at: null }],
+      topics: [{ code: 'demande_de_visite', name: 'Demande de visite', count: 2 }],
+    });
+    expect(snapshot.interactions).toHaveLength(1);
+    // Contrat backend : list_object_crm porte désormais actor_id + interlocutor_email +
+    // status + resolved_at + replies[] par interaction (fil de discussion §65/§66, fix
+    // « par Système » + chip de statut §66).
+    expect(snapshot.interactions[0]).toEqual({
+      id: 'i1', interactionType: 'call', subject: 'Demande de visite', body: 'RDV fixé au 12.',
+      occurredAt: '2026-06-01T08:00:00Z', actorId: 'a1', actorName: 'M. Payet',
+      topicCode: 'demande_de_visite', topicName: 'Demande de visite',
+      sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui',
+      // §66 — `status` propagé pour la chip de la vue objet (était droppé).
+      interlocutorEmail: 'contact@palmistes.re', status: 'resolved', resolvedAt: '2026-06-02T08:00:00Z',
+      replies: [{
+        id: 'r1', interactionType: 'note', body: 'Réponse interne.', occurredAt: '2026-06-01T09:00:00Z',
+        createdAt: '2026-06-01T09:01:00Z', sentimentCode: null, sentimentName: null,
+        ownerName: 'Florence', interlocutorEmail: null, source: 'bertel_ui',
+      }],
+    });
+    expect(snapshot.topics).toEqual([{ code: 'demande_de_visite', name: 'Demande de visite', count: 2 }]);
+  });
+
+  // §61 — la vue établissement consomme les legs actors + tasks du même RPC.
+  it('parse les acteurs liés et les tâches du payload list_object_crm', () => {
+    const snapshot = parseObjectCrmSnapshot({
+      interactions: [],
+      topics: [],
+      actors: [{
+        actor_id: 'a1', display_name: 'Mme Jocelyne Lebon', photo_url: 'https://cdn/jl.jpg',
+        role_code: 'operator', role_name: 'Exploitant', is_primary: true,
+      }],
+      tasks: [{
+        id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', due_at: '2026-06-15T00:00:00Z',
+        related_interaction_id: 'int-9', related_interaction_subject: 'Demande de visite',
+        related_interaction_status: 'new',
+      }],
+    });
+    expect(snapshot.actors).toEqual([{
+      actorId: 'a1', displayName: 'Mme Jocelyne Lebon', photoUrl: 'https://cdn/jl.jpg',
+      roleCode: 'operator', roleName: 'Exploitant', isPrimary: true,
+    }]);
+    // §66 — la tâche de la vue objet porte aussi le lien interaction (id/subject/status).
+    expect(snapshot.tasks).toEqual([{
+      id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', dueAt: '2026-06-15T00:00:00Z',
+      relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite',
+      relatedInteractionStatus: 'new',
+    }]);
+  });
+
+  it('rend un snapshot vide sur payload nul/malformé', () => {
+    expect(parseObjectCrmSnapshot(null)).toEqual({ interactions: [], topics: [], actors: [], tasks: [] });
+    expect(parseObjectCrmSnapshot({ interactions: 'oops', topics: 42 })).toEqual({ interactions: [], topics: [], actors: [], tasks: [] });
+  });
+});
+
+// §61 — annuaire ACTEURS (api.list_crm_directory) : l'entité CRM principale.
+describe('parseCrmDirectoryEntry', () => {
+  it('parse une entrée annuaire (objets liés, compteurs, dernière interaction, top sujets)', () => {
+    const entry = parseCrmDirectoryEntry({
+      actor_id: 'a1', display_name: 'Mme Jocelyne Lebon',
+      objects: [{ object_id: 'HLORUN00000000QB', object_name: 'Les Palmistes', object_type: 'HLO', role_name: 'Exploitant', is_primary: false }],
+      object_count: 1, interaction_count: 10, interactions_12m: 2,
+      last_interaction_at: '2026-04-16T00:00:00+00:00', last_interaction_type: 'note',
+      last_interaction_subject: 'Note interne', last_interaction_object_name: 'Les Palmistes',
+      // Contrat backend : top_topics = `[{code, name}]` (le code pilote la teinte → parité fiche).
+      top_topics: [
+        { code: 'accompagnement_taxe_sejour', name: 'Accompagnement Taxe de séjour' },
+        { code: 'fermeture_provisoire', name: 'Fermeture provisoire' },
+      ],
+    });
+    expect(entry).toEqual({
+      actorId: 'a1', displayName: 'Mme Jocelyne Lebon', photoUrl: null,
+      objects: [{ objectId: 'HLORUN00000000QB', objectName: 'Les Palmistes', objectType: 'HLO', roleName: 'Exploitant', isPrimary: false }],
+      objectCount: 1, interactionCount: 10, interactions12m: 2,
+      lastInteractionAt: '2026-04-16T00:00:00+00:00', lastInteractionType: 'note',
+      lastInteractionSubject: 'Note interne', lastInteractionObjectName: 'Les Palmistes',
+      topTopics: [
+        { code: 'accompagnement_taxe_sejour', name: 'Accompagnement Taxe de séjour' },
+        { code: 'fermeture_provisoire', name: 'Fermeture provisoire' },
+      ],
+    });
+  });
+
+  // Défense contre un cache obsolète : l'ancienne forme `string[]` est encore acceptée et
+  // mappée sur `{code: '', name}` (clé vide → teinte topic--0) — jamais de crash de parse.
+  it('tolère l ancienne forme top_topics: string[] (cache obsolète → {code: "", name})', () => {
+    const entry = parseCrmDirectoryEntry({
+      actor_id: 'a1', display_name: 'X', top_topics: ['Boutique', 'Hébergement'],
+    });
+    expect(entry.topTopics).toEqual([
+      { code: '', name: 'Boutique' },
+      { code: '', name: 'Hébergement' },
+    ]);
+  });
+
+  it('borne les champs absents/malformés (objects/top_topics non-tableaux → [])', () => {
+    const entry = parseCrmDirectoryEntry({ actor_id: 'a1', display_name: 'X', objects: 'oops', top_topics: null });
+    expect(entry.objects).toEqual([]);
+    expect(entry.topTopics).toEqual([]);
+    expect(entry.objectCount).toBe(0);
+    expect(entry.lastInteractionAt).toBeNull();
+  });
+
+  // Photo acteur (PO point 4) : additive photo_url → photoUrl, null quand absent.
+  it('lit photo_url → photoUrl (null quand absent)', () => {
+    expect(parseCrmDirectoryEntry({ actor_id: 'a1', display_name: 'X', photo_url: 'https://cdn/p.jpg' }).photoUrl).toBe(
+      'https://cdn/p.jpg',
+    );
+    expect(parseCrmDirectoryEntry({ actor_id: 'a1', display_name: 'X' }).photoUrl).toBeNull();
+  });
+});
+
+// §61 — fiche acteur 360° (api.list_actor_crm) : interactions à contexte objet OPTIONNEL.
+describe('parseActorCrmSnapshot', () => {
+  it('parse acteur + objets (role_code) + interactions (objectId nullable) + topics', () => {
+    const snapshot = parseActorCrmSnapshot({
+      actor: { id: 'a1', display_name: 'Mme Jocelyne Lebon', gender: 'Mme', first_name: 'Jocelyne', last_name: 'Lebon' },
+      objects: [{ object_id: 'HLORUN00000000QB', object_name: 'Les Palmistes', object_type: 'HLO', role_code: 'operator', role_name: 'Exploitant', is_primary: true }],
+      interactions: [
+        { id: 'i1', interaction_type: 'note', direction: 'internal', status: 'new',
+          subject: 'Note interne', body: 'corps', occurred_at: '2026-04-16T00:00:00+00:00',
+          created_at: '2026-05-01T09:24:21Z', object_id: 'HLORUN00000000QB', object_name: 'Les Palmistes',
+          topic_code: 'accompagnement_taxe_sejour', topic_name: 'Accompagnement Taxe de séjour',
+          sentiment_code: 'interrogatif', sentiment_name: 'Interrogatif', owner_name: null, source: 'import_berta2_crm' },
+        { id: 'i2', interaction_type: 'call', direction: 'outbound', status: 'resolved',
+          subject: 'Vœux annuels', body: null, occurred_at: '2026-01-08T00:00:00+00:00',
+          object_id: null, object_name: null, topic_code: null, topic_name: null,
+          sentiment_code: null, sentiment_name: null, owner_name: 'Florence', source: 'bertel_ui' },
+      ],
+      channels: [
+        { id: 'c1', kind_code: 'email', kind_name: 'Email', value: 'jocelyne@palmistes.re', is_primary: true },
+        { id: 'c2', kind_code: 'phone', kind_name: 'Téléphone', value: '0262 12 34 56', is_primary: false },
+      ],
+      topics: [{ code: 'accompagnement_taxe_sejour', name: 'Accompagnement Taxe de séjour', count: 2 }],
+    });
+    expect(snapshot.actor).toEqual({
+      id: 'a1',
+      displayName: 'Mme Jocelyne Lebon',
+      // §66 — civilité (gender) portée par list_actor_crm.actor pour préremplir le select du modal.
+      gender: 'Mme',
+      firstName: 'Jocelyne',
+      lastName: 'Lebon',
+      photoUrl: null,
+    });
+    // Canaux de contact (rectif PO point 4) — PII du périmètre publisher, déjà gated par le RPC.
+    // 17e — `isPublic` : la fixture ne porte pas `is_public` (backend antérieur), et le parseur
+    // doit alors retomber sur PRIVÉ. Fail-closed : une clé absente ne rend jamais diffusable une
+    // coordonnée de personne.
+    expect(snapshot.channels).toEqual([
+      { id: 'c1', kindCode: 'email', kindName: 'Email', value: 'jocelyne@palmistes.re', isPrimary: true, isPublic: false },
+      { id: 'c2', kindCode: 'phone', kindName: 'Téléphone', value: '0262 12 34 56', isPrimary: false, isPublic: false },
+    ]);
+    expect(snapshot.objects).toEqual([{
+      objectId: 'HLORUN00000000QB', objectName: 'Les Palmistes', objectType: 'HLO',
+      roleCode: 'operator', roleName: 'Exploitant', isPrimary: true,
+    }]);
+    // Contexte objet optionnel : l'interaction « générale » garde objectId/objectName null.
+    expect(snapshot.interactions[0]).toMatchObject({ id: 'i1', objectId: 'HLORUN00000000QB', objectName: 'Les Palmistes' });
+    expect(snapshot.interactions[1]).toMatchObject({ id: 'i2', objectId: null, objectName: null, ownerName: 'Florence' });
+    expect(snapshot.topics).toEqual([{ code: 'accompagnement_taxe_sejour', name: 'Accompagnement Taxe de séjour', count: 2 }]);
+  });
+
+  // Photo acteur (PO point 4) : actor.photo_url → actor.photoUrl.
+  it('lit actor.photo_url → actor.photoUrl', () => {
+    const snapshot = parseActorCrmSnapshot({
+      actor: { id: 'a1', display_name: 'X', photo_url: 'https://cdn/portrait.jpg' },
+    });
+    expect(snapshot.actor.photoUrl).toBe('https://cdn/portrait.jpg');
+  });
+
+  // §66 — civilité : actor.gender → actor.gender (null quand absent/vide ; pas une organisation).
+  it('lit actor.gender → actor.gender (null quand absent)', () => {
+    expect(parseActorCrmSnapshot({ actor: { id: 'a1', display_name: 'M. Jean Payet', gender: 'M.' } }).actor.gender).toBe('M.');
+    expect(parseActorCrmSnapshot({ actor: { id: 'a1', display_name: 'SARL Untel' } }).actor.gender).toBeNull();
+  });
+
+  it('rend un snapshot vide sur payload nul/malformé', () => {
+    expect(parseActorCrmSnapshot(null)).toEqual({
+      actor: { id: '', displayName: '', gender: null, firstName: null, lastName: null, photoUrl: null },
+      objects: [], channels: [], interactions: [], topics: [],
+    });
+  });
+});
+
+describe('parseCrmInteraction — contexte objet nullable (§61)', () => {
+  it('une interaction sans objet (générale) garde objectId/objectName null', () => {
+    const interaction = parseCrmInteraction({
+      id: 'i1', object_id: null, object_name: null, interaction_type: 'call',
+      direction: 'outbound', status: 'resolved', subject: 'Vœux', body: null,
+      occurred_at: '2026-01-08T00:00:00Z',
+    });
+    expect(interaction.objectId).toBeNull();
+    expect(interaction.objectName).toBeNull();
+  });
+
+  // Rectif PO v5 point 5 : la timeline porte actor_id (clic carte → fiche acteur).
+  it('lit actor_id → actorId (null quand absent)', () => {
+    const withActor = parseCrmInteraction({
+      id: 'i1', interaction_type: 'note', subject: 'Note', actor_id: 'a1',
+    });
+    expect(withActor.actorId).toBe('a1');
+    const withoutActor = parseCrmInteraction({ id: 'i2', interaction_type: 'note', subject: 'Note' });
+    expect(withoutActor.actorId).toBeNull();
+  });
+
+  // §65/§66 — fil de discussion : interlocutor_email + resolved_at + replies[] nichées.
+  it('lit interlocutor_email / resolved_at + niche les réponses (replies[])', () => {
+    const root = parseCrmInteraction({
+      id: 'i1', interaction_type: 'email', subject: 'Demande', body: 'corps',
+      occurred_at: '2026-06-01T08:00:00Z', interlocutor_email: 'demande@etab.re', resolved_at: '2026-06-03T00:00:00Z',
+      replies: [
+        { id: 'r1', interaction_type: 'note', body: 'Réponse 1', occurred_at: '2026-06-02T08:00:00Z',
+          created_at: '2026-06-02T08:01:00Z', sentiment_code: 'positif', sentiment_name: 'Positif',
+          owner_name: 'Florence', interlocutor_email: null, source: 'bertel_ui' },
+      ],
+    });
+    expect(root.interlocutorEmail).toBe('demande@etab.re');
+    expect(root.resolvedAt).toBe('2026-06-03T00:00:00Z');
+    expect(root.replies).toEqual([
+      { id: 'r1', interactionType: 'note', body: 'Réponse 1', occurredAt: '2026-06-02T08:00:00Z',
+        createdAt: '2026-06-02T08:01:00Z', sentimentCode: 'positif', sentimentName: 'Positif',
+        ownerName: 'Florence', interlocutorEmail: null, source: 'bertel_ui' },
+    ]);
+  });
+
+  it('replies absentes/malformées → [] (défensif), interlocutor/resolved absents → null', () => {
+    const a = parseCrmInteraction({ id: 'i1', interaction_type: 'note', subject: 'Note' });
+    expect(a.replies).toEqual([]);
+    expect(a.interlocutorEmail).toBeNull();
+    expect(a.resolvedAt).toBeNull();
+    const b = parseCrmInteraction({ id: 'i2', interaction_type: 'note', subject: 'Note', replies: 'oops' });
+    expect(b.replies).toEqual([]);
+  });
+});
+
+describe('listCrmDirectory / listActorCrm — chemins démo', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+  });
+
+  it('mode démo : listCrmDirectory renvoie les 3 acteurs mock', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(listCrmDirectory()).resolves.toEqual(mockCrmDirectory);
+    expect(mockCrmDirectory).toHaveLength(3);
+  });
+
+  // Recherche (PO 2026-07-27) : sujet/statut/période restent non simulés en démo, mais la
+  // RECHERCHE doit rester vivante — sinon le champ du header serait inerte hors connexion
+  // (l'ancien champ local de l'annuaire, lui, filtrait bien les fixtures).
+  it('mode démo : listCrmDirectory filtre les fixtures sur le terme recherché', async () => {
+    useSessionStore.setState({ demoMode: true });
+    const byActorName = await listCrmDirectory({ search: 'Técher' });
+    expect(byActorName.map((entry) => entry.displayName)).toEqual(['M. Paul Técher']);
+
+    const byObjectName = await listCrmDirectory({ search: 'comptoir' });
+    expect(byObjectName.map((entry) => entry.displayName)).toEqual(['Mme Marie Hoarau']);
+
+    await expect(listCrmDirectory({ search: 'zzzintrouvable' })).resolves.toEqual([]);
+  });
+
+  it('mode démo : sans recherche, l annuaire complet est rendu', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(listCrmDirectory({ topicCode: 'boutique' })).resolves.toEqual(mockCrmDirectory);
+  });
+
+  it('mode démo : listActorCrm renvoie un snapshot cohérent avec l annuaire mock', async () => {
+    useSessionStore.setState({ demoMode: true });
+    const snapshot = await listActorCrm(mockCrmDirectory[0].actorId);
+    expect(snapshot.actor.id).toBe(mockCrmDirectory[0].actorId);
+    expect(snapshot.actor.displayName).toBe(mockCrmDirectory[0].displayName);
+    expect(snapshot.objects.map((o) => o.objectId)).toEqual(mockCrmDirectory[0].objects.map((o) => o.objectId));
+  });
+});
+
+// Vocabulaire complet demand_topic (fix cold-start §19) — lecture PostgREST directe de
+// ref_code (pub_ref_code_read), PAS une table crm_* : le pattern maison des vocabulaires ref.
+describe('listDemandTopics', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+  });
+
+  it('mode démo : renvoie le vocabulaire mock sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(listDemandTopics()).resolves.toEqual([
+      { code: 'demande_de_visite', name: 'Demande de visite' },
+      { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
+    ]);
+  });
+
+  it('hors démo sans client Supabase configuré : renvoie [] (le select retombe sur la distribution objet)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    await expect(listDemandTopics()).resolves.toEqual([]);
+  });
+});
+
+/* ===== Rectifs PO §61 — contrats RPC (paramètres réellement envoyés) ============= */
+
+describe('listCrmDirectory — filtres serveur (sujet / statut / période, KPIs réactifs)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('passe topicCode/status/from en paramètres RPC (le serveur filtre TOUS les agrégats)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([]);
+    await listCrmDirectory({ topicCode: 'boutique', status: 'active', from: '2026-03-14T00:00:00.000Z' });
+    expect(rpc).toHaveBeenCalledWith('list_crm_directory', {
+      p_topic_code: 'boutique',
+      p_status: 'active',
+      p_from: '2026-03-14T00:00:00.000Z',
+      p_to: null,
+      p_search: null,
+    });
+  });
+
+  it('sans filtre : tous les paramètres RPC sont null (annuaire complet)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([]);
+    await listCrmDirectory();
+    expect(rpc).toHaveBeenCalledWith('list_crm_directory', {
+      p_topic_code: null, p_status: null, p_from: null, p_to: null, p_search: null,
+    });
+  });
+
+  // Recherche acteurs (PO 2026-07-27) : le terme part au SERVEUR — téléphone et e-mail vivent
+  // dans actor_channel et ne sont pas dans le payload, aucun tamis client ne pourrait les voir.
+  it('passe le terme de recherche en p_search', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([]);
+    await listCrmDirectory({ search: 'hoareau' });
+    expect(rpc).toHaveBeenCalledWith('list_crm_directory', {
+      p_topic_code: null, p_status: null, p_from: null, p_to: null, p_search: 'hoareau',
+    });
+  });
+});
+
+// Le match de démo n'est PAS le match serveur (pas de flou, ni téléphone ni e-mail dans les
+// fixtures) : il couvre ce que les fixtures portent réellement.
+describe('matchesCrmDirectorySearch (mode démo)', () => {
+  const entry = mockCrmDirectory[0];
+
+  it('matche le nom de l acteur, le nom d établissement et le rôle, sans casse', () => {
+    expect(matchesCrmDirectorySearch(entry, entry.displayName.toUpperCase())).toBe(true);
+    expect(matchesCrmDirectorySearch(entry, 'comptoir')).toBe(true);
+    expect(matchesCrmDirectorySearch(entry, 'gérante')).toBe(true);
+  });
+
+  it('ne matche pas un terme absent, et un terme vide laisse tout passer', () => {
+    expect(matchesCrmDirectorySearch(entry, 'zzzintrouvable')).toBe(false);
+    expect(matchesCrmDirectorySearch(entry, '   ')).toBe(true);
+  });
+});
+
+describe('saveCrmActor / saveActorChannel / deleteActorChannel (rectifs PO points 4+5)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  beforeEach(() => {
+    useSessionStore.setState({ demoMode: false });
+    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: true });
+  });
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('INSERT acteur : display_name + object_id facultatif + identité', async () => {
+    const rpc = fakeRpcClient({ id: 'new-actor' });
+    await expect(
+      saveCrmActor({ displayName: 'M. Jean Payet', firstName: 'Jean', lastName: 'Payet', objectId: 'HOT123' }),
+    ).resolves.toBe('new-actor');
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: { display_name: 'M. Jean Payet', first_name: 'Jean', last_name: 'Payet', object_id: 'HOT123' },
+    });
+  });
+
+  it('INSERT acteur en projet : rôle sans object_id', async () => {
+    const rpc = fakeRpcClient({ id: 'prospect-actor' });
+    await saveCrmActor({ displayName: 'Projet Lagon', roleCode: 'guide' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: { display_name: 'Projet Lagon', role_code: 'guide' },
+    });
+  });
+
+  it('UPDATE acteur : id + identité seulement (pas de clés objet/role parasites)', async () => {
+    const rpc = fakeRpcClient({ id: 'a1' });
+    await saveCrmActor({ id: 'a1', displayName: 'Mme Marie Hoarau', firstName: 'Marie' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: { id: 'a1', display_name: 'Mme Marie Hoarau', first_name: 'Marie' },
+    });
+  });
+
+  it('INSERT canal : actor_id + kind_code + value (+ is_primary)', async () => {
+    const rpc = fakeRpcClient({ id: 'c1' });
+    await expect(
+      saveActorChannel({ actorId: 'a1', kindCode: 'email', value: 'jean@payet.re', isPrimary: true }),
+    ).resolves.toBe('c1');
+    expect(rpc).toHaveBeenCalledWith('save_actor_channel', {
+      p_payload: { actor_id: 'a1', kind_code: 'email', value: 'jean@payet.re', is_primary: true },
+    });
+  });
+
+  it('UPDATE canal : id + champs modifiés seulement', async () => {
+    const rpc = fakeRpcClient({ id: 'c1' });
+    await saveActorChannel({ id: 'c1', value: '0692 11 22 33' });
+    expect(rpc).toHaveBeenCalledWith('save_actor_channel', { p_payload: { id: 'c1', value: '0692 11 22 33' } });
+  });
+
+  it('deleteActorChannel passe p_id', async () => {
+    const rpc = fakeRpcClient(null);
+    await deleteActorChannel('c1');
+    expect(rpc).toHaveBeenCalledWith('delete_actor_channel', { p_id: 'c1' });
+  });
+
+  // Photo acteur (PO point 4) : photo_url partiel — clé présente écrite, '' = effacement.
+  it('UPDATE acteur avec photoUrl : photo_url passé en payload (URL posée par la route d upload)', async () => {
+    const rpc = fakeRpcClient({ id: 'a1' });
+    await saveCrmActor({ id: 'a1', photoUrl: 'https://cdn/portrait.jpg' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', { p_payload: { id: 'a1', photo_url: 'https://cdn/portrait.jpg' } });
+  });
+
+  it('UPDATE acteur avec photoUrl vide : photo_url = "" (effacement explicite)', async () => {
+    const rpc = fakeRpcClient({ id: 'a1' });
+    await saveCrmActor({ id: 'a1', photoUrl: '' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', { p_payload: { id: 'a1', photo_url: '' } });
+  });
+
+  // §66 — civilité : gender partiel (clé présente écrite ; '' efface côté serveur). Le
+  // display_name est COMPOSÉ côté client (civilité + prénom + nom) et envoyé tel quel.
+  it('INSERT acteur : gender + display_name composé partent en payload', async () => {
+    const rpc = fakeRpcClient({ id: 'new-actor' });
+    await saveCrmActor({
+      displayName: 'Mme Jocelyne Lebon', gender: 'Mme', firstName: 'Jocelyne', lastName: 'Lebon', objectId: 'HOT123',
+    });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: {
+        display_name: 'Mme Jocelyne Lebon', gender: 'Mme', first_name: 'Jocelyne', last_name: 'Lebon', object_id: 'HOT123',
+      },
+    });
+  });
+
+  it('UPDATE acteur avec gender vide : gender = "" (effacement explicite, organisation)', async () => {
+    const rpc = fakeRpcClient({ id: 'a1' });
+    await saveCrmActor({ id: 'a1', gender: '', displayName: 'SARL Untel', lastName: 'SARL Untel' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: { id: 'a1', gender: '', display_name: 'SARL Untel', last_name: 'SARL Untel' },
+    });
+  });
+
+  it('échec RPC → throw (l erreur PostgREST brute survit, .code 42501 compris)', async () => {
+    const rpc = jest.fn(async () => ({ data: null, error: Object.assign(new Error('denied'), { code: '42501' }) }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(saveCrmActor({ displayName: 'X', objectId: 'o1' })).rejects.toMatchObject({ code: '42501' });
+  });
+});
+
+// §66 — affecter un établissement existant à un acteur depuis sa fiche (api.link_actor_to_object).
+// Gate = write-CRM sur l'OBJET (42501 sinon). Rôle par défaut serveur 'operator' (seul seedé).
+describe('linkActorToObject', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('appelle link_actor_to_object(p_payload {actor_id, object_id}) et renvoie { linked }', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ actor_id: 'a1', object_id: 'HOT123', role_code: 'operator', linked: true });
+    await expect(linkActorToObject('a1', 'HOT123')).resolves.toEqual({ linked: true });
+    expect(rpc).toHaveBeenCalledWith('link_actor_to_object', {
+      p_payload: { actor_id: 'a1', object_id: 'HOT123', role_code: undefined },
+    });
+  });
+
+  it('passe role_code quand fourni', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ actor_id: 'a1', object_id: 'HOT123', role_code: 'operator', linked: true });
+    await linkActorToObject('a1', 'HOT123', 'operator');
+    expect(rpc).toHaveBeenCalledWith('link_actor_to_object', {
+      p_payload: { actor_id: 'a1', object_id: 'HOT123', role_code: 'operator' },
+    });
+  });
+
+  it('linked=false (lien déjà existant) est propagé', async () => {
+    useSessionStore.setState({ demoMode: false });
+    fakeRpcClient({ actor_id: 'a1', object_id: 'HOT123', role_code: 'operator', linked: false });
+    await expect(linkActorToObject('a1', 'HOT123')).resolves.toEqual({ linked: false });
+  });
+
+  it('échec RPC → throw (42501 = pas de write-CRM sur l objet, .code survit)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = jest.fn(async () => ({ data: null, error: Object.assign(new Error('denied'), { code: '42501' }) }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(linkActorToObject('a1', 'HOT123')).rejects.toMatchObject({ code: '42501' });
+  });
+
+  it('mode démo : renvoie { linked: true } sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(linkActorToObject('a1', 'HOT123')).resolves.toEqual({ linked: true });
+  });
+});
+
+// Suggestions de contacts (PO point 2) — pré-remplissage de l'authoring acteur depuis les
+// contacts de l'établissement de rattachement (api.list_object_contact_suggestions).
+describe('parseContactSuggestion / listObjectContactSuggestions', () => {
+  it('parse une suggestion (snake_case → camelCase, is_primary booléen)', () => {
+    expect(
+      parseContactSuggestion({
+        kind_code: 'email', kind_name: 'Email', value: 'contact@hotel.re', is_primary: true, source: 'établissement',
+      }),
+    ).toEqual({ kindCode: 'email', kindName: 'Email', value: 'contact@hotel.re', isPrimary: true, source: 'établissement' });
+  });
+
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('hors démo : appelle list_object_contact_suggestions(p_object_id) et parse le tableau', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([
+      { kind_code: 'email', kind_name: 'Email', value: 'contact@hotel.re', is_primary: true, source: 'établissement' },
+      { kind_code: 'phone', kind_name: 'Téléphone', value: '0262 00 00 00', is_primary: false, source: 'acteur lié' },
+    ]);
+    await expect(listObjectContactSuggestions('HOT123')).resolves.toEqual([
+      { kindCode: 'email', kindName: 'Email', value: 'contact@hotel.re', isPrimary: true, source: 'établissement' },
+      { kindCode: 'phone', kindName: 'Téléphone', value: '0262 00 00 00', isPrimary: false, source: 'acteur lié' },
+    ]);
+    expect(rpc).toHaveBeenCalledWith('list_object_contact_suggestions', { p_object_id: 'HOT123' });
+  });
+
+  it('42501 (hors périmètre / non autorisé) → [] (le bloc se masque, le modal ne casse pas)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = jest.fn(async () => ({ data: null, error: Object.assign(new Error('denied'), { code: '42501' }) }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(listObjectContactSuggestions('HOT123')).resolves.toEqual([]);
+  });
+
+  it('mode démo : renvoie quelques suggestions mock sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    const suggestions = await listObjectContactSuggestions('obj-1');
+    expect(suggestions.length).toBeGreaterThanOrEqual(1);
+    expect(suggestions[0]).toHaveProperty('kindCode');
+    expect(suggestions[0]).toHaveProperty('value');
+  });
+});
+
+// Timeline filtrable (PO points 6+7) — signature 7→9 args : p_status (active = famille ouverte / done = famille fermée) +
+// p_from en ARGUMENTS NOMMÉS. Toutes + Tout (status/from absents) = timeline complète.
+describe('listCrmTimeline — filtres statut/période (args nommés)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('sans filtre : status/from null (Toutes + Tout = ensemble complet, PAS de borne période)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ items: [], has_more: false });
+    await listCrmTimeline();
+    expect(rpc).toHaveBeenCalledWith('list_crm_timeline', {
+      p_object_id: null,
+      p_topic_code: null,
+      p_interaction_type: null,
+      p_sentiment_code: null,
+      p_status: null,
+      p_from: null,
+      p_before: null,
+      p_before_id: null,
+      p_limit: 50,
+    });
+  });
+
+  it('passe topicCode/status/from + le curseur keyset (before/before_id)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ items: [], has_more: false });
+    await listCrmTimeline({
+      topicCode: 'boutique',
+      status: 'active',
+      from: '2026-03-14T00:00:00.000Z',
+      before: '2026-06-01T00:00:00Z',
+      beforeId: 'evt-9',
+    });
+    expect(rpc).toHaveBeenCalledWith('list_crm_timeline', {
+      p_object_id: null,
+      p_topic_code: 'boutique',
+      p_interaction_type: null,
+      p_sentiment_code: null,
+      p_status: 'active',
+      p_from: '2026-03-14T00:00:00.000Z',
+      p_before: '2026-06-01T00:00:00Z',
+      p_before_id: 'evt-9',
+      p_limit: 50,
+    });
+  });
+});
+
+describe('saveCrmTask — rattachement acteur (rectif PO point 3)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('passe actor_id quand actorId est fourni (tâche créée depuis la fiche acteur)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ objectId: 'HOT123', actorId: 'a1', title: 'Rappeler', dueAt: '2026-06-20' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { object_id: 'HOT123', actor_id: 'a1', title: 'Rappeler', due_at: '2026-06-20' },
+    });
+  });
+
+  // Contrat HÉRITÉ, conservé le temps de la fenêtre de déploiement : un front antérieur à
+  // 16w continue d'envoyer `owner`, que le serveur traite comme un ensemble d'une personne.
+  it('passe owner quand fourni (contrat mono-assigné hérité, encore accepté)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ objectId: 'HOT123', title: 'Rappeler', dueAt: '2026-06-20', owner: 'usr-jean' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { object_id: 'HOT123', title: 'Rappeler', due_at: '2026-06-20', owner: 'usr-jean' },
+    });
+  });
+
+  // 16w — assignation MULTIPLE : le tableau part tel quel sous `assignee_ids`.
+  it('passe assignee_ids quand assigneeIds est fourni (plusieurs personnes)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ objectId: 'HOT123', title: 'Rappeler', assigneeIds: ['u-a', 'u-b'] });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { object_id: 'HOT123', title: 'Rappeler', assignee_ids: ['u-a', 'u-b'] },
+    });
+  });
+
+  // Clé ABSENTE = assignations inchangées côté serveur : c'est ce qui rend le drag & drop
+  // du kanban (statut seul) incapable de toucher aux assignés.
+  it('assigneeIds omis : assignee_ids absent du payload (un move ne réassigne rien)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ id: 't1', status: 'in_progress' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', { p_payload: { id: 't1', status: 'in_progress' } });
+  });
+
+  // Un tableau VIDE est transmis TEL QUEL : le refus est une décision serveur (22023), pas
+  // un filtrage silencieux du client — sinon l'UI et la base ne diraient pas la même chose.
+  it('un tableau vide est transmis (le refus appartient au serveur, pas au client)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ id: 't1', assigneeIds: [] });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', { p_payload: { id: 't1', assignee_ids: [] } });
+  });
+
+  // §66 — lien tâche → interaction : relatedInteractionId → related_interaction_id (clé
+  // présente écrite ; cohérence d'objet validée serveur — 22023 si objet différent).
+  it('passe related_interaction_id quand relatedInteractionId est fourni', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ objectId: 'HOT123', actorId: 'a1', title: 'Suivi', relatedInteractionId: 'int-9' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { object_id: 'HOT123', actor_id: 'a1', title: 'Suivi', related_interaction_id: 'int-9' },
+    });
+  });
+
+  // Détachement : '' (chaîne vide) écrit la clé pour détacher (clé présente = écrite).
+  it('passe related_interaction_id = "" pour détacher (clé présente même vide)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ id: 't1', relatedInteractionId: '' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { id: 't1', related_interaction_id: '' },
+    });
+  });
+
+  // Clé absente = pas de changement (n'apparaît pas dans le payload — move kanban inchangé).
+  it('relatedInteractionId omis : related_interaction_id absent du payload', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ id: 't1', status: 'done' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', { p_payload: { id: 't1', status: 'done' } });
+  });
+});
+
+// 17i — ping fire-and-forget du drain e-mail après une assignation. Le ping ne part QUE si
+// l'input portait `assigneeIds` (clé absente = assignations inchangées, ex. drag & drop du
+// kanban qui n'envoie que le statut) ; il part APRÈS le succès du RPC (jamais avant, jamais
+// sur erreur), et jamais en mode démo (le chemin démo sort de saveCrmTask bien plus tôt).
+describe('saveCrmTask — ping notify-drain (17i)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  const realFetch = global.fetch;
+  const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+
+  beforeEach(() => {
+    fetchMock.mockClear();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    useSessionStore.setState({ demoMode: false });
+    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: true });
+    // getSupabaseClient().auth.getSession() → un access_token de test (même pattern que
+    // describe('uploadActorPhoto') plus haut dans ce fichier).
+    mockedGetSupabaseClient.mockReturnValue({
+      auth: { getSession: async () => ({ data: { session: { access_token: 'jwt-ping' } } }) },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+  });
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+    mockedGetSupabaseClient.mockReset();
+    global.fetch = realFetch;
+  });
+
+  it('ping le drain après un save AVEC assigneeIds', async () => {
+    fakeRpcClient({ id: 't-1' });
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0)); // laisse partir le void
+    expect(fetchMock).toHaveBeenCalledWith('/api/crm/notify-drain', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: 'Bearer jwt-ping' }),
+    }));
+  });
+
+  it('SMTP absent : garde la tâche et ne POSTe pas le drain', async () => {
+    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: false });
+    fakeRpcClient({ id: 't-1' });
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('NE ping PAS un save sans assigneeIds (drag & drop statut seul)', async () => {
+    fakeRpcClient({ id: 't-1' });
+    await saveCrmTask({ id: 't-1', status: 'done' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('ne ping pas si le RPC échoue (le ping suit le succès, jamais l’échec)', async () => {
+    const rpc = jest.fn(async () => ({ data: null, error: { message: 'boom' } }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] })).rejects.toMatchObject({
+      message: 'boom',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('ne ping pas en mode démo (le chemin démo sort de saveCrmTask avant le ping)', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('pas de session active → pas de ping (aucun token à envoyer)', async () => {
+    fakeRpcClient({ id: 't-1' });
+    mockedGetSupabaseClient.mockReturnValue({
+      auth: { getSession: async () => ({ data: { session: null } }) },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('pas de client Supabase (non configuré) → pas de ping', async () => {
+    fakeRpcClient({ id: 't-1' });
+    mockedGetSupabaseClient.mockReturnValue(null as unknown as ReturnType<typeof getSupabaseClient>);
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('un fetch qui lève est avalé : saveCrmTask résout quand même (l’outbox rattrape)', async () => {
+    fakeRpcClient({ id: 't-1' });
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    await expect(saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] })).resolves.toBe('t-1');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalled();
+  });
+});
+
+// §65/§66 — réponses + bascule traité/rouvert (le composer de fil + le bouton « Marquer traitée »).
+describe('saveCrmInteraction — réponse (parentInteractionId) + bascule de statut', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  // Une RÉPONSE : on passe parent_interaction_id + body (+ sentiment optionnel) ; PAS d'actorId
+  // ni d'objectId (le backend hérite le contexte de la racine — ne pas le re-passer).
+  it('passe parent_interaction_id (réponse) sans ré-ancrer actor/object', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'r1' });
+    await saveCrmInteraction({ parentInteractionId: 'root-1', body: 'Ma réponse', sentimentCode: 'positif' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', {
+      p_payload: { parent_interaction_id: 'root-1', body: 'Ma réponse', sentiment_code: 'positif' },
+    });
+  });
+
+  // Clôture par le sélecteur : save({id, status:resolved}) — le serveur pose resolved_at.
+  it('bascule « traitée » → { id, status: done }', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'root-1' });
+    await saveCrmInteraction({ id: 'root-1', status: 'resolved' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', { p_payload: { id: 'root-1', status: 'resolved' } });
+  });
+
+  // Réouverture par le sélecteur : save({id, status:new}) — le serveur efface resolved_at.
+  it('réouverture par le sélecteur → { id, status: new }', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'root-1' });
+    await saveCrmInteraction({ id: 'root-1', status: 'new' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', { p_payload: { id: 'root-1', status: 'new' } });
+  });
+});
+
+// Assignation (PO point 4) — annuaire des assignables : membres actifs de l'ORG du caller.
+describe('parseCrmAssignee / listCrmAssignees', () => {
+  it('parse un assignable (user_id → userId, display_name → displayName)', () => {
+    expect(parseCrmAssignee({ user_id: 'usr-jean', display_name: 'Jean P.' })).toEqual({
+      userId: 'usr-jean',
+      displayName: 'Jean P.',
+    });
+  });
+
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('mode démo : renvoie une liste mock non vide (au moins 1 personne)', async () => {
+    useSessionStore.setState({ demoMode: true });
+    const assignees = await listCrmAssignees();
+    expect(assignees.length).toBeGreaterThanOrEqual(1);
+    expect(assignees[0]).toHaveProperty('userId');
+    expect(assignees[0]).toHaveProperty('displayName');
+  });
+
+  it('hors démo : appelle list_crm_assignees et parse le tableau (1 entrée fonctionne)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([{ user_id: 'usr-marie', display_name: 'Marie D.' }]);
+    await expect(listCrmAssignees()).resolves.toEqual([{ userId: 'usr-marie', displayName: 'Marie D.' }]);
+    expect(rpc).toHaveBeenCalledWith('list_crm_assignees', {});
+  });
+});
+
+// Vocabulaire des canaux de contact (ref_code, domaine contact_kind) — même pattern de
+// lecture PostgREST directe que listDemandTopics (pas une table crm_*).
+describe('listContactKinds', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+  });
+
+  it('mode démo : renvoie le vocabulaire mock sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(listContactKinds()).resolves.toEqual([
+      { code: 'phone', name: 'Téléphone' },
+      { code: 'mobile', name: 'Mobile' },
+      { code: 'email', name: 'Email' },
+      { code: 'website', name: 'Site web' },
+      { code: 'address', name: 'Adresse' },
+    ]);
+  });
+
+  it('hors démo sans client Supabase configuré : renvoie [] (fail-soft)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    await expect(listContactKinds()).resolves.toEqual([]);
+  });
+});
+
+// Les partitions ref_code_* ne figurent pas dans le cache PostgREST : le vocabulaire
+// document_type doit impérativement passer par la table parente ref_code + filtre domain.
+describe('listObjectDocumentTypes', () => {
+  afterEach(() => {
+    mockedGetSupabaseClient.mockReset();
+  });
+
+  it('interroge ref_code avec domain=document_type et restitue les libellés', async () => {
+    const query = {
+      select: jest.fn(),
+      eq: jest.fn(),
+      order: jest.fn(),
+    };
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    query.order
+      .mockReturnValueOnce(query)
+      .mockResolvedValueOnce({
+        data: [
+          { code: 'carte', name: 'Carte / menu (PDF)' },
+          { code: 'brochure', name: 'Brochure' },
+        ],
+        error: null,
+      });
+    const from = jest.fn(() => query);
+    mockedGetSupabaseClient.mockReturnValue({ from } as unknown as ReturnType<typeof getSupabaseClient>);
+
+    await expect(listObjectDocumentTypes()).resolves.toEqual([
+      { code: 'carte', name: 'Carte / menu (PDF)' },
+      { code: 'brochure', name: 'Brochure' },
+    ]);
+    expect(from).toHaveBeenCalledWith('ref_code');
+    expect(query.select).toHaveBeenCalledWith('code, name');
+    expect(query.eq).toHaveBeenNthCalledWith(1, 'domain', 'document_type');
+    expect(query.eq).toHaveBeenNthCalledWith(2, 'is_active', true);
+    expect(query.order).toHaveBeenNthCalledWith(1, 'position', { ascending: true });
+    expect(query.order).toHaveBeenNthCalledWith(2, 'name', { ascending: true });
+  });
+});
+
+// Upload portrait acteur (PO point 4) — POST /api/actor-photo/upload (FormData + bearer de
+// session). La route autorise AS THE CALLER, strippe l'EXIF et écrit en service-role ;
+// le helper client ne fait QUE poster et lire { url }. Démo : pas d'appel réseau.
+describe('uploadActorPhoto', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  const realFetch = global.fetch;
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetSupabaseClient.mockReset();
+    global.fetch = realFetch;
+  });
+
+  function makeFile(): File {
+    return new File([new Uint8Array([1, 2, 3])], 'portrait.jpg', { type: 'image/jpeg' });
+  }
+
+  it('poste FormData (actorId + file) avec le bearer de session et renvoie l URL', async () => {
+    useSessionStore.setState({ demoMode: false });
+    mockedGetSupabaseClient.mockReturnValue({
+      auth: { getSession: async () => ({ data: { session: { access_token: 'jwt-123' } } }) },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+    const fetchMock = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ url: 'https://cdn/actors/a1/x.jpg' }),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(uploadActorPhoto('a1', makeFile())).resolves.toBe('https://cdn/actors/a1/x.jpg');
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/actor-photo/upload');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jwt-123');
+    const body = init.body as FormData;
+    expect(body.get('actorId')).toBe('a1');
+    expect(body.get('file')).toBeInstanceOf(File);
+  });
+
+  // Chantier 2026-08-28 n°4 — assertion RETOURNÉE À DESSEIN : elle épinglait le pass-through du
+  // `detail` ANGLAIS de la route (« caller cannot edit this actor »), que l'utilisateur lisait
+  // littéralement. L'exigence de fond — ne pas échouer en silence — est préservée : on lève
+  // toujours, avec un message français.
+  it('non-2xx → throw avec un message FRANÇAIS (pas d échec silencieux, pas de brut anglais)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    mockedGetSupabaseClient.mockReturnValue({
+      auth: { getSession: async () => ({ data: { session: { access_token: 'jwt-123' } } }) },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+    global.fetch = (async () => ({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'forbidden', detail: 'caller cannot edit this actor' }),
+    })) as unknown as typeof fetch;
+    const promise = uploadActorPhoto('a1', makeFile());
+    await expect(promise).rejects.toThrow(/pas autorisée avec vos droits actuels/);
+    await expect(promise).rejects.not.toThrow(/caller cannot edit this actor/);
+  });
+
+  it('mode démo : renvoie une URL locale sans appel réseau', async () => {
+    useSessionStore.setState({ demoMode: true });
+    const fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await expect(uploadActorPhoto('a1', makeFile())).resolves.toEqual(expect.any(String));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Chantier 2026-08-28 n°1, sous-lot 1d — la sonde d'interface était PLUS STRICTE que le
+// serveur : elle ne testait que `write_crm_notes`, alors que la garde SQL accepte aussi le
+// rang d'administration d'ORG. Un admin d'ORG voyait tout le CRM en « Lecture seule ».
+// ---------------------------------------------------------------------------------------
+describe('userCanWriteCrmNotes — parité avec la garde serveur (chantier 2026-08-28)', () => {
+  it('interroge la sonde SQL unique, jamais user_has_permission', async () => {
+    useSessionStore.setState({ demoMode: false, role: 'tourism_agent' });
+    const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
+    mockedGetApiClient.mockReturnValue({ schema: () => ({ rpc }) } as never);
+
+    await expect(userCanWriteCrmNotes()).resolves.toBe(true);
+    expect(rpc).toHaveBeenCalledWith('current_user_can_write_crm_notes');
+    // Re-transcrire la chaîne de OR côté client est exactement ce qui a créé la divergence.
+    expect(rpc).not.toHaveBeenCalledWith('user_has_permission', expect.anything());
+  });
+
+  it('fail-closed : une erreur RPC laisse en lecture seule, sans passer inaperçue', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    useSessionStore.setState({ demoMode: false, role: 'tourism_agent' });
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: { message: 'boom' } });
+    mockedGetApiClient.mockReturnValue({ schema: () => ({ rpc }) } as never);
+
+    await expect(userCanWriteCrmNotes()).resolves.toBe(false);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('une réponse inattendue n’ouvre PAS l’écriture', async () => {
+    useSessionStore.setState({ demoMode: false, role: 'tourism_agent' });
+    // La fonction SQL garantit un booléen (COALESCE, §204) ; le client reste strict quand même.
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
+    mockedGetApiClient.mockReturnValue({ schema: () => ({ rpc }) } as never);
+    await expect(userCanWriteCrmNotes()).resolves.toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Chantier 2026-08-28 n°1, sous-lot 1b (17e) — visibilité d'un canal d'acteur.
+// Ce n'était pas une garde trop stricte : c'était une fonctionnalité ABSENTE aux trois étages
+// (pas de colonne, pas de clé RPC, pas de contrôle UI). Marquer un canal comme privé était
+// impossible pour TOUT LE MONDE, superuser compris.
+// ---------------------------------------------------------------------------------------
+describe('saveActorChannel — visibilité du canal (17e)', () => {
+  it('relaie is_public quand la clé est fournie', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'ch-1' });
+    await saveActorChannel({ id: 'ch-1', isPublic: true });
+    expect(rpc).toHaveBeenCalledWith('save_actor_channel', {
+      p_payload: { id: 'ch-1', is_public: true },
+    });
+  });
+
+  it('N’ENVOIE PAS la clé quand elle est absente — sinon corriger une valeur repasserait le canal en privé', async () => {
+    // Le RPC est appelé champ par champ et interprète la clé absente comme « ne touche pas à la
+    // visibilité » (garde `p_payload ? 'is_public'` côté SQL). Envoyer systématiquement `false`
+    // écraserait la visibilité à chaque correction : c'est le piège que ce test verrouille.
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'ch-1' });
+    await saveActorChannel({ id: 'ch-1', value: 'corrige@test.re' });
+    expect(rpc).toHaveBeenCalledWith('save_actor_channel', {
+      p_payload: { id: 'ch-1', value: 'corrige@test.re' },
+    });
+  });
+
+  it('parse is_public depuis le RPC, et retombe sur PRIVÉ si la clé manque (fail-closed)', () => {
+    const snapshot = parseActorCrmSnapshot({
+      actor: { id: 'a1', display_name: 'A' },
+      channels: [
+        { id: 'c1', kind_code: 'email', value: 'diffusable@test.re', is_public: true },
+        { id: 'c2', kind_code: 'email', value: 'interne@test.re', is_public: false },
+        { id: 'c3', kind_code: 'email', value: 'sans-cle@test.re' },
+        { id: 'c4', kind_code: 'email', value: 'valeur-inattendue@test.re', is_public: 'oui' },
+      ],
+    });
+    expect(snapshot.channels.map((c) => c.isPublic)).toEqual([true, false, false, false]);
+  });
+});
+
+describe('listCrmStatusEvents — journal de transitions (manifeste 17g)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('deballe l’ENVELOPPE { events } — un tableau nu rendrait [] en silence', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({
+      events: [
+        { from_status: null, to_status: 'new', changed_at: '2026-08-01T10:00:00Z', changed_by_label: 'David Philippe' },
+        { from_status: 'new', to_status: 'awaiting_provider', changed_at: '2026-08-05T09:00:00Z', changed_by_label: null },
+      ],
+    });
+
+    const events = await listCrmStatusEvents('int-1');
+
+    expect(rpc).toHaveBeenCalledWith('list_crm_status_events', { p_interaction_id: 'int-1' });
+    expect(events).toHaveLength(2);
+    expect(events[0]).toEqual({
+      fromStatus: null, toStatus: 'new',
+      changedAt: '2026-08-01T10:00:00Z', changedByLabel: 'David Philippe',
+    });
+    // changedByLabel null = tout l’historique anterieur a la bascule. Ne pas le replier sur
+    // une chaine vide : « pas d’auteur connu » et « auteur sans nom » ne sont pas la meme chose.
+    expect(events[1].changedByLabel).toBeNull();
+  });
+
+  it('rend [] quand la RPC ne renvoie pas d’enveloppe, sans jeter', async () => {
+    useSessionStore.setState({ demoMode: false });
+    fakeRpcClient(null);
+    await expect(listCrmStatusEvents('int-1')).resolves.toEqual([]);
+  });
+
+  it('propage l’erreur RPC au lieu de l’avaler', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = jest.fn(async () => ({ data: null, error: new Error('42501') }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(listCrmStatusEvents('int-1')).rejects.toThrow('42501');
+  });
+
+  it('en mode demo, ne fabrique AUCUN journal', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(listCrmStatusEvents('int-1')).resolves.toEqual([]);
+    expect(mockedGetApiClient).not.toHaveBeenCalled();
+  });
+});
+
+describe('awaitingSinceOf', () => {
+  const ev = (toStatus: string, changedAt: string) => ({
+    fromStatus: null, toStatus, changedAt, changedByLabel: null,
+  });
+
+  it('rend la date du DERNIER passage en attente prestataire', () => {
+    expect(
+      awaitingSinceOf([
+        ev('awaiting_provider', '2026-08-01T00:00:00Z'),
+        ev('in_progress', '2026-08-03T00:00:00Z'),
+        ev('awaiting_provider', '2026-08-10T00:00:00Z'),
+      ]),
+    ).toBe('2026-08-10T00:00:00Z');
+  });
+
+  it('rend null quand la demande n’est jamais passee en attente — le cas de tout l’historique d’avant 17g', () => {
+    expect(awaitingSinceOf([ev('new', '2026-08-01T00:00:00Z'), ev('resolved', '2026-08-02T00:00:00Z')])).toBeNull();
+    expect(awaitingSinceOf([])).toBeNull();
+  });
+});

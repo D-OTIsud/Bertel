@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Bertel · Fiches détail par type — print</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<link rel="stylesheet" href="opening-periods.css"/>
+<link rel="stylesheet" href="detail-types.css"/>
+<style>
+  /* Custom landscape-ish page sized to the artboard (1180×1620) + chrome. */
+  @page { size: 1240px 1780px; margin: 0; }
+
+  html, body {
+    background: var(--bg);
+    margin: 0;
+    padding: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-page {
+    width: 1240px;
+    min-height: 1780px;
+    padding: 28px 30px 24px;
+    box-sizing: border-box;
+    page-break-after: always;
+    break-after: page;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background:
+      radial-gradient(ellipse 60% 40% at 8% 0%, rgba(23, 107, 106, 0.06), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(242, 139, 84, 0.06), transparent 55%),
+      linear-gradient(180deg, #faf6ef 0%, var(--bg) 100%);
+  }
+  .print-page:last-child { break-after: auto; page-break-after: auto; }
+
+  .print-header {
+    flex: none;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 8px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .print-header__title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .print-header__title small {
+    display: block;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 4px;
+    letter-spacing: 0;
+  }
+  .print-header__codes {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-3);
+    text-align: right;
+    letter-spacing: 0.04em;
+  }
+  .print-header__codes strong {
+    display: block;
+    color: var(--accent-deep, var(--teal));
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 2px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .print-stage {
+    width: 1180px;
+    margin: 0 auto;
+    flex: 1;
+  }
+
+  /* detail-flat needs to grow to its content (no internal scrollbars in print). */
+  .print .detail-flat {
+    height: auto;
+    min-height: 1600px;
+    overflow: visible;
+    box-shadow: 0 16px 38px -22px rgba(24,49,59,0.30);
+  }
+  .print .detail-flat .drawer__main,
+  .print .detail-flat .drawer__side { overflow: visible; }
+
+  /* Avoid splitting key sections across pages. */
+  .print .section,
+  .print .hero,
+  .print .route-hero,
+  .print .kpi-row,
+  .print .side-card,
+  .print .week-grid,
+  .print .formula,
+  .print .rooms-table,
+  .print .waypoint,
+  .print .menu-row { break-inside: avoid; }
+
+  .print .detail-flat__cover {
+    /* When printing, footer area: page number + section */
+  }
+  .print-footer {
+    flex: none;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--ink-4);
+    padding: 6px 8px 0;
+    letter-spacing: 0.04em;
+  }
+
+  /* Screen preview (when viewing the file directly): center pages with breathing room */
+  @media screen {
+    body {
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+    .print-page {
+      box-shadow: 0 24px 60px -20px rgba(24,49,59,0.18);
+      border-radius: 6px;
+    }
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body class="print">
+<div id="root"></div>
+
+<script type="text/babel" src="icons.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="opening-periods.jsx"></script>
+<script type="text/babel" src="detail-types.jsx"></script>
+
+<script type="text/babel">
+/* global React, ReactDOM, TypeDetailPage */
+
+const PAGES = [
+  { type: 'HEB', title: 'Hébergement', sub: 'Hôtel · Hébergement loisir · Camping · Résidence',
+    codes: 'HOT · HPA · HLO · CAMP · RVA' },
+  { type: 'RES', title: 'Restaurant', sub: 'Cartes & menus PDF + grille horaires par service',
+    codes: 'RES' },
+  { type: 'ASC', title: 'Activité', sub: 'Formules / sessions + matériel + saison',
+    codes: 'ASC' },
+  { type: 'ITI', title: 'Itinéraire', sub: 'Carte + profil altimétrique + étapes + téléchargements GPX',
+    codes: 'ITI · FMA' },
+  { type: 'VIS', title: 'Site & visite', sub: 'Visites & médiation + horaires saisonniers + tarifs',
+    codes: 'LOI · PCU · PNA' },
+  { type: 'SRV', title: 'Service & commerce', sub: 'Prestations + zone d\'intervention + grille horaires saison',
+    codes: 'PSV · SRV · COM · VIL' },
+];
+
+function PrintPage({ page, idx, total }) {
+  return (
+    <section className="print-page">
+      <header className="print-header">
+        <h1 className="print-header__title">
+          {page.title}<small>{page.sub}</small>
+        </h1>
+        <div className="print-header__codes">
+          <strong>Codes couverts</strong>
+          {page.codes}
+        </div>
+      </header>
+      <div className="print-stage">
+        <TypeDetailPage typeCode={page.type}/>
+      </div>
+      <footer className="print-footer">
+        <span>Bertel · Fiche détail par type d'objet</span>
+        <span>{idx + 1} / {total}</span>
+      </footer>
+    </section>
+  );
+}
+
+function App() {
+  return (
+    <>
+      {PAGES.map((p, i) => <PrintPage key={p.type} page={p} idx={i} total={PAGES.length}/>)}
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+
+// Auto-print: wait for fonts + a small delay so layout settles.
+(async () => {
+  try {
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  await new Promise(r => setTimeout(r, 600));
+  window.print();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Minimal Supabase CLI config — used by the SQL fresh-apply CI gate
+# (.github/workflows/sql-fresh-apply.yml). The CLI fills defaults for any
+# section not specified here. Regenerate/extend with `supabase init` if a
+# newer CLI requires more fields.
+project_id = "bertel"
+
+[db]
+# Default local connection: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+port = 54322
+shadow_port = 54320
+# Match live PROD (17.6) so the fresh-apply test runs on the same major version.
+major_version = 17

@@ -1,0 +1,6949 @@
+
+
+-- Classements/labels extensibles par schéma (moved to after object table creation)
+
+
+-- =====================================================
+-- TOURISM CRM - SCHÉMA UNIFIÉ (MONOLITHIQUE)
+-- Fichier : tourism_crm_schema_updated (2).sql
+-- Description : Schéma complet, idempotent, incluant toutes les tables (y compris celles qui manquaient)
+-- =====================================================
+
+-- Extensions requises
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "postgis";
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS "unaccent" WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+-- §198 — dmetaphone (bras phonétique de la recherche). Dans `extensions` comme pg_trgm :
+-- toute fonction à search_path restreint doit l'y trouver (gotcha §29).
+CREATE EXTENSION IF NOT EXISTS "fuzzystrmatch" WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+ALTER EXTENSION btree_gist SET SCHEMA extensions;
+
+-- Schémas
+CREATE SCHEMA IF NOT EXISTS api;
+CREATE SCHEMA IF NOT EXISTS audit;
+CREATE SCHEMA IF NOT EXISTS ref;
+CREATE SCHEMA IF NOT EXISTS crm;
+CREATE SCHEMA IF NOT EXISTS internal;
+
+-- Séquence pour ID fonctionnels
+CREATE SEQUENCE IF NOT EXISTS object_id_seq START 1;
+
+-- =====================================================
+-- Fonctions utilitaires
+-- =====================================================
+
+-- immutable_unaccent
+CREATE OR REPLACE FUNCTION public.immutable_unaccent(text)
+RETURNS text
+LANGUAGE sql IMMUTABLE PARALLEL SAFE 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT extensions.unaccent($1);
+$$;
+
+-- to_base36
+CREATE OR REPLACE FUNCTION api.to_base36(n BIGINT)
+RETURNS TEXT
+LANGUAGE plpgsql
+IMMUTABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+    digits CONSTANT TEXT := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    q BIGINT := n;
+    r INT;
+    out TEXT := '';
+BEGIN
+    IF q = 0 THEN
+        RETURN '0';
+    END IF;
+    WHILE q > 0 LOOP
+        r := (q % 36)::INT;
+        out := substr(digits, r + 1, 1) || out;
+        q := q / 36;
+    END LOOP;
+    RETURN out;
+END;
+$$;
+
+-- generate_object_id (HOTAQU000V5014ZU-like)
+CREATE OR REPLACE FUNCTION api.generate_object_id(p_object_type TEXT, p_region_code TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+    digits CONSTANT TEXT := '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    q BIGINT;
+    r INT;
+    out TEXT := '';
+    seq BIGINT;
+    prefix TEXT;
+BEGIN
+    prefix := upper(left(p_object_type, 3)) || upper(right(lpad(p_region_code, 3, 'X'), 3));
+    seq := nextval('object_id_seq');
+    q := seq;
+    IF q = 0 THEN
+      out := '0';
+    ELSE
+      WHILE q > 0 LOOP
+        r := (q % 36)::INT;
+        out := substr(digits, r + 1, 1) || out;
+        q := q / 36;
+      END LOOP;
+    END IF;
+    RETURN prefix || lpad(out, 10, '0');
+END;
+$$;
+
+-- update_updated_at_column
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Object-specific updated_at guard: ignore cache-only updates.
+CREATE OR REPLACE FUNCTION update_object_updated_at_business()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF (
+    to_jsonb(NEW) - ARRAY[
+      'updated_at',
+      'is_editing',
+      'commercial_visibility',
+      'cached_min_price',
+      'cached_main_image_url',
+      'cached_rating',
+      'cached_review_count',
+      'cached_is_open_now',
+      'cached_amenity_codes',
+      'cached_payment_codes',
+      'cached_environment_tags',
+      'cached_language_codes',
+      'cached_classification_codes',
+      'cached_taxonomy_codes',
+      'current_version'
+    ]
+  ) IS NOT DISTINCT FROM (
+    to_jsonb(OLD) - ARRAY[
+      'updated_at',
+      'is_editing',
+      'commercial_visibility',
+      'cached_min_price',
+      'cached_main_image_url',
+      'cached_rating',
+      'cached_review_count',
+      'cached_is_open_now',
+      'cached_amenity_codes',
+      'cached_payment_codes',
+      'cached_environment_tags',
+      'cached_language_codes',
+      'cached_classification_codes',
+      'cached_taxonomy_codes',
+      'current_version'
+    ]
+  ) THEN
+    RETURN NEW;
+  END IF;
+
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================
+-- Types
+-- =====================================================
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'object_type'
+  ) THEN
+    CREATE TYPE object_type AS ENUM (
+      'RES','PCU','PNA','ORG','ITI','VIL','HPA','ASC','COM','HOT','HLO','LOI','FMA','CAMP','PSV','RVA'
+    );
+    -- 'ACT' et 'SPU' sont ajoutés par le bloc d'upgrade « Ensure new enum labels exist » plus bas
+    -- (ALTER TYPE ... ADD VALUE IF NOT EXISTS) — même chemin sur fresh et sur live.
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'object_status'
+  ) THEN
+    CREATE TYPE object_status AS ENUM ('draft','published','archived','hidden');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_interaction_type'
+  ) THEN
+    CREATE TYPE crm_interaction_type AS ENUM ('call','email','meeting','visit','whatsapp','sms','note','other');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_direction'
+  ) THEN
+    CREATE TYPE crm_direction AS ENUM ('inbound','outbound','internal');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_status'
+  ) THEN
+    -- Cycle de vie des DEMANDES (manifeste 17g). Ne pas confondre avec `crm_task_status`
+    -- douze lignes plus bas, qui porte sur les TÂCHES et partage `in_progress`/`canceled` :
+    -- les deux vocabulaires se ressemblent et ne se remplacent JAMAIS l'un l'autre.
+    -- OUVERTS : new, in_progress, awaiting_provider (temps déduit du traitement net).
+    -- FERMÉS  : resolved, closed, canceled.
+    CREATE TYPE crm_status AS ENUM
+      ('new','in_progress','awaiting_provider','resolved','closed','canceled');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_task_status'
+  ) THEN
+    CREATE TYPE crm_task_status AS ENUM ('todo','in_progress','done','canceled','blocked');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_task_priority'
+  ) THEN
+    CREATE TYPE crm_task_priority AS ENUM ('low','medium','high','urgent');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'crm_consent_channel'
+  ) THEN
+    CREATE TYPE crm_consent_channel AS ENUM ('email','phone','sms','whatsapp','postal');
+  END IF;
+END $$;
+
+-- =====================================================
+-- ref_code partitionné
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ref_code (
+  id UUID DEFAULT uuid_generate_v4(),
+  domain TEXT NOT NULL,
+  code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  position INTEGER,
+  icon_url TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  valid_from DATE,
+  valid_to DATE,
+  parent_id UUID,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for reference data
+  name_i18n JSONB,
+  description_i18n JSONB,
+  name_normalized TEXT GENERATED ALWAYS AS (immutable_unaccent(lower(name))) STORED,
+  PRIMARY KEY (id, domain)
+) PARTITION BY LIST (domain);
+
+-- Ensure description column exists for existing installations
+ALTER TABLE IF EXISTS ref_code ADD COLUMN IF NOT EXISTS description TEXT;
+
+-- Drop legacy normalized column and enforce normalization via CHECK
+ALTER TABLE IF EXISTS ref_code DROP COLUMN IF EXISTS code_normalized;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_ref_code_code_normalized'
+      AND conrelid = 'ref_code'::regclass
+  ) THEN
+    ALTER TABLE ref_code
+      ADD CONSTRAINT chk_ref_code_code_normalized
+      CHECK (code = immutable_unaccent(lower(code)));
+  END IF;
+END $$;
+
+-- Partitions courantes
+CREATE TABLE IF NOT EXISTS ref_code_contact_kind PARTITION OF ref_code FOR VALUES IN ('contact_kind');
+CREATE TABLE IF NOT EXISTS ref_code_media_type PARTITION OF ref_code FOR VALUES IN ('media_type');
+CREATE TABLE IF NOT EXISTS ref_code_media_tag PARTITION OF ref_code FOR VALUES IN ('media_tag');
+CREATE TABLE IF NOT EXISTS ref_code_social_network PARTITION OF ref_code FOR VALUES IN ('social_network');
+CREATE TABLE IF NOT EXISTS ref_code_weekday PARTITION OF ref_code FOR VALUES IN ('weekday');
+CREATE TABLE IF NOT EXISTS ref_code_language_level PARTITION OF ref_code FOR VALUES IN ('language_level');
+CREATE TABLE IF NOT EXISTS ref_code_amenity_family PARTITION OF ref_code FOR VALUES IN ('amenity_family');
+CREATE TABLE IF NOT EXISTS ref_code_payment_method PARTITION OF ref_code FOR VALUES IN ('payment_method');
+CREATE TABLE IF NOT EXISTS ref_code_environment_tag PARTITION OF ref_code FOR VALUES IN ('environment_tag');
+-- §201 — « type d'unité d'hébergement » (bulle, tipi, lodge, cabane). La partition
+-- garantit STRUCTURELLEMENT le domaine : la FK de object_accommodation_unit_type ne
+-- peut pas viser un code d'un autre domaine, sans CHECK à maintenir.
+CREATE TABLE IF NOT EXISTS ref_code_accommodation_unit_type PARTITION OF ref_code FOR VALUES IN ('accommodation_unit_type');
+CREATE TABLE IF NOT EXISTS ref_code_price_kind PARTITION OF ref_code FOR VALUES IN ('price_kind');
+CREATE TABLE IF NOT EXISTS ref_code_price_unit PARTITION OF ref_code FOR VALUES IN ('price_unit');
+CREATE TABLE IF NOT EXISTS ref_code_price_type PARTITION OF ref_code FOR VALUES IN ('price_type');
+CREATE TABLE IF NOT EXISTS ref_code_meeting_equipment PARTITION OF ref_code FOR VALUES IN ('meeting_equipment');
+CREATE TABLE IF NOT EXISTS ref_code_opening_schedule_type PARTITION OF ref_code FOR VALUES IN ('opening_schedule_type');
+CREATE TABLE IF NOT EXISTS ref_code_iti_practice PARTITION OF ref_code FOR VALUES IN ('iti_practice');
+CREATE TABLE IF NOT EXISTS ref_code_demand_topic PARTITION OF ref_code FOR VALUES IN ('demand_topic');
+CREATE TABLE IF NOT EXISTS ref_code_demand_subtopic PARTITION OF ref_code FOR VALUES IN ('demand_subtopic');
+CREATE TABLE IF NOT EXISTS ref_code_mood PARTITION OF ref_code FOR VALUES IN ('mood');
+CREATE TABLE IF NOT EXISTS ref_code_menu_category PARTITION OF ref_code FOR VALUES IN ('menu_category');
+CREATE TABLE IF NOT EXISTS ref_code_dietary_tag PARTITION OF ref_code FOR VALUES IN ('dietary_tag');
+CREATE TABLE IF NOT EXISTS ref_code_allergen PARTITION OF ref_code FOR VALUES IN ('allergen');
+CREATE TABLE IF NOT EXISTS ref_code_cuisine_type PARTITION OF ref_code FOR VALUES IN ('cuisine_type');
+CREATE TABLE IF NOT EXISTS ref_code_accommodation_type PARTITION OF ref_code FOR VALUES IN ('accommodation_type');
+CREATE TABLE IF NOT EXISTS ref_code_tourism_type PARTITION OF ref_code FOR VALUES IN ('tourism_type');
+CREATE TABLE IF NOT EXISTS ref_code_transport_type PARTITION OF ref_code FOR VALUES IN ('transport_type');
+CREATE TABLE IF NOT EXISTS ref_code_activity_type PARTITION OF ref_code FOR VALUES IN ('activity_type');
+CREATE TABLE IF NOT EXISTS ref_code_season_type PARTITION OF ref_code FOR VALUES IN ('season_type');
+CREATE TABLE IF NOT EXISTS ref_code_client_type PARTITION OF ref_code FOR VALUES IN ('client_type');
+CREATE TABLE IF NOT EXISTS ref_code_service_type PARTITION OF ref_code FOR VALUES IN ('service_type');
+CREATE TABLE IF NOT EXISTS ref_code_booking_status PARTITION OF ref_code FOR VALUES IN ('booking_status');
+CREATE TABLE IF NOT EXISTS ref_code_promotion_type PARTITION OF ref_code FOR VALUES IN ('promotion_type');
+CREATE TABLE IF NOT EXISTS ref_code_document_type PARTITION OF ref_code FOR VALUES IN ('document_type');
+CREATE TABLE IF NOT EXISTS ref_code_insurance_type PARTITION OF ref_code FOR VALUES IN ('insurance_type');
+CREATE TABLE IF NOT EXISTS ref_code_feedback_type PARTITION OF ref_code FOR VALUES IN ('feedback_type');
+CREATE TABLE IF NOT EXISTS ref_code_partnership_type PARTITION OF ref_code FOR VALUES IN ('partnership_type');
+CREATE TABLE IF NOT EXISTS ref_code_assistance_type PARTITION OF ref_code FOR VALUES IN ('assistance_type');
+CREATE TABLE IF NOT EXISTS ref_code_destination_type PARTITION OF ref_code FOR VALUES IN ('destination_type');
+CREATE TABLE IF NOT EXISTS ref_code_event_type PARTITION OF ref_code FOR VALUES IN ('event_type');
+CREATE TABLE IF NOT EXISTS ref_code_package_type PARTITION OF ref_code FOR VALUES IN ('package_type');
+CREATE TABLE IF NOT EXISTS ref_code_room_type PARTITION OF ref_code FOR VALUES IN ('room_type');
+CREATE TABLE IF NOT EXISTS ref_code_bed_type PARTITION OF ref_code FOR VALUES IN ('bed_type');
+CREATE TABLE IF NOT EXISTS ref_code_view_type PARTITION OF ref_code FOR VALUES IN ('view_type');
+CREATE TABLE IF NOT EXISTS ref_code_amenity_type PARTITION OF ref_code FOR VALUES IN ('amenity_type');
+CREATE TABLE IF NOT EXISTS ref_code_membership_tier PARTITION OF ref_code FOR VALUES IN ('membership_tier');
+CREATE TABLE IF NOT EXISTS ref_code_membership_campaign PARTITION OF ref_code FOR VALUES IN ('membership_campaign');
+CREATE TABLE IF NOT EXISTS ref_code_incident_category PARTITION OF ref_code FOR VALUES IN ('incident_category');
+CREATE TABLE IF NOT EXISTS ref_code_other PARTITION OF ref_code DEFAULT;
+
+-- Stable weekday mapping: locale-independent day number (1=Mon..7=Sun).
+ALTER TABLE IF EXISTS ref_code
+  ADD COLUMN IF NOT EXISTS dow_number SMALLINT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'chk_ref_code_weekday_dow_number'
+      AND conrelid = 'ref_code'::regclass
+  ) THEN
+    ALTER TABLE ref_code
+      ADD CONSTRAINT chk_ref_code_weekday_dow_number
+      CHECK (
+        domain <> 'weekday'
+        OR (dow_number BETWEEN 1 AND 7)
+      );
+  END IF;
+END $$;
+
+-- Backfill weekday numeric mapping from canonical weekday code.
+UPDATE ref_code
+SET dow_number = CASE code
+  WHEN 'monday' THEN 1
+  WHEN 'tuesday' THEN 2
+  WHEN 'wednesday' THEN 3
+  WHEN 'thursday' THEN 4
+  WHEN 'friday' THEN 5
+  WHEN 'saturday' THEN 6
+  WHEN 'sunday' THEN 7
+  ELSE dow_number
+END
+WHERE domain = 'weekday'
+  AND (
+    dow_number IS NULL
+    OR dow_number <> CASE code
+      WHEN 'monday' THEN 1
+      WHEN 'tuesday' THEN 2
+      WHEN 'wednesday' THEN 3
+      WHEN 'thursday' THEN 4
+      WHEN 'friday' THEN 5
+      WHEN 'saturday' THEN 6
+      WHEN 'sunday' THEN 7
+      ELSE dow_number
+    END
+  );
+
+-- Index d'unicité nécessaires sur chaque partition (id & code)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_contact_kind_id ON ref_code_contact_kind (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_type_id ON ref_code_media_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_tag_id ON ref_code_media_tag (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_social_network_id ON ref_code_social_network (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_weekday_id ON ref_code_weekday (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_language_level_id ON ref_code_language_level (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_family_id ON ref_code_amenity_family (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_payment_method_id ON ref_code_payment_method (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_environment_tag_id ON ref_code_environment_tag (id);
+-- Obligatoire pour qu'une partition soit cible de FK : la PK du parent est (id, domain).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_accommodation_unit_type_id ON ref_code_accommodation_unit_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_kind_id ON ref_code_price_kind (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_unit_id ON ref_code_price_unit (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_type_id ON ref_code_price_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_meeting_equipment_id ON ref_code_meeting_equipment (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_opening_schedule_type_id ON ref_code_opening_schedule_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_iti_practice_id ON ref_code_iti_practice (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_demand_topic_id ON ref_code_demand_topic (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_demand_subtopic_id ON ref_code_demand_subtopic (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_mood_id ON ref_code_mood (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_menu_category_id ON ref_code_menu_category (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_dietary_tag_id ON ref_code_dietary_tag (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_allergen_id ON ref_code_allergen (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_cuisine_type_id ON ref_code_cuisine_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_accommodation_type_id ON ref_code_accommodation_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_tourism_type_id ON ref_code_tourism_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_transport_type_id ON ref_code_transport_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_activity_type_id ON ref_code_activity_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_season_type_id ON ref_code_season_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_client_type_id ON ref_code_client_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_service_type_id ON ref_code_service_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_booking_status_id ON ref_code_booking_status (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_promotion_type_id ON ref_code_promotion_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_document_type_id ON ref_code_document_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_insurance_type_id ON ref_code_insurance_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_feedback_type_id ON ref_code_feedback_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_partnership_type_id ON ref_code_partnership_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_assistance_type_id ON ref_code_assistance_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_destination_type_id ON ref_code_destination_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_event_type_id ON ref_code_event_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_package_type_id ON ref_code_package_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_room_type_id ON ref_code_room_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_bed_type_id ON ref_code_bed_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_view_type_id ON ref_code_view_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_type_id ON ref_code_amenity_type (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_tier_id ON ref_code_membership_tier (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_campaign_id ON ref_code_membership_campaign (id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_incident_category_id ON ref_code_incident_category (id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_contact_kind_code ON ref_code_contact_kind(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_type_code ON ref_code_media_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_media_tag_code ON ref_code_media_tag(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_social_network_code ON ref_code_social_network(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_weekday_code ON ref_code_weekday(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_language_level_code ON ref_code_language_level(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_family_code ON ref_code_amenity_family(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_payment_method_code ON ref_code_payment_method(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_environment_tag_code ON ref_code_environment_tag(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_accommodation_unit_type_code ON ref_code_accommodation_unit_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_kind_code ON ref_code_price_kind(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_unit_code ON ref_code_price_unit(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_type_code ON ref_code_price_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_meeting_equipment_code ON ref_code_meeting_equipment(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_opening_schedule_type_code ON ref_code_opening_schedule_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_iti_practice_code ON ref_code_iti_practice(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_demand_topic_code ON ref_code_demand_topic(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_demand_subtopic_code ON ref_code_demand_subtopic(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_mood_code ON ref_code_mood(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_menu_category_code ON ref_code_menu_category(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_dietary_tag_code ON ref_code_dietary_tag(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_allergen_code ON ref_code_allergen(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_cuisine_type_code ON ref_code_cuisine_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_accommodation_type_code ON ref_code_accommodation_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_tourism_type_code ON ref_code_tourism_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_transport_type_code ON ref_code_transport_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_activity_type_code ON ref_code_activity_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_season_type_code ON ref_code_season_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_client_type_code ON ref_code_client_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_service_type_code ON ref_code_service_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_booking_status_code ON ref_code_booking_status(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_promotion_type_code ON ref_code_promotion_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_document_type_code ON ref_code_document_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_insurance_type_code ON ref_code_insurance_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_feedback_type_code ON ref_code_feedback_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_partnership_type_code ON ref_code_partnership_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_assistance_type_code ON ref_code_assistance_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_destination_type_code ON ref_code_destination_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_event_type_code ON ref_code_event_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_package_type_code ON ref_code_package_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_room_type_code ON ref_code_room_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_bed_type_code ON ref_code_bed_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_view_type_code ON ref_code_view_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_type_code ON ref_code_amenity_type(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_tier_code ON ref_code_membership_tier(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_membership_campaign_code ON ref_code_membership_campaign(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_incident_category_code ON ref_code_incident_category(code);
+
+ALTER TABLE IF EXISTS ref_code
+  ADD COLUMN IF NOT EXISTS is_assignable BOOLEAN;
+
+UPDATE ref_code
+SET is_assignable = TRUE
+WHERE is_assignable IS NULL;
+
+ALTER TABLE IF EXISTS ref_code
+  ALTER COLUMN is_assignable SET DEFAULT TRUE;
+
+ALTER TABLE IF EXISTS ref_code
+  ALTER COLUMN is_assignable SET NOT NULL;
+
+DROP INDEX IF EXISTS idx_ref_code_domain_code;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_domain_code
+ON ref_code(domain, code);
+
+CREATE INDEX IF NOT EXISTS idx_ref_code_domain_parent_id
+ON ref_code(domain, parent_id);
+
+CREATE TABLE IF NOT EXISTS ref_code_domain_registry (
+  domain TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  object_type object_type,
+  is_hierarchical BOOLEAN NOT NULL DEFAULT FALSE,
+  is_taxonomy BOOLEAN NOT NULL DEFAULT FALSE,
+  position INTEGER,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  name_i18n JSONB,
+  description_i18n JSONB,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- =====================================================
+-- Référentiels et i18n
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS ref_language (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(5) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  native_name VARCHAR(100),
+  icon_url TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_language_position ON ref_language(position) WHERE position IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION ref_language_set_position()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF NEW.position IS NULL THEN
+    LOCK TABLE ref_language IN SHARE ROW EXCLUSIVE MODE;
+    SELECT COALESCE(MAX(position), 0) + 1 INTO NEW.position FROM ref_language;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_ref_language_set_position') THEN
+    CREATE TRIGGER trg_ref_language_set_position BEFORE INSERT ON ref_language FOR EACH ROW EXECUTE FUNCTION ref_language_set_position();
+  END IF;
+END;
+$$;
+
+CREATE TABLE IF NOT EXISTS ref_amenity (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  family_id UUID NOT NULL REFERENCES ref_code_amenity_family(id) ON DELETE RESTRICT,
+  scope TEXT DEFAULT 'object' CHECK (scope IN ('object','meeting_room','both')),
+  description TEXT,
+  icon_url TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  name_i18n JSONB,
+  -- I18n support for description
+  description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
+);
+
+CREATE TABLE IF NOT EXISTS ref_sustainability_action_category (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  icon_url TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  name_i18n JSONB,
+  -- I18n support for description
+  description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
+);
+
+CREATE TABLE IF NOT EXISTS ref_sustainability_action (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  category_id UUID NOT NULL REFERENCES ref_sustainability_action_category(id) ON DELETE RESTRICT,
+  code VARCHAR(50) NOT NULL,
+  label VARCHAR(150) NOT NULL,
+  description TEXT,
+  icon_url TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  label_i18n JSONB,
+  description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB,
+  UNIQUE(category_id, code)
+);
+
+CREATE TABLE IF NOT EXISTS ref_document (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  url TEXT NOT NULL UNIQUE,
+  title TEXT,
+  issuer TEXT,
+  description TEXT,
+  icon_url TEXT,
+  position INTEGER,
+  valid_from DATE,
+  valid_to DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for document content
+  title_i18n JSONB,
+  issuer_i18n JSONB,
+  description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
+);
+
+CREATE TABLE IF NOT EXISTS ref_review_source (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  icon_url TEXT,
+  base_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Link documents to a ref_code document_type when present
+-- Revert prior attempt to link documents to ref_code document_type; legal types are handled by ref_legal_type via object_legal
+ALTER TABLE IF EXISTS ref_document DROP COLUMN IF EXISTS type_id;
+DROP INDEX IF EXISTS idx_ref_document_type_id;
+
+-- Tags libres + liaisons génériques
+CREATE TABLE IF NOT EXISTS ref_tag (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT,
+  color TEXT,
+  icon TEXT,
+  icon_url TEXT,
+  position INTEGER,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  extra JSONB,
+  name_normalized TEXT GENERATED ALWAYS AS (immutable_unaccent(lower(name))) STORED,
+  description_normalized TEXT GENERATED ALWAYS AS (
+    CASE WHEN description IS NOT NULL THEN immutable_unaccent(lower(description)) END
+  ) STORED
+);
+CREATE TABLE IF NOT EXISTS tag_link (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tag_id UUID NOT NULL REFERENCES ref_tag(id) ON DELETE CASCADE,
+  target_table TEXT NOT NULL,
+  target_pk TEXT NOT NULL,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  extra JSONB,
+  CONSTRAINT uq_tag_unique_target UNIQUE (tag_id, target_table, target_pk)
+);
+
+-- i18n générique
+CREATE TABLE IF NOT EXISTS i18n_translation (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  target_table TEXT NOT NULL,
+  target_pk TEXT NOT NULL,
+  target_column TEXT NOT NULL,
+  language_id UUID NOT NULL REFERENCES ref_language(id) ON DELETE RESTRICT,
+  value_text TEXT,
+  value_json JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_i18n_value_not_empty CHECK (value_text IS NOT NULL OR value_json IS NOT NULL),
+  CONSTRAINT uq_i18n_translation UNIQUE (target_table, target_pk, target_column, language_id)
+);
+
+-- Governance guard: avoid dual source-of-truth when table already has a JSONB *_i18n column.
+CREATE OR REPLACE FUNCTION validate_i18n_translation_target()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_has_jsonb_i18n BOOLEAN;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1
+    FROM information_schema.columns c
+    WHERE c.table_schema = 'public'
+      AND c.table_name = NEW.target_table
+      AND c.column_name = NEW.target_column || '_i18n'
+      AND c.data_type = 'jsonb'
+  )
+  INTO v_has_jsonb_i18n;
+
+  IF v_has_jsonb_i18n THEN
+    RAISE EXCEPTION
+      'i18n_translation is blocked for %.% because %.%_i18n exists and is canonical',
+      NEW.target_table, NEW.target_column, NEW.target_table, NEW.target_column;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_validate_i18n_translation_target ON i18n_translation;
+CREATE TRIGGER trg_validate_i18n_translation_target
+BEFORE INSERT OR UPDATE ON i18n_translation
+FOR EACH ROW EXECUTE FUNCTION validate_i18n_translation_target();
+
+CREATE OR REPLACE FUNCTION validate_org_object_type()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_column_name TEXT := TG_ARGV[0];
+  v_org_id TEXT;
+BEGIN
+  v_org_id := to_jsonb(NEW)->>v_column_name;
+
+  IF v_org_id IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+       FROM object o
+       WHERE o.id = v_org_id
+         AND o.object_type = 'ORG'
+     ) THEN
+    RAISE EXCEPTION '% must reference an ORG object id, got %', v_column_name, v_org_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION enforce_classification_single_selection()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_scheme_code TEXT;
+  v_is_allowed BOOLEAN;
+BEGIN
+  IF NEW.value_id IS NOT NULL
+     AND NEW.scheme_id IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+       FROM ref_classification_value v
+       WHERE v.id = NEW.value_id
+         AND v.scheme_id = NEW.scheme_id
+     ) THEN
+    RAISE EXCEPTION 'value_id % does not belong to scheme_id %', NEW.value_id, NEW.scheme_id;
+  END IF;
+
+  SELECT (
+    COALESCE(s.is_distinction, FALSE)
+    OR COALESCE(s.display_group, '') IN ('sustainability_labels', 'accessibility_labels')
+  ), s.code
+  INTO v_is_allowed, v_scheme_code
+  FROM ref_classification_scheme s
+  WHERE s.id = NEW.scheme_id;
+
+  IF COALESCE(v_is_allowed, FALSE) = FALSE THEN
+    RAISE EXCEPTION 'classification scheme % is reserved for taxonomy and cannot be stored in object_classification',
+      COALESCE(v_scheme_code, NEW.scheme_id::TEXT)
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF NEW.status = 'granted'
+     AND EXISTS (
+       SELECT 1
+       FROM ref_classification_scheme s
+       WHERE s.id = NEW.scheme_id
+         AND s.selection = 'single'
+     )
+     AND EXISTS (
+       SELECT 1
+       FROM object_classification oc
+       WHERE oc.object_id = NEW.object_id
+         AND oc.scheme_id = NEW.scheme_id
+         AND oc.status = 'granted'
+         AND oc.id IS DISTINCT FROM NEW.id
+     ) THEN
+    SELECT s.code
+    INTO v_scheme_code
+    FROM ref_classification_scheme s
+    WHERE s.id = NEW.scheme_id;
+
+    RAISE EXCEPTION 'classification scheme % allows only one granted value per object',
+      COALESCE(v_scheme_code, NEW.scheme_id::TEXT);
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Classifications
+CREATE TABLE IF NOT EXISTS ref_classification_scheme (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  icon_url TEXT,
+  selection VARCHAR(10) NOT NULL DEFAULT 'single',
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'ref_classification_scheme'
+      AND c.conname = 'chk_classification_scheme_selection'
+  ) THEN
+    ALTER TABLE ref_classification_scheme
+      ADD CONSTRAINT chk_classification_scheme_selection
+      CHECK (selection IN ('single', 'multiple'));
+  END IF;
+END $$;
+
+ALTER TABLE IF EXISTS ref_classification_scheme
+  ADD COLUMN IF NOT EXISTS name_i18n JSONB;
+ALTER TABLE IF EXISTS ref_classification_scheme
+  ADD COLUMN IF NOT EXISTS is_distinction BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS ref_classification_scheme
+  ADD COLUMN IF NOT EXISTS display_group VARCHAR(50);
+CREATE TABLE IF NOT EXISTS ref_classification_value (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  scheme_id UUID NOT NULL REFERENCES ref_classification_scheme(id) ON DELETE CASCADE,
+  code VARCHAR(50) NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  ordinal INTEGER,
+  parent_id UUID REFERENCES ref_classification_value(id) ON DELETE CASCADE,
+  metadata JSONB,
+  icon_url TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  name_i18n JSONB,
+  UNIQUE(scheme_id, code)
+);
+
+-- =====================================================
+-- TABLE MAÎTRE OBJECT
+-- =====================================================
+CREATE TABLE IF NOT EXISTS object (
+  id TEXT PRIMARY KEY,
+  object_type object_type NOT NULL,
+  name TEXT NOT NULL,
+  -- Realm de cloisonnement (18a) : la fiche appartient-elle au corpus de test ?
+  -- DECLAREE ICI et non dans migration_test_org_isolation.sql, qui est appliquee EN
+  -- DERNIER : get_filtered_object_ids est `LANGUAGE sql`, donc son corps est VALIDE
+  -- au CREATE (etape 5 du manifeste) et il reference cette colonne. Sans elle a
+  -- l'etape 1, une base fraiche echoue avant meme d'atteindre la migration.
+  -- Entretenue par TRIGGER depuis org_config.is_test_org — ne jamais l'ecrire a la main.
+  is_test BOOLEAN NOT NULL DEFAULT FALSE,
+  business_timezone TEXT NOT NULL DEFAULT 'Indian/Reunion',
+  commercial_visibility TEXT NOT NULL DEFAULT 'active',
+  region_code TEXT CHECK (region_code IS NULL OR region_code ~ '^[A-Z0-9]{3}$'),
+  updated_at_source TIMESTAMPTZ,
+  status object_status NOT NULL DEFAULT 'draft',
+  published_at TIMESTAMPTZ,
+  is_editing BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  name_normalized TEXT GENERATED ALWAYS AS (immutable_unaccent(lower(name))) STORED,
+  name_search_vector tsvector GENERATED ALWAYS AS (to_tsvector('french', COALESCE(immutable_unaccent(lower(name)), ''))) STORED,
+  -- Cached aggregates for quick lookups (updated by triggers)
+  cached_min_price NUMERIC(10,2),
+  cached_main_image_url TEXT,
+  cached_rating NUMERIC(3,2),
+  cached_review_count INTEGER DEFAULT 0,
+  cached_is_open_now BOOLEAN,
+  cached_amenity_codes TEXT[],
+  cached_payment_codes TEXT[],
+  cached_environment_tags TEXT[],
+  cached_language_codes TEXT[],
+  cached_classification_codes TEXT[],
+  cached_taxonomy_codes TEXT[],
+  -- Current version number (for efficient versioning without MAX() scan)
+  current_version INTEGER NOT NULL DEFAULT 0,
+  extra JSONB,
+  name_i18n JSONB,
+  CONSTRAINT chk_object_id_shape CHECK (id ~ '^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$'),
+  CONSTRAINT chk_object_status CHECK (status IN ('draft','published','archived','hidden')),
+  CONSTRAINT chk_object_commercial_visibility CHECK (commercial_visibility IN ('active','lapsed','suspended'))
+);
+
+-- Ensure cache columns exist for existing installations
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS business_timezone TEXT;
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS commercial_visibility TEXT;
+UPDATE object
+SET business_timezone = 'Indian/Reunion'
+WHERE business_timezone IS NULL
+   OR btrim(business_timezone) = '';
+UPDATE object
+SET commercial_visibility = 'active'
+WHERE commercial_visibility IS NULL
+   OR btrim(commercial_visibility) = '';
+ALTER TABLE IF EXISTS object ALTER COLUMN business_timezone SET DEFAULT 'Indian/Reunion';
+ALTER TABLE IF EXISTS object ALTER COLUMN business_timezone SET NOT NULL;
+ALTER TABLE IF EXISTS object ALTER COLUMN commercial_visibility SET DEFAULT 'active';
+ALTER TABLE IF EXISTS object ALTER COLUMN commercial_visibility SET NOT NULL;
+ALTER TABLE IF EXISTS object DROP CONSTRAINT IF EXISTS chk_object_commercial_visibility;
+ALTER TABLE IF EXISTS object
+ADD CONSTRAINT chk_object_commercial_visibility
+CHECK (commercial_visibility IN ('active','lapsed','suspended'));
+
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_amenity_codes TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_payment_codes TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_environment_tags TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_language_codes TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_classification_codes TEXT[];
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_taxonomy_codes TEXT[];
+-- §109 — aggregated weighted full-text search document (child-sourced; maintained by
+-- api.refresh_object_filter_caches). Powers the Explorer global search (search_mode='global').
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS search_document tsvector;
+-- §197 — même contenu public agrégé, en TEXTE BRUT normalisé (minuscules, sans accents,
+-- espaces compactés) : source des trigrammes pg_trgm de la recherche tolérante aux fautes.
+-- Un tsvector ne conserve que des lexèmes racinisés — la forme réelle des mots, seule
+-- exploitable par word_similarity(), y est perdue. Rempli par le MÊME CTE que ci-dessus.
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS search_document_text TEXT;
+-- §198 — codes phonétiques (dmetaphone) des mots du MÊME contenu, produits depuis le MÊME
+-- CTE. Préfiltre du bras phonétique du repli : rattrape les graphies dont la PREMIÈRE
+-- lettre change (kafé/café), que les trigrammes ne peuvent pas rattraper — leur score y
+-- tombe exactement au plancher de bruit. Dictionnaire `simple`, pas `french` : les
+-- lexèmes sont des codes, les raciniser n'aurait aucun sens.
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS search_document_phonetic tsvector;
+
+-- ─── Lot 1 — 2026-03-20 ──────────────────────────────────────────────────────
+-- TRANSITOIRE / NON-CANONIQUE / OPT-IN
+-- secondary_types ne remplace pas object.object_type qui reste le type principal
+-- de référence pour toutes les APIs. Aucune API existante ne lit ni ne filtre ce
+-- champ automatiquement. Usage opt-in uniquement par le code qui l'invoque
+-- explicitement. Condition de remplacement : si multi-appartenance > 50 objets
+-- avec besoin UI confirmé, migrer vers junction table object_type_link et
+-- supprimer cette colonne.
+ALTER TABLE IF EXISTS object
+  ADD COLUMN IF NOT EXISTS secondary_types object_type[] NOT NULL DEFAULT '{}';
+
+-- TRANSITOIRE — non exposé comme filtre API avant backfill et normalisation.
+-- Stocke la zone touristique en texte libre pendant la phase d'import Excel.
+-- Condition de suppression : quand ref_zone_touristique est créée et que toutes
+-- les valeurs ont été normalisées sur des IDs FK, remplacer par
+-- zone_touristique_id UUID REFERENCES ref_zone_touristique(id).
+ALTER TABLE IF EXISTS object_location
+  ADD COLUMN IF NOT EXISTS zone_touristique TEXT;
+
+-- Génération d'ID si absent
+CREATE OR REPLACE FUNCTION api.before_insert_object_generate_id()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE v_region TEXT;
+BEGIN
+  IF NEW.id IS NULL OR NEW.id = '' THEN
+    v_region := COALESCE(NEW.region_code, NULLIF(current_setting('app.region_code', true), ''), 'GEN');
+    NEW.id := api.generate_object_id((NEW.object_type)::text, v_region);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_before_insert_object_generate_id ON object;
+CREATE TRIGGER trg_before_insert_object_generate_id BEFORE INSERT ON object FOR EACH ROW EXECUTE FUNCTION api.before_insert_object_generate_id();
+
+CREATE OR REPLACE FUNCTION api.validate_object_business_timezone()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  NEW.business_timezone := COALESCE(NULLIF(btrim(NEW.business_timezone), ''), 'Indian/Reunion');
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_timezone_names tzn
+    WHERE tzn.name = NEW.business_timezone
+  ) THEN
+    RAISE EXCEPTION 'Invalid business_timezone: %', NEW.business_timezone
+      USING ERRCODE = '22023';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_validate_object_business_timezone ON object;
+CREATE TRIGGER trg_validate_object_business_timezone
+BEFORE INSERT OR UPDATE OF business_timezone ON object
+FOR EACH ROW
+EXECUTE FUNCTION api.validate_object_business_timezone();
+
+-- Mise à jour published_at
+CREATE OR REPLACE FUNCTION api.manage_object_published_at()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF NEW.status = 'published' AND OLD.status != 'published' AND NEW.published_at IS NULL THEN
+    NEW.published_at := NOW();
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_manage_object_published_at ON object;
+CREATE TRIGGER trg_manage_object_published_at BEFORE UPDATE ON object FOR EACH ROW EXECUTE FUNCTION api.manage_object_published_at();
+
+-- =====================================================
+-- Tables communes
+-- =====================================================
+
+-- Address table removed in favor of unified object_location
+DROP TABLE IF EXISTS address CASCADE;
+
+CREATE TABLE IF NOT EXISTS object_zone (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  insee_commune VARCHAR(5) NOT NULL,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(object_id, insee_commune)
+);
+
+-- Legacy simple location table removed (using unified object_location)
+
+CREATE TABLE IF NOT EXISTS object_place (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  label TEXT,
+  slug TEXT,
+  is_primary BOOLEAN DEFAULT FALSE,
+  position INTEGER DEFAULT 0,
+  effective_from DATE,
+  effective_to DATE,
+  extra JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_place_one_primary ON object_place(object_id) WHERE is_primary;
+
+
+
+-- =====================================================
+-- Unified Location model (object or place)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS object_location (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT REFERENCES object(id) ON DELETE CASCADE,
+  place_id UUID REFERENCES object_place(id) ON DELETE CASCADE,
+
+  -- Address fields
+  address1 TEXT,
+  address1_suite TEXT,
+  address2 TEXT,
+  address3 TEXT,
+  postcode VARCHAR(10),
+  city TEXT,
+  code_insee VARCHAR(5),
+  lieu_dit TEXT,
+  direction TEXT,
+
+  -- Geographic fields
+  latitude DECIMAL(10,8),
+  longitude DECIMAL(11,8),
+  altitude_m INTEGER,
+
+  -- Metadata
+  is_main_location BOOLEAN DEFAULT FALSE,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  -- Generated geography point
+  geog2 GEOGRAPHY(POINT,4326) GENERATED ALWAYS AS (
+    CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL
+         THEN ST_SetSRID(ST_MakePoint(longitude::float8, latitude::float8),4326)::geography
+    END
+  ) STORED,
+
+  -- Full-text search vector for city
+  city_search_vector tsvector GENERATED ALWAYS AS (
+    to_tsvector('french', COALESCE(immutable_unaccent(lower(city)), ''))
+  ) STORED,
+
+  -- Constraints
+  CONSTRAINT chk_object_or_place CHECK ((object_id IS NOT NULL AND place_id IS NULL) OR (object_id IS NULL AND place_id IS NOT NULL)),
+  CONSTRAINT chk_latitude_range_unified CHECK (latitude IS NULL OR (latitude >= -90 AND latitude <= 90)),
+  CONSTRAINT chk_longitude_range_unified CHECK (longitude IS NULL OR (longitude >= -180 AND longitude <= 180)),
+  CONSTRAINT chk_latlon_both_or_none_unified CHECK ((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL))
+);
+
+CREATE INDEX IF NOT EXISTS idx_object_location_object_id ON object_location(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_location_place_id ON object_location(place_id);
+CREATE INDEX IF NOT EXISTS idx_object_location_geog2 ON object_location USING GIST (geog2);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_location_main ON object_location(object_id) WHERE is_main_location;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_location_main_place ON object_location(place_id) WHERE is_main_location;
+
+-- =====================================================
+-- Pending changes moderation queue
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS pending_change (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT REFERENCES object(id) ON DELETE CASCADE,
+  target_table TEXT NOT NULL,
+  target_pk TEXT,
+  action TEXT NOT NULL CHECK (action IN ('insert','update','delete')),
+  payload JSONB NOT NULL,
+  submitted_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','applied')),
+  reviewed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  review_note TEXT,
+  applied_at TIMESTAMPTZ,
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_change_object_status ON pending_change(object_id, status);
+CREATE INDEX IF NOT EXISTS idx_pending_change_target ON pending_change(target_table, target_pk);
+-- Index to support querying validated changes by effective timestamp
+DROP INDEX IF EXISTS idx_pending_change_validated_timestamp;
+CREATE INDEX IF NOT EXISTS idx_pending_change_validated_effective_ts
+ON pending_change (status, (COALESCE(applied_at, reviewed_at)))
+WHERE status IN ('approved', 'applied');
+
+DROP TRIGGER IF EXISTS update_pending_change_updated_at ON pending_change;
+CREATE TRIGGER update_pending_change_updated_at BEFORE UPDATE ON pending_change FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Maintain object.is_editing based on pending changes lifecycle
+CREATE OR REPLACE FUNCTION pending_change_after_insert()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF NEW.status = 'pending' AND NEW.object_id IS NOT NULL THEN
+    UPDATE object SET is_editing = TRUE WHERE id = NEW.object_id;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION pending_change_after_update()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  -- If becomes pending, mark editing
+  IF NEW.status = 'pending' AND (OLD.status IS DISTINCT FROM 'pending') AND NEW.object_id IS NOT NULL THEN
+    UPDATE object SET is_editing = TRUE WHERE id = NEW.object_id;
+  END IF;
+
+  -- If leaves pending, clear when no more pending remain
+  IF OLD.status = 'pending' AND NEW.status <> 'pending' AND NEW.object_id IS NOT NULL THEN
+    PERFORM 1 FROM pending_change pc WHERE pc.object_id = NEW.object_id AND pc.status = 'pending' LIMIT 1;
+    IF NOT FOUND THEN
+      UPDATE object SET is_editing = FALSE WHERE id = NEW.object_id;
+    END IF;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION pending_change_after_delete()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF OLD.status = 'pending' AND OLD.object_id IS NOT NULL THEN
+    PERFORM 1 FROM pending_change pc WHERE pc.object_id = OLD.object_id AND pc.status = 'pending' LIMIT 1;
+    IF NOT FOUND THEN
+      UPDATE object SET is_editing = FALSE WHERE id = OLD.object_id;
+    END IF;
+  END IF;
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_pending_change_after_insert ON pending_change;
+CREATE TRIGGER trg_pending_change_after_insert AFTER INSERT ON pending_change FOR EACH ROW EXECUTE FUNCTION pending_change_after_insert();
+
+DROP TRIGGER IF EXISTS trg_pending_change_after_update ON pending_change;
+CREATE TRIGGER trg_pending_change_after_update AFTER UPDATE OF status ON pending_change FOR EACH ROW EXECUTE FUNCTION pending_change_after_update();
+
+DROP TRIGGER IF EXISTS trg_pending_change_after_delete ON pending_change;
+CREATE TRIGGER trg_pending_change_after_delete AFTER DELETE ON pending_change FOR EACH ROW EXECUTE FUNCTION pending_change_after_delete();
+
+-- Backfill/compatibility helpers removed with unified locations
+-- Ensure ref_contact_role exists before it's referenced
+CREATE TABLE IF NOT EXISTS ref_contact_role (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS contact_channel (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  kind_id UUID NOT NULL REFERENCES ref_code_contact_kind(id) ON DELETE RESTRICT,
+  value TEXT NOT NULL,
+  role_id UUID REFERENCES ref_contact_role(id) ON DELETE RESTRICT,
+  is_public BOOLEAN NOT NULL DEFAULT TRUE,
+  is_primary BOOLEAN DEFAULT FALSE,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(object_id, kind_id, value),
+  CONSTRAINT chk_contact_value_not_empty CHECK (LENGTH(TRIM(value)) > 0)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_contact_primary ON contact_channel(object_id, kind_id) WHERE is_primary;
+
+-- Media
+CREATE TABLE IF NOT EXISTS media (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT REFERENCES object(id) ON DELETE CASCADE,
+  media_type_id UUID NOT NULL REFERENCES ref_code_media_type(id) ON DELETE RESTRICT,
+  title TEXT,
+  credit TEXT,
+  url TEXT NOT NULL,
+  description TEXT,
+  analyse_data JSONB,
+  width INTEGER,
+  height INTEGER,
+  is_main BOOLEAN DEFAULT FALSE,
+  is_published BOOLEAN NOT NULL DEFAULT TRUE,
+  position INTEGER DEFAULT 0,
+  rights_expires_at DATE,
+  visibility TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  title_normalized TEXT GENERATED ALWAYS AS (CASE WHEN title IS NOT NULL THEN immutable_unaccent(lower(title)) END) STORED,
+  description_normalized TEXT GENERATED ALWAYS AS (CASE WHEN description IS NOT NULL THEN immutable_unaccent(lower(description)) END) STORED,
+  place_id UUID REFERENCES object_place(id) ON DELETE CASCADE,
+  kind TEXT,
+  title_i18n JSONB,
+  description_i18n JSONB,
+  CONSTRAINT chk_media_url_not_empty CHECK (LENGTH(TRIM(url)) > 0),
+  CONSTRAINT chk_media_visibility CHECK (visibility IS NULL OR visibility IN ('public','private','partners')),
+  CONSTRAINT chk_media_kind CHECK (kind IS NULL OR kind IN ('illustration','asset','logo')),
+  CONSTRAINT chk_media_target_present CHECK ((object_id IS NOT NULL) <> (place_id IS NOT NULL)),
+  CONSTRAINT chk_media_url_shape CHECK (url ~* '^https?://')
+);
+
+-- Add organization context to media table (similar to object_description)
+ALTER TABLE IF EXISTS media
+  ADD COLUMN IF NOT EXISTS org_object_id TEXT REFERENCES object(id) ON DELETE SET NULL;
+
+-- Ensure new enum labels exist on upgraded databases
+DO $$ BEGIN
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'PSV';
+  EXCEPTION WHEN others THEN NULL; END;
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'RVA';
+  EXCEPTION WHEN others THEN NULL; END;
+  -- ─── Lot ACT — 2026-03-21 ────────────────────────────────────────────────────
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'ACT';
+  EXCEPTION WHEN others THEN NULL; END;
+  -- ─── Lot SPU « Service public » — 2026-06-11 (§53 ; taxonomie : migration_object_type_spu.sql, 8u)
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'SPU';
+  EXCEPTION WHEN others THEN NULL; END;
+  -- ─── Lot PRD — §57 (taxonomie : migration_object_type_prd.sql, 8x) ; foldé ici 2026-06-30 (audit B1) pour qu'une base NEUVE reproduise les 19 valeurs sans dépendre de la migration
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'PRD';
+  EXCEPTION WHEN others THEN NULL; END;
+END $$;
+
+-- Valider dimensions médias selon type
+CREATE OR REPLACE FUNCTION validate_media_dimensions()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE is_photo_video BOOLEAN;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM ref_code_media_type rc WHERE rc.id = NEW.media_type_id AND rc.code IN ('photo','video')
+  ) INTO is_photo_video;
+  IF is_photo_video THEN
+    IF (NEW.width IS NOT NULL AND NEW.width < 0) OR (NEW.height IS NOT NULL AND NEW.height < 0) THEN
+      RAISE EXCEPTION 'Width and height must be non-negative for photo/video media types';
+    END IF;
+  ELSE
+    IF NEW.width IS NOT NULL OR NEW.height IS NOT NULL THEN
+      RAISE EXCEPTION 'Width and height must be NULL for non-photo/video media types';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_validate_media_dimensions ON media;
+CREATE TRIGGER trg_validate_media_dimensions BEFORE INSERT OR UPDATE ON media FOR EACH ROW EXECUTE FUNCTION validate_media_dimensions();
+
+-- Auto-demote the previous main media when a row is inserted/updated with is_main=true.
+-- Scope mirrors the partial unique indexes uq_media_one_main_per_type /
+-- uq_media_one_main_per_type_place: (object_id, media_type_id) for object-attached
+-- media, (place_id, media_type_id) for place-attached media. The XOR constraint
+-- chk_media_target_present guarantees exactly one of the two foreign keys is set.
+-- Without this trigger, setting is_main=true on a new row would fail the partial
+-- unique index check while another row in the same scope still has is_main=true.
+CREATE OR REPLACE FUNCTION enforce_single_main_media()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+  -- Defensive guard: the trigger's WHEN clause already restricts firing to
+  -- NEW.is_main IS TRUE, but re-check here so the function stays safe if
+  -- invoked through a future path (e.g. INSTEAD OF on a view).
+  IF NEW.is_main IS NOT TRUE THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.object_id IS NOT NULL THEN
+    UPDATE media
+       SET is_main = FALSE
+     WHERE object_id = NEW.object_id
+       AND media_type_id = NEW.media_type_id
+       AND is_main IS TRUE
+       AND id <> NEW.id;
+  ELSIF NEW.place_id IS NOT NULL THEN
+    UPDATE media
+       SET is_main = FALSE
+     WHERE place_id = NEW.place_id
+       AND media_type_id = NEW.media_type_id
+       AND is_main IS TRUE
+       AND id <> NEW.id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_enforce_single_main_media ON media;
+CREATE TRIGGER trg_enforce_single_main_media
+  BEFORE INSERT OR UPDATE OF is_main, object_id, place_id, media_type_id ON media
+  FOR EACH ROW
+  WHEN (NEW.is_main IS TRUE)
+  EXECUTE FUNCTION enforce_single_main_media();
+
+-- Descriptions
+CREATE TABLE IF NOT EXISTS object_description (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  description TEXT,
+  description_chapo TEXT,
+  description_mobile TEXT,
+  description_edition TEXT,
+  description_offre_hors_zone TEXT,
+  sanitary_measures TEXT,
+  visibility TEXT,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  description_normalized TEXT GENERATED ALWAYS AS (CASE WHEN description IS NOT NULL THEN immutable_unaccent(lower(description)) END) STORED,
+  description_chapo_normalized TEXT GENERATED ALWAYS AS (CASE WHEN description_chapo IS NOT NULL THEN immutable_unaccent(lower(description_chapo)) END) STORED,
+  CONSTRAINT chk_object_description_visibility CHECK (visibility IS NULL OR visibility IN ('public','private','partners'))
+);
+-- Add organization context to descriptions
+ALTER TABLE IF EXISTS object_description
+  ADD COLUMN IF NOT EXISTS org_object_id TEXT REFERENCES object(id) ON DELETE SET NULL;
+
+-- Add i18n JSONB columns for description translations
+-- These columns store translations in JSONB format: {"fr": "French text", "en": "English text", "es": "Spanish text"}
+-- Use api.i18n_pick() helper function to extract translations with fallback support
+-- Example: UPDATE object_description SET description_i18n = '{"fr": "Description en français", "en": "Description in English"}' WHERE id = 'desc-uuid';
+ALTER TABLE IF EXISTS object_description
+  ADD COLUMN IF NOT EXISTS description_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_chapo_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_mobile_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_edition_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_offre_hors_zone_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS sanitary_measures_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS description_adapted TEXT,
+  ADD COLUMN IF NOT EXISTS description_adapted_i18n JSONB,
+  ADD COLUMN IF NOT EXISTS extra JSONB;
+
+-- Backfill duplicates: keep most recent canonical row per object and delete older duplicates.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'object_description' AND column_name = 'org_object_id'
+  ) THEN
+    WITH ranked AS (
+      SELECT id, object_id,
+             ROW_NUMBER() OVER (PARTITION BY object_id ORDER BY created_at DESC, id) AS rn
+      FROM object_description
+      WHERE org_object_id IS NULL
+    ), to_delete AS (
+      SELECT id
+      FROM ranked
+      WHERE rn > 1
+    )
+    DELETE FROM object_description d
+    USING to_delete
+    WHERE d.id = to_delete.id;
+  END IF;
+END $$;
+
+-- Uniqueness: one canonical description per object (org_object_id IS NULL)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_description_canonical_one
+  ON object_description(object_id)
+  WHERE org_object_id IS NULL;
+
+-- Uniqueness: at most one description per organization for a given object
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_description_per_org
+  ON object_description(object_id, org_object_id)
+  WHERE org_object_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS object_place_description (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  place_id UUID NOT NULL REFERENCES object_place(id) ON DELETE CASCADE,
+  description TEXT,
+  description_chapo TEXT,
+  description_mobile TEXT,
+  description_edition TEXT,
+  description_offre_hors_zone TEXT,
+  sanitary_measures TEXT,
+  description_adapted TEXT,
+  visibility TEXT,
+  position INTEGER DEFAULT 0,
+  extra JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for place descriptions
+  description_i18n JSONB,
+  description_chapo_i18n JSONB,
+  description_mobile_i18n JSONB,
+  description_edition_i18n JSONB,
+  description_offre_hors_zone_i18n JSONB,
+  sanitary_measures_i18n JSONB,
+  description_adapted_i18n JSONB,
+  CONSTRAINT chk_object_place_description_visibility CHECK (visibility IS NULL OR visibility IN ('public','private','partners'))
+);
+ALTER TABLE IF EXISTS object_place_description
+  ADD COLUMN IF NOT EXISTS description_adapted TEXT,
+  ADD COLUMN IF NOT EXISTS description_adapted_i18n JSONB;
+
+CREATE TABLE IF NOT EXISTS object_private_description (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  org_object_id TEXT REFERENCES object(id) ON DELETE SET NULL,
+  body TEXT NOT NULL,
+  audience TEXT NOT NULL DEFAULT 'private' CHECK (audience IN ('private','partners')),
+  language_id UUID REFERENCES ref_language(id) ON DELETE SET NULL,
+  -- Authorship: which authenticated user created this note
+  created_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  -- Categorisation: general intent of the note
+  category TEXT NOT NULL DEFAULT 'general'
+    CHECK (category IN ('general','important','urgent','internal','followup')),
+  -- Pin flag: pinned notes surface at the top of the list
+  is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Archive flag: archived notes stay visible to the team but are visually muted
+  is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Idempotent column additions for object_private_description (table may already exist)
+ALTER TABLE object_private_description
+  ADD COLUMN IF NOT EXISTS created_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general'
+    CHECK (category IN ('general','important','urgent','internal','followup')),
+  ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Liens externes (external_ids)
+CREATE TABLE IF NOT EXISTS object_external_id (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  organization_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE RESTRICT,
+  source_system TEXT NOT NULL DEFAULT 'default',
+  external_id TEXT NOT NULL,
+  last_synced_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_object_external_id_by_source UNIQUE (organization_object_id, source_system, external_id),
+  CONSTRAINT uq_object_external_id_object_org_source UNIQUE (object_id, organization_object_id, source_system)
+);
+
+ALTER TABLE IF EXISTS object_external_id
+  ADD COLUMN IF NOT EXISTS source_system TEXT;
+
+UPDATE object_external_id
+SET source_system = 'default'
+WHERE source_system IS NULL;
+
+ALTER TABLE IF EXISTS object_external_id
+  ALTER COLUMN source_system SET DEFAULT 'default';
+
+ALTER TABLE IF EXISTS object_external_id
+  ALTER COLUMN source_system SET NOT NULL;
+
+DO $$
+DECLARE
+  v_legacy_conname TEXT;
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_external_id'
+      AND c.conname = 'uq_object_org'
+  ) THEN
+    ALTER TABLE object_external_id DROP CONSTRAINT uq_object_org;
+  END IF;
+
+  SELECT c.conname
+  INTO v_legacy_conname
+  FROM pg_constraint c
+  JOIN pg_class t ON t.oid = c.conrelid
+  JOIN pg_namespace n ON n.oid = t.relnamespace
+  WHERE n.nspname = 'public'
+    AND t.relname = 'object_external_id'
+    AND c.contype = 'u'
+    AND pg_get_constraintdef(c.oid) LIKE 'UNIQUE (organization_object_id, external_id)%'
+  LIMIT 1;
+
+  IF v_legacy_conname IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE object_external_id DROP CONSTRAINT %I', v_legacy_conname);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_external_id'
+      AND c.conname = 'uq_object_external_id_by_source'
+  ) THEN
+    ALTER TABLE object_external_id
+      ADD CONSTRAINT uq_object_external_id_by_source
+      UNIQUE (organization_object_id, source_system, external_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_external_id'
+      AND c.conname = 'uq_object_external_id_object_org_source'
+  ) THEN
+    ALTER TABLE object_external_id
+      ADD CONSTRAINT uq_object_external_id_object_org_source
+      UNIQUE (object_id, organization_object_id, source_system);
+  END IF;
+END $$;
+
+-- Avis (reviews) importés
+CREATE TABLE IF NOT EXISTS object_review (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  source_id UUID NOT NULL REFERENCES ref_review_source(id) ON DELETE RESTRICT,
+  external_id TEXT,
+  rating NUMERIC(3,2) CHECK (rating >= 0 AND rating <= 5),
+  rating_max INTEGER DEFAULT 5,
+  title TEXT,
+  content TEXT,
+  author_name TEXT,
+  author_avatar_url TEXT,
+  review_date DATE,
+  visit_date DATE,
+  traveler_type TEXT,
+  language_id UUID REFERENCES ref_language(id) ON DELETE SET NULL,
+  helpful_count INTEGER DEFAULT 0,
+  response TEXT,
+  response_date DATE,
+  is_published BOOLEAN DEFAULT TRUE,
+  imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  raw_data JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (source_id, external_id)
+);
+
+-- Origine
+CREATE TABLE IF NOT EXISTS object_origin (
+  object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
+  source_system TEXT,
+  source_object_id TEXT,
+  import_batch_id UUID,
+  first_imported_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Légal
+-- Legacy specific legal tables removed in favor of unified object_legal
+
+-- Simple opening tables removed - using rich opening system instead
+
+-- Développement durable
+CREATE TABLE IF NOT EXISTS object_sustainability_action (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  action_id UUID NOT NULL REFERENCES ref_sustainability_action(id) ON DELETE RESTRICT,
+  document_id UUID REFERENCES ref_document(id) ON DELETE SET NULL,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(object_id, action_id)
+);
+-- Classification table required by sustainability_action_label
+CREATE TABLE IF NOT EXISTS object_classification (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  scheme_id UUID NOT NULL REFERENCES ref_classification_scheme(id) ON DELETE RESTRICT,
+  value_id UUID NOT NULL REFERENCES ref_classification_value(id) ON DELETE RESTRICT,
+  subvalue_ids UUID[],
+  document_id UUID REFERENCES ref_document(id) ON DELETE SET NULL,
+  requested_at DATE,
+  awarded_at DATE,
+  valid_until DATE,
+  status TEXT,
+  source TEXT,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_label_dates CHECK (valid_until IS NULL OR awarded_at IS NULL OR valid_until >= awarded_at),
+  CONSTRAINT chk_object_classification_status CHECK (status IS NULL OR status IN ('requested','granted','suspended','expired'))
+);
+
+CREATE TABLE IF NOT EXISTS ref_code_taxonomy_closure (
+  domain TEXT NOT NULL,
+  ancestor_id UUID NOT NULL,
+  descendant_id UUID NOT NULL,
+  depth INTEGER NOT NULL CHECK (depth >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (domain, ancestor_id, descendant_id),
+  CONSTRAINT fk_ref_code_taxonomy_closure_domain
+    FOREIGN KEY (domain)
+    REFERENCES ref_code_domain_registry(domain)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_ref_code_taxonomy_closure_ancestor
+    FOREIGN KEY (ancestor_id, domain)
+    REFERENCES ref_code(id, domain)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_ref_code_taxonomy_closure_descendant
+    FOREIGN KEY (descendant_id, domain)
+    REFERENCES ref_code(id, domain)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS object_taxonomy (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  domain TEXT NOT NULL,
+  ref_code_id UUID NOT NULL,
+  source TEXT,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_object_taxonomy_domain
+    FOREIGN KEY (domain)
+    REFERENCES ref_code_domain_registry(domain)
+    ON DELETE RESTRICT,
+  CONSTRAINT fk_object_taxonomy_ref_code
+    FOREIGN KEY (ref_code_id, domain)
+    REFERENCES ref_code(id, domain)
+    ON DELETE RESTRICT,
+  CONSTRAINT uq_object_taxonomy_object_domain UNIQUE (object_id, domain)
+);
+
+CREATE TABLE IF NOT EXISTS object_sustainability_action_label (
+  object_sustainability_action_id UUID NOT NULL REFERENCES object_sustainability_action(id) ON DELETE CASCADE,
+  object_classification_id UUID NOT NULL REFERENCES object_classification(id) ON DELETE CASCADE,
+  PRIMARY KEY (object_sustainability_action_id, object_classification_id)
+);
+
+CREATE OR REPLACE FUNCTION api.is_ref_code_taxonomy_domain(p_domain TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT COALESCE((
+    SELECT d.is_taxonomy
+    FROM ref_code_domain_registry d
+    WHERE d.domain = p_domain
+  ), FALSE);
+$$;
+
+CREATE OR REPLACE FUNCTION api.refresh_ref_code_taxonomy_closure(p_domain TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF COALESCE(api.is_ref_code_taxonomy_domain(p_domain), FALSE) = FALSE THEN
+    DELETE FROM ref_code_taxonomy_closure
+    WHERE domain = p_domain;
+    RETURN;
+  END IF;
+
+  DELETE FROM ref_code_taxonomy_closure
+  WHERE domain = p_domain;
+
+  INSERT INTO ref_code_taxonomy_closure (domain, ancestor_id, descendant_id, depth)
+  WITH RECURSIVE closure AS (
+    SELECT
+      rc.domain,
+      rc.id AS ancestor_id,
+      rc.id AS descendant_id,
+      0 AS depth
+    FROM ref_code rc
+    WHERE rc.domain = p_domain
+
+    UNION ALL
+
+    SELECT
+      closure.domain,
+      closure.ancestor_id,
+      child.id AS descendant_id,
+      closure.depth + 1 AS depth
+    FROM closure
+    JOIN ref_code child
+      ON child.domain = closure.domain
+     AND child.parent_id = closure.descendant_id
+  )
+  SELECT domain, ancestor_id, descendant_id, depth
+  FROM closure;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.refresh_object_taxonomy_cache_for_domain(p_domain TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  UPDATE object o
+  SET cached_taxonomy_codes = sub.codes
+  FROM (
+    SELECT
+      o2.id AS object_id,
+      COALESCE((
+        SELECT array_agg(DISTINCT (ot.domain || ':' || anc.code) ORDER BY (ot.domain || ':' || anc.code))
+        FROM object_taxonomy ot
+        JOIN ref_code_taxonomy_closure cl
+          ON cl.domain = ot.domain
+         AND cl.descendant_id = ot.ref_code_id
+        JOIN ref_code anc
+          ON anc.id = cl.ancestor_id
+         AND anc.domain = cl.domain
+        WHERE ot.object_id = o2.id
+          AND anc.is_assignable = TRUE
+      ), ARRAY[]::TEXT[]) AS codes
+    FROM object o2
+    WHERE EXISTS (
+      SELECT 1
+      FROM object_taxonomy ot
+      WHERE ot.object_id = o2.id
+        AND ot.domain = p_domain
+    )
+  ) sub
+  WHERE o.id = sub.object_id
+    AND o.cached_taxonomy_codes IS DISTINCT FROM sub.codes;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.validate_ref_code_taxonomy_hierarchy()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_is_taxonomy BOOLEAN;
+BEGIN
+  SELECT COALESCE(d.is_taxonomy, FALSE)
+  INTO v_is_taxonomy
+  FROM ref_code_domain_registry d
+  WHERE d.domain = NEW.domain;
+
+  IF COALESCE(v_is_taxonomy, FALSE) = FALSE THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.parent_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.parent_id = NEW.id THEN
+    RAISE EXCEPTION 'taxonomy node % cannot be its own parent', COALESCE(NEW.code, NEW.id::TEXT)
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM ref_code parent_code
+    WHERE parent_code.id = NEW.parent_id
+      AND parent_code.domain = NEW.domain
+  ) THEN
+    RAISE EXCEPTION 'taxonomy parent % must belong to the same ref_code domain %', NEW.parent_id, NEW.domain
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF EXISTS (
+    WITH RECURSIVE ancestors AS (
+      SELECT rc.id, rc.parent_id
+      FROM ref_code rc
+      WHERE rc.domain = NEW.domain
+        AND rc.id = NEW.parent_id
+
+      UNION ALL
+
+      SELECT rc.id, rc.parent_id
+      FROM ref_code rc
+      JOIN ancestors a
+        ON rc.id = a.parent_id
+      WHERE rc.domain = NEW.domain
+    )
+    SELECT 1
+    FROM ancestors
+    WHERE id = NEW.id
+  ) THEN
+    RAISE EXCEPTION 'taxonomy move would create a cycle in domain % for node %', NEW.domain, COALESCE(NEW.code, NEW.id::TEXT)
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.trg_refresh_ref_code_taxonomy_closure()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_old_is_taxonomy BOOLEAN := FALSE;
+  v_new_is_taxonomy BOOLEAN := FALSE;
+BEGIN
+  IF TG_OP IN ('UPDATE', 'DELETE') THEN
+    SELECT COALESCE(d.is_taxonomy, FALSE)
+    INTO v_old_is_taxonomy
+    FROM ref_code_domain_registry d
+    WHERE d.domain = OLD.domain;
+  END IF;
+
+  IF TG_OP IN ('INSERT', 'UPDATE') THEN
+    SELECT COALESCE(d.is_taxonomy, FALSE)
+    INTO v_new_is_taxonomy
+    FROM ref_code_domain_registry d
+    WHERE d.domain = NEW.domain;
+  END IF;
+
+  IF TG_OP = 'UPDATE' AND OLD.domain IS DISTINCT FROM NEW.domain THEN
+    IF v_old_is_taxonomy THEN
+      PERFORM api.refresh_ref_code_taxonomy_closure(OLD.domain);
+      PERFORM api.refresh_object_taxonomy_cache_for_domain(OLD.domain);
+    END IF;
+    IF v_new_is_taxonomy THEN
+      PERFORM api.refresh_ref_code_taxonomy_closure(NEW.domain);
+      PERFORM api.refresh_object_taxonomy_cache_for_domain(NEW.domain);
+    END IF;
+    RETURN NULL;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    IF v_old_is_taxonomy THEN
+      PERFORM api.refresh_ref_code_taxonomy_closure(OLD.domain);
+      PERFORM api.refresh_object_taxonomy_cache_for_domain(OLD.domain);
+    END IF;
+    RETURN NULL;
+  END IF;
+
+  IF v_new_is_taxonomy THEN
+    PERFORM api.refresh_ref_code_taxonomy_closure(NEW.domain);
+    PERFORM api.refresh_object_taxonomy_cache_for_domain(NEW.domain);
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.validate_object_taxonomy_assignment()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_is_taxonomy BOOLEAN;
+  v_domain_object_type object_type;
+  v_object_type object_type;
+  v_node_code TEXT;
+  v_is_assignable BOOLEAN;
+BEGIN
+  SELECT COALESCE(d.is_taxonomy, FALSE), d.object_type
+  INTO v_is_taxonomy, v_domain_object_type
+  FROM ref_code_domain_registry d
+  WHERE d.domain = NEW.domain;
+
+  IF COALESCE(v_is_taxonomy, FALSE) = FALSE THEN
+    RAISE EXCEPTION 'object_taxonomy only accepts domains registered as taxonomy, got %', NEW.domain
+      USING ERRCODE = '23514';
+  END IF;
+
+  SELECT o.object_type
+  INTO v_object_type
+  FROM object o
+  WHERE o.id = NEW.object_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'unknown object id % for object_taxonomy assignment', NEW.object_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  IF v_domain_object_type IS NOT NULL AND v_object_type IS DISTINCT FROM v_domain_object_type THEN
+    RAISE EXCEPTION 'taxonomy domain % only accepts object_type %, got % for object %', NEW.domain, v_domain_object_type, v_object_type, NEW.object_id
+      USING ERRCODE = '23514';
+  END IF;
+
+  SELECT rc.code, rc.is_assignable
+  INTO v_node_code, v_is_assignable
+  FROM ref_code rc
+  WHERE rc.id = NEW.ref_code_id
+    AND rc.domain = NEW.domain;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'taxonomy node % does not exist in domain %', NEW.ref_code_id, NEW.domain
+      USING ERRCODE = '23503';
+  END IF;
+
+  IF COALESCE(v_is_assignable, FALSE) = FALSE THEN
+    RAISE EXCEPTION 'taxonomy node % in domain % cannot be assigned to objects', COALESCE(v_node_code, NEW.ref_code_id::TEXT), NEW.domain
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Relations objets
+CREATE TABLE IF NOT EXISTS ref_object_relation_type (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS object_relation (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  source_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  target_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  relation_type_id UUID NOT NULL REFERENCES ref_object_relation_type(id) ON DELETE RESTRICT,
+  distance_m NUMERIC(10,2),
+  note TEXT,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_relation_not_self CHECK (source_object_id <> target_object_id),
+  CONSTRAINT uq_object_relation UNIQUE (source_object_id, target_object_id, relation_type_id)
+);
+
+-- M:N liaisons
+CREATE TABLE IF NOT EXISTS object_language (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  language_id UUID NOT NULL REFERENCES ref_language(id) ON DELETE CASCADE,
+  level_id UUID REFERENCES ref_code_language_level(id) ON DELETE SET NULL,
+  extra JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, language_id)
+);
+CREATE TABLE IF NOT EXISTS object_payment_method (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  payment_method_id UUID NOT NULL REFERENCES ref_code_payment_method(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, payment_method_id)
+);
+CREATE TABLE IF NOT EXISTS object_environment_tag (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  environment_tag_id UUID NOT NULL REFERENCES ref_code_environment_tag(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, environment_tag_id)
+);
+-- §201 — types d'unité d'hébergement d'un objet, MULTI-VALUÉS.
+-- `object_taxonomy` impose une seule valeur par objet et par domaine : un
+-- établissement qui propose une bulle ET un lodge ne peut pas s'y représenter.
+-- Répond à « dans quoi le visiteur dort-il ? », jamais à « quel type
+-- d'établissement est-ce ? » (= object_taxonomy).
+-- Défini AVANT api_views_functions.sql : `api.get_filtered_object_ids` référence
+-- cette table dans son corps et ne compilerait pas sans elle.
+CREATE TABLE IF NOT EXISTS object_accommodation_unit_type (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  unit_type_id UUID NOT NULL REFERENCES ref_code_accommodation_unit_type(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, unit_type_id)
+);
+-- PostgreSQL n'indexe pas le côté référençant d'une FK : sans cet index, purger
+-- un code de référentiel balaierait toute la table de liaison.
+CREATE INDEX IF NOT EXISTS idx_object_accommodation_unit_type_unit_type_id
+  ON object_accommodation_unit_type (unit_type_id);
+CREATE TABLE IF NOT EXISTS object_amenity (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  amenity_id UUID NOT NULL REFERENCES ref_amenity(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, amenity_id)
+);
+
+-- Media tags (M:N - multiple tags per media)
+CREATE TABLE IF NOT EXISTS media_tag (
+  media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES ref_code_media_tag(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (media_id, tag_id)
+);
+
+-- ORG/Contacts/Actor
+CREATE TABLE IF NOT EXISTS ref_org_role (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS object_org_link (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  org_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  role_id UUID NOT NULL REFERENCES ref_org_role(id) ON DELETE RESTRICT,
+  is_primary BOOLEAN DEFAULT FALSE,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, org_object_id, role_id)
+);
+
+-- A single primary organization per object
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_primary_org
+  ON object_org_link(object_id)
+  WHERE is_primary;
+
+-- Actor model
+CREATE TABLE IF NOT EXISTS ref_actor_role (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS actor (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  display_name TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
+  gender TEXT,
+  photo_url TEXT,
+  extra JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  display_name_normalized TEXT GENERATED ALWAYS AS (immutable_unaccent(lower(display_name))) STORED,
+  first_name_normalized TEXT GENERATED ALWAYS AS (CASE WHEN first_name IS NOT NULL THEN immutable_unaccent(lower(first_name)) END) STORED,
+  last_name_normalized TEXT GENERATED ALWAYS AS (CASE WHEN last_name IS NOT NULL THEN immutable_unaccent(lower(last_name)) END) STORED,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
+);
+CREATE TABLE IF NOT EXISTS actor_channel (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  actor_id UUID NOT NULL REFERENCES actor(id) ON DELETE CASCADE,
+  kind_id UUID NOT NULL REFERENCES ref_code_contact_kind(id) ON DELETE RESTRICT,
+  value TEXT NOT NULL,
+  is_primary BOOLEAN DEFAULT FALSE,
+  -- Visibilité du canal (chantier 2026-08-28, manifeste 17e). DÉFAUT PRIVÉ, à l'inverse de
+  -- `contact_channel.is_public` (DEFAULT TRUE) : celui-ci porte une coordonnée d'ÉTABLISSEMENT,
+  -- celui-là une coordonnée de PERSONNE. Le drapeau ne gate que les surfaces de DIFFUSION ; le
+  -- CRM et l'éditeur continuent d'émettre tous les canaux aux membres autorisés (le périmètre
+  -- est déjà gardé par api.can_read_actor_contacts, §208) — sans quoi le déploiement aurait
+  -- vidé les fiches de tous les agents le jour même.
+  is_public BOOLEAN NOT NULL DEFAULT FALSE,
+  role_id UUID REFERENCES ref_contact_role(id) ON DELETE SET NULL,
+  position INTEGER DEFAULT 0,
+  extra JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_actor_channel_not_empty CHECK (length(trim(value)) > 0),
+  CONSTRAINT uq_actor_channel_unique UNIQUE (actor_id, kind_id, value)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_actor_channel_primary ON actor_channel(actor_id, kind_id) WHERE is_primary;
+
+CREATE TABLE IF NOT EXISTS actor_object_role (
+  actor_id UUID NOT NULL REFERENCES actor(id) ON DELETE CASCADE,
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  role_id UUID NOT NULL REFERENCES ref_actor_role(id) ON DELETE RESTRICT,
+  is_primary BOOLEAN DEFAULT FALSE,
+  valid_from DATE,
+  valid_to DATE,
+  visibility TEXT NOT NULL DEFAULT 'public' CHECK (visibility IN ('public','private','partners')),
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (actor_id, object_id, role_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_actor_object_role_primary ON actor_object_role(object_id, role_id) WHERE is_primary;
+
+-- Email shape enforcement (object + actor)
+CREATE OR REPLACE FUNCTION api.enforce_contact_email_shape()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE v_is_email BOOLEAN;
+BEGIN
+  SELECT lower(code) = 'email' INTO v_is_email FROM ref_code_contact_kind WHERE id = NEW.kind_id;
+  IF v_is_email AND NEW.value IS NOT NULL AND NEW.value !~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' THEN
+    RAISE EXCEPTION 'Invalid email format for contact kind=email: %', NEW.value;
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_contact_channel_email ON contact_channel;
+CREATE TRIGGER trg_contact_channel_email BEFORE INSERT OR UPDATE ON contact_channel FOR EACH ROW EXECUTE FUNCTION api.enforce_contact_email_shape();
+
+CREATE OR REPLACE FUNCTION api.enforce_actor_channel_email_shape()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE v_is_email BOOLEAN;
+BEGIN
+  SELECT lower(code) = 'email' INTO v_is_email FROM ref_code_contact_kind WHERE id = NEW.kind_id;
+  IF v_is_email AND NEW.value IS NOT NULL AND NEW.value !~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' THEN
+    RAISE EXCEPTION 'Invalid email format for actor channel kind=email: %', NEW.value;
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_actor_channel_email ON actor_channel;
+CREATE TRIGGER trg_actor_channel_email BEFORE INSERT OR UPDATE ON actor_channel FOR EACH ROW EXECUTE FUNCTION api.enforce_actor_channel_email_shape();
+
+-- Unicité email cross-actors
+CREATE OR REPLACE FUNCTION api.prevent_duplicate_actor_email()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE v_is_email BOOLEAN; v_existing_actor_id UUID;
+BEGIN
+  SELECT lower(code) = 'email' INTO v_is_email FROM ref_code_contact_kind WHERE id = NEW.kind_id;
+  IF v_is_email AND NEW.value IS NOT NULL THEN
+    SELECT ac.actor_id INTO v_existing_actor_id
+    FROM actor_channel ac
+    JOIN ref_code_contact_kind rck ON ac.kind_id = rck.id
+    WHERE lower(rck.code) = 'email' AND lower(ac.value) = lower(NEW.value) AND ac.actor_id != NEW.actor_id
+    LIMIT 1;
+    IF v_existing_actor_id IS NOT NULL THEN
+      RAISE EXCEPTION 'Email % is already used by actor %', NEW.value, v_existing_actor_id;
+    END IF;
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_prevent_duplicate_actor_email ON actor_channel;
+CREATE TRIGGER trg_prevent_duplicate_actor_email BEFORE INSERT OR UPDATE ON actor_channel FOR EACH ROW EXECUTE FUNCTION api.prevent_duplicate_actor_email();
+
+-- CRM: interactions & tasks
+CREATE TABLE IF NOT EXISTS crm_interaction (
+  id UUID DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  actor_id UUID REFERENCES actor(id) ON DELETE SET NULL,
+  -- Fil de réponses (§66) : une réponse est une interaction enfant rattachée à la demande
+  -- RACINE (1 niveau) ; hérite acteur+contexte du parent (design PO 2026-06-12). NB : le
+  -- nullable réel de object_id est posé par migration_crm_module.sql (modèle acteur-centré).
+  parent_interaction_id UUID REFERENCES crm_interaction(id) ON DELETE CASCADE,
+  interaction_type crm_interaction_type NOT NULL DEFAULT 'note',
+  direction crm_direction NOT NULL DEFAULT 'internal',
+  -- PAS de DEFAULT (chantier 2026-08-28, manifeste 17b). Il valait 'done' — ANCIEN vocabulaire,
+  -- aujourd'hui 'resolved' (17g) — ce qui faisait naître « traitée » toute demande créée sans
+  -- statut explicite. Le remplacer par 'planned' (aujourd'hui 'new') aurait
+  -- contredit la règle par-sujet de `api.save_crm_interaction` pour toute écriture DIRECTE ;
+  -- l'absence de défaut, la colonne étant NOT NULL, fait ÉCHOUER une écriture directe sans
+  -- statut au lieu de deviner. Les 3 seules fonctions qui insèrent ici passent toutes `status`
+  -- explicitement (vérifié sur pg_proc : save_crm_interaction, create_crm_artifacts_from_incident,
+  -- log_publication_proof_interaction).
+  status crm_status NOT NULL,
+  subject TEXT,
+  body TEXT,
+  source TEXT,
+  occurred_at TIMESTAMPTZ,
+  due_at TIMESTAMPTZ,
+  duration_min INTEGER,
+  owner UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  handled_by_actor_id UUID REFERENCES actor(id) ON DELETE SET NULL,
+  demand_topic_id UUID REFERENCES ref_code_demand_topic(id) ON DELETE RESTRICT,
+  demand_subtopic_id UUID REFERENCES ref_code_demand_subtopic(id) ON DELETE RESTRICT,
+  request_mood_id UUID REFERENCES ref_code_mood(id) ON DELETE SET NULL,
+  response_mood_id UUID REFERENCES ref_code_mood(id) ON DELETE SET NULL,
+  is_actionable BOOLEAN NOT NULL DEFAULT TRUE,
+  first_response_at TIMESTAMPTZ,
+  resolved_at TIMESTAMPTZ,
+  extra JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (id)
+);
+CREATE OR REPLACE FUNCTION api.auto_populate_interaction_subject()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE topic_name TEXT; subtopic_name TEXT; generated_subject TEXT;
+BEGIN
+  IF NEW.subject IS NOT NULL AND trim(NEW.subject) != '' THEN RETURN NEW; END IF;
+  IF NEW.demand_topic_id IS NOT NULL THEN SELECT name INTO topic_name FROM ref_code_demand_topic WHERE id = NEW.demand_topic_id; END IF;
+  IF NEW.demand_subtopic_id IS NOT NULL THEN SELECT name INTO subtopic_name FROM ref_code_demand_subtopic WHERE id = NEW.demand_subtopic_id; END IF;
+  IF topic_name IS NOT NULL AND subtopic_name IS NOT NULL THEN
+    generated_subject := topic_name || ' - ' || subtopic_name;
+  ELSIF topic_name IS NOT NULL THEN
+    generated_subject := topic_name;
+  ELSIF subtopic_name IS NOT NULL THEN
+    generated_subject := subtopic_name;
+  ELSE
+    CASE NEW.interaction_type
+      WHEN 'call' THEN generated_subject := 'Appel téléphonique';
+      WHEN 'email' THEN generated_subject := 'Email';
+      WHEN 'meeting' THEN generated_subject := 'Rendez-vous';
+      WHEN 'visit' THEN generated_subject := 'Visite';
+      WHEN 'whatsapp' THEN generated_subject := 'WhatsApp';
+      WHEN 'sms' THEN generated_subject := 'SMS';
+      WHEN 'note' THEN generated_subject := 'Note interne';
+      ELSE generated_subject := 'Interaction CRM';
+    END CASE;
+  END IF;
+  NEW.subject := generated_subject;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_auto_populate_interaction_subject ON crm_interaction;
+CREATE TRIGGER trg_auto_populate_interaction_subject BEFORE INSERT OR UPDATE ON crm_interaction FOR EACH ROW EXECUTE FUNCTION api.auto_populate_interaction_subject();
+
+CREATE TABLE IF NOT EXISTS crm_task (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  actor_id UUID REFERENCES actor(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  status crm_task_status NOT NULL DEFAULT 'todo',
+  priority crm_task_priority NOT NULL DEFAULT 'medium',
+  due_at TIMESTAMPTZ,
+  owner UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  related_interaction_id UUID REFERENCES crm_interaction(id) ON DELETE SET NULL,
+  extra JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Consentements
+CREATE TABLE IF NOT EXISTS actor_consent (
+  actor_id UUID NOT NULL REFERENCES actor(id) ON DELETE CASCADE,
+  channel crm_consent_channel NOT NULL,
+  consent_given BOOLEAN NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  source TEXT,
+  document_id UUID REFERENCES ref_document(id) ON DELETE SET NULL,
+  PRIMARY KEY(actor_id, channel)
+);
+
+-- Pricing
+CREATE TABLE IF NOT EXISTS ref_capacity_metric (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  unit VARCHAR(20),
+  icon_url TEXT,
+  position INTEGER,
+  description TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS ref_capacity_applicability (
+  metric_id UUID NOT NULL REFERENCES ref_capacity_metric(id) ON DELETE CASCADE,
+  object_type object_type NOT NULL,
+  PRIMARY KEY(metric_id, object_type)
+);
+CREATE TABLE IF NOT EXISTS object_capacity (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  metric_id UUID NOT NULL REFERENCES ref_capacity_metric(id) ON DELETE RESTRICT,
+  value_integer INTEGER CHECK (value_integer IS NULL OR value_integer >= 0),
+  unit VARCHAR(20),
+  effective_from DATE,
+  effective_to DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(object_id, metric_id),
+  CONSTRAINT chk_capacity_dates CHECK (effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from)
+);
+-- sync unit
+CREATE OR REPLACE FUNCTION sync_object_capacity_unit()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF NEW.metric_id IS NOT NULL THEN
+    SELECT unit INTO STRICT NEW.unit FROM ref_capacity_metric WHERE id = NEW.metric_id;
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_object_capacity_sync_unit_ins ON object_capacity;
+CREATE TRIGGER trg_object_capacity_sync_unit_ins BEFORE INSERT ON object_capacity FOR EACH ROW EXECUTE FUNCTION sync_object_capacity_unit();
+DROP TRIGGER IF EXISTS trg_object_capacity_sync_unit_upd ON object_capacity;
+CREATE TRIGGER trg_object_capacity_sync_unit_upd BEFORE UPDATE OF metric_id ON object_capacity FOR EACH ROW EXECUTE FUNCTION sync_object_capacity_unit();
+CREATE OR REPLACE FUNCTION propagate_capacity_unit_change()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' AND NEW.unit IS DISTINCT FROM OLD.unit THEN
+    UPDATE object_capacity SET unit = NEW.unit WHERE metric_id = NEW.id;
+  END IF;
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS trg_ref_capacity_metric_unit_change ON ref_capacity_metric;
+CREATE TRIGGER trg_ref_capacity_metric_unit_change AFTER UPDATE OF unit ON ref_capacity_metric FOR EACH ROW EXECUTE FUNCTION propagate_capacity_unit_change();
+
+-- Tarifs
+CREATE TABLE IF NOT EXISTS object_price (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  kind_id UUID NOT NULL REFERENCES ref_code_price_kind(id) ON DELETE RESTRICT,
+  unit_id UUID REFERENCES ref_code_price_unit(id) ON DELETE RESTRICT,
+  amount NUMERIC(12,2) CHECK (amount IS NULL OR amount >= 0),
+  amount_max NUMERIC(12,2) CHECK (amount_max IS NULL OR amount_max >= 0),
+  currency CHAR(3) NOT NULL DEFAULT 'EUR',
+  season_code TEXT,
+  indication_code TEXT,
+  age_min_enfant SMALLINT,
+  age_max_enfant SMALLINT,
+  age_min_junior SMALLINT,
+  age_max_junior SMALLINT,
+  valid_from DATE,
+  valid_to DATE,
+  conditions TEXT,
+  source TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_amount_range CHECK (amount_max IS NULL OR amount IS NULL OR amount_max >= amount),
+  CONSTRAINT chk_age_ranges_valid CHECK (
+    (age_min_enfant IS NULL OR age_min_enfant >= 0) AND
+    (age_max_enfant IS NULL OR age_max_enfant >= age_min_enfant) AND
+    (age_min_junior IS NULL OR age_min_junior >= 0) AND
+    (age_max_junior IS NULL OR age_max_junior >= age_min_junior)
+  )
+);
+CREATE TABLE IF NOT EXISTS object_price_period (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  price_id UUID NOT NULL REFERENCES object_price(id) ON DELETE CASCADE,
+  start_date DATE,
+  end_date DATE,
+  start_time TIME,
+  end_time TIME,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_price_period_dates CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date),
+  CONSTRAINT chk_price_period_times CHECK (end_time IS NULL OR start_time IS NULL OR end_time > start_time)
+);
+CREATE TABLE IF NOT EXISTS object_discount (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  conditions TEXT,
+  discount_percent NUMERIC(5,2) CHECK (discount_percent IS NULL OR (discount_percent >= 0 AND discount_percent <= 100)),
+  discount_amount NUMERIC(12,2) CHECK (discount_amount IS NULL OR discount_amount >= 0),
+  currency CHAR(3),
+  min_group_size INTEGER CHECK (min_group_size IS NULL OR min_group_size >= 1),
+  max_group_size INTEGER CHECK (max_group_size IS NULL OR max_group_size >= min_group_size),
+  valid_from DATE,
+  valid_to DATE,
+  source TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_discount_xor CHECK (
+    (discount_percent IS NOT NULL AND discount_amount IS NULL) OR
+    (discount_percent IS NULL AND discount_amount IS NOT NULL)
+  ),
+  CONSTRAINT chk_discount_currency_amount CHECK (discount_amount IS NULL OR currency IS NOT NULL)
+);
+
+-- MICE / Meeting rooms
+CREATE TABLE IF NOT EXISTS object_meeting_room (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  name TEXT,
+  area_m2 NUMERIC(8,2) CHECK (area_m2 IS NULL OR area_m2 >= 0),
+  cap_theatre INTEGER CHECK (cap_theatre IS NULL OR cap_theatre >= 0),
+  cap_u INTEGER CHECK (cap_u IS NULL OR cap_u >= 0),
+  cap_classroom INTEGER CHECK (cap_classroom IS NULL OR cap_classroom >= 0),
+  cap_boardroom INTEGER CHECK (cap_boardroom IS NULL OR cap_boardroom >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for meeting room names
+  name_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
+);
+CREATE TABLE IF NOT EXISTS meeting_room_equipment (
+  room_id UUID NOT NULL REFERENCES object_meeting_room(id) ON DELETE CASCADE,
+  equipment_id UUID NOT NULL REFERENCES ref_code_meeting_equipment(id) ON DELETE RESTRICT,
+  position INTEGER DEFAULT 0,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_id, equipment_id)
+);
+
+-- Types de chambres (Hébergement)
+CREATE TABLE IF NOT EXISTS object_room_type (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  name_i18n JSONB,
+  description TEXT,
+  description_i18n JSONB,
+  capacity_adults INTEGER CHECK (capacity_adults IS NULL OR capacity_adults >= 0),
+  capacity_children INTEGER CHECK (capacity_children IS NULL OR capacity_children >= 0),
+  capacity_total INTEGER CHECK (capacity_total IS NULL OR capacity_total >= 0),
+  size_sqm NUMERIC(6,2),
+  bed_config TEXT,
+  bed_config_i18n JSONB,
+  total_rooms INTEGER DEFAULT 1,
+  floor_level INTEGER,
+  view_type_id UUID REFERENCES ref_code_view_type(id) ON DELETE SET NULL,
+  base_price NUMERIC(12,2),
+  currency TEXT DEFAULT 'EUR',
+  is_accessible BOOLEAN DEFAULT FALSE,
+  is_published BOOLEAN DEFAULT TRUE,
+  position INTEGER DEFAULT 0,
+  extra JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (object_id, code)
+);
+
+CREATE TABLE IF NOT EXISTS object_room_type_amenity (
+  room_type_id UUID NOT NULL REFERENCES object_room_type(id) ON DELETE CASCADE,
+  amenity_id UUID NOT NULL REFERENCES ref_amenity(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_type_id, amenity_id)
+);
+
+-- §72: structured bed list per room type (qty x bed type). Sibling of object_room_type_amenity
+-- plus a quantity/position payload; bed_type_id -> ref_code_bed_type FK-target partition.
+CREATE TABLE IF NOT EXISTS object_room_type_bed (
+  room_type_id UUID NOT NULL REFERENCES object_room_type(id) ON DELETE CASCADE,
+  bed_type_id  UUID NOT NULL REFERENCES ref_code_bed_type(id) ON DELETE CASCADE,
+  quantity     INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  position     INTEGER NOT NULL DEFAULT 1,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_type_id, bed_type_id)
+);
+CREATE INDEX IF NOT EXISTS idx_room_type_bed_bed_type_id ON object_room_type_bed(bed_type_id);
+
+CREATE TABLE IF NOT EXISTS object_room_type_media (
+  room_type_id UUID NOT NULL REFERENCES object_room_type(id) ON DELETE CASCADE,
+  media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_type_id, media_id)
+);
+
+-- Ouvertures riches
+CREATE TABLE IF NOT EXISTS opening_period (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  name TEXT,
+  date_start DATE,
+  date_end DATE,
+  source_period_id TEXT,
+  all_years BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for opening period names
+  name_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB,
+  CONSTRAINT chk_opening_period_dates CHECK (date_end IS NULL OR date_start IS NULL OR date_end >= date_start)
+);
+CREATE TABLE IF NOT EXISTS opening_schedule (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  period_id UUID NOT NULL REFERENCES opening_period(id) ON DELETE CASCADE,
+  schedule_type_id UUID NOT NULL REFERENCES ref_code_opening_schedule_type(id) ON DELETE RESTRICT,
+  name TEXT,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for schedule names and notes
+  name_i18n JSONB,
+  note_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
+);
+CREATE TABLE IF NOT EXISTS opening_time_period (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  schedule_id UUID NOT NULL REFERENCES opening_schedule(id) ON DELETE CASCADE,
+  closed BOOLEAN NOT NULL DEFAULT FALSE,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS opening_time_period_weekday (
+  time_period_id UUID NOT NULL REFERENCES opening_time_period(id) ON DELETE CASCADE,
+  weekday_id UUID NOT NULL REFERENCES ref_code_weekday(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (time_period_id, weekday_id)
+);
+ALTER TABLE IF EXISTS opening_time_period_weekday
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE TABLE IF NOT EXISTS opening_time_frame (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  time_period_id UUID NOT NULL REFERENCES opening_time_period(id) ON DELETE CASCADE,
+  start_time TIME,
+  end_time TIME,
+  recurrence INTERVAL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_time_frame_range CHECK (start_time IS NULL OR end_time IS NULL OR end_time > start_time)
+);
+
+-- Group & Pets
+CREATE TABLE IF NOT EXISTS object_group_policy (
+  object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
+  min_size INTEGER CHECK (min_size IS NULL OR min_size >= 1),
+  max_size INTEGER CHECK (max_size IS NULL OR (min_size IS NULL OR max_size >= min_size)),
+  group_only BOOLEAN NOT NULL DEFAULT FALSE,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS object_pet_policy (
+  object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
+  accepted BOOLEAN NOT NULL,
+  conditions TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Promotions
+CREATE TABLE IF NOT EXISTS promotion (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT UNIQUE,
+  name TEXT NOT NULL,
+  name_i18n JSONB,
+  description TEXT,
+  description_i18n JSONB,
+  type_id UUID REFERENCES ref_code_promotion_type(id) ON DELETE RESTRICT,
+  discount_type TEXT NOT NULL CHECK (discount_type IN ('percent', 'fixed_amount', 'free_item')),
+  discount_value NUMERIC(12,2) NOT NULL,
+  currency TEXT,
+  valid_from TIMESTAMPTZ,
+  valid_to TIMESTAMPTZ,
+  max_uses INTEGER,
+  max_uses_per_user INTEGER,
+  current_uses INTEGER DEFAULT 0,
+  min_purchase_amount NUMERIC(12,2),
+  applicable_object_types TEXT[],
+  season_id UUID REFERENCES ref_code_season_type(id) ON DELETE SET NULL,
+  partner_org_id TEXT REFERENCES object(id) ON DELETE SET NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  is_public BOOLEAN DEFAULT TRUE,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_promo_currency_amount CHECK (discount_type <> 'fixed_amount' OR currency IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS promotion_object (
+  promotion_id UUID NOT NULL REFERENCES promotion(id) ON DELETE CASCADE,
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (promotion_id, object_id)
+);
+
+CREATE TABLE IF NOT EXISTS promotion_usage (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  promotion_id UUID NOT NULL REFERENCES promotion(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  object_id TEXT REFERENCES object(id) ON DELETE SET NULL,
+  used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  amount_saved NUMERIC(12,2),
+  currency TEXT
+);
+
+-- =====================================================
+-- Profil utilisateur applicatif (non-auth)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS app_user_profile (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name TEXT,
+  avatar_url TEXT,
+  locale TEXT NOT NULL DEFAULT 'fr',
+  timezone TEXT NOT NULL DEFAULT 'Indian/Reunion',
+  role TEXT CHECK (role IS NULL OR role IN ('owner', 'super_admin', 'tourism_agent')),
+  lang_prefs TEXT[] NOT NULL DEFAULT ARRAY['fr','en'],
+  preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION api.enforce_app_user_profile_role_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  requester_uid UUID := auth.uid();
+  requester_is_owner BOOLEAN := false;
+BEGIN
+  -- No JWT context (migration SQL / privileged direct connection): skip runtime guard.
+  IF current_setting('request.jwt.claims', true) IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  requester_is_owner :=
+    auth.role() IN ('service_role', 'admin')
+    OR EXISTS (
+      SELECT 1
+      FROM auth.users u
+      WHERE u.id = requester_uid
+        AND u.raw_user_meta_data->>'role' = 'admin'
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM app_user_profile me
+      WHERE me.id = requester_uid
+        AND me.role = 'owner'
+    );
+
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.role IN ('owner', 'super_admin') AND NOT requester_is_owner THEN
+      RAISE EXCEPTION 'Seul un owner peut attribuer le role owner ou super_admin.';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'UPDATE' THEN
+    IF NEW.role IS DISTINCT FROM OLD.role
+       AND NEW.role IN ('owner', 'super_admin')
+       AND NOT requester_is_owner THEN
+      RAISE EXCEPTION 'Seul un owner peut attribuer le role owner ou super_admin.';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE INDEX IF NOT EXISTS idx_app_user_profile_role ON app_user_profile(role);
+CREATE INDEX IF NOT EXISTS idx_app_user_profile_locale ON app_user_profile(locale);
+CREATE INDEX IF NOT EXISTS idx_app_user_profile_preferences_gin ON app_user_profile USING GIN (preferences);
+
+CREATE OR REPLACE FUNCTION api.sync_app_user_profile_from_auth_user(
+  p_user_id UUID,
+  p_email TEXT,
+  p_raw_user_meta_data JSONB DEFAULT '{}'::jsonb,
+  p_raw_app_meta_data JSONB DEFAULT '{}'::jsonb
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth
+AS $$
+DECLARE
+  v_user_meta JSONB := COALESCE(p_raw_user_meta_data, '{}'::jsonb);
+  v_app_meta JSONB := COALESCE(p_raw_app_meta_data, '{}'::jsonb);
+  v_display_name TEXT;
+  v_avatar_url TEXT;
+  v_locale TEXT;
+  v_timezone TEXT;
+  v_role TEXT;
+  v_lang_source JSONB;
+  v_lang_prefs TEXT[] := ARRAY['fr','en'];
+  v_preferences JSONB := '{}'::jsonb;
+BEGIN
+  v_display_name := NULLIF(COALESCE(
+    v_user_meta->>'display_name',
+    v_user_meta->>'full_name',
+    v_user_meta->>'name',
+    v_app_meta->>'display_name',
+    v_app_meta->>'full_name',
+    p_email,
+    p_user_id::TEXT
+  ), '');
+
+  v_avatar_url := NULLIF(COALESCE(
+    v_user_meta->>'avatar_url',
+    v_user_meta->>'picture',
+    v_app_meta->>'avatar_url',
+    v_app_meta->>'picture'
+  ), '');
+
+  v_locale := NULLIF(COALESCE(
+    v_user_meta->>'locale',
+    v_app_meta->>'locale'
+  ), '');
+
+  v_timezone := NULLIF(COALESCE(
+    v_user_meta->>'timezone',
+    v_app_meta->>'timezone'
+  ), '');
+
+  v_role := NULLIF(COALESCE(
+    v_app_meta->>'role',
+    v_user_meta->>'role'
+  ), '');
+
+  IF v_role NOT IN ('owner', 'super_admin', 'tourism_agent') THEN
+    v_role := NULL;
+  END IF;
+
+  v_lang_source := COALESCE(
+    v_user_meta->'lang_prefs',
+    v_user_meta->'langPrefs',
+    v_app_meta->'lang_prefs',
+    v_app_meta->'langPrefs'
+  );
+
+  IF jsonb_typeof(v_lang_source) = 'array' THEN
+    SELECT COALESCE(array_agg(NULLIF(BTRIM(lang_item.value), '') ORDER BY lang_item.ord), ARRAY[]::TEXT[])
+    INTO v_lang_prefs
+    FROM jsonb_array_elements_text(v_lang_source) WITH ORDINALITY AS lang_item(value, ord)
+    WHERE NULLIF(BTRIM(lang_item.value), '') IS NOT NULL;
+  END IF;
+
+  IF COALESCE(array_length(v_lang_prefs, 1), 0) = 0 THEN
+    v_lang_prefs := ARRAY['fr','en'];
+  END IF;
+
+  IF jsonb_typeof(v_user_meta->'preferences') = 'object' THEN
+    v_preferences := v_user_meta->'preferences';
+  ELSIF jsonb_typeof(v_app_meta->'preferences') = 'object' THEN
+    v_preferences := v_app_meta->'preferences';
+  END IF;
+
+  INSERT INTO app_user_profile (
+    id,
+    display_name,
+    avatar_url,
+    locale,
+    timezone,
+    role,
+    lang_prefs,
+    preferences
+  )
+  VALUES (
+    p_user_id,
+    v_display_name,
+    v_avatar_url,
+    COALESCE(v_locale, 'fr'),
+    COALESCE(v_timezone, 'Indian/Reunion'),
+    v_role,
+    v_lang_prefs,
+    v_preferences
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET display_name = COALESCE(app_user_profile.display_name, EXCLUDED.display_name),
+      avatar_url = COALESCE(app_user_profile.avatar_url, EXCLUDED.avatar_url),
+      locale = COALESCE(app_user_profile.locale, EXCLUDED.locale),
+      timezone = COALESCE(app_user_profile.timezone, EXCLUDED.timezone),
+      role = COALESCE(app_user_profile.role, EXCLUDED.role),
+      lang_prefs = CASE
+        WHEN COALESCE(array_length(app_user_profile.lang_prefs, 1), 0) = 0 THEN EXCLUDED.lang_prefs
+        ELSE app_user_profile.lang_prefs
+      END,
+      preferences = CASE
+        WHEN app_user_profile.preferences = '{}'::jsonb THEN EXCLUDED.preferences
+        ELSE app_user_profile.preferences
+      END;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.handle_auth_user_profile_created()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth
+AS $$
+BEGIN
+  PERFORM api.sync_app_user_profile_from_auth_user(
+    NEW.id,
+    NEW.email,
+    NEW.raw_user_meta_data,
+    NEW.raw_app_meta_data
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+-- =====================================================
+-- Spécifiques FMA (événements)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS object_fma (
+  object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
+  event_start_date DATE,
+  event_end_date DATE,
+  event_start_time TIME,
+  event_end_time TIME,
+  is_recurring BOOLEAN DEFAULT FALSE,
+  recurrence_pattern TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_fma_dates CHECK (event_end_date IS NULL OR event_start_date IS NULL OR event_end_date >= event_start_date)
+);
+CREATE TABLE IF NOT EXISTS object_fma_occurrence (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  start_at TIMESTAMPTZ NOT NULL,
+  end_at TIMESTAMPTZ,
+  state TEXT,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_fma_occ_dates CHECK (end_at IS NULL OR end_at >= start_at)
+);
+
+-- =====================================================
+-- Spécifiques ITI (itinéraires) + détails/stages/sections/profile/practice/etc.
+-- =====================================================
+CREATE TABLE IF NOT EXISTS object_iti (
+  object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
+  distance_km DECIMAL(8, 2),
+  duration_min INTEGER CONSTRAINT chk_object_iti_duration_min CHECK (duration_min IS NULL OR duration_min > 0), -- minutes (greenfield retype from duration_hours; see migration_iti_duration_elevation.sql)
+  difficulty_level INTEGER CHECK (difficulty_level BETWEEN 1 AND 5),
+  elevation_gain INTEGER,   -- positive ascent, metres
+  elevation_loss INTEGER,   -- negative descent, metres
+  is_loop BOOLEAN DEFAULT FALSE,
+  geom GEOGRAPHY(LINESTRING, 4326),
+  -- Cached GPX/KML for performance (auto-regenerated on geometry change)
+  cached_gpx TEXT,
+  cached_kml TEXT,
+  cached_gpx_generated_at TIMESTAMPTZ,
+  -- Itinerary status (open/closed/partial)
+  open_status TEXT CHECK (open_status IS NULL OR open_status IN ('open', 'closed', 'partially_closed', 'warning')),
+  status_note TEXT,
+  status_document_id UUID REFERENCES ref_document(id) ON DELETE SET NULL,
+  status_updated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS object_iti_practice (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  practice_id UUID NOT NULL REFERENCES ref_code_iti_practice(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, practice_id)
+);
+
+CREATE TABLE IF NOT EXISTS ref_iti_assoc_role (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  position INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS object_iti_associated_object (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  associated_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  role_id UUID NOT NULL REFERENCES ref_iti_assoc_role(id) ON DELETE RESTRICT,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, associated_object_id, role_id)
+);
+
+CREATE TABLE IF NOT EXISTS object_iti_stage (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  name TEXT,
+  description TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  geom GEOGRAPHY(POINT, 4326),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for stage names and descriptions
+  name_i18n JSONB,
+  description_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
+);
+
+CREATE TABLE IF NOT EXISTS object_iti_stage_media (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  stage_id UUID NOT NULL REFERENCES object_iti_stage(id) ON DELETE CASCADE,
+  media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(stage_id, media_id)
+);
+
+CREATE TABLE IF NOT EXISTS object_iti_section (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  name TEXT,
+  position INTEGER NOT NULL DEFAULT 0,
+  geom GEOGRAPHY(LINESTRING, 4326),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- I18n support for section names
+  name_i18n JSONB,
+  -- Extra JSONB for future extensibility
+  extra JSONB
+);
+
+CREATE TABLE IF NOT EXISTS object_iti_info (
+  object_id TEXT PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
+  access TEXT,
+  ambiance TEXT,
+  recommended_parking TEXT,
+  required_equipment TEXT,
+  info_places TEXT,
+  is_child_friendly BOOLEAN,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  access_i18n JSONB,
+  ambiance_i18n JSONB,
+  recommended_parking_i18n JSONB,
+  required_equipment_i18n JSONB,
+  info_places_i18n JSONB
+);
+
+CREATE TABLE IF NOT EXISTS object_iti_profile (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  position_m NUMERIC(10,2) NOT NULL,
+  elevation_m NUMERIC(8,2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, position_m)
+);
+
+ALTER TABLE IF EXISTS object_iti_profile
+  ADD COLUMN IF NOT EXISTS id UUID;
+
+UPDATE object_iti_profile
+SET id = uuid_generate_v4()
+WHERE id IS NULL;
+
+ALTER TABLE IF EXISTS object_iti_profile
+  ALTER COLUMN id SET DEFAULT uuid_generate_v4();
+
+ALTER TABLE IF EXISTS object_iti_profile
+  ALTER COLUMN id SET NOT NULL;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_iti_profile'
+      AND c.conname = 'object_iti_profile_pkey'
+  ) THEN
+    ALTER TABLE object_iti_profile DROP CONSTRAINT object_iti_profile_pkey;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'object_iti_profile'
+      AND c.conname = 'object_iti_profile_id_pkey'
+  ) THEN
+    ALTER TABLE object_iti_profile ADD CONSTRAINT object_iti_profile_id_pkey PRIMARY KEY (id);
+  END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_object_iti_profile_pos
+ON object_iti_profile(object_id, position_m);
+
+-- =====================================================
+-- Spécifiques activités (facette partagée ASC+ACT — §48)
+-- ─── Lot ACT — 2026-03-21 ; élargi ASC 2026-06-10 (§48, migration 8q) ────────
+-- ACT = prestation commerciale encadrée, réservable, tarifée, définie par une durée.
+-- Depuis §48, object_act est une facette PARTAGÉE ASC+ACT (ref_facet_applicability) :
+-- les deux types portent les données d'activité (l'éditeur mappe ACT→archétype ASC).
+-- Distinct de PNA (site), ITI (tracé), FMA (événement daté).
+-- L'opérateur est un ACTOR (actor_object_role), jamais une ORG institutionnelle.
+-- Lien vers PNA/site support   : object_relation [based_at_site]
+-- Lien vers ITI tracé support  : object_relation [uses_itinerary]
+-- Coordonnées du RDV           : object_location (standard, comme tout objet)
+-- Voir : bertel-tourism-ui/claude_brief/lot_act_plan.md
+-- =====================================================
+CREATE TABLE IF NOT EXISTS object_act (
+  object_id           TEXT        PRIMARY KEY REFERENCES object(id) ON DELETE CASCADE,
+  duration_min        INTEGER     CHECK (duration_min > 0),
+  min_participants    SMALLINT    CHECK (min_participants >= 1),
+  max_participants    SMALLINT,
+  difficulty_level    SMALLINT    CHECK (difficulty_level BETWEEN 1 AND 5),
+  guide_required      BOOLEAN     NOT NULL DEFAULT TRUE,
+  min_age             SMALLINT,
+  equipment_provided  BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_object_act_participants CHECK (
+    max_participants IS NULL
+    OR min_participants IS NULL
+    OR max_participants >= min_participants
+  )
+);
+
+DROP TRIGGER IF EXISTS update_object_act_updated_at ON object_act;
+CREATE TRIGGER update_object_act_updated_at
+  BEFORE UPDATE ON object_act
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- Tourism CRM extensions
+-- =====================================================
+
+-- Memberships & subscriptions
+CREATE TABLE IF NOT EXISTS object_membership (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  object_id TEXT REFERENCES object(id) ON DELETE CASCADE,
+  campaign_id UUID NOT NULL REFERENCES ref_code_membership_campaign(id) ON DELETE RESTRICT,
+  tier_id UUID NOT NULL REFERENCES ref_code_membership_tier(id) ON DELETE RESTRICT,
+  status TEXT NOT NULL DEFAULT 'prospect' CHECK (status IN ('prospect','invoiced','paid','canceled','lapsed')),
+  starts_at DATE,
+  ends_at DATE,
+  payment_date DATE,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_object_membership_dates CHECK (ends_at IS NULL OR starts_at IS NULL OR ends_at >= starts_at)
+);
+CREATE INDEX IF NOT EXISTS idx_object_membership_org ON object_membership(org_object_id);
+CREATE INDEX IF NOT EXISTS idx_object_membership_object ON object_membership(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_membership_campaign_status ON object_membership(campaign_id, status);
+CREATE INDEX IF NOT EXISTS idx_object_membership_current
+ON object_membership(org_object_id, object_id, starts_at, ends_at)
+WHERE status IN ('invoiced','paid');
+
+CREATE OR REPLACE FUNCTION api.handle_membership_status_transition()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF NEW.status = 'lapsed' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+    IF NEW.object_id IS NOT NULL THEN
+      UPDATE object o
+      SET commercial_visibility = 'lapsed'
+      WHERE o.id = NEW.object_id
+        AND o.commercial_visibility IS DISTINCT FROM 'lapsed'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM object_membership m2
+          WHERE m2.id <> NEW.id
+            AND (
+              m2.object_id = NEW.object_id
+              OR (
+                m2.object_id IS NULL
+                AND m2.org_object_id IN (
+                  SELECT l.org_object_id
+                  FROM object_org_link l
+                  WHERE l.object_id = NEW.object_id
+                )
+              )
+            )
+            AND m2.status IN ('paid', 'invoiced')
+            AND (m2.starts_at IS NULL OR m2.starts_at <= CURRENT_DATE)
+            AND (m2.ends_at IS NULL OR m2.ends_at >= CURRENT_DATE)
+        );
+    ELSE
+      UPDATE object o
+      SET commercial_visibility = 'lapsed'
+      WHERE o.commercial_visibility IS DISTINCT FROM 'lapsed'
+        AND EXISTS (
+          SELECT 1
+          FROM object_org_link l
+          WHERE l.object_id = o.id
+            AND l.org_object_id = NEW.org_object_id
+        )
+        AND NOT EXISTS (
+          SELECT 1
+          FROM object_membership m2
+          WHERE m2.id <> NEW.id
+            AND (
+              m2.object_id = o.id
+              OR (m2.object_id IS NULL AND m2.org_object_id = NEW.org_object_id)
+            )
+            AND m2.status IN ('paid', 'invoiced')
+            AND (m2.starts_at IS NULL OR m2.starts_at <= CURRENT_DATE)
+            AND (m2.ends_at IS NULL OR m2.ends_at >= CURRENT_DATE)
+        );
+    END IF;
+  ELSIF NEW.status IN ('paid', 'invoiced') AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+    IF NEW.object_id IS NOT NULL THEN
+      UPDATE object o
+      SET commercial_visibility = 'active'
+      WHERE o.id = NEW.object_id
+        AND o.commercial_visibility IS DISTINCT FROM 'active'
+        AND EXISTS (
+          SELECT 1
+          FROM object_membership m2
+          WHERE (
+              m2.object_id = NEW.object_id
+              OR (
+                m2.object_id IS NULL
+                AND m2.org_object_id IN (
+                  SELECT l.org_object_id
+                  FROM object_org_link l
+                  WHERE l.object_id = NEW.object_id
+                )
+              )
+            )
+            AND m2.status IN ('paid', 'invoiced')
+            AND (m2.starts_at IS NULL OR m2.starts_at <= CURRENT_DATE)
+            AND (m2.ends_at IS NULL OR m2.ends_at >= CURRENT_DATE)
+        );
+    ELSE
+      UPDATE object o
+      SET commercial_visibility = 'active'
+      WHERE o.commercial_visibility IS DISTINCT FROM 'active'
+        AND EXISTS (
+          SELECT 1
+          FROM object_org_link l
+          WHERE l.object_id = o.id
+            AND l.org_object_id = NEW.org_object_id
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM object_membership m2
+          WHERE (
+              m2.object_id = o.id
+              OR (m2.object_id IS NULL AND m2.org_object_id = NEW.org_object_id)
+            )
+            AND m2.status IN ('paid', 'invoiced')
+            AND (m2.starts_at IS NULL OR m2.starts_at <= CURRENT_DATE)
+            AND (m2.ends_at IS NULL OR m2.ends_at >= CURRENT_DATE)
+        );
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_membership_status_transition ON object_membership;
+CREATE TRIGGER trg_membership_status_transition
+AFTER INSERT OR UPDATE OF status ON object_membership
+FOR EACH ROW EXECUTE FUNCTION api.handle_membership_status_transition();
+
+-- Incident reporting
+CREATE TABLE IF NOT EXISTS incident_report (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  category_id UUID NOT NULL REFERENCES ref_code_incident_category(id) ON DELETE RESTRICT,
+  geom GEOGRAPHY(POINT, 4326),
+  description TEXT,
+  reporter_email TEXT,
+  reporter_name TEXT,
+  media_urls TEXT[],
+  severity TEXT NOT NULL DEFAULT 'medium' CHECK (severity IN ('low','medium','critical')),
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','in_progress','resolved','rejected')),
+  crm_task_id UUID REFERENCES crm_task(id) ON DELETE SET NULL,
+  crm_interaction_id UUID REFERENCES crm_interaction(id) ON DELETE SET NULL,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_incident_reporter_email_shape
+    CHECK (
+      reporter_email IS NULL
+      OR reporter_email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_incident_report_object_status ON incident_report(object_id, status);
+CREATE INDEX IF NOT EXISTS idx_incident_report_category ON incident_report(category_id);
+CREATE INDEX IF NOT EXISTS idx_incident_report_geom ON incident_report USING GIST(geom);
+CREATE INDEX IF NOT EXISTS idx_incident_report_created_at ON incident_report(created_at DESC);
+
+CREATE OR REPLACE FUNCTION api.create_crm_artifacts_from_incident()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_interaction_id UUID;
+  v_task_id UUID;
+  v_priority crm_task_priority;
+BEGIN
+  v_priority := CASE NEW.severity
+    WHEN 'critical' THEN 'urgent'::crm_task_priority
+    WHEN 'medium' THEN 'high'::crm_task_priority
+    ELSE 'medium'::crm_task_priority
+  END;
+
+  INSERT INTO crm_interaction (
+    object_id,
+    interaction_type,
+    direction,
+    status,
+    subject,
+    body,
+    source,
+    occurred_at,
+    is_actionable,
+    extra
+  ) VALUES (
+    NEW.object_id,
+    'note',
+    'internal',
+    'resolved',                    -- DEMANDE (crm_status, 17g) : la note de journal EST écrite.
+    'Incident report received',
+    COALESCE(NEW.description, 'No details provided'),
+    'incident_report',
+    NOW(),
+    TRUE,
+    jsonb_build_object(
+      'incident_id', NEW.id,
+      'severity', NEW.severity,
+      'category_id', NEW.category_id
+    )
+  )
+  RETURNING id INTO v_interaction_id;
+
+  INSERT INTO crm_task (
+    object_id,
+    title,
+    description,
+    status,
+    priority,
+    related_interaction_id,
+    extra
+  ) VALUES (
+    NEW.object_id,
+    'Maintenance incident to review',
+    COALESCE(NEW.description, 'No details provided'),
+    'todo',                        -- TÂCHE (crm_task_status) : INTOUCHÉ par 17g.
+    v_priority,
+    v_interaction_id,
+    jsonb_build_object(
+      'incident_id', NEW.id,
+      'severity', NEW.severity
+    )
+  )
+  RETURNING id INTO v_task_id;
+
+  UPDATE incident_report
+  SET crm_task_id = v_task_id,
+      crm_interaction_id = v_interaction_id
+  WHERE id = NEW.id;
+
+  IF NEW.severity = 'critical' THEN
+    UPDATE object_iti
+    SET open_status = 'warning',
+        status_note = COALESCE(status_note, 'Critical incident reported'),
+        status_updated_at = NOW()
+    WHERE object_id = NEW.object_id
+      AND COALESCE(open_status, 'open') <> 'closed';
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_incident_report_after_insert ON incident_report;
+CREATE TRIGGER trg_incident_report_after_insert
+AFTER INSERT ON incident_report
+FOR EACH ROW EXECUTE FUNCTION api.create_crm_artifacts_from_incident();
+
+-- Publication / print management
+CREATE TABLE IF NOT EXISTS publication (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  target_audience TEXT,
+  year INTEGER CHECK (year IS NULL OR (year BETWEEN 2000 AND 2200)),
+  status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning','proofing','at_press','published')),
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_publication_code_normalized CHECK (code = immutable_unaccent(lower(code)))
+);
+
+CREATE TABLE IF NOT EXISTS publication_object (
+  publication_id UUID NOT NULL REFERENCES publication(id) ON DELETE CASCADE,
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  custom_print_text TEXT,
+  workflow_status TEXT NOT NULL DEFAULT 'selected'
+    CHECK (workflow_status IN ('selected','proof_sent','changes_requested','validated_bat','rejected')),
+  page_number INTEGER CHECK (page_number IS NULL OR page_number > 0),
+  proof_sent_at TIMESTAMPTZ,
+  validated_bat_at TIMESTAMPTZ,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (publication_id, object_id)
+);
+CREATE INDEX IF NOT EXISTS idx_publication_status_year ON publication(status, year);
+CREATE INDEX IF NOT EXISTS idx_publication_object_status ON publication_object(workflow_status, publication_id);
+CREATE INDEX IF NOT EXISTS idx_publication_object_object_id ON publication_object(object_id);
+
+CREATE OR REPLACE FUNCTION api.set_publication_workflow_timestamps()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF NEW.workflow_status = 'proof_sent' AND (OLD.workflow_status IS DISTINCT FROM 'proof_sent') THEN
+    NEW.proof_sent_at := NOW();
+  END IF;
+  IF NEW.workflow_status = 'validated_bat' AND (OLD.workflow_status IS DISTINCT FROM 'validated_bat') THEN
+    NEW.validated_bat_at := NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_publication_object_workflow_timestamps ON publication_object;
+CREATE TRIGGER trg_publication_object_workflow_timestamps
+BEFORE UPDATE OF workflow_status ON publication_object
+FOR EACH ROW EXECUTE FUNCTION api.set_publication_workflow_timestamps();
+
+CREATE OR REPLACE FUNCTION api.log_publication_proof_interaction()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF NEW.workflow_status = 'proof_sent' AND (OLD.workflow_status IS DISTINCT FROM 'proof_sent') THEN
+    INSERT INTO crm_interaction (
+      object_id,
+      interaction_type,
+      direction,
+      status,
+      subject,
+      body,
+      source,
+      occurred_at,
+      is_actionable,
+      extra
+    ) VALUES (
+      NEW.object_id,
+      'email',
+      'outbound',
+      'resolved',                  -- le BAT EST parti : rien n'est en attente côté équipe (17g).
+      'Proof sent for publication',
+      'A PDF proof was sent for publication workflow.',
+      'publication_workflow',
+      NOW(),
+      TRUE,
+      jsonb_build_object(
+        'publication_id', NEW.publication_id,
+        'workflow_status', NEW.workflow_status
+      )
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_publication_proof_interaction ON publication_object;
+CREATE TRIGGER trg_publication_proof_interaction
+AFTER UPDATE OF workflow_status ON publication_object
+FOR EACH ROW EXECUTE FUNCTION api.log_publication_proof_interaction();
+
+-- Structured quality audits
+CREATE TABLE IF NOT EXISTS audit_template (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  scheme_id UUID NOT NULL REFERENCES ref_classification_scheme(id) ON DELETE RESTRICT,
+  classification_value_id UUID REFERENCES ref_classification_value(id) ON DELETE RESTRICT,
+  code TEXT,
+  name TEXT NOT NULL,
+  passing_score_required INTEGER NOT NULL DEFAULT 0 CHECK (passing_score_required >= 0),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_audit_template_scheme_name UNIQUE (scheme_id, name),
+  CONSTRAINT uq_audit_template_code UNIQUE (code)
+);
+
+CREATE TABLE IF NOT EXISTS audit_criteria (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  template_id UUID NOT NULL REFERENCES audit_template(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  question TEXT NOT NULL,
+  max_points INTEGER NOT NULL CHECK (max_points > 0),
+  is_mandatory BOOLEAN NOT NULL DEFAULT FALSE,
+  position INTEGER NOT NULL DEFAULT 0,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_audit_criteria_template_code UNIQUE (template_id, code)
+);
+
+CREATE TABLE IF NOT EXISTS audit_session (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  template_id UUID NOT NULL REFERENCES audit_template(id) ON DELETE RESTRICT,
+  auditor_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  audit_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  total_score INTEGER NOT NULL DEFAULT 0 CHECK (total_score >= 0),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','completed','certified','failed')),
+  certified_at TIMESTAMPTZ,
+  metadata JSONB,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS audit_result (
+  session_id UUID NOT NULL REFERENCES audit_session(id) ON DELETE CASCADE,
+  criteria_id UUID NOT NULL REFERENCES audit_criteria(id) ON DELETE CASCADE,
+  points_awarded INTEGER NOT NULL DEFAULT 0 CHECK (points_awarded >= 0),
+  auditor_note TEXT,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (session_id, criteria_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_template_scheme_active ON audit_template(scheme_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_audit_criteria_template ON audit_criteria(template_id, position);
+CREATE INDEX IF NOT EXISTS idx_audit_session_object_status ON audit_session(object_id, status, audit_date DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_result_session ON audit_result(session_id);
+
+CREATE OR REPLACE FUNCTION api.validate_audit_result_points()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_max_points INTEGER;
+BEGIN
+  SELECT c.max_points INTO v_max_points
+  FROM audit_criteria c
+  WHERE c.id = NEW.criteria_id;
+
+  IF v_max_points IS NULL THEN
+    RAISE EXCEPTION 'Unknown criteria_id %', NEW.criteria_id;
+  END IF;
+  IF NEW.points_awarded < 0 OR NEW.points_awarded > v_max_points THEN
+    RAISE EXCEPTION 'points_awarded (%) must be between 0 and %', NEW.points_awarded, v_max_points;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_validate_audit_result_points ON audit_result;
+CREATE TRIGGER trg_validate_audit_result_points
+BEFORE INSERT OR UPDATE OF points_awarded, criteria_id ON audit_result
+FOR EACH ROW EXECUTE FUNCTION api.validate_audit_result_points();
+
+CREATE OR REPLACE FUNCTION api.recompute_audit_session_score()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_session_id UUID;
+BEGIN
+  v_session_id := COALESCE(NEW.session_id, OLD.session_id);
+
+  UPDATE audit_session s
+  SET total_score = COALESCE((
+      SELECT SUM(ar.points_awarded)
+      FROM audit_result ar
+      WHERE ar.session_id = v_session_id
+    ), 0)
+  WHERE s.id = v_session_id;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_recompute_audit_session_score ON audit_result;
+CREATE TRIGGER trg_recompute_audit_session_score
+AFTER INSERT OR UPDATE OR DELETE ON audit_result
+FOR EACH ROW EXECUTE FUNCTION api.recompute_audit_session_score();
+
+CREATE OR REPLACE FUNCTION api.sync_classification_from_audit_session()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_scheme_id UUID;
+  v_value_id UUID;
+  v_validity_months INTEGER;
+BEGIN
+  IF NEW.status = 'certified' AND (OLD.status IS DISTINCT FROM 'certified') THEN
+    NEW.certified_at := COALESCE(NEW.certified_at, NOW());
+
+    SELECT t.scheme_id,
+           t.classification_value_id,
+           COALESCE(NULLIF((t.metadata->>'validity_months'),'')::INTEGER, 36)
+    INTO v_scheme_id, v_value_id, v_validity_months
+    FROM audit_template t
+    WHERE t.id = NEW.template_id;
+
+    IF v_scheme_id IS NOT NULL AND v_value_id IS NOT NULL THEN
+      UPDATE object_classification oc
+      SET awarded_at = NEW.audit_date,
+          valid_until = NEW.audit_date + make_interval(months => GREATEST(v_validity_months, 1)),
+          status = 'granted',
+          source = 'audit',
+          note = COALESCE(oc.note, 'Granted from certified audit session'),
+          updated_at = NOW()
+      WHERE oc.object_id = NEW.object_id
+        AND oc.scheme_id = v_scheme_id
+        AND oc.value_id = v_value_id
+        AND COALESCE(oc.source, '') = 'audit';
+
+      IF NOT FOUND THEN
+        INSERT INTO object_classification (
+          object_id,
+          scheme_id,
+          value_id,
+          awarded_at,
+          valid_until,
+          status,
+          source,
+          note
+        ) VALUES (
+          NEW.object_id,
+          v_scheme_id,
+          v_value_id,
+          NEW.audit_date,
+          NEW.audit_date + make_interval(months => GREATEST(v_validity_months, 1)),
+          'granted',
+          'audit',
+          'Granted from certified audit session'
+        );
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_classification_from_audit_session ON audit_session;
+CREATE TRIGGER trg_sync_classification_from_audit_session
+BEFORE UPDATE OF status ON audit_session
+FOR EACH ROW EXECUTE FUNCTION api.sync_classification_from_audit_session();
+
+DROP TRIGGER IF EXISTS update_object_membership_updated_at ON object_membership;
+CREATE TRIGGER update_object_membership_updated_at
+BEFORE UPDATE ON object_membership
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_incident_report_updated_at ON incident_report;
+CREATE TRIGGER update_incident_report_updated_at
+BEFORE UPDATE ON incident_report
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_publication_updated_at ON publication;
+CREATE TRIGGER update_publication_updated_at
+BEFORE UPDATE ON publication
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_publication_object_updated_at ON publication_object;
+CREATE TRIGGER update_publication_object_updated_at
+BEFORE UPDATE ON publication_object
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_audit_template_updated_at ON audit_template;
+CREATE TRIGGER update_audit_template_updated_at
+BEFORE UPDATE ON audit_template
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_audit_criteria_updated_at ON audit_criteria;
+CREATE TRIGGER update_audit_criteria_updated_at
+BEFORE UPDATE ON audit_criteria
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_audit_session_updated_at ON audit_session;
+CREATE TRIGGER update_audit_session_updated_at
+BEFORE UPDATE ON audit_session
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_audit_result_updated_at ON audit_result;
+CREATE TRIGGER update_audit_result_updated_at
+BEFORE UPDATE ON audit_result
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- Dashboard — registre temporel (Brique 2, manifest 14s)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS public.metric_snapshot (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  snapshot_date date NOT NULL,
+  scope         text NOT NULL,            -- 'global' | 'type' | 'category' | 'commune' | 'status'
+  scope_key     text NOT NULL DEFAULT '', -- '' pour 'global' ; ex. 'HLO', 'Le Tampon', 'published'
+  metric_key    text NOT NULL,            -- ex. 'completeness_avg', 'corpus_count', 'classified_count'
+  value         numeric NOT NULL,
+  denominator   integer,                  -- 'total' du type pour completeness_* (recompose un %) ; NULL pour les métriques de comptage
+  captured_at   timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_metric_snapshot UNIQUE (snapshot_date, scope, scope_key, metric_key)
+);
+CREATE INDEX IF NOT EXISTS idx_metric_snapshot_read
+  ON public.metric_snapshot (metric_key, scope, scope_key, snapshot_date);
+
+COMMENT ON TABLE public.metric_snapshot IS
+'Registre temporel faisant foi des stats dashboard (Brique 2). Long-format: une ligne par
+(snapshot_date, scope, scope_key, metric_key). Agrégats non-PII. Écrit par
+api.capture_metric_snapshots (cron quotidien), lu par api.get_metric_snapshot_series / _yoy.';
+
+ALTER TABLE public.metric_snapshot ENABLE ROW LEVEL SECURITY;
+-- Agrégats non-PII : lecture authenticated OK ; écritures uniquement via la fonction
+-- SECURITY DEFINER / service_role (aucune policy write ⇒ deny pour anon/authenticated).
+DROP POLICY IF EXISTS metric_snapshot_read ON public.metric_snapshot;
+CREATE POLICY metric_snapshot_read ON public.metric_snapshot
+  FOR SELECT TO authenticated USING (true);
+
+GRANT SELECT ON public.metric_snapshot TO authenticated;
+
+-- =====================================================
+-- Classifications objets (labels)
+-- =====================================================
+ 
+
+-- =====================================================
+-- Versioning objets + Audit partitionné
+-- =====================================================
+CREATE TABLE IF NOT EXISTS audit.audit_log (
+  id BIGSERIAL,
+  table_name TEXT NOT NULL,
+  operation TEXT NOT NULL CHECK (operation IN ('UPDATE','DELETE')),
+  row_pk JSONB,
+  before_data JSONB,
+  after_data JSONB,
+  changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  changed_by TEXT,
+  PRIMARY KEY (id, changed_at)
+) PARTITION BY RANGE (changed_at);
+
+CREATE OR REPLACE FUNCTION audit.get_month_partition_name(partition_date TIMESTAMPTZ)
+RETURNS TEXT 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  RETURN 'audit_log_' || to_char(partition_date, 'YYYY_MM');
+END; $$ LANGUAGE plpgsql STABLE;
+
+-- 16e (§146): born-gated + self-repairing — partitions do NOT inherit RLS/policies from the
+-- parent, so the creator ALWAYS re-asserts ENABLE RLS + the policy pair (wrapped §39 form).
+-- The api.is_platform_superuser() arm is added only when that function exists (it is created by
+-- rls_policies.sql, applied AFTER this file on a fresh build; the rls_policies partition loop
+-- re-creates the policy WITH the arm on the partitions created below).
+CREATE OR REPLACE FUNCTION audit.create_monthly_partition(partition_date TIMESTAMPTZ)
+RETURNS TEXT
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE partition_name TEXT; start_date TIMESTAMPTZ; end_date TIMESTAMPTZ; v_created BOOLEAN := FALSE; v_super_arm TEXT;
+BEGIN
+  partition_name := audit.get_month_partition_name(partition_date);
+  start_date := date_trunc('month', partition_date);
+  end_date := start_date + INTERVAL '1 month';
+  IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='audit' AND tablename=partition_name) THEN
+    EXECUTE format('CREATE TABLE audit.%I PARTITION OF audit.audit_log FOR VALUES FROM (%L) TO (%L)', partition_name, start_date, end_date);
+    v_created := TRUE;
+  END IF;
+  EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%I_table_name ON audit.%I (table_name)', partition_name, partition_name);
+  EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%I_changed_at ON audit.%I (changed_at)', partition_name, partition_name);
+  EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%I_operation ON audit.%I (operation)', partition_name, partition_name);
+  v_super_arm := CASE WHEN to_regproc('api.is_platform_superuser') IS NOT NULL
+                      THEN ' OR api.is_platform_superuser()' ELSE '' END;
+  EXECUTE format('ALTER TABLE audit.%I ENABLE ROW LEVEL SECURITY', partition_name);
+  EXECUTE format('DROP POLICY IF EXISTS "Lecture audit (admin/service_role)" ON audit.%I', partition_name);
+  EXECUTE format(
+    'CREATE POLICY "Lecture audit (admin/service_role)" ON audit.%I FOR SELECT USING ((select auth.role()) IN (''service_role'',''admin'')%s)',
+    partition_name, v_super_arm
+  );
+  EXECUTE format('DROP POLICY IF EXISTS "Insertion via triggers" ON audit.%I', partition_name);
+  EXECUTE format(
+    'CREATE POLICY "Insertion via triggers" ON audit.%I FOR INSERT TO service_role, postgres WITH CHECK (true)',
+    partition_name
+  );
+  RETURN CASE WHEN v_created THEN 'Created partition ' ELSE 'Ensured partition ' END || partition_name;
+END; $$ LANGUAGE plpgsql;
+
+SELECT audit.create_monthly_partition(date_trunc('month', CURRENT_DATE));
+SELECT audit.create_monthly_partition(date_trunc('month', CURRENT_DATE) + INTERVAL '1 month');
+
+-- DEFAULT partition as safety net (catches inserts when monthly partition is missing)
+CREATE TABLE IF NOT EXISTS audit.audit_log_default PARTITION OF audit.audit_log DEFAULT;
+
+CREATE OR REPLACE FUNCTION audit.ensure_future_partitions(months_ahead INTEGER DEFAULT 3)
+RETURNS TEXT 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE i INTEGER; result_text TEXT := ''; partition_date TIMESTAMPTZ;
+BEGIN
+  FOR i IN 0..months_ahead-1 LOOP
+    partition_date := date_trunc('month', CURRENT_DATE) + (i || ' months')::INTERVAL;
+    result_text := result_text || audit.create_monthly_partition(partition_date) || E'\n';
+  END LOOP;
+  RETURN result_text;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION audit.drop_old_partitions(months_to_keep INTEGER DEFAULT 12)
+RETURNS TEXT 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  cutoff_date DATE;
+  result_text TEXT := '';
+  r RECORD;
+  part_year INTEGER;
+  part_month INTEGER;
+  part_date DATE;
+BEGIN
+  cutoff_date := (date_trunc('month', CURRENT_DATE) - make_interval(months => months_to_keep))::date;
+
+  FOR r IN
+    SELECT schemaname, tablename
+    FROM pg_tables
+    WHERE schemaname = 'audit'
+      AND tablename ~ '^audit_log_[0-9]{4}_[0-9]{2}$'
+  LOOP
+    part_year := split_part(r.tablename, '_', 3)::INTEGER;
+    part_month := split_part(r.tablename, '_', 4)::INTEGER;
+    part_date := make_date(part_year, part_month, 1);
+
+    IF part_date < cutoff_date THEN
+      EXECUTE format('DROP TABLE IF EXISTS audit.%I', r.tablename);
+      result_text := result_text || 'Dropped old partition: ' || r.tablename || E'\n';
+    END IF;
+  END LOOP;
+
+  IF result_text = '' THEN
+    result_text := 'No old partitions to drop';
+  END IF;
+
+  RETURN result_text;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT audit.ensure_future_partitions(3);
+
+-- 16e (§146): the daily cron entrypoint maintains BOTH partitioned parents — audit.audit_log AND
+-- public.object_version (whose creator was never wired anywhere: rows silently piled into
+-- object_version_default from 2026-06 until 16e re-homed them). Retention stays audit-only:
+-- object_version rows are product data (version restore §98/14r), never dropped here.
+CREATE OR REPLACE FUNCTION audit.maintain_partitions()
+RETURNS TEXT
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE result_text TEXT := '';
+BEGIN
+  result_text := result_text || '=== Creating future partitions (audit.audit_log) ===' || E'\n' || audit.ensure_future_partitions(3) || E'\n';
+  result_text := result_text || '=== Ensuring object_version partitions ===' || E'\n' || public.ensure_object_version_partitions(3) || E'\n';
+  result_text := result_text || '=== Cleaning old partitions (audit) ===' || E'\n' || audit.drop_old_partitions(12) || E'\n';
+  EXECUTE 'ANALYZE audit.audit_log';
+  EXECUTE 'ANALYZE public.object_version';
+  result_text := result_text || 'Updated statistics for audit.audit_log + public.object_version' || E'\n';
+  RETURN result_text;
+END; $$ LANGUAGE plpgsql;
+
+COMMENT ON TABLE audit.audit_log IS 'Partitioned audit log table tracking all UPDATE and DELETE operations on public tables.';
+
+CREATE OR REPLACE FUNCTION audit.log_row_changes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, audit, public, pg_temp
+AS $$
+DECLARE
+  v_pk JSONB := NULL;
+  v_changed_by TEXT := NULL;
+  v_pk_cols TEXT[];
+  v_row JSONB;
+BEGIN
+  v_changed_by := COALESCE(NULLIF(current_setting('request.jwt.claim.email', true), ''), NULLIF(current_setting('request.jwt.claim.sub', true), ''), current_user);
+
+  v_row := CASE
+    WHEN TG_OP = 'DELETE' THEN to_jsonb(OLD)
+    WHEN NEW IS NOT NULL THEN to_jsonb(NEW)
+    ELSE to_jsonb(OLD)
+  END;
+
+  SELECT array_agg(a.attname ORDER BY k.ord)
+  INTO v_pk_cols
+  FROM pg_index i
+  JOIN unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord) ON TRUE
+  JOIN pg_attribute a
+    ON a.attrelid = i.indrelid
+   AND a.attnum = k.attnum
+  WHERE i.indrelid = TG_RELID
+    AND i.indisprimary;
+
+  IF v_pk_cols IS NOT NULL AND array_length(v_pk_cols, 1) > 0 THEN
+    SELECT jsonb_object_agg(col_name, v_row -> col_name)
+    INTO v_pk
+    FROM unnest(v_pk_cols) AS t(col_name);
+  ELSIF v_row ? 'id' THEN
+    v_pk := jsonb_build_object('id', v_row->'id');
+  END IF;
+
+  IF TG_OP = 'UPDATE' THEN
+    INSERT INTO audit.audit_log(table_name, operation, row_pk, before_data, after_data, changed_by) VALUES (TG_TABLE_NAME, TG_OP, v_pk, to_jsonb(OLD), to_jsonb(NEW), v_changed_by);
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    INSERT INTO audit.audit_log(table_name, operation, row_pk, before_data, after_data, changed_by) VALUES (TG_TABLE_NAME, TG_OP, v_pk, to_jsonb(OLD), NULL, v_changed_by);
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+-- Attach audit triggers (invoked at end of script to include late-created tables).
+CREATE OR REPLACE FUNCTION audit.attach_missing_triggers()
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, audit, public, pg_temp
+AS $$
+DECLARE
+  r RECORD;
+  trig_name TEXT;
+BEGIN
+  FOR r IN
+    SELECT table_schema, table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      AND table_name NOT LIKE 'ref_code_%'
+      AND table_name NOT LIKE 'audit_log_%'
+  LOOP
+    trig_name := format('trg_audit_%s', r.table_name);
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = trig_name) THEN
+      EXECUTE format('CREATE TRIGGER %I AFTER UPDATE OR DELETE ON %I.%I FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()', trig_name, r.table_schema, r.table_name);
+    END IF;
+  END LOOP;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_audit_ref_code') THEN
+    CREATE TRIGGER trg_audit_ref_code AFTER UPDATE OR DELETE ON ref_code FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_audit_crm_interaction') THEN
+    CREATE TRIGGER trg_audit_crm_interaction AFTER UPDATE OR DELETE ON crm_interaction FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes();
+  END IF;
+END;
+$$;
+
+-- Versioning
+CREATE TABLE IF NOT EXISTS object_version (
+  id UUID DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  data JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  change_reason TEXT,
+  change_type TEXT NOT NULL DEFAULT 'update' CHECK (change_type IN ('insert','update','delete')),
+  UNIQUE(object_id, version_number, created_at),
+  PRIMARY KEY (id, created_at)
+) PARTITION BY RANGE (created_at);
+
+-- 16e (§146): born-gated + self-repairing — a partition does NOT inherit RLS/policies from the
+-- parent; a bare public partition would be anon-readable via direct PostgREST (full draft
+-- snapshots). The creator ALWAYS re-asserts ENABLE RLS + admin_object_version (wrapped §39 form).
+CREATE OR REPLACE FUNCTION create_object_version_monthly_partition(partition_date TIMESTAMPTZ)
+RETURNS TEXT
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE partition_name TEXT; start_date TIMESTAMPTZ; end_date TIMESTAMPTZ; v_created BOOLEAN := FALSE;
+BEGIN
+  partition_name := 'object_version_' || to_char(partition_date, 'YYYY_MM');
+  start_date := date_trunc('month', partition_date);
+  end_date := start_date + INTERVAL '1 month';
+  IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=partition_name) THEN
+    EXECUTE format(
+      'CREATE TABLE public.%I PARTITION OF public.object_version FOR VALUES FROM (%L) TO (%L)',
+      partition_name, start_date, end_date
+    );
+    v_created := TRUE;
+  END IF;
+  EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', partition_name);
+  EXECUTE format('DROP POLICY IF EXISTS "admin_object_version" ON public.%I', partition_name);
+  EXECUTE format(
+    'CREATE POLICY "admin_object_version" ON public.%I FOR ALL USING ((select auth.role()) IN (''service_role'',''admin''))',
+    partition_name
+  );
+  RETURN CASE WHEN v_created THEN 'Created partition: ' ELSE 'Ensured partition: ' END || partition_name;
+END; $$ LANGUAGE plpgsql;
+
+-- 16e (§146): monthly horizon for object_version — called by audit.maintain_partitions() (daily
+-- cron), mirror of audit.ensure_future_partitions.
+CREATE OR REPLACE FUNCTION public.ensure_object_version_partitions(months_ahead INTEGER DEFAULT 3)
+RETURNS TEXT
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE i INTEGER; result_text TEXT := ''; partition_date TIMESTAMPTZ;
+BEGIN
+  FOR i IN 0..months_ahead-1 LOOP
+    partition_date := date_trunc('month', CURRENT_DATE) + (i || ' months')::INTERVAL;
+    result_text := result_text || public.create_object_version_monthly_partition(partition_date) || E'\n';
+  END LOOP;
+  RETURN result_text;
+END; $$ LANGUAGE plpgsql;
+
+REVOKE EXECUTE ON FUNCTION public.ensure_object_version_partitions(integer) FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION public.ensure_object_version_partitions(integer) TO service_role;
+
+SELECT create_object_version_monthly_partition(date_trunc('month', CURRENT_DATE));
+SELECT create_object_version_monthly_partition(date_trunc('month', CURRENT_DATE) + INTERVAL '1 month');
+
+-- DEFAULT partition as safety net (catches inserts when monthly partition is missing)
+CREATE TABLE IF NOT EXISTS public.object_version_default PARTITION OF public.object_version DEFAULT;
+CREATE INDEX IF NOT EXISTS idx_object_version_object_id_created
+ON object_version(object_id, created_at DESC);
+
+DROP TRIGGER IF EXISTS trg_audit_object_version ON object_version;
+CREATE TRIGGER trg_audit_object_version AFTER UPDATE OR DELETE ON object_version FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes();
+
+CREATE OR REPLACE FUNCTION save_object_version()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE v_version_number INTEGER; v_change_type TEXT; v_actor UUID;
+BEGIN
+  IF TG_OP = 'INSERT' THEN 
+    v_change_type := 'insert';
+    -- For INSERT, use current_version from NEW (should be 1 after increment trigger)
+    v_version_number := COALESCE(NEW.current_version, 1);
+    v_actor := NEW.created_by;
+  ELSIF TG_OP = 'UPDATE' THEN 
+    IF (
+      to_jsonb(NEW) - ARRAY[
+        'updated_at',
+        'is_editing',
+        'commercial_visibility',
+        'cached_min_price',
+        'cached_main_image_url',
+        'cached_rating',
+        'cached_review_count',
+        'cached_is_open_now',
+        'cached_amenity_codes',
+        'cached_payment_codes',
+        'cached_environment_tags',
+        'cached_language_codes',
+        'cached_classification_codes',
+        'cached_taxonomy_codes',
+        'current_version'
+      ]
+    ) IS NOT DISTINCT FROM (
+      to_jsonb(OLD) - ARRAY[
+        'updated_at',
+        'is_editing',
+        'commercial_visibility',
+        'cached_min_price',
+        'cached_main_image_url',
+        'cached_rating',
+        'cached_review_count',
+        'cached_is_open_now',
+        'cached_amenity_codes',
+        'cached_payment_codes',
+        'cached_environment_tags',
+        'cached_language_codes',
+        'cached_classification_codes',
+        'cached_taxonomy_codes',
+        'current_version'
+      ]
+    ) THEN
+      RETURN NEW;
+    END IF;
+    v_change_type := 'update';
+    -- For UPDATE, use current_version from NEW (already incremented)
+    v_version_number := COALESCE(NEW.current_version, OLD.current_version, 1);
+    v_actor := COALESCE(NEW.updated_by, NEW.created_by, OLD.updated_by, OLD.created_by);
+  ELSIF TG_OP = 'DELETE' THEN 
+    v_change_type := 'delete';
+    -- For DELETE (BEFORE trigger), use OLD.current_version + 1
+    v_version_number := COALESCE(OLD.current_version, 0) + 1;
+    v_actor := COALESCE(OLD.updated_by, OLD.created_by);
+  END IF;
+
+  INSERT INTO object_version (object_id, version_number, data, created_by, change_type)
+  VALUES (COALESCE(NEW.id, OLD.id), v_version_number, to_jsonb(COALESCE(NEW, OLD)), v_actor, v_change_type);
+
+  RETURN COALESCE(NEW, OLD);
+END; $$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_object_version ON object;
+CREATE TRIGGER trg_object_version AFTER INSERT OR UPDATE ON object FOR EACH ROW EXECUTE FUNCTION save_object_version();
+DROP TRIGGER IF EXISTS trg_object_version_delete ON object;
+CREATE TRIGGER trg_object_version_delete BEFORE DELETE ON object FOR EACH ROW EXECUTE FUNCTION save_object_version();
+
+-- =====================================================
+-- Index (principaux) pour perfs
+-- =====================================================
+CREATE INDEX IF NOT EXISTS idx_object_type ON object(object_type);
+CREATE INDEX IF NOT EXISTS idx_object_status_published ON object(id, name, object_type) WHERE status = 'published';
+CREATE INDEX IF NOT EXISTS idx_object_status_draft ON object(id, name, object_type) WHERE status = 'draft';
+CREATE INDEX IF NOT EXISTS idx_object_status_archived ON object(id, name, object_type) WHERE status = 'archived';
+CREATE INDEX IF NOT EXISTS idx_object_name_normalized_trgm ON object USING GIN (name_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_object_name_normalized_btree ON object (name_normalized);
+CREATE INDEX IF NOT EXISTS idx_object_name_search_vector ON object USING GIN (name_search_vector);
+CREATE INDEX IF NOT EXISTS idx_object_cached_amenity_codes_gin ON object USING GIN (cached_amenity_codes);
+CREATE INDEX IF NOT EXISTS idx_object_cached_payment_codes_gin ON object USING GIN (cached_payment_codes);
+CREATE INDEX IF NOT EXISTS idx_object_cached_environment_tags_gin ON object USING GIN (cached_environment_tags);
+CREATE INDEX IF NOT EXISTS idx_object_cached_language_codes_gin ON object USING GIN (cached_language_codes);
+CREATE INDEX IF NOT EXISTS idx_object_cached_classification_codes_gin ON object USING GIN (cached_classification_codes);
+CREATE INDEX IF NOT EXISTS idx_object_cached_taxonomy_codes_gin ON object USING GIN (cached_taxonomy_codes);
+CREATE INDEX IF NOT EXISTS idx_object_search_document_gin ON object USING GIN (search_document);
+CREATE INDEX IF NOT EXISTS idx_object_location_city_search_vector ON object_location USING GIN (city_search_vector);
+
+-- Covering index for map view and filtered list base CTE (index-only scan)
+CREATE INDEX IF NOT EXISTS idx_location_main_covering
+ON object_location(object_id)
+INCLUDE (latitude, longitude, address1, postcode, city, city_search_vector, geog2)
+WHERE is_main_location = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_object_updated_at_source ON object(updated_at_source);
+CREATE INDEX IF NOT EXISTS idx_object_updated_at_id ON object(updated_at, id);
+CREATE INDEX IF NOT EXISTS idx_object_updated_at_source_id ON object(updated_at_source, id);
+
+-- Partial indexes for hot paths (published objects only)
+CREATE INDEX IF NOT EXISTS idx_object_published_type_updated 
+ON object(object_type, updated_at, id) 
+WHERE status = 'published';
+CREATE INDEX IF NOT EXISTS idx_object_published_updated_at_id
+ON object(updated_at, id)
+WHERE status = 'published';
+CREATE INDEX IF NOT EXISTS idx_object_published_updated_at_source_id
+ON object(updated_at_source, id)
+WHERE status = 'published';
+
+CREATE INDEX IF NOT EXISTS idx_object_published_name_search
+ON object USING GIN(name_search_vector)
+WHERE status = 'published';
+
+-- Only index main locations with coordinates
+CREATE INDEX IF NOT EXISTS idx_location_main_with_coords
+ON object_location(object_id, latitude, longitude)
+WHERE is_main_location = TRUE AND latitude IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_location_main_city_search
+ON object_location USING GIN(city_search_vector)
+WHERE is_main_location = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_location_main_geog_gist
+ON object_location USING GIST(geog2)
+WHERE is_main_location = TRUE AND geog2 IS NOT NULL;
+
+-- Only index published media with org context
+CREATE INDEX IF NOT EXISTS idx_media_published_org
+ON media(object_id, org_object_id, is_main, position)
+WHERE is_published = TRUE;
+
+-- Only index active classifications
+CREATE INDEX IF NOT EXISTS idx_classification_active
+ON object_classification(object_id, value_id, scheme_id)
+WHERE status = 'granted';
+-- Critical indexes for 1M+ row performance
+CREATE INDEX IF NOT EXISTS idx_object_type_status ON object(object_type, status);
+CREATE INDEX IF NOT EXISTS idx_object_updated_at ON object(updated_at);
+DROP INDEX IF EXISTS idx_object_updated_at_brin;
+CREATE INDEX IF NOT EXISTS idx_object_updated_at_published
+ON object(updated_at)
+WHERE status = 'published';
+CREATE INDEX IF NOT EXISTS idx_object_org_link_org ON object_org_link(org_object_id, is_primary);
+-- Address indexes removed; see object_location indexes below
+-- Legacy location indexes removed (using object_location)
+CREATE INDEX IF NOT EXISTS idx_object_place_object ON object_place(object_id);
+-- geog2 removed from object_place; spatial index resides on object_location
+-- altitude index removed with simplified object_place (use object_location if needed)
+CREATE INDEX IF NOT EXISTS idx_contact_channel_object_id ON contact_channel(object_id);
+CREATE INDEX IF NOT EXISTS idx_contact_channel_kind_id ON contact_channel(kind_id);
+CREATE INDEX IF NOT EXISTS idx_contact_channel_value ON contact_channel(value);
+CREATE INDEX IF NOT EXISTS idx_contact_channel_public ON contact_channel(is_public);
+CREATE INDEX IF NOT EXISTS idx_contact_channel_role ON contact_channel(role_id);
+CREATE INDEX IF NOT EXISTS idx_contact_channel_object_kind_id ON contact_channel(object_id, kind_id);
+CREATE INDEX IF NOT EXISTS idx_media_object_id ON media(object_id);
+CREATE INDEX IF NOT EXISTS idx_media_org_object_id ON media(org_object_id) WHERE org_object_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_media_object_org ON media(object_id, org_object_id) WHERE org_object_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_media_place_id ON media(place_id);
+CREATE INDEX IF NOT EXISTS idx_media_media_type_id ON media(media_type_id);
+CREATE INDEX IF NOT EXISTS idx_media_is_published ON media(is_published);
+CREATE INDEX IF NOT EXISTS idx_media_rights_expires_at ON media(rights_expires_at);
+CREATE INDEX IF NOT EXISTS idx_media_analyse_data ON media USING GIN (analyse_data);
+CREATE INDEX IF NOT EXISTS idx_media_is_main ON media(is_main);
+CREATE INDEX IF NOT EXISTS idx_media_visibility ON media(visibility);
+DROP INDEX IF EXISTS idx_media_updated_at_brin;
+CREATE INDEX IF NOT EXISTS idx_media_updated_at_published
+ON media(updated_at)
+WHERE is_published = TRUE;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_media_one_main_per_type ON media(object_id, media_type_id) WHERE is_main;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_media_one_main_per_type_place ON media(place_id, media_type_id) WHERE is_main;
+CREATE INDEX IF NOT EXISTS idx_media_title_normalized_trgm ON media USING GIN (title_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_media_description_normalized_trgm ON media USING GIN (description_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_object_description_object_id ON object_description(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_description_normalized_trgm ON object_description USING GIN (description_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_object_description_chapo_normalized_trgm ON object_description USING GIN (description_chapo_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_object_description_i18n_gin
+ON object_description USING GIN (description_i18n jsonb_path_ops);
+CREATE INDEX IF NOT EXISTS idx_object_private_description_object ON object_private_description(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_private_description_object_org ON object_private_description(object_id, org_object_id);
+-- Supports pinned-first ordering within an org scope
+DROP INDEX IF EXISTS idx_object_private_description_pinned;
+CREATE INDEX IF NOT EXISTS idx_object_private_description_pinned
+  ON object_private_description(object_id, org_object_id, is_archived ASC, is_pinned DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_object_external_id_object_id ON object_external_id(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_external_id_organization_object_id ON object_external_id(organization_object_id);
+CREATE INDEX IF NOT EXISTS idx_object_origin_object_id ON object_origin(object_id);
+-- Legacy legal indexes removed (using object_legal only)
+-- Simple opening table indexes removed
+CREATE INDEX IF NOT EXISTS idx_object_language_object_id ON object_language(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_language_language_id ON object_language(language_id);
+CREATE INDEX IF NOT EXISTS idx_object_amenity_object_id ON object_amenity(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_amenity_amenity_id ON object_amenity(amenity_id);
+CREATE INDEX IF NOT EXISTS idx_media_tag_media_id ON media_tag(media_id);
+CREATE INDEX IF NOT EXISTS idx_media_tag_tag_id ON media_tag(tag_id);
+CREATE INDEX IF NOT EXISTS idx_object_review_object_id ON object_review(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_review_source_id ON object_review(source_id);
+CREATE INDEX IF NOT EXISTS idx_object_review_published ON object_review(is_published);
+CREATE INDEX IF NOT EXISTS idx_object_review_date ON object_review(review_date);
+CREATE INDEX IF NOT EXISTS idx_room_type_object_id ON object_room_type(object_id);
+CREATE INDEX IF NOT EXISTS idx_room_type_published ON object_room_type(is_published);
+CREATE INDEX IF NOT EXISTS idx_room_type_view_type ON object_room_type(view_type_id);
+CREATE INDEX IF NOT EXISTS idx_room_type_amenity_amenity_id ON object_room_type_amenity(amenity_id);
+CREATE INDEX IF NOT EXISTS idx_room_type_media_media_id ON object_room_type_media(media_id);
+CREATE INDEX IF NOT EXISTS idx_promotion_active_public ON promotion(is_active, is_public);
+CREATE INDEX IF NOT EXISTS idx_promotion_validity ON promotion(valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_promotion_object_object_id ON promotion_object(object_id);
+CREATE INDEX IF NOT EXISTS idx_promotion_usage_promotion_id ON promotion_usage(promotion_id);
+CREATE INDEX IF NOT EXISTS idx_promotion_usage_user_id ON promotion_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_object_payment_method_object_id ON object_payment_method(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_payment_method_payment_method_id ON object_payment_method(payment_method_id);
+CREATE INDEX IF NOT EXISTS idx_object_environment_tag_object_id ON object_environment_tag(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_environment_tag_environment_tag_id ON object_environment_tag(environment_tag_id);
+CREATE INDEX IF NOT EXISTS idx_object_org_link_object_id ON object_org_link(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_org_link_org_object_id ON object_org_link(org_object_id);
+CREATE INDEX IF NOT EXISTS idx_object_org_link_role_id ON object_org_link(role_id);
+CREATE INDEX IF NOT EXISTS idx_object_zone_object_id ON object_zone(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_zone_insee_commune ON object_zone(insee_commune);
+CREATE INDEX IF NOT EXISTS idx_ref_sustainability_action_category_id ON ref_sustainability_action(category_id);
+CREATE INDEX IF NOT EXISTS idx_object_sustainability_action_object_id ON object_sustainability_action(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_sustainability_action_action_id ON object_sustainability_action(action_id);
+CREATE INDEX IF NOT EXISTS idx_object_sustainability_action_label_action_id ON object_sustainability_action_label(object_sustainability_action_id);
+CREATE INDEX IF NOT EXISTS idx_object_sustainability_action_label_classification_id ON object_sustainability_action_label(object_classification_id);
+CREATE INDEX IF NOT EXISTS idx_ref_tag_slug_ci ON ref_tag (immutable_unaccent(lower(slug)));
+CREATE INDEX IF NOT EXISTS idx_tag_link_tag_id ON tag_link(tag_id);
+CREATE INDEX IF NOT EXISTS idx_tag_link_target ON tag_link(target_table, target_pk);
+CREATE INDEX IF NOT EXISTS idx_actor_display_name_normalized_trgm ON actor USING GIN (display_name_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_actor_first_name_normalized_trgm ON actor USING GIN (first_name_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_actor_last_name_normalized_trgm ON actor USING GIN (last_name_normalized gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_crm_task_object ON crm_task(object_id);
+CREATE INDEX IF NOT EXISTS idx_crm_task_owner_due ON crm_task(owner, due_at);
+CREATE INDEX IF NOT EXISTS idx_crm_task_status ON crm_task(status);
+CREATE INDEX IF NOT EXISTS idx_object_price_object ON object_price(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_price_kind ON object_price(kind_id);
+CREATE INDEX IF NOT EXISTS idx_object_price_unit ON object_price(unit_id);
+CREATE INDEX IF NOT EXISTS idx_object_price_validity ON object_price(valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_object_price_indication ON object_price(indication_code);
+CREATE INDEX IF NOT EXISTS idx_object_discount_object ON object_discount(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_discount_validity ON object_discount(valid_from, valid_to);
+CREATE INDEX IF NOT EXISTS idx_object_discount_groups ON object_discount(min_group_size, max_group_size);
+CREATE INDEX IF NOT EXISTS idx_object_group_policy_object ON object_group_policy(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_pet_policy_object ON object_pet_policy(object_id);
+CREATE INDEX IF NOT EXISTS idx_meeting_room_object ON object_meeting_room(object_id);
+CREATE INDEX IF NOT EXISTS idx_meeting_room_equipment_room ON meeting_room_equipment(room_id);
+CREATE INDEX IF NOT EXISTS idx_meeting_room_equipment_equipment ON meeting_room_equipment(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_opening_period_object ON opening_period(object_id);
+CREATE INDEX IF NOT EXISTS idx_opening_schedule_period ON opening_schedule(period_id);
+CREATE INDEX IF NOT EXISTS idx_opening_time_period_schedule ON opening_time_period(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_opening_time_period_weekday_period ON opening_time_period_weekday(time_period_id);
+CREATE INDEX IF NOT EXISTS idx_opening_time_period_weekday_weekday ON opening_time_period_weekday(weekday_id);
+CREATE INDEX IF NOT EXISTS idx_opening_time_frame_period ON opening_time_frame(time_period_id);
+CREATE INDEX IF NOT EXISTS idx_object_fma_object_id ON object_fma(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_fma_occ_object ON object_fma_occurrence(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_fma_occ_start ON object_fma_occurrence(start_at);
+CREATE INDEX IF NOT EXISTS idx_object_iti_object_id ON object_iti(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_iti_geom ON object_iti USING GIST (geom);
+-- Additional GPX-specific indexes
+CREATE INDEX IF NOT EXISTS idx_iti_geom_bbox
+ON object_iti USING GIST(geom)
+WHERE geom IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_iti_with_track
+ON object_iti(object_id, distance_km, difficulty_level)
+WHERE geom IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_object_iti_practice_object_id ON object_iti_practice(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_iti_practice_practice_id ON object_iti_practice(practice_id);
+CREATE INDEX IF NOT EXISTS idx_object_iti_stage_object_id ON object_iti_stage(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_iti_stage_geom_gist ON object_iti_stage USING GIST (geom);
+-- Index for stage waypoints with coordinates
+CREATE INDEX IF NOT EXISTS idx_iti_stage_with_geom
+ON object_iti_stage(object_id, position)
+WHERE geom IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_object_iti_stage_media_stage_id ON object_iti_stage_media(stage_id);
+CREATE INDEX IF NOT EXISTS idx_object_iti_stage_media_media_id ON object_iti_stage_media(media_id);
+CREATE INDEX IF NOT EXISTS idx_object_iti_section_parent_object_id ON object_iti_section(parent_object_id);
+CREATE INDEX IF NOT EXISTS idx_object_iti_associated_object_object_id ON object_iti_associated_object(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_iti_associated_object_associated_object_id ON object_iti_associated_object(associated_object_id);
+CREATE INDEX IF NOT EXISTS idx_object_iti_profile_object ON object_iti_profile(object_id);
+CREATE INDEX IF NOT EXISTS idx_i18n_translation_target ON i18n_translation(target_table, target_pk);
+CREATE INDEX IF NOT EXISTS idx_i18n_translation_column_language ON i18n_translation(target_table, target_column, language_id);
+
+-- =====================================================
+-- Materialized views for reference data caching
+-- =====================================================
+
+-- Consolidated reference data cache for frequently accessed data
+DROP MATERIALIZED VIEW IF EXISTS public.mv_ref_data_json CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS internal.mv_ref_data_json CASCADE;
+CREATE MATERIALIZED VIEW internal.mv_ref_data_json AS
+SELECT 
+  'amenity' as ref_type,
+  ra.id,
+  ra.code,
+  jsonb_build_object(
+    'code', ra.code,
+    'name', ra.name,
+    'name_i18n', ra.name_i18n,
+    'icon_url', ra.icon_url,
+    'family_code', fam.code,
+    'family_name', fam.name,
+    'family_icon_url', fam.icon_url
+  ) as json_data
+FROM ref_amenity ra
+LEFT JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
+UNION ALL
+SELECT 
+  'language',
+  rl.id,
+  rl.code,
+  jsonb_build_object(
+    'code', rl.code,
+    'name', rl.name
+  ) as json_data
+FROM ref_language rl
+UNION ALL
+SELECT 
+  'media_type',
+  mt.id,
+  mt.code,
+  jsonb_build_object(
+    'code', mt.code,
+    'name', mt.name,
+    'name_i18n', mt.name_i18n,
+    'description_i18n', mt.description_i18n,
+    'icon_url', mt.icon_url
+  ) as json_data
+FROM ref_code_media_type mt
+UNION ALL
+SELECT
+  'contact_kind',
+  ck.id,
+  ck.code,
+  jsonb_build_object(
+    'code', ck.code,
+    'name', ck.name,
+    'description', ck.description,
+    'icon_url', ck.icon_url
+  ) as json_data
+FROM ref_code_contact_kind ck;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_ref_data_type_id ON internal.mv_ref_data_json(ref_type, id);
+CREATE INDEX IF NOT EXISTS idx_mv_ref_data_code ON internal.mv_ref_data_json(ref_type, code);
+
+-- Note: Refresh this view daily or when reference data changes
+-- REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;
+
+-- Hot-path filter projection for list/map endpoints (published + main location).
+-- Freshness strategy: REFRESH MATERIALIZED VIEW CONCURRENTLY via pg_cron every 5 minutes.
+DROP MATERIALIZED VIEW IF EXISTS public.mv_filtered_objects CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS internal.mv_filtered_objects CASCADE;
+CREATE MATERIALIZED VIEW internal.mv_filtered_objects AS
+SELECT
+  o.id,
+  o.object_type,
+  o.status,
+  o.commercial_visibility,
+  o.updated_at,
+  o.name_normalized,
+  o.name_search_vector,
+  ol.city_search_vector,
+  ol.latitude,
+  ol.longitude,
+  ol.geog2,
+  o.cached_min_price,
+  o.cached_main_image_url,
+  o.cached_rating,
+  o.cached_is_open_now,
+  o.cached_amenity_codes,
+  o.cached_payment_codes,
+  o.cached_environment_tags,
+  o.cached_language_codes,
+  o.cached_classification_codes,
+  o.cached_taxonomy_codes,
+  o.search_document,
+  -- §197 — source des trigrammes de la recherche tolérante aux fautes. Sans ces deux
+  -- colonnes ici, le flou serait muet sur le chemin publié (visiteurs anonymes) SANS
+  -- aucune erreur : le MV est le cache chaud de get_filtered_object_ids.
+  o.search_document_text,
+  o.search_document_phonetic,
+  public.immutable_unaccent(lower(ol.city)) AS city_normalized
+FROM object o
+LEFT JOIN object_location ol
+  ON ol.object_id = o.id
+ AND ol.is_main_location IS TRUE
+WHERE o.status = 'published';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_filtered_objects_id
+ON internal.mv_filtered_objects(id);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_name_search_gin
+ON internal.mv_filtered_objects USING GIN(name_search_vector);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_city_search_gin
+ON internal.mv_filtered_objects USING GIN(city_search_vector);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_search_doc_gin
+ON internal.mv_filtered_objects USING GIN(search_document);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_geog_gist
+ON internal.mv_filtered_objects USING GIST(geog2);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_amenity_codes_gin
+ON internal.mv_filtered_objects USING GIN(cached_amenity_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_payment_codes_gin
+ON internal.mv_filtered_objects USING GIN(cached_payment_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_environment_tags_gin
+ON internal.mv_filtered_objects USING GIN(cached_environment_tags);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_language_codes_gin
+ON internal.mv_filtered_objects USING GIN(cached_language_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_classification_codes_gin
+ON internal.mv_filtered_objects USING GIN(cached_classification_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_taxonomy_codes_gin
+ON internal.mv_filtered_objects USING GIN(cached_taxonomy_codes);
+CREATE INDEX IF NOT EXISTS idx_mv_filtered_objects_updated_at_id
+ON internal.mv_filtered_objects(updated_at, id);
+
+-- =====================================================
+-- Triggers for cached GPX/KML generation
+-- =====================================================
+
+-- Invalidate the GPX/KML cache when itinerary geometry changes.
+-- (The previous body called ST_AsGPX(3, geom, 15, 1, NULL, NULL) — ST_AsGPX is NOT installed in
+-- this PostGIS — and ST_AsKML(3, geom, 15, NULL) — no such signature: it crashed on EVERY geom
+-- write. It never fired because object_iti had 0 rows. The read path — api.get_object_resource /
+-- api.build_iti_track — already recomputes the track on demand via COALESCE(cached, build), so the
+-- cache is a pure optimization: invalidate here, recompute lazily on read. §111 Section 06 ITI.)
+CREATE OR REPLACE FUNCTION regenerate_iti_track_cache()
+RETURNS TRIGGER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF NEW.geom IS NULL THEN
+    NEW.cached_gpx := NULL;
+    NEW.cached_kml := NULL;
+    NEW.cached_gpx_generated_at := NULL;
+  ELSIF (TG_OP = 'INSERT')
+     OR (TG_OP = 'UPDATE' AND NEW.geom IS DISTINCT FROM OLD.geom) THEN
+    NEW.cached_gpx := NULL;
+    NEW.cached_kml := NULL;
+    NEW.cached_gpx_generated_at := NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_cache_iti_track ON object_iti;
+CREATE TRIGGER trg_cache_iti_track
+BEFORE INSERT OR UPDATE ON object_iti
+FOR EACH ROW EXECUTE FUNCTION regenerate_iti_track_cache();
+
+-- =====================================================
+-- Triggers for cached aggregate updates
+-- =====================================================
+
+-- Update cached min price when prices change
+CREATE OR REPLACE FUNCTION update_object_cached_min_price()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_new_object_id TEXT;
+  v_old_object_id TEXT;
+BEGIN
+  v_new_object_id := CASE WHEN TG_OP <> 'DELETE' THEN NEW.object_id ELSE NULL END;
+  v_old_object_id := CASE WHEN TG_OP <> 'INSERT' THEN OLD.object_id ELSE NULL END;
+
+  IF v_old_object_id IS NOT NULL THEN
+    UPDATE object
+    SET cached_min_price = (
+      SELECT MIN(amount)
+      FROM object_price
+      WHERE object_id = v_old_object_id
+        AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+        AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+    )
+    WHERE id = v_old_object_id
+      AND cached_min_price IS DISTINCT FROM (
+        SELECT MIN(amount)
+        FROM object_price
+        WHERE object_id = v_old_object_id
+          AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+          AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+      );
+  END IF;
+
+  IF v_new_object_id IS NOT NULL AND v_new_object_id IS DISTINCT FROM v_old_object_id THEN
+    UPDATE object
+    SET cached_min_price = (
+      SELECT MIN(amount)
+      FROM object_price
+      WHERE object_id = v_new_object_id
+        AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+        AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+    )
+    WHERE id = v_new_object_id
+      AND cached_min_price IS DISTINCT FROM (
+        SELECT MIN(amount)
+        FROM object_price
+        WHERE object_id = v_new_object_id
+          AND (valid_from IS NULL OR valid_from <= CURRENT_DATE)
+          AND (valid_to IS NULL OR valid_to >= CURRENT_DATE)
+      );
+  END IF;
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_cached_min_price ON object_price;
+CREATE TRIGGER trg_update_cached_min_price
+AFTER INSERT OR UPDATE OR DELETE ON object_price
+FOR EACH ROW EXECUTE FUNCTION update_object_cached_min_price();
+
+-- Update cached main image when media changes
+CREATE OR REPLACE FUNCTION update_object_cached_main_image()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_new_object_id TEXT;
+  v_old_object_id TEXT;
+BEGIN
+  v_new_object_id := CASE WHEN TG_OP <> 'DELETE' THEN NEW.object_id ELSE NULL END;
+  v_old_object_id := CASE WHEN TG_OP <> 'INSERT' THEN OLD.object_id ELSE NULL END;
+
+  IF v_old_object_id IS NOT NULL THEN
+    UPDATE object
+    SET cached_main_image_url = (
+      SELECT url
+      FROM media
+      WHERE object_id = v_old_object_id
+        AND is_published = TRUE
+        AND is_main = TRUE
+        AND (kind IS NULL OR kind = 'illustration')
+        -- §59 (14a): a 'private'/'partners' cover must never become the public card image
+        AND (visibility IS NULL OR visibility = 'public')
+      ORDER BY position NULLS LAST
+      LIMIT 1
+    )
+    WHERE id = v_old_object_id
+      AND cached_main_image_url IS DISTINCT FROM (
+        SELECT url
+        FROM media
+        WHERE object_id = v_old_object_id
+          AND is_published = TRUE
+          AND is_main = TRUE
+          AND (kind IS NULL OR kind = 'illustration')
+          AND (visibility IS NULL OR visibility = 'public')
+        ORDER BY position NULLS LAST
+        LIMIT 1
+      );
+  END IF;
+
+  IF v_new_object_id IS NOT NULL AND v_new_object_id IS DISTINCT FROM v_old_object_id THEN
+    UPDATE object
+    SET cached_main_image_url = (
+      SELECT url
+      FROM media
+      WHERE object_id = v_new_object_id
+        AND is_published = TRUE
+        AND is_main = TRUE
+        AND (kind IS NULL OR kind = 'illustration')
+        -- §59 (14a): a 'private'/'partners' cover must never become the public card image
+        AND (visibility IS NULL OR visibility = 'public')
+      ORDER BY position NULLS LAST
+      LIMIT 1
+    )
+    WHERE id = v_new_object_id
+      AND cached_main_image_url IS DISTINCT FROM (
+        SELECT url
+        FROM media
+        WHERE object_id = v_new_object_id
+          AND is_published = TRUE
+          AND is_main = TRUE
+          AND (kind IS NULL OR kind = 'illustration')
+          AND (visibility IS NULL OR visibility = 'public')
+        ORDER BY position NULLS LAST
+        LIMIT 1
+      );
+  END IF;
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_cached_main_image ON media;
+CREATE TRIGGER trg_update_cached_main_image
+AFTER INSERT OR UPDATE OR DELETE ON media
+FOR EACH ROW EXECUTE FUNCTION update_object_cached_main_image();
+
+-- Update cached rating metrics when reviews change
+CREATE OR REPLACE FUNCTION update_object_cached_rating_metrics()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_new_object_id TEXT;
+  v_old_object_id TEXT;
+BEGIN
+  v_new_object_id := CASE WHEN TG_OP <> 'DELETE' THEN NEW.object_id ELSE NULL END;
+  v_old_object_id := CASE WHEN TG_OP <> 'INSERT' THEN OLD.object_id ELSE NULL END;
+
+  IF v_old_object_id IS NOT NULL THEN
+    UPDATE object
+    SET
+      cached_rating = (
+        SELECT ROUND(AVG(r.rating)::numeric, 2)
+        FROM object_review r
+        WHERE r.object_id = v_old_object_id
+          AND r.is_published = TRUE
+          AND r.rating IS NOT NULL
+      ),
+      cached_review_count = (
+        SELECT COUNT(*)
+        FROM object_review r
+        WHERE r.object_id = v_old_object_id
+          AND r.is_published = TRUE
+      )
+    WHERE id = v_old_object_id
+      AND (
+        cached_rating IS DISTINCT FROM (
+          SELECT ROUND(AVG(r.rating)::numeric, 2)
+          FROM object_review r
+          WHERE r.object_id = v_old_object_id
+            AND r.is_published = TRUE
+            AND r.rating IS NOT NULL
+        )
+        OR cached_review_count IS DISTINCT FROM (
+          SELECT COUNT(*)
+          FROM object_review r
+          WHERE r.object_id = v_old_object_id
+            AND r.is_published = TRUE
+        )
+      );
+  END IF;
+
+  IF v_new_object_id IS NOT NULL AND v_new_object_id IS DISTINCT FROM v_old_object_id THEN
+    UPDATE object
+    SET
+      cached_rating = (
+        SELECT ROUND(AVG(r.rating)::numeric, 2)
+        FROM object_review r
+        WHERE r.object_id = v_new_object_id
+          AND r.is_published = TRUE
+          AND r.rating IS NOT NULL
+      ),
+      cached_review_count = (
+        SELECT COUNT(*)
+        FROM object_review r
+        WHERE r.object_id = v_new_object_id
+          AND r.is_published = TRUE
+      )
+    WHERE id = v_new_object_id
+      AND (
+        cached_rating IS DISTINCT FROM (
+          SELECT ROUND(AVG(r.rating)::numeric, 2)
+          FROM object_review r
+          WHERE r.object_id = v_new_object_id
+            AND r.is_published = TRUE
+            AND r.rating IS NOT NULL
+        )
+        OR cached_review_count IS DISTINCT FROM (
+          SELECT COUNT(*)
+          FROM object_review r
+          WHERE r.object_id = v_new_object_id
+            AND r.is_published = TRUE
+        )
+      );
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_cached_rating_metrics ON object_review;
+CREATE TRIGGER trg_update_cached_rating_metrics
+AFTER INSERT OR UPDATE OR DELETE ON object_review
+FOR EACH ROW EXECUTE FUNCTION update_object_cached_rating_metrics();
+
+-- Refresh denormalized filter caches used by hot-path filtered listing.
+CREATE OR REPLACE FUNCTION api.phonetic_document(p_text TEXT)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+-- `extensions` : dmetaphone y vit (même gotcha §29 que word_similarity).
+SET search_path = pg_catalog, public, api, extensions
+AS $$
+  -- Entrée ATTENDUE déjà normalisée (minuscules, sans accents) : c'est le cas des deux
+  -- appelants — object.search_document_text et api.norm_search(). Le garde `^[a-z]`
+  -- écarte les jetons numériques, dont le code phonétique n'a aucun sens.
+  -- length >= 3 : en deçà, dmetaphone produit des codes trop courts pour discriminer.
+  SELECT string_agg(DISTINCT extensions.dmetaphone(w.tok), ' ')
+  FROM regexp_split_to_table(COALESCE(p_text, ''), '[^a-z0-9]+') AS w(tok)
+  WHERE length(w.tok) >= 3 AND w.tok ~ '^[a-z]';
+$$;
+
+CREATE OR REPLACE FUNCTION api.refresh_object_filter_caches(p_object_id TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_cached_amenity_codes TEXT[];
+  v_cached_payment_codes TEXT[];
+  v_cached_environment_tags TEXT[];
+  v_cached_language_codes TEXT[];
+  v_cached_classification_codes TEXT[];
+  v_cached_taxonomy_codes TEXT[];
+  v_search_document tsvector;
+  v_search_document_text TEXT;
+  v_search_document_phonetic tsvector;
+BEGIN
+  IF p_object_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT ra.code ORDER BY ra.code)
+    FROM object_amenity oa
+    JOIN ref_amenity ra ON ra.id = oa.amenity_id
+    WHERE oa.object_id = p_object_id
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_amenity_codes;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT pm.code ORDER BY pm.code)
+    FROM object_payment_method opm
+    JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
+    WHERE opm.object_id = p_object_id
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_payment_codes;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT et.code ORDER BY et.code)
+    FROM object_environment_tag oet
+    JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+    WHERE oet.object_id = p_object_id
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_environment_tags;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT rl.code ORDER BY rl.code)
+    FROM object_language ol
+    JOIN ref_language rl ON rl.id = ol.language_id
+    WHERE ol.object_id = p_object_id
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_language_codes;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT (s.code || ':' || v.code) ORDER BY (s.code || ':' || v.code))
+    FROM object_classification oc
+    JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+    JOIN ref_classification_value v ON v.id = oc.value_id
+    WHERE oc.object_id = p_object_id
+      AND oc.status = 'granted'
+      AND (
+        COALESCE(s.is_distinction, FALSE)
+        OR COALESCE(s.display_group, '') IN ('sustainability_labels', 'accessibility_labels')
+      )
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_classification_codes;
+
+  SELECT COALESCE((
+    SELECT array_agg(DISTINCT (ot.domain || ':' || anc.code) ORDER BY (ot.domain || ':' || anc.code))
+    FROM object_taxonomy ot
+    JOIN ref_code_taxonomy_closure cl
+      ON cl.domain = ot.domain
+     AND cl.descendant_id = ot.ref_code_id
+    JOIN ref_code anc
+      ON anc.id = cl.ancestor_id
+     AND anc.domain = cl.domain
+    WHERE ot.object_id = p_object_id
+      AND anc.is_assignable = TRUE
+  ), ARRAY[]::TEXT[])
+  INTO v_cached_taxonomy_codes;
+
+  -- Aggregated weighted full-text search document (§109). Child-sourced ONLY
+  -- (name/city stay on their generated vectors, composed at query time).
+  -- FR canonical labels/prose; menus & descriptions honor public visibility.
+  --   B = taxonomy + classification/label names
+  --   C = amenities + tags + environment + cuisines + menus + dishes + dietary + allergens
+  --   D = canonical public description prose (markdown-stripped) + dish descriptions
+  -- §197 : ce MÊME CTE alimente aussi search_document_text (texte brut normalisé).
+  -- Ne JAMAIS dupliquer ces sous-requêtes pour la variante texte : les deux
+  -- représentations dériveraient silencieusement l'une de l'autre.
+  WITH doc AS (
+    SELECT
+      (
+        -- §192 — les alias de vocabulaire source (Berta) sont indexés AVEC le
+        -- libellé canonique. Sans cela, renommer un nœud fait disparaître
+        -- l'ancien terme de la recherche : retirer « / gîte » de
+        -- `location_saisonniere` retirerait le token `git` du doc_b de ses 376
+        -- porteurs. Le renommage et l'alias searchable sont indissociables.
+        -- Le CASE protège d'un `aliases` mal typé (jsonb_array_elements est
+        -- évalué en FROM, donc avant tout WHERE : le garde doit être sur l'argument).
+        COALESCE((SELECT string_agg(DISTINCT anc.name || COALESCE(
+              (SELECT ' ' || string_agg(al.value #>> '{}', ' ')
+                 FROM jsonb_array_elements(
+                        CASE WHEN jsonb_typeof(anc.metadata -> 'aliases') = 'array'
+                             THEN anc.metadata -> 'aliases' ELSE '[]'::jsonb END) al), ''), ' ')
+          FROM object_taxonomy ot
+          JOIN ref_code_taxonomy_closure cl ON cl.domain = ot.domain AND cl.descendant_id = ot.ref_code_id
+          JOIN ref_code anc ON anc.id = cl.ancestor_id AND anc.domain = cl.domain
+          WHERE ot.object_id = p_object_id AND anc.is_assignable = TRUE), '')
+        || ' ' ||
+        COALESCE((SELECT string_agg(DISTINCT s.name || ' ' || v.name, ' ')
+          FROM object_classification oc
+          JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+          JOIN ref_classification_value v ON v.id = oc.value_id
+          WHERE oc.object_id = p_object_id AND oc.status = 'granted'), '')
+      ) AS doc_b,
+      (
+        COALESCE((SELECT string_agg(DISTINCT ra.name, ' ')
+          FROM object_amenity oa JOIN ref_amenity ra ON ra.id = oa.amenity_id
+          WHERE oa.object_id = p_object_id), '')
+        || ' ' || COALESCE((SELECT string_agg(DISTINCT t.name, ' ')
+          FROM tag_link tl JOIN ref_tag t ON t.id = tl.tag_id
+          WHERE tl.target_table = 'object' AND tl.target_pk = p_object_id), '')
+        || ' ' || COALESCE((SELECT string_agg(DISTINCT et.name, ' ')
+          FROM object_environment_tag oet JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+          WHERE oet.object_id = p_object_id), '')
+        || ' ' || COALESCE((SELECT string_agg(DISTINCT ct.name, ' ')
+          FROM object_cuisine_type oct JOIN ref_code_cuisine_type ct ON ct.id = oct.cuisine_type_id
+          WHERE oct.object_id = p_object_id), '')
+        || ' ' || COALESCE((SELECT string_agg(DISTINCT m.name || ' ' || COALESCE(mi.name, ''), ' ')
+          FROM object_menu m LEFT JOIN object_menu_item mi ON mi.menu_id = m.id
+          WHERE m.object_id = p_object_id AND m.is_active AND (m.visibility IS NULL OR m.visibility = 'public')), '')
+        || ' ' || COALESCE((SELECT string_agg(DISTINCT dt.name, ' ')
+          FROM object_menu m
+          JOIN object_menu_item mi ON mi.menu_id = m.id
+          JOIN object_menu_item_dietary_tag mid ON mid.menu_item_id = mi.id
+          JOIN ref_code_dietary_tag dt ON dt.id = mid.dietary_tag_id
+          WHERE m.object_id = p_object_id AND m.is_active AND (m.visibility IS NULL OR m.visibility = 'public')), '')
+        || ' ' || COALESCE((SELECT string_agg(DISTINCT al.name, ' ')
+          FROM object_menu m
+          JOIN object_menu_item mi ON mi.menu_id = m.id
+          JOIN object_menu_item_allergen mia ON mia.menu_item_id = mi.id
+          JOIN ref_code_allergen al ON al.id = mia.allergen_id
+          WHERE m.object_id = p_object_id AND m.is_active AND (m.visibility IS NULL OR m.visibility = 'public')), '')
+      ) AS doc_c,
+      (
+        COALESCE((SELECT string_agg(DISTINCT
+            COALESCE(api.strip_markdown(d.description), '') || ' '
+            || COALESCE(api.strip_markdown(d.description_chapo), '') || ' '
+            || COALESCE(api.strip_markdown(d.description_mobile), '') || ' '
+            || COALESCE(api.strip_markdown(d.description_adapted), ''), ' ')
+          FROM object_description d
+          WHERE d.object_id = p_object_id AND d.org_object_id IS NULL
+            AND (d.visibility IS NULL OR d.visibility = 'public')), '')
+        || ' ' || COALESCE((SELECT string_agg(DISTINCT api.strip_markdown(mi.description), ' ')
+          FROM object_menu m JOIN object_menu_item mi ON mi.menu_id = m.id
+          WHERE m.object_id = p_object_id AND m.is_active AND (m.visibility IS NULL OR m.visibility = 'public')
+            AND mi.description IS NOT NULL), '')
+      ) AS doc_d
+  ),
+  -- §199 — la normalisation est faite UNE fois ici et alimente les trois
+  -- représentations (tsvector, texte brut, codes phonétiques). La dupliquer
+  -- serait rouvrir exactement le piège que §197 avait fermé.
+  norm AS (
+    SELECT d.doc_b, d.doc_c, d.doc_d,
+           NULLIF(btrim(regexp_replace(
+             immutable_unaccent(lower(d.doc_b || ' ' || d.doc_c || ' ' || d.doc_d)),
+             '\s+', ' ', 'g')), '') AS flat
+    FROM doc d
+  )
+  SELECT
+       setweight(to_tsvector('french', immutable_unaccent(lower(doc.doc_b))), 'B')
+    || setweight(to_tsvector('french', immutable_unaccent(lower(doc.doc_c))), 'C')
+    || setweight(to_tsvector('french', immutable_unaccent(lower(doc.doc_d))), 'D'),
+       -- §197 — même contenu, forme brute. NULLIF('') : une fiche sans contenu
+       -- enfant porte NULL, pas une chaîne vide (les lecteurs COALESCE de toute façon).
+       doc.flat,
+       -- §199 — codes phonétiques des mots du même contenu. Dictionnaire 'simple'
+       -- (surtout PAS 'french') : les lexèmes sont des codes dmetaphone, les
+       -- raciniser n'aurait aucun sens.
+       to_tsvector('simple', COALESCE(api.phonetic_document(doc.flat), ''))
+  INTO v_search_document, v_search_document_text, v_search_document_phonetic
+  FROM norm doc;
+
+  UPDATE object o
+  SET
+    cached_amenity_codes = v_cached_amenity_codes,
+    cached_payment_codes = v_cached_payment_codes,
+    cached_environment_tags = v_cached_environment_tags,
+    cached_language_codes = v_cached_language_codes,
+    cached_classification_codes = v_cached_classification_codes,
+    cached_taxonomy_codes = v_cached_taxonomy_codes,
+    search_document = v_search_document,
+    search_document_text = v_search_document_text,
+    search_document_phonetic = v_search_document_phonetic
+  WHERE o.id = p_object_id
+    AND (
+      o.cached_amenity_codes IS DISTINCT FROM v_cached_amenity_codes
+      OR o.cached_payment_codes IS DISTINCT FROM v_cached_payment_codes
+      OR o.cached_environment_tags IS DISTINCT FROM v_cached_environment_tags
+      OR o.cached_language_codes IS DISTINCT FROM v_cached_language_codes
+      OR o.cached_classification_codes IS DISTINCT FROM v_cached_classification_codes
+      OR o.cached_taxonomy_codes IS DISTINCT FROM v_cached_taxonomy_codes
+      OR o.search_document IS DISTINCT FROM v_search_document
+      OR o.search_document_text IS DISTINCT FROM v_search_document_text
+      OR o.search_document_phonetic IS DISTINCT FROM v_search_document_phonetic
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.trg_refresh_object_filter_caches_from_child()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_new_object_id TEXT;
+  v_old_object_id TEXT;
+BEGIN
+  v_new_object_id := CASE WHEN TG_OP <> 'DELETE' THEN NEW.object_id ELSE NULL END;
+  v_old_object_id := CASE WHEN TG_OP <> 'INSERT' THEN OLD.object_id ELSE NULL END;
+
+  IF v_old_object_id IS NOT NULL THEN
+    PERFORM api.refresh_object_filter_caches(v_old_object_id);
+  END IF;
+
+  IF v_new_object_id IS NOT NULL AND v_new_object_id IS DISTINCT FROM v_old_object_id THEN
+    PERFORM api.refresh_object_filter_caches(v_new_object_id);
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_amenity ON object_amenity;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_amenity
+AFTER INSERT OR UPDATE OR DELETE ON object_amenity
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_payment_method ON object_payment_method;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_payment_method
+AFTER INSERT OR UPDATE OR DELETE ON object_payment_method
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_environment_tag ON object_environment_tag;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_environment_tag
+AFTER INSERT OR UPDATE OR DELETE ON object_environment_tag
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_language ON object_language;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_language
+AFTER INSERT OR UPDATE OR DELETE ON object_language
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_classification ON object_classification;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_classification
+AFTER INSERT OR UPDATE OR DELETE ON object_classification
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_taxonomy ON object_taxonomy;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_taxonomy
+AFTER INSERT OR UPDATE OR DELETE ON object_taxonomy
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+-- §109 search_document sources not covered by the generic (object_id-direct) trigger above.
+-- object_id resolved through the parent (menu / menu_item / tag_link target_pk).
+CREATE OR REPLACE FUNCTION api.trg_refresh_caches_from_object_menu_item()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, api, auth AS $$
+DECLARE v_new TEXT; v_old TEXT;
+BEGIN
+  IF TG_OP <> 'DELETE' THEN SELECT object_id INTO v_new FROM object_menu WHERE id = NEW.menu_id; END IF;
+  IF TG_OP <> 'INSERT' THEN SELECT object_id INTO v_old FROM object_menu WHERE id = OLD.menu_id; END IF;
+  IF v_old IS NOT NULL THEN PERFORM api.refresh_object_filter_caches(v_old); END IF;
+  IF v_new IS NOT NULL AND v_new IS DISTINCT FROM v_old THEN PERFORM api.refresh_object_filter_caches(v_new); END IF;
+  RETURN COALESCE(NEW, OLD);
+END $$;
+
+-- For menu-item child link tables (dietary_tag / allergen / cuisine_type): resolve object_id via menu_item → menu.
+CREATE OR REPLACE FUNCTION api.trg_refresh_caches_from_menu_item_link()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, api, auth AS $$
+DECLARE v_obj TEXT;
+BEGIN
+  SELECT m.object_id INTO v_obj
+  FROM object_menu m
+  JOIN object_menu_item mi ON mi.menu_id = m.id
+  WHERE mi.id = COALESCE(NEW.menu_item_id, OLD.menu_item_id);
+  IF v_obj IS NOT NULL THEN PERFORM api.refresh_object_filter_caches(v_obj); END IF;
+  RETURN COALESCE(NEW, OLD);
+END $$;
+
+-- tag_link is polymorphic; object_id is target_pk when target_table = 'object'.
+CREATE OR REPLACE FUNCTION api.trg_refresh_caches_from_tag_link()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, api, auth AS $$
+BEGIN
+  IF TG_OP <> 'INSERT' AND OLD.target_table = 'object' THEN
+    PERFORM api.refresh_object_filter_caches(OLD.target_pk);
+  END IF;
+  IF TG_OP <> 'DELETE' AND NEW.target_table = 'object'
+     AND NEW.target_pk IS DISTINCT FROM (CASE WHEN TG_OP = 'UPDATE' THEN OLD.target_pk END) THEN
+    PERFORM api.refresh_object_filter_caches(NEW.target_pk);
+  END IF;
+  RETURN COALESCE(NEW, OLD);
+END $$;
+
+-- object_id-direct sources: reuse the generic child trigger.
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_description ON object_description;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_description
+AFTER INSERT OR UPDATE OR DELETE ON object_description
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+-- The menu/cuisine child cache-refresh triggers (object_menu, object_cuisine_type,
+-- object_menu_item, object_menu_item_dietary_tag, object_menu_item_allergen) are RELOCATED
+-- to just after their tables (menu-tables block, before the LEGAL section) — those tables are
+-- defined later in this file, so creating the triggers HERE aborts a fresh apply
+-- (fresh-apply gate, 2026-07-01).
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_tag_link ON tag_link;
+CREATE TRIGGER trg_refresh_object_filter_caches_tag_link
+AFTER INSERT OR UPDATE OR DELETE ON tag_link
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_tag_link();
+
+-- One-time/upgrade backfill for existing object rows
+UPDATE object o
+SET
+  cached_amenity_codes = COALESCE((
+    SELECT array_agg(DISTINCT ra.code::text ORDER BY ra.code::text)
+    FROM object_amenity oa
+    JOIN ref_amenity ra ON ra.id = oa.amenity_id
+    WHERE oa.object_id = o.id
+  ), ARRAY[]::TEXT[]),
+  cached_payment_codes = COALESCE((
+    SELECT array_agg(DISTINCT pm.code::text ORDER BY pm.code::text)
+    FROM object_payment_method opm
+    JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
+    WHERE opm.object_id = o.id
+  ), ARRAY[]::TEXT[]),
+  cached_environment_tags = COALESCE((
+    SELECT array_agg(DISTINCT et.code::text ORDER BY et.code::text)
+    FROM object_environment_tag oet
+    JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+    WHERE oet.object_id = o.id
+  ), ARRAY[]::TEXT[]),
+  cached_language_codes = COALESCE((
+    SELECT array_agg(DISTINCT rl.code::text ORDER BY rl.code::text)
+    FROM object_language ol
+    JOIN ref_language rl ON rl.id = ol.language_id
+    WHERE ol.object_id = o.id
+  ), ARRAY[]::TEXT[]),
+  cached_classification_codes = COALESCE((
+    SELECT array_agg(DISTINCT (s.code || ':' || v.code) ORDER BY (s.code || ':' || v.code))
+    FROM object_classification oc
+    JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+    JOIN ref_classification_value v ON v.id = oc.value_id
+    WHERE oc.object_id = o.id
+      AND oc.status = 'granted'
+      AND (
+        COALESCE(s.is_distinction, FALSE)
+        OR COALESCE(s.display_group, '') IN ('sustainability_labels', 'accessibility_labels')
+      )
+  ), ARRAY[]::TEXT[]),
+  cached_taxonomy_codes = COALESCE((
+    SELECT array_agg(DISTINCT (ot.domain || ':' || anc.code) ORDER BY (ot.domain || ':' || anc.code))
+    FROM object_taxonomy ot
+    JOIN ref_code_taxonomy_closure cl
+      ON cl.domain = ot.domain
+     AND cl.descendant_id = ot.ref_code_id
+    JOIN ref_code anc
+      ON anc.id = cl.ancestor_id
+     AND anc.domain = cl.domain
+    WHERE ot.object_id = o.id
+      AND anc.is_assignable = TRUE
+  ), ARRAY[]::TEXT[])
+WHERE
+  o.cached_amenity_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT ra.code::text ORDER BY ra.code::text)
+    FROM object_amenity oa
+    JOIN ref_amenity ra ON ra.id = oa.amenity_id
+    WHERE oa.object_id = o.id
+  ), ARRAY[]::TEXT[])
+  OR o.cached_payment_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT pm.code::text ORDER BY pm.code::text)
+    FROM object_payment_method opm
+    JOIN ref_code_payment_method pm ON pm.id = opm.payment_method_id
+    WHERE opm.object_id = o.id
+  ), ARRAY[]::TEXT[])
+  OR o.cached_environment_tags IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT et.code::text ORDER BY et.code::text)
+    FROM object_environment_tag oet
+    JOIN ref_code_environment_tag et ON et.id = oet.environment_tag_id
+    WHERE oet.object_id = o.id
+  ), ARRAY[]::TEXT[])
+  OR o.cached_language_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT rl.code::text ORDER BY rl.code::text)
+    FROM object_language ol
+    JOIN ref_language rl ON rl.id = ol.language_id
+    WHERE ol.object_id = o.id
+  ), ARRAY[]::TEXT[])
+  OR o.cached_classification_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT (s.code || ':' || v.code) ORDER BY (s.code || ':' || v.code))
+    FROM object_classification oc
+    JOIN ref_classification_scheme s ON s.id = oc.scheme_id
+    JOIN ref_classification_value v ON v.id = oc.value_id
+    WHERE oc.object_id = o.id
+      AND oc.status = 'granted'
+      AND (
+        COALESCE(s.is_distinction, FALSE)
+        OR COALESCE(s.display_group, '') IN ('sustainability_labels', 'accessibility_labels')
+      )
+  ), ARRAY[]::TEXT[])
+  OR o.cached_taxonomy_codes IS DISTINCT FROM COALESCE((
+    SELECT array_agg(DISTINCT (ot.domain || ':' || anc.code) ORDER BY (ot.domain || ':' || anc.code))
+    FROM object_taxonomy ot
+    JOIN ref_code_taxonomy_closure cl
+      ON cl.domain = ot.domain
+     AND cl.descendant_id = ot.ref_code_id
+    JOIN ref_code anc
+      ON anc.id = cl.ancestor_id
+     AND anc.domain = cl.domain
+    WHERE ot.object_id = o.id
+      AND anc.is_assignable = TRUE
+  ), ARRAY[]::TEXT[]);
+
+-- Backfill cached review metrics
+UPDATE object o
+SET
+  cached_rating = sub.avg_rating,
+  cached_review_count = sub.review_count
+FROM (
+  SELECT
+    object_id,
+    ROUND((AVG(rating) FILTER (WHERE rating IS NOT NULL))::numeric, 2) AS avg_rating,
+    COUNT(*) AS review_count
+  FROM object_review
+  WHERE is_published = TRUE
+  GROUP BY object_id
+) sub
+WHERE o.id = sub.object_id;
+
+UPDATE object o
+SET
+  cached_rating = NULL,
+  cached_review_count = 0
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM object_review r
+  WHERE r.object_id = o.id
+    AND r.is_published = TRUE
+);
+
+-- Batch refresh cached_is_open_now for all objects.
+-- Scheduled on live via pg_cron. NOTE (2026-06-04): heavy job (~18-22s/run on ~373 published
+-- objects: correlated EXISTS over the opening_* chain + per-object timezone LATERAL). To avoid
+-- periodic instance saturation it runs every 15 min, STAGGERED off the */5 mv_filtered_objects
+-- refresh:  SELECT cron.alter_job(job_id := <id>, schedule := '3,18,33,48 * * * *');
+-- (orig example: SELECT cron.schedule('refresh-open-status','*/5 * * * *',$$SELECT api.refresh_open_status()$$);)
+-- A set-based rewrite of this function (sub-second) is a tracked follow-up (lot1_mapping_decisions.md §35).
+CREATE OR REPLACE FUNCTION api.is_opening_period_active_on_date(
+  p_all_years BOOLEAN,
+  p_date_start DATE,
+  p_date_end DATE,
+  p_local_date DATE
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT
+    CASE
+      WHEN COALESCE(p_all_years, FALSE) = FALSE THEN
+        (p_date_start IS NULL OR p_date_start <= p_local_date)
+        AND (p_date_end IS NULL OR p_date_end >= p_local_date)
+      ELSE
+        CASE
+          WHEN p_date_start IS NULL OR p_date_end IS NULL THEN TRUE
+          WHEN to_char(p_date_start, 'MMDD') <= to_char(p_date_end, 'MMDD') THEN
+            to_char(p_local_date, 'MMDD') BETWEEN to_char(p_date_start, 'MMDD') AND to_char(p_date_end, 'MMDD')
+          ELSE
+            to_char(p_local_date, 'MMDD') >= to_char(p_date_start, 'MMDD')
+            OR to_char(p_local_date, 'MMDD') <= to_char(p_date_end, 'MMDD')
+        END
+    END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.is_opening_period_active_today(
+  p_all_years BOOLEAN,
+  p_date_start DATE,
+  p_date_end DATE
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT api.is_opening_period_active_on_date(
+    p_all_years,
+    p_date_start,
+    p_date_end,
+    CURRENT_DATE
+  );
+$$;
+
+-- §157 — variante paramétrée du résolveur d'heure locale : même validation
+-- « pas cher » de la zone (AT TIME ZONE lève 22023, attrapé → Indian/Reunion,
+-- cf. §37 — JAMAIS de scan pg_timezone_names sur un hot path), évaluée à un
+-- instant ARBITRAIRE. C'est la brique du moteur d'ouverture paramétré
+-- (internal.compute_open_status) qui rend possible « ouvert à 18 h » alors
+-- qu'il est 10 h. get_local_now_for_timezone délègue (une seule implémentation).
+CREATE OR REPLACE FUNCTION api.get_local_time_for_timezone(
+  p_business_timezone TEXT,
+  p_at TIMESTAMPTZ
+)
+RETURNS TABLE (
+  local_date DATE,
+  local_time TIME WITHOUT TIME ZONE,
+  local_isodow INT,
+  business_timezone TEXT
+)
+LANGUAGE plpgsql
+STABLE
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE
+  v_zone  TEXT := COALESCE(NULLIF(btrim(p_business_timezone), ''), 'Indian/Reunion');
+  v_local TIMESTAMP;
+BEGIN
+  BEGIN
+    v_local := p_at AT TIME ZONE v_zone;
+  EXCEPTION WHEN invalid_parameter_value THEN
+    v_zone  := 'Indian/Reunion';
+    v_local := p_at AT TIME ZONE v_zone;
+  END;
+
+  RETURN QUERY SELECT
+    v_local::DATE                     AS local_date,
+    v_local::TIME                     AS local_time,
+    EXTRACT(ISODOW FROM v_local)::INT AS local_isodow,
+    v_zone                            AS business_timezone;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.get_local_now_for_timezone(
+  p_business_timezone TEXT
+)
+RETURNS TABLE (
+  local_date DATE,
+  local_time TIME WITHOUT TIME ZONE,
+  local_isodow INT,
+  business_timezone TEXT
+)
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  -- §157 : délégué au résolveur paramétré (une seule implémentation, cf. §37 pour
+  -- l'historique perf — la validation de zone reste le try/catch AT TIME ZONE).
+  SELECT * FROM api.get_local_time_for_timezone(p_business_timezone, CURRENT_TIMESTAMP);
+$$;
+
+CREATE OR REPLACE FUNCTION api.get_object_local_now(
+  p_object_id TEXT
+)
+RETURNS TABLE (
+  local_date DATE,
+  local_time TIME WITHOUT TIME ZONE,
+  local_isodow INT,
+  business_timezone TEXT
+)
+LANGUAGE sql
+STABLE
+
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  SELECT ln.local_date, ln.local_time, ln.local_isodow, ln.business_timezone
+  FROM object o
+  CROSS JOIN LATERAL api.get_local_now_for_timezone(o.business_timezone) ln
+  WHERE o.id = p_object_id;
+$$;
+
+-- §157 — LE moteur d'ouverture, paramétré par l'instant demandé. Source UNIQUE :
+-- api.refresh_open_status (cache « maintenant », cron) et le filtre « ouvert à … »
+-- de get_filtered_object_ids sont deux lectures du MÊME calcul — plus de dérive
+-- possible entre la pastille et le filtre. Publiés uniquement (parité stricte
+-- avec le cache : un brouillon n'a jamais matché « Ouvert maintenant »).
+-- TRI-ÉTAT préservé (§133) : NULL = aucune donnée (jamais matché par un filtre,
+-- pas de pastille) ; TRUE = ouvert (dont « jour ouvert sans horaire », §93) ;
+-- FALSE = a des horaires, fermé à cet instant. Pas de scan catalogue (§37).
+-- La récurrence saisonnière (§92) est portée par is_opening_period_active_on_date.
+CREATE OR REPLACE FUNCTION internal.compute_open_status(p_at TIMESTAMPTZ)
+RETURNS TABLE (object_id TEXT, is_open BOOLEAN)
+LANGUAGE plpgsql
+STABLE
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF p_at IS NULL THEN
+    RETURN; -- filtre absent ⇒ ensemble vide, coût nul (garde ceinture-bretelles).
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    o.id,
+    CASE
+      WHEN NOT EXISTS (
+        SELECT 1 FROM opening_period p2 WHERE p2.object_id = o.id
+      ) THEN NULL::boolean
+      ELSE (
+      EXISTS (
+        SELECT 1
+        FROM opening_period p
+        JOIN opening_schedule s ON s.period_id = p.id
+        JOIN opening_time_period tp ON tp.schedule_id = s.id
+        JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+        JOIN opening_time_frame tf ON tf.time_period_id = tp.id
+        JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+        CROSS JOIN LATERAL api.get_local_time_for_timezone(o.business_timezone, p_at) ln
+        WHERE p.object_id = o.id
+          AND tp.closed = FALSE
+          AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
+          AND COALESCE(
+            wd.dow_number,
+            CASE wd.code
+              WHEN 'monday' THEN 1
+              WHEN 'tuesday' THEN 2
+              WHEN 'wednesday' THEN 3
+              WHEN 'thursday' THEN 4
+              WHEN 'friday' THEN 5
+              WHEN 'saturday' THEN 6
+              WHEN 'sunday' THEN 7
+              ELSE NULL
+            END
+          ) = ln.local_isodow
+          AND (tf.start_time IS NULL OR tf.start_time <= ln.local_time)
+          AND (tf.end_time IS NULL OR tf.end_time > ln.local_time)
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM opening_period p
+        JOIN opening_schedule s ON s.period_id = p.id
+        JOIN opening_time_period tp ON tp.schedule_id = s.id
+        JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+        JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+        CROSS JOIN LATERAL api.get_local_time_for_timezone(o.business_timezone, p_at) ln
+        WHERE p.object_id = o.id
+          AND tp.closed = FALSE
+          AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
+          AND COALESCE(
+            wd.dow_number,
+            CASE wd.code
+              WHEN 'monday' THEN 1
+              WHEN 'tuesday' THEN 2
+              WHEN 'wednesday' THEN 3
+              WHEN 'thursday' THEN 4
+              WHEN 'friday' THEN 5
+              WHEN 'saturday' THEN 6
+              WHEN 'sunday' THEN 7
+              ELSE NULL
+            END
+          ) = ln.local_isodow
+          AND NOT EXISTS (SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id)
+      )
+      )
+    END AS is_open
+  FROM object o
+  WHERE o.status = 'published';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.refresh_open_status()
+RETURNS void
+LANGUAGE plpgsql
+
+SET search_path = pg_catalog, public, api, internal, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  -- §157 : écriture-cache du moteur unique évalué à « maintenant ».
+  -- Sémantique inchangée (tri-état §133, « ouvert sans horaire » §93, perf §37).
+  UPDATE object o
+  SET cached_is_open_now = s.is_open
+  FROM internal.compute_open_status(now()) s
+  WHERE o.id = s.object_id
+    AND o.cached_is_open_now IS DISTINCT FROM s.is_open;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.disable_cache_triggers()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF COALESCE(auth.role(), '') NOT IN ('service_role', 'admin') THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
+
+  SET LOCAL session_replication_role = replica;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.enable_cache_triggers()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF COALESCE(auth.role(), '') NOT IN ('service_role', 'admin') THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
+
+  SET LOCAL session_replication_role = DEFAULT;
+END;
+$$;
+
+-- =====================================================
+-- Triggers updated_at sur les tables clés
+-- =====================================================
+DROP TRIGGER IF EXISTS update_ref_language_updated_at ON ref_language;
+CREATE TRIGGER update_ref_language_updated_at BEFORE UPDATE ON ref_language FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_code_updated_at ON ref_code;
+CREATE TRIGGER update_ref_code_updated_at BEFORE UPDATE ON ref_code FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_code_domain_registry_updated_at ON ref_code_domain_registry;
+CREATE TRIGGER update_ref_code_domain_registry_updated_at BEFORE UPDATE ON ref_code_domain_registry FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_amenity_updated_at ON ref_amenity;
+CREATE TRIGGER update_ref_amenity_updated_at BEFORE UPDATE ON ref_amenity FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_sustainability_action_category_updated_at ON ref_sustainability_action_category;
+CREATE TRIGGER update_ref_sustainability_action_category_updated_at BEFORE UPDATE ON ref_sustainability_action_category FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_sustainability_action_updated_at ON ref_sustainability_action;
+CREATE TRIGGER update_ref_sustainability_action_updated_at BEFORE UPDATE ON ref_sustainability_action FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_document_updated_at ON ref_document;
+CREATE TRIGGER update_ref_document_updated_at BEFORE UPDATE ON ref_document FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_tag_updated_at ON ref_tag;
+CREATE TRIGGER update_ref_tag_updated_at BEFORE UPDATE ON ref_tag FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_classification_scheme_updated_at ON ref_classification_scheme;
+CREATE TRIGGER update_ref_classification_scheme_updated_at BEFORE UPDATE ON ref_classification_scheme FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_classification_value_updated_at ON ref_classification_value;
+CREATE TRIGGER update_ref_classification_value_updated_at BEFORE UPDATE ON ref_classification_value FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_org_role_updated_at ON ref_org_role;
+CREATE TRIGGER update_ref_org_role_updated_at BEFORE UPDATE ON ref_org_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_contact_role_updated_at ON ref_contact_role;
+CREATE TRIGGER update_ref_contact_role_updated_at BEFORE UPDATE ON ref_contact_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_capacity_metric_updated_at ON ref_capacity_metric;
+CREATE TRIGGER update_ref_capacity_metric_updated_at BEFORE UPDATE ON ref_capacity_metric FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_iti_assoc_role_updated_at ON ref_iti_assoc_role;
+CREATE TRIGGER update_ref_iti_assoc_role_updated_at BEFORE UPDATE ON ref_iti_assoc_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_object_relation_type_updated_at ON ref_object_relation_type;
+CREATE TRIGGER update_ref_object_relation_type_updated_at BEFORE UPDATE ON ref_object_relation_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_object_updated_at ON object;
+CREATE TRIGGER update_object_updated_at BEFORE UPDATE ON object FOR EACH ROW EXECUTE FUNCTION update_object_updated_at_business();
+
+-- Increment version number on INSERT/UPDATE (BEFORE trigger so version is available for save_object_version)
+CREATE OR REPLACE FUNCTION increment_object_version()
+RETURNS TRIGGER 
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    NEW.current_version := 1;
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF (
+      to_jsonb(NEW) - ARRAY[
+        'updated_at',
+        'is_editing',
+        'cached_min_price',
+        'cached_main_image_url',
+        'cached_rating',
+        'cached_review_count',
+        'cached_is_open_now',
+        'cached_amenity_codes',
+        'cached_payment_codes',
+        'cached_environment_tags',
+        'cached_language_codes',
+        'cached_classification_codes',
+        'cached_taxonomy_codes',
+        'current_version'
+      ]
+    ) IS NOT DISTINCT FROM (
+      to_jsonb(OLD) - ARRAY[
+        'updated_at',
+        'is_editing',
+        'cached_min_price',
+        'cached_main_image_url',
+        'cached_rating',
+        'cached_review_count',
+        'cached_is_open_now',
+        'cached_amenity_codes',
+        'cached_payment_codes',
+        'cached_environment_tags',
+        'cached_language_codes',
+        'cached_classification_codes',
+        'cached_taxonomy_codes',
+        'current_version'
+      ]
+    ) THEN
+      NEW.current_version := COALESCE(OLD.current_version, 0);
+      RETURN NEW;
+    END IF;
+    NEW.current_version := COALESCE(OLD.current_version, 0) + 1;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_increment_object_version ON object;
+CREATE TRIGGER trg_increment_object_version 
+BEFORE INSERT OR UPDATE ON object 
+FOR EACH ROW 
+EXECUTE FUNCTION increment_object_version();
+
+-- Address trigger removed with table drop
+DROP TRIGGER IF EXISTS update_object_location_updated_at ON object_location;
+CREATE TRIGGER update_object_location_updated_at BEFORE UPDATE ON object_location FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_place_updated_at ON object_place;
+CREATE TRIGGER update_object_place_updated_at BEFORE UPDATE ON object_place FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_contact_channel_updated_at ON contact_channel;
+CREATE TRIGGER update_contact_channel_updated_at BEFORE UPDATE ON contact_channel FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_media_updated_at ON media;
+CREATE TRIGGER update_media_updated_at BEFORE UPDATE ON media FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_place_description_updated_at ON object_place_description;
+CREATE TRIGGER update_object_place_description_updated_at BEFORE UPDATE ON object_place_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_private_description_updated_at ON object_private_description;
+CREATE TRIGGER update_object_private_description_updated_at BEFORE UPDATE ON object_private_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Notes privées : les champs de portée et d'auteur restent immuables même si
+-- un responsable ORG supérieur modifie le contenu d'une note.
+CREATE OR REPLACE FUNCTION api.lock_object_private_description_system_fields()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  NEW.object_id := OLD.object_id;
+  NEW.org_object_id := OLD.org_object_id;
+  NEW.created_by_user_id := OLD.created_by_user_id;
+  NEW.created_at := OLD.created_at;
+  NEW.audience := OLD.audience;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS lock_object_private_description_system_fields ON object_private_description;
+CREATE TRIGGER lock_object_private_description_system_fields
+  BEFORE UPDATE ON object_private_description
+  FOR EACH ROW EXECUTE FUNCTION api.lock_object_private_description_system_fields();
+DROP TRIGGER IF EXISTS update_object_classification_updated_at ON object_classification;
+CREATE TRIGGER update_object_classification_updated_at BEFORE UPDATE ON object_classification FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_taxonomy_updated_at ON object_taxonomy;
+CREATE TRIGGER update_object_taxonomy_updated_at BEFORE UPDATE ON object_taxonomy FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS trg_enforce_classification_single_selection ON object_classification;
+CREATE TRIGGER trg_enforce_classification_single_selection
+BEFORE INSERT OR UPDATE ON object_classification
+FOR EACH ROW EXECUTE FUNCTION enforce_classification_single_selection();
+DROP TRIGGER IF EXISTS trg_validate_ref_code_taxonomy_hierarchy ON ref_code;
+CREATE TRIGGER trg_validate_ref_code_taxonomy_hierarchy
+BEFORE INSERT OR UPDATE OF domain, parent_id ON ref_code
+FOR EACH ROW EXECUTE FUNCTION api.validate_ref_code_taxonomy_hierarchy();
+DROP TRIGGER IF EXISTS trg_refresh_ref_code_taxonomy_closure ON ref_code;
+CREATE TRIGGER trg_refresh_ref_code_taxonomy_closure
+AFTER INSERT OR UPDATE OR DELETE ON ref_code
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_ref_code_taxonomy_closure();
+DROP TRIGGER IF EXISTS trg_validate_object_taxonomy_assignment ON object_taxonomy;
+CREATE TRIGGER trg_validate_object_taxonomy_assignment
+BEFORE INSERT OR UPDATE ON object_taxonomy
+FOR EACH ROW EXECUTE FUNCTION api.validate_object_taxonomy_assignment();
+-- Legacy legal triggers removed (using object_legal only)
+-- Simple opening table triggers removed
+DROP TRIGGER IF EXISTS update_object_fma_updated_at ON object_fma;
+CREATE TRIGGER update_object_fma_updated_at BEFORE UPDATE ON object_fma FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_fma_occurrence_updated_at ON object_fma_occurrence;
+CREATE TRIGGER update_object_fma_occurrence_updated_at BEFORE UPDATE ON object_fma_occurrence FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_updated_at ON object_iti;
+CREATE TRIGGER update_object_iti_updated_at BEFORE UPDATE ON object_iti FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_practice_updated_at ON object_iti_practice;
+CREATE TRIGGER update_object_iti_practice_updated_at BEFORE UPDATE ON object_iti_practice FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_stage_updated_at ON object_iti_stage;
+CREATE TRIGGER update_object_iti_stage_updated_at BEFORE UPDATE ON object_iti_stage FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_stage_media_updated_at ON object_iti_stage_media;
+CREATE TRIGGER update_object_iti_stage_media_updated_at BEFORE UPDATE ON object_iti_stage_media FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_section_updated_at ON object_iti_section;
+CREATE TRIGGER update_object_iti_section_updated_at BEFORE UPDATE ON object_iti_section FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_associated_object_updated_at ON object_iti_associated_object;
+CREATE TRIGGER update_object_iti_associated_object_updated_at BEFORE UPDATE ON object_iti_associated_object FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_iti_info_updated_at ON object_iti_info;
+CREATE TRIGGER update_object_iti_info_updated_at BEFORE UPDATE ON object_iti_info FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_zone_updated_at ON object_zone;
+CREATE TRIGGER update_object_zone_updated_at BEFORE UPDATE ON object_zone FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_external_id_updated_at ON object_external_id;
+CREATE TRIGGER update_object_external_id_updated_at BEFORE UPDATE ON object_external_id FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS trg_validate_org_object_type_object_org_link ON object_org_link;
+CREATE TRIGGER trg_validate_org_object_type_object_org_link
+BEFORE INSERT OR UPDATE ON object_org_link
+FOR EACH ROW EXECUTE FUNCTION validate_org_object_type('org_object_id');
+DROP TRIGGER IF EXISTS trg_validate_org_object_type_object_membership ON object_membership;
+CREATE TRIGGER trg_validate_org_object_type_object_membership
+BEFORE INSERT OR UPDATE ON object_membership
+FOR EACH ROW EXECUTE FUNCTION validate_org_object_type('org_object_id');
+DROP TRIGGER IF EXISTS trg_validate_org_object_type_object_external_id ON object_external_id;
+CREATE TRIGGER trg_validate_org_object_type_object_external_id
+BEFORE INSERT OR UPDATE ON object_external_id
+FOR EACH ROW EXECUTE FUNCTION validate_org_object_type('organization_object_id');
+DROP TRIGGER IF EXISTS trg_validate_org_object_type_object_description ON object_description;
+CREATE TRIGGER trg_validate_org_object_type_object_description
+BEFORE INSERT OR UPDATE ON object_description
+FOR EACH ROW EXECUTE FUNCTION validate_org_object_type('org_object_id');
+DROP TRIGGER IF EXISTS update_object_origin_updated_at ON object_origin;
+CREATE TRIGGER update_object_origin_updated_at BEFORE UPDATE ON object_origin FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_sustainability_action_updated_at ON object_sustainability_action;
+CREATE TRIGGER update_object_sustainability_action_updated_at BEFORE UPDATE ON object_sustainability_action FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_capacity_updated_at ON object_capacity;
+CREATE TRIGGER update_object_capacity_updated_at BEFORE UPDATE ON object_capacity FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_i18n_translation_updated_at ON i18n_translation;
+CREATE TRIGGER update_i18n_translation_updated_at BEFORE UPDATE ON i18n_translation FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_crm_interaction_updated_at ON crm_interaction;
+CREATE TRIGGER update_crm_interaction_updated_at BEFORE UPDATE ON crm_interaction FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_crm_task_updated_at ON crm_task;
+CREATE TRIGGER update_crm_task_updated_at BEFORE UPDATE ON crm_task FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_price_updated_at ON object_price;
+CREATE TRIGGER update_object_price_updated_at BEFORE UPDATE ON object_price FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_price_period_updated_at ON object_price_period;
+CREATE TRIGGER update_object_price_period_updated_at BEFORE UPDATE ON object_price_period FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_discount_updated_at ON object_discount;
+CREATE TRIGGER update_object_discount_updated_at BEFORE UPDATE ON object_discount FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_group_policy_updated_at ON object_group_policy;
+CREATE TRIGGER update_object_group_policy_updated_at BEFORE UPDATE ON object_group_policy FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_pet_policy_updated_at ON object_pet_policy;
+CREATE TRIGGER update_object_pet_policy_updated_at BEFORE UPDATE ON object_pet_policy FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_meeting_room_updated_at ON object_meeting_room;
+CREATE TRIGGER update_object_meeting_room_updated_at BEFORE UPDATE ON object_meeting_room FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_relation_updated_at ON object_relation;
+CREATE TRIGGER update_object_relation_updated_at BEFORE UPDATE ON object_relation FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_period_updated_at ON opening_period;
+CREATE TRIGGER update_opening_period_updated_at BEFORE UPDATE ON opening_period FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_schedule_updated_at ON opening_schedule;
+CREATE TRIGGER update_opening_schedule_updated_at BEFORE UPDATE ON opening_schedule FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_time_period_updated_at ON opening_time_period;
+CREATE TRIGGER update_opening_time_period_updated_at BEFORE UPDATE ON opening_time_period FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_time_period_weekday_updated_at ON opening_time_period_weekday;
+CREATE TRIGGER update_opening_time_period_weekday_updated_at BEFORE UPDATE ON opening_time_period_weekday FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_opening_time_frame_updated_at ON opening_time_frame;
+CREATE TRIGGER update_opening_time_frame_updated_at BEFORE UPDATE ON opening_time_frame FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- PHASE 2: Missing updated_at triggers
+-- =====================================================
+DROP TRIGGER IF EXISTS update_ref_review_source_updated_at ON ref_review_source;
+CREATE TRIGGER update_ref_review_source_updated_at BEFORE UPDATE ON ref_review_source FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_description_updated_at ON object_description;
+CREATE TRIGGER update_object_description_updated_at BEFORE UPDATE ON object_description FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_review_updated_at ON object_review;
+CREATE TRIGGER update_object_review_updated_at BEFORE UPDATE ON object_review FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_org_link_updated_at ON object_org_link;
+CREATE TRIGGER update_object_org_link_updated_at BEFORE UPDATE ON object_org_link FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_ref_actor_role_updated_at ON ref_actor_role;
+CREATE TRIGGER update_ref_actor_role_updated_at BEFORE UPDATE ON ref_actor_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_actor_updated_at ON actor;
+CREATE TRIGGER update_actor_updated_at BEFORE UPDATE ON actor FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_actor_channel_updated_at ON actor_channel;
+CREATE TRIGGER update_actor_channel_updated_at BEFORE UPDATE ON actor_channel FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_actor_object_role_updated_at ON actor_object_role;
+CREATE TRIGGER update_actor_object_role_updated_at BEFORE UPDATE ON actor_object_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_object_room_type_updated_at ON object_room_type;
+CREATE TRIGGER update_object_room_type_updated_at BEFORE UPDATE ON object_room_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_promotion_updated_at ON promotion;
+CREATE TRIGGER update_promotion_updated_at BEFORE UPDATE ON promotion FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_app_user_profile_updated_at ON app_user_profile;
+CREATE TRIGGER update_app_user_profile_updated_at BEFORE UPDATE ON app_user_profile FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS enforce_app_user_profile_role_change ON app_user_profile;
+CREATE TRIGGER enforce_app_user_profile_role_change
+  BEFORE INSERT OR UPDATE ON app_user_profile
+  FOR EACH ROW
+  EXECUTE FUNCTION api.enforce_app_user_profile_role_change();
+DROP TRIGGER IF EXISTS on_auth_user_created_app_user_profile ON auth.users;
+CREATE TRIGGER on_auth_user_created_app_user_profile
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION api.handle_auth_user_profile_created();
+
+DO $$
+DECLARE
+  v_user RECORD;
+BEGIN
+  FOR v_user IN
+    SELECT
+      u.id,
+      u.email,
+      u.raw_user_meta_data,
+      u.raw_app_meta_data
+    FROM auth.users u
+    LEFT JOIN app_user_profile p
+      ON p.id = u.id
+    WHERE p.id IS NULL
+  LOOP
+    PERFORM api.sync_app_user_profile_from_auth_user(
+      v_user.id,
+      v_user.email,
+      v_user.raw_user_meta_data,
+      v_user.raw_app_meta_data
+    );
+  END LOOP;
+END;
+$$;
+DROP TRIGGER IF EXISTS update_object_iti_profile_updated_at ON object_iti_profile;
+CREATE TRIGGER update_object_iti_profile_updated_at BEFORE UPDATE ON object_iti_profile FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- Fin du schéma monolithique
+-- =====================================================
+
+
+
+-- Indexes for object_classification (idempotent)
+CREATE INDEX IF NOT EXISTS idx_object_classification_object_id ON object_classification(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_classification_scheme_id ON object_classification(scheme_id);
+CREATE INDEX IF NOT EXISTS idx_object_classification_value_id ON object_classification(value_id);
+CREATE INDEX IF NOT EXISTS idx_object_classification_subvalue_ids_gin ON object_classification USING GIN (subvalue_ids);
+CREATE INDEX IF NOT EXISTS idx_object_classification_document_id ON object_classification(document_id);
+CREATE INDEX IF NOT EXISTS idx_object_taxonomy_object_id ON object_taxonomy(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_taxonomy_domain ON object_taxonomy(domain);
+CREATE INDEX IF NOT EXISTS idx_object_taxonomy_ref_code_id ON object_taxonomy(ref_code_id);
+CREATE INDEX IF NOT EXISTS idx_ref_code_taxonomy_closure_descendant ON ref_code_taxonomy_closure(domain, descendant_id, depth);
+CREATE INDEX IF NOT EXISTS idx_ref_code_taxonomy_closure_ancestor ON ref_code_taxonomy_closure(domain, ancestor_id, depth);
+
+
+-- =====================================================
+-- MENUS (canonical; parent first, then child)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS object_menu (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  category_id UUID REFERENCES ref_code_menu_category(id) ON DELETE RESTRICT,
+  name TEXT NOT NULL,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  visibility TEXT CHECK (visibility IN ('public','private','partners')),
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_object_menu_object_id ON object_menu(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_menu_category_id ON object_menu(category_id);
+CREATE INDEX IF NOT EXISTS idx_object_menu_is_active ON object_menu(is_active);
+CREATE INDEX IF NOT EXISTS idx_object_menu_position ON object_menu(position);
+
+DROP TRIGGER IF EXISTS update_object_menu_updated_at ON object_menu;
+CREATE TRIGGER update_object_menu_updated_at
+BEFORE UPDATE ON object_menu
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS object_menu_item (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  menu_id UUID NOT NULL REFERENCES object_menu(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  price NUMERIC(12,2) CHECK (price IS NULL OR price >= 0),
+  currency CHAR(3) NOT NULL DEFAULT 'EUR',
+  kind_id UUID REFERENCES ref_code_price_kind(id) ON DELETE RESTRICT,
+  unit_id UUID REFERENCES ref_code_price_unit(id) ON DELETE RESTRICT,
+  media_id UUID REFERENCES media(id) ON DELETE SET NULL,
+  is_available BOOLEAN NOT NULL DEFAULT TRUE,
+  position INTEGER DEFAULT 0,
+  -- §06 P2b — la SECTION (Entrée/Plat/Dessert…) vit au niveau du plat (3-niveaux Menu→Section→Plat).
+  -- object_menu = le menu (titre) ; object_menu.category_id devient un conteneur optionnel.
+  section_id UUID REFERENCES ref_code_menu_category(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_object_menu_item_menu_id ON object_menu_item(menu_id);
+CREATE INDEX IF NOT EXISTS idx_object_menu_item_position ON object_menu_item(position);
+CREATE INDEX IF NOT EXISTS idx_object_menu_item_section ON object_menu_item(section_id);
+
+DROP TRIGGER IF EXISTS update_object_menu_item_updated_at ON object_menu_item;
+CREATE TRIGGER update_object_menu_item_updated_at
+BEFORE UPDATE ON object_menu_item
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Menu item dietary tags (vegan, organic, paleo, etc.)
+CREATE TABLE IF NOT EXISTS object_menu_item_dietary_tag (
+  menu_item_id UUID NOT NULL REFERENCES object_menu_item(id) ON DELETE CASCADE,
+  dietary_tag_id UUID NOT NULL REFERENCES ref_code_dietary_tag(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (menu_item_id, dietary_tag_id)
+);
+
+-- Menu item allergens (dairy, nuts, gluten, etc.)
+CREATE TABLE IF NOT EXISTS object_menu_item_allergen (
+  menu_item_id UUID NOT NULL REFERENCES object_menu_item(id) ON DELETE CASCADE,
+  allergen_id UUID NOT NULL REFERENCES ref_code_allergen(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (menu_item_id, allergen_id)
+);
+
+-- Menu item cuisine types (creole, metropolitan, chinese, traditional, etc.)
+CREATE TABLE IF NOT EXISTS object_menu_item_cuisine_type (
+  menu_item_id UUID NOT NULL REFERENCES object_menu_item(id) ON DELETE CASCADE,
+  cuisine_type_id UUID NOT NULL REFERENCES ref_code_cuisine_type(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (menu_item_id, cuisine_type_id)
+);
+
+-- Menu item media (many-to-many relationship)
+CREATE TABLE IF NOT EXISTS object_menu_item_media (
+  menu_item_id UUID NOT NULL REFERENCES object_menu_item(id) ON DELETE CASCADE,
+  media_id UUID NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (menu_item_id, media_id)
+);
+
+-- Indexes for menu item tags
+CREATE INDEX IF NOT EXISTS idx_menu_item_dietary_tag_item ON object_menu_item_dietary_tag(menu_item_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_dietary_tag_tag ON object_menu_item_dietary_tag(dietary_tag_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_allergen_item ON object_menu_item_allergen(menu_item_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_allergen_allergen ON object_menu_item_allergen(allergen_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_cuisine_type_item ON object_menu_item_cuisine_type(menu_item_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_cuisine_type_type ON object_menu_item_cuisine_type(cuisine_type_id);
+
+-- Indexes for menu item media
+CREATE INDEX IF NOT EXISTS idx_menu_item_media_item ON object_menu_item_media(menu_item_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_media_media ON object_menu_item_media(media_id);
+
+-- §06 P1 — Cuisine NIVEAU-OBJET (« cuisines proposées »), descriptor-link comme object_amenity.
+-- Découplé des menus : un restaurant déclare sa/ses cuisine(s) sans avoir de menu. position 1 = principale.
+-- RLS + grants dans rls_policies.sql (migration_object_cuisine_type.sql, manifest 14t).
+CREATE TABLE IF NOT EXISTS object_cuisine_type (
+  object_id       TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  cuisine_type_id UUID NOT NULL REFERENCES ref_code_cuisine_type(id) ON DELETE CASCADE,
+  position        INT  NOT NULL DEFAULT 1,
+  PRIMARY KEY (object_id, cuisine_type_id)
+);
+CREATE INDEX IF NOT EXISTS idx_object_cuisine_type_object ON object_cuisine_type(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_cuisine_type_type   ON object_cuisine_type(cuisine_type_id);
+
+-- §06 P3 — Carte PDF (document) attachée à l'objet : lien générique object↔ref_document, role-codé
+-- (ref_code_document_type ; 'carte' = restaurant). Titre + validité (de quand à quand) portés par le
+-- LIEN (object_document est canonical-write ; ref_document est admin-write ⇒ l'éditeur ne peut y écrire).
+-- url depuis ref_document (lecture publique). RLS + grants dans rls_policies.sql
+-- (migration_object_document.sql, manifest 14u). Upload via POST /api/media|document/upload.
+CREATE TABLE IF NOT EXISTS object_document (
+  object_id   TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  document_id UUID NOT NULL REFERENCES ref_document(id) ON DELETE CASCADE,
+  role_id     UUID REFERENCES ref_code_document_type(id),
+  title       TEXT,
+  valid_from  DATE,
+  valid_to    DATE,
+  position    INT NOT NULL DEFAULT 1,
+  PRIMARY KEY (object_id, document_id)
+);
+CREATE INDEX IF NOT EXISTS idx_object_document_object ON object_document(object_id);
+CREATE INDEX IF NOT EXISTS idx_object_document_role   ON object_document(role_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_media_position ON object_menu_item_media(position);
+
+DROP TRIGGER IF EXISTS update_object_menu_item_media_updated_at ON object_menu_item_media;
+CREATE TRIGGER update_object_menu_item_media_updated_at
+BEFORE UPDATE ON object_menu_item_media
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Filter-cache refresh triggers for the menu/cuisine child tables. RELOCATED here (from the
+-- generic child-trigger block ~700 lines above) so they are created AFTER their tables — the
+-- menu tables are only defined just above, so creating these triggers earlier aborts a fresh
+-- apply (fresh-apply gate, 2026-07-01). Functions live in api_views_functions.sql (defined first).
+-- object_id-direct sources:
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_menu ON object_menu;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_menu
+AFTER INSERT OR UPDATE OR DELETE ON object_menu
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_cuisine_type ON object_cuisine_type;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_cuisine_type
+AFTER INSERT OR UPDATE OR DELETE ON object_cuisine_type
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+-- parent-resolved sources:
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_menu_item ON object_menu_item;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_menu_item
+AFTER INSERT OR UPDATE OR DELETE ON object_menu_item
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_object_menu_item();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_menu_item_dietary ON object_menu_item_dietary_tag;
+CREATE TRIGGER trg_refresh_object_filter_caches_menu_item_dietary
+AFTER INSERT OR UPDATE OR DELETE ON object_menu_item_dietary_tag
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_menu_item_link();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_menu_item_allergen ON object_menu_item_allergen;
+CREATE TRIGGER trg_refresh_object_filter_caches_menu_item_allergen
+AFTER INSERT OR UPDATE OR DELETE ON object_menu_item_allergen
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_menu_item_link();
+
+-- =====================================================
+-- UNIFIED LEGAL SYSTEM
+-- =====================================================
+
+-- =====================================================
+-- 1. Create legal validity mode enum
+-- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'legal_validity_mode'
+  ) THEN
+    CREATE TYPE legal_validity_mode AS ENUM (
+      'forever',           -- Open ended, valid_to must be null
+      'tacit_renewal',     -- Considered valid unless revoked, valid_to can be null
+      'fixed_end_date'     -- Requires a non-null valid_to
+    );
+  END IF;
+END $$;
+
+-- =====================================================
+-- 2. Create reference table for legal record types
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ref_legal_type (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT,
+  category TEXT, -- e.g., 'business', 'accommodation', 'tax', 'insurance'
+  is_required BOOLEAN DEFAULT FALSE,
+  is_public BOOLEAN DEFAULT FALSE, -- Whether the document can be public or only for parent org
+  review_interval_days INTEGER, -- For tacit_renewal types, how often to review
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Insert common legal types
+--
+-- Deux familles, et elles ne se comportent PAS pareil (cf. §209, migration_legal_document_catalog.sql) :
+--  - IDENTITÉ (siret, siren, raison_sociale, vat_number, tourist_tax) : une valeur scalaire, sans
+--    expiration, rendue comme champ plat par l'éditeur §18 (LEGAL_IDENTITY_TYPE_CODES). SIRET/SIREN/
+--    taxe de séjour restent `is_public` (arbitrage PO 2026-07-31 : ils sortent déjà par l'API partenaire).
+--  - DOCUMENTS (le reste) : pièces justificatives demandées aux prestataires, rendues comme répéteur
+--    avec validité + justificatif uploadé. TOUS `is_required = false` (l'obligation dépend de la
+--    situation de l'exploitant : meublé ≠ association ≠ restaurant) et TOUS `is_public = false`
+--    (pièces administratives, jamais diffusées par l'API partenaire ni le site public).
+-- `review_interval_days` = périodicité indicative de re-demande, pas une règle bloquante.
+INSERT INTO ref_legal_type (code, name, description, category, is_required, is_public, review_interval_days) VALUES
+  -- Identité de la personne morale ------------------------------------------------------
+  ('siret', 'SIRET', 'Identifiant établissement (14 chiffres = SIREN 9 + NIC 5). Une seule ligne object_legal par fiche.', 'business', true, true, NULL),
+  ('siren', 'SIREN', 'Identifiant entreprise (9 chiffres). Optionnel si SIRET renseigné (dérivable des 9 premiers chiffres). Ne pas dupliquer une ligne SIRET.', 'business', false, true, NULL),
+  ('raison_sociale', 'Raison sociale', 'Dénomination ou raison sociale de la personne morale exploitante', 'business', false, false, NULL),
+  ('vat_number', 'Numéro TVA', 'Numéro de TVA intracommunautaire', 'business', false, false, NULL),
+  ('tourist_tax', 'Taxe de séjour', 'Numéro d''enregistrement ou d''autorisation de collecte de la taxe de séjour', 'accommodation', true, true, 365),
+
+  -- Existence juridique de l'exploitant -------------------------------------------------
+  ('avis_situation_sirene', 'Avis de situation au répertoire SIRENE',
+   'Attestation INSEE d''inscription au répertoire SIRENE. Justificatif d''existence le plus universel : accepté pour tout exploitant immatriculé (entreprise individuelle, micro-entrepreneur, société, association employeuse). Demandé de moins de 3 mois.',
+   'business', false, false, 90),
+  ('kbis', 'Extrait KBIS',
+   'Extrait d''immatriculation au registre du commerce et des sociétés — carte d''identité des sociétés et commerçants. Demandé de moins de 3 mois. Ne concerne PAS les associations (statuts) ni les professions libérales (extrait INPI / avis SIRENE).',
+   'business', false, false, 90),
+  ('extrait_inpi', 'Extrait INPI',
+   'Extrait du registre national des entreprises (INPI), guichet unique depuis 2023. Équivalent du KBIS pour les exploitants non inscrits au RCS : artisans, agriculteurs, professions libérales. Demandé de moins de 3 mois.',
+   'business', false, false, 90),
+  ('statuts_association', 'Statuts d''association',
+   'Statuts déposés de l''association loi 1901 exploitante, accompagnés le cas échéant du récépissé de déclaration en préfecture. Pièce d''existence des exploitants associatifs, en lieu et place du KBIS.',
+   'business', false, false, NULL),
+
+  -- Déclaration d'hébergement -----------------------------------------------------------
+  ('cerfa_meuble_tourisme', 'CERFA de déclaration de meublé de tourisme',
+   'Déclaration en mairie d''un meublé de tourisme (CERFA 14004). Obligatoire pour toute location saisonnière de logement meublé. À rapprocher du récépissé de déclaration en mairie, qui en accuse le dépôt.',
+   'accommodation', false, false, NULL),
+  ('cerfa_chambre_hotes', 'CERFA de déclaration de chambre d''hôtes',
+   'Déclaration en mairie d''une activité de chambres d''hôtes (CERFA 13566). Obligatoire dès la première chambre ; distincte de la déclaration de meublé de tourisme.',
+   'accommodation', false, false, NULL),
+  ('recepisse_declaration_mairie', 'Récépissé de déclaration en mairie',
+   'Accusé de réception délivré par la commune à la suite d''une déclaration (meublé de tourisme, chambres d''hôtes, occupation du domaine public…). Preuve que la déclaration a bien été déposée.',
+   'accommodation', false, false, NULL),
+
+  -- Restauration / débit de boissons ----------------------------------------------------
+  ('permis_exploitation', 'Permis d''exploitation',
+   'Attestation de la formation obligatoire préalable à l''exploitation d''un débit de boissons ou d''un établissement de restauration servant de l''alcool. Valable 10 ans.',
+   'restauration', false, false, 3650),
+  ('licence_restaurant', 'Licence restaurant',
+   'Licence de débit de boissons à consommer sur place attachée au service des repas (petite licence restaurant ou licence restaurant). Délivrée après déclaration en mairie ; attachée à l''établissement.',
+   'restauration', false, false, NULL),
+
+  -- Encadrement d'activité --------------------------------------------------------------
+  ('diplome_activite', 'Diplôme d''activité',
+   'Diplôme ou titre professionnel autorisant l''encadrement contre rémunération de l''activité proposée (BPJEPS, DEJEPS, BEES, brevet fédéral reconnu…). Une pièce par activité encadrée.',
+   'activite', false, false, NULL),
+  ('carte_professionnelle', 'Carte professionnelle',
+   'Carte professionnelle en cours de validité : guide-conférencier, moniteur, agent immobilier (loi Hoguet, pour les intermédiaires de location)… Précise la profession concernée dans la référence.',
+   'activite', false, false, NULL),
+  ('immatriculation_atout_france', 'Immatriculation Atout France',
+   'Immatriculation au registre des opérateurs de voyages et de séjours tenu par Atout France, exigée dès qu''un prestataire vend un forfait ou combine plusieurs prestations. Remplace depuis 2009 l''ancienne « licence tourisme ». Renouvellement triennal.',
+   'activite', false, false, 1095),
+
+  -- Assurance ---------------------------------------------------------------------------
+  ('attestation_assurance', 'Attestation d''assurance',
+   'Attestation d''assurance en cours de validité couvrant l''activité : responsabilité civile professionnelle, et le cas échéant multirisque de l''établissement. Pièce demandée à tout prestataire, quelle que soit sa situation. Renouvellement annuel.',
+   'insurance', false, false, 365),
+
+  -- Établissement recevant du public ----------------------------------------------------
+  ('fire_safety', 'Attestation de sécurité incendie (ERP)',
+   'Attestation ou procès-verbal de la commission de sécurité pour un établissement recevant du public. Périodicité de visite variable selon la catégorie et le type d''ERP.',
+   'erp', false, false, 365),
+  ('accessibility', 'Attestation d''accessibilité (ERP)',
+   'Attestation d''accessibilité d''un établissement recevant du public, ou agenda d''accessibilité programmée (Ad''AP). Distincte du label Tourisme & Handicap, qui est une distinction volontaire saisie en §10.',
+   'erp', false, false, 1095),
+
+  -- Cycle de vie de l'établissement -----------------------------------------------------
+  -- Ajout du 2026-08-28 (lot de corrections, chantier 2 — demande PO ; manifeste 17a). Seule pièce
+  -- de SORTIE du catalogue : le §18 devient le porte-documents administratif de la fiche.
+  ('courrier_fermeture', 'Courrier de fermeture',
+   'Courrier attestant la fermeture de l''établissement (cessation d''activité, fermeture administrative ou définitive). À joindre lorsqu''une fiche est retirée de la diffusion : il documente la date d''effet et l''origine de la décision.',
+   'business', false, false, NULL)
+ON CONFLICT (code) DO NOTHING;
+
+-- =====================================================
+-- 3. Create unified object_legal table
+-- =====================================================
+CREATE TABLE IF NOT EXISTS object_legal (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  type_id UUID NOT NULL REFERENCES ref_legal_type(id) ON DELETE RESTRICT,
+  value JSONB NOT NULL, -- Flexible storage for different value types
+  document_id UUID REFERENCES ref_document(id) ON DELETE SET NULL,
+  valid_from DATE NOT NULL DEFAULT CURRENT_DATE,
+  valid_to DATE,
+  validity_mode legal_validity_mode NOT NULL DEFAULT 'fixed_end_date',
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'expired', 'suspended', 'revoked', 'requested')),
+  document_requested_at TIMESTAMPTZ,
+  document_delivered_at TIMESTAMPTZ,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  
+  -- Constraints
+  CONSTRAINT chk_forever_validity CHECK (
+    (validity_mode = 'forever' AND valid_to IS NULL) OR
+    (validity_mode != 'forever')
+  ),
+  CONSTRAINT chk_fixed_end_date_validity CHECK (
+    (validity_mode = 'fixed_end_date' AND valid_to IS NOT NULL) OR
+    (validity_mode != 'fixed_end_date')
+  ),
+  CONSTRAINT chk_valid_date_range CHECK (valid_to IS NULL OR valid_to >= valid_from),
+  CONSTRAINT chk_document_delivery_date CHECK (document_delivered_at IS NULL OR document_delivered_at >= document_requested_at),
+  CONSTRAINT chk_requested_status CHECK (
+    (status = 'requested' AND document_requested_at IS NOT NULL) OR
+    (status != 'requested')
+  ),
+  
+  -- Optional uniqueness to avoid duplicates
+  UNIQUE(object_id, type_id, valid_from)
+);
+
+-- =====================================================
+-- 4. Create indexes for performance
+-- =====================================================
+CREATE INDEX IF NOT EXISTS idx_object_legal_object_type ON object_legal(object_id, type_id);
+CREATE INDEX IF NOT EXISTS idx_object_legal_valid_to ON object_legal(valid_to) WHERE valid_to IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_object_legal_validity_mode ON object_legal(validity_mode);
+CREATE INDEX IF NOT EXISTS idx_object_legal_status ON object_legal(status);
+CREATE INDEX IF NOT EXISTS idx_object_legal_expiring ON object_legal(valid_to, status) 
+  WHERE valid_to IS NOT NULL AND status = 'active';
+CREATE INDEX IF NOT EXISTS idx_object_legal_requested ON object_legal(status, document_requested_at) 
+  WHERE status = 'requested';
+CREATE INDEX IF NOT EXISTS idx_object_legal_document_dates ON object_legal(document_requested_at, document_delivered_at);
+
+-- =====================================================
+-- 5. Create trigger for updated_at
+-- =====================================================
+DROP TRIGGER IF EXISTS update_ref_legal_type_updated_at ON ref_legal_type;
+CREATE TRIGGER update_ref_legal_type_updated_at
+  BEFORE UPDATE ON ref_legal_type
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_object_legal_updated_at ON object_legal;
+CREATE TRIGGER update_object_legal_updated_at 
+  BEFORE UPDATE ON object_legal 
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- 6. Create views for easy querying
+-- =====================================================
+
+-- View for active legal records
+CREATE OR REPLACE VIEW v_active_legal_records
+WITH (security_invoker = true) AS
+SELECT 
+  ol.id,
+  ol.object_id,
+  o.name as object_name,
+  o.object_type,
+  rlt.code as type_code,
+  rlt.name as type_name,
+  rlt.category,
+  ol.value,
+  ol.document_id,
+  ol.valid_from,
+  ol.valid_to,
+  ol.validity_mode,
+  ol.status,
+  ol.document_requested_at,
+  ol.document_delivered_at,
+  ol.note,
+  CASE 
+    WHEN ol.valid_to IS NOT NULL THEN (ol.valid_to - CURRENT_DATE)::INTEGER
+    ELSE NULL
+  END as days_until_expiry
+FROM object_legal ol
+JOIN object o ON o.id = ol.object_id
+JOIN ref_legal_type rlt ON rlt.id = ol.type_id
+WHERE ol.status = 'active';
+
+-- View for expiring legal records (next 30 days)
+CREATE OR REPLACE VIEW v_expiring_legal_records
+WITH (security_invoker = true) AS
+SELECT *
+FROM v_active_legal_records
+WHERE valid_to IS NOT NULL 
+  AND valid_to BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'
+ORDER BY valid_to ASC;
+
+-- =====================================================
+-- 7. Comments and documentation
+-- =====================================================
+
+COMMENT ON TABLE object_legal IS 'Unified legal records for all object types. Each record represents one legal aspect (permit, license, etc.) for one object.';
+COMMENT ON COLUMN object_legal.value IS 'Flexible JSONB storage for different value types (numbers, text, structured data)';
+COMMENT ON COLUMN object_legal.validity_mode IS 'How the validity period is managed: forever (no expiry), tacit_renewal (renewed unless revoked), fixed_end_date (specific end date)';
+COMMENT ON COLUMN object_legal.status IS 'Current status: active, expired, suspended, revoked, requested';
+COMMENT ON COLUMN object_legal.document_requested_at IS 'Timestamp when the supporting document was requested';
+COMMENT ON COLUMN object_legal.document_delivered_at IS 'Timestamp when the supporting document was delivered';
+
+COMMENT ON TABLE ref_legal_type IS 'Reference table for legal record types. Defines what types of legal documents can be stored for objects.';
+COMMENT ON COLUMN ref_legal_type.is_public IS 'Whether documents of this type can be public (true) or should only be visible to parent organization (false)';
+
+-- =====================================================
+-- Phase 1 — Fondation du modèle d'accès et de permissions
+-- Référence : access_control_master_plan.md (version 1.5, 2026-03-23)
+-- Périmètre : référentiels rôles, membership, scope ORG, lien user-actor.
+-- Hors périmètre : permissions (Niveau 2), exceptions (Niveau 3), groupes.
+-- =====================================================
+
+
+-- -----------------------------------------------------
+-- 1. ref_org_business_role — Catalogue des rôles métier ORG
+-- Le rôle métier reflète la fonction professionnelle du user dans l'ORG.
+-- Il est orthogonal au scope (Niveau 1) et aux permissions (Niveau 2).
+-- Il ne confère aucun droit implicite — les droits passent par org/user_permission.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS ref_org_business_role (
+  id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code        VARCHAR(50)  NOT NULL UNIQUE,
+  name        VARCHAR(100) NOT NULL,
+  description TEXT,
+  position    INTEGER,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+
+-- -----------------------------------------------------
+-- 2. ref_org_admin_role — Catalogue des rôles d'administration ORG
+-- Le rôle admin définit le périmètre de gouvernance du user dans l'ORG.
+-- Orthogonal au rôle métier : on peut être editor et team_lead, ou viewer et org_admin.
+-- rank INTEGER obligatoire : permet les comparaisons pour les règles d'anti auto-élévation
+-- (un admin ne peut gérer que des rôles de rang strictement inférieur au sien).
+-- IMPORTANT : aucun rôle admin ne bypasse api.user_has_permission().
+-- Les droits d'un admin restent déclarés explicitement dans org_permission/user_permission.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS ref_org_admin_role (
+  id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code        VARCHAR(50)  NOT NULL UNIQUE,
+  name        VARCHAR(100) NOT NULL,
+  description TEXT,
+  -- rank : entier de comparaison pour les règles d'anti auto-élévation (§2.6 du plan).
+  -- Distinct de position (ordre d'affichage) : ici la sémantique est fonctionnelle.
+  rank        INTEGER      NOT NULL,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+
+-- -----------------------------------------------------
+-- 3. user_org_membership — Appartenance d'un user à une ORG
+-- Cette table porte UNIQUEMENT le fait d'appartenir (membership).
+-- Elle ne porte pas les rôles — ceux-ci sont dans des tables séparées (§2.4 du plan).
+-- Contrainte métier : un user 'tourism_agent' n'a qu'une seule ORG active à la fois.
+-- Les users 'owner' et 'super_admin' sont exemptés de cette contrainte.
+-- org_object_id doit pointer vers un object.type = 'ORG' (vérifié par trigger).
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_org_membership (
+  id               UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id          UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  -- Doit pointer vers un objet de type 'ORG'. Garanti par trigger check_membership_org_type.
+  org_object_id    TEXT        NOT NULL REFERENCES object(id) ON DELETE RESTRICT,
+  is_active        BOOLEAN     NOT NULL DEFAULT TRUE,
+  invited_by       UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  invited_at       TIMESTAMPTZ,
+  activated_at     TIMESTAMPTZ,
+  deactivated_at   TIMESTAMPTZ,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'.
+-- Un CHECK constraint ne peut pas référencer une autre table en PostgreSQL ;
+-- le trigger est la solution correcte.
+CREATE OR REPLACE FUNCTION api.check_membership_org_type()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM object WHERE id = NEW.org_object_id AND object_type = 'ORG'
+  ) THEN
+    RAISE EXCEPTION
+      'user_org_membership.org_object_id doit pointer vers un objet de type ORG (valeur reçue : %)',
+      NEW.org_object_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS check_membership_org_type ON user_org_membership;
+CREATE TRIGGER check_membership_org_type
+  BEFORE INSERT OR UPDATE OF org_object_id ON user_org_membership
+  FOR EACH ROW EXECUTE FUNCTION api.check_membership_org_type();
+
+-- Trigger : contrainte "1 user tourism_agent = 1 ORG active".
+-- Un index partiel unique WHERE is_active = TRUE s'appliquerait à TOUS les users,
+-- y compris owner/super_admin. Le trigger permet d'appliquer la règle sélectivement.
+--
+-- Durcissements par rapport à la version naïve :
+--   1. pg_advisory_xact_lock(user_id) : sérialise les transactions concurrentes sur le
+--      même user_id — élimine le TOCTOU sur les INSERTs simultanés.
+--   2. SELECT ... FOR NO KEY UPDATE : verrouille les lignes actives existantes pendant
+--      la vérification — empêche une transaction concurrente de désactiver/réactiver
+--      un membership pendant que la nôtre lit.
+--   3. Le trigger se déclenche aussi sur UPDATE OF user_id : si user_id est modifié
+--      sur un membership actif, la contrainte est revérifiée pour le nouveau user_id.
+--   4. id IS DISTINCT FROM NEW.id remplace la condition TG_OP redondante :
+--      en BEFORE INSERT la ligne n'existe pas encore, l'exclusion est toujours correcte.
+CREATE OR REPLACE FUNCTION api.enforce_single_active_org_membership()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_platform_role TEXT;
+BEGIN
+  -- La contrainte ne s'applique qu'à l'activation d'un membership
+  IF NEW.is_active = FALSE THEN
+    RETURN NEW;
+  END IF;
+
+  -- Lire le rôle plateforme du user (sur le nouveau user_id en cas de UPDATE OF user_id)
+  SELECT role INTO v_platform_role
+  FROM app_user_profile
+  WHERE id = NEW.user_id;
+
+  -- owner et super_admin ne sont pas soumis à la contrainte métier 1-ORG
+  IF v_platform_role IN ('owner', 'super_admin') THEN
+    RETURN NEW;
+  END IF;
+
+  -- Verrou advisory transaction-level sur user_id :
+  -- sérialise toutes les tentatives d'activation concurrentes pour ce user.
+  -- Élimine le TOCTOU : deux INSERTs simultanés ne peuvent plus tous les deux
+  -- passer le EXISTS ci-dessous avant que l'un n'ait commité.
+  PERFORM pg_advisory_xact_lock(hashtext(NEW.user_id::text));
+
+  -- Verrouiller les lignes actives existantes (FOR NO KEY UPDATE) :
+  -- empêche une transaction concurrente de modifier is_active sur ces lignes
+  -- pendant que notre vérification est en cours.
+  PERFORM 1
+  FROM user_org_membership
+  WHERE user_id = NEW.user_id
+    AND is_active = TRUE
+    AND id IS DISTINCT FROM NEW.id
+  FOR NO KEY UPDATE;
+
+  -- Vérification effective : un seul membership actif autorisé
+  IF EXISTS (
+    SELECT 1
+    FROM user_org_membership
+    WHERE user_id = NEW.user_id
+      AND is_active = TRUE
+      AND id IS DISTINCT FROM NEW.id
+  ) THEN
+    RAISE EXCEPTION
+      'Un utilisateur tourism_agent ne peut avoir qu''une seule ORG active. '
+      'Désactivez le membership existant avant d''en activer un nouveau (user_id = %).',
+      NEW.user_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS enforce_single_active_org_membership ON user_org_membership;
+CREATE TRIGGER enforce_single_active_org_membership
+  -- user_id ajouté : couvre le cas UPDATE SET user_id sur un membership actif
+  BEFORE INSERT OR UPDATE OF is_active, user_id ON user_org_membership
+  FOR EACH ROW EXECUTE FUNCTION api.enforce_single_active_org_membership();
+
+
+-- -----------------------------------------------------
+-- 4. user_org_business_role — Rôle métier actif du user dans son ORG
+-- Séparé du membership : on peut modifier le rôle sans toucher au membership.
+-- Contrainte : un seul rôle métier actif par membership (index partiel).
+-- Le rôle métier est obligatoire pour tout user rattaché à une ORG.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_org_business_role (
+  id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  membership_id UUID        NOT NULL REFERENCES user_org_membership(id) ON DELETE CASCADE,
+  role_id       UUID        NOT NULL REFERENCES ref_org_business_role(id) ON DELETE RESTRICT,
+  is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
+  assigned_by   UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  assigned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Un seul rôle métier actif par membership à tout moment
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_org_business_role_active
+  ON user_org_business_role(membership_id) WHERE is_active = TRUE;
+
+
+-- -----------------------------------------------------
+-- 5. user_org_admin_role — Rôle d'administration du user dans son ORG
+-- Optionnel (0 ou 1 par membership). Séparé du rôle métier.
+-- Le rang est porté par ref_org_admin_role.rank (utilisé pour les contrôles anti-élévation).
+-- N'accorde aucun droit implicite — les droits restent dans org/user_permission.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_org_admin_role (
+  id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  membership_id UUID        NOT NULL REFERENCES user_org_membership(id) ON DELETE CASCADE,
+  role_id       UUID        NOT NULL REFERENCES ref_org_admin_role(id) ON DELETE RESTRICT,
+  is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
+  assigned_by   UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  assigned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Au plus un rôle admin actif par membership à tout moment
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_org_admin_role_active
+  ON user_org_admin_role(membership_id) WHERE is_active = TRUE;
+
+
+-- -----------------------------------------------------
+-- 6. app_user_profile — Ajout de actor_id (lien user → actor, optionnel)
+-- Lien 1-to-1 nullable. Un actor ne peut être lié qu'à un seul user.
+-- L'index partiel unique garantit l'unicité côté actor sans bloquer les NULLs.
+-- Le lien user → actor ne définit pas le rôle global ORG du user (§2.1 du plan).
+-- -----------------------------------------------------
+ALTER TABLE app_user_profile
+  ADD COLUMN IF NOT EXISTS actor_id UUID REFERENCES actor(id) ON DELETE SET NULL;
+
+-- Garantit qu'un actor n'est pas lié à plusieurs users simultanément
+CREATE UNIQUE INDEX IF NOT EXISTS uq_app_user_profile_actor_id
+  ON app_user_profile(actor_id) WHERE actor_id IS NOT NULL;
+
+
+-- -----------------------------------------------------
+-- 7. org_config — Scope d'accès de l'ORG (Niveau 1 uniquement)
+-- Cette table porte UNIQUEMENT le scope d'accès (Niveau 1).
+-- Elle ne porte PAS de permissions d'action (Niveau 2) — cf. Correction C3 du plan.
+-- Valeurs autorisées :
+--   own_objects_only : périmètre propre uniquement (objets créés/publiés/liés via object_org_link)
+--   all_published    : périmètre propre + lecture de tous les objets publiés d'autres ORG
+-- La valeur 'all_objects' est explicitement exclue (§2.3 du plan).
+-- Modification de access_scope réservée au super_admin (contrôle applicatif — §2.8 du plan).
+-- org_object_id doit pointer vers un object.type = 'ORG' (vérifié par trigger).
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS org_config (
+  id             UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  -- Une seule config par ORG
+  org_object_id  TEXT        NOT NULL UNIQUE REFERENCES object(id) ON DELETE CASCADE,
+  access_scope   TEXT        NOT NULL DEFAULT 'own_objects_only'
+                   CHECK (access_scope IN ('own_objects_only', 'all_published')),
+  -- ORG « bac a sable » (18a) : ses fiches sont is_test, ses membres ne voient QUE
+  -- le corpus de test. Reserve au superuser plateforme.
+  is_test_org    BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'.
+CREATE OR REPLACE FUNCTION api.check_org_config_org_type()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM object WHERE id = NEW.org_object_id AND object_type = 'ORG'
+  ) THEN
+    RAISE EXCEPTION
+      'org_config.org_object_id doit pointer vers un objet de type ORG (valeur reçue : %)',
+      NEW.org_object_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS check_org_config_org_type ON org_config;
+CREATE TRIGGER check_org_config_org_type
+  BEFORE INSERT OR UPDATE OF org_object_id ON org_config
+  FOR EACH ROW EXECUTE FUNCTION api.check_org_config_org_type();
+
+
+-- =====================================================
+-- Indexes Phase 1
+-- =====================================================
+CREATE INDEX IF NOT EXISTS idx_user_org_membership_user_id
+  ON user_org_membership(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_org_membership_org_object_id
+  ON user_org_membership(org_object_id);
+-- Index partiel pour les lookups fréquents "membership actif du user"
+CREATE INDEX IF NOT EXISTS idx_user_org_membership_user_active
+  ON user_org_membership(user_id) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_user_org_business_role_membership_id
+  ON user_org_business_role(membership_id);
+CREATE INDEX IF NOT EXISTS idx_user_org_admin_role_membership_id
+  ON user_org_admin_role(membership_id);
+CREATE INDEX IF NOT EXISTS idx_org_config_org_object_id
+  ON org_config(org_object_id);
+
+
+-- =====================================================
+-- Triggers updated_at — Phase 1
+-- =====================================================
+DROP TRIGGER IF EXISTS update_ref_org_business_role_updated_at ON ref_org_business_role;
+CREATE TRIGGER update_ref_org_business_role_updated_at
+  BEFORE UPDATE ON ref_org_business_role
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_ref_org_admin_role_updated_at ON ref_org_admin_role;
+CREATE TRIGGER update_ref_org_admin_role_updated_at
+  BEFORE UPDATE ON ref_org_admin_role
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_org_membership_updated_at ON user_org_membership;
+CREATE TRIGGER update_user_org_membership_updated_at
+  BEFORE UPDATE ON user_org_membership
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_org_business_role_updated_at ON user_org_business_role;
+CREATE TRIGGER update_user_org_business_role_updated_at
+  BEFORE UPDATE ON user_org_business_role
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_org_admin_role_updated_at ON user_org_admin_role;
+CREATE TRIGGER update_user_org_admin_role_updated_at
+  BEFORE UPDATE ON user_org_admin_role
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_org_config_updated_at ON org_config;
+CREATE TRIGGER update_org_config_updated_at
+  BEFORE UPDATE ON org_config
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- End of Phase 1 — Fondation du modèle d'accès
+-- =====================================================
+
+
+-- =====================================================
+-- Phase 2 — Auto-rattachement ORG ↔ objet à la création
+-- Implémente l'invariant §2.2 du document maître :
+-- "Quand un user d'une ORG crée un objet, cet objet est automatiquement
+-- rattaché à l'ORG du user comme publisher principal (is_primary = TRUE)."
+-- Référence : access_control_master_plan.md §2.2
+--
+-- Source de vérité : NEW.created_by → user_org_membership (pas auth.uid()).
+-- Ce choix rend le trigger robuste hors contexte JWT :
+-- imports, RPCs backend, service_role, scripts de migration.
+--
+-- Cas où le trigger ne fait rien (skip silencieux — jamais d'exception) :
+--   1. created_by IS NULL      → import / seed / service_role sans créateur identifié
+--   2. object_type = 'ORG'    → une ORG ne s'auto-rattache pas à une ORG
+--   3. 0 membership actif      → owner/super_admin hors ORG, ou user en onboarding
+--   4. > 1 membership actif    → owner multi-ORG : ORG cible ambiguë, skip sans erreur
+--   5. role 'publisher' absent → env sans seeds, test isolé — ne doit pas bloquer
+--   6. primary déjà existante  → edge case défensif sur uq_object_primary_org
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION api.auto_attach_object_to_creator_org()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+DECLARE
+  v_org_object_id     TEXT;
+  v_publisher_role_id UUID;
+  v_membership_count  INTEGER;
+BEGIN
+  -- 1. Pas de créateur identifié : import, seed, service_role, migration
+  IF NEW.created_by IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  -- 2. Une ORG ne s'auto-rattache pas à elle-même
+  IF NEW.object_type = 'ORG' THEN
+    RETURN NEW;
+  END IF;
+
+  -- 3. Résoudre le rôle 'publisher' dans ref_org_role (via code, pas UUID codé en dur)
+  SELECT id INTO v_publisher_role_id
+  FROM ref_org_role
+  WHERE code = 'publisher';
+
+  IF v_publisher_role_id IS NULL THEN
+    -- ref_org_role pas encore seedée (env de test isolé, CI sans seeds) : skip
+    RETURN NEW;
+  END IF;
+
+  -- 4. Compter les memberships actifs du créateur
+  --    On lit user_org_membership directement via created_by pour ne pas dépendre du JWT.
+  SELECT COUNT(*) INTO v_membership_count
+  FROM user_org_membership
+  WHERE user_id   = NEW.created_by
+    AND is_active = TRUE;
+
+  IF v_membership_count = 0 THEN
+    -- Créateur sans ORG active (owner/super_admin non rattaché, user en onboarding)
+    RETURN NEW;
+  END IF;
+
+  IF v_membership_count > 1 THEN
+    -- Owner/super_admin multi-ORG : cas ambigu, on ne devine pas l'ORG cible
+    -- La contrainte enforce_single_active_org_membership ne s'applique pas aux owners.
+    RETURN NEW;
+  END IF;
+
+  -- 5. Récupérer l'unique ORG active du créateur
+  SELECT org_object_id INTO v_org_object_id
+  FROM user_org_membership
+  WHERE user_id   = NEW.created_by
+    AND is_active = TRUE;
+
+  -- 6. Si un lien primary existe déjà pour cet objet (edge case défensif),
+  --    ne pas tenter d'insérer is_primary = TRUE — évite un conflit sur uq_object_primary_org.
+  IF EXISTS (
+    SELECT 1 FROM object_org_link
+    WHERE object_id = NEW.id AND is_primary = TRUE
+  ) THEN
+    RETURN NEW;
+  END IF;
+
+  -- 7. Insérer le rattachement publisher principal.
+  --    ON CONFLICT DO NOTHING : idempotent sur la PK (object_id, org_object_id, role_id).
+  INSERT INTO object_org_link (object_id, org_object_id, role_id, is_primary, created_at, updated_at)
+  VALUES (NEW.id, v_org_object_id, v_publisher_role_id, TRUE, NOW(), NOW())
+  ON CONFLICT (object_id, org_object_id, role_id) DO NOTHING;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_auto_attach_object_to_creator_org ON object;
+CREATE TRIGGER trg_auto_attach_object_to_creator_org
+  AFTER INSERT ON object
+  FOR EACH ROW EXECUTE FUNCTION api.auto_attach_object_to_creator_org();
+
+
+-- =====================================================
+-- End of Phase 2 — Auto-rattachement ORG ↔ objet
+-- =====================================================
+
+
+-- =====================================================
+-- Phase 4 — Niveau 2 des permissions
+-- Référence : access_control_master_plan.md §7 Phase 4
+-- Périmètre : ref_permission, org_permission, user_permission.
+-- Hors périmètre : exceptions Niveau 3, groupes, permissions de champ.
+-- =====================================================
+-- Principe clé : les permissions sont orthogonales aux rôles.
+--   - Un rôle métier ou admin ne confère AUCUNE permission implicite (§2.6 du plan).
+--   - Toute permission doit être accordée explicitement via org_permission ou user_permission.
+--   - user_permission est additive : un user peut avoir une permission que son ORG n'a pas (§2.4).
+-- =====================================================
+
+-- -----------------------------------------------------
+-- 1. ref_permission — Catalogue des permissions d'action (Niveau 2, V1)
+-- Chaque code représente une action accordable/révocable de façon explicite.
+-- category : domaine fonctionnel (content / crm / team / media).
+-- TEXT + CHECK préféré à ENUM pour la compatibilité migration (pattern établi Phase 1).
+-- is_active : désactivation sans suppression du catalogue.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS ref_permission (
+  id          UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code        VARCHAR(100) NOT NULL UNIQUE,
+  name        VARCHAR(200) NOT NULL,
+  -- content, crm, team, media — TEXT + CHECK pour éviter ALTER TYPE en migration future
+  category    TEXT         NOT NULL CHECK (category IN ('content', 'crm', 'team', 'media')),
+  description TEXT,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+DROP TRIGGER IF EXISTS update_ref_permission_updated_at ON ref_permission;
+CREATE TRIGGER update_ref_permission_updated_at
+  BEFORE UPDATE ON ref_permission
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- -----------------------------------------------------
+-- 2. org_permission — Permissions accordées à une ORG entière
+-- Une permission ORG est héritée par tous les membres actifs de l'ORG.
+-- Elle s'inscrit dans le périmètre Niveau 1 sans l'étendre.
+-- Contrainte (org_object_id, permission_id) UNIQUE : une ligne par couple.
+-- is_active : soft revoke — préserve la traçabilité (granted_by / granted_at).
+-- org_object_id pointe vers un object.type = 'ORG' (vérification applicative dans les RPC).
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS org_permission (
+  id             UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_object_id  TEXT        NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  permission_id  UUID        NOT NULL REFERENCES ref_permission(id) ON DELETE CASCADE,
+  is_active      BOOLEAN     NOT NULL DEFAULT TRUE,
+  granted_by     UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  granted_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_org_permission UNIQUE (org_object_id, permission_id)
+);
+
+-- Index filtré actifs : chemin chaud dans api.user_has_permission() (chemin 2 — héritage ORG)
+CREATE INDEX IF NOT EXISTS idx_org_permission_active
+  ON org_permission (org_object_id, permission_id)
+  WHERE is_active = TRUE;
+
+-- Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'.
+-- Un CHECK constraint ne peut pas référencer une autre table en PostgreSQL ;
+-- le trigger est la solution correcte (même pattern que check_membership_org_type
+-- et check_org_config_org_type).
+CREATE OR REPLACE FUNCTION api.check_org_permission_org_type()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM object WHERE id = NEW.org_object_id AND object_type = 'ORG'
+  ) THEN
+    RAISE EXCEPTION
+      'org_permission.org_object_id doit pointer vers un objet de type ORG (valeur reçue : %)',
+      NEW.org_object_id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS check_org_permission_org_type ON org_permission;
+CREATE TRIGGER check_org_permission_org_type
+  BEFORE INSERT OR UPDATE OF org_object_id ON org_permission
+  FOR EACH ROW EXECUTE FUNCTION api.check_org_permission_org_type();
+
+DROP TRIGGER IF EXISTS update_org_permission_updated_at ON org_permission;
+CREATE TRIGGER update_org_permission_updated_at
+  BEFORE UPDATE ON org_permission
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- -----------------------------------------------------
+-- 3. user_permission — Permissions additives accordées à un user précis
+-- Additive (§2.4) : un user peut avoir une permission que son ORG n'a pas globalement.
+-- Contrainte (user_id, permission_id) UNIQUE : une ligne par couple.
+-- is_active : soft revoke — préserve la traçabilité.
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_permission (
+  id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id       UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  permission_id UUID        NOT NULL REFERENCES ref_permission(id) ON DELETE CASCADE,
+  is_active     BOOLEAN     NOT NULL DEFAULT TRUE,
+  granted_by    UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  granted_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_user_permission UNIQUE (user_id, permission_id)
+);
+
+-- Index filtré actifs : chemin chaud dans api.user_has_permission() (chemin 1 — permission directe)
+CREATE INDEX IF NOT EXISTS idx_user_permission_active
+  ON user_permission (user_id, permission_id)
+  WHERE is_active = TRUE;
+
+DROP TRIGGER IF EXISTS update_user_permission_updated_at ON user_permission;
+CREATE TRIGGER update_user_permission_updated_at
+  BEFORE UPDATE ON user_permission
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- End of Phase 4 — Niveau 2 des permissions
+-- =====================================================
+
+-- Run audit attachment after all table creations (including late sections).
+SELECT audit.attach_missing_triggers();
+
+-- =====================================================
+-- Journal des transitions de statut d'une demande CRM (manifeste 17g) — FOLD de
+-- `migration_crm_lifecycle.sql`, corps identique.
+-- Placed AFTER attach_missing_triggers() ON PURPOSE, même précédent que gdpr_erasure_log
+-- ci-dessous : crm_interaction_status_event ne doit PAS porter de trigger d'audit sur un fresh
+-- apply, pour matcher la production (où la migration 17g n'a pas re-déclenché attach). Doctrine
+-- §61 : cette table porte SON PROPRE trigger append-only (trg_crm_interaction_status_event),
+-- RLS ON, ZÉRO policy, ZÉRO grant applicatif — un trigger d'audit ne serait pas dangereux (le
+-- journal est append-only) mais y ajouter en fresh apply ce que la production n'a jamais eu est
+-- une divergence évitable, pas un renfort.
+-- Il vit ICI et pas seulement dans la migration parce qu'un `schema_unified.sql` passé aux six
+-- valeurs SANS le journal ni les deux triggers d'écriture traduits donnerait un fresh apply
+-- VERT dont le premier incident lèverait 22P02.
+-- Il rend calculable le temps de traitement NET : l'attente prestataire (awaiting_provider) est
+-- déduite, parce qu'un indicateur ne doit mesurer que ce que l'équipe maîtrise.
+-- =====================================================
+CREATE TABLE IF NOT EXISTS public.crm_interaction_status_event (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  interaction_id uuid NOT NULL REFERENCES public.crm_interaction(id) ON DELETE CASCADE,
+  from_status    crm_status,          -- NULL = création
+  to_status      crm_status NOT NULL,
+  changed_at     timestamptz NOT NULL DEFAULT now(),
+  -- Attribution d'ÉQUIPE (auth.uid()), même classe de rétention que audit_log.changed_by ;
+  -- hors périmètre de rpc_gdpr_erase_subject (acteurs/déclarants), décision spec §10.5.
+  changed_by     uuid
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_status_event_interaction
+  ON public.crm_interaction_status_event (interaction_id, changed_at);
+
+-- Doctrine §61 : RLS ON, ZÉRO POLICY, AUCUN GRANT applicatif — la lecture passe uniquement par
+-- le RPC DEFINER `api.list_crm_status_events`, jamais par PostgREST en direct.
+ALTER TABLE public.crm_interaction_status_event ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.crm_interaction_status_event FROM PUBLIC, anon, authenticated;
+
+-- SECURITY DEFINER : le trigger écrit dans une table à RLS activée et sans policy ; sans
+-- DEFINER, toute écriture depuis un rôle applicatif serait refusée et le journal serait
+-- silencieusement vide.
+CREATE OR REPLACE FUNCTION api.log_crm_interaction_status_event()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.crm_interaction_status_event (interaction_id, from_status, to_status, changed_by)
+    VALUES (NEW.id, NULL, NEW.status, auth.uid());
+  ELSIF NEW.status IS DISTINCT FROM OLD.status THEN
+    INSERT INTO public.crm_interaction_status_event (interaction_id, from_status, to_status, changed_by)
+    VALUES (NEW.id, OLD.status, NEW.status, auth.uid());
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_crm_interaction_status_event ON public.crm_interaction;
+CREATE TRIGGER trg_crm_interaction_status_event
+  AFTER INSERT OR UPDATE OF status ON public.crm_interaction
+  FOR EACH ROW EXECUTE FUNCTION api.log_crm_interaction_status_event();
+
+-- =====================================================
+-- RGPD Art. 17 — effacement / anonymisation (folded from migration_gdpr_erasure.sql, runbook 14j)
+-- Placed AFTER attach_missing_triggers() ON PURPOSE: gdpr_erasure_log must NOT carry an audit
+-- trigger (matches live, where attach was not re-run after the migration). The RLS read policy
+-- lives in rls_policies.sql (it needs api.is_platform_superuser, defined there). Functions use
+-- plpgsql late binding so referenced tables/functions need not exist at CREATE time.
+-- =====================================================
+CREATE TABLE IF NOT EXISTS gdpr_erasure_log (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  subject_kind  TEXT NOT NULL CHECK (subject_kind IN
+                  ('actor','incident','review','object_legal','contact_channel','user')),
+  subject_id    TEXT NOT NULL,
+  mode          TEXT NOT NULL CHECK (mode IN ('anonymize','delete')),
+  reason        TEXT,
+  performed_by  TEXT,
+  performed_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  report        JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+COMMENT ON TABLE gdpr_erasure_log IS
+  'Journal des effacements/anonymisations RGPD (Art. 17). Écrit uniquement par api.rpc_gdpr_erase_subject.';
+ALTER TABLE gdpr_erasure_log ENABLE ROW LEVEL SECURITY;  -- policy gdpr_erasure_log_admin_read in rls_policies.sql
+REVOKE ALL ON gdpr_erasure_log FROM PUBLIC, anon;
+GRANT SELECT ON gdpr_erasure_log TO authenticated;
+GRANT ALL    ON gdpr_erasure_log TO service_role;
+
+-- Rédaction ciblée du journal d'audit : retire les clés PII d'un sujet (row_pk OU before_data->>key,
+-- ce dernier capture les lignes DELETE dont la PK ne porte pas la FK). null::jsonb - text[] = null.
+CREATE OR REPLACE FUNCTION audit.redact_subject(
+  p_table TEXT, p_match_key TEXT, p_match_val TEXT, p_pii_cols TEXT[]
+) RETURNS INTEGER
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth, audit
+AS $$
+DECLARE v_count INTEGER;
+BEGIN
+  UPDATE audit.audit_log
+     SET before_data = before_data - p_pii_cols,
+         after_data  = after_data  - p_pii_cols
+   WHERE table_name = p_table
+     AND ( (row_pk ->> p_match_key) = p_match_val
+        OR (before_data ->> p_match_key) = p_match_val );
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  RETURN v_count;
+END;
+$$;
+REVOKE ALL ON FUNCTION audit.redact_subject(TEXT,TEXT,TEXT,TEXT[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION audit.redact_subject(TEXT,TEXT,TEXT,TEXT[]) TO service_role;
+
+CREATE OR REPLACE FUNCTION api.rpc_gdpr_erase_subject(
+  p_subject_kind TEXT, p_subject_id TEXT, p_mode TEXT DEFAULT 'anonymize', p_reason TEXT DEFAULT NULL
+) RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth, audit
+AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+  v_actor UUID; v_report JSONB := '{}'::jsonb; v_media TEXT[] := ARRAY[]::TEXT[];
+  v_photo TEXT; v_int_id UUID; v_task_id TEXT;
+  v_portal_user UUID;  -- 18a §8 — le compte portail délié, reporté à l'opérateur RGPD
+  TOMBSTONE CONSTANT TEXT := '[Donnée effacée]';
+BEGIN
+  IF current_setting('request.jwt.claims', true) IS NOT NULL AND NOT api.is_platform_superuser() THEN
+    RAISE EXCEPTION 'Effacement RGPD réservé aux administrateurs plateforme (référent RGPD / superuser).';
+  END IF;
+  IF p_mode NOT IN ('anonymize','delete') THEN
+    RAISE EXCEPTION 'Mode invalide: % (attendu anonymize|delete)', p_mode;
+  END IF;
+
+  IF p_subject_kind = 'actor' THEN
+    v_actor := p_subject_id::uuid;
+    IF NOT EXISTS (SELECT 1 FROM actor WHERE id = v_actor) THEN
+      RAISE EXCEPTION 'Acteur introuvable: %', p_subject_id; END IF;
+    SELECT photo_url INTO v_photo FROM actor WHERE id = v_actor;
+    IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
+    -- 18a §8 — AVANT la branche de mode (cf. l'avertissement ci-dessus) : l'accès portail
+    -- tombe immédiatement, et l'id du compte est CAPTURÉ pendant qu'il est encore lisible.
+    UPDATE app_user_profile SET actor_id = NULL WHERE actor_id = v_actor
+    RETURNING id INTO v_portal_user;
+    -- 18a §8 — l'ORIGINAL du message libre du prestataire. La branche anonymize efface plus
+    -- bas crm_task.description, qui n'en est qu'une COPIE (submit_actor_fiche écrit le même
+    -- texte aux deux endroits) ; fiche_submission.note, colonne créée par CETTE migration,
+    -- échappait aux deux modes et restait relue telle quelle par la file de modération.
+    -- AVANT la branche, pour la même raison que l'UPDATE ci-dessus : fiche_submission.actor_id
+    -- est ON DELETE SET NULL, donc en mode 'delete' le DELETE FROM actor délierait la ligne
+    -- en SILENCE et tout nettoyage placé après serait muet. Le bras submitted_by rattrape les
+    -- soumissions dont l'actor_id était déjà NULL (v_portal_user NULL ⇒ prédicat NULL ⇒
+    -- aucune ligne de plus, jamais un balayage).
+    -- La garde to_regclass n'est PAS de la superstition : ce corps est aussi la définition
+    -- canonique de schema_unified.sql, appliquée AVANT 18a dans le manifeste — donc à un
+    -- moment où fiche_submission (créée par la §3.1) n'existe pas encore. plpgsql ne résout
+    -- les noms de relation qu'à l'exécution : sans garde, la branche 'actor' deviendrait
+    -- inexécutable sur toute base où 18a n'est pas encore passée (test_gdpr_erasure.sql en
+    -- premier). Avec elle, les deux fichiers portent le MÊME texte — prosrc et source
+    -- restent md5-alignables — et la ligne s'active d'elle-même dès que la table existe.
+    IF to_regclass('public.fiche_submission') IS NOT NULL THEN
+      UPDATE fiche_submission SET note = NULL
+       WHERE actor_id = v_actor OR submitted_by = v_portal_user;
+    END IF;
+    IF p_mode = 'anonymize' THEN
+      UPDATE actor SET display_name = TOMBSTONE, first_name = NULL, last_name = NULL,
+                       gender = NULL, photo_url = NULL, extra = NULL WHERE id = v_actor;
+      UPDATE crm_interaction SET actor_id = NULL,
+             handled_by_actor_id = CASE WHEN handled_by_actor_id = v_actor THEN NULL ELSE handled_by_actor_id END,
+             subject = NULL, body = NULL, source = NULL, extra = NULL
+       WHERE actor_id = v_actor OR handled_by_actor_id = v_actor;
+      UPDATE crm_task SET actor_id = NULL, title = TOMBSTONE, description = NULL, extra = NULL WHERE actor_id = v_actor;
+      DELETE FROM actor_consent WHERE actor_id = v_actor;
+      DELETE FROM actor_channel WHERE actor_id = v_actor;
+      v_report := jsonb_build_object('mode','anonymize','actor', v_actor);
+    ELSE
+      DELETE FROM actor WHERE id = v_actor;
+      v_report := jsonb_build_object('mode','delete','actor', v_actor);
+    END IF;
+    -- Remontée APRÈS la branche : les deux modes viennent d'écraser v_report.
+    -- La suppression d'auth.users n'est pas faisable en SQL (même doctrine que la branche
+    -- 'user') : on NOMME le compte pour que le geste ne se perde pas.
+    IF v_portal_user IS NOT NULL THEN
+      v_report := v_report || jsonb_build_object('portal_user_id', v_portal_user,
+        'portal_note', 'Compte portail délié. Supprimer auth.users via l''API Admin (action Révoquer de la fiche CRM).');
+    END IF;
+    PERFORM audit.redact_subject('actor','id', v_actor::text,
+      ARRAY['display_name','first_name','last_name','gender','photo_url','extra',
+            'display_name_normalized','first_name_normalized','last_name_normalized']);
+    PERFORM audit.redact_subject('actor_channel','actor_id', v_actor::text, ARRAY['value','extra']);
+    PERFORM audit.redact_subject('actor_consent','actor_id', v_actor::text, ARRAY['source']);
+    PERFORM audit.redact_subject('crm_interaction','actor_id', v_actor::text,
+      ARRAY['subject','body','source','extra','actor_id','handled_by_actor_id']);
+    PERFORM audit.redact_subject('crm_task','actor_id', v_actor::text,
+      ARRAY['title','description','extra','actor_id']);
+    -- 18a §8 — la SIXIÈME rédaction, et la seule qui nettoie une trace que l'effacement
+    -- vient de FABRIQUER lui-même : trg_audit_app_user_profile (AFTER UPDATE) a écrit dans
+    -- audit.audit_log une ligne dont before_data = to_jsonb(OLD) — elle RE-NOUE le lien
+    -- acteur↔compte que le déliage ci-dessus vient de couper, et y gèle le display_name du
+    -- compte portail. Sans elle, l'UPDATE de déliage serait la seule mutation de cette
+    -- branche sans son redact jumeau. audit.redact_subject apparie sur
+    -- `(row_pk ->> clé) = valeur OR (before_data ->> clé) = valeur` (prosrc vérifié) : la
+    -- clé actor_id attrape donc bien la ligne née de ce déliage.
+    PERFORM audit.redact_subject('app_user_profile','actor_id', v_actor::text,
+      ARRAY['actor_id','display_name','avatar_url','preferences']);
+    -- Et le résidu que le prédicat précédent ne peut pas voir : la ligne d'audit de CRÉATION
+    -- du lien (before_data.actor_id = null, after_data.actor_id = <A>) n'est appariée ni par
+    -- row_pk->>'actor_id' ni par before_data->>'actor_id'. Apparier sur `id` = le compte
+    -- portail attrape par row_pk TOUTES les lignes d'audit de ce compte, création comprise.
+    IF v_portal_user IS NOT NULL THEN
+      PERFORM audit.redact_subject('app_user_profile','id', v_portal_user::text,
+        ARRAY['actor_id','display_name','avatar_url','preferences']);
+    END IF;
+
+  ELSIF p_subject_kind = 'incident' THEN
+    IF NOT EXISTS (SELECT 1 FROM incident_report WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Signalement introuvable: %', p_subject_id; END IF;
+    SELECT crm_interaction_id, crm_task_id INTO v_int_id, v_task_id FROM incident_report WHERE id = p_subject_id::uuid;
+    UPDATE incident_report SET reporter_email = NULL, reporter_name = NULL, description = NULL,
+           media_urls = NULL, geom = NULL, metadata = NULL WHERE id = p_subject_id::uuid;
+    IF v_int_id IS NOT NULL THEN
+      UPDATE crm_interaction SET subject = NULL, body = NULL, extra = NULL WHERE id = v_int_id;
+      PERFORM audit.redact_subject('crm_interaction','id', v_int_id::text, ARRAY['subject','body','extra']);
+    END IF;
+    PERFORM audit.redact_subject('incident_report','id', p_subject_id,
+      ARRAY['reporter_email','reporter_name','description','media_urls','geom','metadata']);
+    v_report := jsonb_build_object('incident', p_subject_id, 'linked_interaction', v_int_id);
+
+  ELSIF p_subject_kind = 'review' THEN
+    IF NOT EXISTS (SELECT 1 FROM object_review WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Avis introuvable: %', p_subject_id; END IF;
+    SELECT author_avatar_url INTO v_photo FROM object_review WHERE id = p_subject_id::uuid;
+    IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
+    IF p_mode = 'delete' THEN DELETE FROM object_review WHERE id = p_subject_id::uuid;
+    ELSE UPDATE object_review SET author_name = NULL, author_avatar_url = NULL, content = NULL,
+             title = NULL, response = NULL, raw_data = NULL WHERE id = p_subject_id::uuid; END IF;
+    PERFORM audit.redact_subject('object_review','id', p_subject_id,
+      ARRAY['author_name','author_avatar_url','content','title','response','raw_data']);
+    v_report := jsonb_build_object('review', p_subject_id);
+
+  ELSIF p_subject_kind = 'object_legal' THEN
+    IF NOT EXISTS (SELECT 1 FROM object_legal WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Donnée légale introuvable: %', p_subject_id; END IF;
+    UPDATE object_legal SET value = '{}'::jsonb, note = NULL WHERE id = p_subject_id::uuid;
+    PERFORM audit.redact_subject('object_legal','id', p_subject_id, ARRAY['value','note']);
+    v_report := jsonb_build_object('object_legal', p_subject_id);
+
+  ELSIF p_subject_kind = 'contact_channel' THEN
+    IF NOT EXISTS (SELECT 1 FROM contact_channel WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Coordonnée introuvable: %', p_subject_id; END IF;
+    IF p_mode = 'delete' THEN DELETE FROM contact_channel WHERE id = p_subject_id::uuid;
+    ELSE UPDATE contact_channel SET value = TOMBSTONE WHERE id = p_subject_id::uuid; END IF;
+    PERFORM audit.redact_subject('contact_channel','id', p_subject_id, ARRAY['value']);
+    v_report := jsonb_build_object('contact_channel', p_subject_id);
+
+  ELSIF p_subject_kind = 'user' THEN
+    IF NOT EXISTS (SELECT 1 FROM app_user_profile WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Profil utilisateur introuvable: %', p_subject_id; END IF;
+    UPDATE app_user_profile SET display_name = NULL, avatar_url = NULL, preferences = '{}'::jsonb
+     WHERE id = p_subject_id::uuid;
+    PERFORM audit.redact_subject('app_user_profile','id', p_subject_id, ARRAY['display_name','avatar_url','preferences']);
+    v_report := jsonb_build_object('user', p_subject_id,
+                  'note','Supprimer le compte auth.users via l''API Admin Supabase (hors SQL).');
+  ELSE
+    RAISE EXCEPTION 'Type de sujet inconnu: %', p_subject_kind;
+  END IF;
+
+  v_report := v_report || jsonb_build_object('media_to_delete', to_jsonb(v_media));
+  INSERT INTO gdpr_erasure_log(subject_kind, subject_id, mode, reason, performed_by, report)
+  VALUES (p_subject_kind, p_subject_id, p_mode, p_reason,
+          COALESCE(NULLIF(current_setting('request.jwt.claim.email', true), ''), v_uid::text, current_user), v_report);
+  RETURN v_report;
+END;
+$$;
+REVOKE ALL ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) TO authenticated, service_role;
+COMMENT ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) IS
+  'Effacement/anonymisation RGPD Art. 17 d''un sujet. Anonymise (défaut) ou supprime, rédige le journal d''audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme.';
+

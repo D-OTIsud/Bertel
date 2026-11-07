@@ -1,0 +1,5168 @@
+# Functions / RPCs
+
+_Reads/writes are regex-inferred and flagged by confidence._
+
+## `api._covered_days(p_all_years boolean, p_s date, p_e date)`
+- returns: `integer[]`
+
+> 4) Validation anti-chevauchement (même rang : croisement partiel interdit, imbrication tolérée).
+> Fermetures exclues, périodes sans dates ignorées. Miroir SQL EXACT de la fonction pure
+> TS periodsPartialOverlap : intersection ensembliste des jours couverts.
+
+## `api.actor_portal_floor_modules()`
+- returns: `text[]`
+
+> 4.1 Le plancher dur : modules JAMAIS montrés/acceptés côté acteur, quelle que soit la
+> config. §18 Juridique (legal), §19 Suivi prestataire (provider-follow-up = notes
+> privées), §21 Publication (publication), §22 Identifiants externes (sync-identifiers),
+> plus les modules READONLY de l'éditeur (distribution, provider). Ajout 2026-09-02 :
+> relationships (son writer auto save_object_relations réécrit object_org_link ET
+> actor_object_role — le périmètre même de l'acteur), places (save_object_places
+> supprime les médias des sous-lieux absents du payload), media (aucun chemin
+> d'upload ni d'application pour un acteur, D11). Fonction plutôt que table : non
+> paramétrable PAR CONSTRUCTION.
+
+## `api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT 'fixed_end_date'::legal_validity_mode, p_status text DEFAULT 'active'::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
+- returns: `uuid`
+- reads `public.ref_legal_type` _(high)_
+- writes `public.object_legal` _(high)_
+
+> =====================================================
+> Function to add a legal record
+> =====================================================
+
+## `api.admit_ai_request(p_user_id uuid, p_route text)`
+- returns: `jsonb`
+- reads `internal.ai_request_rate_state` _(high)_
+- writes `internal.ai_request_rate_state` _(high)_
+
+> Service-only atomic 12/60s sliding AI request admission per verified user and route. No provider text/key stored. Local CPU leases remain separate.
+
+## `api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
+- writes `public.crm_interaction` _(high)_
+
+## `api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.crm_interaction` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+
+> 18a/D9 — approuve une soumission entière. p_include_manual=FALSE (défaut) SAUTE les changements sans writer et les laisse pending : la soumission reste ouverte tant que l'office n'a pas attesté les avoir reportés. Ne pose pas le statut agrégé (trigger §8).
+
+## `api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+- writes `public.pending_change` _(high)_
+
+> P2.1 §120 + 18a/D9 — approuve : re-dispatch whitelisté (SEPT writers, miroir de submit_actor_fiche), OU approbation ATTESTÉE (p_applied_manually) d'un changement sans writer, qui pose status=approved (jamais applied) et estampille metadata.applied_manually/attested_by/attested_at. Le 3e paramètre a un DÉFAUT : l'appel historique à deux arguments est inchangé.
+
+## `api.assert_facet_applicable()`
+- returns: `trigger`
+- reads `public.object` _(high)_
+- reads `public.ref_facet_applicability` _(high)_
+- reads `public.ref_facet_registry` _(high)_
+
+> == 4. Generic applicability trigger ========================================
+> Pattern B validator (cf. api.validate_object_taxonomy_assignment): SECURITY INVOKER,
+> house search_path. Cost per row: 2 PK probes + 1 two-key PK probe -- hot-path safe (§37).
+
+## `api.assert_no_period_overlap(p_periods jsonb)`
+- returns: `void`
+
+## `api.assert_object_type_change_consistent()`
+- returns: `trigger` — dynamic SQL
+- reads `public.ref_facet_applicability` _(high)_
+- reads `public.ref_facet_registry` _(high)_
+
+> == 5. Guard on object.object_type changes ==================================
+
+## `api.assert_staging_batch_integrity(p_batch_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+
+## `api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)`
+- returns: `json`
+- reads `public.object` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to audit legal compliance across all objects
+> =====================================================
+
+## `api.auto_attach_object_to_creator_org()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.object_org_link` _(high)_
+
+## `api.auto_populate_interaction_subject()`
+- returns: `trigger`
+- reads `public.ref_code_demand_subtopic` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+
+## `api.b64url_decode(p text)`
+- returns: `bytea`
+
+## `api.b64url_encode(p bytea)`
+- returns: `text`
+
+## `api.before_insert_object_generate_id()`
+- returns: `trigger`
+
+> Génération d'ID si absent
+
+## `api.build_iti_track(p_object_id text, p_format text DEFAULT 'kml'::text, p_include_stages boolean DEFAULT true, p_stage_color text DEFAULT 'red'::text)`
+- returns: `text`
+- reads `public.object` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_iti_stage` _(high)_
+
+## `api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date)`
+- returns: `json`
+
+> 5) Read path: emit the period type code (+ all_years) so the editor round-trips.
+
+## `api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date, p_order integer DEFAULT 1)`
+- returns: `json`
+- reads `public.opening_period` _(high)_
+- reads `public.ref_code_opening_period_type` _(high)_
+
+> 5) Read path: emit the period type code (+ all_years) so the editor round-trips.
+
+## `api.can_delete_object_private_note(p_note_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_private_description` _(high)_
+
+> Suppression : réservée au rang admin le plus élevé de l'ORG (org_admin) ou au superuser plateforme.
+
+## `api.can_manage_object_private_note(p_note_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_private_description` _(high)_
+
+> Auteur, supérieur hiérarchique direct dans la même ORG, ou superuser plateforme.
+> Utilisé pour modifier / archiver une note.
+
+## `api.can_read_actor_contacts(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+> SOURCE AUTORITAIRE (§208) de la règle « qui voit les coordonnées complètes d'un acteur » : superuser plateforme (lu dans app_user_profile.role — délibérément PAS api.is_platform_superuser(), dont le premier bras dirait TRUE à une clé service_role) OU membre d'une ORG publisher de la fiche (api.current_user_crm_object_ids). FALSE hors contexte HTTP et en service-role (auth.uid() NULL) : un export de PII est imputable à une personne. Forme PAR FICHE, appelée par api.export_actor_capabilities et par l'éditeur. DEUX autres formulations existent (tâche 7, 2026-08-08, mise à jour depuis « UNE seule ») : la forme ensembliste du périmètre dans api.export_actor_contacts (duplication délibérée §204), et le bras superuser de la cascade prestataire→fiche de api.list_selection_emails (migration_selection_emails.sql, §211 plié au régime §208) — faire évoluer les TROIS ensemble.
+
+## `api.can_read_exact_legal_document_metadata(p_document_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_legal` _(high)_
+
+> A policy must not traverse ref_document as the caller: it would recurse into
+> its own RLS. This boolean definer reveals no location and bypasses row policies
+> only while evaluating the existing legal right plus exact ownership mapping.
+
+## `api.can_read_extended(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+> Boolean per-row predicate kept as the single gate used by api.can_read_object -> the ~40
+> object-child read policies (P0.3). Delegates to the set function above (one source of truth);
+> MUST stay byte-equivalent to it. Was an inline 4-path WITH (see git history); set-based now.
+
+## `api.can_read_object(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> 1) Single source of truth for "is this object's data readable by the current caller".
+
+## `api.can_read_object_for_correction(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+## `api.can_read_object_private_notes(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+> Retourne TRUE si l'utilisateur courant peut consulter les notes privées
+> depuis le périmètre de son organisation active.
+
+## `api.can_write_object_private_notes(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+> Retourne TRUE si l'utilisateur courant peut écrire une note privée
+> pour l'objet dans le périmètre de son organisation active.
+
+## `api.cancel_portal_photo_upload(p_object_id text, p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)`
+- returns: `integer` — SECURITY DEFINER
+
+> Capture current real and test KPI stocks independently. p_date labels a current capture, not a historical reconstruction.
+
+## `api.check_membership_org_type()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'.
+> Un CHECK constraint ne peut pas référencer une autre table en PostgreSQL ;
+> le trigger est la solution correcte.
+
+## `api.check_object_legal_compliance(p_object_id text)`
+- returns: `TABLE(type_code text, type_name text, is_required boolean, has_record boolean, is_valid boolean, status text, valid_to date, days_until_expiry integer)`
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to check if an object has all required legal records
+> =====================================================
+
+## `api.check_org_branding_org_type()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> Garde type ORG (miroir de api.check_org_config_org_type — table à part, message dédié).
+
+## `api.check_org_config_org_type()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'.
+
+## `api.check_org_permission_org_type()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'.
+> Un CHECK constraint ne peut pas référencer une autre table en PostgreSQL ;
+> le trigger est la solution correcte (même pattern que check_membership_org_type
+> et check_org_config_org_type).
+
+## `api.check_org_smtp_org_type()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+## `api.claim_unmailed_notifications(p_limit integer DEFAULT 20)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.app_notification` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.object` _(high)_
+- writes `public.app_notification` _(high)_
+
+> Outbox e-mail : crm_task_assigned et fiche_submission_reviewed (TTL 10 min, SKIP LOCKED, 5 tentatives). Contenu joint en DB, creator_email/creator_name issus de crm_task.created_by pour les assignations uniquement. Réservée au drain Next en service_role.
+
+## `api.commit_staging_to_public(p_batch_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `staging.contact_channel_temp` _(high)_
+- reads `staging.import_batches` _(high)_
+- reads `staging.media_temp` _(high)_
+- reads `staging.object_amenity_temp` _(high)_
+- reads `staging.object_classification_temp` _(high)_
+- reads `staging.object_location_temp` _(high)_
+- reads `staging.object_org_link_temp` _(high)_
+- reads `staging.object_payment_method_temp` _(high)_
+- reads `staging.object_temp` _(high)_
+- reads `staging.org_temp` _(high)_
+- reads `staging.ref_classification_scheme_temp` _(high)_
+- reads `staging.ref_classification_value_temp` _(high)_
+- reads `staging.ref_code_temp` _(high)_
+- writes `public.contact_channel` _(high)_
+- writes `public.media` _(high)_
+- writes `public.object` _(high)_
+- writes `public.object_amenity` _(high)_
+- writes `public.object_classification` _(high)_
+- writes `public.object_external_id` _(high)_
+- writes `public.object_location` _(high)_
+- writes `public.object_org_link` _(high)_
+- writes `public.object_payment_method` _(high)_
+- writes `public.ref_classification_scheme` _(high)_
+- writes `public.ref_classification_value` _(high)_
+- writes `public.ref_code` _(high)_
+- writes `public.ref_org_role` _(high)_
+- writes `staging.batch_commit_ledger` _(high)_
+- writes `staging.batch_commit_ledger_item` _(high)_
+- writes `staging.import_batches` _(high)_
+- writes `staging.media_temp` _(high)_
+- writes `staging.object_temp` _(high)_
+- writes `staging.org_temp` _(high)_
+- writes `staging.ref_classification_scheme_temp` _(high)_
+- writes `staging.ref_classification_value_temp` _(high)_
+- writes `staging.ref_code_temp` _(high)_
+
+## `api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_actor_module_visibility` _(high)_
+- reads `public.ref_document` _(high)_
+- reads `public.ref_org_role` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.compose_object_resource_blocks(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+- writes `internal.sandbox_discovery_identity` _(high)_
+- writes `public.app_user_profile` _(high)_
+- writes `public.user_org_business_role` _(high)_
+- writes `public.user_org_membership` _(high)_
+
+## `api.count_notifications_blocked_no_smtp()`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
+- reads `public.org_smtp_settings` _(high)_
+
+## `api.create_crm_artifacts_from_incident()`
+- returns: `trigger`
+- writes `public.crm_interaction` _(high)_
+- writes `public.crm_task` _(high)_
+- writes `public.incident_report` _(high)_
+- writes `public.object_iti` _(high)_
+
+> ─────────────────────────────────────────────────────────────────────────────────────
+> 7.6  api.create_crm_artifacts_from_incident — corps schema_unified traduit
+> ─────────────────────────────────────────────────────────────────────────────────────
+> ⚠ CETTE FONCTION ÉCRIT DANS LES DEUX VOCABULAIRES. L'INSERT INTERACTION passe de 'done' à
+> 'resolved' (la note d'incident EST écrite) ; l'INSERT TÂCHE dix-neuf lignes plus bas garde
+> 'todo' — c'est un `crm_task_status`, il n'a RIEN à voir avec le cycle de vie des demandes.
+
+## `api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- writes `public.object_list` _(high)_
+- writes `public.object_list_item` _(high)_
+
+> Création d'une liste : tout membre connecté d'une ORG (lecteurs compris). Items statiques admis published ET du bon corpus de test (§2/§4 revue architecte).
+
+## `api.create_membership_campaign(p_anchor_object_id text, p_name text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code` _(high)_
+- writes `public.ref_code` _(high)_
+
+## `api.create_membership_tier(p_anchor_object_id text, p_name text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code` _(high)_
+- writes `public.ref_code` _(high)_
+
+## `api.create_tag(p_anchor_object_id text, p_name text, p_color text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_tag` _(high)_
+- writes `public.ref_tag` _(high)_
+
+> §09: dedup-guarded GLOBAL tag creation. Gated per-object. Dedup on ref_tag.name_normalized; slug inline; gen_random_uuid; created_by set. Color is a HEX #rrggbb (global per tag); defaults to #64748b.
+
+## `api.crm_user_label(p_user uuid, p_display_name text)`
+- returns: `text`
+
+> Libellé affichable d'un utilisateur : display_name, à défaut « Utilisateur xxxxxxxx ». Source unique du repli — les sérialiseurs de tâche et de notification l'appellent tous.
+
+## `api.current_user_active_org()`
+- returns: `TABLE(org_id text, org_name text)` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Retourne l'ORG active de l'utilisateur courant (id + nom), pour le libellé
+> côté éditeur du sélecteur de périmètre des descriptions. Le serveur reste
+> autoritaire ; le client n'utilise ce nom que pour l'affichage.
+
+## `api.current_user_actor_id()`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.app_user_profile` _(high)_
+
+> Current authenticated actor profile binding; demotion or unlink removes portal identity immediately.
+
+## `api.current_user_admin_rank()`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Retourne le rang admin actif du user courant dans son ORG active (NULL si aucun).
+
+## `api.current_user_admin_role_code()`
+- returns: `text` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Retourne le code du rôle admin actif du user courant (NULL si pas de rôle admin).
+> Traverse : user_org_membership → user_org_admin_role → ref_org_admin_role.
+> Le rôle admin ne bypasse pas api.user_has_permission() (§2.6 du plan).
+
+## `api.current_user_business_role_code()`
+- returns: `text` — SECURITY DEFINER
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Retourne le code du rôle métier actif du user courant (NULL si aucun).
+> Traverse : user_org_membership → user_org_business_role → ref_org_business_role.
+> Usage : affichage, contexte session — pas de logique de permission ici.
+
+## `api.current_user_can_edit_objects()`
+- returns: `boolean` — SECURITY DEFINER
+
+> =====================================================
+> Capability check : "le user courant peut-il éditer des objets ?"
+> =====================================================
+> TRUE quand l'utilisateur a au moins une voie d'édition sur le périmètre
+> de son organisation active :
+> 1. superuser plateforme (owner / super_admin / service_role / admin),
+> 2. rôle admin actif dans son ORG (peu importe le rang),
+> 3. permission métier d'édition sur n'importe quel objet : create_object,
+> edit_canonical_when_publisher, edit_org_enrichment, publish_object.
+>
+> Usage : la fonction est consommée par le frontend Explorer pour décider
+> s'il doit afficher les statuts non publiés (draft) des objets de l'ORG.
+> Elle ne porte AUCUNE logique d'autorisation sur une fiche précise — la RLS
+> (cf. api.can_read_extended) reste seule à gater l'accès ligne par ligne.
+> Un membre simple en lecture seule (pas d'admin role, pas de permission
+> métier d'édition) renvoie FALSE et n'a donc accès qu'aux fiches publiées.
+> STABLE + SECURITY DEFINER : pour traverser ref_permission / org_permission /
+> user_permission sans dépendre des policies RLS de ces tables.
+
+## `api.current_user_can_manage_actor_portal()`
+- returns: `boolean`
+
+> Permission dédiée au bloc CRM Accès portail. Superutilisateur plateforme ou permission explicite ; aucun rôle métier ne la reçoit par défaut. Les gardes CRM par acteur restent requises.
+
+## `api.current_user_can_write_crm_notes()`
+- returns: `boolean` — SECURITY DEFINER
+
+> Sonde d'interface : l'utilisateur courant peut-il écrire des notes CRM ? Reproduit la garde de api.user_can_write_crm_actor (write_crm_notes OU rang admin d'ORG OU superuser) SANS son arme de périmètre. Source de vérité UNIQUE — le front ne doit jamais re-transcrire cette chaîne de OR. Chantier 2026-08-28, manifeste 17c.
+
+## `api.current_user_crm_actor_ids()`
+- returns: `SETOF uuid` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.crm_interaction` _(high)_
+
+> Prospects without object links remain scoped to the active CRM organisation.
+
+## `api.current_user_crm_object_ids()`
+- returns: `SETOF text` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> ---------- 7. Helpers d'autorisation (style current_user_extended_object_ids, §35) ----------
+> Périmètre CRM = objets dont une ORG du user (membership actif) est PUBLISHER.
+> Volontairement plus étroit que extended (pas d'arme acteur, pas d'arme all_published) :
+> le CRM est le pilotage interne de l'ORG publicatrice, pas un droit d'édition.
+
+## `api.current_user_email()`
+- returns: `text`
+
+> Email courant (JWT claims)
+
+## `api.current_user_extended_object_ids()`
+- returns: `SETOF text` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_config` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Set form of api.can_read_extended: the current user's extended-readable object ids, computed once (RLS-bypassed). Used by the object SELECT policy as a hashed-set membership test to avoid per-row predicate evaluation. Keep byte-equivalent to can_read_extended's 4 paths.
+
+## `api.current_user_is_org_admin()`
+- returns: `boolean` — SECURITY DEFINER
+
+> 1. Admin-gate helper — single source for the §22 front gate (mirrors the write gate exactly).
+
+## `api.current_user_org_id()`
+- returns: `text` — SECURITY DEFINER
+- reads `public.user_org_membership` _(high)_
+
+> Retourne l'org_object_id actif du user courant (NULL si aucun membership actif).
+> Pour un tourism_agent, au plus une ORG active existe (contrainte enforce_single_active_org_membership).
+> Pour un owner/super_admin, retourne la première trouvée (usage interne uniquement).
+
+## `api.current_user_portal_object_ids()`
+- returns: `SETOF text` — SECURITY DEFINER
+- reads `public.actor_object_role` _(high)_
+- reads `public.object` _(high)_
+
+> 18a portail acteur — fiches du portail : liens actor_object_role NON expirés de MON actor_id, hors ORG.
+
+## `api.current_user_readable_object_ids()`
+- returns: `SETOF text` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> 1) "Objects visible to me" = published ∪ my extended scope. Single source of truth for the
+> object-level read visibility (the `object` table's own SELECT predicate, as a SET). SECURITY
+> DEFINER so the published scan bypasses RLS; returns only object ids. Reuses §35's set fn.
+
+## `api.current_user_test_realm()`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.org_config` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Realm de lecture du user courant : true = bac a sable, false = production (jamais NULL). service_role et anon renvoient false — l'API partenaire ne voit donc jamais le corpus de test. Garde a double sens : o.is_test = (SELECT api.current_user_test_realm()).
+
+## `api.cursor_pack(p jsonb)`
+- returns: `text`
+
+## `api.cursor_unpack(p text)`
+- returns: `jsonb`
+
+## `api.delete_actor_channel(p_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_channel` _(high)_
+- writes `public.actor_channel` _(high)_
+
+> Suppression d'un canal (gate par l'acteur de la ligne, mêmes erreurs P0002/42501).
+
+## `api.delete_ai_provider(p_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.app_ai_provider_config` _(high)_
+- reads `vault.secrets` _(high)_
+- writes `public.app_ai_provider_config` _(high)_
+- writes `vault.secrets` _(high)_
+
+## `api.delete_crm_interaction(p_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+- writes `public.crm_interaction` _(high)_
+
+> Suppression d'une interaction (même gate d'écriture ; arme objet si contexte, sinon arme
+> acteur — object_id nullable ⇒ existence par FOUND, pas par IS NULL).
+
+## `api.delete_list(p_list_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> =====================================================================
+> 12. Suppression — verrou AVANT décision (§5 revue architecte)
+> =====================================================================
+> Corps inchangé depuis migration_object_list.sql à part le verrou : cette
+> fonction n'avait jamais été touchée avant cette revue, mais son SENS change
+> avec is_featured (user_can_write_list en dépend désormais).
+
+## `api.delete_org_smtp(p_org_object_id text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.org_smtp_settings` _(high)_
+- reads `vault.secrets` _(high)_
+- writes `public.org_smtp_settings` _(high)_
+- writes `vault.secrets` _(high)_
+
+## `api.deliver_legal_document(p_legal_id uuid, p_document_id uuid, p_delivered_at timestamp with time zone DEFAULT now(), p_new_status text DEFAULT 'active'::text)`
+- returns: `boolean`
+- writes `public.object_legal` _(high)_
+
+> =====================================================
+> Function to mark a document as delivered
+> =====================================================
+
+## `api.disable_cache_triggers()`
+- returns: `void` — SECURITY DEFINER
+
+## `api.duplicate_list(p_list_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- reads `public.object_list_item` _(high)_
+- writes `public.object_list` _(high)_
+- writes `public.object_list_item` _(high)_
+
+> Duplication indépendante dans l'ORG active de l'appelant : nouveau
+> propriétaire, active, non proposée, non mise à la une, sans token ni
+> historique d'envoi ni destinataire personnel. Statique → copie items ;
+> dynamique → conserve les filtres (résolution vive, pas de figeage). Les
+> items copiés restent soumis au filtre published-only à la LECTURE (§4) sur
+> la copie comme sur l'original : aucun risque supplémentaire à ne pas
+> filtrer la copie elle-même.
+
+## `api.enable_cache_triggers()`
+- returns: `void` — SECURITY DEFINER
+
+## `api.enforce_actor_channel_email_shape()`
+- returns: `trigger`
+- reads `public.ref_code_contact_kind` _(high)_
+
+## `api.enforce_app_user_profile_role_change()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+> Garde d'écriture d'app_user_profile : `role` (historique) ET, depuis 18a, `actor_id` — le lien qui PORTE la portée du portail acteur. Attribution réservée au service_role (route /api/crm/actor-access) ou à un owner agissant sur un AUTRE profil ; l'effacement (NULL) reste libre pour le déliage RGPD et la cascade FK.
+
+## `api.enforce_contact_email_shape()`
+- returns: `trigger`
+- reads `public.ref_code_contact_kind` _(high)_
+
+> Email shape enforcement (object + actor)
+
+## `api.enforce_single_active_org_membership()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Trigger : contrainte "1 user tourism_agent = 1 ORG active".
+> Un index partiel unique WHERE is_active = TRUE s'appliquerait à TOUS les users,
+> y compris owner/super_admin. Le trigger permet d'appliquer la règle sélectivement.
+>
+> Durcissements par rapport à la version naïve :
+> 1. pg_advisory_xact_lock(user_id) : sérialise les transactions concurrentes sur le
+> même user_id — élimine le TOCTOU sur les INSERTs simultanés.
+> 2. SELECT ... FOR NO KEY UPDATE : verrouille les lignes actives existantes pendant
+> la vérification — empêche une transaction concurrente de désactiver/réactiver
+> un membership pendant que la nôtre lit.
+> 3. Le trigger se déclenche aussi sur UPDATE OF user_id : si user_id est modifié
+> sur un membership actif, la contrainte est revérifiée pour le nouveau user_id.
+> 4. id IS DISTINCT FROM NEW.id remplace la condition TG_OP redondante :
+> en BEFORE INSERT la ligne n'existe pas encore, l'exclusion est toujours correcte.
+
+## `api.ensure_list_share_link(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> =====================================================================
+> 16. Lien de partage — verrou AVANT décision, jamais un touch de l'horloge
+> =====================================================================
+> Accessible à tout utilisateur autorisé à UTILISER la liste (pas seulement
+> l'éditeur) : un lecteur d'une liste à la une peut obtenir/copier son lien.
+> Réutilise le lien actif SANS toucher son expiration. Peut générer le
+> PREMIER lien s'il n'en existe encore aucun. Un lien EXISTANT mais
+> désactivé/expiré n'est PAS réactivé ici, pour QUICONQUE : erreur claire
+> SHARE_NOT_AVAILABLE — un éditeur réactive via api.share_list, un geste
+> explicite et distinct. Verrou FOR UPDATE AVANT toute décision (§5 revue
+> architecte) : deux premiers partages concurrents doivent converger sur le
+> MÊME token, jamais sur deux tokens distincts qui s'écrasent l'un l'autre.
+
+## `api.export_actor_capabilities(p_object_ids text[])`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_object_role` _(high)_
+
+> Préflight ERGONOMIQUE (§208 R2) de la modale d'export : deux booléens agrégés sur la sélection réelle — l'offre de colonnes acteur suit la consultation effective, pas un proxy « membre d'une ORG ». N'est JAMAIS une garde : api.export_actor_contacts refait tous les contrôles fiche par fiche et c'est lui seul qui journalise. Appelle api.can_read_actor_contacts (source autoritaire) plutôt que de la retranscrire ; chaque bras est intersecté avec le périmètre lisible de l'appelant (§36) — aucun oracle d'existence sur un id non lu. PLAFOND DUR de 500 ids après dédoublonnage (BATCH_TOO_LARGE, SQLSTATE 22023), identique à celui de api.export_actor_contacts : la garde appelée est SECURITY DEFINER donc non inlinable, et le pire cas (sélection intégralement refusée, le cas d'un appelant hostile) coûte 2 évaluations par id — le plafond est ce qui borne réellement ce fan-out, pas l'ordre des bras du OR.
+
+## `api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT 'xlsx'::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_contact_role` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.actor_contact_export_log` _(high)_
+
+> Export JOURNALISÉ des coordonnées d'acteur (§208), seule voie autorisée : autorise-une-fois (§36 — la liste d'ids du client n'est jamais de confiance, elle est réduite fiche par fiche au périmètre de l'appelant), finalité validée serveur (5–500 car.), format xlsx|csv, dédoublonnage serveur, plafond dur de 500 ids par appel, puis écriture d'une ligne dans public.actor_contact_export_log DANS LA MÊME TRANSACTION que la lecture. Sélection mixte : sert l'autorisé et NOMME le refusé (denied_object_ids) ; tout-refusé ⇒ FORBIDDEN (42501) et — limite assumée — aucune ligne de journal. Pas de GRANT à service_role : un export de PII est imputable à une personne. Le bras de périmètre est la forme ensembliste de api.can_read_actor_contacts (duplication délibérée §204) : faire évoluer les deux ensemble.
+
+## `api.export_itineraries_gpx_batch(p_object_ids text[], p_include_stages boolean DEFAULT true)`
+- returns: `TABLE(object_id text, name text, gpx_data text, file_size integer)`
+- reads `public.object` _(high)_
+
+> Batch GPX export for multiple itineraries
+
+## `api.export_itinerary_gpx(p_object_id text, p_include_stages boolean DEFAULT true, p_include_metadata boolean DEFAULT true)`
+- returns: `text`
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_iti_stage` _(high)_
+
+> Export full GPX with metadata and stages
+
+## `api.export_publication_indesign(p_publication_id uuid, p_min_width integer DEFAULT 1600, p_min_height integer DEFAULT 1200)`
+- returns: `json`
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.publication` _(high)_
+- reads `public.publication_object` _(high)_
+
+> =====================================================
+> Publication export for print workflows (InDesign-ready)
+> =====================================================
+
+## `api.facet_applicability_violations()`
+- returns: `TABLE(facet_table text, object_id text, object_type object_type)` — dynamic SQL
+- reads `public.object` _(high)_
+- reads `public.ref_facet_applicability` _(high)_
+- reads `public.ref_facet_registry` _(high)_
+
+> == 6. Violations report (ops/CI; legacy rows are NOT auto-deleted) =========
+
+## `api.finish_portal_photo_analysis(p_request_id uuid, p_claim_id uuid, p_outcome jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
+
+## `api.generate_legal_expiry_notifications(p_days_ahead integer DEFAULT 30, p_object_types text[] DEFAULT NULL::text[])`
+- returns: `json`
+- reads `public.object` _(high)_
+
+> =====================================================
+> Function to generate legal expiry notifications
+> =====================================================
+
+## `api.generate_object_id(p_object_type text, p_region_code text)`
+- returns: `text`
+
+> generate_object_id (HOTAQU000V5014ZU-like)
+
+## `api.get_active_ai_provider_secret()`
+- returns: `TABLE(id uuid, label text, api_kind text, base_url text, model text, max_output_tokens integer, extra jsonb, api_key text)` — SECURITY DEFINER
+- reads `public.app_ai_provider_config` _(high)_
+- reads `vault.decrypted_secrets` _(high)_
+
+## `api.get_active_object_documents(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_classification` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.get_actor_data(p_object_id text)`
+- returns: `jsonb`
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_contact_role` _(high)_
+
+> =====================================================
+> Helper: Get enriched actor data with contacts
+> =====================================================
+
+## `api.get_actor_section_visibility(p_org_object_id text, p_object_type text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.org_actor_module_visibility` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> 4.3 Lecture de la matrice pour /settings (org + type explicites). Membres actifs de
+> l'ORG uniquement (même périmètre que la policy SELECT d'org_role_permission).
+
+## `api.get_all_opening_time_slots(p_period_id uuid)`
+- returns: `jsonb`
+- reads `public.opening_schedule` _(high)_
+- reads `public.opening_time_frame` _(high)_
+- reads `public.opening_time_period` _(high)_
+- reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
+
+> =====================================================
+> Optimized function to get all opening time slots for a period
+> =====================================================
+
+## `api.get_app_branding()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_branding_settings` _(high)_
+- reads `public.org_branding_settings` _(high)_
+
+> Payload branding authentifié — résout la surcharge ORG selon le membership actif, champ par champ, fallback plateforme. markerStyles/extra plateforme. Clé orgObjectId = ORG résolue (NULL si aucun membership).
+
+## `api.get_dashboard_actualisation(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_threshold_days integer DEFAULT 90)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> Dashboard §10: per-type freshness breakdown against a configurable threshold.
+> Tiers: up_to_date (< p_threshold_days old), to_review (threshold..2x threshold),
+> stale (> 2x threshold). rate = percentage up_to_date.
+> weekly_rates is NULL until Phase 2B adds the object_version time-series join.
+> updated_at reflects meaningful business edits only (cache-only changes are excluded
+> by the update_object_updated_at_business trigger).
+> ORG objects excluded. p_updated_at_from/to scope the object pool (inclusive DATE boundaries).
+
+## `api.get_dashboard_city_distribution(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_limit integer DEFAULT 20)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+> Dashboard §2b: top cities by object count within the filtered pool.
+> Reads is_main_location=true from object_location; excludes null/empty cities.
+> delta_30d counts objects created (not updated) in that city in the last 30 days.
+> ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.
+
+## `api.get_dashboard_city_options()`
+- returns: `text[]` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+> Returns a sorted TEXT[] of distinct cities present in object_location
+> (is_main_location=true, non-null/non-empty) for all non-ORG objects, any status.
+> No filter parameters. Used to populate the dashboard city filter dropdown.
+> Represents the full corpus city domain, not the current filtered slice.
+
+## `api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.v_object_essentials` _(high)_
+- reads `public.object` _(high)_
+
+> Dashboard Qualité: remplissage « perçu visiteur » par type. Lit internal.v_object_essentials
+> (§204, source unique du bundle) — le calcul était auparavant recopié dans ce corps. Par type: score
+> moyen 0-100, % fiches complètes-visiteur, essentiel le plus manquant, liste des fiches <80
+> (plafonnée par p_below_limit). ORG exclus. p_updated_at_from/to bornes DATE inclusives.
+
+## `api.get_dashboard_crm_activity()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction_status_event` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+
+> CRM age, topics, flow and net processing time in the caller real/test realm.
+
+## `api.get_dashboard_crm_open()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_task` _(high)_
+
+> Open CRM counters in the caller real/test realm, independent of object facets. Provider RPC uses the same base realm.
+
+## `api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+
+> Dashboard §5: overview of objects carrying at least one granted qualification,
+> classification, or label. Scope is driven by ref_classification_scheme.is_distinction = TRUE —
+> no hardcoded list. To add a new label, seed its scheme with is_distinction = TRUE; this
+> function picks it up automatically. Typological schemes (type_hot, retail_category) keep
+> is_distinction = FALSE and are excluded. Returns global rate + per-scheme breakdown sorted
+> by count DESC. ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.
+
+## `api.get_dashboard_filter_options()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+> Returns { cities: text[], lieu_dits: text[] } as jsonb — sorted, btrim-cleaned,
+> distinct values from object_location (is_main_location=true) for all non-ORG objects,
+> any status. Both arrays represent the full corpus domain (not the current filtered slice).
+> Used to populate the city and lieu-dit filter dropdowns on the dashboard sidebar in one call.
+
+## `api.get_dashboard_lieu_dit_options()`
+- returns: `text[]` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+> Returns a sorted TEXT[] of distinct lieux-dits (btrim-cleaned, non-null/non-empty)
+> from object_location (is_main_location=true) for all non-ORG objects, any status.
+> No filter parameters. Used to populate the dashboard lieu-dit filter dropdown.
+> Represents the full corpus lieu-dit domain, not the current filtered slice.
+
+## `api.get_dashboard_provider_crm_activity()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction_status_event` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+
+## `api.get_dashboard_provider_crm_open()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_task` _(high)_
+
+## `api.get_dashboard_provider_team_activity()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_version` _(high)_
+
+## `api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+
+> Dashboard §1: hero scorecard aggregates for the filtered object pool.
+> Returns total/published counts, pending_change count (scoped to same pool),
+> 30-day creation delta vs the prior 30 days, and average processing delay
+> (COALESCE(applied_at, reviewed_at) - submitted_at) for resolved pending_changes.
+> avg_completeness = weighted mean of api.get_dashboard_completeness avg_score per type
+> (single source of truth for the 8-essential formula; NULL when the pool is empty).
+> distinctions / distinctions_pct = objects holding >=1 granted official classement/label
+> (ref_classification_scheme.is_distinction), scoped to the same dated pool.
+> ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.
+
+## `api.get_dashboard_team_activity()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_version` _(high)_
+
+> Twelve weeks of author activity on tourism objects in the caller real/test realm; unchanged editor-day formulas.
+
+## `api.get_dashboard_type_breakdown(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> Dashboard §2a: object count broken down by object_type within the filtered pool.
+> Each row includes per-status counts and the type's share of the total.
+> ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.
+
+## `api.get_expiring_legal_records(p_days_ahead integer DEFAULT 30, p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])`
+- returns: `TABLE(legal_id uuid, object_id text, object_name text, object_type text, legal_type_code text, legal_type_name text, value jsonb, valid_to date, days_until_expiry integer, status text)`
+- reads `public.object` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to get expiring legal records
+> =====================================================
+
+## `api.get_expiring_legal_records_api(p_days_ahead integer DEFAULT 30, p_object_types text[] DEFAULT NULL::text[], p_legal_types text[] DEFAULT NULL::text[])`
+- returns: `json`
+- reads `public.object` _(high)_
+
+> =====================================================
+> Function to get expiring legal records in API format
+> =====================================================
+
+## `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)`
+- returns: `TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)` — SECURITY DEFINER
+- reads `internal.mv_filtered_objects` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.media` _(high)_
+- reads `public.meeting_room_equipment` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_accommodation_unit_type` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_capacity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_fma` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_iti_practice` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_meeting_room` _(high)_
+- reads `public.object_pet_policy` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.object_sustainability_action_label` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_capacity_metric` _(high)_
+- reads `public.ref_classification_equivalent_action` _(high)_
+- reads `public.ref_classification_equivalent_group` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code_accommodation_unit_type` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
+- reads `public.ref_code_iti_practice` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_code_meeting_equipment` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_sustainability_action_category` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+- reads `thesaurus.source_rows` _(medium)_
+
+> ---- 4) get_filtered_object_ids : les deux cles de remplissage ------------
+>
+> COUT MESURE ET ASSUME — +4,4 ms de PLANIFICATION par appel, filtre ETEINT.
+> Localise par bissection sur live (30 iterations x 2 series, ecart stable) :
+> temoin sans patch ................................. 22,7 ms
+> ajouts au CTE params seuls ........................ 22,9 ms  (gratuit)
+> CASE par ligne SANS reference a la vue ............ 23,0 ms  (gratuit)
+> patch complet, filtre eteint ...................... 27,0 ms  (+4,4)
+> Le surcout n'est donc NI le CASE NI le parsing : c'est la simple PRESENCE du
+> EXISTS sur internal.v_object_essentials dans le texte de la requete. Le
+> planificateur plante le sous-plan a chaque appel meme quand la branche n'est
+> jamais prise, et la fonction etant SECURITY DEFINER elle n'est pas inlinee.
+> AUCUNE garde ne peut supprimer ce cout : il precede l'execution.
+>
+> Pourquoi on l'accepte plutot que de le supprimer :
+> * le supprimer vraiment demanderait de materialiser les essentiels (une MV
+> rafraichie par le cron des 10 min). La planification tomberait a ~0, mais
+> la fiche ne quitterait la liste de travail qu'au rafraichissement suivant
+> — or ce filtre EST une liste de travail : l'agent corrige puis refiltre.
+> La fraicheur est la fonctionnalite, pas un detail.
+> * l'autre issue serait de sortir le predicat vers le RPC de page (plpgsql :
+> une branche IF n'est planifiee que si elle s'execute), mais la carte et le
+> tableau de bord passent aussi par get_filtered_object_ids : le filtre
+> cesserait de s'appliquer a la carte. Incoherence, pas optimisation.
+> * ordre de grandeur : 4,4 ms contre 220-310 ms de latence Reunion->Supabase
+> par aller-retour, soit ~1,5 % d'un seul aller-retour.
+> Si le corpus grossit ou si ce chemin devient critique, la MV est l'echappatoire
+> documentee (cf. journal de decision).
+> Corps DERIVE de la definition live par .tmp_pgapply/_gen_remplissage.cjs
+> (ancres assertees, refus d ecrire si une ancre bouge ou est ambigue).
+> NE PAS EDITER A LA MAIN : regenerer.
+> La derniere definition vivait dans migration_accommodation_unit_type.sql
+> (taxo6), PAS dans la migration phonetique : partir de la mauvaise source
+> ferait regresser 199 (dmetaphone) et 201 (types d unite).
+
+## `api.get_gallery_write_receipt(p_object_id text, p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gallery_write_receipt` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+
+## `api.get_ingestor_metrics()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `staging.import_batches` _(high)_
+- reads `staging.import_events` _(high)_
+- reads `staging.mapping_contract` _(high)_
+- reads `staging.media_temp` _(high)_
+- reads `staging.object_amenity_temp` _(high)_
+- reads `staging.object_org_link_temp` _(high)_
+- reads `staging.object_payment_method_temp` _(high)_
+
+## `api.get_ingestor_scheduler_health()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `cron.job` _(high)_
+- reads `cron.job_run_details` _(high)_
+
+## `api.get_itinerary_track_geojson(p_object_id text, p_simplify boolean DEFAULT false, p_tolerance double precision DEFAULT 0.0001)`
+- returns: `json`
+- reads `public.object_iti` _(high)_
+- reads `public.object_iti_stage` _(high)_
+
+> Get track with stages as GeoJSON FeatureCollection
+
+## `api.get_itinerary_track_simplified(p_object_id text, p_tolerance double precision DEFAULT 0.0001)`
+- returns: `json`
+- reads `public.object_iti` _(high)_
+
+> Simplified track for map display (lightweight GeoJSON)
+
+## `api.get_legal_object_document_file(p_object_id text, p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_legal` _(high)_
+- reads `public.ref_document` _(high)_
+
+> Only SectionLegal and its legal-document modal request this existing legal
+> context. The card and Classification keep the canonical RPC above.
+
+## `api.get_list(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+
+> =====================================================================
+> 8. Détail public (authenticated) — inchangé en surface, corps factorisé
+> =====================================================================
+
+## `api.get_local_now_for_timezone(p_business_timezone text)`
+- returns: `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
+
+## `api.get_local_time_for_timezone(p_business_timezone text, p_at timestamp with time zone)`
+- returns: `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
+
+> §157 — variante paramétrée du résolveur d'heure locale : même validation
+> « pas cher » de la zone (AT TIME ZONE lève 22023, attrapé → Indian/Reunion,
+> cf. §37 — JAMAIS de scan pg_timezone_names sur un hot path), évaluée à un
+> instant ARBITRAIRE. C'est la brique du moteur d'ouverture paramétré
+> (internal.compute_open_status) qui rend possible « ouvert à 18 h » alors
+> qu'il est 10 h. get_local_now_for_timezone délègue (une seule implémentation).
+
+## `api.get_media_for_web(p_object_id text, p_preferred_tags text[] DEFAULT ARRAY['facade'::text, 'interieur'::text, 'cuisine'::text, 'paysage'::text], p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 20)`
+- returns: `json`
+- reads `public.media` _(high)_
+- reads `public.media_tag` _(high)_
+- reads `public.ref_code_media_tag` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
+> =====================================================
+> Get filtered media for web display (excludes internal/sensitive)
+> =====================================================
+
+## `api.get_metric_snapshot_series(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)`
+- returns: `TABLE(bucket date, value numeric, denominator integer)` — SECURITY DEFINER
+- reads `public.metric_snapshot` _(high)_
+
+## `api.get_metric_snapshot_series_with_bounds(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)`
+- returns: `jsonb`
+- reads `public.metric_snapshot` _(high)_
+
+> Realm-scoped metric series plus exact first/last source snapshot dates. Weekly buckets never define history duration; legacy tabular reader stays compatible.
+
+## `api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)`
+- returns: `TABLE(yr integer, mon integer, value numeric)` — SECURITY DEFINER
+- reads `public.metric_snapshot` _(high)_
+
+## `api.get_my_actor_profile()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+> 18a — profil de LA persona acteur courante (current_user_actor_id()), lecture seule v1. Ne constitue PAS une 5e formulation du périmètre PII can_read_actor_contacts : il ne lit jamais qu'UN acteur, le sien.
+
+## `api.get_my_portal_photo_workspace(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+
+## `api.get_object_amenity_codes_compact(p_object_id text)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+
+> Compact amenity code array for cards, maps and LCP/list payloads. Uses canonical cached_amenity_codes, never legacy wheelchair_access.
+
+## `api.get_object_badges_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `jsonb`
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+
+> Compact badges from official classifications, sustainability actions and canonical acc_* accessibility amenities.
+
+## `api.get_object_card(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+
+> =====================================================
+> Lightweight card read model (single + batch)
+> =====================================================
+
+## `api.get_object_cards_adapted_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `json`
+
+> Batch wrapper for get_object_resource_adapted. Returns adapted/FALC resources for multiple objects, preserving input order.
+
+## `api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
+- reads `public.ref_code_domain_registry` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+
+> 2) cards_batch -> SECURITY DEFINER + authorize-once. Body is byte-identical to the step-5
+> definition in api_views_functions.sql EXCEPT THREE changes: (a) the SECURITY DEFINER clause
+> below; (b) the `distinct_ids` CTE gains the authorize-once gate — `WHERE EXISTS(published)
+> OR id IN (SELECT api.current_user_extended_object_ids())` (§38 published-only fast-path: the
+> set-equivalent split of `… current_user_readable_object_ids()` that skips the extended scan
+> for an all-published page; every downstream child CTE joins distinct_ids); and
+> (c) `main_description` re-applies the object_description visibility RLS this DEFINER body
+> bypasses (see the inline note there — the only field-level read gate among the tables read).
+
+## `api.get_object_document_file(p_object_id text, p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_document` _(high)_
+
+## `api.get_object_environment_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `jsonb`
+- reads `public.object_environment_tag` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+
+> Compact environment tag payload for cards, maps and LCP/list payloads.
+
+## `api.get_object_i18n_all(p_object_id text)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_org_link` _(high)_
+
+> Partner i18n=all block (audit API C-5): object_description free-text family as {field:{lang:plain text}} (strip_markdown per language, public-visibility only, published-gated). service_role-only.
+
+## `api.get_object_interop(p_object_id text, p_profile text)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_interop_crosswalk` _(high)_
+
+> Partner interop serializer (audit API I4 §137): datatourisme (JSON-LD) / apidae / tourinsoft (bespoke JSON) document for a PUBLISHED object; @type/class from the nearest mapped taxonomy ancestor (closure depth ASC), then the object_type fallback in ref_interop_crosswalk (table-driven), core via api.interop_object_core (public-only). service_role-only; unmapped/unpublished/unknown-profile => NULL. Core-fields subset — validate field-level conformance against the target importer before production sync.
+
+## `api.get_object_jsonld(p_object_id text, p_profile text DEFAULT 'jsonld'::text)`
+- returns: `jsonb`
+- reads `public.contact_channel` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_web_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_interop_crosswalk` _(high)_
+
+> Partner JSON-LD serializer (audit API I4): schema.org output for a PUBLISHED object, @type from ref_interop_crosswalk (table-driven), public-only contacts/media/web-channels, plain-text description (strip_markdown). service_role-only; unmapped/unpublished => NULL. §136.
+
+## `api.get_object_legal_compliance(p_object_id text)`
+- returns: `json`
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to get legal compliance in API format
+> =====================================================
+
+## `api.get_object_legal_data(p_object_id text)`
+- returns: `jsonb`
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to get legal data in API format
+> =====================================================
+
+## `api.get_object_legal_records(p_object_id text)`
+- returns: `TABLE(legal_id uuid, type_code text, type_name text, type_category text, type_is_public boolean, value jsonb, document_id uuid, valid_from date, valid_to date, validity_mode text, status text, document_requested_at timestamp with time zone, document_delivered_at timestamp with time zone, note text, days_until_expiry integer)`
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to get all legal records for an object
+> =====================================================
+
+## `api.get_object_legal_records_by_visibility(p_object_id text, p_is_public boolean DEFAULT NULL::boolean)`
+- returns: `TABLE(legal_id uuid, type_code text, type_name text, type_category text, type_is_public boolean, value jsonb, document_id uuid, valid_from date, valid_to date, validity_mode text, status text, document_requested_at timestamp with time zone, document_delivered_at timestamp with time zone, note text, days_until_expiry integer)`
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to get legal records filtered by visibility
+> =====================================================
+
+## `api.get_object_local_now(p_object_id text)`
+- returns: `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
+- reads `public.object` _(high)_
+
+## `api.get_object_map_item(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+
+> =====================================================
+> Lightweight map view API - returns minimal object data
+> =====================================================
+
+## `api.get_object_private_legal_records(p_object_id text)`
+- returns: `json`
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to get private legal records only (for parent org)
+> =====================================================
+
+## `api.get_object_public_legal_records(p_object_id text)`
+- returns: `json`
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to get public legal records only
+> =====================================================
+
+## `api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)`
+- returns: `json` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.contact_channel` _(high)_
+- reads `public.media` _(high)_
+- reads `public.media_tag` _(high)_
+- reads `public.meeting_room_equipment` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_act` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_capacity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_cuisine_type` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_discount` _(high)_
+- reads `public.object_document` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_external_id` _(high)_
+- reads `public.object_fma` _(high)_
+- reads `public.object_fma_occurrence` _(high)_
+- reads `public.object_group_policy` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_iti_associated_object` _(high)_
+- reads `public.object_iti_info` _(high)_
+- reads `public.object_iti_practice` _(high)_
+- reads `public.object_iti_profile` _(high)_
+- reads `public.object_iti_section` _(high)_
+- reads `public.object_iti_stage` _(high)_
+- reads `public.object_iti_stage_media` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_meeting_room` _(high)_
+- reads `public.object_membership` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_allergen` _(high)_
+- reads `public.object_menu_item_cuisine_type` _(high)_
+- reads `public.object_menu_item_dietary_tag` _(high)_
+- reads `public.object_menu_item_media` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.object_origin` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_pet_policy` _(high)_
+- reads `public.object_place` _(high)_
+- reads `public.object_place_description` _(high)_
+- reads `public.object_price` _(high)_
+- reads `public.object_price_period` _(high)_
+- reads `public.object_private_description` _(high)_
+- reads `public.object_relation` _(high)_
+- reads `public.object_room_type` _(high)_
+- reads `public.object_room_type_amenity` _(high)_
+- reads `public.object_room_type_bed` _(high)_
+- reads `public.object_room_type_media` _(high)_
+- reads `public.object_stay_policy` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.object_sustainability_action_label` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.object_web_channel` _(high)_
+- reads `public.object_zone` _(high)_
+- reads `public.opening_period` _(high)_
+- reads `public.promotion` _(high)_
+- reads `public.promotion_object` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_capacity_metric` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_allergen` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
+- reads `public.ref_code_bed_type` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+- reads `public.ref_code_dietary_tag` _(high)_
+- reads `public.ref_code_document_type` _(high)_
+- reads `public.ref_code_domain_registry` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_iti_practice` _(high)_
+- reads `public.ref_code_language_level` _(high)_
+- reads `public.ref_code_media_tag` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_code_meeting_equipment` _(high)_
+- reads `public.ref_code_membership_campaign` _(high)_
+- reads `public.ref_code_membership_tier` _(high)_
+- reads `public.ref_code_menu_category` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_price_kind` _(high)_
+- reads `public.ref_code_price_unit` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_commune` _(high)_
+- reads `public.ref_contact_role` _(high)_
+- reads `public.ref_document` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_legal_type` _(high)_
+- reads `public.ref_object_relation_type` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_sustainability_action_category` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+
+> Migration: Markdown D2 -- sub-place description (object_place_description)
+> Manifest id: 15c
+> Decision log: §112
+> Date: 2026-06-22
+>
+> Summary:
+> One body-only edit inside api.get_object_resource (CREATE OR REPLACE, signature unchanged):
+>
+> api.get_object_resource -- places block (~line 3878 in api_views_functions.sql):
+> BEFORE: 'descriptions', COALESCE((
+> SELECT jsonb_agg((to_jsonb(pd) - 'place_id')  <-- leaks all raw prose + *_i18n columns
+> ORDER BY ...
+> AFTER:  'descriptions', COALESCE((
+> SELECT jsonb_agg(
+> -- §112 Markdown: explicit override. ONLY the flat scalar prose keys are
+> -- dropped (the || override re-emits them stripped). §112 C1 fix: the raw
+> -- *_i18n maps are NOT subtracted — the place editor loads from THIS block
+> -- and reads them for its per-language values (editor leg; subtracting them
+> -- NULLed translations on the next §16 save).
+> (to_jsonb(pd) - 'place_id'
+> - 'description'
+> - 'description_chapo'
+> - 'description_mobile'
+> - 'description_edition'
+> - 'description_adapted')
+> || jsonb_build_object(
+> 'description',          api.strip_markdown(COALESCE(api.i18n_pick(...), pd.description)),
+> 'description_md',       COALESCE(api.i18n_pick(...), pd.description),
+> 'description_raw',      pd.description,      -- editor round-trip base
+> 'description_chapo',    api.strip_markdown(COALESCE(...)),
+> 'description_chapo_md', COALESCE(...),
+> 'description_chapo_raw', pd.description_chapo,
+> ... (same pattern for mobile/edition/adapted)
+> )
+> ORDER BY ...
+>
+> Per field, the public keys are <col> (stripped) + <col>_md (resolved raw); the editor legs are
+> <col>_raw (raw scalar base, read by parseDescriptionScope scope='place') AND the kept raw
+> <col>_i18n map (per-language values). Only <col> (flat scalar) is dropped from to_jsonb so the
+> stripped override wins; <col>_i18n stays raw (no flat consumer resolves it).
+>
+> No schema_unified.sql fold needed: api.get_object_resource body lives ONLY in api_views_functions.sql.
+> Folded: api_views_functions.sql (canonical source, updated in place).
+>
+> Deploy:
+> 1. Deploy api.get_object_resource via:
+> node .tmp_pgapply/apply_range.cjs <start_line> <end_line>
+
+## `api.get_object_resource_adapted(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.contact_channel` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+> FALC/Accessibility-friendly resource read model. Returns a simplified JSON with
+> description_adapted preferred over regular description, essential location,
+> primary phone/email contacts, main image, and LBL_TOURISME_HANDICAP accessibility labels (V5 canonical code).
+
+## `api.get_object_resources_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)`
+- returns: `json`
+
+> =====================================================
+> Batch wrapper for get_object_resource (performance optimization)
+> Fetches resources for multiple objects while preserving order
+> =====================================================
+
+## `api.get_object_reviews(p_object_id text, p_limit integer DEFAULT 10, p_offset integer DEFAULT 0, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `json`
+- reads `public.object_review` _(high)_
+- reads `public.ref_review_source` _(high)_
+
+> =====================================================
+> Get object reviews with aggregates (external imports)
+> =====================================================
+
+## `api.get_object_room_types(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `json`
+- reads `public.media` _(high)_
+- reads `public.object_room_type` _(high)_
+- reads `public.object_room_type_amenity` _(high)_
+- reads `public.object_room_type_media` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_code_view_type` _(high)_
+
+> =====================================================
+> Get room types for accommodations
+> =====================================================
+
+## `api.get_object_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `jsonb`
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+
+> Compact object tag payload for cards, maps and LCP/list payloads. Ordered by tag_link.position (§09 per-object priority).
+
+## `api.get_object_taxonomy_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `jsonb`
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_domain_registry` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+
+> Compact taxonomy payload for cards, maps and other LCP/list payloads.
+
+## `api.get_object_version_snapshot(p_object_id text, p_version_number integer)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_version` _(high)_
+
+> (2) Single-version snapshot (the full data jsonb) for the detailed diff.
+
+## `api.get_object_versions(p_object_id text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
+- returns: `TABLE(version_number integer, created_at timestamp with time zone, created_by_name text, change_type text, change_reason text, changed_fields text[])` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_version` _(high)_
+
+> (1) Timeline + per-version changed_fields. The cache/meta ignore-list is the SAME set
+> save_object_version() strips (plus identity/audit/generated keys), so a captured version never
+> differs only on noise. Kept byte-identical to DIFF_IGNORE_KEYS in object-versions.ts.
+
+## `api.get_object_with_deep_data(p_object_id text, p_languages text[] DEFAULT ARRAY['fr'::text], p_options jsonb DEFAULT '{}'::jsonb)`
+- returns: `json`
+
+## `api.get_object_workspace_permissions(p_object_id text)`
+- returns: `jsonb`
+
+> Agrège en un appel les 9 sondes de permission de l'éditeur pour un objet, dont la permission juridique dédiée. SECURITY INVOKER volontairement ; chaque sonde échoue fermée et indépendamment.
+
+## `api.get_objects_by_type_with_deep_data(p_object_type text, p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
+- returns: `json`
+- reads `public.object` _(high)_
+
+> =====================================================
+> Enhanced API function: Get objects by type with deep data
+> =====================================================
+
+## `api.get_objects_interop_batch(p_object_ids text[], p_profile text)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+
+> Partner batch interop serializer (audit API I4 §153): {"<object_id>": <profile document>} for up to 200 PUBLISHED ids, wrapping get_object_jsonld (profile 'jsonld') / get_object_interop (datatourisme/apidae/tourinsoft). Unpublished/unknown/unmapped ids are absent. service_role-only. Measured 200 docs = 88 ms.
+
+## `api.get_objects_with_deep_data(p_object_ids text[], p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb)`
+- returns: `json`
+- reads `public.contact_channel` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.object_relation` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_contact_role` _(high)_
+- reads `public.ref_object_relation_type` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+> =====================================================
+> Enhanced API function: Get multiple objects with deep data
+> =====================================================
+
+## `api.get_opening_slots_by_day(p_period_id uuid)`
+- returns: `jsonb`
+- reads `public.opening_schedule` _(high)_
+- reads `public.opening_time_frame` _(high)_
+- reads `public.opening_time_period` _(high)_
+- reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
+
+> =====================================================
+> Optimized: get ALL opening time frames per weekday as arrays (unbounded)
+> =====================================================
+
+## `api.get_opening_time_slots(p_period_id uuid, p_weekday_code text, p_slot_number integer DEFAULT 1)`
+- returns: `jsonb`
+- reads `public.opening_schedule` _(high)_
+- reads `public.opening_time_frame` _(high)_
+- reads `public.opening_time_period` _(high)_
+- reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
+
+> =====================================================
+> Helper function to extract opening time slots for a specific day (legacy)
+> =====================================================
+
+## `api.get_org_branding(p_org_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_branding_settings` _(high)_
+- reads `public.org_branding_settings` _(high)_
+
+> -----------------------------------------------------
+> 4) Lecture admin (éditeur de branding) : ligne brute (NULL = hérite) + payload résolu.
+> -----------------------------------------------------
+
+## `api.get_org_smtp(p_org_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_branding_settings` _(high)_
+- reads `public.org_branding_settings` _(high)_
+- reads `public.org_smtp_settings` _(high)_
+
+## `api.get_org_smtp_secret(p_org_object_id text)`
+- returns: `TABLE(host text, port integer, secure boolean, from_email text, from_name text, username text, password text)` — SECURITY DEFINER
+- reads `public.app_branding_settings` _(high)_
+- reads `public.org_branding_settings` _(high)_
+- reads `public.org_smtp_settings` _(high)_
+- reads `vault.decrypted_secrets` _(high)_
+
+## `api.get_organization_data(p_object_id text)`
+- returns: `jsonb`
+- reads `public.contact_channel` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_contact_role` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+> =====================================================
+> Helper: Get enriched organization data
+> =====================================================
+
+## `api.get_parent_object_data(p_object_id text)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_relation` _(high)_
+- reads `public.ref_object_relation_type` _(high)_
+
+> =====================================================
+> Helper: Get enriched parent object data
+> =====================================================
+
+## `api.get_partner_object_with_vocabulary(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_i18n_all boolean DEFAULT false)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+
+> Published real object, optional pivot and vocabulary release from one statement snapshot; service_role only.
+
+## `api.get_pending_document_requests(p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])`
+- returns: `TABLE(legal_id uuid, object_id text, object_name text, object_type text, legal_type_code text, legal_type_name text, value jsonb, document_requested_at timestamp with time zone, days_since_requested integer, note text)`
+- reads `public.object` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> =====================================================
+> Function to get pending document requests
+> =====================================================
+
+## `api.get_pending_document_requests_api(p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])`
+- returns: `json`
+
+> =====================================================
+> Function to get pending document requests in API format
+> =====================================================
+
+## `api.get_portal_photo_analysis(p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.crm_interaction` _(high)_
+
+## `api.get_portal_photo_review(p_change_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.get_portal_section_visibility(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_actor_module_visibility` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> 4.4 Variante portail : résout l'ORG publisher (primaire d'abord) et le type depuis la
+> fiche. Autorisée : persona acteur pour une fiche de SA portée, membres de l'ORG,
+> superuser. C'est elle que consomme l'éditeur en mode portail (front ET section 5).
+
+## `api.get_public_branding()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_branding_settings` _(high)_
+
+> Returns public-safe brand settings for anonymous contexts such as the login page, including the runtime-driven institutional operator attribution (operatorName/territory/islandTagline from extra).
+
+## `api.get_public_list_by_token(p_token text)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+> ---------- 7. RPC PUBLIQUE (anon) : lecture par token ----------
+> Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
+> (NULL) si token invalide / désactivé / expiré.
+
+## `api.get_public_trail(p_slug text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
+
+## `api.get_ref_catalog(p_catalog_key text)`
+- returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
+- reads `public.ref_catalog_registry` _(high)_
+- reads `public.ref_code` _(high)_
+
+## `api.get_sandbox_discovery_user()`
+- returns: `uuid` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.org_config` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+
+## `api.get_smtp_config()`
+- returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
+
+## `api.get_smtp_config_secret()`
+- returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
+- reads `vault.decrypted_secrets` _(high)_
+
+## `api.get_trail(p_trail_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_commune` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_commune` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
+- reads `public.trail_status_history` _(high)_
+- reads `public.trail_status_override` _(high)_
+
+## `api.guard_object_initial_publication()`
+- returns: `trigger`
+
+## `api.guard_object_is_test()`
+- returns: `trigger` — SECURITY DEFINER
+
+> This is an invariant, not another authorization decision. Even privileged
+> writers must change the source organization/config rather than forge its copy.
+> VOLATILE is intentional: queries in a row trigger need a fresh snapshot after
+> waiting for another transaction's row update. No caller-controlled bypass GUC.
+
+## `api.guard_object_status_change()`
+- returns: `trigger` — SECURITY DEFINER
+
+> 8) Status guard: status changes require publish_object (rpc_publish_object), not edit_canonical.
+> service_role/admin and platform superuser are exempt. rpc_publish_object verifies the
+> caller's publish right before its UPDATE, so the trigger re-check passes for it
+> (auth.uid() is preserved under SECURITY DEFINER). Fires only when `status` is in the SET list.
+
+## `api.handle_auth_user_profile_created()`
+- returns: `trigger` — SECURITY DEFINER
+
+## `api.handle_membership_status_transition()`
+- returns: `trigger`
+- reads `public.object_membership` _(high)_
+- reads `public.object_org_link` _(high)_
+- writes `public.object` _(high)_
+
+## `api.i18n_get_text(p_target_table text, p_target_pk text, p_target_column text, p_lang_code text DEFAULT 'fr'::text, p_fallback_lang text DEFAULT 'fr'::text)`
+- returns: `text`
+- reads `public.i18n_translation` _(high)_
+- reads `public.ref_language` _(high)_
+
+> I18N Helper: Get translation from EAV i18n_translation table with fallback
+> Usage: api.i18n_get_text('object_description', 'desc-uuid-123', 'description', 'en', 'fr')
+> Returns: Translated text from i18n_translation table with fallback support
+> Used for advanced cases where JSONB columns are not available
+
+## `api.i18n_get_text_strict(p_target_table text, p_target_pk text, p_target_column text, p_lang_code text DEFAULT 'fr'::text, p_fallback_lang text DEFAULT 'fr'::text)`
+- returns: `text`
+- reads `public.i18n_translation` _(high)_
+- reads `public.ref_language` _(high)_
+
+> I18N Helper (strict): EAV i18n without "any language" fallback
+
+## `api.i18n_pick(p_i18n_data jsonb, p_lang_code text DEFAULT 'fr'::text, p_fallback_lang text DEFAULT 'fr'::text)`
+- returns: `text`
+
+> I18N Helper: Pick translation from JSONB with fallback
+> Usage: api.i18n_pick('{"fr": "Bonjour", "en": "Hello"}', 'en', 'fr')
+> Returns: "Hello" (or "Bonjour" if 'en' not found, or any available language as last resort)
+> Language codes are normalized to lowercase following project conventions
+
+## `api.i18n_pick_strict(p_i18n_data jsonb, p_lang_code text DEFAULT 'fr'::text, p_fallback_lang text DEFAULT 'fr'::text)`
+- returns: `text`
+
+> I18N Helper (strict): Pick translation from JSONB without "any language" fallback
+> Returns NULL if both requested and fallback are missing/empty
+
+## `api.interop_object_core(p_object_id text)`
+- returns: `jsonb`
+- reads `public.contact_channel` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_web_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+> Shared interop core reader (audit API I4 §137): flat gated core of a PUBLISHED object (public-only) for the profile serializers.
+
+## `api.is_actor_persona()`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+> 18a portail acteur — TRUE si le profil courant est role=actor. Fail-closed (§204).
+
+## `api.is_object_open_now(p_object_id text)`
+- returns: `boolean`
+- reads `public.opening_period` _(high)_
+- reads `public.opening_schedule` _(high)_
+- reads `public.opening_time_frame` _(high)_
+- reads `public.opening_time_period` _(high)_
+- reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
+
+## `api.is_object_owner(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+> Legacy name retained for technical/platform authority only. Canonical staff writes use current explicit publisher permissions.
+
+## `api.is_opening_period_active_on_date(p_all_years boolean, p_date_start date, p_date_end date, p_local_date date)`
+- returns: `boolean`
+
+> Batch refresh cached_is_open_now for all objects.
+> Scheduled on live via pg_cron. NOTE (2026-06-04): heavy job (~18-22s/run on ~373 published
+> objects: correlated EXISTS over the opening_* chain + per-object timezone LATERAL). To avoid
+> periodic instance saturation it runs every 15 min, STAGGERED off the */5 mv_filtered_objects
+> refresh:  SELECT cron.alter_job(job_id := <id>, schedule := '3,18,33,48 * * * *');
+> (orig example: SELECT cron.schedule('refresh-open-status','*/5 * * * *',$$SELECT api.refresh_open_status()$$);)
+> A set-based rewrite of this function (sub-second) is a tracked follow-up (lot1_mapping_decisions.md §35).
+
+## `api.is_opening_period_active_today(p_all_years boolean, p_date_start date, p_date_end date)`
+- returns: `boolean`
+
+## `api.is_platform_admin()`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+> Platform branding authority: authenticated owner/super_admin from app_user_profile, or the existing service_role/admin technical identity. Auth metadata never grants authority; missing auth context returns false.
+
+## `api.is_platform_owner()`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+> Vérifie si l'utilisateur courant est owner plateforme (ou admin/service)
+
+## `api.is_platform_superuser()`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+> =====================================================
+> Helper : autorité plateforme (owner OU super_admin)
+> Distinct de api.is_platform_owner() qui ne couvre que 'owner'.
+> Utilisé pour les opérations réservées à l'autorité plateforme :
+> - écriture sur org_config.access_scope (§2.8 du plan maître)
+> =====================================================
+
+## `api.is_ref_code_taxonomy_domain(p_domain text)`
+- returns: `boolean`
+- reads `public.ref_code_domain_registry` _(high)_
+
+## `api.json_clean(p jsonb)`
+- returns: `jsonb`
+
+> Clean JSON by removing newlines and extra whitespace
+
+## `api.jsonb_pick_keys(p_payload jsonb, p_keys text[])`
+- returns: `jsonb`
+
+> =====================================================
+> Object resource block helpers (decomposition layer)
+> =====================================================
+
+## `api.jsonb_prune_empty_top(p jsonb)`
+- returns: `jsonb`
+
+> =====================================================
+> JSON Helper: Prune empty top-level keys (arrays/objects)
+> =====================================================
+
+## `api.link_actor_to_object(p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- writes `public.actor_object_role` _(high)_
+
+> Missing role_code inherits the actor's default role, then falls back to operator
+> for legacy actors created before this migration.
+
+## `api.list_actor_crm(p_actor_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_crm_sentiment` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+
+> Fiche acteur (navigation acteur → objets → interactions tous contextes) : identité, objets
+> liés du périmètre, canaux de contact (rectif PO 2026-06-11), TOUTES les interactions de
+> l'acteur (contexte objet du périmètre OU générale), répartition des sujets.
+> Superuser : sans restriction de périmètre.
+
+## `api.list_actor_support(p_actor_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_document_type` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.list_ai_providers()`
+- returns: `TABLE(id uuid, label text, api_kind text, base_url text, model text, max_output_tokens integer, is_active boolean, extra jsonb, has_key boolean, created_at timestamp with time zone, updated_at timestamp with time zone)` — SECURITY DEFINER
+- reads `public.app_ai_provider_config` _(high)_
+
+## `api.list_catalog(p_domain text, p_lang text DEFAULT 'fr'::text)`
+- returns: `jsonb`
+
+> ── Un référentiel, forme uniforme {code,name,icon_url,parent_code,domain} ───────
+
+## `api.list_crm_assignees()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Assignataires possibles d'une tâche (demande PO 2026-06-12) : membres ACTIFS DISTINCTS des
+> ORG du caller (eux-mêmes inclus). Peuple le select « attribuer à » de l'UI. display_name
+> peut être NULL (profil non renseigné) ⇒ COALESCE vers un libellé court dérivé de l'uuid
+> (jamais de ligne sans étiquette). Superuser sans membership : [] (assignation par
+> user_can_assign_crm reste possible — documenté). Trié par display_name.
+
+## `api.list_crm_directory(p_topic_code text DEFAULT NULL::text, p_status text DEFAULT NULL::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_search text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.crm_interaction` _(high)_
+
+## `api.list_crm_directory_linked(p_topic_code text DEFAULT NULL::text, p_status text DEFAULT NULL::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_search text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+
+## `api.list_crm_status_events(p_interaction_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.crm_interaction_status_event` _(high)_
+
+> Journal des transitions de statut d'une demande CRM, ordonné du plus ancien au plus récent (manifeste 17g). Alimente l'encart « depuis quand » du sélecteur de statut. Périmètre §61 : la lisibilité du journal SUIT celle de son interaction (arme objet, à défaut arme acteur, à défaut la sonde d'écriture de notes). N'émet aucune coordonnée — seulement un libellé d'utilisateur via api.crm_user_label.
+
+## `api.list_crm_tasks()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.crm_task_assignee` _(high)_
+- reads `public.crm_task_document` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_document` _(high)_
+
+> ═══════════════════════════════════════════════════════════════════════════════════════
+> 7. LECTURES DE TÂCHE — clés `assignees[]`, `created_by_id`, `created_by_name`
+> `owner_id`/`owner_name` sont CONSERVÉS le temps du déploiement (un front antérieur
+> les lit encore). Le nouveau front ne doit plus s'en servir.
+> ═══════════════════════════════════════════════════════════════════════════════════════
+
+## `api.list_crm_timeline(p_object_id text DEFAULT NULL::text, p_topic_code text DEFAULT NULL::text, p_interaction_type text DEFAULT NULL::text, p_sentiment_code text DEFAULT NULL::text, p_status text DEFAULT NULL::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before_id uuid DEFAULT NULL::uuid, p_limit integer DEFAULT 50)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_crm_sentiment` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+
+> ─────────────────────────────────────────────────────────────────────────────────────
+> 7.4  api.list_crm_timeline — corps 8z traduit : un filtre devient une FAMILLE
+> ─────────────────────────────────────────────────────────────────────────────────────
+> Le contrat EXTERNE de `p_status` NE CHANGE PAS : il reste `active | done`, c'est le
+> vocabulaire de l'INTERFACE (les deux chips « Actives » / « Traitées »), pas celui du type.
+> Ce qui change, c'est ce à quoi il se traduit : une VALEUR devient une FAMILLE.
+
+## `api.list_deleted_objects_since(p_since timestamp with time zone DEFAULT NULL::timestamp with time zone, p_limit integer DEFAULT 500)`
+- returns: `jsonb`
+- reads `public.object_deletion_log` _(high)_
+
+> Flux tombstone partenaire (§108/C-4) : suppressions définitives depuis object_deletion_log, projeté {object_id,type,deleted_at} (jamais report/performed_by/object_name). service_role-only.
+
+## `api.list_effective_object_ids(p_list_id uuid, p_published_only boolean)`
+- returns: `TABLE(object_id text, pos integer, note_fr text, note_en text)` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_list` _(high)_
+- reads `public.object_list_item` _(high)_
+
+> Ensemble effectif d'une liste (statique = items curatés ; dynamique = résolution vive des filtres). published_only=TRUE exige désormais status = published ET is_test = current_user_test_realm() (§2, 2e revue architecte) — published seul n'est pas lisibilité. Périmètre/signature/ACL et branche dynamique inchangés depuis migration_object_list.sql.
+
+## `api.list_featured_lists()`
+- returns: `json` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+
+> À la une de l'organisation active : visible à TOUT membre ACTIF de l'ORG.
+
+## `api.list_is_archived(p_is_featured boolean, p_last_activity_at timestamp with time zone)`
+- returns: `boolean`
+
+## `api.list_item_contacts(p_ids text[])`
+- returns: `TABLE(object_id text, contacts jsonb)` — SECURITY DEFINER
+- reads `public.contact_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+> ---------- 5b. Contacts publics des items (téléphone / site web) ----------
+> Enrichissement des items de liste pour les templates OTI (boutons « appeler » /
+> « site web » du design). PUBLICS uniquement (is_public — le flag champ §49 compose,
+> jamais de canal interne) : phone (repli mobile) + website. Set-based sur le jeu
+> d'ids (borné 200 par le résolveur) — pas de fonction par ligne (§125).
+> Helper interne : jamais exposé (les RPCs DEFINER l'exécutent en tant qu'owner).
+
+## `api.list_list_proposals()`
+- returns: `json` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+
+> Propositions en attente de l'organisation active : réservé aux admins DE
+> CETTE ORG PRÉCISE (rang scopé, jamais current_user_admin_rank() global —
+> §2 revue architecte) ou superuser. Un appelant qui ne l'est pas obtient un
+> tableau VIDE (le filtre WHERE porte la garde), jamais une exception.
+
+## `api.list_my_lists()`
+- returns: `json` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+
+> `status = 'shared'` records editorial history, not whether a live capability
+> link still exists.  Emit the actual state on all list-card payloads.
+
+## `api.list_my_notifications(p_limit integer DEFAULT 50)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_list` _(high)_
+
+> Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Les propositions de listes sont rendues seulement aux reviewers encore éligibles dans leur ORG active (ou superuser) et tant qu'elles sont pending/non archivées. Anon ⇒ boîte vide.
+
+## `api.list_my_portal_fiches()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.contact_channel` _(high)_
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+> 18a — accueil du portail : les fiches de la portée acteur, avec la soumission ouverte (le cas échéant), la dernière résolue, et les canaux PUBLICS de l'office publisher (office_email/office_phone, D11) — jamais un canal interne.
+
+## `api.list_my_portal_messages(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+
+## `api.list_my_portal_photos(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+
+## `api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+
+> 18a — historique des soumissions de l'acteur COURANT (auto-scopé, jamais de paramètre destinataire). p_object_id filtre STRICTEMENT (révision 2026-09-02) — sans lui un acteur multi-fiches verrait la soumission ouverte d'UNE fiche apparaître sous une AUTRE. section = metadata.section (le module id stable), field = le libellé lisible (D12).
+
+## `api.list_object_contact_suggestions(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.contact_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+> Suggestions de contacts pour l'authoring d'un acteur (demande PO 2026-06-12). Le caller
+> crée/édite un acteur SOUS cet objet ⇒ gate = arme objet user_can_write_crm (même prédicat
+> que save_crm_actor à la création). Combine les contacts de l'ÉTABLISSEMENT (contact_channel
+> §03, source 'établissement') + les canaux des acteurs DÉJÀ liés (actor_channel via
+> actor_object_role, source 'acteur lié'), dédupliqués par (kind_code, lower(btrim(value)))
+> en préférant la source 'établissement' puis is_primary. ORDER final : e-mails d'abord,
+> primaires, puis valeur. PII réservée au périmètre publisher (jamais en PostgREST direct).
+
+## `api.list_object_crm(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.crm_task_assignee` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_crm_sentiment` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+
+> Vue CRM d'un objet : interactions + tâches + répartition des sujets + acteurs liés
+> (navigation objet → acteurs du modèle acteur-centré ; cf. en-tête point 5).
+
+## `api.list_object_markers(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_search text DEFAULT NULL::text)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+> Explorer map markers: lightweight {id,type,name,image,open_now,location{lat,lon,city}} for ALL matching geolocated objects in one call. Authorize-once SECURITY DEFINER (§36): filtered set ∩ current_user_readable_object_ids() then object_location read RLS-free. Replaces the per-page card fetch as the map data source; avoids the per-row can_read_object scalar (§35) and per-row enrichment (cf. list_objects_map_view). See decision log §125.
+
+## `api.list_object_resources_filtered_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+- returns: `json`
+- reads `public.object` _(high)_
+
+> ---- 5) list_object_resources_filtered_page : le champ sur les cartes -----
+> Corps DERIVE de la definition live par .tmp_pgapply/_gen_page204.cjs.
+> NE PAS EDITER A LA MAIN : regenerer.
+> Emis des que l appelant est editeur, sans condition sur le filtre :
+> 2,0 ms mesures pour une page de 24 (tout en index scan). Le conditionner
+> au filtre economiserait 2 ms et priverait la colonne Table de ses donnees
+> filtre eteint.
+
+## `api.list_object_resources_filtered_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+- returns: `json`
+- reads `public.object` _(high)_
+
+## `api.list_object_resources_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)`
+- returns: `json`
+- reads `public.object` _(high)_
+
+## `api.list_object_resources_page_text(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)`
+- returns: `json`
+
+## `api.list_object_resources_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+- returns: `json`
+- reads `public.object` _(high)_
+
+## `api.list_object_resources_since_fast_text(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+- returns: `json`
+
+## `api.list_object_verifier_ids(p_object_id text)`
+- returns: `SETOF uuid` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+
+> 4.2 Les vérificateurs d'une fiche (D3) : membres ACTIFS d'une ORG publisher de l'objet
+> tenant validate_changes — par la matrice de rôle (17i) OU par grant individuel.
+> REPLI (corrigé en revue Task 4, ruling contrôleur) : superutilisateurs plateforme
+> actifs (app_user_profile.role IN ('owner','super_admin')) — JAMAIS les rangs admin
+> de l'ORG. Fait vérifié en base : api.user_has_permission() (donc
+> api.user_can_moderate_object, donc le bouton Approuver) n'a que DEUX chemins —
+> grant individuel (user_permission) et rôle métier (user_org_business_role ×
+> org_role_permission, §227) — et ignore TOTALEMENT user_org_admin_role. Un rang
+> admin sans validate_changes échouerait donc user_can_moderate_object en 42501 :
+> la tâche assignée serait injouable et la fiche resterait bloquée à vie
+> (uq_fiche_submission_open n'autorise qu'une soumission ouverte à la fois) — pire
+> qu'une liste vide, car muet. Un superuser plateforme, lui, satisfait
+> user_can_moderate_object ET is_object_owner INCONDITIONNELLEMENT (leur bras
+> is_platform_superuser(), commun aux deux) : le prérequis « tout vérificateur a
+> aussi l'écriture canonique » tient toujours. Peut rendre VIDE si aucun
+> superuser n'existe (la soumission n'échoue pas pour ça — spec §7, tâche part
+> non assignée, assignee_count=0 signalé au client).
+
+## `api.list_objects_map_view(p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_filters jsonb DEFAULT '{}'::jsonb, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 500, p_offset integer DEFAULT 0)`
+- returns: `json`
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+## `api.list_objects_with_validated_changes_since(p_since timestamp with time zone)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.pending_change` _(high)_
+
+> Returns a JSON array of object IDs that have had validated modifications (approved or applied) since the specified date. Uses applied_at timestamp if available, otherwise reviewed_at.
+
+## `api.list_org_smtp_status()`
+- returns: `TABLE(org_object_id text, org_name text, host text, port integer, from_email text, is_enabled boolean, has_password boolean, last_test_at timestamp with time zone, last_test_ok boolean)` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.org_smtp_settings` _(high)_
+
+## `api.list_partner_keys()`
+- returns: `TABLE(id uuid, label text, key_prefix text, scopes text[], is_active boolean, expires_at timestamp with time zone, revoked_at timestamp with time zone, last_used_at timestamp with time zone, created_at timestamp with time zone)` — SECURITY DEFINER
+- reads `internal.partner_api_key` _(high)_
+
+> Liste les clés (métadonnées seulement — JAMAIS le hash ni la clé).
+
+## `api.list_partner_objects_with_vocabulary(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_taxonomy_codes text[] DEFAULT NULL::text[], p_include_equivalent_predecessors boolean DEFAULT false)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+
+> Published real object page and vocabulary release from one snapshot; opt-in exact-equivalence taxonomy filters.
+
+## `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
+- returns: `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone, submission_id uuid, submission_note text, actor_label text, manual_apply boolean)` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+
+> P2.1 §120 + 18a/D9 — file de modération. Ajoute submission_id / submission_note / actor_label / manual_apply. Jointures soumission et acteur LEFT : une ligne sans soumission (§120/§122) doit rester listée.
+
+## `api.list_portal_message_documents(p_interaction_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.list_public_trails(p_status_code text DEFAULT NULL::text, p_simplify boolean DEFAULT true, p_tolerance numeric DEFAULT 0.0001, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
+- returns: `TABLE(id uuid, slug text, name text, status_code text, status_label text, not_guaranteed boolean, manager_labels text[], source_label text, source_website text, last_update timestamp with time zone, length_m numeric, geom jsonb)` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
+
+## `api.list_ref_catalogs()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.v_ref_catalog` _(high)_
+- reads `public.ref_catalog_registry` _(high)_
+- reads `public.ref_code` _(high)_
+
+## `api.list_ref_code_domains()`
+- returns: `jsonb`
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_domain_registry` _(high)_
+
+> Phase 7.5 — domaines ref_code éditables (non structurels) + compteurs, pour le maître de l'éditeur de référentiels.
+
+## `api.list_reference_bundle(p_domains text[] DEFAULT NULL::text[], p_lang text DEFAULT 'fr'::text)`
+- returns: `jsonb`
+
+> Plusieurs référentiels publics en un appel. p_domains NULL = tous. Audit API I1.
+
+## `api.list_selection_emails(p_reason text, p_object_ids text[] DEFAULT NULL::text[], p_list_id uuid DEFAULT NULL::uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_consent` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.contact_channel` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_list` _(high)_
+- reads `public.object_list_item` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- writes `public.actor_contact_export_log` _(high)_
+
+> Export des e-mails d'une sélection Explorer (p_object_ids) OU d'une liste (p_list_id). Authorize-once SECURITY DEFINER : garde éditeur (§205) puis périmètre ORG publisher (= périmètre CRM — `readable` ne suffit pas pour une donnée partners). Cascade prestataire operator → fiche. Rend des lignes brutes ; dédoublonnage et formatage côté client. §211. RÉGIME §208 (tâche 7, 2026-08-08) : p_reason PREMIER paramètre, obligatoire (5–500 car., sinon PT400/REASON_REQUIRED) ; VOLATILE (écrit) ; journal public.actor_contact_export_log dans la MÊME transaction, UNIQUEMENT quand le bras acteur émet au moins une adresse (une sélection entièrement résolue par les adresses de fiche n'a rien à journaliser) ; AUCUNE valeur de coordonnée dans le journal ; bras superuser ALIGNÉ sur api.can_read_actor_contacts (jamais api.is_platform_superuser()) ; PAS de GRANT à service_role. Troisième formulation du périmètre « qui voit les coordonnées d'un acteur » (§208) — évolue avec api.can_read_actor_contacts et la forme ensembliste de api.export_actor_contacts.
+
+## `api.list_trail_sync_runs(p_source_code text DEFAULT NULL::text, p_limit integer DEFAULT 20)`
+- returns: `TABLE(id uuid, source_code text, trigger text, dry_run boolean, status text, started_at timestamp with time zone, finished_at timestamp with time zone, http_status integer, error text, layer_last_edit_date timestamp with time zone, counts jsonb, report jsonb)` — SECURITY DEFINER
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail_sync_run` _(high)_
+
+## `api.list_trails(p_status_code text DEFAULT NULL::text, p_presence text DEFAULT NULL::text, p_visibility text DEFAULT NULL::text, p_search text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
+- returns: `TABLE(id uuid, slug text, name text, origin text, visibility text, public_status_code text, public_status_flags jsonb, manager_codes text[], source_count integer, presence_summary jsonb, archived_at timestamp with time zone, created_at timestamp with time zone, updated_at timestamp with time zone, total_count bigint)` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
+
+## `api.lock_object_private_description_system_fields()`
+- returns: `trigger` — SECURITY DEFINER
+
+> Notes privées : les champs de portée et d'auteur restent immuables même si
+> un responsable ORG supérieur modifie le contenu d'une note.
+
+## `api.log_crm_interaction_status_event()`
+- returns: `trigger` — SECURITY DEFINER
+- writes `public.crm_interaction_status_event` _(high)_
+
+> Trigger AFTER INSERT OR UPDATE OF status sur crm_interaction : écrit une ligne de crm_interaction_status_event par transition RÉELLE (un UPDATE qui ne touche pas au statut n'écrit rien). from_status NULL = création. Manifeste 17g.
+
+## `api.log_publication_proof_interaction()`
+- returns: `trigger`
+- writes `public.crm_interaction` _(high)_
+
+> ─────────────────────────────────────────────────────────────────────────────────────
+> 7.7  api.log_publication_proof_interaction — corps schema_unified traduit
+> ─────────────────────────────────────────────────────────────────────────────────────
+
+## `api.manage_object_published_at()`
+- returns: `trigger`
+
+> Mise à jour published_at
+
+## `api.mark_all_notifications_read()`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.app_notification` _(high)_
+
+## `api.mark_list_sent(p_list_id uuid, p_sender_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.object_list` _(high)_
+
+> Suivi serveur après acceptation SMTP (route /api/lists/send), service_role UNIQUEMENT. Remplace api.mark_list_sent(uuid) (grantée à authenticated), révoquée : un client ne peut plus se déclarer « envoyé » sans preuve. p_sender_id est vérifié contre internal.list_sender_authorized — existence du profil ET adhésion active exigées AVANT tout bras propriétaire/featured.
+
+## `api.mark_notification_read(p_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.app_notification` _(high)_
+
+## `api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)`
+- returns: `integer` — SECURITY DEFINER
+- writes `public.app_notification` _(high)_
+
+> Acquittement du drain e-mail (17m + 18a §8, les DEUX espèces). Succès = email_sent_at ; échec = email_error + email_attempts+1 + claim levé (re-réclamable jusqu'à 5 tentatives). Service_role only.
+
+## `api.norm_search(p text)`
+- returns: `text`
+
+## `api.notification_relay_org(p_task_id uuid, p_recipient_id uuid)`
+- returns: `text` — SECURITY DEFINER
+- reads `public.crm_task` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+## `api.notify_task_assignees(p_task_id uuid, p_new_assignees uuid[], p_actor uuid)`
+- returns: `integer` — SECURITY DEFINER
+- writes `public.app_notification` _(high)_
+
+> Crée une notification crm_task_assigned par NOUVEL assigné, en excluant l'auteur de l'action (règle produit : on ne se notifie pas de sa propre auto-assignation). Appelée UNIQUEMENT depuis api.save_crm_task, dans la même transaction que le save.
+
+## `api.object_expected_is_test(p_object_id text)`
+- returns: `boolean`
+- reads `public.object_org_link` _(high)_
+- reads `public.org_config` _(high)_
+
+> An ORG follows its own configuration. Other objects follow their primary
+> organization. A new/orphan object has no source yet and starts in production;
+> the existing AFTER INSERT auto-attachment stamps a test creator's object.
+
+## `api.object_missing_essentials(p_object_ids text[])`
+- returns: `TABLE(object_id text, missing text[])` — SECURITY DEFINER
+- reads `internal.v_object_essentials` _(high)_
+
+> §204 — essentiels manquants pour un ENSEMBLE d'objets (jamais par ligne). Rend 0 ligne si
+> l'appelant n'est pas éditeur (api.current_user_can_edit_objects) : c'est le gate serveur du
+> filtre « Remplissage ». Auto-autorise ses ids contre current_user_readable_object_ids (§36) — la
+> liste reçue n'est jamais crue sur parole. Mesuré: 2,0 ms pour une page de 24.
+
+## `api.object_private_note_author_admin_rank(p_note_id uuid)`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.object_private_description` _(high)_
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Retourne le rang admin de l'auteur de la note dans l'ORG de la note (NULL si aucun).
+
+## `api.opening_period_rank(p_is_closure boolean, p_all_years boolean, p_date_start date, p_date_end date)`
+- returns: `integer`
+
+> 2) Rang de priorité (closure 4 > fixe 3 > cyclique 2 > base 1).
+
+## `api.opening_period_width(p_all_years boolean, p_date_start date, p_date_end date)`
+- returns: `integer`
+
+> 3) Largeur de fenêtre en "jours" (à rang égal, la plus étroite gagne).
+> Cyclique : durée MM-JJ (approx. mois*31+jour, monotone) avec wrap. Fixe : date_end - date_start.
+> Base / sans dates : 100000 (∞, la plus large).
+
+## `api.partner_admit(p_key_hash text, p_limit integer DEFAULT 120, p_window_seconds integer DEFAULT 60)`
+- returns: `jsonb`
+
+> Service-role partner authentication and fixed-window quota in one RPC. Auth fails closed; quota errors alone fail open. No identity cache.
+
+## `api.partner_authenticate(p_key_hash text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.partner_api_key` _(high)_
+- writes `internal.partner_api_key` _(high)_
+
+> Le route passe le SHA-256 hex (calculé en Node) — la clé brute ne touche jamais la DB.
+> Renvoie {ok, id, label, scopes} si la clé est active/non-expirée/non-révoquée, sinon {ok:false}.
+> ponytail: met à jour last_used_at à chaque appel (write par requête) — throttler si QPS élevé (R2).
+
+## `api.partner_log_call(p_key_id uuid, p_path text, p_status integer)`
+- returns: `void` — SECURITY DEFINER
+- writes `internal.partner_api_call` _(high)_
+
+## `api.partner_rate_check(p_key_id uuid, p_limit integer DEFAULT 120, p_window_seconds integer DEFAULT 60)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `internal.partner_rate_bucket` _(high)_
+
+> Incrémente le compteur de la fenêtre courante et rend le verdict. service_role-only.
+
+## `api.periods_partial_overlap(p_all_years boolean, a_s date, a_e date, b_s date, b_e date)`
+- returns: `boolean`
+
+## `api.phonetic_document(p_text text)`
+- returns: `text`
+
+> §198 — texte normalisé → codes dmetaphone dédupliqués, séparés par des espaces. SOURCE UNIQUE de la transformation phonétique : utilisée pour construire object.search_document_phonetic ET pour interroger. Deux implémentations divergeraient en silence. Entrée attendue déjà en minuscules sans accents.
+
+## `api.pick_lang(p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
+- returns: `text`
+
+## `api.portal_message_document(p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.portal_message_upload_context(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+> Final function declarations, with SQL dependencies ordered before callers.
+
+## `api.portal_photo_failed_approval(p_claim_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.portal_photo_preview(p_document_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.portal_photo_upload_context(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.prevent_duplicate_actor_email()`
+- returns: `trigger`
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+> Duplicate-email detection must not reveal or depend on the other realm's actor identities.
+
+## `api.public_catalog_domains()`
+- returns: `text[]` — SECURITY DEFINER
+- reads `thesaurus.vocabulary` _(high)_
+
+> Liste des domaines de référentiel exposés publiquement par api.list_catalog (whitelist default-deny). Audit API I1.
+
+## `api.publish_portal_photo_additions(p_object_id text, p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.media` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.purge_expired_staging_batches(p_limit integer DEFAULT 500)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `staging.import_batches` _(high)_
+- writes `staging.import_batches` _(high)_
+
+## `api.purge_staging_batch(p_batch_id text, p_force boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `staging.import_batches` _(high)_
+- writes `staging.import_batches` _(high)_
+
+## `api.recompute_audit_session_score()`
+- returns: `trigger`
+- reads `public.audit_result` _(high)_
+- writes `public.audit_session` _(high)_
+
+## `api.reconcile_portal_photo_order(p_object_id text, p_expected jsonb, p_media_ids jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+
+## `api.record_org_smtp_test(p_org_object_id text, p_ok boolean, p_error text)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.org_smtp_settings` _(high)_
+
+## `api.ref_code_domain_is_editable(p_domain text)`
+- returns: `boolean`
+- reads `public.ref_code_domain_registry` _(high)_
+
+> Un domaine ref_code est-il éditable par l'admin (non structurel) ?
+
+## `api.ref_code_usage_count(p_domain text, p_id uuid)`
+- returns: `integer` — SECURITY DEFINER
+
+> Phase 7.5 — nombre de références d'UNE valeur ref_code (super-admin). Garde de suppression.
+
+## `api.ref_code_usage_counts(p_domain text)`
+- returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `public.ref_code` _(high)_
+
+> Phase 7.5 — carte {ref_code.id -> N références} d'un domaine (super-admin). Scan catalogue-dirigé des colonnes uuid *_id non-FK-ailleurs ; correct par unicité UUID. Alimente « utilisé par N fiches » + la garde delete-at-0.
+
+## `api.refresh_object_filter_caches(p_object_id text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_cuisine_type` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_allergen` _(high)_
+- reads `public.object_menu_item_dietary_tag` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_allergen` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+- reads `public.ref_code_dietary_tag` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+- writes `public.object` _(high)_
+
+> 2) Extend the cache-refresh function to also build search_document ---------
+> (full body — folded identically into schema_unified.sql)
+
+## `api.refresh_object_taxonomy_cache_for_domain(p_domain text)`
+- returns: `void`
+- reads `public.object` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- writes `public.object` _(high)_
+
+## `api.refresh_open_status()`
+- returns: `void`
+- writes `public.object` _(high)_
+
+> 5) Moteur de statut : la période active la PLUS SPÉCIFIQUE gagne ; une fermeture active force fermé.
+
+## `api.refresh_ref_code_taxonomy_closure(p_domain text)`
+- returns: `void`
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- writes `public.ref_code_taxonomy_closure` _(high)_
+
+## `api.reject_fiche_submission(p_submission_id uuid, p_review_note text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+
+> 18a/D9 — refuse une soumission entière. Motif OBLIGATOIRE (le prestataire doit savoir pourquoi) ; ne touche que les lignes encore pending.
+
+## `api.reject_pending_change(p_id uuid, p_review_note text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+- writes `public.pending_change` _(high)_
+
+> P2.1 §120 — Refuse une suggestion (note obligatoire). Aucun re-dispatch.
+
+## `api.render_format_currency(p_amount numeric, p_currency text, p_locale text)`
+- returns: `text`
+
+> =====================================================
+> Rendering helpers (currency, percent, dates, datetimes)
+> =====================================================
+
+## `api.render_format_date(p_date date, p_locale text)`
+- returns: `text`
+
+## `api.render_format_date_range(p_start date, p_end date, p_locale text)`
+- returns: `text`
+
+## `api.render_format_datetime_range(p_start timestamp with time zone, p_end timestamp with time zone, p_locale text, p_timezone text)`
+- returns: `text`
+
+## `api.render_format_percent(p_percent numeric, p_locale text)`
+- returns: `text`
+
+## `api.render_format_time(p_time time without time zone, p_locale text)`
+- returns: `text`
+
+## `api.reorder_portal_photos(p_object_id text, p_media_ids jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+
+## `api.request_legal_document(p_legal_id uuid, p_requested_at timestamp with time zone DEFAULT now())`
+- returns: `boolean`
+- writes `public.object_legal` _(high)_
+
+> =====================================================
+> Function to request a document for a legal record
+> =====================================================
+
+## `api.request_list_feature(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> Proposal lifecycle: create recipients in the same transaction as the first
+> request; clear all pending alerts as soon as a review resolves it.  The
+> direct self-feature path can also close a pending request, so it removes the
+> same alerts.
+
+## `api.reserve_portal_photo_analysis(p_object_id text, p_document_id uuid, p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `internal.portal_photo_analysis_settings` _(high)_
+- reads `public.app_ai_provider_config` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
+
+## `api.reserve_portal_photo_upload(p_object_id text, p_upload_id uuid, p_replace_media_id uuid DEFAULT NULL::uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)`
+- returns: `SETOF text` — SECURITY DEFINER
+
+> ---------- 4. Résolveur dynamique (wrapper du leaf de filtre) ----------
+> p_buckets : soit un tableau [{types,filters,search}], soit {buckets:[...]}.
+
+## `api.resolve_staging_dependencies(p_batch_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+
+## `api.resource_block_base(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.resource_block_contacts(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.resource_block_descriptions(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.resource_block_itinerary(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.resource_block_legal(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.resource_block_location(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.resource_block_media(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.resource_block_misc(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.resource_block_pricing(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.resource_block_render(p_payload jsonb)`
+- returns: `jsonb`
+
+## `api.restore_list(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> Réactivation explicite d'une liste personnelle ARCHIVÉE. NO-OP sur une
+> liste déjà active, et ne s'applique jamais à une liste à la une
+> (structurellement jamais archivée) — §3 revue architecte.
+
+## `api.retry_failed_media_downloads(p_limit integer DEFAULT 200)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `staging.media_temp` _(high)_
+- writes `staging.media_temp` _(high)_
+
+## `api.review_list_feature(p_list_id uuid, p_accept boolean)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
+- reads `public.object_list` _(high)_
+- writes `public.app_notification` _(high)_
+- writes `public.object_list` _(high)_
+
+> Admin DE CETTE ORG : accepte (met à la une) ou refuse (retire la
+> proposition) une proposition. Verrou AVANT décision (§5). Ne touche jamais
+> last_activity_at.
+
+## `api.rollback_staging_batch_compensate(p_batch_id text, p_force boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `staging.batch_commit_ledger` _(high)_
+- reads `staging.batch_commit_ledger_item` _(high)_
+- reads `staging.import_batches` _(high)_
+- writes `public.media` _(high)_
+- writes `public.object` _(high)_
+- writes `staging.batch_commit_ledger` _(high)_
+- writes `staging.import_batches` _(high)_
+
+## `api.rpc_create_object(p_object_type text, p_name text, p_region_code text DEFAULT NULL::text)`
+- returns: `text` — SECURITY DEFINER
+- writes `public.object` _(high)_
+
+> -------------------------------------------------------
+> F1. api.rpc_create_object(p_object_type, p_name, p_region_code)
+> Crée un objet via la surface métier sécurisée.
+> Exige : membership ORG actif (Niveau 1) + permission create_object (Niveau 2).
+> Status forcé à 'draft' : la publication passe obligatoirement par rpc_publish_object.
+> created_by forcé à auth.uid() : non paramétrable, non falsifiable.
+> ID généré automatiquement par le trigger (basé sur object_type + region_code).
+> Retourne : l'id TEXT de l'objet créé.
+> -------------------------------------------------------
+
+## `api.rpc_create_org(p_name text, p_region_code text DEFAULT 'RUN'::text, p_access_scope text DEFAULT 'own_objects_only'::text)`
+- returns: `text` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- writes `public.object` _(high)_
+- writes `public.org_config` _(high)_
+
+> Crée une organisation (objet ORG published + org_config) en une transaction. Superadmin plateforme uniquement — voie UNIQUE de création d'ORG (jamais rpc_create_object ni le dialog B1).
+
+## `api.rpc_deactivate_membership(p_membership_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.user_org_admin_role` _(high)_
+- writes `public.user_org_business_role` _(high)_
+- writes `public.user_org_membership` _(high)_
+
+> -------------------------------------------------------
+> rpc_deactivate_membership
+> Désactive un membership et ses rôles (métier + admin) en cascade.
+> Autorisation : org_admin (rank ≥ 30) de l'ORG cible, ou super_admin.
+> Anti-self : un admin ne peut pas désactiver son propre membership.
+> Rang : la cible doit avoir un rang admin strictement inférieur à l'appelant (§2.6).
+> -------------------------------------------------------
+
+## `api.rpc_delete_object(p_object_id text, p_confirm_name text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_consent` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_document` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.object_place` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.object` _(high)_
+- writes `public.object_deletion_log` _(high)_
+- writes `public.ref_document` _(high)_
+
+> Suppression définitive d'une fiche (§108) : superuser-only, établissements, archived requis, confirmation par nom. Journalise dans object_deletion_log, supprime l'objet (CASCADE) + les ref_document orphelinés, et retourne les URLs Storage (media + documents) à supprimer côté serveur.
+
+## `api.rpc_delete_object_external_id(p_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object_external_id` _(high)_
+- writes `public.object_external_id` _(high)_
+
+> 3. Delete one external identifier owned by the current user's ORG (admin-only, non-canonical).
+
+## `api.rpc_delete_ref_code(p_domain text, p_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code` _(high)_
+- writes `public.ref_code` _(high)_
+
+> Phase 7.5 — suppression définitive d'une valeur ref_code, UNIQUEMENT à 0 référence (sinon 23503) ; super-admin + domaine éditable (fail-closed).
+
+## `api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)`
+- returns: `void` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
+
+## `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_consent` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.contact_channel` _(high)_
+- reads `public.incident_report` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.object_review` _(high)_
+- writes `public.actor` _(high)_
+- writes `public.actor_channel` _(high)_
+- writes `public.actor_consent` _(high)_
+- writes `public.app_user_profile` _(high)_
+- writes `public.contact_channel` _(high)_
+- writes `public.crm_interaction` _(high)_
+- writes `public.crm_task` _(high)_
+- writes `public.fiche_submission` _(high)_
+- writes `public.gdpr_erasure_log` _(high)_
+- writes `public.incident_report` _(high)_
+- writes `public.object_legal` _(high)_
+- writes `public.object_review` _(high)_
+
+> Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id.
+
+## `api.rpc_grant_user_permission(p_target_user_id uuid, p_permission_code text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.user_permission` _(high)_
+
+> -------------------------------------------------------
+> D3. rpc_grant_user_permission
+> Accorde une permission additive à un user précis.
+> Autorisation : org_admin (rank 30) de l'ORG du user cible, ou superuser plateforme.
+> Anti-self (§2.6) : un admin ne peut pas s'auto-accorder une permission.
+> Idempotent : réactive une permission révoquée si elle existe déjà.
+> -------------------------------------------------------
+
+## `api.rpc_issue_partner_key(p_label text, p_scopes text[] DEFAULT '{}'::text[], p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `internal.partner_api_key` _(high)_
+
+> Émet une clé : renvoie la clé BRUTE UNE SEULE FOIS (jamais re-consultable).
+
+## `api.rpc_list_org_members(p_org_object_id text)`
+- returns: `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[], last_seen_at timestamp with time zone, role_permission_codes text[], is_platform_superuser boolean)` — SECURITY DEFINER
+- reads `auth.sessions` _(high)_
+- reads `auth.users` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+
+## `api.rpc_list_orgs()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.org_config` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Liste des organisations (ORG) avec périmètre d'accès et effectif actif. Superadmin plateforme uniquement.
+
+## `api.rpc_list_role_permissions(p_org_object_id text)`
+- returns: `TABLE(role_code text, permission_code text)` — SECURITY DEFINER
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Lecture de la matrice pour l'écran /team. SECURITY DEFINER + prédicat d'appartenance :
+> la fonction ne rend la matrice qu'à un membre actif de l'ORG demandée.
+
+## `api.rpc_publish_object(p_object_id text, p_publish boolean DEFAULT true)`
+- returns: `void` — SECURITY DEFINER
+
+> -------------------------------------------------------
+> F2. api.rpc_publish_object(p_object_id, p_publish)
+> Publie (TRUE) ou dépublie (FALSE) un objet.
+> Exige : permission publish_object + ORG active = publisher sur l'objet.
+>
+> Publication  (p_publish = TRUE)  → status = 'published'
+> published_at géré par trg_manage_object_published_at (premier passage uniquement).
+> Dépublication (p_publish = FALSE) → status = 'hidden'
+> 'hidden' = retrait temporaire du public, l'objet n'est pas remis en rédaction.
+> 'draft' est réservé aux objets non encore publiés.
+> published_at conservé (historique de première publication intact).
+> -------------------------------------------------------
+
+## `api.rpc_reorder_ref_code(p_domain text, p_ids uuid[])`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.ref_code` _(high)_
+
+> RÉORDONNE : position = rang (1-based) dans le tableau d'ids fourni.
+
+## `api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)`
+- returns: `void` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
+- reads `public.ref_code` _(high)_
+
+> Réordonnancement. Sans cette RPC, absorber RefCodeEditor ferait disparaître les flèches
+> monter/descendre des 52 domaines : une régression fonctionnelle déguisée en refonte.
+>
+> DEUX PIÈGES, tous deux vérifiés en base :
+> (a) `ref_language` porte `uq_ref_language_position` — un index UNIQUE PARTIEL sur
+> position. Permuter 1↔2 par deux UPDATE successifs viole l'unicité au premier.
+> L'écriture est donc EN DEUX PHASES : on pousse d'abord tout le monde dans une
+> plage libre (1 000 000 + rang), puis on redescend sur le rang final.
+> (b) une liste partielle ou dupliquée réordonnerait silencieusement de travers : on
+> exige l'ensemble EXACT des lignes du catalogue, sans doublon.
+
+## `api.rpc_reset_test_data()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.object` _(high)_
+- reads `public.org_config` _(high)_
+- writes `public.actor` _(high)_
+- writes `public.object` _(high)_
+
+> Vide et resseme le corpus du bac a sable. Superuser plateforme uniquement, et refuse de s'executer si l'ORG cible n'est pas is_test_org. Sans argument : la cible est constante et ne peut pas etre pointee sur une organisation de production.
+
+## `api.rpc_restore_object_version(p_object_id text, p_version_number integer)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object_version` _(high)_
+- writes `public.object` _(high)_
+
+> (3) Restore: apply ONLY writable canonical columns from the snapshot. EXCLUDES id, current_version,
+> created_at/by, updated_at, is_editing, all cached_*, the generated columns, and STATUS.
+
+## `api.rpc_revoke_admin_role(p_membership_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.user_org_admin_role` _(high)_
+
+> -------------------------------------------------------
+> rpc_revoke_admin_role
+> Retire le rôle admin d'un membre (sans toucher au rôle métier).
+> Autorisation : org_admin (rank 30), ou super_admin.
+> Anti-self (§2.6) : impossible de se retirer son propre rôle admin.
+> Gestion vers le bas seulement (§2.6) : rang cible < rang appelant.
+> No-op silencieux si la cible n'a pas de rôle admin actif.
+> -------------------------------------------------------
+
+## `api.rpc_revoke_partner_key(p_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `internal.partner_api_key` _(high)_
+
+> Révoque une clé (effet immédiat : partner_authenticate la refusera).
+
+## `api.rpc_revoke_user_permission(p_target_user_id uuid, p_permission_code text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.user_permission` _(high)_
+
+> -------------------------------------------------------
+> D4. rpc_revoke_user_permission
+> Révoque une permission individuelle d'un user (soft revoke).
+> Autorisation : org_admin (rank 30) de l'ORG du user cible, ou superuser plateforme.
+> Anti-self (§2.6) : un admin ne peut pas se retirer une permission lui-même.
+> No-op silencieux si la permission n'est pas active pour ce user.
+> -------------------------------------------------------
+
+## `api.rpc_set_actor_section_visibility(p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.org_actor_module_visibility` _(high)_
+
+> 4.5 Écriture de la matrice : rang admin ≥ 30 sur l'ORG (même seuil que
+> rpc_set_role_permission). Refuse le plancher dur — même pour le RE-rendre visible :
+> une ligne « legal visible » en base serait un mensonge, la fonction l'ignorerait.
+
+## `api.rpc_set_admin_role(p_membership_id uuid, p_role_code text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.user_org_admin_role` _(high)_
+
+> -------------------------------------------------------
+> rpc_set_admin_role
+> Attribue ou remplace le rôle admin d'un membre.
+> Autorisation : org_admin (rank 30) de l'ORG cible, ou super_admin.
+> Anti-self (§2.6) : auto-attribution interdite.
+> Gestion vers le bas seulement (§2.6) :
+> - nouveau rang cible < rang appelant
+> - rang actuel cible (si admin) < rang appelant
+> Invariant §2.5 : le membre doit avoir un rôle métier actif avant
+> de recevoir un rôle admin ("pas d'admin sans métier").
+> -------------------------------------------------------
+
+## `api.rpc_set_business_role(p_membership_id uuid, p_role_code text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.user_org_business_role` _(high)_
+
+> -------------------------------------------------------
+> rpc_set_business_role
+> Remplace le rôle métier actif d'un membre (rotation : désactiver + créer).
+> Autorisation : org_manager (rank ≥ 20) de l'ORG cible, ou super_admin.
+> Anti-self : un admin ne peut pas modifier son propre rôle métier.
+> Note : les rôles métier n'ont pas de hiérarchie de rang propre ;
+> le guard porte sur le rang admin de l'appelant uniquement.
+> -------------------------------------------------------
+
+## `api.rpc_set_object_status(p_object_id text, p_status text)`
+- returns: `text` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- writes `public.object` _(high)_
+
+## `api.rpc_set_ref_code_active(p_id uuid, p_domain text, p_active boolean)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.ref_code` _(high)_
+
+> (DÉS)ACTIVE une valeur ref_code.
+
+## `api.rpc_set_role_permission(p_org_object_id text, p_role_code text, p_permission_code text, p_granted boolean)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.org_role_permission` _(high)_
+
+> ─────────────────────────────────────────────────────────────────────────────
+> 4. Écriture de la matrice — rang ≥ 30, comme toute écriture de permission.
+> ─────────────────────────────────────────────────────────────────────────────
+
+## `api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.user_org_business_role` _(high)_
+- writes `public.user_org_membership` _(high)_
+
+> -------------------------------------------------------
+> rpc_upsert_membership
+> Crée un membership (+ rôle métier initial) ou réactive un membership inactif.
+> Autorisation : org_manager (rank ≥ 20) de l'ORG cible, ou super_admin.
+> Anti-self : un admin ne peut pas s'ajouter lui-même.
+> Invariant §2.5 : le rôle métier est obligatoire — toujours fourni à la création.
+> -------------------------------------------------------
+
+## `api.rpc_upsert_object_external_id(p_object_id text, p_source_system text, p_external_id text, p_last_synced_at timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- writes `public.object_external_id` _(high)_
+
+> 2. Upsert one external identifier on the CURRENT USER'S ORG (server-derived org; admin-only;
+> canonical sources rejected). ON CONFLICT respects uq_object_external_id_object_org_source.
+
+## `api.rpc_upsert_ref_code(p_domain text, p_name text, p_id uuid DEFAULT NULL::uuid, p_code text DEFAULT NULL::text, p_name_i18n jsonb DEFAULT NULL::jsonb, p_position integer DEFAULT NULL::integer)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code` _(high)_
+- writes `public.ref_code` _(high)_
+
+> CRÉE (p_id NULL) ou ÉDITE (p_id fourni) une valeur ref_code d'un domaine éditable.
+
+## `api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb)`
+- returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
+
+## `api.rpc_write_org_description(p_object_id text, p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_description` _(high)_
+- writes `public.object_description` _(high)_
+
+> Écrit/supprime la SURCOUCHE de description propre à l'ORG active de l'utilisateur.
+> Seul écrivain des lignes object_description scopées org_object_id (invariant CLAUDE.md).
+> Le serveur fixe org_object_id = current_user_org_id() : le client ne choisit pas l'ORG.
+> Payload tout-vide => suppression de la ligne (fallback canonique au rendu).
+
+## `api.run_staging_dedup(p_batch_id text, p_distance_meters integer DEFAULT 50, p_name_similarity real DEFAULT 0.45)`
+- returns: `jsonb` — SECURITY DEFINER
+
+## `api.save_actor_channel(p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- writes `public.actor_channel` _(high)_
+
+> Upsert canal de contact. INSERT : actor_id + kind_code + value requis ; UPDATE partiel
+> value/kind_code/is_primary. Gate = arme acteur (l'acteur de la ligne pour l'update).
+> Les triggers de la table s'appliquent et leurs erreurs remontent TELLES QUELLES :
+> trg_prevent_duplicate_actor_email (e-mail déjà porté par un autre acteur),
+> trg_actor_channel_email (forme d'e-mail), uq_actor_channel_primary (un primaire par
+> (acteur, kind)), uq_actor_channel_unique (doublon exact).
+
+## `api.save_actor_document(p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_code_document_type` _(high)_
+- writes `public.actor_document` _(high)_
+
+## `api.save_crm_actor(p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- writes `public.actor` _(high)_
+- writes `public.actor_object_role` _(high)_
+
+> INSERT now accepts a missing object_id. default_role_id preserves the intended
+> business role until the first establishment is created/linked.
+
+## `api.save_crm_interaction(p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_code_crm_sentiment` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+- writes `public.crm_interaction` _(high)_
+
+> Upsert interaction (id présent = UPDATE partiel ; topic/sentiment par code, clé présente
+> + valeur vide ⇒ effacement explicite). Modèle acteur-centré : ancrage acteur OU objet (au
+> moins un) ; autorisation par l'arme objet quand un contexte objet existe, sinon arme acteur.
+
+## `api.save_crm_task(p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.crm_task_assignee` _(high)_
+- writes `public.crm_task` _(high)_
+- writes `public.crm_task_assignee` _(high)_
+
+> ═══════════════════════════════════════════════════════════════════════════════════════
+> 6. api.save_crm_task — contrat `assignee_ids`
+> ═══════════════════════════════════════════════════════════════════════════════════════
+
+## `api.save_object_commercial(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.object_amenity` _(high)_
+- reads `public.object_capacity` _(high)_
+- reads `public.object_discount` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_group_policy` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_pet_policy` _(high)_
+- reads `public.object_price` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_capacity_metric` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_language_level` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_price_kind` _(high)_
+- reads `public.ref_code_price_unit` _(high)_
+- reads `public.ref_language` _(high)_
+- writes `public.object_amenity` _(high)_
+- writes `public.object_capacity` _(high)_
+- writes `public.object_discount` _(high)_
+- writes `public.object_environment_tag` _(high)_
+- writes `public.object_group_policy` _(high)_
+- writes `public.object_language` _(high)_
+- writes `public.object_payment_method` _(high)_
+- writes `public.object_pet_policy` _(high)_
+- writes `public.object_price` _(high)_
+- writes `public.object_price_period` _(high)_
+
+## `api.save_object_gallery(p_object_id text, p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gallery_write_receipt` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- writes `internal.gallery_write_receipt` _(high)_
+- writes `public.media` _(high)_
+
+## `api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_iti_associated_object` _(high)_
+- reads `public.object_iti_info` _(high)_
+- reads `public.object_iti_profile` _(high)_
+- reads `public.object_iti_section` _(high)_
+- reads `public.object_iti_stage` _(high)_
+- reads `public.object_place` _(high)_
+- reads `public.ref_iti_assoc_role` _(high)_
+- writes `public.object_iti_associated_object` _(high)_
+- writes `public.object_iti_info` _(high)_
+- writes `public.object_iti_profile` _(high)_
+- writes `public.object_iti_section` _(high)_
+- writes `public.object_iti_stage` _(high)_
+- writes `public.object_iti_stage_media` _(high)_
+
+## `api.save_object_openings(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.opening_period` _(high)_
+- reads `public.ref_code_opening_period_type` _(high)_
+- reads `public.ref_code_opening_schedule_type` _(high)_
+- reads `public.ref_code_weekday` _(high)_
+- writes `public.opening_period` _(high)_
+- writes `public.opening_schedule` _(high)_
+- writes `public.opening_time_frame` _(high)_
+- writes `public.opening_time_period` _(high)_
+- writes `public.opening_time_period_weekday` _(high)_
+
+> 4) Write path: resolve period_type_code -> id and persist it (mirrors schedule_type).
+
+## `api.save_object_places(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_place` _(high)_
+- reads `public.object_place_description` _(high)_
+- reads `public.object_zone` _(high)_
+- reads `public.ref_commune` _(high)_
+- writes `public.object_location` _(high)_
+- writes `public.object_place` _(high)_
+- writes `public.object_place_description` _(high)_
+- writes `public.object_zone` _(high)_
+
+## `api.save_object_relations(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.actor_object_role` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.object_relation` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_object_relation_type` _(high)_
+- reads `public.ref_org_role` _(high)_
+- writes `public.actor_object_role` _(high)_
+- writes `public.object_org_link` _(high)_
+- writes `public.object_relation` _(high)_
+
+> ⚠ BODY SYNC: this function body must stay byte-identical to the copy in migration_actor_links_editor.sql (8r re-applies it after this file on fresh installs). Edit BOTH or fresh ≠ live.
+> ⚠ DEPENDENCY (§208/T13b): the `actors` branch calls api.can_read_actor_contacts(text), created by
+> migration_actor_contacts_org_gate.sql (manifest 16u). The reference is resolved at RUNTIME, not at
+> CREATE time (plpgsql validates syntax only), so a fresh apply in manifest order is fine — nothing
+> between step 7 and 16u calls this RPC. On a LIVE database, apply 16u BEFORE (or in the same pass as)
+> any re-apply of this file or of 8r, or the actors branch raises 42883 at the first save.
+
+## `api.save_object_rooms(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_room_type` _(high)_
+- reads `public.object_room_type_amenity` _(high)_
+- reads `public.object_room_type_bed` _(high)_
+- reads `public.object_room_type_media` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_code_bed_type` _(high)_
+- reads `public.ref_code_room_type` _(high)_
+- reads `public.ref_code_view_type` _(high)_
+- writes `public.object_room_type` _(high)_
+- writes `public.object_room_type_amenity` _(high)_
+- writes `public.object_room_type_bed` _(high)_
+- writes `public.object_room_type_media` _(high)_
+
+## `api.save_object_workspace_sustainability(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_sustainability_action_category` _(high)_
+- writes `public.object_sustainability_action` _(high)_
+
+## `api.save_object_workspace_tags(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+- writes `public.tag_link` _(high)_
+
+## `api.search_actors(p_query text)`
+- returns: `TABLE(id uuid, display_name text, first_name text, last_name text, gender text, email text)` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+## `api.search_events_by_restaurant_cuisine(p_cuisine_types text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 20, p_offset integer DEFAULT 0)`
+- returns: `json`
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_cuisine_type` _(high)_
+- reads `public.object_relation` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+
+## `api.search_objects_by_label(p_label_value_id uuid, p_include_partial boolean DEFAULT true, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 20, p_offset integer DEFAULT 0)`
+- returns: `json`
+- reads `public.object` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.object_sustainability_action_label` _(high)_
+- reads `public.ref_classification_equivalent_action` _(high)_
+- reads `public.ref_classification_equivalent_group` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+
+> =====================================================
+> Search objects by label with partial action matches
+> =====================================================
+
+## `api.search_objects_by_name(p_term text, p_limit integer DEFAULT 8)`
+- returns: `TABLE(id text, name text, object_type object_type, status object_status, city text, image_url text)` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+> Concordance directe par nom (spec 2026-08-26) : navigation, pas filtrage — cherche tout le corpus visible indépendamment des filtres de l'Exploreur. Périmètre auto-gardé : published pour tous, + draft du périmètre étendu pour un éditeur (COALESCE sur la sonde à trois valeurs, §204) ; archived/hidden jamais. Consommée par le menu de la barre de recherche, le bandeau de résultats et la palette ⌘K.
+
+## `api.search_objects_with_deep_data(p_search_term text, p_object_types text[] DEFAULT NULL::text[], p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
+- returns: `json`
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+> =====================================================
+> Enhanced API function: Search objects with deep data
+> =====================================================
+
+## `api.search_restaurants_by_cuisine(p_cuisine_types text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 20, p_offset integer DEFAULT 0)`
+- returns: `json`
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_cuisine_type` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+
+## `api.send_portal_message(p_object_id text, p_subject text, p_body text, p_attachments jsonb DEFAULT '[]'::jsonb, p_reply_to text DEFAULT NULL::text, p_client_id uuid DEFAULT NULL::uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.app_notification` _(high)_
+- writes `public.crm_interaction` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `api.set_active_ai_provider(p_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.app_ai_provider_config` _(high)_
+- writes `public.app_ai_provider_config` _(high)_
+
+## `api.set_itinerary_track(p_object_id text, p_payload jsonb)`
+- returns: `jsonb`
+- reads `public.object_iti_profile` _(high)_
+- writes `public.object_iti` _(high)_
+- writes `public.object_iti_profile` _(high)_
+
+> =====================================================================
+> §111 Section 06 ITI editor — ingest the imported GPX/KML trace (client-parsed
+> to a GeoJSON LineString) and auto-derive metrics. Writes object_iti.geom (2D;
+> the trigger invalidates the GPX/KML cache), computes distance_km (ST_Length),
+> elevation_gain/loss (from the 3D Z values, before Force2D), and rebuilds
+> object_iti_profile (sampled, bounded ~300 points). p_payload = { geojson: <LineString|null> }.
+> SECURITY INVOKER + workspace_assert_can_write_object gate, like every canonical write.
+> =====================================================================
+
+## `api.set_list_featured(p_list_id uuid, p_featured boolean)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
+- reads `public.object_list` _(high)_
+- writes `public.app_notification` _(high)_
+- writes `public.object_list` _(high)_
+
+> Admin DE CETTE ORG : met directement SA PROPRE liste à la une (AUCUNE
+> exception superuser sur la propriété — 2e revue architecte §3), ou retire
+> une liste à la une de son ORG. Celle d'un collègue passe PAR
+> review_list_feature sur une proposition en attente — JAMAIS ici. Le retrait relance une période
+> active complète MAIS uniquement s'il agit réellement (idempotence : un
+> retrait répété sur une liste déjà non-featured est un NO-OP, ne relance pas
+> la rétention).
+
+## `api.set_list_items(p_list_id uuid, p_items jsonb)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_list` _(high)_
+- reads `public.object_list_item` _(high)_
+- writes `public.object_list` _(high)_
+- writes `public.object_list_item` _(high)_
+
+> =====================================================================
+> 11. Items statiques — verrou, reconcile non-destructif, cible normalisée UNIQUE
+> =====================================================================
+> §4 (2e revue architecte) : v_after comparait un payload FILTRÉ tandis que
+> le DELETE comparait le payload BRUT — un id devenu non publié/hors corpus
+> mais toujours présent dans le payload restait alors stocké SANS être
+> retiré ni mis à jour (le DELETE le voyait "encore référencé", l'INSERT le
+> rejetait), pendant que v_after le considérait déjà absent : l'horloge
+> avançait à chaque appel identique sans qu'aucune ligne stockée ne change
+> réellement. Correction : UNE cible normalisée (v_target — DISTINCT ON
+> object_id, published ET bon corpus de test, §2), appliquée À L'IDENTIQUE
+> au DELETE et à l'UPSERT, puis l'état réel FINAL (relu après écriture) est
+> comparé à l'état INITIAL — jamais un état "prévu" qui peut diverger du
+> stockage réel.
+
+## `api.set_provider_only_preference(p_enabled boolean)`
+- returns: `boolean`
+- reads `public.app_user_profile` _(high)_
+- writes `public.app_user_profile` _(high)_
+
+> Fusion atomique d'UNE clé ; ne remplace jamais les autres préférences.
+> INVOKER : la RLS du profil reste active, et aucun user_id n'est accepté.
+
+## `api.set_publication_workflow_timestamps()`
+- returns: `trigger`
+
+## `api.set_tag_color(p_anchor_object_id text, p_tag_id uuid, p_color text)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.ref_tag` _(high)_
+
+> §09: set a tag's GLOBAL color (ref_tag.color, HEX #rrggbb), gated per-object. Color is global per tag (D3). SECURITY DEFINER.
+
+## `api.share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> =====================================================================
+> 13. Partage (réglages) — verrou AVANT décision (§5 revue architecte)
+> =====================================================================
+> Corps inchangé depuis migration_object_list.sql à part le verrou, pour la
+> même raison que delete_list ci-dessus.
+
+## `api.start_portal_photo_analysis(p_request_id uuid, p_claim_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `internal.portal_photo_analysis_settings` _(high)_
+- reads `public.app_ai_provider_config` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.portal_photo_analysis` _(high)_
+
+## `api.strip_markdown(md text)`
+- returns: `text`
+
+> Plain-text derivation for Markdown-canonical description columns (manifest 14w).
+> Strips the editor's Markdown subset (headings, emphasis, lists, blockquotes, links, images,
+> escapes) and returns clean plain text. NULL→NULL (STRICT). Idempotent.
+> Consumers: get_object_card (card subtitle), get_object_resource (plain_description),
+> get_object_with_deep_data, ranked_label_search snippet.
+> Order is load-bearing: must be defined before get_object_card (~line 2006) in this file.
+
+## `api.strip_markdown_i18n(p_i18n jsonb)`
+- returns: `jsonb`
+
+> {lang: markdown} -> {lang: plain text}. Empty/whitespace values dropped, keys lowercased,
+> NULL / '{}' / all-empty -> NULL (jsonb_strip_nulls-friendly). Reuses api.strip_markdown.
+
+## `api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- writes `public.crm_task` _(high)_
+- writes `public.crm_task_assignee` _(high)_
+- writes `public.fiche_submission` _(high)_
+- writes `public.pending_change` _(high)_
+
+> 18a — « Soumettre pour vérification » du portail : soumission + N pending_change + tâche multi-assignée + notifications, en UNE transaction. Whitelist writers = DEUX entrées (save_object_commercial, save_object_openings), les SEULES que le portail émet — sous-ensemble STRICT d'approve_pending_change (§120), jamais un sur-ensemble sous peine de fiche bloquée à vie. Les cinq autres writers ont été retirés le 2026-09-04 : le plancher dur se contrôle sur metadata.section, le ré-dispatch se décide sur metadata.rpc, et rien ne couplait les deux clés.
+
+## `api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)`
+- returns: `uuid` — SECURITY DEFINER
+- writes `public.pending_change` _(high)_
+
+> Dépose une suggestion dans la file de modération (équipes internes). 18a : FERMÉE aux personas du portail acteur — elles ont leur propre porte, api.submit_actor_fiche, seule à appliquer le plancher de modules, la matrice de masquage, la whitelist de writers, le plafond de 40 changements et le verrou « une seule vérification ouverte ».
+
+## `api.suppress_sandbox_notification_emails(p_notification_ids uuid[])`
+- returns: `uuid[]` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
+- writes `public.app_notification` _(high)_
+
+> Service-only final check before SMTP: terminates discovery/test notification email, retaining in-app events and durable provenance.
+
+## `api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT '{}'::jsonb, p_raw_app_meta_data jsonb DEFAULT '{}'::jsonb)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.app_user_profile` _(high)_
+
+## `api.sync_classification_from_audit_session()`
+- returns: `trigger`
+- reads `public.audit_template` _(high)_
+- writes `public.object_classification` _(high)_
+
+## `api.sync_object_is_test(p_object_id text)`
+- returns: `void`
+- writes `public.object` _(high)_
+
+## `api.tg_object_list_touch()`
+- returns: `trigger`
+
+> Tenue à jour de updated_at
+
+## `api.thesaurus_admin(p_action text, p_payload jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb`
+
+> Thesaurus editorial actions, gated platform superuser, optimistic revisions and atomic publisher-role release.
+
+## `api.thesaurus_expand_taxonomy_codes(p_codes text[])`
+- returns: `text[]` — SECURITY DEFINER
+- reads `thesaurus.release_concept` _(high)_
+
+## `api.thesaurus_generation()`
+- returns: `bigint` — SECURITY DEFINER
+- reads `thesaurus.instance` _(medium)_
+
+> These helpers deliberately expose only the generation, never private editorial data.
+
+## `api.thesaurus_object_release()`
+- returns: `bigint`
+
+## `api.thesaurus_public(p_action text, p_release_id bigint DEFAULT NULL::bigint, p_params jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb`
+
+> Partner-only immutable thesaurus release reader. No direct editorial table access.
+
+## `api.thesaurus_reference_snapshot(p_domains text[] DEFAULT NULL::text[])`
+- returns: `jsonb` — dynamic SQL
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.v_capacity_metric_bounds` _(high)_
+
+> Reference values and vocabulary generation from one statement snapshot; fixed reference allowlist, invoker RLS.
+
+## `api.thesaurus_reference_statuses()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+
+> Public-reference status only: no editorial documents or native-to-concept IDs.
+
+## `api.thesaurus_taxonomy_matches(p_cached text[], p_selected text[], p_filters jsonb)`
+- returns: `boolean`
+
+## `api.to_base36(n bigint)`
+- returns: `text`
+
+> to_base36
+
+## `api.trail_create_manual(p_name text, p_visibility text DEFAULT 'private'::text, p_description_md text DEFAULT NULL::text)`
+- returns: `uuid` — SECURITY DEFINER
+- writes `public.trail` _(high)_
+
+## `api.trail_force_status(p_trail_id uuid, p_forced_status_code text, p_reason text, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.trail` _(high)_
+- writes `public.trail_status_history` _(high)_
+- writes `public.trail_status_override` _(high)_
+
+## `api.trail_link_source_record(p_source_record_id uuid, p_trail_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.trail` _(high)_
+- reads `public.trail_source_record` _(high)_
+- writes `public.trail_source_record` _(high)_
+- writes `public.trail_status_history` _(high)_
+
+## `api.trail_revoke_override(p_override_id uuid, p_note text DEFAULT NULL::text)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.trail_status_override` _(high)_
+
+## `api.trail_set_visibility(p_trail_id uuid, p_visibility text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.trail` _(high)_
+- writes `public.trail` _(high)_
+- writes `public.trail_status_history` _(high)_
+
+## `api.trail_sync_apply_service(p_sync_run_id uuid, p_features jsonb, p_options jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.trail_sync_run` _(high)_
+
+## `api.trail_sync_begin(p_source_code text, p_trigger text, p_dry_run boolean DEFAULT false, p_requested_by uuid DEFAULT NULL::uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.ref_trail_source` _(high)_
+- writes `public.trail_sync_run` _(high)_
+
+## `api.trail_sync_finalize(p_sync_run_id uuid, p_status text, p_report jsonb DEFAULT NULL::jsonb, p_http_status integer DEFAULT NULL::integer, p_error text DEFAULT NULL::text, p_layer_last_edit_date timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.trail_sync_run` _(high)_
+
+## `api.trail_update_editorial(p_trail_id uuid, p_name text DEFAULT NULL::text, p_description_md text DEFAULT NULL::text, p_editorial_geom_geojson jsonb DEFAULT NULL::jsonb)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.trail` _(high)_
+- writes `public.trail` _(high)_
+
+## `api.trg_object_deletion_log_is_test()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> Le tombstone herite du realm de la fiche AU MOMENT de sa suppression.
+
+## `api.trg_object_org_link_is_test()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+## `api.trg_org_config_is_test()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+
+> A config insert, flag change, key move or deletion re-derives every affected
+> organization and current primary child. An absent source uses the same false
+> fallback as an object without a primary organization. No authorization changes.
+
+## `api.trg_refresh_caches_from_menu_item_link()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+
+> For menu-item child link tables (dietary_tag / allergen / cuisine_type): resolve object_id via menu_item → menu.
+
+## `api.trg_refresh_caches_from_object_menu_item()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object_menu` _(high)_
+
+> §109 search_document sources not covered by the generic (object_id-direct) trigger above.
+> object_id resolved through the parent (menu / menu_item / tag_link target_pk).
+
+## `api.trg_refresh_caches_from_tag_link()`
+- returns: `trigger` — SECURITY DEFINER
+
+> tag_link is polymorphic; object_id is target_pk when target_table = 'object'.
+
+## `api.trg_refresh_object_filter_caches_from_child()`
+- returns: `trigger` — SECURITY DEFINER
+
+## `api.trg_refresh_ref_code_taxonomy_closure()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.ref_code_domain_registry` _(high)_
+
+## `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT NULL::legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
+- returns: `boolean`
+- writes `public.object_legal` _(high)_
+
+> =====================================================
+> Function to update a legal record
+> =====================================================
+
+## `api.update_list(p_list_id uuid, p_patch jsonb)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> =====================================================================
+> 10. Mise à jour des métadonnées — verrou + bump SEULEMENT sur diff réel
+> =====================================================================
+
+## `api.update_portal_photo_proposal_texts(p_object_id text, p_document_id uuid, p_expected jsonb, p_title text, p_description text)`
+- returns: `jsonb` — SECURITY DEFINER
+
+## `api.update_portal_photo_texts(p_object_id text, p_media_id uuid, p_expected jsonb, p_title text, p_description text)`
+- returns: `jsonb` — SECURITY DEFINER
+
+## `api.upsert_ai_provider(p_id uuid, p_label text, p_api_kind text, p_base_url text, p_model text, p_max_output_tokens integer, p_is_active boolean, p_extra jsonb DEFAULT '{}'::jsonb, p_api_key text DEFAULT NULL::text)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.app_ai_provider_config` _(high)_
+- writes `public.app_ai_provider_config` _(high)_
+
+## `api.upsert_app_branding(p_brand_name text DEFAULT NULL::text, p_logo_storage_path text DEFAULT NULL::text, p_logo_public_url text DEFAULT NULL::text, p_logo_mime_type text DEFAULT NULL::text, p_primary_color text DEFAULT NULL::text, p_accent_color text DEFAULT NULL::text, p_text_color text DEFAULT NULL::text, p_background_color text DEFAULT NULL::text, p_surface_color text DEFAULT NULL::text, p_marker_styles jsonb DEFAULT NULL::jsonb, p_extra jsonb DEFAULT NULL::jsonb, p_clear_logo boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.app_branding_settings` _(high)_
+
+> Creates or updates the global branding/theme settings used by the UI. Restricted to platform admins.
+
+## `api.upsert_org_branding(p_org_object_id text, p_brand_name text DEFAULT NULL::text, p_logo_storage_path text DEFAULT NULL::text, p_logo_public_url text DEFAULT NULL::text, p_logo_mime_type text DEFAULT NULL::text, p_primary_color text DEFAULT NULL::text, p_accent_color text DEFAULT NULL::text, p_text_color text DEFAULT NULL::text, p_background_color text DEFAULT NULL::text, p_surface_color text DEFAULT NULL::text, p_reset boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.org_branding_settings` _(high)_
+- writes `public.org_branding_settings` _(high)_
+
+> -----------------------------------------------------
+> 5) Écriture : contrat FULL-STATE PUT — chaque appel remplace la ligne entière (NULL = hérite).
+> Le dialog recharge d'abord get_org_branding().raw et renvoie TOUS les champs.
+> p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
+> -----------------------------------------------------
+
+## `api.upsert_org_smtp(p_org_object_id text, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text DEFAULT NULL::text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text, p_is_enabled boolean DEFAULT false, p_clear_password boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.org_smtp_settings` _(high)_
+- reads `vault.secrets` _(high)_
+- writes `public.org_smtp_settings` _(high)_
+- writes `vault.secrets` _(high)_
+
+## `api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
+- reads `vault.secrets` _(high)_
+- writes `public.app_smtp_config` _(high)_
+- writes `vault.secrets` _(high)_
+
+## `api.user_actor_ids()`
+- returns: `SETOF uuid`
+- reads `public.app_user_profile` _(high)_
+
+> Compatibility identity helper: current actor profile binding only; email never grants scope.
+
+## `api.user_can_assign_crm(p_user uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Assignabilité d'une tâche (demande PO 2026-06-12) : p_user est assignable ssi il partage
+> une ORG (membership actif) avec le caller — MÊME ensemble que api.list_crm_assignees, qui
+> peuple le select côté UI (une seule source de vérité). Superuser : tout app_user_profile
+> existant (un superuser sans membership renvoie [] depuis list_crm_assignees mais peut
+> assigner n'importe quel utilisateur connu — cohérent avec son périmètre non restreint).
+
+## `api.user_can_attach_object_document(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+## `api.user_can_create_object()`
+- returns: `boolean` — SECURITY DEFINER
+
+> -------------------------------------------------------
+> Phase 5 — api.user_can_create_object()
+> Définie ICI (avant la policy qui l'utilise) pour respecter l'ordre
+> d'exécution SQL : la policy INSERT référence la fonction, elle doit
+> exister au moment du CREATE POLICY.
+> -------------------------------------------------------
+
+## `api.user_can_manage_list_feature_action(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+> Capacité PRÉCISE affichée en carte : l'admin (ou superuser) peut-il faire
+> QUELQUE CHOSE sur CETTE ligne via set_list_featured/review_list_feature —
+> retirer une liste déjà à la une, featurer directement SA PROPRE liste, ou
+> revoir une proposition en attente. Ni "est admin de l'ORG" au sens large,
+> ni un droit d'édition général (§3 revue architecte).
+
+## `api.user_can_manage_object_legal(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+> Preserve the existing dedicated legal permission/publisher contract. Pin its
+> two table sources before making it a dependency of the document reader.
+
+## `api.user_can_manage_org_branding(p_org_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> -----------------------------------------------------
+> 3) Gouvernance : superuser plateforme OU admin (rang >= 30) actif de CETTE ORG.
+> -----------------------------------------------------
+
+## `api.user_can_manage_org_smtp(p_org_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Qui règle le relais SMTP d'une ORG : superadmin plateforme, ou admin ACTIF de rang >= 30 de
+> CETTE ORG. Même seuil que le branding et le portail acteurs — proposer la section plus bas
+> offrirait un écran dont chaque enregistrement échouerait en 42501.
+
+## `api.user_can_moderate_object(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+> P2.1 §120 — TRUE si l'appelant peut modérer les suggestions de cet objet (superuser OU validate_changes + membre ORG publisher).
+
+## `api.user_can_publish_object(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+> -------------------------------------------------------
+> E2. api.user_can_publish_object(p_object_id text)
+> Permission Niveau 2 : publish_object
+> ET l'ORG active du user est publisher sur l'objet (via object_org_link).
+> Règle prudente (§2.2) : seul le publisher contrôle le statut de publication.
+> Non branché en RLS : le changement de status passe par UPDATE, impossible de
+> distinguer OLD.status vs NEW.status dans USING/WITH CHECK sans RPC.
+> Conçu pour être appelé par rpc_publish_object (à créer en Phase 6).
+> -------------------------------------------------------
+
+## `api.user_can_read_crm(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+## `api.user_can_read_crm_actor(p_actor_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+
+## `api.user_can_read_list(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+> Lecture : propriétaire actif, membre actif pour une liste à la une, admin de
+> l'ORG pour une proposition en attente (revue), reprise d'orpheline, ou
+> superuser plateforme (accès global, explicite). AUCUN accès général "tout
+> membre de l'ORG lit toute liste" (règle 2 du cadrage).
+
+## `api.user_can_use_list(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+> Utilisation (dupliquer, obtenir/générer le lien de partage) : propriétaire
+> actif, membre actif pour une liste à la une, reprise d'orpheline, ou
+> superuser. Volontairement PLUS ÉTROIT que la lecture : un admin qui voit
+> une proposition EN ATTENTE (bras revue de user_can_read_list) n'a pas de
+> droit d'usage tant qu'il ne l'a pas acceptée.
+
+## `api.user_can_write_canonical(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+> -------------------------------------------------------
+> E3. api.user_can_write_canonical(p_object_id text)
+> Permission Niveau 2 : edit_canonical_when_publisher
+> ET l'ORG active du user est publisher sur l'objet.
+> Règle métier (§2.2) : seul le publisher modifie la donnée canonique.
+> Non branché en RLS : pas de surface de colonne isolée pour le canonique
+> vs l'enrichissement dans le schéma actuel.
+> Conçu pour être appelé par les RPC d'écriture canonique (Phase 6).
+> -------------------------------------------------------
+
+## `api.user_can_write_crm(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+> ─────────────────────────────────────────────────────────────────────────────
+> 1. Écriture CRM sur un ÉTABLISSEMENT.
+> ─────────────────────────────────────────────────────────────────────────────
+
+## `api.user_can_write_crm_actor(p_actor_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+
+> ─────────────────────────────────────────────────────────────────────────────
+> 2. Écriture CRM sur un ACTEUR.
+> ─────────────────────────────────────────────────────────────────────────────
+
+## `api.user_can_write_crm_task(p_task_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.crm_task` _(high)_
+
+> true si l'appelant peut écrire la tâche (même prédicat que save_crm_task : user_can_write_crm sur son object). Gate des routes /api/task-document (17i).
+
+## `api.user_can_write_enrichment(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+> -------------------------------------------------------
+> E4. api.user_can_write_enrichment(p_object_id text)
+> Permission Niveau 2 : edit_org_enrichment
+> ET l'ORG active du user dispose d'un lien object_org_link explicite
+> avec rôle 'publisher' ou 'contributor' (pas 'reader').
+> Règle métier (§2.2) : une ORG ne peut enrichir un objet que si elle a
+> un lien explicite avec un rôle au moins contributeur.
+> Non branché en RLS : aucune table d'enrichissement ORG distincte n'existe
+> encore dans le schéma — surface d'écriture non matérialisée.
+> Conçu pour être appelé par les RPC d'enrichissement ORG (Phase 6).
+> -------------------------------------------------------
+
+## `api.user_can_write_list(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+> Écriture d'une liste : son créateur, ou un admin d'ORG (rang >= 30) si le créateur n'est plus membre actif (reprise d'orpheline), ou le superuser plateforme. Le bras « n'importe quel rôle admin » a été retiré le 2026-08-31 (17k).
+
+## `api.user_can_write_object_canonical(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+> user_can_write_object_canonical: defined in migration_permission_write_paths.sql (SP-1), \ir'd
+> AFTER this file — but the per-command canonical_* write policies below reference it (WITH CHECK /
+> USING validate at CREATE). Stub here; SP-1 CREATE OR REPLACEs it with the real DEFINER body.
+
+## `api.user_has_permission(p_permission_code text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+
+> Droits effectifs : exception individuelle OU rôle métier de l'ORG (§227). Le chemin org_permission a été retiré le 2026-08-31 — il accordait sans regarder le rôle.
+
+## `api.user_is_list_org_admin(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+> « Est admin de l'ORG de cette liste » (rang >= 30 DANS CETTE ORG, ou
+> superuser). Indépendant de la propriété — c'est ce qui permet à un admin de
+> revoir la liste d'un collègue sans lui donner de droit d'édition général.
+
+## `api.validate_audit_result_points()`
+- returns: `trigger`
+- reads `public.audit_criteria` _(high)_
+
+## `api.validate_object_business_timezone()`
+- returns: `trigger`
+
+## `api.validate_object_hotel_positioning()`
+- returns: `trigger`
+- reads `public.object` _(high)_
+- reads `public.ref_code` _(high)_
+
+## `api.validate_object_taxonomy_assignment()`
+- returns: `trigger`
+- reads `public.object` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_domain_registry` _(high)_
+
+## `api.validate_promotion_code(p_code text, p_object_id text DEFAULT NULL::text)`
+- returns: `json`
+- reads `public.object` _(high)_
+- reads `public.promotion` _(high)_
+- reads `public.promotion_object` _(high)_
+
+> =====================================================
+> Validate promotion code for an object
+> =====================================================
+
+## `api.validate_ref_code_taxonomy_hierarchy()`
+- returns: `trigger`
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_domain_registry` _(high)_
+
+## `api.watchdog_mark_stale_batches(p_stale_minutes integer DEFAULT 30, p_limit integer DEFAULT 200)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `staging.import_batches` _(high)_
+- writes `staging.import_batches` _(high)_
+
+## `api.withdraw_portal_photo(p_object_id text, p_media_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+
+## `audit.attach_missing_triggers()`
+- returns: `void` — SECURITY DEFINER, dynamic SQL
+
+> Attach audit triggers (invoked at end of script to include late-created tables).
+
+## `audit.create_monthly_partition(partition_date timestamp with time zone)`
+- returns: `text` — dynamic SQL
+
+> 16e (§146): born-gated + self-repairing — partitions do NOT inherit RLS/policies from the
+> parent, so the creator ALWAYS re-asserts ENABLE RLS + the policy pair (wrapped §39 form).
+> The api.is_platform_superuser() arm is added only when that function exists (it is created by
+> rls_policies.sql, applied AFTER this file on a fresh build; the rls_policies partition loop
+> re-creates the policy WITH the arm on the partitions created below).
+
+## `audit.drop_old_partitions(months_to_keep integer DEFAULT 12)`
+- returns: `text` — dynamic SQL
+
+## `audit.ensure_future_partitions(months_ahead integer DEFAULT 3)`
+- returns: `text`
+
+## `audit.get_month_partition_name(partition_date timestamp with time zone)`
+- returns: `text`
+
+## `audit.log_row_changes()`
+- returns: `trigger` — SECURITY DEFINER
+- writes `audit.audit_log` _(high)_
+
+## `audit.maintain_partitions()`
+- returns: `text`
+
+> 16e (§146): the daily cron entrypoint maintains BOTH partitioned parents — audit.audit_log AND
+> public.object_version (whose creator was never wired anywhere: rows silently piled into
+> object_version_default from 2026-06 until 16e re-homed them). Retention stays audit-only:
+> object_version rows are product data (version restore §98/14r), never dropped here.
+
+## `audit.redact_subject(p_table text, p_match_key text, p_match_val text, p_pii_cols text[])`
+- returns: `integer` — SECURITY DEFINER
+- writes `audit.audit_log` _(high)_
+
+> ---------------------------------------------------------------------
+> 2. audit.redact_subject — ajoute le matching after_data
+> ---------------------------------------------------------------------
+
+## `internal.actor_in_current_realm(p_actor_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+
+## `internal.backfill_list_feature_notifications()`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+> Historical pending proposals become visible immediately after deployment.
+> The unique index makes this safe to rerun and avoids duplicate alerts.
+
+## `internal.build_list_detail_json(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+
+> =====================================================================
+> 7. Assemblage du détail (interne — jamais exposé à PostgREST)
+> =====================================================================
+> Factorisé hors de `api.get_list` pour que les RPC d'action (review/set
+> featured/restore) puissent, APRÈS leur propre mutation, rendre le détail
+> SI ENCORE LISIBLE ou `NULL` sinon — sans jamais lever une exception juste
+> parce que la visibilité a changé À CAUSE de l'action qu'on vient d'exécuter.
+> AUCUNE vérification d'autorisation ici : chaque appelant a déjà fait la
+> sienne avant d'appeler cette fonction.
+
+## `internal.capture_dashboard_realm_snapshots(p_date date, p_is_test boolean)`
+- returns: `integer`
+- reads `internal.v_object_essentials` _(high)_
+- reads `public.actor` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_code_amenity_family` _(high)_
+- reads `storage.objects` _(medium)_
+- writes `public.metric_snapshot` _(high)_
+
+> Explicit realm argument for the scheduled writer: no JWT impersonation, no
+> reliance on the current account, and the same completeness rounding as the live KPI.
+
+## `internal.compute_open_status(p_at timestamp with time zone)`
+- returns: `TABLE(object_id text, is_open boolean)`
+- reads `public.object` _(high)_
+- reads `public.opening_period` _(high)_
+- reads `public.opening_schedule` _(high)_
+- reads `public.opening_time_frame` _(high)_
+- reads `public.opening_time_period` _(high)_
+- reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
+
+## `internal.crm_backfill_assignees_from_owner()`
+- returns: `integer`
+- reads `public.crm_task` _(high)_
+- writes `public.crm_task_assignee` _(high)_
+
+> Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie.
+
+## `internal.crm_row_in_current_realm(p_object_id text, p_actor_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+
+## `internal.dashboard_crm_interactions()`
+- returns: `SETOF crm_interaction`
+- reads `public.actor` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.object` _(high)_
+
+## `internal.dashboard_object_ids()`
+- returns: `TABLE(object_id text)`
+- reads `public.object` _(high)_
+
+## `internal.gallery_arm_photo_reservation(p_object_id text, p_document_id uuid, p_replace_media_id uuid)`
+- returns: `void`
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `internal.gallery_assert_photo_capacity(p_object_id text, p_previous_usage integer, p_previous_published integer)`
+- returns: `void`
+
+## `internal.gallery_bind_photo_proposal()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `internal.gallery_capture_photo_proposal_usage()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+## `internal.gallery_photo_reservations(p_object_id text)`
+- returns: `TABLE(document_id uuid, replace_media_id uuid)`
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.gallery_photo_usage(p_object_id text)`
+- returns: `integer`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
+## `internal.gallery_published_photo_count(p_object_id text)`
+- returns: `integer`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
+## `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_classification` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_document` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> Returns active private Bertel attachment documents for one object. Authorization is object-scoped through user_can_write_object_canonical; unauthorized callers receive {authorized:false,documents:[]}.
+
+## `internal.grant_test_org_permissions()`
+- returns: `jsonb`
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.org_permission` _(high)_
+- writes `public.org_role_permission` _(high)_
+- writes `public.user_org_business_role` _(high)_
+
+> Donne aux membres NOMMES du bac a sable les droits d'un EDITEUR au sens de §227 : jeu complet (12) sur le role `editor`, + ce role aux membres qui n'en ont aucun. Le role `contributor` reste a 7 — le compte decouverte partage de codex/public-sandbox-entry le porte, et son test exige qu'il n'ait PAS write_crm_notes. N'ECRASE JAMAIS un role existant — le visiteur decouverte DOIT rester `contributor`, sans quoi api.get_sandbox_discovery_user() leve UNSAFE_SANDBOX_IDENTITY et l'Espace de test devient indisponible. Desactive au passage toute ligne org_permission (table RETIREE par §227, dont la migration refuse de s'appliquer s'il en reste une active).
+
+## `internal.guard_actor_object_realm()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.object` _(high)_
+
+> A caller allowed to edit a production object must not attach a sandbox actor by UUID.
+> Table triggers cover every writer, including workspace RPCs and service-role routes.
+
+## `internal.guard_notification_external_email()`
+- returns: `trigger` — SECURITY DEFINER
+
+## `internal.list_grid_summary(p_list_id uuid)`
+- returns: `TABLE(item_count integer, type_breakdown jsonb, cover_image text)` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> =====================================================================
+> 6. Résumé de grille (compte/répartition/couverture) — résolu UNE FOIS
+> =====================================================================
+> §6 revue architecte : les 3 grilles appelaient auparavant 3 fois
+> api.list_effective_object_ids par ligne de liste (couverture, compte,
+> répartition). Ce helper le fait UNE fois (CTE MATERIALIZED) et dérive les
+> trois valeurs de la même résolution. TOUJOURS published ET du bon corpus
+> de test (§2/§4 revue architecte, via api.list_effective_object_ids) : un
+> item statique non publié OU hors corpus (brouillon ou fiche test, quelle
+> que soit son ORG) ne compte JAMAIS dans item_count/type_breakdown, et ne
+> peut JAMAIS devenir la couverture. Jamais exposé (ni grant PUBLIC, ni RPC dédiée) :
+> consommé uniquement par les grilles ci-dessous.
+
+## `internal.list_sender_authorized(p_list_id uuid, p_user_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+
+> Vérifie que p_sender_id (fourni par la route serveur, PAS déduit d'un JWT —
+> service_role n'en a pas) est autorisé à UTILISER cette liste. §1 revue
+> architecte : `created_by` ne porte aucune FK et survit à la suppression
+> d'un compte — les bras propriétaire/à-la-une exigent désormais
+> EXPLICITEMENT `internal.org_membership_active(p_user_id, org)` (existence
+> ET adhésion active) AVANT d'être considérés, jamais un simple
+> `created_by = p_user_id`. Le bras orpheline revérifie déjà l'adhésion active
+> du SENDER via internal.org_is_admin (rang scopé §2). Le bras superuser
+> passe par app_user_profile.role (jamais auth.role(), qui vaudrait TRUE pour
+> la clé service_role elle-même).
+
+## `internal.lock_object_realm_sources(p_org_ids text[])`
+- returns: `void`
+- reads `public.object` _(high)_
+
+> Source transitions serialize by organization before touching derived object
+> rows. The object guard never takes these locks: it already owns an object row,
+> whereas a config transition owns its config row before updating objects.
+> A SHARE lock on the organization row also makes a stale REPEATABLE READ source
+> transition fail with 40001 instead of accepting a pre-flip snapshot.
+
+## `internal.notification_has_sandbox_context(p_recipient_id uuid, p_created_by uuid, p_task_id uuid, p_payload jsonb)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.object` _(high)_
+
+## `internal.notify_list_feature_reviewers(p_list_id uuid)`
+- returns: `integer` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.app_notification` _(high)_
+
+> Deliver to the same population allowed to review a list: active rank-30+
+> admins of its exact ORG, plus explicit platform superusers.  The helper is
+> internal because it takes an arbitrary list id and writes another user's
+> inbox.
+
+## `internal.object_document_matches_object(p_document_id uuid, p_object_id text)`
+- returns: `boolean`
+- reads `public.object_classification` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.object_in_current_realm(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+## `internal.org_admin_rank(p_user_id uuid, p_org_object_id text)`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Rang admin de p_user_id DANS CETTE ORG PRÉCISE (jamais agrégé toutes ORG
+> confondues, à l'inverse de api.current_user_admin_rank()). NULL si aucune
+> adhésion active + rôle admin actif dans p_org_object_id.
+
+## `internal.org_is_admin(p_user_id uuid, p_org_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+> p_user_id est-il admin (rang >= 30) DE CETTE ORG PRÉCISE ? Implique déjà
+> une adhésion active (la jointure d'internal.org_admin_rank l'exige) —
+> aucun appelant n'a besoin de revérifier org_membership_active en plus.
+
+## `internal.org_membership_active(p_user_id uuid, p_org_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.user_org_membership` _(high)_
+
+> Le créateur (ou tout p_user_id) est-il ACTIVEMENT membre de cette ORG ?
+> `user_org_membership.user_id` référence `users(id) ON DELETE CASCADE` : un
+> compte réellement supprimé n'a donc plus AUCUNE ligne ici, et cette
+> fonction rend FALSE pour lui — c'est ce qui couvre à la fois "ancien
+> membre" (adhésion désactivée) ET "compte supprimé" (adhésion disparue) en
+> un seul test.
+
+## `internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.pending_change` _(high)_
+
+## `internal.photo_analysis_assert_owner(p_object_id text, p_document_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.photo_analysis_envelope(p_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.photo_analysis_json(p_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.photo_analysis_local_day(p_at timestamp with time zone)`
+- returns: `date`
+
+## `internal.photo_analysis_reset_at(p_day date)`
+- returns: `timestamp with time zone`
+
+## `internal.photo_assessment_valid(p_value jsonb)`
+- returns: `boolean`
+
+## `internal.portal_photo_actor_writes_enabled()`
+- returns: `boolean`
+
+## `internal.portal_photo_appeal_document(p_interaction_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.portal_photo_assert_actor(p_object_id text)`
+- returns: `uuid` — SECURITY DEFINER
+
+## `internal.portal_photo_assert_writes_open()`
+- returns: `void`
+
+## `internal.portal_photo_order_snapshot(p_object_id text)`
+- returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
+## `internal.portal_photo_text_snapshot(p_title text, p_description text, p_title_i18n jsonb, p_description_i18n jsonb, p_revision text)`
+- returns: `jsonb`
+
+## `internal.portal_photo_workspace_json(p_object_id text, p_actor_id uuid)`
+- returns: `jsonb`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `internal.portal_photo_analysis_settings` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.app_ai_provider_config` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.media` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+
+## `internal.portal_photos_json(p_object_id text)`
+- returns: `jsonb`
+- reads `public.media` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+
+## `internal.provider_crm_interactions()`
+- returns: `SETOF crm_interaction`
+- reads `public.actor_object_role` _(high)_
+- reads `storage.objects` _(medium)_
+
+## `internal.provider_object_ids()`
+- returns: `TABLE(object_id text)`
+- reads `public.actor_object_role` _(high)_
+
+> Helpers privés : accessibles uniquement depuis les RPC autorisées ci-dessous.
+
+## `internal.purge_expired_lists()`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> Purge annuelle des listes NON mises à la une, inactives depuis 1 an (last_activity_at). Cascade object_list_item (FK ON DELETE CASCADE) : les items disparaissent, jamais les fiches touristiques/media. Inaccessible à tout client (REVOKE ALL FROM PUBLIC, aucun GRANT posé) ; exécutée par le cron quotidien purge-expired-lists (voir docs/listes-cycle-vie.md).
+
+## `internal.recompute_trail_status(p_trail_id uuid)`
+- returns: `void`
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
+- reads `public.trail_status_override` _(high)_
+- writes `public.trail` _(high)_
+- writes `public.trail_status_history` _(high)_
+
+## `internal.ref_catalog_access(p_catalog_key text)`
+- returns: `text`
+- reads `internal.v_ref_catalog` _(high)_
+- reads `public.ref_catalog_registry` _(high)_
+
+> Accès EFFECTIF : DÉRIVÉ d'abord, registre ensuite. Les dérivés ne peuvent pas être
+> oubliés au seed. Consommé par le maître ET par le détail — sans quoi une table sans
+> clé primaire s'afficherait éditable dans la liste puis verrouillée à l'ouverture.
+
+## `internal.ref_catalog_cast_expr(p_columns jsonb, p_name text, p_src text)`
+- returns: `text`
+
+> Valeur castée au type découvert, réutilisée par l'INSERT, le SET et le WHERE.
+> Sans cast, (p_values->>'is_required') rend du texte et une colonne booléenne le refuse.
+> Le type vient de la VUE, jamais de l'appelant : un type fourni par le client serait une injection.
+
+## `internal.ref_catalog_label_column(p_catalog_key text)`
+- returns: `text`
+- reads `internal.v_ref_catalog` _(high)_
+- reads `public.ref_catalog_registry` _(high)_
+
+> Cascade de libellé. Une déclaration par table serait la RÈGLE et non l'exception
+> (12 des 32 tables n'ont pas de `name`), et chaque oubli produirait une ligne muette.
+> Rend NULL pour les matrices : leur libellé se compose depuis la clé, côté front.
+
+## `internal.ref_catalog_readonly_reason(p_catalog_key text)`
+- returns: `text`
+- reads `internal.v_ref_catalog` _(high)_
+- reads `public.ref_catalog_registry` _(high)_
+
+## `internal.ref_catalog_row_count(p_table text)`
+- returns: `bigint` — dynamic SQL
+- reads `internal.v_ref_catalog` _(high)_
+
+## `internal.resolve_fiche_submission(p_submission_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+- writes `public.app_notification` _(high)_
+- writes `public.crm_task` _(high)_
+- writes `public.fiche_submission` _(high)_
+
+> 18a §8 — statut agrégé d'une soumission dont plus aucune ligne n'est pending : approved (tout applied/approved), rejected (tout rejected), partial (mélange) ; ferme la tâche et notifie l'acteur (payload SANS nom, RGPD). Appelée par le trigger trg_fiche_submission_resolve, jamais directement.
+
+## `internal.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)`
+- returns: `SETOF text` — SECURITY DEFINER
+
+> Moteur de résolution des listes dynamiques (plafond 2001). NON exposé : joignable uniquement depuis un SECURITY DEFINER qui a déjà appliqué sa propre garde. Le contrat public api.resolve_list_object_ids reste plafonné à 200. §211
+
+## `internal.seed_test_corpus(p_per_type integer DEFAULT 15)`
+- returns: `jsonb`
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_price` _(high)_
+- reads `public.opening_period` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_price_kind` _(high)_
+- reads `public.ref_code_price_unit` _(high)_
+- reads `public.ref_org_role` _(high)_
+- writes `public.actor` _(high)_
+- writes `public.actor_object_role` _(high)_
+- writes `public.contact_channel` _(high)_
+- writes `public.object` _(high)_
+- writes `public.object_amenity` _(high)_
+- writes `public.object_classification` _(high)_
+- writes `public.object_description` _(high)_
+- writes `public.object_location` _(high)_
+- writes `public.object_org_link` _(high)_
+- writes `public.object_price` _(high)_
+- writes `public.opening_period` _(high)_
+
+> Chaque fiche est rattachee a l'ORG de test comme ORG PRIMAIRE : c'est CE lien
+> qui, via le trigger de migration_test_org_isolation.sql, la marque is_test. On
+> ne choisit JAMAIS is_test independamment de cette source. Pour rejouer l UPSERT
+> d une fiche deja rattachee, l INSERT transmet la derivation canonique courante :
+> BEFORE INSERT s execute avant ON CONFLICT, meme si le flag ne sera pas modifie.
+> Une fiche neuve reste false puis le lien primaire la classe atomiquement.
+
+## `internal.seed_test_crm()`
+- returns: `jsonb`
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.crm_task_assignee` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_crm_sentiment` _(high)_
+- reads `public.ref_code_demand_subtopic` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.actor` _(high)_
+- writes `public.actor_channel` _(high)_
+- writes `public.crm_interaction` _(high)_
+- writes `public.crm_task` _(high)_
+- writes `public.crm_task_assignee` _(high)_
+
+> CRM du corpus de test : interactions variees (types, sens, 6 statuts, sujets/sous-sujets coherents, sentiments, 8 mois d'historique), taches (4 statuts, 4 priorites, moitie en retard, multi-assignees) et prospects (acteurs rattaches a l'ORG, e-mails en .test). Cloisonne PAR CONSTRUCTION : current_user_crm_object_ids part de l'ORG.
+
+## `internal.seed_test_facets(p_id text, p_type text, p_i integer, p_src text DEFAULT NULL::text)`
+- returns: `void`
+- reads `public.object_act` _(high)_
+- reads `public.object_fma` _(high)_
+- reads `public.object_fma_occurrence` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_iti_info` _(high)_
+- reads `public.object_iti_practice` _(high)_
+- reads `public.object_iti_profile` _(high)_
+- reads `public.object_iti_stage` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_meeting_room` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_room_type` _(high)_
+- reads `public.ref_code_iti_practice` _(high)_
+- reads `public.ref_code_menu_category` _(high)_
+- reads `public.ref_code_room_type` _(high)_
+- reads `public.ref_code_view_type` _(high)_
+- writes `public.object_act` _(high)_
+- writes `public.object_fma` _(high)_
+- writes `public.object_fma_occurrence` _(high)_
+- writes `public.object_iti` _(high)_
+- writes `public.object_iti_info` _(high)_
+- writes `public.object_iti_practice` _(high)_
+- writes `public.object_iti_profile` _(high)_
+- writes `public.object_iti_stage` _(high)_
+- writes `public.object_meeting_room` _(high)_
+- writes `public.object_menu` _(high)_
+- writes `public.object_menu_item` _(high)_
+- writes `public.object_room_type` _(high)_
+
+> Profondeur PAR TYPE du corpus de test : object_iti (+etapes, pratiques, profil, trace), object_fma (+occurrences), object_act, types de chambre, salles de reunion, carte. Suit ref_facet_applicability a la lettre — 7 types n'ont aucune facette. Idempotent (purge avant reecriture).
+
+## `internal.seed_test_media(p_id text, p_type text, p_i integer)`
+- returns: `void`
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_iti_stage` _(high)_
+- reads `public.object_iti_stage_media` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_media` _(high)_
+- reads `public.object_room_type` _(high)_
+- reads `public.object_room_type_media` _(high)_
+- reads `public.ref_code_media_tag` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+- writes `public.media_tag` _(high)_
+- writes `public.object` _(high)_
+- writes `public.object_iti_stage_media` _(high)_
+- writes `public.object_menu_item_media` _(high)_
+- writes `public.object_room_type_media` _(high)_
+
+> Medias du corpus de test : 3-5 photos par fiche (une principale), etiquettes, et les liens de facette (etapes ITI, chambres, plats). Emprunte un vivier BORNE de 24 URLs publiques reelles — la chaine seulement, jamais un octet ; ne touche JAMAIS au stockage. Idempotent.
+
+## `internal.stamp_actor_test_realm()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.org_config` _(high)_
+
+## `internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.app_notification` _(high)_
+- reads `public.pending_change` _(high)_
+- writes `public.app_notification` _(high)_
+
+## `internal.test_actor_name(p_type text, p_i integer)`
+- returns: `text`
+
+> Noms d'acteurs FICTIFS. Jamais tires du corpus reel : c'est la ligne rouge de
+> l'arbitrage hybride — on emprunte des structures, jamais des personnes.
+>
+> Les deux indices derivent d'un HACHAGE de (type, rang) et non d'une arithmetique
+> sur `length(p_type)` : tous les codes de type font 3 ou 4 caracteres, donc la
+> longueur ne prend que DEUX valeurs et ne produisait que 30 noms distincts pour
+> 270 fiches — un annuaire de test ou chaque personne detient neuf etablissements
+> ne permet d'exercer ni le CRM, ni la recherche d'acteurs, ni les regroupements.
+
+## `internal.test_corpus_id(p_type text, p_i integer)`
+- returns: `text`
+
+> Id conforme a chk_object_id_shape (3 lettres + 3 alphanum + 10 alphanum) :
+> `TST` occupe la place que `RUN` occupe sur les fiches reelles.
+
+## `internal.test_corpus_name(p_type text, p_i integer)`
+- returns: `text`
+
+> Un nom credible par type. Volontairement realiste : un corpus intitule
+> « Objet 12 » ne permet d'evaluer ni une recherche, ni un tri, ni une mise en page.
+
+## `internal.test_org_id()`
+- returns: `text`
+
+> Id de l'ORG bac a sable. Source unique pour le seed, la remise a zero et les tests.
+
+## `internal.tg_pending_change_notifications()`
+- returns: `trigger` — SECURITY DEFINER
+
+## `internal.tg_remove_list_feature_notifications()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
+- writes `public.app_notification` _(high)_
+
+> Deleting a list through its RPC, retention purge, or an administrative SQL
+> path must not leave an orphaned inbox item.  This is intentionally an AFTER
+> DELETE trigger: the payload has no FK by design and must not invent one.
+
+## `internal.trail_expire_overrides()`
+- returns: `void`
+- reads `public.trail` _(high)_
+- reads `public.trail_source_record` _(high)_
+- reads `public.trail_status_override` _(high)_
+- writes `public.trail_status_history` _(high)_
+
+## `internal.trail_recompute_status_self_trigger()`
+- returns: `trigger`
+
+## `internal.trail_recompute_status_trigger()`
+- returns: `trigger`
+
+## `internal.trail_sync_apply(p_sync_run_id uuid, p_features jsonb, p_options jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb`
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail_geometry_version` _(high)_
+- reads `public.trail_source_record` _(high)_
+- reads `public.trail_sync_run` _(high)_
+- writes `public.trail` _(high)_
+- writes `public.trail_geometry_version` _(high)_
+- writes `public.trail_manager_link` _(high)_
+- writes `public.trail_source_record` _(high)_
+- writes `public.trail_status_history` _(high)_
+
+## `internal.update_portal_photo_texts(p_object_id text, p_id uuid, p_private boolean, p_expected jsonb, p_title text, p_description text)`
+- returns: `jsonb`
+- reads `public.actor_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.media` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.actor` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_config` _(high)_
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+
+> Recipient form of api.user_can_moderate_object. No JWT substitution: the
+> caller remains the contributor throughout submission. This internal helper
+> mirrors the effective permission's two independent grants and the publisher
+> scope; administrative rank alone never grants moderation.
+
+## `internal.validate_portal_photo_additions(p_object_id text, p_payload jsonb, p_user_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+## `internal.workspace_assert_can_write_object(p_object_id text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> 2) Workspace gate (was: is_object_owner only).
+
+## `internal.workspace_jsonb_array(p_value jsonb)`
+- returns: `jsonb`
+
+## `internal.workspace_jsonb_object(p_value jsonb)`
+- returns: `jsonb`
+
+## `internal.workspace_result(p_success boolean DEFAULT true, p_changed_counts jsonb DEFAULT '{}'::jsonb, p_skipped_fields text[] DEFAULT ARRAY[]::text[], p_warnings text[] DEFAULT ARRAY[]::text[])`
+- returns: `jsonb`
+
+## `internal.workspace_uuid(p_value text)`
+- returns: `uuid`
+
+## `public.create_object_version_monthly_partition(partition_date timestamp with time zone)`
+- returns: `text` — dynamic SQL
+
+> ============================================================================
+> 1) object_version partition creator — born-gated + self-repairing
+> ============================================================================
+
+## `public.enforce_classification_single_selection()`
+- returns: `trigger`
+- reads `public.object_classification` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+
+## `public.enforce_single_main_media()`
+- returns: `trigger`
+- writes `public.media` _(high)_
+
+## `public.ensure_object_version_partitions(months_ahead integer DEFAULT 3)`
+- returns: `text`
+
+> 16e (§146): monthly horizon for object_version — called by audit.maintain_partitions() (daily
+> cron), mirror of audit.ensure_future_partitions.
+
+## `public.fiche_submission_after_review()`
+- returns: `trigger` — SECURITY DEFINER
+
+> 18a §8 — trigger de résolution sur pending_change. SECURITY DEFINER : la résolution doit tourner quel que soit le chemin qui a tranché la ligne (unitaire, groupé, correctif service_role).
+
+## `public.immutable_unaccent(text)`
+- returns: `text`
+
+> immutable_unaccent
+
+## `public.increment_object_version()`
+- returns: `trigger`
+
+## `public.pending_change_after_delete()`
+- returns: `trigger`
+- reads `public.pending_change` _(high)_
+- writes `public.object` _(high)_
+
+## `public.pending_change_after_insert()`
+- returns: `trigger`
+- writes `public.object` _(high)_
+
+## `public.pending_change_after_update()`
+- returns: `trigger`
+- reads `public.pending_change` _(high)_
+- writes `public.object` _(high)_
+
+## `public.propagate_capacity_unit_change()`
+- returns: `trigger`
+- writes `public.object_capacity` _(high)_
+
+## `public.ref_language_set_position()`
+- returns: `trigger`
+- reads `public.ref_language` _(high)_
+
+## `public.regenerate_iti_track_cache()`
+- returns: `trigger`
+
+## `public.save_object_version()`
+- returns: `trigger` — SECURITY DEFINER
+- writes `public.object_version` _(high)_
+
+## `public.seed_org_role_permission()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- writes `public.org_role_permission` _(high)_
+
+> ─────────────────────────────────────────────────────────────────────────────
+> 2bis. Semer AUSSI les ORG créées plus tard.
+>
+> Le seed ci-dessus ne couvre que les ORG existant au moment de la migration. Sans ce
+> trigger, une ORG créée demain naîtrait avec une matrice VIDE : ses Éditeurs auraient
+> l'étiquette et zéro droit, et l'écran d'onboarding — qui n'accorde plus de permission
+> individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et différée.
+> ─────────────────────────────────────────────────────────────────────────────
+
+## `public.sync_object_capacity_unit()`
+- returns: `trigger`
+- reads `public.ref_capacity_metric` _(high)_
+
+## `public.update_object_cached_main_image()`
+- returns: `trigger`
+- reads `public.media` _(high)_
+- writes `public.object` _(high)_
+
+## `public.update_object_cached_min_price()`
+- returns: `trigger`
+- reads `public.object_price` _(high)_
+- writes `public.object` _(high)_
+
+## `public.update_object_cached_rating_metrics()`
+- returns: `trigger`
+- reads `public.object_review` _(high)_
+- writes `public.object` _(high)_
+
+## `public.update_object_updated_at_business()`
+- returns: `trigger`
+
+## `public.update_updated_at_column()`
+- returns: `trigger`
+
+## `public.validate_i18n_translation_target()`
+- returns: `trigger`
+
+## `public.validate_media_dimensions()`
+- returns: `trigger`
+- reads `public.ref_code_media_type` _(high)_
+
+## `public.validate_org_object_type()`
+- returns: `trigger`
+- reads `public.object` _(high)_
+
+## `thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.ref_code_domain_registry` _(high)_
+- reads `thesaurus.assignment_retention` _(high)_
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.label` _(high)_
+- reads `thesaurus.localized_field` _(high)_
+- reads `thesaurus.mapping` _(high)_
+- reads `thesaurus.mutation_journal` _(high)_
+- reads `thesaurus.note` _(high)_
+- reads `thesaurus.ownership_retention` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.release` _(high)_
+- reads `thesaurus.release_change` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+- reads `thesaurus.revision` _(high)_
+- reads `thesaurus.source_link` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.assignment_retention` _(high)_
+- writes `thesaurus.concept` _(high)_
+- writes `thesaurus.instance` _(high)_
+- writes `thesaurus.label` _(high)_
+- writes `thesaurus.localized_field` _(high)_
+- writes `thesaurus.mapping` _(high)_
+- writes `thesaurus.mutation_journal` _(high)_
+- writes `thesaurus.note` _(high)_
+- writes `thesaurus.outbox` _(high)_
+- writes `thesaurus.ownership_retention` _(high)_
+- writes `thesaurus.relation` _(high)_
+- writes `thesaurus.release` _(high)_
+- writes `thesaurus.release_change` _(high)_
+- writes `thesaurus.release_concept` _(high)_
+- writes `thesaurus.revision` _(high)_
+- writes `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.admin_dispatch(p_action text, p_payload jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.outbox` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.release` _(high)_
+- reads `thesaurus.revision` _(high)_
+- reads `thesaurus.source_link` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.concept` _(high)_
+- writes `thesaurus.instance` _(high)_
+- writes `thesaurus.outbox` _(high)_
+- writes `thesaurus.revision` _(high)_
+- writes `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.apply_prepared_objects(p_stage jsonb, p_live_ids text[])`
+- returns: `void` — SECURITY DEFINER
+- writes `public.object` _(high)_
+
+## `thesaurus.apply_source(p_id uuid, p_doc jsonb)`
+- returns: `void` — dynamic SQL
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+
+## `thesaurus.assert_current_authority()`
+- returns: `void` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+## `thesaurus.assert_preparation_contract()`
+- returns: `void`
+
+## `thesaurus.concept_document(p_id uuid)`
+- returns: `jsonb`
+
+> Editorial callers retain their semantic conflict fingerprint. Immutable public
+> snapshots discard that private field and avoid computing it for every concept.
+
+## `thesaurus.concept_document(p_id uuid, p_include_source_fingerprint boolean)`
+- returns: `jsonb`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.label` _(high)_
+- reads `thesaurus.localized_field` _(high)_
+- reads `thesaurus.mapping` _(high)_
+- reads `thesaurus.note` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.revision` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+> Editorial callers retain their semantic conflict fingerprint. Immutable public
+> snapshots discard that private field and avoid computing it for every concept.
+
+## `thesaurus.current_actor()`
+- returns: `uuid` — SECURITY DEFINER
+
+> Supabase owns auth; delegate the actor lookup without granting its schema to the publisher.
+
+## `thesaurus.ensure_parent_dependencies()`
+- returns: `void`
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.filter_public_catalog(p_domain text, p_catalog jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.source_rows` _(high)_
+
+## `thesaurus.guard_assignment()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `thesaurus.assignment_retention` _(high)_
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.assignment_retention` _(high)_
+
+## `thesaurus.guard_classification_subvalues()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `thesaurus.assignment_retention` _(high)_
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+- writes `thesaurus.assignment_retention` _(high)_
+
+## `thesaurus.guard_immutable()`
+- returns: `trigger`
+- reads `thesaurus.release` _(high)_
+
+## `thesaurus.guard_ownership_transfer()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `thesaurus.ownership_retention` _(high)_
+
+## `thesaurus.guard_prepared_truncate()`
+- returns: `trigger`
+
+## `thesaurus.guard_source()`
+- returns: `trigger`
+
+## `thesaurus.is_ancestor(p_parent uuid, p_child uuid)`
+- returns: `boolean`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+
+## `thesaurus.is_governed(p_domain text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `thesaurus.vocabulary` _(medium)_
+
+## `thesaurus.legacy_list_catalog(p_domain text, p_lang text DEFAULT 'fr'::text)`
+- returns: `jsonb`
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_commune` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_sustainability_action_category` _(high)_
+
+> Un référentiel public résolu i18n, forme {code,name,icon_url,parent_code,domain}. Audit API I1.
+
+## `thesaurus.localized_document(p_doc jsonb, p_lang text)`
+- returns: `jsonb`
+
+## `thesaurus.object_ids_for_row(p_table oid, p_row jsonb, p_visited oid[] DEFAULT '{}'::oid[], p_depth integer DEFAULT 0)`
+- returns: `text[]` — SECURITY DEFINER, dynamic SQL
+- reads `public.actor_object_role` _(high)_
+- reads `public.tag_link` _(high)_
+- reads `thesaurus.ownership_retention` _(high)_
+
+## `thesaurus.owns_preparation_lock(p_key integer, p_exclusive boolean DEFAULT true)`
+- returns: `boolean`
+
+## `thesaurus.preparation_contract_registry()`
+- returns: `jsonb`
+
+## `thesaurus.preparation_owned_tables()`
+- returns: `TABLE(table_oid oid)`
+
+## `thesaurus.preparation_plain_key_columns(p_table oid)`
+- returns: `text[]`
+
+## `thesaurus.preparation_projection_dependencies()`
+- returns: `TABLE(table_oid oid)`
+
+> The immutable registry is source-controlled SQL, not editable application data.
+> A future function, view, partition or ownership shape change fails closed until
+> a migration reviews and reinstalls the preparation contract.
+
+## `thesaurus.preparation_sources()`
+- returns: `TABLE(table_oid oid)`
+
+## `thesaurus.prepare_affected_objects(p_object_ids text[])`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_cuisine_type` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_allergen` _(high)_
+- reads `public.object_menu_item_dietary_tag` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_allergen` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+- reads `public.ref_code_dietary_tag` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+
+> Both the MVCC snapshot and the nine-column objects are captured by this ONE
+> SQL statement. No public.object read, UPDATE, temporary table or FK is used.
+
+## `thesaurus.preview(p_ids uuid[])`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.revision` _(high)_
+
+## `thesaurus.prune_mutation_journal(p_limit integer DEFAULT 10000)`
+- returns: `integer` — SECURITY DEFINER
+- reads `thesaurus.mutation_journal` _(high)_
+- writes `thesaurus.mutation_journal` _(high)_
+
+> Private maintenance: nonblocking transaction shared K2, bounded deletion of snapshot-visible owner receipts; never locks the K1 editor fence.
+
+## `thesaurus.public_dispatch(p_action text, p_release_id bigint DEFAULT NULL::bigint, p_params jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.release` _(high)_
+- reads `thesaurus.release_change` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+
+## `thesaurus.publication_documents()`
+- returns: `TABLE(concept_id uuid, domain text, is_public boolean, document jsonb)`
+
+> Keep a full renderer as an independent oracle and for a first publication.
+
+## `thesaurus.publication_documents(p_concepts uuid[])`
+- returns: `TABLE(concept_id uuid, domain text, is_public boolean, document jsonb)`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.label` _(high)_
+- reads `thesaurus.localized_field` _(high)_
+- reads `thesaurus.mapping` _(high)_
+- reads `thesaurus.note` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.source_link` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+> Render a release in one relational pass. Native rows and semantic arrays are
+> materialized once instead of re-running the eight-source union per concept.
+> Editorial reads keep concept_document(uuid) and its conflict fingerprint.
+
+## `thesaurus.record_owner_mutation()`
+- returns: `trigger` — SECURITY DEFINER
+- writes `thesaurus.mutation_journal` _(high)_
+
+## `thesaurus.refresh_affected_object(p_object_id text)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.object` _(high)_
+
+## `thesaurus.refresh_affected_objects(p_object_ids text[])`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_cuisine_type` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_allergen` _(high)_
+- reads `public.object_menu_item_dietary_tag` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_allergen` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+- reads `public.ref_code_dietary_tag` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+- writes `public.object` _(high)_
+
+## `thesaurus.refresh_object_filter_caches(p_object_id text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_cuisine_type` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_environment_tag` _(high)_
+- reads `public.object_language` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_allergen` _(high)_
+- reads `public.object_menu_item_dietary_tag` _(high)_
+- reads `public.object_payment_method` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_allergen` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
+- reads `public.ref_code_dietary_tag` _(high)_
+- reads `public.ref_code_environment_tag` _(high)_
+- reads `public.ref_code_payment_method` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_tag` _(high)_
+- reads `public.tag_link` _(high)_
+- writes `public.object` _(high)_
+
+## `thesaurus.remember_ownership()`
+- returns: `trigger` — SECURITY DEFINER
+- writes `thesaurus.ownership_retention` _(high)_
+
+## `thesaurus.requalification()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `thesaurus.concept` _(high)_
+
+## `thesaurus.row_has_historical_reference(p_table oid, p_row jsonb, p_visited oid[] DEFAULT '{}'::oid[], p_depth integer DEFAULT 0)`
+- returns: `boolean` — SECURITY DEFINER, dynamic SQL
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.release_concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.source_descendant_ids(p_concepts uuid[])`
+- returns: `uuid[]`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+
+> Natural source parents include typed standalone structures as well as ref_code
+> hierarchies (amenity family, classification scheme and sustainability category).
+> UNION deduplicates identities and terminates even if a legacy source is cyclic.
+
+## `thesaurus.source_fingerprint(p_concept uuid)`
+- returns: `text`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.instance` _(high)_
+- reads `thesaurus.label` _(high)_
+- reads `thesaurus.localized_field` _(high)_
+- reads `thesaurus.mapping` _(high)_
+- reads `thesaurus.note` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.source_write_gate()`
+- returns: `trigger`
+
+## `thesaurus.sync_sources(p_domains text[] DEFAULT NULL::text[])`
+- returns: `integer`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.source_rows` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+- writes `thesaurus.concept` _(high)_
+- writes `thesaurus.source_link` _(high)_
+
+## `thesaurus.take_source_gate()`
+- returns: `void`
+
+## `thesaurus.take_writer_gate()`
+- returns: `void`
+
+## `thesaurus.usage_objects(p_concepts uuid[])`
+- returns: `TABLE(object_id text)` — SECURITY DEFINER
+- reads `public.object_classification` _(high)_
+- reads `thesaurus.concept` _(high)_
+
+## `thesaurus.validate_document(p_concept uuid, p_doc jsonb)`
+- returns: `jsonb`
+- reads `thesaurus.concept` _(high)_
+- reads `thesaurus.relation` _(high)_
+- reads `thesaurus.vocabulary` _(high)_
+
+## `thesaurus.write_fence()`
+- returns: `trigger`

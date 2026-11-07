@@ -1,0 +1,537 @@
+import { create } from 'zustand';
+import type {
+  AccessibilityDisabilityTypeCode,
+  BackendObjectTypeCode,
+  CapacityFilter,
+  ExplorerFilters,
+  ExplorerBucketKey,
+  ExplorerStatusFilter,
+  ExplorerTagFilter,
+  GeoPolygon,
+  MeetingRoomFilter,
+  MissingEssentialBucket,
+  MissingEssentialCode,
+} from '../types/domain';
+import { mergeSelectedObjectIds } from '../utils/explorer-selection';
+import {
+  DEFAULT_EXPLORER_FILTERS,
+  DEFAULT_HOT_SUBTYPES,
+  DEFAULT_SRV_SUBTYPES,
+  DEFAULT_VIS_SUBTYPES,
+  bucketForTaxonomyDomain,
+  normalizeExplorerFilters,
+} from '../utils/facets';
+
+interface ExplorerState extends ExplorerFilters {
+  selectedObjectIds: string[];
+  visibleObjectIds: string[];
+  selectedCardId: string | null;
+  /** D20 : survol transitoire (carte-résultat ↔ marqueur), jamais persisté. */
+  hoveredCardId: string | null;
+
+  toggleBucket: (bucket: ExplorerBucketKey) => void;
+  setSearch: (search: string) => void;
+  setIncludeEquivalentPredecessors: (enabled: boolean) => void;
+  setProviderOnly: (enabled: boolean) => void;
+  setCities: (cities: string[]) => void;
+  setLieuDit: (lieuDit: string) => void;
+  setPmr: (value: boolean) => void;
+  toggleAccessibilityDisabilityType: (type: AccessibilityDisabilityTypeCode) => void;
+  toggleAccessibilityAmenity: (code: string) => void;
+  setSustainable: (value: boolean) => void;
+  toggleSustainabilityCategory: (code: string) => void;
+  toggleSustainabilityAction: (code: string) => void;
+  setPetsAccepted: (value: boolean) => void;
+  setOpenNow: (value: boolean) => void;
+  /** §157 — « ouvert à … » (datetime-local, heure Réunion). Exclusif avec openNow. */
+  setOpenAt: (value: string | null) => void;
+  /** §159 — familles de services & équipements (transverse). */
+  setAmenityFamilies: (codes: string[]) => void;
+  /** §157 — plage de dates du bucket Événements. */
+  setEvtEventRange: (from: string | null, to: string | null) => void;
+  /** §154 — cadre & environnement (bord de mer, montagne, volcan…), transverse. */
+  setEnvironmentTags: (codes: string[]) => void;
+  setAccommodationUnitTypes: (codes: string[]) => void;
+  setAccommodationPositionings: (codes: string[]) => void;
+  setRankedLabelScheme: (schemeCode: string | null) => void;
+  setRankedLabelIncludeEquivalents: (value: boolean) => void;
+  setRankedLabelValueCodes: (codes: string[]) => void;
+  /** Toggle a §09 tag in the Explorer filter set (click a colored tag on a card/map). */
+  toggleTag: (tag: ExplorerTagFilter) => void;
+  clearTags: () => void;
+  /**
+   * Toggle a publication-status entry in the Explorer filter set.
+   * Empty array = "let the server use its default (published)".
+   * The FiltersPanel only renders this control for users that have
+   * `canEditObjects = true`; for everyone else the array stays empty.
+   */
+  toggleStatus: (status: ExplorerStatusFilter) => void;
+  setStatuses: (statuses: ExplorerStatusFilter[]) => void;
+  /** §204 — paliers de remplissage (éditeurs). */
+  setMissingEssentialsBuckets: (buckets: MissingEssentialBucket[]) => void;
+  /** §204 — essentiels manquants recherchés (éditeurs). */
+  setMissingEssentialsAny: (codes: MissingEssentialCode[]) => void;
+  toggleSelectedObject: (objectId: string) => void;
+  addSelectedObjects: (objectIds: string[]) => void;
+  /** D9 : restauration de la sélection précédente (« Annuler » du toast). */
+  replaceSelection: (objectIds: string[]) => void;
+  clearSelection: () => void;
+  setHoveredCard: (id: string | null) => void;
+  setVisibleObjectIds: (objectIds: string[]) => void;
+  selectAllVisible: () => void;
+  selectCard: (id: string) => void;
+  clearSelectedCard: () => void;
+
+  toggleHotSubtype: (type: BackendObjectTypeCode) => void;
+  toggleVisSubtype: (type: BackendObjectTypeCode) => void;
+  toggleSrvSubtype: (type: BackendObjectTypeCode) => void;
+  /** Fixe l'ensemble exact des sous-types (vide → défaut du bucket). Cf. Task 8b : primitive de
+   *  drill-down (narrow-to-set), complémentaire du toggle un-à-un ci-dessus. */
+  setHotSubtypes: (types: BackendObjectTypeCode[]) => void;
+  setVisSubtypes: (types: BackendObjectTypeCode[]) => void;
+  setSrvSubtypes: (types: BackendObjectTypeCode[]) => void;
+  /** §155 — toggle d'une sous-catégorie (paire domaine:code, tout bucket). */
+  toggleTaxonomy: (domain: string, code: string) => void;
+  setHotCapacityFilter: (code: string, min?: number, max?: number) => void;
+  setResCapacityFilter: (code: string, min?: number, max?: number) => void;
+  setHotMeetingRoom: (patch: Partial<MeetingRoomFilter>) => void;
+  setItiIsLoop: (value: boolean | null) => void;
+  setItiDifficulty: (min?: number, max?: number) => void;
+  setItiDistance: (min?: number, max?: number) => void;
+  setItiDuration: (min?: number, max?: number) => void;
+  toggleItiPractice: (code: string) => void;
+  setPolygon: (polygon: GeoPolygon | null, bbox?: [number, number, number, number] | null) => void;
+  resetSpatialFilter: () => void;
+  resetAll: () => void;
+  setFiltersFromUrl: (partial: Partial<ExplorerFilters>) => void;
+  replaceFiltersFromUrl: (partial: Partial<ExplorerFilters>) => void;
+}
+
+/**
+ * §156 (P1-b audit filtres) — garde min ≤ max : une paire inversée est
+ * réordonnée (interprétation insensible à l'ordre de saisie) au lieu de
+ * produire silencieusement une plage vide côté serveur.
+ */
+function orderRange(min?: number, max?: number): [number | undefined, number | undefined] {
+  if (min != null && max != null && min > max) {
+    return [max, min];
+  }
+  return [min, max];
+}
+
+function upsertCapacityFilter(filters: CapacityFilter[], code: string, rawMin?: number, rawMax?: number): CapacityFilter[] {
+  const [min, max] = orderRange(rawMin, rawMax);
+  const next = filters.filter((filter) => filter.code !== code);
+  if (min == null && max == null) {
+    return next;
+  }
+  return [...next, { code, min, max }];
+}
+
+/**
+ * §155-bis — retirer un TYPE emporte ses sous-catégories (même philosophie que
+ * la cascade D23 au niveau bucket) : sinon une paire taxonomy_hot survit au
+ * décochage d'« Hôtel » et le bucket entier tombe à 0 résultat (types ∩
+ * sous-catégorie = ∅) sans explication.
+ */
+function purgeTaxonomyForType(common: ExplorerFilters['common'], type: BackendObjectTypeCode): ExplorerFilters['common'] {
+  const domain = `taxonomy_${String(type).toLowerCase()}`;
+  return { ...common, taxonomyAny: (common.taxonomyAny ?? []).filter((item) => item.domain !== domain) };
+}
+
+function toggleListValue<T extends string>(values: T[], value: T): T[] {
+  const needle = String(value).trim() as T;
+  if (!needle) {
+    return values;
+  }
+  return values.includes(needle) ? values.filter((item) => item !== needle) : [...values, needle];
+}
+
+function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters>, replace = false): ExplorerFilters {
+  const fallback = DEFAULT_EXPLORER_FILTERS;
+  const currentBase = replace ? fallback : current;
+
+  return normalizeExplorerFilters({
+    selectedBuckets: partial.selectedBuckets ?? currentBase.selectedBuckets,
+    common: {
+      ...currentBase.common,
+      ...partial.common,
+      // Une URL ancienne sans ce critère conserve la préférence du compte.
+      providerOnly: partial.common?.providerOnly ?? current.common.providerOnly ?? false,
+      statuses: partial.common?.statuses ?? currentBase.common.statuses,
+      ...(replace ? { polygon: fallback.common.polygon, bbox: fallback.common.bbox } : {}),
+    },
+    hot: {
+      ...currentBase.hot,
+      ...partial.hot,
+      capacityFilters: partial.hot?.capacityFilters ?? currentBase.hot.capacityFilters,
+      meetingRoom: {
+        ...currentBase.hot.meetingRoom,
+        ...partial.hot?.meetingRoom,
+      },
+    },
+    res: {
+      ...currentBase.res,
+      ...partial.res,
+      capacityFilters: partial.res?.capacityFilters ?? currentBase.res.capacityFilters,
+    },
+    iti: {
+      ...currentBase.iti,
+      ...partial.iti,
+      practicesAny: partial.iti?.practicesAny ?? currentBase.iti.practicesAny,
+    },
+    evt: {
+      ...currentBase.evt,
+      ...partial.evt,
+    },
+    vis: {
+      ...currentBase.vis,
+      ...partial.vis,
+      subtypes: partial.vis?.subtypes ?? currentBase.vis.subtypes,
+    },
+    srv: {
+      ...currentBase.srv,
+      ...partial.srv,
+      subtypes: partial.srv?.subtypes ?? currentBase.srv.subtypes,
+    },
+  });
+}
+
+const createExplorerStore = () => create<ExplorerState>((set) => ({
+  ...DEFAULT_EXPLORER_FILTERS,
+  selectedObjectIds: [],
+  visibleObjectIds: [],
+  selectedCardId: null,
+  hoveredCardId: null,
+
+  setProviderOnly: (providerOnly) => set((state) => ({ common: { ...state.common, providerOnly } })),
+
+  toggleBucket: (bucket) =>
+    set((state) => {
+      const removing = state.selectedBuckets.includes(bucket);
+      const selectedBuckets = removing
+        ? state.selectedBuckets.filter((item) => item !== bucket)
+        : [...state.selectedBuckets, bucket];
+      if (!removing) {
+        return { selectedBuckets };
+      }
+      // D23 — garde anti-combinaison invalide : désélectionner un bucket emporte
+      // ses sous-filtres. Sinon ils restent actifs-mais-ignorés (chips mensongères)
+      // et se RÉACTIVENT dès que la sélection redevient vide (= tous les buckets).
+      // §155 : les sous-catégories du bucket (paires domaine:code) sont purgées
+      // de l'état COMMUN dans tous les cas — y compris ACT/EVT sans slice dédié.
+      const taxonomyAny = (state.common.taxonomyAny ?? []).filter(
+        (item) => bucketForTaxonomyDomain(item.domain) !== bucket,
+      );
+      const common = { ...state.common, taxonomyAny };
+      switch (bucket) {
+        case 'HOT':
+          return {
+            selectedBuckets,
+            common,
+            hot: { subtypes: [...DEFAULT_HOT_SUBTYPES], capacityFilters: [], meetingRoom: {} },
+          };
+        case 'RES':
+          return { selectedBuckets, common, res: { capacityFilters: [] } };
+        case 'ITI':
+          return { selectedBuckets, common, iti: { ...DEFAULT_EXPLORER_FILTERS.iti } };
+        case 'EVT':
+          return { selectedBuckets, common, evt: { ...DEFAULT_EXPLORER_FILTERS.evt } };
+        case 'VIS':
+          return { selectedBuckets, common, vis: { subtypes: [...DEFAULT_VIS_SUBTYPES] } };
+        case 'SRV':
+          return { selectedBuckets, common, srv: { subtypes: [...DEFAULT_SRV_SUBTYPES] } };
+        default:
+          return { selectedBuckets, common };
+      }
+    }),
+  setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
+  setIncludeEquivalentPredecessors: (enabled) => set((state) => ({ common: { ...state.common, includeEquivalentPredecessors: enabled } })),
+  // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters).
+  setEnvironmentTags: (codes) => set((state) => ({ common: { ...state.common, environmentTagsAny: codes } })),
+  // §201 — types d'unité d'hébergement (axe multi-valué, table de liaison).
+  setAccommodationUnitTypes: (codes) =>
+    set((state) => ({ common: { ...state.common, accommodationUnitTypesAny: codes } })),
+  // Positionnements d'hôtel : axe multi-valué séparé de la nature.
+  setAccommodationPositionings: (codes) =>
+    set((state) => ({ common: { ...state.common, accommodationPositioningsAny: codes } })),
+  // §157 — « ouvert à … » exclusif avec « ouvert maintenant » (deux instants
+  // contradictoires ne doivent jamais s'ANDer silencieusement côté RPC).
+  setOpenAt: (value) =>
+    set((state) => ({ common: { ...state.common, openAt: value, ...(value ? { openNow: false } : {}) } })),
+  setEvtEventRange: (from, to) => set({ evt: { eventFrom: from, eventTo: to } }),
+  // §159 — services & équipements (transverse).
+  setAmenityFamilies: (codes) => set((state) => ({ common: { ...state.common, amenityFamiliesAny: codes } })),
+  setCities: (cities) => set((state) => ({ common: { ...state.common, cities } })),
+  setLieuDit: (lieuDit) => set((state) => ({ common: { ...state.common, lieuDit } })),
+  setPmr: (value) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        pmr: value,
+        ...(!value
+          ? {
+              accessibilityDisabilityTypesAny: [],
+              accessibilityAmenityCodesAny: [],
+            }
+          : {}),
+      },
+    })),
+  toggleAccessibilityDisabilityType: (type) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        pmr: true,
+        accessibilityDisabilityTypesAny: toggleListValue(state.common.accessibilityDisabilityTypesAny ?? [], type),
+      },
+    })),
+  toggleAccessibilityAmenity: (code) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        pmr: true,
+        accessibilityAmenityCodesAny: toggleListValue(state.common.accessibilityAmenityCodesAny ?? [], code),
+      },
+    })),
+  setSustainable: (value) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        sustainable: value,
+        ...(!value
+          ? {
+              sustainabilityCategoryCodesAny: [],
+              sustainabilityActionCodesAny: [],
+            }
+          : {}),
+      },
+    })),
+  toggleSustainabilityCategory: (code) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        sustainable: true,
+        sustainabilityCategoryCodesAny: toggleListValue(state.common.sustainabilityCategoryCodesAny ?? [], code),
+      },
+    })),
+  toggleSustainabilityAction: (code) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        sustainable: true,
+        sustainabilityActionCodesAny: toggleListValue(state.common.sustainabilityActionCodesAny ?? [], code),
+      },
+    })),
+  setPetsAccepted: (value) => set((state) => ({ common: { ...state.common, petsAccepted: value } })),
+  setOpenNow: (value) =>
+    set((state) => ({ common: { ...state.common, openNow: value, ...(value ? { openAt: null } : {}) } })),
+  setRankedLabelScheme: (schemeCode) =>
+    set((state) => ({
+      common: {
+        ...state.common,
+        rankedLabelSchemeCode: String(schemeCode ?? '').trim() || null,
+        rankedLabelValueCodes: [],
+        // Le toggle « démarches équivalentes » (§173) est un affinage PAR scheme : changer de
+        // scheme repart du défaut (sinon un exact-only décoché survivrait, caché, quand le
+        // nouveau scheme est un classement gradué — dont le toggle n'est pas rendu).
+        rankedLabelIncludeEquivalents: true,
+      },
+    })),
+  setRankedLabelIncludeEquivalents: (value) =>
+    set((state) => ({ common: { ...state.common, rankedLabelIncludeEquivalents: value } })),
+  setRankedLabelValueCodes: (codes) =>
+    set((state) => ({ common: { ...state.common, rankedLabelValueCodes: codes } })),
+  toggleTag: (tag) =>
+    set((state) => {
+      const slug = String(tag?.slug ?? '').trim();
+      if (!slug) return state;
+      const tagsAny = state.common.tagsAny ?? [];
+      const exists = tagsAny.some((entry) => entry.slug === slug);
+      const next: ExplorerTagFilter[] = exists
+        ? tagsAny.filter((entry) => entry.slug !== slug)
+        : [...tagsAny, { slug, name: String(tag.name ?? '').trim() || slug, color: tag.color }];
+      return { common: { ...state.common, tagsAny: next } };
+    }),
+  clearTags: () => set((state) => ({ common: { ...state.common, tagsAny: [] } })),
+  toggleStatus: (status) =>
+    set((state) => {
+      const statuses = state.common.statuses ?? [];
+      const exists = statuses.includes(status);
+      const next = exists ? statuses.filter((entry) => entry !== status) : [...statuses, status];
+      return { common: { ...state.common, statuses: next } };
+    }),
+  setStatuses: (statuses) =>
+    set((state) => ({
+      common: { ...state.common, statuses: [...new Set(statuses)] },
+    })),
+  setMissingEssentialsBuckets: (buckets) =>
+    set((state) => ({
+      common: { ...state.common, missingEssentialsBuckets: [...new Set(buckets)] },
+    })),
+  setMissingEssentialsAny: (codes) =>
+    set((state) => ({
+      common: { ...state.common, missingEssentialsAny: [...new Set(codes)] },
+    })),
+  toggleSelectedObject: (objectId) =>
+    set((state) => {
+      const needle = String(objectId).trim();
+      if (!needle) return state;
+      const exists = state.selectedObjectIds.includes(needle);
+
+      return {
+        ...state,
+        selectedObjectIds: exists ? state.selectedObjectIds.filter((id) => id !== needle) : [...state.selectedObjectIds, needle],
+      };
+    }),
+  addSelectedObjects: (objectIds) =>
+    set((state) => {
+      const selectedObjectIds = mergeSelectedObjectIds(state.selectedObjectIds, objectIds);
+      return selectedObjectIds.length === state.selectedObjectIds.length ? state : { ...state, selectedObjectIds };
+    }),
+  replaceSelection: (objectIds) =>
+    set((state) => ({
+      ...state,
+      selectedObjectIds: [...new Set(objectIds.map((id) => String(id).trim()).filter(Boolean))],
+    })),
+  clearSelection: () => set((state) => ({ ...state, selectedObjectIds: [] })),
+  setHoveredCard: (id) => set({ hoveredCardId: id }),
+  setVisibleObjectIds: (objectIds) =>
+    set((state) => ({
+      ...state,
+      visibleObjectIds: [...new Set(objectIds.map((id) => String(id).trim()).filter(Boolean))],
+    })),
+  selectAllVisible: () =>
+    set((state) => ({
+      ...state,
+      selectedObjectIds: state.visibleObjectIds.length > 0 ? [...state.visibleObjectIds] : [],
+    })),
+  selectCard: (id) => set({ selectedCardId: id }),
+  clearSelectedCard: () => set({ selectedCardId: null }),
+
+  toggleHotSubtype: (type) =>
+    set((state) => {
+      const subtypes = state.hot.subtypes ?? [...DEFAULT_HOT_SUBTYPES];
+      const removing = subtypes.includes(type);
+      const nextSubtypes = removing ? subtypes.filter((item) => item !== type) : [...subtypes, type];
+      return {
+        hot: {
+          ...state.hot,
+          subtypes: nextSubtypes.length > 0 ? nextSubtypes : [...DEFAULT_HOT_SUBTYPES],
+        },
+        ...(removing ? { common: purgeTaxonomyForType(state.common, type) } : {}),
+      };
+    }),
+  toggleVisSubtype: (type) =>
+    set((state) => {
+      const subtypes = state.vis.subtypes ?? [...DEFAULT_VIS_SUBTYPES];
+      const removing = subtypes.includes(type);
+      const next = removing ? subtypes.filter((item) => item !== type) : [...subtypes, type];
+      return {
+        vis: { ...state.vis, subtypes: next.length > 0 ? next : [...DEFAULT_VIS_SUBTYPES] },
+        ...(removing ? { common: purgeTaxonomyForType(state.common, type) } : {}),
+      };
+    }),
+  toggleSrvSubtype: (type) =>
+    set((state) => {
+      const subtypes = state.srv.subtypes ?? [...DEFAULT_SRV_SUBTYPES];
+      const removing = subtypes.includes(type);
+      const next = removing ? subtypes.filter((item) => item !== type) : [...subtypes, type];
+      return {
+        srv: { ...state.srv, subtypes: next.length > 0 ? next : [...DEFAULT_SRV_SUBTYPES] },
+        ...(removing ? { common: purgeTaxonomyForType(state.common, type) } : {}),
+      };
+    }),
+  setHotSubtypes: (types) =>
+    set((state) => ({ hot: { ...state.hot, subtypes: types.length > 0 ? [...types] : [...DEFAULT_HOT_SUBTYPES] } })),
+  setVisSubtypes: (types) =>
+    set((state) => ({ vis: { ...state.vis, subtypes: types.length > 0 ? [...types] : [...DEFAULT_VIS_SUBTYPES] } })),
+  setSrvSubtypes: (types) =>
+    set((state) => ({ srv: { ...state.srv, subtypes: types.length > 0 ? [...types] : [...DEFAULT_SRV_SUBTYPES] } })),
+  // §155 — sous-catégories : état commun, partitionné par bucket au payload.
+  toggleTaxonomy: (domain, code) =>
+    set((state) => {
+      const taxonomy = state.common.taxonomyAny ?? [];
+      const exists = taxonomy.some((item) => item.domain === domain && item.code === code);
+      return {
+        common: {
+          ...state.common,
+          taxonomyAny: exists
+            ? taxonomy.filter((item) => !(item.domain === domain && item.code === code))
+            : [...taxonomy, { domain, code }],
+        },
+      };
+    }),
+  setHotCapacityFilter: (code, min, max) =>
+    set((state) => ({
+      hot: {
+        ...state.hot,
+        capacityFilters: upsertCapacityFilter(state.hot.capacityFilters ?? [], code, min, max),
+      },
+    })),
+  setResCapacityFilter: (code, min, max) =>
+    set((state) => ({
+      res: {
+        ...state.res,
+        capacityFilters: upsertCapacityFilter(state.res.capacityFilters ?? [], code, min, max),
+      },
+    })),
+  setHotMeetingRoom: (patch) =>
+    set((state) => ({
+      hot: {
+        ...state.hot,
+        meetingRoom: {
+          ...(state.hot.meetingRoom ?? {}),
+          ...patch,
+        },
+      },
+    })),
+  setItiIsLoop: (value) => set((state) => ({ iti: { ...state.iti, isLoop: value } })),
+  setItiDifficulty: (rawMin, rawMax) =>
+    set((state) => {
+      const [min, max] = orderRange(rawMin, rawMax);
+      return { iti: { ...state.iti, difficultyMin: min, difficultyMax: max } };
+    }),
+  setItiDistance: (rawMin, rawMax) =>
+    set((state) => {
+      const [min, max] = orderRange(rawMin, rawMax);
+      return { iti: { ...state.iti, distanceMinKm: min, distanceMaxKm: max } };
+    }),
+  setItiDuration: (rawMin, rawMax) =>
+    set((state) => {
+      const [min, max] = orderRange(rawMin, rawMax);
+      return { iti: { ...state.iti, durationMinH: min, durationMaxH: max } };
+    }),
+  toggleItiPractice: (code) =>
+    set((state) => {
+      const practicesAny = state.iti.practicesAny ?? [];
+      return {
+        iti: {
+          ...state.iti,
+          practicesAny: practicesAny.includes(code)
+            ? practicesAny.filter((item) => item !== code)
+            : [...practicesAny, code],
+        },
+      };
+    }),
+  setPolygon: (polygon, bbox = null) => set((state) => ({ common: { ...state.common, polygon, bbox } })),
+  resetSpatialFilter: () => set((state) => ({ common: { ...state.common, polygon: null, bbox: null } })),
+  resetAll: () => set((state) => ({
+    ...DEFAULT_EXPLORER_FILTERS,
+    common: { ...DEFAULT_EXPLORER_FILTERS.common, providerOnly: state.common.providerOnly ?? false },
+  })),
+  setFiltersFromUrl: (partial) => set((state) => mergeFilters(state, partial, false)),
+  replaceFiltersFromUrl: (partial) => set((state) => mergeFilters(state, partial, true)),
+}));
+
+/**
+ * Instance Explorer (singleton) — inchangée, utilisée par la page Explorer,
+ * useExplorerUrlSync, les résultats/carte/sélection et tous leurs tests.
+ */
+export const useExplorerStore = createExplorerStore();
+
+/**
+ * Instance INDÉPENDANTE pour le Dashboard (§ align filtres). Même logique de
+ * filtre, état séparé : filtrer sur le Dashboard ne touche pas l'Explorer.
+ * Pas de branchement URL (useExplorerUrlSync ne cible que le singleton).
+ */
+export const useDashboardExplorerStore = createExplorerStore();

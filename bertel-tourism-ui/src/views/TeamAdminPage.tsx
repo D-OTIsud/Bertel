@@ -1,0 +1,352 @@
+'use client';
+import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
+import { useSessionStore } from '@/store/session-store';
+import { canAdministerTeam } from '@/store/session-selectors';
+import {
+  listOrgMembers,
+  listBusinessRoles,
+  listAdminRoles,
+  listPermissionCatalog,
+  listRolePermissions,
+  setBusinessRole,
+  setAdminRole,
+  revokeAdminRole,
+  deactivateMembership,
+  deleteUserAccount,
+  friendlyRbacError,
+  type OrgMember,
+  type RefRole,
+  type RefPermission,
+} from '@/services/rbac';
+import type { MemberRef, RoleMatrix } from '@/features/team/role-permission-matrix';
+import { listOrgs, type OrgSummary } from '@/services/orgs';
+import { MembersTable } from '@/features/team/MembersTable';
+import { RoleSelect } from '@/features/team/RoleSelect';
+import { InviteMemberDialog } from '@/features/team/InviteMemberDialog';
+import { MemberPermissionsDrawer } from '@/features/team/MemberPermissionsDrawer';
+import { OrgRolePermissionsModal } from '@/features/team/OrgRolePermissionsModal';
+import { MemberProfileModal } from '@/features/team/MemberProfileModal';
+import { businessRoleLabel, reviewRoleChange } from '@/features/team/permission-presets';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ShieldCheck } from 'lucide-react';
+import { strictErrorMessage } from '../lib/strict-error-message';
+
+export default function TeamAdminPage() {
+  const role = useSessionStore((s) => s.role);
+  const adminRank = useSessionStore((s) => s.adminRank);
+  const orgId = useSessionStore((s) => s.orgId);
+  const userId = useSessionStore((s) => s.userId);
+  const allowed = canAdministerTeam({ role, adminRank });
+
+  // effectiveOrgId: use the session org when available; fall back to the default ORG for
+  // superusers/owners who have no active membership (e.g. platform admin with no org assignment).
+  const [effectiveOrgId, setEffectiveOrgId] = useState<string | null>(null);
+
+  const isSuperuser = role === 'owner' || role === 'super_admin';
+  const [orgs, setOrgs] = useState<OrgSummary[]>([]);
+
+  useEffect(() => {
+    if (!allowed) return;
+    if (!isSuperuser) {
+      if (orgId) setEffectiveOrgId(orgId);
+      return;
+    }
+    // Superadmin : liste complète + ciblage explicite (?org= > ORG de session > première).
+    // Lecture one-shot de l'URL (window) — TeamAdminPage est monté sous /settings, pas de
+    // useSearchParams (éviterait une Suspense boundary).
+    const urlOrg = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('org') : null;
+    listOrgs()
+      .then((rows) => {
+        setOrgs(rows);
+        setEffectiveOrgId((current) => current ?? urlOrg ?? orgId ?? rows[0]?.id ?? null);
+      })
+      .catch(() => { if (orgId) setEffectiveOrgId(orgId); });
+  }, [allowed, isSuperuser, orgId]);
+
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [bizRoles, setBizRoles] = useState<RefRole[]>([]);
+  const [adminRoles, setAdminRoles] = useState<RefRole[]>([]);
+  const [catalog, setCatalog] = useState<RefPermission[]>([]);
+  const [roleMatrix, setRoleMatrix] = useState<RoleMatrix>({});
+  // Écran de réglage des permissions par rôle métier (§227) — portée ORG, surface séparée.
+  const [roleMatrixOpen, setRoleMatrixOpen] = useState(false);
+  // ID of the membership whose permissions drawer is open (null = closed).
+  const [managingId, setManagingId] = useState<string | null>(null);
+  // ID du membership dont la modale de profil est ouverte (null = fermée).
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
+  // Membre en attente de confirmation de désactivation (null = aucune ; remplace window.confirm).
+  const [confirmDeactivate, setConfirmDeactivate] = useState<OrgMember | null>(null);
+  const [deactivateBusy, setDeactivateBusy] = useState(false);
+  // Membre en attente de confirmation de suppression DÉFINITIVE (compte auth + cascade).
+  const [confirmDelete, setConfirmDelete] = useState<OrgMember | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const reload = useCallback(async () => {
+    if (!effectiveOrgId) { setLoading(false); return; }
+    setLoading(true);
+    try { setMembers(await listOrgMembers(effectiveOrgId)); setError(null); }
+    catch (e) { setError(strictErrorMessage(e, 'Erreur de chargement')); }
+    finally { setLoading(false); }
+    // Recharge la matrice rôle → permissions : le tiroir d'un membre en dépend pour dire
+    // quels droits lui viennent de son rôle.
+    listRolePermissions(effectiveOrgId).then(setRoleMatrix).catch(() => {});
+  }, [effectiveOrgId]);
+
+  useEffect(() => { if (allowed) void reload(); }, [allowed, reload]);
+
+  // Load role catalogs + permission catalog once when allowed.
+  useEffect(() => {
+    if (!allowed) return;
+    listBusinessRoles().then(setBizRoles).catch(() => {});
+    listAdminRoles().then(setAdminRoles).catch(() => {});
+    listPermissionCatalog().then(setCatalog).catch(() => {});
+    if (effectiveOrgId) listRolePermissions(effectiveOrgId).then(setRoleMatrix).catch(() => {});
+  }, [allowed, effectiveOrgId]);
+
+  // Caller's effective admin rank (superuser/owner → Infinity so all ranks are assignable).
+  const callerRank = (role === 'owner' || role === 'super_admin') ? Infinity : (adminRank ?? 0);
+
+  // Derive the live member object from managingId so the drawer reflects freshly reloaded data.
+  const managing = members.find((m) => m.membershipId === managingId) ?? null;
+  const editingProfile = members.find((m) => m.membershipId === editingProfileId) ?? null;
+
+  // Réglage des permissions par rôle : org_admin rang >= 30, owner ou superuser.
+  const canManageOrgDefaults = role === 'owner' || role === 'super_admin' || (adminRank ?? 0) >= 30;
+
+  // Projection minimale du roster pour la matrice : elle doit pouvoir NOMMER qui bascule.
+  const memberRefs: MemberRef[] = members.map((m) => ({
+    userId: m.userId,
+    displayName: m.displayName ?? m.email ?? m.userId,
+    businessRoleCode: m.businessRoleCode,
+    individualCodes: m.permissionCodes,
+  }));
+
+  /**
+   * §227 — dire ce que le changement de rôle FAIT, maintenant qu'il fait quelque chose.
+   *
+   * Ce bloc annonçait l'inverse : « le rôle seul n'accorde aucun droit », et proposait
+   * d'appliquer un préréglage à la main. Le rôle confère désormais ses droits immédiatement
+   * (table `org_role_permission`). Ce qui mérite une alerte a changé de camp : ce n'est plus
+   * ce que le rôle N'A PAS donné, c'est ce que la RÉTROGRADATION N'A PAS retiré — les
+   * exceptions individuelles, accordées nommément, survivent au changement d'étiquette.
+   */
+  function announceRoleChange(m: OrgMember, code: string) {
+    const { granted, residualExceptions } = reviewRoleChange(code, m.permissionCodes, roleMatrix);
+    const roleLabel = businessRoleLabel(code);
+    const who = m.displayName ?? m.email ?? 'Ce membre';
+
+    if (residualExceptions.length > 0) {
+      toast.warning(
+        `${who} conserve ${residualExceptions.length} droit${residualExceptions.length > 1 ? 's' : ''} au-delà du rôle ${roleLabel}.`,
+        {
+          duration: Infinity,
+          description:
+            'Accordés en exception individuelle, ils ne sont PAS retirés par le changement de rôle. '
+            + `À révoquer dans « Permissions » : ${residualExceptions.join(', ')}.`,
+        },
+      );
+      return;
+    }
+
+    toast.success(
+      granted.length > 0
+        ? `Rôle ${roleLabel} : ${granted.length} droit${granted.length > 1 ? 's' : ''} appliqué${granted.length > 1 ? 's' : ''}.`
+        : `Rôle ${roleLabel} : lecture seule, aucun droit d’écriture.`,
+    );
+  }
+
+  async function changeBusinessRole(m: OrgMember, code: string) {
+    try {
+      await setBusinessRole(m.membershipId, code);
+      toast.success('Rôle métier mis à jour.');
+      announceRoleChange(m, code);
+    } catch (e) {
+      toast.error(friendlyRbacError(e as { message?: string }));
+    }
+    await reload();
+  }
+
+  async function changeAdminRole(m: OrgMember, code: string | null) {
+    try {
+      if (code === null) {
+        await revokeAdminRole(m.membershipId);
+      } else {
+        await setAdminRole(m.membershipId, code);
+      }
+      toast.success('Rôle admin mis à jour.');
+    } catch (e) {
+      toast.error(friendlyRbacError(e as { message?: string }));
+    }
+    await reload();
+  }
+
+  async function doDelete(m: OrgMember) {
+    setDeleteBusy(true);
+    try {
+      await deleteUserAccount(m.userId);
+      toast.success('Compte supprimé définitivement.');
+      setConfirmDelete(null);
+    } catch (e) {
+      toast.error(friendlyRbacError(e as { message?: string }));
+    } finally {
+      setDeleteBusy(false);
+    }
+    await reload();
+  }
+
+  async function doDeactivate(m: OrgMember) {
+    setDeactivateBusy(true);
+    try {
+      await deactivateMembership(m.membershipId);
+      toast.success('Membre désactivé.');
+      setConfirmDeactivate(null);
+    } catch (e) {
+      toast.error(friendlyRbacError(e as { message?: string }));
+    } finally {
+      setDeactivateBusy(false);
+    }
+    await reload();
+  }
+
+  if (!allowed) {
+    return (
+      <section className="settings-pane">
+        <div className="notice notice--warn">Accès réservé aux administrateurs d’organisation.</div>
+      </section>
+    );
+  }
+  return (
+    <section className="settings-pane">
+      <div className="settings-pane__head">
+        <div>
+          <h2>Équipe</h2>
+          <p>Membres de votre organisation, rôles et permissions.</p>
+        </div>
+        <div className="settings-pane__actions">
+          {canManageOrgDefaults && effectiveOrgId && (
+            <button type="button" className="ghost-button" onClick={() => setRoleMatrixOpen(true)}>
+              <ShieldCheck size={14} aria-hidden /> Permissions par rôle
+            </button>
+          )}
+          {canManageOrgDefaults ? (
+            effectiveOrgId && <InviteMemberDialog orgId={effectiveOrgId} onDone={reload} />
+          ) : (
+            <>
+              <span className="badge badge--info badge--xs" title="Inviter un membre nécessite le rang ≥ 30">rang ≥ 30</span>
+              <button type="button" className="primary-button" disabled title="Réservé aux administrateurs de rang ≥ 30">
+                Inviter
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {isSuperuser && orgs.length > 1 && (
+        <label className="field-block" htmlFor="team-org">
+          <span>Organisation</span>
+          <select id="team-org" className="select" value={effectiveOrgId ?? ''} onChange={(e) => setEffectiveOrgId(e.target.value)}>
+            {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+        </label>
+      )}
+
+      {error && <div className="inline-alert inline-alert--danger" role="alert">{error}</div>}
+      {loading ? <p className="muted">Chargement…</p>
+        : (
+          <MembersTable
+            members={members}
+            currentUserId={userId}
+            onManagePermissions={(m) => setManagingId(m.membershipId)}
+            onEditProfile={canManageOrgDefaults ? (m) => setEditingProfileId(m.membershipId) : undefined}
+            onDeactivate={(m) => setConfirmDeactivate(m)}
+            // SEC-01 (audit sécurité 2026-09-05) : la suppression définitive traverse toutes les
+            // organisations — capacité PLATEFORME (owner/super_admin), jamais un rang d'ORG local
+            // (`canManageOrgDefaults` inclut le rang ≥ 30, qui ne garde que « Désactiver »).
+            onDelete={isSuperuser ? (m) => setConfirmDelete(m) : undefined}
+            callerIsOwner={role === 'owner'}
+          >
+            {(m, isSelf) => ({
+              business: (
+                <RoleSelect
+                  value={m.businessRoleCode}
+                  options={bizRoles}
+                  callerRank={callerRank}
+                  disabled={isSelf}
+                  label={`Rôle métier de ${m.displayName ?? m.email ?? 'ce membre'}`}
+                  onChange={(c) => { if (c) void changeBusinessRole(m, c); }}
+                />
+              ),
+              admin: (
+                <RoleSelect
+                  value={m.adminRoleCode}
+                  options={adminRoles}
+                  callerRank={callerRank}
+                  includeNone
+                  disabled={isSelf}
+                  label={`Rôle admin de ${m.displayName ?? m.email ?? 'ce membre'}`}
+                  onChange={(c) => void changeAdminRole(m, c)}
+                />
+              ),
+            })}
+          </MembersTable>
+        )}
+      <MemberPermissionsDrawer
+        member={managing}
+        catalog={catalog}
+        roleMatrix={roleMatrix}
+        onOpenRoleMatrix={canManageOrgDefaults ? () => { setManagingId(null); setRoleMatrixOpen(true); } : undefined}
+        onClose={() => setManagingId(null)}
+        onChanged={reload}
+      />
+      <OrgRolePermissionsModal
+        open={roleMatrixOpen}
+        orgId={effectiveOrgId ?? ''}
+        catalog={catalog}
+        roles={bizRoles}
+        matrix={roleMatrix}
+        members={memberRefs}
+        onClose={() => setRoleMatrixOpen(false)}
+        onChanged={reload}
+      />
+      <MemberProfileModal
+        member={editingProfile}
+        canEditPlatformRole={role === 'owner'}
+        onClose={() => setEditingProfileId(null)}
+        onSaved={reload}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmDeactivate)}
+        tone="danger"
+        title="Désactiver ce membre ?"
+        confirmLabel="Désactiver"
+        busy={deactivateBusy}
+        message={
+          confirmDeactivate
+            ? `${confirmDeactivate.displayName ?? confirmDeactivate.email ?? 'Ce membre'} perdra l’accès à l’organisation. Son compte peut être réactivé ultérieurement.`
+            : ''
+        }
+        onCancel={() => setConfirmDeactivate(null)}
+        onConfirm={() => confirmDeactivate && void doDeactivate(confirmDeactivate)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        tone="danger"
+        title="Supprimer définitivement ce compte ?"
+        confirmLabel="Supprimer définitivement"
+        busy={deleteBusy}
+        message={
+          confirmDelete
+            ? `Le compte plateforme de ${confirmDelete.displayName ?? confirmDelete.email ?? 'ce membre'} sera supprimé définitivement, avec TOUTES ses adhésions à des organisations (pas seulement celle-ci). Cette action est irréversible — pour un retrait temporaire, utilisez « Désactiver ».`
+            : ''
+        }
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => confirmDelete && void doDelete(confirmDelete)}
+      />
+    </section>
+  );
+}

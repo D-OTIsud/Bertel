@@ -1,0 +1,62 @@
+# Revue croisée du thésaurus Bertel
+
+6 novembre 2026. La demande est de faire critiquer le plan par Claude, d'évaluer ses objections indépendamment et d'itérer jusqu'à un accord argumenté. Le [plan V3](../superpowers/plans/2026-11-06-thesaurus-api-partenaires-plan.md) a été validé au niveau architectural. La revue technique ultérieure reste **conditionnelle aux preuves de déploiement** décrites dans l'[audit d'implémentation](2026-11-06-thesaurus-implementation.md) ; elle ne déclare pas le plan entier exécuté.
+
+## Validation du plan : trois tours
+
+Au moment de ces trois tours, le CLI installé n'était pas authentifié. La revue a été menée dans l'application Claude connectée, conversation **Thésaurus Bertel : relecture de plan**, modèle affiché **Opus 5.5 Moyen**. Le plan et les faits du dépôt ont été transmis en texte ; Claude n'avait pas le dépôt dans cette conversation et ne devait ni exécuter de test ni modifier de fichier. Les verdicts ci-dessous ont été lus dans l'interface.
+
+| Tour | Verdict de Claude | Évaluation et évolution retenue par Codex |
+|---|---|---|
+| 1 | **« RÉVISER »** | Quatre blocages confirmés : écritures sources hors workflow, confusion état/assignabilité/validité, devenir des affectations lors des fusions/scissions, frontière d'atomicité des projections. Ajout de gardes DB, dimensions distinctes, conservation historique avec requalification et bascule atomique des dérivés requis. |
+| 2 | **« VALIDÉ au niveau de l'architecture »** | Les quatre blocages sont traités. Huit précisions intégrées : mises à jour de contenu comme propositions, inventaire réel des consommateurs, budget de contention, reprise des valeurs retirées, distinction `/catalog`/historique, équivalence opt-in commune, URI authentifiées et volume de resynchronisation annoncé. |
+| 3 | **« VALIDÉ. La V3 est un plan d'architecture et de réalisation cohérent. »** | Aucun nouveau blocage architectural. Ajout du signalement des fiches liées à des prédécesseurs quand l'option est désactivée et des cinq livrables de passage du lot 1. La comparaison legacy possède une référence avant modification puis un contrôle réel avant activation. |
+
+Codex n'a pas suivi trois formulations trop larges : une GUC modifiable n'est pas une autorisation ; seuls des prédécesseurs d'équivalence exacte validée peuvent élargir un filtre ; les projections requises ne peuvent pas converger après la bascule. Claude a accepté ces objections au deuxième tour. Un renommage d'un concept actif ne retire pas son assignabilité. La validation commune porte sur ce plan, sans transformer la revue en preuve de tests ou d'activation.
+
+## Revue du code par le CLI demandé
+
+Après la nouvelle demande explicite de l'utilisateur, le CLI **Claude Code** a réellement été exécuté, avec `--model claude-opus-5-5 --effort medium`, en lecture seule (`--permission-mode plan`, outils Read/Grep/Glob). L'artefact JSON confirme `canonicalModel: claude-opus-5-5`, sans sous-agent et sans refus de permission. Il ne s'agit pas d'un agent GPT présenté comme Claude.
+
+Premier verdict CLI : **« À CORRIGER »**, huit constats. Codex a inspecté les faits, retenu les correctifs justifiés et contesté les hypothèses qui n'étaient pas établies.
+
+| Nº | Constat CLI | Décision de Codex et état |
+|---|---|---|
+| 1 | Dépendances RLS du rôle de publication incomplètes | **Retenu.** Grants EXECUTE ciblés, puis assertion `pg_policy` → `pg_depend` → `pg_proc` pour arrêter l'installation si un helper nécessaire devient inexécutable. Pas de grant global sur les fonctions API. L'hypothèse supplémentaire d'un USAGE nécessaire sur `auth` a été réfutée avec une publication réelle après révocation explicite : les policies stockées appellent les fonctions par OID ; le helper d'identité de confiance résout sa dépendance sous son propriétaire. |
+| 2 | Expansion d'équivalence répétée par fiche | **Retenu et corrigé.** Sous-requête non corrélée exécutée une fois par requête. Artefact `runtime-filter-initplan.json` : zéro expansion option fausse, cinq pour cinq requêtes option vraie. La justesse des résultats repose sur huit comparaisons exactes back-office/partenaire, distinctes de ce benchmark sans prédécesseurs. |
+| 3 | Rafraîchissement de MV bloquant les lecteurs | **Retenu et corrigé.** `CONCURRENTLY` sur une MV déjà peuplée ; remplissage simple sinon. Mesure isolée : 132 lectures concurrentes, attente maximale 1,80 ms. Les index uniques des deux MV doivent être vérifiés sur la cible. L'essai éditeur sous charge dépasse encore le budget de 10,70 ms et reste visible dans l'audit. |
+| 4 | Compatibilité de version PostgreSQL | **Vérifiée.** Cible PostgreSQL 17.6 ; les instructions MAINTAIN et INHERIT/SET utilisées sont disponibles dans cette majeure. La CI doit également réussir sur son environnement Supabase. |
+| 5 | Délai et contention sur corpus réel | **Retenu comme preuve d'ouverture manquante.** Les 447 fiches des mesures locales sont synthétiques. La répétition sur copie restaurée de la production et le budget éditeur ≤ 2 s restent requis. Les seuils supplémentaires de publication < 4 s et de ratio filtre < 1,2× suggérés par Claude ne figuraient pas au plan et n'ont pas été transformés en exigences convenues. |
+| 6 | Dérive des triggers lors d'une réapplication de fichiers de base | **Retenu.** Les quatre exemptions de publication sont vérifiées à l'installation et par le test du manifeste. Réappliquer des fichiers de base après les overlays peut encore rétablir d'anciennes définitions ; le runbook doit imposer l'ordre et les contrôles finaux, ou les miroirs doivent être alignés. Un simple succès de la migration ne prouve pas une réapplication ultérieure sûre. |
+| 7 | Audit d'implémentation contradictoire | **Retenu.** Matrice des 17 critères réécrite autour d'artefacts nommés et de leurs limites ; les mesures successives et l'échec sous charge ne sont plus masqués par d'anciens paragraphes. La preuve HTTP simulée reste explicitement séparée du smoke réel. |
+| 8 | Secret de curseur, exclusion du realm test, portée de la réécriture SQL | **Retenu comme contrôle de déploiement.** Configurer `THESAURUS_CURSOR_SECRET` sur les applications concernées, vérifier les deux branches de liste publique et comparer la définition réelle de `get_filtered_object_ids` avant/après. Le repli serveur sur la clé service-role existe, mais une rotation invaliderait ses curseurs ; ce n'est pas une preuve de configuration de production. |
+
+### Seconde revue CLI des correctifs
+
+Le même CLI a relu les changements du commit `745c3a8` et les artefacts mesurés. Résultat conservé dans `claude-cli-corrections-review.json` : **« validation technique conditionnelle »**. Claude indique n'avoir exécuté aucun test lui-même.
+
+Il juge résolus les défauts de droits RLS, d'expansion répétée, de rafraîchissement bloquant et de version PostgreSQL. Il accepte explicitement les deux réfutations de Codex : USAGE sur `auth` non nécessaire dans le cas prouvé ; seuils 1,2×/4 s simples recommandations. L'assertion des exemptions de triggers résout le défaut à l'installation, avec la réserve sur une réapplication ultérieure des fichiers de base.
+
+Les réserves restantes sont précises : contrôles après réapplication des fichiers de base ; dépendances de privilèges des adaptateurs autonomes avant généralisation ; secret de curseur et diff de la fonction filtre ; CI exacte, sauvegarde/restauration représentative, benchmark réel, déploiement, comparaison `/catalog` et smokes partenaires. Le précontrôle réel de 14:13 UTC confirme depuis les deux index uniques valides nécessaires au rafraîchissement concurrent.
+
+Codex partage ce verdict conditionnel : les corrections techniques sont fondées, mais la mesure sous charge et les opérations encore absentes empêchent d'annoncer l'ouverture validée. La validation architecturale V3 et la validation opérationnelle sont deux conclusions distinctes.
+
+### Troisième avis CLI : le budget de contention
+
+Après la mesure sur copie réelle (publication 6,7 s, attente éditeur 5,1 s), le même CLI Opus 5.5, effort moyen, évalue une proposition de refus récupérable après 1,8 s. Artefact : `claude-cli-contention-review.json`. Son verdict distingue un filet de sécurité conforme au mécanisme d'échec récupérable du plan d'un contournement si ce refus sert à déclarer le budget atteint. Un refus borné change une attente en échec de sauvegarde ; il ne raccourcit pas la détention du verrou global.
+
+**Codex est d'accord : le critère 17 reste non satisfait.** Ni un timeout plus long de publication, ni un `PT409` plus rapide ne sont utilisés pour annoncer une réussite. Le bootstrap massif réussi sur copie demeure une opération d'installation à encadrer ; il ne prouve pas une publication interactive dans le budget. L'ouverture et l'élargissement restent conditionnés à une optimisation mesurée ou à la conception générationnelle prévue par le plan, sans réduire arbitrairement les 447 fiches du pilote ni supprimer des projections requises.
+
+Les trois artefacts CLI et les preuves d'exécution sont conservés localement dans `.tmp-thesaurus-implementation/`, exclu de Git. Les archiver avec la livraison en retirant toute donnée sensible. Les verdicts de Claude ne remplacent ni les logs CI ni la recette déployée.
+
+### Revue CLI de la préparation hors verrou d'éditeur
+
+Les mesures complètes de 447 fiches réelles et 489 propriétaires restent au-dessus du budget avec la reconstruction initiale, puis avec les instantanés incrémentaux. Un prototype strictement local prépare les neuf caches avant K1 et obtient 1,46 s sous verrou, sans preuve de sûreté à ce stade. Codex refuse d'en déduire une livraison et soumet une architecture de préparation avec verrou de sources, journal par XID principal et validation tardive. Le même CLI, toujours `claude-opus-5-5 --effort medium`, valide cette architecture **sous preuves**, dans `claude-cli-preparation-design-v2-visible.json` ; le fichier intermédiaire sans réponse visible n'est pas une validation.
+
+La revue d'implémentation `claude-cli-prepared-implementation-review.json` donne ensuite **« À CORRIGER »** : la purge du journal est encore exécutée sous K1, donc son accumulation peut allonger l'attente des éditeurs. Codex retient ce défaut et déplace cette purge avant K1 ; un entretien privé et borné est ajouté pour le stockage entre publications. Claude valide explicitement l'exclusion du seul XID propre de la validation tardive : la préparation voit ces écritures, et le garde de phase interdit une nouvelle écriture possédée avant K1. Il ne relève pas de blocage dans l'ordre des verrous ni dans les droits des helpers de clôture.
+
+Ses réserves sont conservées comme contrôles : aucune ligne d'historique de version ne doit provoquer un faux conflit pour un changement de nom ou de cache ; l'ensemble des appels et des relations de la projection doit être couvert ; seuls les tags de cible `object` sont lus par la projection actuelle ; les huit adaptateurs doivent être renommés avec leurs vrais triggers ; les courses réelles, le journal accumulé, les crons et le déploiement HTTP restent à prouver. La revue finale des correctifs et ces exécutions sont requises avant de transformer cet avis en validation opérationnelle.
+
+La seconde revue, `claude-cli-prepared-corrections-review.json`, retient un autre contre-exemple : un pruner qui détient X2 exclusif peut provoquer un `PT409` parasite pour une écriture de source qui détient déjà S1. Codex et les deux relecteurs indépendants retiennent ce constat. Le pruner prend désormais **S2 partagé par essai immédiat**, reste incompatible avec toute préparation X2 et devient compatible avec les écritures de sources. Sa suppression n'utilise toujours que les XID visibles dans le snapshot capturé après S2. La recherche des partitions d'historique par ligne est remplacée par `pg_partition_root`, avec équivalence exacte prouvée sur les 113 relations possédées et les 220 tables/partitions de la copie réelle.
+
+La demande de troisième relecture, avec ces correctifs, échoue sur la **limite mensuelle du compte Claude Code** (`claude-cli-prepared-final-code-review.json`). Cet échec n'est pas une validation. L'utilisateur est informé ; Codex poursuit les vérifications autorisées et conserve le dernier avis Claude avec ses corrections et réserves explicites. La validation antérieure du plan V3 et de l'architecture ne vaut pas validation finale de cette implémentation corrigée.

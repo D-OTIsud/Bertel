@@ -1,0 +1,578 @@
+import { stripDiacritics } from '../../../lib/text-fold';
+import { useEffect, useState } from 'react';
+import { Fs, Field, Input, Readout, EditorModal } from '../primitives';
+import type { SectionProps } from './section-types';
+import { getArchetypeMeta, type ArchetypeCode } from '../archetypes';
+import type {
+  ObjectWorkspaceTaxonomyAssignment,
+  ObjectWorkspaceTaxonomyDomain,
+  ObjectWorkspaceTaxonomyNodeOption,
+  ObjectWorkspaceTaxonomyPathNode,
+} from '../../../services/object-workspace-parser';
+
+const IDENTITY_COPY: Record<ArchetypeCode, { subject: string; name: string; nature: string }> = {
+  HEB: { subject: 'de l’hébergement', name: 'Nom commercial', nature: 'd’hébergement' },
+  RES: { subject: 'du restaurant', name: 'Nom commercial', nature: 'de restaurant' },
+  ASC: { subject: 'de l’activité', name: 'Nom de l’activité', nature: 'd’activité' },
+  ITI: { subject: 'de l’itinéraire', name: 'Nom de l’itinéraire', nature: 'd’itinéraire' },
+  VIS: { subject: 'du site de visite', name: 'Nom du site de visite', nature: 'de site de visite' },
+  SRV: { subject: 'du service', name: 'Nom du service', nature: 'de service' },
+  FMA: { subject: 'de l’événement', name: 'Nom de l’événement', nature: 'd’événement' },
+};
+
+function toTaxonomyPathNode(
+  node: ObjectWorkspaceTaxonomyNodeOption,
+  depth: number,
+): ObjectWorkspaceTaxonomyPathNode {
+  return {
+    id: node.id,
+    code: node.code,
+    label: node.label,
+    description: node.description,
+    depth,
+  };
+}
+
+function buildTaxonomyPath(
+  nodes: ObjectWorkspaceTaxonomyNodeOption[],
+  selectedNode: ObjectWorkspaceTaxonomyNodeOption,
+): ObjectWorkspaceTaxonomyPathNode[] {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const reversed: ObjectWorkspaceTaxonomyNodeOption[] = [];
+  const visited = new Set<string>();
+  let current: ObjectWorkspaceTaxonomyNodeOption | null = selectedNode;
+
+  while (current && !visited.has(current.id)) {
+    reversed.push(current);
+    visited.add(current.id);
+    current = current.parentId ? (nodeById.get(current.parentId) ?? null) : null;
+  }
+
+  return reversed.reverse().map((node, index) => toTaxonomyPathNode(node, index));
+}
+
+function buildTaxonomyAssignment(
+  domain: ObjectWorkspaceTaxonomyDomain,
+  selectedNode: ObjectWorkspaceTaxonomyNodeOption,
+): ObjectWorkspaceTaxonomyAssignment {
+  const path = buildTaxonomyPath(domain.nodes, selectedNode);
+  return {
+    recordId: domain.assignment?.recordId ?? null,
+    nodeId: selectedNode.id,
+    code: selectedNode.code,
+    label: selectedNode.label,
+    description: selectedNode.description,
+    depth: Math.max(0, path.length - 1),
+    path,
+    updatedAt: domain.assignment?.updatedAt ?? '',
+    source: 'workspace_taxonomy',
+  };
+}
+
+function normalizeTaxonomyLabel(label: string): string {
+  return stripDiacritics(label)
+    .toLowerCase()
+    .replace(/['’]/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .map((part) => part.length > 3 ? part.replace(/s$/, '') : part)
+    .join(' ');
+}
+
+function hasSameTaxonomyMeaning(left: string, right: string): boolean {
+  const normalizedLeft = normalizeTaxonomyLabel(left);
+  const normalizedRight = normalizeTaxonomyLabel(right);
+  return Boolean(normalizedLeft && normalizedLeft === normalizedRight);
+}
+
+function collapseTaxonomyPath(path: ObjectWorkspaceTaxonomyPathNode[]): ObjectWorkspaceTaxonomyPathNode[] {
+  return path.filter((node, index) => (
+    index === 0 || !hasSameTaxonomyMeaning(path[index - 1].label, node.label)
+  ));
+}
+
+function formatTaxonomyPath(assignment: ObjectWorkspaceTaxonomyAssignment | null | undefined): string {
+  if (!assignment) {
+    return '';
+  }
+
+  return collapseTaxonomyPath(assignment.path).map((node) => node.label).join(' ▸ ');
+}
+
+function sortTaxonomyNodes(
+  nodes: ObjectWorkspaceTaxonomyNodeOption[],
+): ObjectWorkspaceTaxonomyNodeOption[] {
+  return [...nodes].sort((left, right) => (
+    left.position - right.position
+    || left.label.localeCompare(right.label, 'fr')
+    || left.code.localeCompare(right.code, 'fr')
+  ));
+}
+
+/** Group nodes by parent id (roots under `null`); each sibling list is sorted. */
+function groupTaxonomyChildren(
+  nodes: ObjectWorkspaceTaxonomyNodeOption[],
+): Map<string | null, ObjectWorkspaceTaxonomyNodeOption[]> {
+  const childrenByParentId = new Map<string | null, ObjectWorkspaceTaxonomyNodeOption[]>();
+  for (const node of nodes) {
+    const siblings = childrenByParentId.get(node.parentId) ?? [];
+    siblings.push(node);
+    childrenByParentId.set(node.parentId, siblings);
+  }
+  for (const [parentId, children] of childrenByParentId) {
+    childrenByParentId.set(parentId, sortTaxonomyNodes(children));
+  }
+  return childrenByParentId;
+}
+
+/** Render one collapsed breadcrumb path (current value / live selection preview). */
+function TaxonomyCrumbs({ path }: { path: ObjectWorkspaceTaxonomyPathNode[] }) {
+  return (
+    <span className="identity-taxo__crumbs">
+      {path.map((node, index) => (
+        <span key={node.id} className="identity-taxo__crumb">
+          {index > 0 && <span className="identity-taxo__sep" aria-hidden="true">▸</span>}
+          <span className="identity-taxo__crumb-label">{node.label}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** Diacritic-insensitive lowercasing for search matching. */
+function foldText(value: string): string {
+  return stripDiacritics(value).toLowerCase().trim();
+}
+
+/**
+ * Node ids to keep visible for a search query: every label match, plus its
+ * ancestors (so the path stays readable) and its descendants (so a matched
+ * branch shows its options). Returns null when the query is empty (show all).
+ */
+function computeSearchVisibleIds(
+  nodes: ObjectWorkspaceTaxonomyNodeOption[],
+  nodeById: Map<string, ObjectWorkspaceTaxonomyNodeOption>,
+  childrenByParentId: Map<string | null, ObjectWorkspaceTaxonomyNodeOption[]>,
+  foldedQuery: string,
+): Set<string> | null {
+  if (!foldedQuery) {
+    return null;
+  }
+  const visible = new Set<string>();
+  function addDescendants(id: string) {
+    for (const child of childrenByParentId.get(id) ?? []) {
+      visible.add(child.id);
+      addDescendants(child.id);
+    }
+  }
+  for (const node of nodes) {
+    const searchableText = [
+      node.label,
+      node.description,
+      node.sourceRef ?? '',
+      ...(node.aliases ?? []),
+    ].map(foldText).join(' ');
+    if (!searchableText.includes(foldedQuery)) {
+      continue;
+    }
+    visible.add(node.id);
+    let current: ObjectWorkspaceTaxonomyNodeOption | undefined = node;
+    while (current?.parentId) {
+      visible.add(current.parentId);
+      current = nodeById.get(current.parentId);
+    }
+    addDescendants(node.id);
+  }
+  return visible;
+}
+
+/**
+ * Sub-category selector — single readable column with search (redesign 2026-06-08,
+ * from a user mockup; replaces the multi-column cascade). A compact breadcrumb of
+ * the live selection sits on top, then a search box, then a single-column tree where
+ * parent groups expand/collapse and assignable leaves are radio options. The saved
+ * choice is badged "Actuelle"; "Valider la sélection" only enables on a changed
+ * assignable node and persists via the `taxonomy` module.
+ */
+function TaxonomyModal({
+  open,
+  domain,
+  onClose,
+  onApply,
+  nature,
+}: {
+  nature: string;
+  open: boolean;
+  domain: ObjectWorkspaceTaxonomyDomain | null;
+  onClose: () => void;
+  onApply: (assignment: ObjectWorkspaceTaxonomyAssignment) => void;
+}) {
+  const assignment = domain?.assignment ?? null;
+  // La nature reste un choix exclusif. Les axes multi-valués ont leurs propres
+  // contrôles sous le sélecteur et ne doivent jamais apparaître comme des
+  // « natures » concurrentes d'Hôtel ou Hôtel-restaurant.
+  const nodes = (domain?.nodes ?? []).filter(
+    (node) => node.axis !== 'positionnement' && node.axis !== 'type_unite',
+  );
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const childrenByParentId = groupTaxonomyChildren(nodes);
+  const roots = childrenByParentId.get(null) ?? [];
+  const hasSelectableNodes = nodes.some((node) => node.isAssignable);
+
+  const [selectedId, setSelectedId] = useState('');
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState('');
+
+  // On open, preselect the saved assignment and expand the branch leading to it.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const domainNodes = domain?.nodes ?? [];
+    const assignedNode = domainNodes.find((node) => node.id === domain?.assignment?.nodeId) ?? null;
+    const ancestorIds = assignedNode
+      ? buildTaxonomyPath(domainNodes, assignedNode).slice(0, -1).map((node) => node.id)
+      : [];
+    setSelectedId(domain?.assignment?.nodeId ?? '');
+    setExpandedIds(new Set(ancestorIds));
+    setQuery('');
+  }, [domain?.assignment?.nodeId, domain?.domain, open]);
+
+  const selectedNode = nodeById.get(selectedId) ?? null;
+  const hasSelectionChanged = Boolean(
+    selectedNode && selectedNode.isAssignable && selectedNode.id !== assignment?.nodeId,
+  );
+  // Live breadcrumb — the selected path, falling back to the saved assignment path.
+  const rawSelectedPath = selectedNode
+    ? buildTaxonomyPath(nodes, selectedNode)
+    : assignment?.path ?? [];
+  const selectedPath = selectedNode
+    ? collapseTaxonomyPath(rawSelectedPath)
+    : collapseTaxonomyPath(assignment?.path ?? []);
+  const selectedPathNodeIds = new Set(rawSelectedPath.map((node) => node.id));
+
+  const foldedQuery = foldText(query);
+  const visibleIds = computeSearchVisibleIds(nodes, nodeById, childrenByParentId, foldedQuery);
+  const isVisible = (id: string) => !visibleIds || visibleIds.has(id);
+  const isExpanded = (id: string) => (foldedQuery ? true : expandedIds.has(id));
+
+  function toggleExpand(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function handleSave() {
+    if (!domain || !selectedNode || !hasSelectionChanged) {
+      return;
+    }
+    onApply(buildTaxonomyAssignment(domain, selectedNode));
+    onClose();
+  }
+
+  function renderNode(node: ObjectWorkspaceTaxonomyNodeOption, depth: number) {
+    if (!isVisible(node.id)) {
+      return null;
+    }
+    const children = childrenByParentId.get(node.id) ?? [];
+    const hasChildren = children.length > 0;
+    const expanded = isExpanded(node.id);
+    const isSelected = node.id === selectedId;
+    const isSelectedPath = selectedPathNodeIds.has(node.id);
+    const isCurrent = node.id === assignment?.nodeId;
+    return (
+      <li key={node.id}>
+        <div
+          className={`taxo2-row${isSelectedPath ? ' is-selected-path' : ''}${isSelected ? ' is-selected' : ''}`}
+          style={{ paddingLeft: 10 + depth * 18 }}
+        >
+          {node.isAssignable || isCurrent ? (
+            <label className="taxo2-opt">
+              {/* checked reflects the whole selected PATH (ancestors + leaf), so picking a
+                  child also marks its parent as selected. onClick (not onChange) so clicking
+                  an already-in-path ancestor still narrows the selection to it. */}
+              <input
+                type="radio"
+                className="taxo2-radio"
+                checked={isSelectedPath}
+                disabled={!node.isAssignable}
+                readOnly
+                onClick={() => setSelectedId(node.id)}
+              />
+              <span className="taxo2-label">
+                {node.label}
+                {(node.aliases?.length ?? 0) > 0 ? (
+                  <small className="block text-[10px] font-normal text-ink-3">
+                    Aussi appelé : {node.aliases?.join(', ')}
+                  </small>
+                ) : null}
+              </span>
+              {isCurrent && <span className="taxo2-badge">Actuelle</span>}
+              {!node.isAssignable && <span className="taxo2-badge">À requalifier</span>}
+            </label>
+          ) : (
+            <button
+              type="button"
+              className="taxo2-group"
+              aria-expanded={hasChildren ? expanded : undefined}
+              onClick={() => hasChildren && toggleExpand(node.id)}
+            >
+              <span className="taxo2-label">
+                {node.label}
+                {(node.aliases?.length ?? 0) > 0 ? (
+                  <small className="block text-[10px] font-normal text-ink-3">
+                    Aussi appelé : {node.aliases?.join(', ')}
+                  </small>
+                ) : null}
+              </span>
+              {isCurrent && <span className="taxo2-badge">Actuelle</span>}
+            </button>
+          )}
+          {hasChildren && (
+            <button
+              type="button"
+              className={`taxo2-caret${expanded ? ' is-open' : ''}`}
+              aria-label={expanded ? `Réduire ${node.label}` : `Développer ${node.label}`}
+              aria-expanded={expanded}
+              onClick={() => toggleExpand(node.id)}
+            >
+              <span aria-hidden="true">›</span>
+            </button>
+          )}
+        </div>
+        {hasChildren && expanded && (
+          <ul className="taxo2-children">{children.map((child) => renderNode(child, depth + 1))}</ul>
+        )}
+      </li>
+    );
+  }
+
+  return (
+    <EditorModal
+      open={open}
+      title={`Choisir la nature ${nature}`}
+      onClose={onClose}
+      onSave={handleSave}
+      saveLabel="Valider la sélection"
+      saveDisabled={!hasSelectionChanged}
+    >
+      <div className="object-editor taxo2">
+        {!domain ? (
+          <p className="identity-taxo__notice">
+            Aucune nature {nature} n'est définie pour ce type de fiche.
+          </p>
+        ) : (
+          <>
+            <div className="taxo2-path">
+              <span className="taxo2-path__label">Sélection</span>
+              {selectedPath.length > 0 ? (
+                <TaxonomyCrumbs path={selectedPath} />
+              ) : (
+                <em className="identity-taxo__none">Aucune nature sélectionnée</em>
+              )}
+            </div>
+
+            {hasSelectableNodes ? (
+              <>
+                <div className="taxo2-search">
+                  <span className="taxo2-search__icon" aria-hidden="true">⌕</span>
+                  <input
+                    type="text"
+                    className="taxo2-search__input"
+                    placeholder="Rechercher une nature ou un ancien libellé…"
+                    aria-label={`Rechercher une nature ${nature}`}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                  />
+                </div>
+                <ul className="taxo2-tree">{roots.map((root) => renderNode(root, 0))}</ul>
+                {Boolean(foldedQuery) && (visibleIds?.size ?? 0) === 0 && (
+                  <p className="taxo2-empty">Aucune nature ne correspond à votre recherche.</p>
+                )}
+              </>
+            ) : (
+              <p className="identity-taxo__notice">
+                Les options de nature {nature} ne sont pas disponibles pour ce type de fiche.
+                La valeur actuelle reste affichée en lecture seule.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </EditorModal>
+  );
+}
+
+/** Section 01 — name and taxonomy, with vocabulary matching the object's archetype.
+ *  Publication status moved to the editor rail; legal name is edited in §18 Fournisseur. */
+export function SectionIdentity({ editor, objectId, folded, archetype, typeCode }: SectionProps) {
+  const resolvedArchetype = archetype ?? getArchetypeMeta(typeCode)?.archetype;
+  const copy = resolvedArchetype ? IDENTITY_COPY[resolvedArchetype] : { subject: 'de la fiche', name: 'Nom', nature: 'de fiche' };
+  const [taxonomyOpen, setTaxonomyOpen] = useState(false);
+  const info = editor.draft.generalInfo;
+  const taxonomy = editor.draft.taxonomy;
+  const canonicalId = objectId ?? '';
+  const taxonomyDomain = taxonomy.domains[0] ?? null;
+  const taxonomyPath = formatTaxonomyPath(taxonomyDomain?.assignment);
+  const assignmentNeedsRequalification = taxonomyDomain?.nodes.some((node) => node.id === taxonomyDomain.assignment?.nodeId && !node.isAssignable);
+  function applyTaxonomyAssignment(assignment: ObjectWorkspaceTaxonomyAssignment) {
+    if (!taxonomyDomain) {
+      return;
+    }
+
+    editor.replaceModule('taxonomy', {
+      ...taxonomy,
+      domains: taxonomy.domains.map((domain) => (
+        domain.domain === taxonomyDomain.domain ? { ...domain, assignment } : domain
+      )),
+    });
+  }
+
+  return (
+    <Fs
+      num="01"
+      title={`Identité ${copy.subject}`}
+      sub="Nom et classification"
+      folded={folded}
+      pill={{ tone: 'ok', label: 'OK' }}
+    >
+      <div className="grid-2-1" style={{ marginBottom: 12 }}>
+        <Field
+          label={copy.name}
+          required
+          error={String(info.name ?? '').trim() ? undefined : `${copy.name} : ce champ est obligatoire.`}
+        >
+          <Input value={info.name} onChange={(name) => editor.patchModule('generalInfo', { name })} lg />
+        </Field>
+        <Field label="ID OTI" hint="Identifiant canonique, généré, non modifiable">
+          <Readout value={canonicalId} mono />
+        </Field>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <Field label={`Nature ${copy.nature}`}>
+          <button
+            type="button"
+            className="identity-taxo-trigger"
+            aria-label={
+              taxonomyPath
+                ? `Modifier la nature ${copy.nature} (actuelle : ${taxonomyPath})`
+                : `Modifier la nature ${copy.nature}`
+            }
+            onClick={() => setTaxonomyOpen(true)}
+          >
+            <span className={`identity-taxo-trigger__value${taxonomyPath ? '' : ' is-empty'}`}>
+              {taxonomyPath || `Définir la nature ${copy.nature}…`}
+            </span>
+            <span className="identity-taxo-trigger__caret" aria-hidden="true">▾</span>
+          </button>
+          {assignmentNeedsRequalification ? <p className="identity-taxo__notice">Ce terme n’est plus attribuable. Il est conservé sur cette fiche et doit être requalifié.</p> : null}
+        </Field>
+      </div>
+
+      {taxonomy.positionings && taxonomy.positionings.options.length > 0 ? (
+        <div style={{ marginBottom: 12 }}>
+          <Field label="Positionnement">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Positionnement">
+              {taxonomy.positionings.options.map((option) => {
+                const active = taxonomy.positionings?.selectedCodes.includes(option.code) === true;
+                return (
+                  <button
+                    key={option.code}
+                    type="button"
+                    aria-pressed={active}
+                    disabled={option.isAssignable === false && !active}
+                    title={option.isAssignable === false ? 'Ancien terme conservé sur cette fiche ; aucune nouvelle attribution possible.' : option.description || undefined}
+                    onClick={() => editor.replaceModule('taxonomy', {
+                      ...taxonomy,
+                      positionings: taxonomy.positionings ? {
+                        ...taxonomy.positionings,
+                        selectedCodes: active
+                          ? taxonomy.positionings.selectedCodes.filter((code) => code !== option.code)
+                          : [...taxonomy.positionings.selectedCodes, option.code],
+                      } : undefined,
+                    })}
+                    className={`identity-unit-chip${active ? ' is-active' : ''}`}
+                    style={{
+                      minHeight: 28,
+                      borderRadius: 8,
+                      border: `1px solid ${active ? 'var(--teal, #176b6a)' : 'var(--line)'}`,
+                      background: active ? 'var(--teal, #176b6a)' : 'var(--surface)',
+                      color: active ? '#fff' : 'var(--ink-2)',
+                      padding: '4px 10px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {option.label}{option.isAssignable === false ? active ? ' — à requalifier' : ' — indisponible' : ''}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+        </div>
+      ) : null}
+
+      {/* §201 — axe « Type d'unité », MULTI-VALUÉ et distinct de la nature. Placé
+          juste sous elle parce que c'est là que la confusion se joue : « Bulle »
+          n'est pas un type d'établissement, c'est ce dans quoi on dort. */}
+      {archetype === 'HEB' && taxonomy.unitTypes.options.length > 0 ? (
+        <div style={{ marginBottom: 12 }}>
+          <Field label="Type d'unité">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Type d'unité">
+                {taxonomy.unitTypes.options.map((option) => {
+                  const active = taxonomy.unitTypes.selectedCodes.includes(option.code);
+                  return (
+                    <button
+                      key={option.code}
+                      type="button"
+                      aria-pressed={active}
+                      disabled={option.isAssignable === false && !active}
+                      title={option.isAssignable === false ? 'Ancien terme conservé sur cette fiche ; aucune nouvelle attribution possible.' : option.description || undefined}
+                      onClick={() => editor.replaceModule('taxonomy', {
+                        ...taxonomy,
+                        unitTypes: {
+                          ...taxonomy.unitTypes,
+                          selectedCodes: active
+                            ? taxonomy.unitTypes.selectedCodes.filter((code) => code !== option.code)
+                            : [...taxonomy.unitTypes.selectedCodes, option.code],
+                        },
+                      })}
+                      className={`identity-unit-chip${active ? ' is-active' : ''}`}
+                      style={{
+                        minHeight: 28,
+                        borderRadius: 8,
+                        border: `1px solid ${active ? 'var(--teal, #176b6a)' : 'var(--line)'}`,
+                        background: active ? 'var(--teal, #176b6a)' : 'var(--surface)',
+                        color: active ? '#fff' : 'var(--ink-2)',
+                        padding: '4px 10px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {option.label}{option.isAssignable === false ? active ? ' — à requalifier' : ' — indisponible' : ''}
+                    </button>
+                  );
+                })}
+              </div>
+          </Field>
+        </div>
+      ) : null}
+
+      <TaxonomyModal
+        open={taxonomyOpen}
+        nature={copy.nature}
+        domain={taxonomyDomain}
+        onClose={() => setTaxonomyOpen(false)}
+        onApply={applyTaxonomyAssignment}
+      />
+    </Fs>
+  );
+}

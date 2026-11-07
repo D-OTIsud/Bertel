@@ -1,0 +1,123 @@
+-- test_object_hard_delete.sql
+-- Behavioral test for api.rpc_delete_object (§108). Transactionnel, ROLLBACK final.
+-- Run APRÈS le manifest complet INCLUANT migration_object_hard_delete.sql.
+\set ON_ERROR_STOP on
+BEGIN;
+
+DO $$
+DECLARE
+  v_org       text := 'ORGRUN9999999971';
+  v_obj       text := 'HOTRUN9999999971';
+  v_su_uid    uuid := '00000000-0000-4000-a000-0000000000c1';  -- super_admin
+  v_plain_uid uuid := '00000000-0000-4000-a000-0000000000c2';  -- tourism_agent (PAS superuser)
+  v_obj2      text := 'HOTRUN9999999982';  -- autre objet (référent survivant d'un doc partagé)
+  v_pub_role  uuid;
+  v_media_type uuid;
+  v_act       uuid;
+  v_place_id  uuid;
+  v_doc_id    uuid := gen_random_uuid();     -- via object_document seulement -> supprimé
+  v_d_sust    uuid := gen_random_uuid();     -- via object_sustainability_action seulement -> supprimé (gap RGPD fermé)
+  v_d_shared  uuid := gen_random_uuid();     -- v_obj object_document + v_obj2 sustainability -> CONSERVÉ
+  v_result    jsonb;
+  v_obj_left  int;
+  v_media_left int;
+  v_link_left int;
+  v_doc_left  int;
+  v_sust_left int;
+  v_shared_left int;
+  v_log_count int;
+BEGIN
+  -- ---------- Users ----------
+  INSERT INTO auth.users (id, email) VALUES
+    (v_su_uid,    'hd_superadmin@test.local'),
+    (v_plain_uid, 'hd_plain@test.local');
+  INSERT INTO app_user_profile (id, role) VALUES
+    (v_su_uid, 'super_admin'), (v_plain_uid, 'tourism_agent')
+  ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+
+  -- ---------- Fixture : objet archivé + enfants témoins (cascade) + document orphelin ----------
+  SELECT id INTO v_pub_role FROM ref_org_role WHERE code = 'publisher';
+  SELECT id INTO v_media_type FROM ref_code_media_type ORDER BY code LIMIT 1;
+  SELECT id INTO v_act FROM ref_sustainability_action LIMIT 1;
+  ASSERT v_media_type IS NOT NULL, 'fixture: no ref_code_media_type seeded';
+  ASSERT v_act IS NOT NULL, 'fixture: no ref_sustainability_action seeded';
+  INSERT INTO object (id, object_type, name, status) VALUES
+    (v_org,  'ORG', 'HardDelete Test Org',   'published'),
+    (v_obj,  'HOT', 'HardDelete Test Hotel', 'archived'),
+    (v_obj2, 'HOT', 'Other Hotel',           'published');
+  INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES (v_obj, v_org, v_pub_role);
+  INSERT INTO media (object_id, media_type_id, url)
+    VALUES (v_obj, v_media_type, 'https://x/storage/v1/object/public/media/'||v_obj||'/a.jpg');
+  -- media XOR : un média de SOUS-LIEU (place-keyed) doit aussi être collecté pour le balayage Storage.
+  INSERT INTO object_place (object_id, label) VALUES (v_obj, 'Sous-lieu test') RETURNING id INTO v_place_id;
+  INSERT INTO media (place_id, media_type_id, url)
+    VALUES (v_place_id, v_media_type, 'https://x/storage/v1/object/public/media/'||v_obj||'/p.jpg');
+  -- ref_document est un catalogue PARTAGÉ référencé par 6 chemins. Trois cas :
+  --   d.pdf   : via object_document seulement              -> orphelin -> supprimé + URL émise
+  --   sust    : via object_sustainability_action seulement -> orphelin -> supprimé (gap RGPD fermé)
+  --   shared  : v_obj object_document + v_obj2 sustainability -> référent survivant -> CONSERVÉ
+  INSERT INTO ref_document (id, url) VALUES
+    (v_doc_id,   'https://x/storage/v1/object/public/documents/'||v_obj||'/d.pdf'),
+    (v_d_sust,   'https://x/storage/v1/object/public/documents/'||v_obj||'/sust.pdf'),
+    (v_d_shared, 'https://x/storage/v1/object/public/documents/'||v_obj||'/shared.pdf');
+  INSERT INTO object_document (object_id, document_id) VALUES (v_obj, v_doc_id), (v_obj, v_d_shared);
+  INSERT INTO object_sustainability_action (object_id, action_id, document_id) VALUES (v_obj, v_act, v_d_sust);
+  INSERT INTO object_sustainability_action (object_id, action_id, document_id) VALUES (v_obj2, v_act, v_d_shared);
+
+  -- ========== 1. Non-superuser => FORBIDDEN ==========
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_plain_uid, 'role','authenticated')::text, true);
+  BEGIN
+    v_result := api.rpc_delete_object(v_obj, 'HardDelete Test Hotel');
+    RAISE EXCEPTION 'GUARD FAILED: non-superuser deleted an object';
+  EXCEPTION WHEN raise_exception THEN
+    -- Spécifiquement la garde superuser, pas FORBIDDEN_ORG (qui contient aussi « FORBIDDEN »).
+    ASSERT POSITION('administrateurs plateforme' IN SQLERRM) > 0, 'expected superuser FORBIDDEN, got: '||SQLERRM;
+  END;
+
+  -- ========== superuser pour la suite ==========
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_su_uid, 'role','authenticated')::text, true);
+
+  -- ========== 2. ORG rejeté ==========
+  BEGIN
+    v_result := api.rpc_delete_object(v_org, 'HardDelete Test Org');
+    RAISE EXCEPTION 'GUARD FAILED: ORG was deleted';
+  EXCEPTION WHEN raise_exception THEN
+    ASSERT POSITION('FORBIDDEN_ORG' IN SQLERRM) > 0, 'expected FORBIDDEN_ORG, got: '||SQLERRM;
+  END;
+
+  -- ========== 3. nom de confirmation erroné ==========
+  BEGIN
+    v_result := api.rpc_delete_object(v_obj, 'Wrong Name');
+    RAISE EXCEPTION 'GUARD FAILED: name mismatch accepted';
+  EXCEPTION WHEN raise_exception THEN
+    ASSERT POSITION('NAME_MISMATCH' IN SQLERRM) > 0, 'expected NAME_MISMATCH, got: '||SQLERRM;
+  END;
+
+  -- ========== 4. fiche non archivée bloquée ==========
+  UPDATE object SET status = 'published' WHERE id = v_obj;
+  BEGIN
+    v_result := api.rpc_delete_object(v_obj, 'HardDelete Test Hotel');
+    RAISE EXCEPTION 'GUARD FAILED: non-archived deleted';
+  EXCEPTION WHEN raise_exception THEN
+    ASSERT POSITION('MUST_ARCHIVE_FIRST' IN SQLERRM) > 0, 'expected MUST_ARCHIVE_FIRST, got: '||SQLERRM;
+  END;
+  UPDATE object SET status = 'archived' WHERE id = v_obj;
+
+  -- ========== 5. happy path ==========
+  v_result := api.rpc_delete_object(v_obj, 'HardDelete Test Hotel');
+  ASSERT (v_result->>'deleted')::boolean,                          'expected deleted=true';
+  ASSERT jsonb_array_length(v_result->'media_to_delete') = 2,      'expected 2 media urls (object-keyed + place-keyed)';
+  ASSERT jsonb_array_length(v_result->'documents_to_delete') = 2,  'expected 2 doc urls (object_document + sustainability orphans), got: '||(v_result->>'documents_to_delete');
+
+  SELECT count(*) INTO v_obj_left   FROM object          WHERE id = v_obj;          ASSERT v_obj_left   = 0, 'object gone';
+  SELECT count(*) INTO v_media_left FROM media           WHERE object_id = v_obj OR place_id = v_place_id; ASSERT v_media_left = 0, 'object+place media cascade-gone';
+  SELECT count(*) INTO v_link_left  FROM object_org_link WHERE object_id = v_obj; ASSERT v_link_left  = 0, 'org_link cascade-gone';
+  SELECT count(*) INTO v_doc_left    FROM ref_document WHERE id = v_doc_id;   ASSERT v_doc_left    = 0, 'object_document-only doc deleted';
+  SELECT count(*) INTO v_sust_left   FROM ref_document WHERE id = v_d_sust;   ASSERT v_sust_left   = 0, 'sustainability-only doc deleted (RGPD erasure gap closed)';
+  SELECT count(*) INTO v_shared_left FROM ref_document WHERE id = v_d_shared; ASSERT v_shared_left = 1, 'shared doc (referenced by other object) NOT deleted';
+  SELECT count(*) INTO v_log_count  FROM object_deletion_log WHERE object_id = v_obj; ASSERT v_log_count = 1, 'one deletion log row';
+
+  RAISE NOTICE 'Object hard-delete assertions passed.';
+END$$;
+
+ROLLBACK;

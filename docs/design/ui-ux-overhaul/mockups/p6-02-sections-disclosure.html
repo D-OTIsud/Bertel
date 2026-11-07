@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6.2 · Sections denses en disclosure · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  .editor-section { max-width: 760px; }
+  .editor-section + .editor-section { margin-top: 28px; }
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  .sec-head__num { font-size: 12px; font-weight: 800; color: var(--teal); letter-spacing: .04em; }
+  .sec-head__sub { color: var(--muted); font-size: 13px; }
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+
+  .disc {
+    border: 1px solid var(--line); border-radius: var(--r-md);
+    background: var(--surface); margin-bottom: 10px; overflow: hidden;
+  }
+  .disc__bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 16px; cursor: pointer; min-height: 44px;
+    background: var(--surface);
+  }
+  .disc__bar:hover { background: var(--surface-2); }
+  .disc__chevron { color: var(--muted); transition: transform .15s ease; }
+  .disc.is-open .disc__chevron { transform: rotate(90deg); }
+  .disc__label { font-weight: 700; font-size: 14px; }
+  .disc__count { color: var(--muted); font-size: 13px; font-weight: 600; margin-left: auto; }
+  .disc__body { padding: 4px 16px 16px; border-top: 1px solid var(--line-soft); }
+  .disc.is-closed .disc__body { display: none; }
+
+  .row-grid { display: grid; gap: 10px; margin-top: 12px; }
+  .place-row {
+    display: grid; grid-template-columns: 24px 1fr 130px 36px; gap: 10px;
+    align-items: center; padding: 9px 12px; border: 1px solid var(--line-soft);
+    border-radius: var(--r-sm); background: var(--surface-2);
+  }
+  .place-row__handle { color: var(--muted); cursor: grab; }
+  .mini-empty {
+    text-align: center; padding: 22px 18px; border: 1px dashed var(--line);
+    border-radius: var(--r-sm); background: var(--surface-2); margin-top: 12px;
+  }
+  .mini-empty .material-symbols-outlined { font-size: 26px; color: var(--teal); }
+  .mini-empty__title { font-weight: 700; font-size: 14px; margin: 6px 0 4px; }
+  .mini-empty__text { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+  .clobber { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .clobber__col { border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; background: var(--surface); }
+  .clobber__col.bad { border-color: var(--danger); }
+  .clobber__col.good { border-color: var(--ok); }
+  .clobber__warn { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--danger); margin-top: 12px; }
+  .clobber__warn .material-symbols-outlined { font-size: 18px; }
+  .clobber__ok { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--ok); margin-top: 12px; }
+  .clobber__ok .material-symbols-outlined { font-size: 18px; }
+  .bind { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: var(--r-pill); }
+  .bind.dup { background: var(--danger-soft); color: var(--danger); }
+</style>
+</head>
+<body>
+<div class="mock-frame">
+  <div class="mock-head">
+    <span class="kicker">Phase 6 · Implémentation 6.2</span>
+    <h1>Sections denses en disclosure</h1>
+    <p class="lead">Les sections §07 Capacité et §16 Lieux déversent tout en ligne et noient l'utilisateur. On hiérarchise : l'essentiel en tête, les préoccupations secondaires repliées en disclosure (le motif existe déjà en §08/§13/§14). On corrige aussi un piège BlockASC où deux contrôles écrivent le même champ.</p>
+  </div>
+
+  <div class="mock-stage">
+
+    <!-- ===== §07 Capacité ===== -->
+    <div class="editor-section">
+      <div class="sec-head">
+        <span class="sec-head__num">§07</span>
+        <h2>Capacité &amp; accueil</h2>
+        <span class="sec-head__sub">L'essentiel en tête, les politiques repliées</span>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat stat--lead">
+          <div class="stat__label">Capacité max</div>
+          <div class="stat__value">110</div>
+          <div class="stat__delta up">personnes</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Chambres</div>
+          <div class="stat__value">42</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Couchages</div>
+          <div class="stat__value">96</div>
+        </div>
+      </div>
+
+      <div class="disc is-closed">
+        <div class="disc__bar">
+          <span class="material-symbols-outlined disc__chevron">chevron_right</span>
+          <span class="disc__label">Détails capacité</span>
+          <span class="disc__count">5 mesures saisies</span>
+        </div>
+        <div class="disc__body">
+          <div class="grid-3" style="margin-top:12px">
+            <div class="field"><label>Salles de séminaire</label><input class="input mono" value="2"></div>
+            <div class="field"><label>Emplacements</label><input class="input mono" value="0"></div>
+            <div class="field"><label>Couverts restaurant</label><input class="input mono" value="80"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="disc is-closed">
+        <div class="disc__bar">
+          <span class="material-symbols-outlined disc__chevron">chevron_right</span>
+          <span class="disc__label">Politique groupes</span>
+          <span class="disc__count">Groupes acceptés</span>
+        </div>
+        <div class="disc__body">
+          <div class="grid-2" style="margin-top:12px">
+            <div class="field"><label>Taille de groupe max</label><input class="input mono" value="40"></div>
+            <div class="field"><label>Conditions</label><input class="input" value="Sur réservation, devis groupe"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="disc is-closed">
+        <div class="disc__bar">
+          <span class="material-symbols-outlined disc__chevron">chevron_right</span>
+          <span class="disc__label">Politique animaux</span>
+          <span class="disc__count">Acceptés avec supplément</span>
+        </div>
+        <div class="disc__body">
+          <div class="grid-2" style="margin-top:12px">
+            <div class="field"><label>Animaux admis</label><select class="select"><option>Oui, avec supplément</option><option>Non</option></select></div>
+            <div class="field"><label>Supplément / nuit</label><input class="input mono" value="12 €"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== §16 Lieux ===== -->
+    <div class="editor-section">
+      <div class="sec-head">
+        <span class="sec-head__num">§16</span>
+        <h2>Lieux &amp; étapes</h2>
+        <span class="sec-head__sub">Trois disclosures labellisées, chacune avec son état vide pédagogique</span>
+      </div>
+
+      <div class="disc is-open">
+        <div class="disc__bar">
+          <span class="material-symbols-outlined disc__chevron">chevron_right</span>
+          <span class="disc__label">Sous-lieux</span>
+          <span class="disc__count">2 sous-lieux</span>
+        </div>
+        <div class="disc__body">
+          <div class="row-grid">
+            <div class="place-row">
+              <span class="material-symbols-outlined place-row__handle">drag_indicator</span>
+              <input class="input" value="Restaurant La Varangue">
+              <select class="select"><option>Restaurant</option><option>Réception</option></select>
+              <button class="btn btn--icon btn--ghost"><span class="material-symbols-outlined">delete</span></button>
+            </div>
+            <div class="place-row">
+              <span class="material-symbols-outlined place-row__handle">drag_indicator</span>
+              <input class="input" value="Spa Tamarin">
+              <select class="select"><option>Bien-être</option><option>Restaurant</option></select>
+              <button class="btn btn--icon btn--ghost"><span class="material-symbols-outlined">delete</span></button>
+            </div>
+          </div>
+          <button class="btn btn--ghost" style="margin-top:10px"><span class="material-symbols-outlined">add</span> Ajouter un sous-lieu</button>
+        </div>
+      </div>
+
+      <div class="disc is-closed">
+        <div class="disc__bar">
+          <span class="material-symbols-outlined disc__chevron">chevron_right</span>
+          <span class="disc__label">Étapes</span>
+          <span class="disc__count">Aucune étape</span>
+        </div>
+        <div class="disc__body">
+          <div class="mini-empty">
+            <span class="material-symbols-outlined">conversion_path</span>
+            <div class="mini-empty__title">Aucune étape pour le moment</div>
+            <div class="mini-empty__text">Les étapes servent aux itinéraires et parcours : ajoutez un point d'intérêt, une distance et une description.</div>
+            <button class="btn btn--secondary"><span class="material-symbols-outlined">add</span> Ajouter une étape</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="disc is-open">
+        <div class="disc__bar">
+          <span class="material-symbols-outlined disc__chevron">chevron_right</span>
+          <span class="disc__label">Communes desservies</span>
+          <span class="disc__count">1 commune</span>
+        </div>
+        <div class="disc__body">
+          <div class="wrap" style="margin-top:12px">
+            <span class="chip chip--removable chip--toggle">Saint-Paul (97411) <span class="chip__x"><span class="material-symbols-outlined" style="font-size:16px">close</span></span></span>
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label>Ajouter une commune (INSEE)</label>
+            <div class="search"><span class="material-symbols-outlined">search</span><input placeholder="Rechercher une commune…"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ASC clobber fix ===== -->
+    <div class="editor-section" style="max-width:100%">
+      <div class="sec-head">
+        <span class="sec-head__num">BlockASC</span>
+        <h2>Un champ = un contrôle</h2>
+        <span class="sec-head__sub">Correction du piège d'écrasement (deux contrôles écrivent le même champ)</span>
+      </div>
+
+      <div class="clobber">
+        <div class="clobber__col bad">
+          <span class="tag-before">Avant</span>
+          <p class="muted small" style="margin:6px 0 12px">« Durée minimale » et « Durée affichée » écrivent toutes deux <code>durationMin</code> ; le toggle « Équipement fourni » écrase le texte libre <code>equipmentProvided</code>.</p>
+          <div class="grid-2">
+            <div class="field"><label>Durée minimale <span class="bind dup">durationMin</span></label><input class="input mono" value="90" disabled></div>
+            <div class="field"><label>Durée affichée <span class="bind dup">durationMin</span></label><input class="input mono" value="90" disabled></div>
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label>Équipement fourni (texte) <span class="bind dup">equipmentProvided</span></label>
+            <input class="input" value="Casque + baudrier fournis" disabled>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <span class="chip is-active">Toggle « Équipement fourni » <span class="bind dup">equipmentProvided</span></span>
+          </div>
+          <div class="clobber__warn">
+            <span class="material-symbols-outlined">warning</span>
+            <span>Activer le toggle remplace le texte saisi par « Fourni sur place » ; saisir une durée affichée écrase la durée minimale. La dernière édition gagne.</span>
+          </div>
+        </div>
+
+        <div class="clobber__col good">
+          <span class="tag-after">Après</span>
+          <p class="muted small" style="margin:6px 0 12px">Chaque champ a exactement un contrôle. La durée affichée disparaît (dérivée de la durée min) ; le toggle pilote un booléen dédié, le détail reste un texte distinct.</p>
+          <div class="grid-2">
+            <div class="field"><label>Durée minimale</label><input class="input mono" value="90"></div>
+            <div class="field"><label>Participants max.</label><input class="input mono" value="8"></div>
+          </div>
+          <div class="field" style="margin-top:12px">
+            <label>Équipement fourni (détail)</label>
+            <input class="input" value="Casque + baudrier fournis">
+          </div>
+          <div class="row" style="margin-top:10px">
+            <span class="checkbox is-on"><span class="material-symbols-outlined">check</span></span>
+            <span style="font-weight:600;font-size:14px">Équipement fourni sur place</span>
+            <span class="badge badge--info" style="margin-left:auto">booléen dédié</span>
+          </div>
+          <div class="clobber__ok">
+            <span class="material-symbols-outlined">check_circle</span>
+            <span>Aucun champ partagé : le toggle écrit un booléen, le détail reste librement éditable, la durée affichée est supprimée du formulaire.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <p class="muted">Réorganisation front des deux sections les plus denses + correction d'un write-trap dans BlockASC. Le contrat de données ne change pas (sauf le booléen d'équipement, déjà présent).</p>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li><b>§07</b> : trois <code>.stat</code> en tête (capacité max, chambres, couchages), puis disclosures repliées « Détails capacité » + cartes « Politique groupes » / « Politique animaux ».</li>
+          <li><b>§16</b> : trois disclosures labellisées (Sous-lieux / Étapes / Communes desservies), chacune avec un état vide qui enseigne ou 1-2 lignes.</li>
+          <li>Réutiliser le motif disclosure (chevron + repli) déjà présent en §08/§13/§14.</li>
+          <li><b>BlockASC</b> : « Durée affichée » supprimée (doublon de <code>durationMin</code>) ; le toggle d'équipement écrit un booléen dédié, distinct du texte de détail.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>SectionCapacity.tsx</code> : extraire les politiques en disclosures, ne garder que 3 stats en tête.</li>
+          <li><code>SectionPlaces.tsx</code> : 3 disclosures + états vides pédagogiques.</li>
+          <li><code>sections/blocks/BlockASC.tsx</code> : retirer le second binding de <code>durationMin</code> (« Durée affichée », l. 134) et séparer le toggle du texte <code>equipmentProvided</code> (l. 61-66 / 131-133).</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>§07 et §16 ne déversent plus tout en ligne (hiérarchie + repli).</li>
+          <li>Chaque champ a exactement un contrôle (plus de clobber ASC).</li>
+          <li>Les disclosures ont des états vides qui enseignent.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

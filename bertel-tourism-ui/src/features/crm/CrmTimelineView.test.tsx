@@ -1,0 +1,219 @@
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { CrmTimelineView } from './CrmTimelineView';
+import * as crm from '../../services/crm';
+import { mockCrmTimeline } from '../../data/mock';
+
+jest.mock('../../services/crm');
+
+const crmMock = crm as jest.Mocked<typeof crm>;
+
+function renderTimeline(canWrite = true) {
+  const onOpenObject = jest.fn();
+  const onOpenActor = jest.fn();
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <CrmTimelineView canWrite={canWrite} onOpenObject={onOpenObject} onOpenActor={onOpenActor} />
+    </QueryClientProvider>,
+  );
+  return { onOpenObject, onOpenActor };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  crmMock.listCrmTimeline.mockResolvedValue(mockCrmTimeline);
+  crmMock.listDemandTopics.mockResolvedValue([
+    { code: 'demande_de_visite', name: 'Demande de visite' },
+    { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
+  ]);
+  crmMock.saveCrmInteraction.mockResolvedValue('new-reply');
+  crmMock.deleteCrmInteraction.mockResolvedValue(undefined);
+  // Le modal de tâche liée a besoin des deux : sans eux, « Créer » resterait désactivé et
+  // le test rougirait pour une raison sans rapport avec ce qu'il éprouve.
+  crmMock.saveCrmTask.mockResolvedValue('new-task');
+  crmMock.listCrmAssignees.mockResolvedValue([{ userId: 'usr-local-marie', displayName: 'Marie D.' }]);
+});
+
+describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () => {
+  // PO point 7 : défaut Toutes + Tout = la timeline complète — listCrmTimeline appelé SANS
+  // status ni from (pas de borne de période ⇒ fin du bug « seulement 2 mois »).
+  it('au montage, charge la timeline complète : ni status ni from (Toutes + Tout)', async () => {
+    renderTimeline();
+    await screen.findByText('Appel de suivi');
+    expect(crmMock.listCrmTimeline).toHaveBeenCalledWith({});
+  });
+
+  // PO point 6 : la barre de filtres (identique à l'onglet Acteurs) pilote listCrmTimeline.
+  it('la barre rend sujet (vocabulaire complet) + statut + période', async () => {
+    renderTimeline();
+    await screen.findByText('Appel de suivi');
+    expect(screen.getByLabelText('Sujet')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Actives' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Traitées' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Toutes' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '30 j' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tout' })).toBeInTheDocument();
+    // Le sujet propose tout le vocabulaire demand_topic.
+    expect(screen.getByRole('option', { name: 'Modification infos BDD' })).toBeInTheDocument();
+  });
+
+  it('statut Actives → listCrmTimeline({status: active})', async () => {
+    renderTimeline();
+    await screen.findByText('Appel de suivi');
+    fireEvent.click(screen.getByRole('button', { name: 'Actives' }));
+    await waitFor(() => expect(crmMock.listCrmTimeline).toHaveBeenLastCalledWith({ status: 'active' }));
+  });
+
+  it('sujet + période bornent topicCode/from ; revenir à Toutes + Tout réenvoie l ensemble complet', async () => {
+    renderTimeline();
+    await screen.findByText('Appel de suivi');
+    fireEvent.change(screen.getByLabelText('Sujet'), { target: { value: 'demande_de_visite' } });
+    await waitFor(() => expect(crmMock.listCrmTimeline).toHaveBeenLastCalledWith({ topicCode: 'demande_de_visite' }));
+    fireEvent.click(screen.getByRole('button', { name: '30 j' }));
+    await waitFor(() =>
+      expect(crmMock.listCrmTimeline).toHaveBeenLastCalledWith({
+        topicCode: 'demande_de_visite',
+        from: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+      }),
+    );
+    // Retour Tout (la période se vide) puis « Tous les sujets » → ensemble complet.
+    fireEvent.click(screen.getByRole('button', { name: 'Tout' }));
+    fireEvent.change(screen.getByLabelText('Sujet'), { target: { value: '' } });
+    await waitFor(() => expect(crmMock.listCrmTimeline).toHaveBeenLastCalledWith({}));
+  });
+
+  // Assertion verrouillée par revue : « Charger plus » sans collapse (keepPreviousData).
+  it('« Charger plus » : garde la liste rendue pendant le fetch de la page 2 (pas de collapse)', async () => {
+    crmMock.listCrmTimeline.mockResolvedValue({ ...mockCrmTimeline, hasMore: true });
+    renderTimeline();
+    await screen.findByText('Appel de suivi');
+    crmMock.listCrmTimeline.mockReturnValue(new Promise<never>(() => {})); // page 2 jamais résolue
+    fireEvent.click(screen.getByRole('button', { name: /charger plus/i }));
+    expect(screen.getByText('Appel de suivi')).toBeInTheDocument();
+    expect(screen.queryByText(/chargement de la timeline/i)).not.toBeInTheDocument();
+  });
+
+  it('échec du chargement initial → erreur visible (pas d écran vide silencieux)', async () => {
+    crmMock.listCrmTimeline.mockRejectedValue(new Error('refus RLS'));
+    renderTimeline();
+    expect(await screen.findByText(/refus RLS/)).toBeInTheDocument();
+  });
+
+  // Rectif PO v5 point 5 : cliquer une carte de la timeline ouvre la fiche de SON acteur.
+  it('clic sur une carte → onOpenActor(actorId)', async () => {
+    const { onOpenActor } = renderTimeline();
+    // evt-1 (actor-1) : titre = sujet normalisé « Demande de visite » ; on cible la carte par
+    // son corps pour ne pas confondre avec l'option homonyme du filtre Sujet. A11y (§66) : la
+    // région cliquable est .tl-card__nav (la carte elle-même n'est plus role=button).
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    fireEvent.click(card.querySelector('.tl-card__nav') as HTMLElement);
+    expect(onOpenActor).toHaveBeenCalledWith('actor-1');
+  });
+
+  // Le tag de contexte garde son propre clic → vue établissement (stopPropagation).
+  it('clic sur le tag de contexte → onOpenObject (pas onOpenActor)', async () => {
+    const { onOpenObject, onOpenActor } = renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    // A11y (§66) : le tag de contexte (.ctx-tag) vit dans la région navigable (role=button), dont
+    // le nom accessible englobe « Hotel Basalte » ⇒ on cible le tag par sa classe, pas par rôle.
+    fireEvent.click(card.querySelector('.ctx-tag') as HTMLElement);
+    expect(onOpenObject).toHaveBeenCalledWith('obj-1');
+    expect(onOpenActor).not.toHaveBeenCalled();
+  });
+
+  // §65/§66 — répondre depuis la timeline : saveCrmInteraction({parentInteractionId}) + refetch.
+  it('Répondre → saveCrmInteraction({ parentInteractionId }) puis recharge la timeline', async () => {
+    renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /répondre/i }));
+    const composer = card.querySelector('.tl-reply-composer') as HTMLElement;
+    fireEvent.change(within(composer).getByPlaceholderText(/votre réponse/i), { target: { value: 'Réponse au fil.' } });
+    fireEvent.click(within(composer).getByRole('button', { name: /envoyer/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ parentInteractionId: 'evt-1', body: 'Réponse au fil.' }),
+    );
+  });
+
+  // §6.1 — le sélecteur à six états depuis la timeline : evt-1 est « new » ⇒ on le passe
+  // « Traitée », ce qui écrit le vocabulaire NEUF (et non plus « done »).
+  it('Sélecteur de statut → saveCrmInteraction({ id, status: resolved })', async () => {
+    renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^statut :/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Traitée' }));
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'evt-1', status: 'resolved' }));
+  });
+
+  // Gating page-wide (no-write-trap) : sans permission, les actions du fil sont désactivées.
+  it('sans permission : Répondre / Statut désactivés avec raison', async () => {
+    renderTimeline(false);
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    const replyBtn = within(actionsBar).getByRole('button', { name: /répondre/i });
+    expect(replyBtn).toBeDisabled();
+    expect(within(actionsBar).getByRole('button', { name: /^statut :/i })).toBeDisabled();
+    expect(replyBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
+  });
+
+  // §66 (PO) — modifier depuis la timeline : saveCrmInteraction({id, body, sentimentCode}) + refetch.
+  it('Modifier → saveCrmInteraction({ id, body, sentimentCode }) puis recharge la timeline', async () => {
+    renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^modifier$/i }));
+    fireEvent.change(within(card).getByLabelText('Modifier le commentaire'), { target: { value: 'Photo facade reçue.' } });
+    fireEvent.click(within(card).getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'evt-1', body: 'Photo facade reçue.', sentimentCode: 'positif' }),
+    );
+  });
+
+  // §66 (PO) — supprimer une racine AVEC réponse : la confirmation avertit de la cascade.
+  it('Supprimer (racine avec réponse) → confirm cascade puis deleteCrmInteraction(id)', async () => {
+    renderTimeline();
+    const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
+    const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^supprimer$/i }));
+    // evt-1 a 1 réponse ⇒ l'avertissement de cascade mentionne « 1 réponse ».
+    expect(within(card).getByText(/et sa 1 réponse|et ses 1 réponse|1 réponse/i)).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole('button', { name: /^oui$/i }));
+    await waitFor(() => expect(crmMock.deleteCrmInteraction).toHaveBeenCalledWith('evt-1'));
+  });
+});
+
+describe('CrmTimelineView — créer une tâche depuis une demande', () => {
+  it('crée la tâche liée avec l’établissement et l’acteur de la carte', async () => {
+    renderTimeline();
+    await screen.findByText('Appel de suivi');
+    fireEvent.click(screen.getAllByRole('button', { name: /créer une tâche/i })[0]);
+
+    const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée à la demande/i });
+    fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer la photo' } });
+    await within(dialog).findByLabelText('Attribuer à');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer la tâche' }));
+
+    await waitFor(() =>
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
+        expect.objectContaining({ objectId: 'obj-1', actorId: 'actor-1', relatedInteractionId: 'evt-1' }),
+      ),
+    );
+  });
+
+  // C'est la SEULE surface où `objectId` peut être null par construction (interaction
+  // « Générale »). L'affordance reste RENDUE et expliquée, elle ne disparaît pas.
+  it('demande sans établissement : bouton désactivé AVEC raison, pas absent', async () => {
+    crmMock.listCrmTimeline.mockResolvedValue({
+      ...mockCrmTimeline,
+      items: [{ ...mockCrmTimeline.items[0], objectId: null, objectName: null }],
+    });
+    renderTimeline();
+    await screen.findByText('Appel de suivi');
+    const button = screen.getByRole('button', { name: /créer une tâche/i });
+    expect(button).toBeDisabled();
+    expect(button.getAttribute('title')).toMatch(/aucun établissement/i);
+  });
+});

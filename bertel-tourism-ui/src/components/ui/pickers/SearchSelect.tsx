@@ -1,0 +1,268 @@
+'use client';
+
+// Single-select searchable picker (house design — mirrors the editor's ChipMultiSelect
+// modal visual language: search field + house-styled option list). Used for long lists
+// where a native <select> is unwieldy (sujet, établissement, acteur, référentiel…).
+// Popover container (not a nested modal) so it can open inside an already-open modal
+// without stacking.
+//
+// Optional grouping: when any option carries a `group`, the list renders as
+// COLLAPSIBLE category sections (headers toggle their options) so a long catalog
+// isn't overwhelming. Typing in the search filters across every group at once.
+
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
+import { ChevronDown } from 'lucide-react';
+import { fold } from './fold';
+import { usePickerPopover } from './usePickerPopover';
+import { PickerPanel, scrollOptionIntoView } from './PickerPanel';
+
+export interface SearchSelectOption {
+  code: string;
+  label: string;
+  /** Optional category — when any option has one, the list renders as collapsible groups. */
+  group?: string;
+}
+
+interface SearchSelectProps {
+  value: string;
+  options: SearchSelectOption[];
+  onChange: (code: string) => void;
+  /** Trigger text when nothing is selected. */
+  placeholder?: string;
+  searchPlaceholder?: string;
+  /** Adds a leading « clear » row that emits the empty code (for optional fields). */
+  allowClear?: boolean;
+  clearLabel?: string;
+  'aria-label'?: string;
+}
+
+export function SearchSelect({
+  value,
+  options,
+  onChange,
+  placeholder = '— Choisir —',
+  searchPlaceholder = 'Rechercher…',
+  allowClear = false,
+  clearLabel = '— Aucun —',
+  'aria-label': ariaLabel,
+}: SearchSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const searchRef = useRef<HTMLInputElement>(null);
+  const listId = useId();
+  // Popover PORTALISÉ (voir usePickerPopover) : sans lui le panneau est découpé par le
+  // premier ancêtre scrollable — un corps de modal, typiquement.
+  const close = useCallback(() => setOpen(false), []);
+  const { mounted, triggerRef, panelRef, panelStyle } = usePickerPopover(open, close, query);
+
+  const selected = options.find((o) => o.code === value) ?? null;
+  // Always render the current value: a code absent from options (stale/legacy) shows itself
+  // rather than collapsing to the placeholder (mirrors ReferenceSelect).
+  const triggerLabel = selected ? selected.label : value !== '' ? value : placeholder;
+
+  const isGrouped = useMemo(() => options.some((o) => Boolean(o.group)), [options]);
+  // Group names in first-appearance order (stable, independent of the filter).
+  const groupOrder = useMemo(() => {
+    const seen: string[] = [];
+    for (const option of options) {
+      if (option.group && !seen.includes(option.group)) seen.push(option.group);
+    }
+    return seen;
+  }, [options]);
+  // Default open state: the group holding the current value (so the selection is visible).
+  const defaultExpanded = useMemo(() => {
+    const group = options.find((o) => o.code === value)?.group;
+    return group ? { [group]: true } : {};
+  }, [options, value]);
+
+  const folded = fold(query.trim());
+  const searching = folded !== '';
+  const filtered = useMemo(
+    () => options.filter((o) => folded === '' || fold(o.label).includes(folded)),
+    [options, folded],
+  );
+
+  // Grouped sections for render + keyboard. While searching, every group with a match is
+  // force-expanded; otherwise a group shows its options only when expanded.
+  const sections = useMemo(() => {
+    if (!isGrouped) return [];
+    return groupOrder.map((name) => {
+      const opts = filtered.filter((o) => o.group === name);
+      return {
+        name,
+        opts,
+        headerVisible: searching ? opts.length > 0 : true,
+        isOpen: searching ? opts.length > 0 : Boolean(expanded[name]),
+      };
+    });
+  }, [isGrouped, groupOrder, filtered, searching, expanded]);
+
+  // The currently navigable options (respecting collapse + filter).
+  const flatVisible = isGrouped ? sections.flatMap((s) => (s.isOpen ? s.opts : [])) : filtered;
+  const rowIndexByCode = useMemo(() => {
+    const map = new Map<string, number>();
+    flatVisible.forEach((o, i) => map.set(o.code, allowClear ? i + 1 : i));
+    return map;
+  }, [flatVisible, allowClear]);
+  const rowCount = flatVisible.length + (allowClear ? 1 : 0);
+  const optionId = (code: string) => `${listId}-option-${encodeURIComponent(code)}`;
+  const activeOption = flatVisible[allowClear ? active - 1 : active];
+  const activeId = allowClear && active === 0 ? `${listId}-clear` : activeOption ? optionId(activeOption.code) : undefined;
+  const showEmpty = isGrouped ? searching && flatVisible.length === 0 : filtered.length === 0;
+
+  useEffect(() => { setActive((index) => Math.max(0, Math.min(index, rowCount - 1))); }, [rowCount]);
+  useEffect(() => {
+    if (open && activeId) scrollOptionIntoView(document.getElementById(activeId), panelRef.current?.querySelector('[role="listbox"]') ?? null);
+  }, [open, activeId, panelRef]);
+
+  // Seed the open groups on the OPEN transition; clear the query on close.
+  // Keyed on `open` only (NOT defaultExpanded): if the caller's `options` identity changes
+  // while the popover is open, re-running this would reset ArrowDown navigation.
+  // defaultExpanded is read fresh at open time. (§71 E review)
+  useEffect(() => {
+    if (open) {
+      setActive(0);
+      setExpanded(defaultExpanded);
+    } else {
+      setQuery('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  function commit(code: string) {
+    onChange(code);
+    setOpen(false);
+    triggerRef.current?.focus({ preventScroll: true });
+  }
+
+  function toggleGroup(name: string) {
+    setExpanded((current) => ({ ...current, [name]: !current[name] }));
+    setActive(0);
+  }
+
+  function onSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Escape') {
+      // Close THIS popover only — a host modal (CrmModal) also closes on a bubbling Escape.
+      event.stopPropagation();
+      event.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActive((a) => Math.min(a + 1, rowCount - 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActive((a) => Math.max(a - 1, 0));
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (allowClear && active === 0) {
+        commit('');
+        return;
+      }
+      const opt = flatVisible[allowClear ? active - 1 : active];
+      if (opt) commit(opt.code);
+    }
+  }
+
+  function renderOption(option: SearchSelectOption) {
+    const rowIndex = rowIndexByCode.get(option.code) ?? -1;
+    return (
+      <button
+        key={option.code}
+        id={optionId(option.code)}
+        type="button"
+        role="option"
+        aria-selected={option.code === value}
+        className={`picker__option${rowIndex === active ? ' is-active' : ''}${option.code === value ? ' is-on' : ''}`}
+        onClick={() => commit(option.code)}
+      >
+        {option.label}
+      </button>
+    );
+  }
+
+  return (
+    <div className="picker picker--single">
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`picker__trigger${selected ? '' : ' is-empty'}`}
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-label={ariaLabel}
+        onClick={() => {
+          triggerRef.current?.focus({ preventScroll: true });
+          setOpen((o) => !o);
+        }}
+      >
+        <span className="picker__trigger-label">{triggerLabel}</span>
+        <ChevronDown className="picker__chevron" size={20} strokeWidth={2} aria-hidden="true" />
+      </button>
+
+      {mounted && open && createPortal(
+        <PickerPanel panelRef={panelRef} triggerRef={triggerRef} searchRef={searchRef} style={panelStyle} onClose={close}>
+          <input
+            ref={searchRef}
+            className="picker__search"
+            type="text"
+            role="combobox"
+            aria-expanded="true"
+            aria-autocomplete="list"
+            value={query}
+            placeholder={searchPlaceholder}
+            aria-label="Rechercher"
+            aria-controls={listId}
+            aria-activedescendant={activeId}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActive(0);
+            }}
+            onKeyDown={onSearchKeyDown}
+          />
+          <div className="picker__options" role="listbox" id={listId}>
+            {allowClear && (
+              <button
+                id={`${listId}-clear`}
+                type="button"
+                role="option"
+                aria-selected={value === ''}
+                className={`picker__option${active === 0 ? ' is-active' : ''}${value === '' ? ' is-on' : ''}`}
+                onClick={() => commit('')}
+              >
+                {clearLabel}
+              </button>
+            )}
+            {isGrouped
+              ? sections.map((section) =>
+                  section.headerVisible ? (
+                    <div key={section.name} className="picker__group">
+                      <button
+                        type="button"
+                        className="picker__group-header"
+                        aria-expanded={section.isOpen}
+                        onClick={() => toggleGroup(section.name)}
+                      >
+                        <span className={`picker__group-chevron${section.isOpen ? ' is-open' : ''}`} aria-hidden>▸</span>
+                        <span className="picker__group-label">{section.name}</span>
+                        <span className="picker__group-count" aria-hidden>{section.opts.length}</span>
+                      </button>
+                      {section.isOpen && section.opts.map(renderOption)}
+                    </div>
+                  ) : null,
+                )
+              : filtered.map(renderOption)}
+            {showEmpty && <p className="picker__empty">Aucun résultat</p>}
+          </div>
+        </PickerPanel>,
+        document.body,
+      )}
+    </div>
+  );
+}

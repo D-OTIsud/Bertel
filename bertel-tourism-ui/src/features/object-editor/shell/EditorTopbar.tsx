@@ -1,0 +1,199 @@
+import { ChevronLeft, Check, AlertTriangle, Loader2 } from 'lucide-react';
+import type { EditorMode } from './EditorTopbar.types';
+import { buildEditTopSaveLabel } from './format-last-object-update';
+import { EditorPresenceRoster } from '../widgets/EditorPresenceRoster';
+import type { RosterEntry } from '../presence/editor-presence';
+
+export type { EditorMode } from './EditorTopbar.types';
+
+export type EditorActionFeedback = 'idle' | 'pending' | 'success' | 'error';
+
+/** Single source of truth for the icon+label pair of a feedback state — never renders a spinner and a success icon at once. */
+function feedbackContent(
+  feedback: EditorActionFeedback,
+  idleLabel: string,
+  pendingLabel: string,
+  successLabel: string,
+  errorLabel: string,
+) {
+  switch (feedback) {
+    case 'pending':
+      return { label: pendingLabel, icon: <Loader2 size={13} className="motion-spin" aria-hidden data-icon="spinner" /> };
+    case 'success':
+      return { label: successLabel, icon: <Check size={13} className="motion-success" aria-hidden /> };
+    case 'error':
+      return { label: errorLabel, icon: <AlertTriangle size={13} aria-hidden /> };
+    default:
+      return { label: idleLabel, icon: null };
+  }
+}
+
+interface EditorTopbarProps {
+  objectName: string;
+  archetypeCodeName: string;
+  mode: EditorMode;
+  dirtyCount: number;
+  lastSavedAt?: string | null;
+  lastUpdatedSource?: string | null;
+  blockerCount?: number;
+  warningCount?: number;
+  publishing?: boolean;
+  saving?: boolean;
+  savingDraft?: boolean;
+  publishDisabled?: boolean;
+  /** P1.3 — contributor (no direct canonical write): the save action submits a moderation proposal. */
+  contributorMode?: boolean;
+  /** Visual feedback layer on top of `saving`/`savingDraft` — additive, defaults to 'idle' (no behavior change). */
+  saveFeedback?: EditorActionFeedback;
+  /** Visual feedback layer on top of `publishing` — additive, defaults to 'idle' (no behavior change). */
+  publishFeedback?: EditorActionFeedback;
+  statusMessage?: string | null;
+  /** Live presence roster (everyone on the fiche) for the save-bar band. */
+  roster?: RosterEntry[];
+  onModeChange: (mode: EditorMode) => void;
+  onPreview: () => void;
+  onCancel: () => void;
+  onPublish: () => void;
+  onSaveDraft?: () => void;
+  onShowBlockers?: () => void;
+}
+
+export function EditorTopbar({
+  objectName,
+  archetypeCodeName,
+  mode,
+  dirtyCount,
+  lastSavedAt,
+  lastUpdatedSource,
+  blockerCount = 0,
+  warningCount = 0,
+  publishing = false,
+  saving = false,
+  savingDraft = false,
+  publishDisabled = false,
+  contributorMode = false,
+  saveFeedback = 'idle',
+  publishFeedback = 'idle',
+  statusMessage = null,
+  roster = [],
+  onModeChange,
+  onPreview,
+  onCancel,
+  onPublish,
+  onSaveDraft,
+  onShowBlockers,
+}: EditorTopbarProps) {
+  const saveLabel = buildEditTopSaveLabel({ statusMessage, dirtyCount, lastSavedAt });
+  const saveTitle =
+    lastSavedAt && lastUpdatedSource
+      ? `Dernière mise à jour enregistrée (${lastUpdatedSource})`
+      : lastSavedAt
+        ? 'Dernière mise à jour enregistrée en base'
+        : undefined;
+
+  return (
+    <div className="edit-top">
+      <div className="edit-top__left">
+        <button type="button" className="icbtn" aria-label="Retour à l'Explorer" onClick={onCancel}>
+          <ChevronLeft width={14} height={14} />
+        </button>
+        <div>
+          <div className="edit-top__crumbs">
+            <strong>{archetypeCodeName}</strong> <span className="sep">›</span>
+            {objectName} <span className="sep">›</span>
+            <strong style={{ color: 'var(--accent-deep)' }}>Modifier</strong>
+          </div>
+          <div className="edit-top__title">{objectName}</div>
+        </div>
+      </div>
+      <div className="edit-top__right">
+        <EditorPresenceRoster roster={roster} />
+        <div className="mode-tog">
+          <button
+            type="button"
+            className={mode === 'rapide' ? 'is-on' : ''}
+            aria-pressed={mode === 'rapide'}
+            onClick={() => onModeChange('rapide')}
+          >
+            Rapide
+          </button>
+          <button
+            type="button"
+            className={mode === 'complet' ? 'is-on' : ''}
+            aria-pressed={mode === 'complet'}
+            onClick={() => onModeChange('complet')}
+          >
+            Complet
+          </button>
+        </div>
+        <span
+          className={`edit-top__save${dirtyCount > 0 ? ' is-dirty' : ''}`}
+          title={saveTitle}
+        >
+          {dirtyCount === 0 && !statusMessage && <span className="pulse" aria-hidden />}
+          {saveLabel}
+        </span>
+        {(() => {
+          const validationLabel =
+            blockerCount > 0
+              ? `${blockerCount} blocage${blockerCount > 1 ? 's' : ''}`
+              : `${warningCount} alerte${warningCount > 1 ? 's' : ''}`;
+          const validationClass = `edit-top__validation${blockerCount > 0 ? ' has-blockers' : ''}`;
+          return onShowBlockers ? (
+            <button type="button" className={validationClass} onClick={onShowBlockers}>
+              {validationLabel}
+            </button>
+          ) : (
+            <span className={validationClass}>{validationLabel}</span>
+          );
+        })()}
+        <button type="button" className="btn sm" onClick={onPreview}>
+          Aperçu fiche
+        </button>
+        <button type="button" className="btn" onClick={onCancel}>
+          Annuler
+        </button>
+        {/* 6.1 : « Publier » devient un acte secondaire distinct (libellé occupé « Publication… »)… */}
+        <button
+          type="button"
+          className="btn"
+          disabled={publishDisabled || publishing || saving}
+          onClick={onPublish}
+        >
+          {(() => {
+            const { label, icon } = feedbackContent(
+              publishFeedback,
+              publishing ? 'Publication…' : 'Publier',
+              'Publication…',
+              'Publié',
+              'Échec — réessayer',
+            );
+            return icon ? <>{icon} {label}</> : label;
+          })()}
+        </button>
+        {/* …et « Enregistrer » redevient l'action primaire (teal + anneau de focus global). */}
+        {onSaveDraft && (
+          <button
+            type="button"
+            className="btn primary"
+            disabled={savingDraft || saving || publishing || dirtyCount === 0}
+            onClick={onSaveDraft}
+          >
+            {(() => {
+              const idleLabel = contributorMode ? 'Proposer une modification' : 'Enregistrer';
+              const pendingLabel = contributorMode ? 'Soumission…' : 'Enregistrement…';
+              const { label, icon } = feedbackContent(
+                saveFeedback,
+                savingDraft ? pendingLabel : idleLabel,
+                pendingLabel,
+                'Enregistré',
+                'Échec — réessayer',
+              );
+              return icon ? <>{icon} {label}</> : label;
+            })()}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

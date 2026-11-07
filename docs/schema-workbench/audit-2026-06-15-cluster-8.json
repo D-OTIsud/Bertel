@@ -1,0 +1,213 @@
+{
+  "cluster": 8,
+  "audit_date": "2026-06-15",
+  "auditor": "Claude Sonnet 4.6 (read-only MCP + source grep)",
+  "scope": [
+    "ref_classification_scheme",
+    "ref_classification_value",
+    "ref_classification_equivalent_group",
+    "ref_classification_equivalent_action",
+    "ref_sustainability_action",
+    "ref_sustainability_action_category",
+    "ref_sustainability_action_group"
+  ],
+
+  "schema_notes": {
+    "ref_classification_equivalent_group": "Composite PK (scheme_id, group_id) — no id column. Maps a classification scheme to a sustainability action group. Columns: scheme_id, group_id, relation_type, requirement_type, match_scope, note. No name/i18n columns — i18n N/A.",
+    "ref_classification_equivalent_action": "Composite PK (scheme_id, action_id) — no id column. Maps a classification scheme to a sustainability action. Columns: scheme_id, action_id, relation_type, requirement_type, match_scope, note. No name/i18n columns — i18n N/A.",
+    "ref_sustainability_action": "Label text stored in 'label' column (NOT 'name'). i18n in label_i18n / description_i18n. category_id is a denormalized FK (redundant with group_id→group.category_id)."
+  },
+
+  "matrix": [
+    {
+      "unit": "ref_classification_scheme",
+      "live_count": 24,
+      "source_count": 24,
+      "doc_count": "referenced (no explicit row count in docs/api-db-reference.html §6)",
+      "db_usage_distinct": "13 schemes have ≥1 object_classification row; 11 have 0 (7 forward-looking LBL_*: LBL_ATR, LBL_CLEF_VERTE, LBL_DESTINATION_EXCELLENCE, LBL_FLOCON_VERT, LBL_GREEN_DESTINATIONS, LBL_LABEL_BAS_CARBONE, LBL_PAVILLON_BLEU; camp_stars 0; retail_category 0; type_act 0; type_hot 0)",
+      "verdict": "MATCH — all 24 source codes verified live. 5 mandatory V5 label codes (LBL_CLEF_VERTE, LBL_ECO_LABEL_UE, LBL_TOURISME_HANDICAP, LBL_DESTINATION_EXCELLENCE, LBL_QUALITE_TOURISME) confirmed present. No pre-V5 retired codes (green_key, eu_ecolabel, tourisme_handicap, destination_excellence, qualite_tourisme) found live.",
+      "i18n_note": "name_i18n exists. 10/24 have any name_i18n (all LBL_* sustainability labels have {\"fr\":\"...\"}). 0/24 have en/es/zh/el. Non-LBL schemes (hot_stars, camp_stars, meuble_stars, gites_epics, clevacances_keys, etc.) have NULL name_i18n — their FR name is the 'name' column."
+    },
+    {
+      "unit": "ref_classification_value",
+      "live_count": 81,
+      "source_count": 81,
+      "doc_count": "81 (stated in task scope)",
+      "db_usage_distinct": "230 total object_classification rows across 13 active schemes. 35/81 values have en+es translations (numeric star/key/epi values). LBL_* singleton 'granted' values have {\"fr\":\"...\"} only. 32/81 values have NULL name_i18n (accueil_paysan, bienvenue_ferme, cte, esprit_parc, maitre_restaurateur, qualite_tourisme_reunion sub-values).",
+      "verdict": "MATCH — 81 live = 81 expected. FK integrity clean (0 orphaned scheme_ids). V5 LBL_ singleton values (granted) confirmed for all 10 sustainability schemes. LBL_TOURISME_HANDICAP has 5 values (granted + 4 disability sub-types: granted_cognitive, granted_hearing, granted_motor, granted_visual).",
+      "i18n_note": "name_i18n column exists. 49/81 have any i18n; 35/81 have 'en'; 35/81 have 'es'; 0 have zh or el. Gap: 46 values (accueil_paysan/bienvenue_ferme categories, cte/esprit_parc/maitre_restaurateur/qualite_tourisme_reunion singletons, all 10 LBL_* granted values, retail_category values, type_act values) have no en/es/zh/el translation."
+    },
+    {
+      "unit": "ref_classification_equivalent_group",
+      "live_count": 176,
+      "source_count": 176,
+      "doc_count": "176 (stated in task scope)",
+      "db_usage_distinct": "176 rows linking 9 sustainability LBL_* schemes to action groups. LBL_ECO_LABEL_UE has the most (43 group links). LBL_TOURISME_HANDICAP=0 (by design — not a sustainability label). relation_type='macro_group' on all sampled rows.",
+      "verdict": "MATCH — FK integrity clean: 0 orphaned scheme_ids, 0 orphaned group_ids. Coverage view (v_object_classification_coverage) confirmed consuming this table. LBL_TOURISME_HANDICAP correctly absent (accessibility label, different domain).",
+      "i18n_note": "No name/i18n columns on this table — i18n N/A."
+    },
+    {
+      "unit": "ref_classification_equivalent_action",
+      "live_count": 544,
+      "source_count": 544,
+      "doc_count": "544 (stated in task scope)",
+      "db_usage_distinct": "544 rows linking 9 LBL_* schemes to individual MA_* actions. LBL_ECO_LABEL_UE has most (131 action links). Consumed by v_object_classification_coverage and v_object_classification_or_equivalent_scheme.",
+      "verdict": "MATCH — FK integrity clean: 0 orphaned scheme_ids, 0 orphaned action_ids (verified via LEFT JOIN). All action_ids resolve to live ref_sustainability_action rows.",
+      "i18n_note": "No name/i18n columns on this table — i18n N/A."
+    },
+    {
+      "unit": "ref_sustainability_action",
+      "live_count": 239,
+      "source_count": 260,
+      "doc_count": "239 (stated in task scope)",
+      "db_usage_distinct": "51 total object_sustainability_action rows using 11 distinct actions: MA_COMMON_BINS(14), MA_MONTHLY_ENERGY_READING(9), MA_WATER_READING(7), MA_ONTRIP_BRIEFING(5), MA_ORGANIC_PRODUCTS(4), MA_ONSITE_COMPOST(3), MA_LOCAL_SUPPLIER_LIST(2), MA_EV_CHARGING(2), MA_WATERLESS_URINALS(2), MA_BIODIVERSITY_AWARENESS(2), MA_FURNITURE_REUSE(1). 228/239 actions are unused (forward-looking vocabulary).",
+      "verdict": "PARTIAL MATCH — Live=239, Source=260. Delta of 21 are accessibility MA_* codes in seeds_data.sql (from embedded seeds_accessibility_v5.sql) that have NOT been applied to live: MA_ACCESLIBRE_CREATED, MA_ACCESLIBRE_PHOTOS, MA_ACCESLIBRE_UPDATED, MA_ACCESSIBILITY_DECLARATION, MA_ACCESS_DEROGATIONS, MA_ACCESS_FACTSHEET, MA_ACCESS_PHOTOS, MA_ACCESS_REFERENT, MA_ACCESS_ROLEPLAY, MA_CORRECTION_PLAN, MA_HANDICAP_TRAINING, MA_PMR_SIGNAGE, MA_PMR_SLOPE_CHECK, MA_PMR_SPACES, MA_REGISTER_AVAILABLE, MA_REGISTER_UPDATED, MA_RGAA_AUDIT, MA_STAFF_KNOWS_REGISTER, MA_STEP_REMOVAL, MA_TACTILE_GUIDANCE, MA_WIDTH_120CM. No live-only codes (live is a clean subset of source). FK integrity clean: 0 orphaned group_ids.",
+      "i18n_note": "label_i18n + description_i18n columns exist. 239/239 have label_i18n and description_i18n (all contain {\"fr\":\"...\"}). 0/239 have en, es, zh, or el. Entire vocabulary is FR-only."
+    },
+    {
+      "unit": "ref_sustainability_action_category",
+      "live_count": 9,
+      "source_count": 9,
+      "doc_count": "9 (stated in task scope)",
+      "db_usage_distinct": "Consumed by api.save_object_workspace_sustainability and by explorer reference loaders. All 9 CAT_* codes present: CAT_BIO(pos 20), CAT_ENERGY(30), CAT_PROC(40), CAT_GOV(50), CAT_MOBILITY(60), CAT_SOCIAL(70), CAT_TERR(80), CAT_WASTE(90), CAT_WATER(100).",
+      "verdict": "MATCH — 9/9 present. No pre-V5 categories (energy, water, waste, mobility, biodiversity) found live — confirmed clean by seeds_data.sql DO block guard (raises EXCEPTION if present). FK integrity: category serves as parent for all 76 groups.",
+      "i18n_note": "name_i18n + description_i18n columns exist. 9/9 have name_i18n and description_i18n ({\"fr\":\"...\"}). 0/9 have en, es, zh, or el."
+    },
+    {
+      "unit": "ref_sustainability_action_group",
+      "live_count": 76,
+      "source_count": 83,
+      "doc_count": "76 (stated in task scope)",
+      "db_usage_distinct": "All 76 live SA_* groups appear in ref_classification_equivalent_group as macro_group targets for ≥1 LBL_* scheme, confirming they are active in the coverage model.",
+      "verdict": "PARTIAL MATCH — Live=76, Source=83. Delta of 7 are accessibility SA_* groups in seeds_data.sql (embedded seeds_accessibility_v5.sql) NOT yet applied to live: SA_ACCESLIBRE, SA_ACCESSIBLE_PARKING, SA_ACCESSIBLE_PATHWAYS, SA_ACCESSIBLE_WEBSITE, SA_ACCESS_INFO, SA_ACCESS_REGISTER, SA_STAFF_TRAINING_ACCESS. No live-only codes. FK integrity clean: 0 orphaned category_ids.",
+      "i18n_note": "name_i18n + description_i18n columns exist. 76/76 have name_i18n and description_i18n ({\"fr\":\"...\"}). 0/76 have en, es, zh, or el."
+    }
+  ],
+
+  "findings": [
+    {
+      "dimension": "D4",
+      "severity": "HIGH",
+      "unit": "ref_sustainability_action + ref_sustainability_action_group",
+      "code": "C8-D4-01",
+      "title": "Accessibility vocabulary (21 MA_* actions + 7 SA_* groups) seeded in source but absent from live DB",
+      "evidence": "seeds_data.sql embeds seeds_accessibility_v5.sql from approximately line 2406 onward. The accessibility action groups (SA_ACCESLIBRE, SA_ACCESSIBLE_PARKING, SA_ACCESSIBLE_PATHWAYS, SA_ACCESSIBLE_WEBSITE, SA_ACCESS_INFO, SA_ACCESS_REGISTER, SA_STAFF_TRAINING_ACCESS) and 21 MA_* micro-actions (MA_ACCESLIBRE_CREATED, MA_ACCESLIBRE_PHOTOS, MA_ACCESLIBRE_UPDATED, MA_ACCESSIBILITY_DECLARATION, MA_ACCESS_DEROGATIONS, MA_ACCESS_FACTSHEET, MA_ACCESS_PHOTOS, MA_ACCESS_REFERENT, MA_ACCESS_ROLEPLAY, MA_CORRECTION_PLAN, MA_HANDICAP_TRAINING, MA_PMR_SIGNAGE, MA_PMR_SLOPE_CHECK, MA_PMR_SPACES, MA_REGISTER_AVAILABLE, MA_REGISTER_UPDATED, MA_RGAA_AUDIT, MA_STAFF_KNOWS_REGISTER, MA_STEP_REMOVAL, MA_TACTILE_GUIDANCE, MA_WIDTH_120CM) are present in seeds_data.sql but absent from live DB. Live has 76 groups vs 83 in source; 239 actions vs 260 in source. 0 live-only codes — live is a clean subset of source.",
+      "recommendation": "Apply the accessibility seed block: these rows are needed before the PMV-001 label eligibility rail can evaluate Tourisme & Handicap coverage. Track as a pre-condition dependency in the deferred items list (seeds_accessibility_v5.sql application). Also verify: the 7 missing SA_* groups would need corresponding entries in ref_classification_equivalent_group if LBL_TOURISME_HANDICAP is to be scored by v_object_classification_coverage (currently that scheme has 0 equiv_group and 0 equiv_action links)."
+    },
+    {
+      "dimension": "D4",
+      "severity": "MEDIUM",
+      "unit": "ref_classification_scheme / ref_classification_equivalent_group",
+      "code": "C8-D4-02",
+      "title": "LBL_TOURISME_HANDICAP has 0 rows in ref_classification_equivalent_group and ref_classification_equivalent_action — excluded from v_object_classification_coverage",
+      "evidence": "Query confirmed: LBL_TOURISME_HANDICAP (the only accessibility label in ref_classification_scheme) has has_equiv_group=false, has_equiv_action=false. The coverage view (v_object_classification_coverage) and search-expansion view (v_object_classification_or_equivalent_scheme) will never score any object against this label via sustainability actions. This is consistent with the 7 missing SA_* groups (C8-D4-01) — the links cannot be seeded until the groups exist. BUT: 4 objects already have LBL_TOURISME_HANDICAP classifications (4 rows in object_classification via scheme LBL_TOURISME_HANDICAP), so the label is in active production use.",
+      "recommendation": "Once the accessibility SA_* groups and MA_* actions are applied (C8-D4-01), seed the corresponding ref_classification_equivalent_group and ref_classification_equivalent_action rows for LBL_TOURISME_HANDICAP. Without this, object_sustainability_action data tagged to accessibility MA_ codes will never surface in coverage queries for that label. Document as a pre-condition dependency in lot1_mapping_decisions.md."
+    },
+    {
+      "dimension": "D1",
+      "severity": "MEDIUM",
+      "unit": "ref_sustainability_action",
+      "code": "C8-D1-01",
+      "title": "228/239 sustainability actions (95.4%) have zero usage in object_sustainability_action — large forward-looking vocabulary with thin data coverage",
+      "evidence": "object_sustainability_action has 51 rows using only 11 distinct action codes. 228 actions are unused. The 11 used codes are: MA_COMMON_BINS(14 objects), MA_MONTHLY_ENERGY_READING(9), MA_WATER_READING(7), MA_ONTRIP_BRIEFING(5), MA_ORGANIC_PRODUCTS(4), MA_ONSITE_COMPOST(3), MA_LOCAL_SUPPLIER_LIST(2), MA_EV_CHARGING(2), MA_WATERLESS_URINALS(2), MA_BIODIVERSITY_AWARENESS(2), MA_FURNITURE_REUSE(1). The action vocabulary (239 MA_* codes) is intentionally comprehensive for label-coverage mapping; usage is expected to grow during the CSV import phase (staging_d_durable — still deferred).",
+      "recommendation": "Classify as forward-looking (not dead code). The unused codes are needed for the coverage engine. No cleanup warranted. Confirm once staging_d_durable import is complete that at least the most common label-mapped actions get populated."
+    },
+    {
+      "dimension": "D1",
+      "severity": "MEDIUM",
+      "unit": "ref_classification_scheme",
+      "code": "C8-D1-02",
+      "title": "7 classification schemes have 0 object_classification rows — LBL_ATR, LBL_CLEF_VERTE, LBL_DESTINATION_EXCELLENCE, LBL_FLOCON_VERT, LBL_GREEN_DESTINATIONS, LBL_LABEL_BAS_CARBONE, LBL_PAVILLON_BLEU are forward-looking; camp_stars/retail_category/type_act/type_hot are typed but unused",
+      "evidence": "Query confirmed: 11 schemes have 0 object_classification rows. The 7 sustainability LBL_* schemes (excluding LBL_ECO_LABEL_UE with 2 rows, LBL_TOURISME_HANDICAP with 4, LBL_QUALITE_TOURISME with 1) have no data yet — these are pre-seeded for future label assignments. camp_stars (0 camping objects in current pilot), type_act/type_hot (no ACT/HOT objects using this specific classification sub-typing yet), retail_category (COM type newly added §57).",
+      "recommendation": "All forward-looking. No cleanup warranted for sustainability LBL_* schemes (needed for coverage view). type_act/type_hot usage will grow when ACT/HOT object data is enriched. camp_stars = no camping objects in pilot scope."
+    },
+    {
+      "dimension": "D3",
+      "severity": "MEDIUM",
+      "unit": "ref_sustainability_action + ref_sustainability_action_category + ref_sustainability_action_group",
+      "code": "C8-D3-01",
+      "title": "Entire sustainability vocabulary is FR-only — no en/es/zh/el translations in label_i18n/name_i18n",
+      "evidence": "ref_sustainability_action: 239/239 have label_i18n={\"fr\":\"...\"} but 0 have 'en', 'es', 'zh', or 'el'. ref_sustainability_action_category: 9/9 have name_i18n={\"fr\":\"...\"} only. ref_sustainability_action_group: 76/76 have name_i18n={\"fr\":\"...\"} only. Seeds confirmed: no en/es/zh/el rows added by seeds_data.sql or seeds_sustainability_v5.sql for these tables. Comment at seeds_data.sql line 1825: 'V5 micro-actions (MA_*) have label_i18n and description_i18n set inline in SECTION A' — but only 'fr' is populated inline.",
+      "recommendation": "Document as a deferred i18n gap consistent with the post-MVP FR-fallback policy (decision log: 'FR-fallback at launch — decided 2026-06-02'). The seeds_data.sql line 1822/1825 comments correctly note the V5 inline i18n replaces the old translation block, but the inline population only covers 'fr'. Priority: add en/es at minimum for the 9 categories + 76 groups (they surface in the editor/explorer UI); MA_* labels are lower priority (internal tool use). Track under the existing 'Establishment-content translation' deferred item."
+    },
+    {
+      "dimension": "D3",
+      "severity": "LOW",
+      "unit": "ref_classification_scheme + ref_classification_value",
+      "code": "C8-D3-02",
+      "title": "ref_classification_scheme: 14/24 schemes have no name_i18n at all; ref_classification_value: 32/81 values have no i18n; zh and el missing for all 81 values",
+      "evidence": "ref_classification_scheme: 10/24 have name_i18n (all 9 sustainability LBL_* + 1 accessibility = {\"fr\":\"...\"} only). 14 operational schemes (hot_stars, camp_stars, meuble_stars, gites_epics, clevacances_keys, qualite_tourisme_reunion, maitre_restaurateur, esprit_parc, cte, bienvenue_ferme, accueil_paysan, retail_category, type_act, type_hot) have name_i18n=NULL. ref_classification_value: 35/81 have 'en', 35/81 have 'es' (the numeric star/key/epi values via the seeds_data.sql translations block line 1756–1801). 0/81 have zh or el. 46 values (cte/esprit_parc/maitre_restaurateur/qualite_tourisme_reunion singletons, all LBL_* granted values, accueil_paysan/bienvenue_ferme categories, retail_category values, type_act values) have no en/es.",
+      "recommendation": "en+es translations for all scheme names and the 46 un-translated values should be added in the next i18n pass. zh+el for the 35 already-translated star/key/epi values to meet the 4-language target. This is consistent with the existing deferred i18n item ('i18n for amenity_family/ref_amenity codes'). Scope: 14 scheme names + 46 value labels in en/es + zh/el for 81 values."
+    },
+    {
+      "dimension": "D2",
+      "severity": "LOW",
+      "unit": "ref_sustainability_action",
+      "code": "C8-D2-01",
+      "title": "ref_sustainability_action has a denormalized category_id column that duplicates the group_id→group.category_id path",
+      "evidence": "Column introspection shows ref_sustainability_action has BOTH group_id (FK to ref_sustainability_action_group) AND category_id (FK to ref_sustainability_action_category). Since group already has category_id, the action.category_id is redundant. Query confirms: 239/239 have non-null category_id. The source migration (migration_sustainability_v5.sql line 35–38) does NOT add category_id — it was a pre-existing column on the table. Seeds_data.sql inserts populate both group_id and category_id.",
+      "recommendation": "Document the denormalization as intentional (performance shortcut to avoid a join when filtering by category). Add a comment to the table DDL in schema_unified.sql: '-- category_id is a denormalized cache of group.category_id; kept for query convenience'. Add a constraint or trigger to enforce consistency if not already present. Low priority."
+    },
+    {
+      "dimension": "D4",
+      "severity": "LOW",
+      "unit": "ref_classification_scheme",
+      "code": "C8-D4-03",
+      "title": "Pre-V5 category codes absence confirmed — cleanup guard in place",
+      "evidence": "Live DB: 0 rows with codes 'energy', 'water', 'waste', 'mobility', 'biodiversity' in ref_sustainability_action_category. seeds_data.sql includes a DO $$ block (lines 1167–1186) that DELETEs pre-V5 categories and then RAISES EXCEPTION if they still exist — providing a run-time idempotency guard. Old label scheme codes 'green_key', 'eu_ecolabel', 'tourisme_handicap', 'destination_excellence', 'qualite_tourisme' absent from ref_classification_scheme (confirmed by query returning 0 rows).",
+      "recommendation": "No action needed. Confirm guard passes during every fresh-apply gate run. The TST recoding hazard (green_key→LBL_CLEF_VERTE, tourisme_handicap→LBL_TOURISME_HANDICAP) flagged in WORKFLOW.md is correctly documented as deferred — the live DB is clean."
+    }
+  ],
+
+  "summary_counts": {
+    "live_db_totals": {
+      "ref_classification_scheme": 24,
+      "ref_classification_value": 81,
+      "ref_classification_equivalent_group": 176,
+      "ref_classification_equivalent_action": 544,
+      "ref_sustainability_action": 239,
+      "ref_sustainability_action_category": 9,
+      "ref_sustainability_action_group": 76,
+      "total_cluster_rows": 1149
+    },
+    "source_totals": {
+      "ref_sustainability_action": 260,
+      "ref_sustainability_action_group": 83,
+      "accessibility_not_applied_actions": 21,
+      "accessibility_not_applied_groups": 7
+    },
+    "integrity_checks": {
+      "orphaned_scheme_ids_in_values": 0,
+      "orphaned_group_ids_in_actions": 0,
+      "orphaned_category_ids_in_groups": 0,
+      "orphaned_scheme_ids_in_equiv_group": 0,
+      "orphaned_group_ids_in_equiv_group": 0,
+      "orphaned_scheme_ids_in_equiv_action": 0,
+      "orphaned_action_ids_in_equiv_action": 0,
+      "pre_v5_category_rows_live": 0,
+      "pre_v5_label_scheme_codes_live": 0
+    },
+    "i18n_coverage": {
+      "ref_classification_scheme_any_i18n": "10/24 (all fr only)",
+      "ref_classification_scheme_en": "0/24",
+      "ref_classification_value_any_i18n": "49/81",
+      "ref_classification_value_en": "35/81",
+      "ref_classification_value_es": "35/81",
+      "ref_classification_value_zh_or_el": "0/81",
+      "ref_sustainability_action_category_fr": "9/9",
+      "ref_sustainability_action_category_en": "0/9",
+      "ref_sustainability_action_group_fr": "76/76",
+      "ref_sustainability_action_group_en": "0/76",
+      "ref_sustainability_action_label_fr": "239/239",
+      "ref_sustainability_action_label_en": "0/239"
+    },
+    "usage": {
+      "object_classification_rows": 230,
+      "schemes_with_usage": 13,
+      "schemes_without_usage": 11,
+      "object_sustainability_action_rows": 51,
+      "distinct_actions_used": 11,
+      "actions_with_zero_usage": 228
+    }
+  }
+}

@@ -1,0 +1,35 @@
+# tbls config for the Bertel3.0 DB knowledge graph.
+# DSN is taken ONLY from the TBLS_DSN env var — never put a literal connection string here (this file is committed).
+dsn: ${TBLS_DSN}
+
+# Output table docs + ER here; commit dbdoc/.
+docPath: dbdoc
+
+# Do NOT write dbdoc/schema.json (tbls doc would by default). The JSON backbone comes from
+# `tbls out -t json -o db-graph-out/schema_tbls.json` instead (kept out of dbdoc/ to avoid a stray
+# committed dump and a --rm-dist conflict).
+disableOutputSchema: true
+
+format:
+  adjust: true
+
+er:
+  format: svg
+
+# Focused sub-diagram for the object model (the relationship layer).
+viewpoints:
+  - name: Object model
+    desc: The object entity, its type-specific facet tables, child tables, and object-to-object relationships.
+    tables:
+      - object
+      - object_relation
+      - object_org_link
+      - actor_object_role
+      - object_iti
+      - object_fma
+      - object_act
+      - object_room_type
+      - object_meeting_room
+      - object_menu
+      - ref_facet_registry
+      - ref_facet_applicability

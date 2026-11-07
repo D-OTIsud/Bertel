@@ -1,0 +1,131 @@
+{
+  "cluster": 5,
+  "audit_date": "2026-06-15",
+  "scope": [
+    "ref_code:amenity_family",
+    "ref_code:amenity_type",
+    "ref_code:environment_tag",
+    "ref_amenity"
+  ],
+  "notes": {
+    "zh_el_i18n": "zh and el name_i18n are 100% absent across ALL Cluster 5 domains (amenity_family, environment_tag) and ref_amenity. This is consistent with the global project status — noted once here, not repeated per finding.",
+    "global_i18n_scope": "Audit focuses on en/es gaps and missing FR labels per instructions; zh/el deferred globally."
+  },
+  "matrix": [
+    {
+      "unit": "ref_code:amenity_family",
+      "live_count": 21,
+      "source_count": 21,
+      "doc_count": 21,
+      "db_usage_distinct": 21,
+      "verdict": "MATCH — counts aligned across all three planes. i18n partially missing: 11 of 21 codes lack en/es translations (the 11 codes added 2026-03-21 as a corrective patch were not included in the i18n UPDATE block). These 11 are used as family labels in the editor and card badges."
+    },
+    {
+      "unit": "ref_code:amenity_type",
+      "live_count": 0,
+      "source_count": 0,
+      "doc_count": 0,
+      "db_usage_distinct": 0,
+      "verdict": "DEAD DOMAIN — the ref_code_amenity_type partition exists in schema_unified.sql (lines 343/438/483) and is registered as a FK target on object_taxonomy (FK ref_code_amenity_type_id_domain_fkey4), but has 0 rows in ref_code, 0 rows in object_taxonomy, 0 rows in ref_code_domain_registry, and 0 references in FE or API SQL. The amenity taxonomy is handled entirely via ref_amenity.family_id → amenity_family. Classify as vestigial."
+    },
+    {
+      "unit": "ref_code:environment_tag",
+      "live_count": 30,
+      "source_count": 30,
+      "doc_count": 30,
+      "db_usage_distinct": 18,
+      "verdict": "MATCH — counts aligned. i18n complete (all 30 codes have en/es). 12 of 30 codes have 0 rows in object_environment_tag (never used in data): anime, desert, front_de_mer, ile, littoral_sauvage, neige, parc_marin, port, quartier_historique, thermal, urbain_creatif, vignoble. These are forward-looking geographic context tags; not a defect but worth noting for catalog pruning."
+    },
+    {
+      "unit": "ref_amenity",
+      "live_count": 136,
+      "source_count": 136,
+      "doc_count": 136,
+      "db_usage_distinct": 37,
+      "verdict": "MATCH on count — 136 rows across live/source/doc. CRITICAL i18n gap: all 43 acc_* codes have FR-only name_i18n (0 en, 0 es). 14 additional non-acc_ codes also lack en/es. 99 of 136 codes (73%) have 0 rows in object_amenity. 0 broken family_id FKs. 0 object_room_type_amenity rows (feature unused)."
+    }
+  ],
+  "findings": [
+    {
+      "dimension": "D2",
+      "severity": "HIGH",
+      "unit": "ref_amenity:accessibility_family",
+      "code": "REF_AMENITY_ACC_NO_I18N",
+      "title": "All 43 acc_* accessibility amenity codes have no en/es translations",
+      "evidence": "Live DB: SELECT count(*) FROM ref_amenity WHERE code LIKE 'acc_%' AND (coalesce(name_i18n->>'en','')='') → 43. Source seed (seeds_data.sql line 3704–3749): the CTE inserts name_i18n as {\"fr\": \"...\"} only — no 'en' or 'es' keys are written for any acc_* code. These 43 codes are the T&H accessibility amenity catalog surfaced in §10 SectionAccessibility and consumed by api.get_object_badges_compact / api.get_object_resource.",
+      "recommendation": "Add en/es translations for all 43 acc_* codes in seeds_data.sql (the B-4 CTE block, lines 3704–3749) using the same UPDATE pattern as the ref_code_translations block (lines 1254–1326). Priority: these appear in multilingual badge/card rendering. The FR strings are already in name_i18n so a targeted UPDATE on the name_i18n jsonb column (|| operator) is safe and idempotent."
+    },
+    {
+      "dimension": "D2",
+      "severity": "MEDIUM",
+      "unit": "ref_code:amenity_family",
+      "code": "AMENITY_FAMILY_PARTIAL_I18N",
+      "title": "11 of 21 amenity_family codes have no en/es translations (the 2026-03-21 corrective additions)",
+      "evidence": "Live DB query on ref_code WHERE domain='amenity_family' AND coalesce(name_i18n->>'en','')='': bathroom, bedroom, climate_control, entertainment, general, kids, kitchen, parking, pets, security, sports — 11 codes. Source: the ref_code_translations UPDATE block (seeds_data.sql lines 1264–1273) covers only the original 10 families (comforts, services, equipment, wellness, business, family, outdoor, gastronomy, accessibility, sustainable). The 11 families added in the corrective patch (seeds_data.sql lines 180–190, 2026-03-21) were never added to the translation block. Doc (api-db-reference.html line 5566) lists 21 codes but does not surface i18n status.",
+      "recommendation": "Extend the ref_code_translations block in seeds_data.sql to include en/es for all 11 missing amenity_family codes. These are family-level labels shown in the §11 amenity picker UI grouped by family and in the Explorer badges compact. Proposed translations (for review): bathroom→Bathroom/Baño, bedroom→Bedroom/Habitación, climate_control→Climate control/Climatización, entertainment→Entertainment/Entretenimiento, general→General/General, kids→Children/Niños, kitchen→Kitchen/Cocina, parking→Parking/Aparcamiento, pets→Pets/Mascotas, security→Security/Seguridad, sports→Sports & leisure/Deportes y ocio."
+    },
+    {
+      "dimension": "D2",
+      "severity": "MEDIUM",
+      "unit": "ref_amenity:non_acc_codes",
+      "code": "REF_AMENITY_NON_ACC_PARTIAL_I18N",
+      "title": "14 non-acc_* ref_amenity codes have no en/es translations",
+      "evidence": "Live DB: codes missing en/es where code NOT LIKE 'acc_%': private_bathroom (bathroom), shared_bathroom (bathroom), towels (bathroom), bed_linen (bedroom), fan (climate_control), dining_room (gastronomy), telephone (general), outdoor_furniture (outdoor), boutique (services), drinking_water (services), pressing (services), public_toilets (services), reception (services), massage (wellness). These 14 were added as part of the 2026-03-21 corrective batch (seeds_data.sql lines 473–607) but were not included in any i18n UPDATE block. The existing translation UPDATE block (lines 1254–1326) does not cover them.",
+      "recommendation": "Add en/es translations for these 14 codes to the ref_code_translations block or a dedicated new UPDATE block in seeds_data.sql. Most are common hospitality terms with obvious translations. Priority order: towels, private_bathroom, shared_bathroom, fan, massage (actively used in pilot objects via object_amenity — verify with usage anti-join), then the others."
+    },
+    {
+      "dimension": "D1",
+      "severity": "MEDIUM",
+      "unit": "ref_code:amenity_type",
+      "code": "AMENITY_TYPE_DEAD_DOMAIN",
+      "title": "amenity_type domain is vestigial: partition exists but 0 rows, 0 FE/API references, 0 data rows",
+      "evidence": "Live DB: ref_code WHERE domain='amenity_type' → 0 rows; object_taxonomy WHERE domain='amenity_type' → 0 rows; ref_code_domain_registry WHERE domain='amenity_type' → 0 rows. Schema: partition ref_code_amenity_type created (schema_unified.sql lines 343/438/483). FK object_taxonomy_ref_code_id_domain_fkey4 references ref_code_amenity_type. FE grep (bertel-tourism-ui/src): 0 matches. API SQL grep (api_views_functions.sql): 0 matches. Seeds: only a RAISE NOTICE mentions 'amenity_type' in domain registration (seeds_data.sql line 925) — no INSERT rows. The ref_amenity table uses family_id→amenity_family, making amenity_type redundant.",
+      "recommendation": "Classify as vestigial. No immediate action required since the empty partition causes no correctness issue and the FK only fires if a row is inserted. Document in lot1_mapping_decisions.md as a dead domain. If the partition is ever to be cleaned up: (1) drop the FK on object_taxonomy, (2) drop the partition. Do not insert rows — the amenity taxonomy is correctly modelled via ref_amenity.family_id."
+    },
+    {
+      "dimension": "D1",
+      "severity": "LOW",
+      "unit": "ref_amenity",
+      "code": "REF_AMENITY_LOW_USAGE",
+      "title": "99 of 136 ref_amenity codes (73%) have zero rows in object_amenity",
+      "evidence": "Live DB: object_amenity distinct amenity_id count = 37 (out of 136 ref_amenity rows; 6207 total object_amenity rows). Anti-join confirms 99 unused codes: all 43 acc_* codes + 56 non-acc_* codes. The 43 acc_* codes are deliberately forward-looking (T&H §10 — these are persisted via object_classification.subvalue_ids, NOT object_amenity). The 56 unused non-acc_* codes include room-specific amenities (jacuzzi, bathtub, etc.) that would be populated via object_room_type_amenity (currently 0 rows — feature not yet used).",
+      "recommendation": "No immediate fix needed. The acc_* codes are correctly mapped to object_classification (§10), not object_amenity — this is by design. The room-type amenities are forward-looking for §06 room authoring. Review the unused non-acc_* object-level codes (e.g. concierge, spa, car_rental, airport_shuttle) to confirm they are expected to be populated via the pilot import pass (B1) or §11 editor. No dead-code removal warranted at this stage."
+    },
+    {
+      "dimension": "D1",
+      "severity": "LOW",
+      "unit": "ref_code:environment_tag",
+      "code": "ENV_TAG_LOW_USAGE",
+      "title": "12 of 30 environment_tag codes unused in object_environment_tag",
+      "evidence": "Live DB anti-join: codes with 0 rows in object_environment_tag: anime, desert, front_de_mer, ile, littoral_sauvage, neige, parc_marin, port, quartier_historique, thermal, urbain_creatif, vignoble. Used distinct: 18 codes, 3484 total rows. Unused codes are mostly niche geographic contexts (thermal spa, vineyard, snow, marine park, creative district, island) not present in the current 848-object pilot dataset (La Réunion geography).",
+      "recommendation": "No action needed — these are valid geographic descriptors relevant to French tourism SIT standard; their absence from current data reflects the pilot dataset scope, not a seeding error. Revisit for catalog pruning only if new object types (e.g. stations thermales, vignobles) are definitively out of scope for Réunion."
+    },
+    {
+      "dimension": "D3",
+      "severity": "LOW",
+      "unit": "ref_amenity:scope_column",
+      "code": "REF_AMENITY_SCOPE_STALE",
+      "title": "FE filters ref_amenity by scope IN ('object','both') but all 136 rows have scope='object'",
+      "evidence": "Live DB: SELECT scope, count(*) FROM ref_amenity GROUP BY scope → {scope:'object', count:136}. FE (object-workspace.ts line 582, explorer-reference.ts line 367, dashboard-reference.ts line 106): all three query .in('scope', ['object','both']). The 'both' arm in the filter is currently dead — no 'both' or 'room_type' scope rows exist. Source seeds: all INSERT blocks use 'object' as the hardcoded scope value.",
+      "recommendation": "Low priority. The filter is forward-compatible (room-type amenities would use scope='room_type' or 'both') and causes no correctness issue today. If room-type amenity authoring (§06) is to reuse ref_amenity rows, update their scope to 'both'; otherwise add a separate 'room_type' scope value. Document the scope vocabulary in seeds_data.sql comments."
+    },
+    {
+      "dimension": "D4",
+      "severity": "INFO",
+      "unit": "ref_amenity:family_id_integrity",
+      "code": "REF_AMENITY_FK_CLEAN",
+      "title": "ref_amenity family_id FK integrity: 0 broken references",
+      "evidence": "Live DB anti-join: SELECT a.id, a.code FROM ref_amenity a WHERE a.family_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ref_code_amenity_family rc WHERE rc.id = a.family_id) → 0 rows. All 136 ref_amenity rows resolve to a valid amenity_family entry. The 2026-03-21 corrective patch (seeds_data.sql lines 177–190) correctly pre-inserts the 11 missing families before the ref_amenity JOIN-based INSERT.",
+      "recommendation": "No action needed. Confirm in fresh-apply gate that the family INSERT at lines 166–191 precedes the ref_amenity INSERT at lines 464–610 (it does: line order preserved). The JOIN-based INSERT pattern already guards against broken FK at seed time."
+    },
+    {
+      "dimension": "D4",
+      "severity": "INFO",
+      "unit": "ref_code:environment_tag",
+      "code": "ENV_TAG_I18N_COMPLETE",
+      "title": "environment_tag i18n complete for en/es (30/30)",
+      "evidence": "Live DB: all 30 environment_tag codes have non-empty name_i18n->>'en' and name_i18n->>'es'. Source: all 30 codes are present in the ref_code_translations block (seeds_data.sql lines 1288–1317). Doc count matches (30). No gaps.",
+      "recommendation": "No action needed."
+    }
+  ]
+}

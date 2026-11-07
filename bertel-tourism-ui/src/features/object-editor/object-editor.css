@@ -1,0 +1,2892 @@
+/* =============================================================
+   Bertel · full-page object editor
+   Ported from the "Edit pages by type" prototype (edit-types.css).
+   Every rule is scoped under .object-editor so the editor's generic
+   class names (.field, .input, .chip, .fs ...) never leak into the
+   rest of the app. Design tokens (--ink, --accent, --surface ...)
+   and per-archetype accent classes (.acc-teal ...) come from the
+   global styles.css; only the tokens missing there are declared here.
+   ============================================================ */
+
+/* ---------- Edit shell (fills workspace main, no outer inset) ---------- */
+.edit-flat.object-editor {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+.object-editor {
+  /* Tokens absent from the global stylesheet. */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  /* audit S5 : --font-sans/--font-display/--font-mono sont fournis par next/font
+     sur <html> (mêmes noms de variables) et hérités ici — la redéfinition locale
+     (devenue cyclique après la migration) a été retirée. */
+}
+
+/* ---------- Sticky top action bar ---------- */
+.object-editor .edit-top {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 22px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface);
+  flex: none;
+}
+.object-editor .edit-top__left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.object-editor .edit-top__crumbs {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--ink-3);
+  letter-spacing: 0.01em; margin-bottom: 4px;
+}
+.object-editor .edit-top__crumbs .sep { color: var(--ink-4); }
+.object-editor .edit-top__crumbs strong { color: var(--ink-2); font-weight: 600; }
+.object-editor .edit-top__title {
+  font-family: var(--font-display);
+  font-weight: 700; font-size: theme('fontSize.2xl.0');
+  letter-spacing: -0.01em; color: var(--ink);
+  line-height: theme('fontSize.2xl.1.lineHeight');
+}
+.object-editor .edit-top__right { display: flex; align-items: center; gap: 8px; }
+.object-editor .edit-top__save {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 10px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: #1a6b48;
+  font-size: 11.5px; font-weight: 600;
+}
+.object-editor .edit-top__save.is-dirty {
+  background: rgba(214, 147, 58, 0.14);
+  color: #8a5c1d;
+}
+.object-editor .edit-top__save .pulse {
+  width: 7px; height: 7px;
+  border-radius: 999px;
+  background: var(--green);
+  flex: none;
+}
+.object-editor .edit-top__validation {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(214,147,58,0.12);
+  color: #8a5c1d;
+  font-size: 11.5px; font-weight: 700;
+}
+.object-editor .edit-top__validation.has-blockers {
+  background: rgba(200,92,72,0.12);
+  color: #93392a;
+}
+
+/* ---------- Body grid (split-pane: each column scrolls independently) ---------- */
+.object-editor .edit-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 222px minmax(0, 1fr) 296px;
+  background: var(--bg-tint);
+}
+
+/* Sélecteur natif de repli, affiché uniquement quand .edit-nav se masque (≤760px). */
+.object-editor .edit-nav__mobile-select { display: none; }
+
+/* ---------- Left section nav ---------- */
+.object-editor .edit-nav {
+  min-height: 0;
+  border-right: 1px solid var(--line-soft);
+  background: var(--bg-tint);
+  padding: 16px 14px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.object-editor .edit-nav__root-title {
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--ink-4);
+  padding: 0 6px 10px;
+  margin-bottom: 4px;
+}
+.object-editor .edit-nav__title {
+  font-family: var(--font-display);
+  font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.10em;
+  color: var(--ink-4); padding: 0 6px 6px;
+}
+/* Each nav group (one per section family, plus Outils) is its own white card. */
+.object-editor .edit-nav__group {
+  margin-bottom: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: theme('borderRadius.shellXl');
+  padding: 10px 8px 8px;
+  box-shadow: var(--shadow-s);
+}
+.object-editor .edit-nav__item {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center; gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  font-size: 12.5px;
+  border-radius: theme('borderRadius.shellMd');
+  color: var(--ink-2);
+  cursor: pointer;
+  margin-bottom: 1px;
+  text-align: left;
+  background: transparent;
+}
+.object-editor .edit-nav__item:hover { background: var(--surface-2); }
+.object-editor .edit-nav__item.is-on {
+  background: var(--accent-tint); color: var(--accent-deep); font-weight: 600;
+}
+.object-editor .edit-nav__item .label {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.object-editor .edit-nav__num {
+  font-family: var(--font-mono);
+  font-size: 10px; color: var(--ink-4); margin-right: 6px;
+}
+.object-editor .edit-nav__dot {
+  width: 6px; height: 6px; border-radius: 999px;
+  background: var(--line-strong);
+}
+.object-editor .edit-nav__dot.ok { background: var(--green); }
+.object-editor .edit-nav__dot.warn { background: var(--warn); }
+.object-editor .edit-nav__dot.req { background: var(--red); }
+.object-editor .edit-nav__pct,
+.object-editor .edit-nav__stat {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--ink-4);
+  letter-spacing: 0.03em;
+}
+.object-editor .edit-nav__stat.warn { color: var(--warn); }
+.object-editor .edit-nav__stat.req { color: var(--red); }
+.object-editor .edit-nav__stat.ok { color: var(--green); }
+.object-editor .edit-nav__tools .edit-nav__item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.object-editor .edit-nav__tools .edit-nav__item--danger .label {
+  color: var(--red);
+}
+
+/* ---------- Main editor column ---------- */
+.object-editor .edit-main {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 24px 32px;
+  background: var(--bg-tint);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Section card ---------- */
+.object-editor .fs {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: theme('borderRadius.shellXl');
+  margin-bottom: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-s);
+}
+.object-editor .fs__head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface);
+}
+.object-editor .fs__head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: theme('fontSize.lg.0'); font-weight: 700;
+  letter-spacing: -0.005em;
+  line-height: theme('fontSize.lg.1.lineHeight');
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  overflow-wrap: anywhere;
+}
+.object-editor .fs__head h3 small {
+  display: block;
+  font-family: var(--font-sans);
+  /* Subtitle was 11.5px/500 in --ink-3 (#6a7a82 ≈ 4.45:1 on --surface — under
+     the 4.5:1 WCAG 1.4.3 floor for normal text, so it read as faint). Bump to
+     --ink-2 (the house rule for ≤11.5px body text) + a touch more size/weight
+     so each section descriptor is legible without competing with the title. */
+  font-size: theme('fontSize.sm.0'); font-weight: 550;
+  color: var(--ink-2); margin-top: 3px; letter-spacing: 0;
+  line-height: theme('fontSize.sm.1.lineHeight');
+}
+.object-editor .fs__num {
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  background: var(--accent-tint); color: var(--accent-deep);
+  display: grid; place-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+}
+.object-editor .fs__head .meta { display: flex; align-items: center; gap: 6px; }
+.object-editor .fs__body { padding: 16px 18px 18px; }
+.object-editor .fs-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 22px; padding: 0 10px;
+  border-radius: 999px;
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.object-editor .fs-pill.ok { background: var(--green-soft); color: #1a6b48; }
+.object-editor .fs-pill.warn { background: rgba(214, 147, 58, 0.16); color: #8a5c1d; }
+.object-editor .fs-pill.req { background: rgba(200, 92, 72, 0.14); color: #93392a; }
+
+/* Mode rapide — compact folded section headers (quieter than open cards: no shadow) */
+.object-editor .fs--rapide-folded {
+  background: var(--surface);
+  box-shadow: none;
+  cursor: pointer;
+}
+.object-editor .fs--rapide-folded .fs__head {
+  border-bottom: 0;
+  padding: 8px 18px;
+}
+.object-editor .fs--rapide-folded .fs__head h3 {
+  font-size: theme('fontSize.lg.0');
+  font-weight: 600;
+  line-height: theme('fontSize.lg.1.lineHeight');
+}
+.object-editor .fs--rapide-folded .fs__head h3 small {
+  display: none;
+}
+.object-editor .fs--rapide-folded:hover {
+  background: var(--surface-2);
+}
+
+/* ---------- Field primitives ---------- */
+.object-editor .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.object-editor .field__label {
+  min-height: 24px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: theme('fontSize.sm.0'); font-weight: 600;
+  color: var(--ink-2); letter-spacing: 0.01em;
+  line-height: theme('fontSize.sm.1.lineHeight');
+}
+.object-editor .field__label .req { color: var(--red); }
+.object-editor .field__label .help {
+  width: 14px; height: 14px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 9px; font-weight: 700; color: var(--ink-4);
+  cursor: help;
+}
+/* Inline errors remain visible; Field hints use the accessible help control. */
+.object-editor .field__hint { margin: 0; font-size: theme('fontSize.sm.0'); line-height: 1.5; color: var(--ink-3); }
+.object-editor .field__error { margin: 0; font-weight: 600; color: var(--red); }
+/* Chantier 2026-08-28 n°4, lot B — la bordure rouge seule se confond avec un simple survol sur
+   un formulaire dense. Le halo la rend repérable en balayant la page. `--red-soft` est un token
+   EXISTANT (rgba littérale) : aucun `rgba(var(--…-rgb), α)` n'est introduit ici — cette forme est
+   silencieusement éliminée au parse (§215/§216) et la garde `styles.guard.test.ts` l'interdit. */
+.object-editor .input[aria-invalid='true'],
+.object-editor .textarea[aria-invalid='true'],
+.object-editor .select[aria-invalid='true'] {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-soft);
+}
+
+.object-editor .input,
+.object-editor .textarea,
+.object-editor .select {
+  width: 100%; height: auto;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: theme('borderRadius.shellMd');
+  padding: 0 11px;
+  font-size: theme('fontSize.base.0'); color: var(--ink);
+  outline: 0;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  font-family: var(--font-sans);
+  line-height: theme('fontSize.base.1.lineHeight');
+  min-height: 2.5rem;
+}
+.object-editor .input:focus,
+.object-editor .textarea:focus,
+.object-editor .select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.object-editor .input::placeholder,
+.object-editor .textarea::placeholder { color: var(--ink-4); }
+.object-editor .input.mono { font-family: var(--font-mono); letter-spacing: 0.02em; }
+.object-editor .input.lg { height: 42px; font-weight: 600; }
+.object-editor .input.has-prefix { padding-left: 32px; }
+.object-editor .input.has-suffix { padding-right: 56px; }
+/* Champ honnêtement désactivé (invariant « visibly disabled with a stated reason ») : `readOnly`
+   bloque bien la frappe, mais sans style le champ reste VISUELLEMENT éditable (même bordure, même
+   fond, même caret) — le motif seul ne suffit pas. Même langage visuel que `.readout` ci-dessous
+   (fond teinté, encre secondaire) ; s'applique rétroactivement aux autres champs readOnly
+   (capacité §07 `unit`, BlockASC, note prestataire §19). Le focus reste possible : on doit pouvoir
+   lire et copier la valeur. */
+.object-editor .input[readonly],
+.object-editor .textarea[readonly] {
+  background: var(--bg-tint);
+  color: var(--ink-2);
+  cursor: not-allowed;
+}
+/* Read-only reference value (X3): visually distinct from an editable input —
+   borderless, tinted, non-interactive. Used for ID OTI, object type, etc. */
+.object-editor .readout {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 11px;
+  background: var(--bg-tint);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.object-editor .readout.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+.object-editor .readout__prefix {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-4);
+}
+.object-editor .readout__value { word-break: break-word; }
+.object-editor .readout.is-empty .readout__value { color: var(--ink-4); font-style: italic; }
+.object-editor .textarea {
+  height: auto; min-height: 84px;
+  padding: 9px 11px; line-height: theme('fontSize.base.1.lineHeight');
+  resize: vertical; font-size: theme('fontSize.base.0');
+}
+.object-editor .textarea.rich { min-height: 120px; }
+.object-editor .select {
+  appearance: none;
+  padding-right: 28px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-3) 50%),
+    linear-gradient(135deg, var(--ink-3) 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 16px,
+    calc(100% - 11px) 16px;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+.object-editor .input-wrap { position: relative; }
+.object-editor .input-wrap .prefix,
+.object-editor .input-wrap .suffix {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  font-size: 11.5px; color: var(--ink-4);
+  font-family: var(--font-mono); letter-spacing: 0.02em;
+  pointer-events: none;
+}
+.object-editor .input-wrap .prefix { left: 10px; }
+.object-editor .input-wrap .suffix { right: 10px; }
+/* Platform favicon shown in front of a URL-valued contact (see SectionContacts). */
+.object-editor .input-wrap .prefix .contact-favicon { display: block; width: 16px; height: 16px; border-radius: 3px; }
+.object-editor .input.is-error,
+.object-editor .textarea.is-error,
+.object-editor .select.is-error {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(200, 92, 72, 0.10);
+}
+.object-editor .field__error {
+  display: flex; align-items: center; gap: 5px;
+  font-size: theme('fontSize.sm.0'); line-height: 1.5; color: var(--red); font-weight: 600; margin-top: 2px;
+}
+
+/* Grid helpers */
+.object-editor .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.object-editor .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.object-editor .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.object-editor .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; }
+.object-editor .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+
+/* Multi-language tab bar */
+.object-editor .lang-tabs {
+  display: inline-flex;
+  background: var(--surface-2);
+  padding: 3px; border-radius: 999px; margin-bottom: 8px;
+}
+.object-editor .lang-tabs button {
+  height: 22px; padding: 0 12px;
+  border-radius: 999px;
+  font-size: 11px; font-weight: 700;
+  color: var(--ink-3); letter-spacing: 0.04em;
+  display: inline-flex; align-items: center; gap: 5px;
+  background: transparent;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+.object-editor .lang-tabs button.is-on {
+  background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s);
+}
+.object-editor .lang-tabs button .ok { color: var(--green); }
+.object-editor .lang-tabs button .miss { color: var(--warn); }
+
+/* Scope tabs — segmented control for Par défaut / Personnalisée */
+.object-editor .scope-tabs {
+  display: inline-flex;
+  background: var(--surface-2);
+  padding: 3px; border-radius: 999px; margin-bottom: 10px; gap: 2px;
+}
+.object-editor .scope-tabs button {
+  height: 26px; padding: 0 14px;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  color: var(--ink-3); letter-spacing: 0.01em;
+  background: transparent; border: 0; cursor: pointer;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+.object-editor .scope-tabs button.is-on {
+  background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s);
+}
+
+/* Description selectors row — scope (Par défaut / Personnalisée) on the left,
+   language tabs on the right: opposite ends so the two axes aren't confused. */
+.object-editor .desc-selectors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.object-editor .desc-selectors .scope-tabs,
+.object-editor .desc-selectors .lang-tabs {
+  margin-bottom: 0;
+}
+.object-editor .desc-selectors .scope-tabs { flex-shrink: 0; }
+.object-editor .desc-selectors .lang-tabs {
+  flex-wrap: wrap;
+  max-width: 100%;
+  border-radius: var(--r-md);
+}
+.object-editor .desc-selectors button { white-space: nowrap; }
+@media (max-width: 600px) {
+  .object-editor .desc-selectors .lang-tabs button { min-height: 44px; }
+}
+
+/* §04 body — even vertical rhythm. The languages-spoken group, the translation
+   selectors, and the two long-text fields otherwise butt together (the char
+   counter of one nearly touches the label of the next). A single column gap
+   replaces the per-block margins so each region breathes the same amount. */
+.object-editor #section-04 .fs__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.object-editor #section-04 .desc-selectors { margin-bottom: 0; }
+/* Keep the "Langues parlées" label hugging its own chips as one tight group. */
+.object-editor #section-04 .desc-langs { display: flex; flex-direction: column; gap: 6px; }
+.object-editor #section-04 .desc-langs .chip-group__label { margin: 0; }
+.object-editor #section-04 .desc-langs .lang-field { margin-top: 0; }
+
+/* Char counter */
+.object-editor .char-count {
+  display: flex; justify-content: flex-end;
+  font-family: var(--font-mono);
+  font-size: 10px; color: var(--ink-4);
+  letter-spacing: 0.02em; margin-top: 4px;
+}
+.object-editor .char-count.over { color: var(--red); }
+
+/* Chips */
+.object-editor .chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 11.5px; font-weight: 600;
+  cursor: pointer; user-select: none;
+}
+.object-editor .chip:not(:disabled):hover { background: var(--surface-2); }
+.object-editor .chip.is-on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.object-editor .chip:disabled { cursor: default; }
+.object-editor .chip.size-sm { height: 26px; padding: 0 9px; font-size: 11px; }
+.object-editor .chip-set { display: flex; flex-wrap: wrap; gap: 6px; }
+.object-editor .chip-group__label {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-4); margin: 8px 0 6px;
+}
+
+/* Toggle switch row */
+.object-editor .tog {
+  display: grid; grid-template-columns: 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-tint);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+.object-editor .tog small { display: block; font-size: 10.5px; color: var(--ink-4); margin-top: 2px; }
+.object-editor .tog__sw {
+  width: 36px; height: 20px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  position: relative; flex: none;
+  transition: background 0.12s ease;
+}
+.object-editor .tog__sw::after {
+  content: ''; position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: left 0.15s ease;
+}
+.object-editor .tog.is-on .tog__sw { background: var(--accent); }
+.object-editor .tog.is-on .tog__sw::after { left: 18px; }
+
+/* ---------- Edit modal — internal rhythm ----------
+   The base EditorModal primitive renders children inside .ed-modal__body
+   with no layout rules of its own. These selectors give consecutive Fields,
+   Toggles and embedded widgets (MediaUploadField, etc.) consistent vertical
+   breathing room and let MediaEditModal cluster publication settings into a
+   tidy two-column row via .ed-modal__group. Tokens only — no hard-coded hues. */
+.object-editor .ed-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 2px;
+}
+
+/* Compact 2-column grouping for the trailing visibility/cover cluster */
+.object-editor .ed-modal__group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.object-editor .ed-modal__group > * {
+  min-width: 0;
+}
+@media (max-width: 520px) {
+  .object-editor .ed-modal__group {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Preview image inside the modal */
+.object-editor .ed-modal__preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-tint);
+}
+
+/* Media upload field — distinct affordance card inside the modal */
+.object-editor .media-upload-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg-tint);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+}
+.object-editor .media-upload-field input[type="file"] {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.object-editor .media-upload-field__error {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--red);
+}
+.object-editor .media-upload-field [role="status"] {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+/* Stat card */
+.object-editor .stat-card {
+  display: flex; flex-direction: column;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--bg-tint); gap: 4px;
+}
+.object-editor .stat-card__label {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+/* KPI info affordance + hover/focus popover (e.g. the sujets behind "Sujets distincts"). */
+.object-editor .stat-card__info {
+  position: relative;
+  display: inline-grid; place-items: center;
+  width: 18px; height: 18px; flex: none;
+  border-radius: 6px;
+  color: var(--ink-4);
+  cursor: help;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.object-editor .stat-card__info:hover,
+.object-editor .stat-card__info:focus-visible {
+  outline: 0;
+  color: var(--accent-deep, var(--accent));
+  background: var(--accent-tint);
+}
+.object-editor .stat-card__pop {
+  position: absolute; bottom: calc(100% + 8px); right: -6px; z-index: 30;
+  width: max-content; max-width: 260px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgba(20, 22, 28, 0.18);
+  text-transform: none; letter-spacing: normal;
+  font-weight: 500; color: var(--ink-2);
+  opacity: 0; transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.object-editor .stat-card__info:hover .stat-card__pop,
+.object-editor .stat-card__info:focus-within .stat-card__pop,
+.object-editor .stat-card__info:focus-visible .stat-card__pop {
+  opacity: 1; transform: translateY(0);
+}
+.object-editor .stat-card__pop-title {
+  display: block; margin-bottom: 6px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.object-editor .stat-card__pop-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.object-editor .stat-card__pop-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 12px; }
+.object-editor .stat-card__pop-count {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  color: var(--ink-3); background: var(--bg-tint);
+  padding: 1px 7px; border-radius: 999px;
+}
+.object-editor .stat-card__row {
+  display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 4px;
+}
+.object-editor .stat-card__value {
+  font-family: var(--font-display);
+  font-size: theme('fontSize.3xl.0'); font-weight: 700;
+  color: var(--ink); letter-spacing: -0.01em;
+  line-height: theme('fontSize.3xl.1.lineHeight');
+}
+.object-editor .stat-card__suffix {
+  font-family: var(--font-mono);
+  font-size: 10.5px; color: var(--ink-3);
+  margin-bottom: 2px; letter-spacing: 0.02em;
+}
+
+/* Repeater rows */
+.object-editor .repeater { display: flex; flex-direction: column; gap: 8px; }
+.object-editor .rep-row {
+  display: grid; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-tint);
+  border-radius: var(--r-md);
+}
+.object-editor .rep-row__act { display: flex; gap: 4px; }
+/* ChipMultiSelect modal trigger: selected chips wrap, « Choisir » button trails on the same row. */
+.object-editor .cms__trigger { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.object-editor .cms__trigger .chip-set { margin: 0; }
+/* §04 language-level modal: one row per language, label left + optional level select right. */
+.object-editor .lang-level-grid { display: flex; flex-direction: column; gap: 8px; }
+.object-editor .lang-level-grid__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.object-editor .lang-level-grid__name { font-size: 14px; color: var(--ink-1); }
+.object-editor .lang-level-grid__act { display: flex; align-items: center; gap: 6px; }
+/* The row the level modal was opened from (chip click) gets a highlight ring. */
+.object-editor .lang-level-grid__row.is-focus {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px;
+}
+/* §04 language chips: clickable body (opens the level modal) + a trailing remove « × ». */
+.object-editor .lang-field { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+/* The "Choisir / modifier les langues" button shares this row with the language
+   chips — center it instead of inheriting .rep-add's top-anchored offset. */
+.object-editor .lang-field .rep-add { align-self: center; margin-top: 0; }
+.object-editor .lang-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.object-editor .lang-chip { display: inline-flex; align-items: stretch; }
+.object-editor .lang-chip__del {
+  display: inline-grid; place-items: center;
+  width: 22px; margin-left: 2px;
+  border: 0; border-radius: 6px;
+  color: var(--ink-3); background: transparent;
+  font-size: 15px; line-height: 1; cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.object-editor .lang-chip__del:hover { color: var(--red); background: rgba(200, 92, 72, 0.10); }
+/* Policy summary: compact « value · value » readout + inline « Modifier » link (button → modal). */
+.object-editor .policy-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.object-editor .btn-link { background: none; border: 0; padding: 0; color: var(--acc); font-size: 12px; cursor: pointer; text-decoration: underline; }
+.object-editor .btn-link:hover { opacity: 0.8; }
+/* "Add" CTA — must read as a real, on-brand action, not a faint placeholder.
+   Resting state carries an accent-tinted fill + solid accent border so it's
+   visible against the surface; hover commits to a full accent fill. Driven by
+   the theme accent tokens, so it adapts across all 6 org palettes. */
+.object-editor .rep-add {
+  display: inline-flex; align-items: center; gap: 7px;
+  align-self: flex-start; margin-top: 8px;
+  height: auto; padding: 0 15px;
+  border-radius: theme('borderRadius.shellMd');
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  font-size: theme('fontSize.sm.0'); font-weight: 650; letter-spacing: 0.01em;
+  color: var(--accent-deep);
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+  box-shadow: var(--shadow-s);
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+              box-shadow 0.16s ease, transform 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: theme('fontSize.sm.1.lineHeight');
+  min-height: 2.5rem;
+}
+.object-editor .rep-add:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-m);
+  transform: translateY(-1px);
+}
+.object-editor .rep-add:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-s);
+}
+.object-editor .rep-add:focus-visible {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.object-editor .rep-add:disabled {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-4);
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+.object-editor .rep-row .del {
+  display: inline-grid; place-items: center;
+  width: 32px; height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--ink-3);
+  background: transparent;
+  font-size: 16px; line-height: 1;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.object-editor .rep-row .del:hover {
+  color: var(--red);
+  background: rgba(200, 92, 72, 0.10);
+}
+.object-editor .rep-row .del:focus-visible {
+  outline: 0;
+  color: var(--red);
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(200, 92, 72, 0.12);
+}
+.object-editor .rep-row .del:disabled {
+  color: var(--ink-4);
+  background: transparent;
+  cursor: default;
+}
+
+/* Repeater rows — dense controls (contacts, classifications, etc.). */
+.object-editor .rep-row .select,
+.object-editor .rep-row .input {
+  height: auto;
+  font-size: theme('fontSize.base.0');
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: theme('fontSize.base.1.lineHeight');
+}
+
+/* Section 03 — Contacts: clear state when contact-type reference data is missing. */
+.object-editor .contacts-notice {
+  margin: 0 0 8px;
+  font-size: 11.5px; line-height: 1.5; color: var(--ink-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+
+/* Section 03 — Contacts & web presence: vertical rhythm + grouped subsections.
+   The section breathes by separating "Coordonnées" from "Réseaux sociaux &
+   distribution" with real spacing + a hairline rule, and by rendering each
+   channel as a compact read-only row (edited in a modal) rather than a dense
+   grid of selects/inputs. */
+.object-editor .contacts-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.object-editor .contacts-layout .contacts-notice { margin: 0; }
+
+.object-editor .contacts-group {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.object-editor .contacts-group--web {
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+}
+.object-editor .contacts-group__title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  /* --ink-2 (not --ink-4): an 11px bold label is "normal" text and must clear
+     WCAG 1.4.3 4.5:1 on --surface; --ink-4/--ink-3 fall short at this size. */
+  color: var(--ink-2);
+}
+.object-editor .contacts-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+/* Compact read-only display cells (each row is edited via the modal). */
+.object-editor .contact-cell {
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.object-editor .contact-cell--type { font-weight: 600; color: var(--ink-1); }
+/* --ink-2, not --ink-3: 11.5px normal text must clear WCAG 1.4.3 4.5:1 on --surface. */
+.object-editor .contact-cell--role { font-size: 11.5px; color: var(--ink-2); }
+.object-editor .contact-cell--value { display: flex; align-items: center; gap: 7px; }
+.object-editor .contact-cell--value .contact-favicon {
+  flex: none; width: 16px; height: 16px; border-radius: 3px; display: block;
+}
+.object-editor .contact-cell__text {
+  min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--ink);
+}
+/* Pencil "edit" action on a display row — matches the .del icon-button footprint. */
+.object-editor .rep-row .rep-edit {
+  display: inline-grid; place-items: center;
+  width: 32px; height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--ink-3);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.object-editor .rep-row .rep-edit:hover {
+  color: var(--accent-deep);
+  background: var(--accent-tint);
+}
+.object-editor .rep-row .rep-edit:focus-visible {
+  /* Solid ring (not a faint tint shadow) so the focus indicator clears WCAG 2.4.11. */
+  outline: 2px solid var(--accent-deep);
+  outline-offset: 1px;
+  color: var(--accent-deep);
+}
+
+/* Right rail */
+.object-editor .edit-side {
+  min-height: 0;
+  border-left: 1px solid var(--line-soft);
+  background: var(--bg-tint);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.object-editor .edit-side__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  box-shadow: var(--shadow-s);
+}
+.object-editor .edit-side__status-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.object-editor .edit-side__status-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.object-editor .edit-side .card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: theme('borderRadius.shellXl');
+  padding: 12px 14px;
+  box-shadow: var(--shadow-s);
+}
+.object-editor .edit-side .card h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+.object-editor .small-act {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-4);
+}
+
+/* Shared action row — used by §21 SectionPublication's lifecycle actions
+   (the standalone edit footer was removed: its draft-save + preview duplicate the top bar). */
+.object-editor .edit-footer__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.object-editor .rep-row__handle {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--line-soft);
+  cursor: grab;
+}
+/* Real drag handle (SortableList <button>) — classic grip dots + grab cursor.
+   Element-qualified so the decorative <span> squares elsewhere keep their look
+   (a bare bordered button read as a checkbox — user-flagged in §03). */
+.object-editor button.rep-row__handle {
+  --grip: var(--ink-4);
+  width: 14px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  cursor: grab;
+  touch-action: none;
+  background-color: transparent;
+  background-image: radial-gradient(circle, var(--grip) 1px, transparent 1.4px);
+  background-size: 7px 6px;
+  background-repeat: repeat;
+}
+.object-editor button.rep-row__handle:hover {
+  --grip: var(--ink-2);
+  background-color: var(--line-soft);
+}
+.object-editor button.rep-row__handle:active { cursor: grabbing; }
+.object-editor button.rep-row__handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* Icon button */
+.object-editor .icbtn {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-3);
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+.object-editor .icbtn:hover { background: var(--surface-2); color: var(--ink); }
+
+/* Buttons. CRM consumers retain their original geometry and type below. */
+.object-editor .btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px; font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--motion-fast, 160ms) ease, transform var(--motion-instant, 90ms) ease;
+}
+.object-editor .btn:where(:not(.crm-app *)) {
+  height: auto;
+  min-height: 2.5rem;
+  border-radius: theme('borderRadius.shellMd');
+  font-size: theme('fontSize.sm.0');
+  line-height: theme('fontSize.sm.1.lineHeight');
+}
+.object-editor .btn:hover { background: var(--surface-2); }
+.object-editor .btn:active { transform: scale(0.98); }
+.object-editor .btn:disabled:active { transform: none; }
+.object-editor .btn.sm { height: 28px; padding: 0 10px; font-size: 11.5px; }
+.object-editor .btn.sm:where(:not(.crm-app *)),
+.object-editor .rep-row .btn:where(:not(.crm-app *)),
+.object-editor .rep-row .rep-add {
+  height: auto;
+  min-height: 2.25rem;
+  font-size: theme('fontSize.sm.0');
+  line-height: theme('fontSize.sm.1.lineHeight');
+}
+
+@media (pointer: coarse) {
+  .object-editor .btn:where(:not(.crm-app *)),
+  .object-editor .btn.sm:where(:not(.crm-app *)),
+  .object-editor .rep-row .btn:where(:not(.crm-app *)),
+  .object-editor .rep-add,
+  .object-editor .rep-row .rep-add,
+  .object-editor .chip:where(:not(.crm-app *)),
+  .object-editor .chip.size-sm:where(:not(.crm-app *)),
+  .object-editor .tog:where(:not(.crm-app *)) {
+    min-height: 44px;
+  }
+}
+
+.object-editor .btn.primary {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+.object-editor .btn.primary:hover { filter: brightness(1.05); }
+.object-editor .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Mode toggle */
+.object-editor .mode-tog {
+  display: inline-flex;
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 3px;
+  border: 1px solid var(--line-soft);
+}
+.object-editor .mode-tog button {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11.5px; font-weight: 700;
+  color: var(--ink-3);
+  background: transparent;
+  cursor: pointer;
+}
+.object-editor .mode-tog button.is-on { background: var(--ink); color: #fff; }
+
+/* Small inline pill */
+.object-editor .pill-mini {
+  font-family: var(--font-mono);
+  font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px;
+  background: var(--surface-2); color: var(--ink-3);
+}
+.object-editor button.pill-mini {
+  border: 0;
+  min-height: 22px;
+}
+.object-editor button.pill-mini:disabled { opacity: 0.62; cursor: not-allowed; }
+.object-editor button.pill-mini { cursor: pointer; }
+.object-editor button.pill-mini:hover { filter: brightness(0.97); }
+
+/* ---------- Cross-cutting editor widgets (rail issues) ---------- */
+.object-editor .issue__dot {
+  width: 8px; height: 8px; border-radius: 999px; flex: none;
+}
+.object-editor .issue__dot.req { background: var(--red); }
+.object-editor .issue__dot.warn { background: var(--warn); }
+.object-editor .rail-empty,
+.object-editor .rpick__empty {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-4);
+}
+
+/* Section 11 — sustainability categories (collapsible, ref-driven) */
+.object-editor .sust-kpi {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.object-editor .sust-empty,
+.object-editor .sust-equiv-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-4);
+}
+.object-editor .sust-equiv-hint { margin-bottom: 8px; font-size: 11.5px; color: var(--ink-3); }
+.object-editor .sust-cat {
+  margin-bottom: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+.object-editor .sust-cat__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.object-editor .sust-cat__head:hover { background: var(--surface-2, rgba(0, 0, 0, 0.02)); }
+.object-editor .sust-cat__num {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+  flex: none;
+}
+.object-editor .sust-cat__title {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.object-editor .sust-cat__title strong {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--ink);
+}
+.object-editor .sust-cat__title small {
+  font-size: 11px;
+  color: var(--ink-4);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.object-editor .sust-cat__count { margin-left: auto; flex: none; }
+.object-editor .sust-cat__chev {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--ink-4);
+  transition: transform 0.15s ease;
+}
+.object-editor .sust-cat.is-open .sust-cat__chev { transform: rotate(180deg); }
+.object-editor .sust-cat__body {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.object-editor .edit-nav__ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 2px auto 10px;
+  width: 148px;
+  height: 148px;
+}
+.object-editor .edit-nav__ring svg {
+  transform: rotate(-90deg);
+}
+.object-editor .edit-nav__ring__center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.object-editor .edit-nav__ring__center .num {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.object-editor .edit-nav__ring__center .num small {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.object-editor .edit-nav__ring__center .lbl {
+  font-size: 10.5px;
+  color: var(--ink-4);
+}
+.object-editor .completion-card__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.object-editor .completion-card__row {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+}
+.object-editor .completion-card__label {
+  color: var(--ink-2);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.object-editor .issue {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 0;
+  border-top: 1px solid var(--line-soft);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.object-editor .issue__body { display: grid; gap: 2px; min-width: 0; }
+.object-editor .issue strong {
+  font-size: 11.5px;
+  color: var(--ink);
+}
+.object-editor .issue small {
+  font-size: 10.5px;
+  color: var(--ink-4);
+}
+.object-editor .issue__go {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--accent-deep);
+}
+.object-editor .peer {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.object-editor .peer__av {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+}
+.object-editor .peer__body { display: grid; gap: 2px; min-width: 0; }
+.object-editor .peer strong { font-size: 11.5px; }
+.object-editor .peer small {
+  font-size: 10.5px;
+  color: var(--ink-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.object-editor .tag-mini {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--accent-tint);
+  color: var(--accent-deep);
+  font-size: 10px;
+  font-weight: 800;
+}
+.object-editor .history-row {
+  padding: 8px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.object-editor .history-row strong {
+  display: block;
+  font-size: 11.5px;
+}
+.object-editor .history-row small {
+  display: block;
+  font-size: 10.5px;
+  color: var(--ink-4);
+  margin-top: 2px;
+}
+.object-editor .history-row .when { color: var(--ink-3); }
+
+.object-editor .input--pending-review {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba(196, 58, 48, 0.35);
+  border-radius: var(--r-sm);
+  background: rgba(196, 58, 48, 0.06);
+  font-size: 0.8125rem;
+}
+.object-editor .pending-value--current {
+  text-decoration: line-through;
+  color: var(--ink-3);
+}
+.object-editor .pending-value--proposed {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.object-editor .prov {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-size: 11px;
+  margin-bottom: 10px;
+}
+.object-editor .prov--pending-review {
+  width: 100%;
+  border-color: rgba(196, 58, 48, 0.28);
+  background: rgba(196, 58, 48, 0.05);
+}
+.object-editor .prov__approve {
+  margin-left: auto;
+  flex: none;
+}
+.object-editor .prov__src {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 900;
+}
+.object-editor .prov__lbl strong { color: var(--ink); }
+.object-editor .prov__when { font-family: var(--font-mono); }
+.object-editor .prov__lock {
+  padding-left: 8px;
+  border-left: 1px solid var(--line-soft);
+  color: var(--red);
+  font-weight: 700;
+}
+
+.object-editor .siret-card {
+  border: 1px solid rgba(108,79,138,0.22);
+  background: rgba(108,79,138,0.06);
+  border-radius: var(--r-md);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.object-editor .siret-card__head {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.object-editor .siret-card__siret {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+.object-editor .siret-card__status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px;
+  color: var(--ink-3);
+  font-weight: 700;
+}
+.object-editor .siret-card__status .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.object-editor .siret-card__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.object-editor .siret-card__kv {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 8px;
+}
+.object-editor .siret-card__kv .k {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-4);
+  font-weight: 800;
+}
+.object-editor .siret-card__kv .v {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.object-editor .siret-card__foot { margin-top: 10px; }
+
+.object-editor .section-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.object-editor .rpick {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: 0 14px 40px rgba(24,49,59,0.10);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.object-editor .rpick__head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.object-editor .rpick__icon {
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 8px;
+  background: var(--accent-tint);
+  color: var(--accent-deep);
+  font-weight: 900;
+}
+.object-editor .rpick__input {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  font: inherit;
+}
+.object-editor .rpick__hint {
+  color: var(--ink-4);
+  font-size: 10.5px;
+}
+.object-editor .rpick__filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.object-editor .rpick__list { display: grid; }
+.object-editor .rpick__empty { padding: 12px; }
+.object-editor .rpick__row {
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-top: 1px solid var(--line-soft);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.object-editor .rpick__row:first-child { border-top: 0; }
+.object-editor .rpick__row:hover,
+.object-editor .rpick__row.is-hi { background: var(--accent-tint); }
+.object-editor .rpick__type {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--accent-deep);
+}
+.object-editor .rpick__main { display: grid; gap: 2px; min-width: 0; }
+.object-editor .rpick__main strong {
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.object-editor .rpick__main small {
+  font-size: 10.5px;
+  color: var(--ink-4);
+}
+.object-editor .rpick__suggest {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-deep);
+}
+.object-editor .rpick__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 10.5px;
+  color: var(--ink-4);
+}
+
+/* §95b — ActorPicker result rows : avatar + civilité/nom/prénom + e-mail + bouton « Lier » (icône).
+   Lignes riches propres au picker acteur (ne touche pas rpick__row partagé avec RelationPicker). */
+.object-editor .actor-opt {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.object-editor .actor-opt:first-child { border-top: 0; }
+.object-editor .actor-opt:hover { background: var(--bg-tint); }
+.object-editor .actor-opt__avatar {
+  width: 34px; height: 34px; flex: none;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--accent-deep, var(--accent));
+  background: var(--accent-tint);
+}
+.object-editor .actor-opt__id { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.object-editor .actor-opt__name {
+  font-size: 13.5px; font-weight: 650; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.object-editor .actor-opt__email {
+  display: inline-flex; align-items: center; gap: 5px; min-width: 0;
+  font-size: 12px; color: var(--ink-3);
+}
+.object-editor .actor-opt__email svg { color: var(--ink-4); flex: none; }
+.object-editor .actor-opt__email-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.object-editor .actor-opt__email--empty { color: var(--ink-4); font-style: italic; }
+.object-editor .actor-opt__link {
+  flex: none; display: inline-flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent-tint);
+  color: var(--accent-deep, var(--accent));
+  font-size: 12px; font-weight: 650; cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.object-editor .actor-opt__link svg { color: var(--accent); flex: none; }
+.object-editor .actor-opt__link:hover { background: var(--accent); color: #fff; }
+.object-editor .actor-opt__link:hover svg { color: #fff; }
+.object-editor .actor-opt__link:focus-visible {
+  outline: 0; box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+/* ---------- Prototype section/block extensions ---------- */
+.object-editor .dropzone {
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  background:
+    repeating-linear-gradient(135deg, transparent 0 18px, rgba(24,49,59,0.025) 18px 36px),
+    var(--bg-tint);
+  padding: 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  text-align: center;
+  color: var(--ink-3);
+}
+.object-editor .dropzone strong { color: var(--ink); font-family: var(--font-display); font-size: 13px; }
+.object-editor .dropzone small { font-size: 11px; color: var(--ink-4); }
+.object-editor .dropzone .ico {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent-deep);
+  margin-bottom: 4px;
+}
+.object-editor .media-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.object-editor .media-tile {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--r-sm);
+  background:
+    repeating-linear-gradient(135deg, rgba(0,0,0,0.04) 0 12px, transparent 12px 24px),
+    linear-gradient(180deg, var(--accent-tint), var(--surface-2));
+  border: 1px solid var(--line-soft);
+  overflow: hidden;
+}
+.object-editor .media-tile img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.object-editor .media-tile__cover {
+  position: absolute; top: 6px; left: 6px;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--ink);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.object-editor .media-tile__alt {
+  position: absolute; left: 6px; right: 6px; bottom: 6px;
+  background: rgba(255,253,248,0.94);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: var(--ink-2);
+  display: flex; align-items: center; gap: 4px;
+  border: 1px solid var(--line-soft);
+}
+.object-editor .media-tile__alt.empty { color: var(--warn); font-style: italic; }
+.object-editor .media-tile__act {
+  position: absolute; top: 6px; right: 6px;
+  display: flex; gap: 3px;
+}
+.object-editor .media-tile__act button,
+.object-editor .sync-row__btn {
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  background: rgba(255,253,248,0.94);
+  color: var(--ink-2);
+  display: grid; place-items: center;
+}
+.object-editor .media-tile__add {
+  display: grid; place-items: center;
+  border: 1.5px dashed var(--line-strong);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 600;
+  gap: 4px;
+}
+/* SortableGrid wrapper — becomes the grid item; the tile keeps its own aspect-ratio. */
+.object-editor .sortable-tile { min-width: 0; }
+/* Étoile couverture sur tuile : l'état actif reste lisible malgré le disabled. */
+.object-editor .media-tile__act .cover-btn.is-on {
+  color: var(--accent);
+  opacity: 1;
+  cursor: default;
+}
+.object-editor .ed-modal__note {
+  font-size: 12px;
+  color: var(--ink-4);
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--bg-tint);
+  border: 1px solid var(--line-soft);
+}
+.object-editor .location-combobox {
+  position: relative;
+}
+.object-editor .location-combobox__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 12;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgba(26, 22, 18, 0.12);
+}
+.object-editor .location-combobox__item {
+  padding: 7px 10px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.object-editor .location-combobox__item:hover,
+.object-editor .location-combobox__item--active {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.object-editor .location-combobox__item--create {
+  font-weight: 600;
+  color: var(--teal, #0d6e6e);
+}
+.object-editor .map-shell-block {
+  margin-top: 12px;
+}
+.object-editor .map-shell {
+  display: grid;
+  /* Left: lieu-dit + GPS (~30%). Right: map (~70%). */
+  grid-template-columns: minmax(200px, 30%) minmax(0, 70%);
+  gap: 12px;
+  align-items: start;
+}
+.object-editor .map-shell__side {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+.object-editor .map-shell__side > .field {
+  margin-bottom: 0;
+}
+.object-editor .map-shell__gps {
+  margin-top: 14px;
+}
+.object-editor .map-shell__gps-head {
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.object-editor .map-shell__gps-head .pill-mini {
+  margin-left: auto;
+}
+.object-editor .map-shell__coords {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.object-editor .map-shell__coords .field {
+  margin-bottom: 0;
+}
+.object-editor .map-shell__geocode-note {
+  margin: 6px 0 0;
+  font-size: 11.5px; line-height: 1.4; color: var(--ink-3);
+}
+.object-editor .map-shell .map-mini--interactive {
+  min-height: 240px;
+  height: 240px;
+}
+.object-editor .map-shell .map-mini--interactive .maplibregl-map,
+.object-editor .map-shell .map-mini--interactive .mapboxgl-map {
+  min-height: 240px;
+  height: 240px;
+}
+.object-editor .map-mini {
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  position: relative;
+  min-height: 180px;
+  overflow: hidden;
+}
+.object-editor .map-mini--interactive {
+  min-height: 200px;
+  background: var(--surface-2);
+}
+.object-editor .map-mini--interactive .maplibregl-map,
+.object-editor .map-mini--interactive .mapboxgl-map {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+}
+.object-editor .map-mini__confirm {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  background: rgba(255, 253, 248, 0.96);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 14px rgba(26, 22, 18, 0.1);
+  z-index: 3;
+}
+.object-editor .map-mini__confirm-text {
+  margin: 0;
+  flex: 1 1 160px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  line-height: 1.35;
+}
+.object-editor .map-mini__confirm-coords {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.object-editor .map-mini__confirm-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.object-editor .editor-map-pin {
+  width: 34px;
+  height: 44px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px rgba(24, 49, 59, 0.28));
+  cursor: grab;
+}
+.object-editor .editor-map-pin:active {
+  cursor: grabbing;
+}
+.object-editor .sched {
+  display: grid;
+  grid-template-columns: 84px repeat(2, minmax(0, 1fr)) 84px;
+  gap: 4px;
+}
+.object-editor .sched__head {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  padding: 6px;
+}
+.object-editor .sched__day {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600;
+  color: var(--ink);
+  padding: 6px 4px;
+  min-width: 0; overflow: hidden;
+  background: transparent; border: 0; cursor: pointer; text-align: left;
+}
+.object-editor .sched__day .ck {
+  flex: 0 0 auto;
+  width: 14px; height: 14px;
+  border-radius: 4px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface);
+  display: grid; place-items: center;
+  color: var(--accent);
+}
+.object-editor .sched__day small {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.object-editor .sched__open-slot {
+  width: 100%; border: 0; background: transparent;
+  color: var(--ink-4); font-style: italic; font-size: 11.5px;
+  cursor: pointer; padding: 0; text-align: center;
+}
+.object-editor .sched__day.is-on .ck { background: var(--accent); border-color: var(--accent); color: #fff; }
+.object-editor .sched__day small { color: var(--ink-4); font-weight: 500; }
+.object-editor .sched__slot {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+}
+.object-editor .sched__slot input {
+  width: 100%; min-width: 0;
+  border: 0; background: transparent; outline: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.object-editor .sched__slot .dash { font-size: 11.5px; color: var(--ink-4); }
+.object-editor .sched__slot.is-closed { background: var(--bg-tint); color: var(--ink-4); }
+.object-editor .sched__slot.is-closed input { color: var(--ink-4); font-style: italic; }
+.object-editor .sched__copy {
+  display: grid; place-items: center;
+  background: transparent;
+  color: var(--ink-4);
+  border-radius: 6px;
+  font-size: 10px;
+}
+.object-editor .sched__copy:hover { color: var(--accent-deep); background: var(--accent-tint); }
+.object-editor .sched__hint {
+  grid-column: 1 / -1;
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-top: 6px;
+}
+.object-editor .season-picker {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 3px;
+  margin-top: 6px;
+}
+.object-editor .season-picker .cell {
+  height: 36px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  display: grid; place-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-4);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+.object-editor .season-picker .cell.high { background: var(--accent-tint); color: var(--accent-deep); }
+.object-editor .season-picker .cell.peak { background: var(--accent); color: #fff; }
+.object-editor .season-picker .cell.closed { background: rgba(200,92,72,0.10); color: #93392a; }
+.object-editor .season-picker .cell:hover { border-color: var(--accent); }
+.object-editor .season-legend {
+  display: flex; gap: 12px;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.object-editor .season-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.object-editor .season-legend i {
+  width: 10px; height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.object-editor .season-legend .l-closed { background: rgba(200,92,72,0.40); }
+.object-editor .season-legend .l-high { background: var(--accent-tint); }
+.object-editor .season-legend .l-peak { background: var(--accent); }
+.object-editor .slider { position: relative; margin: 8px 0; }
+.object-editor .slider__track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b8d9c4 0%, #d8c87a 40%, #e0a05a 75%, #c85c48 100%);
+  position: relative;
+}
+.object-editor .slider__thumb {
+  position: absolute;
+  top: 50%; transform: translate(-50%, -50%);
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 3px solid var(--accent);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.object-editor .slider__scale {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--ink-4);
+  margin-top: 6px;
+  letter-spacing: 0.04em;
+}
+.object-editor .aud-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px; align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--line-soft);
+}
+.object-editor .aud-row:last-child { border-bottom: 0; }
+.object-editor .aud-row__lbl { font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+.object-editor .aud-row__lbl small { color: var(--ink-4); display: block; font-size: 10.5px; }
+.object-editor .tri {
+  display: inline-flex;
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 3px;
+}
+.object-editor .tri button {
+  height: 22px; padding: 0 10px;
+  border-radius: 999px;
+  font-size: 10.5px; font-weight: 700;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.object-editor .tri button.is-on.ok { background: var(--green); color: #fff; }
+.object-editor .tri button.is-on.mid { background: var(--warn); color: #fff; }
+.object-editor .tri button.is-on.no { background: var(--ink-2); color: #fff; }
+.object-editor .wp-rep .rep-row { grid-template-columns: 14px 28px 1fr 100px 90px auto; }
+.object-editor .wp-num {
+  width: 26px; height: 26px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  color: var(--accent-deep);
+  display: grid; place-items: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 11px;
+}
+.object-editor .chan-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto auto;
+  align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--bg-tint);
+  margin-bottom: 6px;
+}
+.object-editor .chan-row__logo,
+.object-editor .sync-row__src {
+  width: 26px; height: 26px;
+  border-radius: 7px;
+  display: grid; place-items: center;
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--line-soft);
+  color: var(--ink-2);
+}
+.object-editor .chan-row__name { font-weight: 700; font-size: 12.5px; color: var(--ink); }
+.object-editor .chan-row__url {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-4);
+  display: block;
+  margin-top: 1px;
+  letter-spacing: 0.02em;
+}
+.object-editor .chan-row__sync {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-4);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.object-editor .chan-row__sync.ok { color: #1a6b48; }
+.object-editor .chan-row__sync.warn { color: #8a5c1d; }
+.object-editor .provider-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+}
+.object-editor .kv {
+  display: flex; flex-direction: column;
+  gap: 2px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-size: 12px;
+}
+.object-editor .kv .k {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.object-editor .kv .v {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+.object-editor .sync-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 90px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-size: 12px;
+}
+.object-editor .sync-row:last-child { border-bottom: 0; }
+.object-editor .sync-row strong { font-weight: 600; color: var(--ink); font-size: 12px; display: block; }
+.object-editor .sync-row small {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-4);
+  letter-spacing: 0.02em;
+}
+.object-editor .sync-row__when {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+  text-align: right;
+}
+.object-editor .class-kpi {
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-tint);
+  border-radius: var(--r-md);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.object-editor .class-kpi__num {
+  font-family: var(--font-display);
+  font-size: 26px; font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.object-editor .class-kpi__lbl {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-top: 4px;
+}
+.object-editor .class-kpi--ok { background: var(--green-soft); border-color: rgba(44,163,111,0.18); }
+.object-editor .class-kpi--ok .class-kpi__num { color: #1a6b48; }
+.object-editor .class-kpi--warn { background: rgba(214,147,58,0.12); border-color: rgba(214,147,58,0.22); }
+.object-editor .class-kpi--warn .class-kpi__num { color: #8a5c1d; }
+.object-editor .class-kpi--red { background: rgba(200,92,72,0.10); border-color: rgba(200,92,72,0.22); }
+.object-editor .class-kpi--red .class-kpi__num { color: #93392a; }
+/* §08 row status chip — mirrors the class-kpi tone palette. */
+.object-editor .class-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-3);
+}
+.object-editor .class-status--ok { background: var(--green-soft); border-color: rgba(44,163,111,0.22); color: #1a6b48; }
+.object-editor .class-status--warn { background: rgba(214,147,58,0.12); border-color: rgba(214,147,58,0.24); color: #8a5c1d; }
+.object-editor .class-status--red { background: rgba(200,92,72,0.10); border-color: rgba(200,92,72,0.24); color: #93392a; }
+/* §08 justificatif attached-document row (link + remove). */
+.object-editor .doc-attached { display: flex; align-items: center; gap: 10px; }
+.object-editor .doc-attached a, .object-editor .doc-attached .object-document-link__button { color: var(--accent); text-decoration: underline; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* §18 read-only "Obligatoire" indicator (derived from the document type — not per-row editable). */
+.object-editor .class-row__sch { min-width: 0; }
+.object-editor .class-row__scheme {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.object-editor .class-row__sch small {
+  display: block;
+  font-size: 10.5px;
+  color: var(--ink-4);
+  margin-top: 1px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Opening periods (sections 14) ---------- */
+.object-editor .op {
+  --op-open: var(--green);
+  --op-open-soft: var(--green-soft);
+  --op-closed: var(--red);
+  --op-closed-soft: rgba(200, 92, 72, 0.10);
+  --op-high: #176b6a;
+  --op-high-soft: #d6e7e6;
+  --op-low: #c08a3e;
+  --op-low-soft: #f5e8cf;
+  --op-shut: #a8a39a;
+  --op-shut-soft: #ece8df;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.object-editor .opB__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.object-editor .opB__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border-radius: 999px;
+  background: var(--op-open-soft);
+  color: #1a6b48;
+  font-size: 12px;
+  font-weight: 700;
+}
+.object-editor .opB__pill .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--op-open);
+}
+.object-editor .opB__legend { display: flex; gap: 12px; font-size: 11px; color: var(--ink-3); flex-wrap: wrap; }
+.object-editor .opB__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.object-editor .opB__legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.object-editor .opB__ribbon {
+  position: relative;
+  height: 48px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--op-shut-soft);
+}
+.object-editor .opB__seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  border: 0;
+  border-right: 2px solid var(--surface);
+  cursor: pointer;
+  padding: 0;
+}
+.object-editor .opB__seg.high { background: var(--op-high); }
+.object-editor .opB__seg.low { background: var(--op-low); }
+.object-editor .opB__seg.shut { background: var(--op-shut); }
+.object-editor .opB__seg.standard { background: var(--op-low); }
+.object-editor .opB__seg.is-selected {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+  z-index: 2;
+}
+.object-editor .opB__now-mark {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 2px;
+  background: var(--orange);
+  border-radius: 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+.object-editor .opB__scale {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.object-editor .opB__scale span { text-align: center; }
+.object-editor .op__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+}
+.object-editor .op__empty h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+.object-editor .rep-row.is-selected {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+  border-radius: var(--r-md);
+}
+.object-editor .opC__row-wrap { display: flex; flex-direction: column; gap: 6px; }
+.object-editor .opC__row-detail {
+  background: var(--bg-tint);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  margin-left: 16px;
+}
+.object-editor .opC__row-hours {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  font-size: 12px; color: var(--ink-2);
+}
+.object-editor .opC__row-hours strong { color: var(--ink); font-weight: 700; margin-right: 2px; }
+.object-editor .opC__excep-card {
+  background: var(--bg-tint);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+}
+.object-editor .opC__excep-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.object-editor .opC__excep-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+}
+.object-editor .opC__excep-list { display: flex; flex-direction: column; gap: 6px; }
+.object-editor .opC__excep-row {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  font-size: 12.5px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.object-editor .opC__excep-row:last-child { border-bottom: 0; }
+.object-editor .opC__excep-row .date { font-family: var(--font-mono); color: var(--ink-2); }
+.object-editor .opC__excep-row .status.closed {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--op-closed-soft);
+  color: var(--red);
+}
+
+@media (max-width: 1120px) {
+  .object-editor .edit-body { grid-template-columns: 188px 1fr; }
+  .object-editor .edit-side { display: none; }
+  .object-editor .media-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* D14 : bandeau persistant du mode contributeur (P1.3 — save = proposition modérée). */
+.object-editor .contributor-banner {
+  flex: none;
+  padding: 8px 22px;
+  font-size: 12.5px;
+  color: var(--warn-ink, #7a4e12);
+  background: var(--warn-bg, #fbf0dd);
+  border-bottom: 1px solid var(--warn-border, #ecd3a6);
+}
+
+/* D12 : ≤1024px la save-bar débordait (roster + toggle + 4 boutons) — elle
+   passe en 2 rangées et le roster de présence s'efface (les badges par
+   section restent le signal de co-édition). */
+@media (max-width: 1024px) {
+  .object-editor .edit-top {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+  .object-editor .edit-top__right { flex-wrap: wrap; row-gap: 6px; }
+  .object-editor .edit-top .editor-roster { display: none; }
+}
+
+@media (max-width: 760px) {
+  .object-editor .fs__head {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+  .object-editor .fs__head .meta {
+    grid-column: 2;
+    margin-left: 0;
+  }
+  .object-editor .edit-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  .object-editor .edit-nav { display: none; }
+  .object-editor .edit-nav__mobile-select {
+    display: block;
+    margin: 10px 12px 0;
+    width: calc(100% - 24px);
+    padding: 10px 12px;
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid var(--line-soft);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13.5px;
+  }
+  .object-editor .edit-main { padding: 12px; }
+  .object-editor .grid-2,
+  .object-editor .grid-3,
+  .object-editor .grid-4,
+  .object-editor .grid-1-2,
+  .object-editor .grid-2-1,
+  .object-editor .map-shell,
+  .object-editor .provider-grid { grid-template-columns: 1fr; }
+  .object-editor .media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .object-editor .sched { grid-template-columns: 72px 1fr 1fr; }
+  .object-editor .sched__copy,
+  .object-editor .sched__head:nth-child(4) { display: none; }
+  .object-editor .season-picker { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+/* ============================================================
+   Section 01 — Identité & taxonomie
+   Flat publication-status indicator, taxonomy trigger + modal,
+   secondary-families block. All scoped under .object-editor.
+   ============================================================ */
+
+/* Flat publication-status indicator — a plain CSS dot, no emoji, no 3D. */
+.object-editor .identity-status { display: flex; align-items: center; gap: 8px; }
+.object-editor .identity-status .select { flex: 1; min-width: 0; }
+.object-editor .identity-status__dot {
+  flex: none;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #c2c0b8;
+}
+.object-editor .identity-status__dot--published { background: #3a9d6b; }
+.object-editor .identity-status__dot--draft { background: #c79234; }
+.object-editor .identity-status__dot--hidden { background: #c65a45; }
+.object-editor .identity-status__dot--archived { background: #9b9b94; }
+
+/* Inline help text under a field — muted, never decorative. */
+.object-editor .identity-help {
+  margin: 0;
+  font-size: 10.5px; line-height: 1.45;
+  color: var(--ink-4);
+}
+
+/* Taxonomy field — a clickable trigger styled like an input. */
+.object-editor .identity-taxo-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; height: 36px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 0 11px;
+  font-size: 13px; color: var(--ink);
+  font-family: var(--font-sans);
+  text-align: left; cursor: pointer;
+}
+.object-editor .identity-taxo-trigger:hover { border-color: var(--accent); }
+.object-editor .identity-taxo-trigger:focus-visible {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.object-editor .identity-taxo-trigger__value {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.object-editor .identity-taxo-trigger__value.is-empty { color: var(--ink-4); }
+.object-editor .identity-taxo-trigger__caret { flex: none; color: var(--ink-4); font-size: 11px; }
+
+/* Taxonomy breadcrumbs + notices (shared by the sous-catégorie modal). */
+.object-editor .identity-taxo__crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.object-editor .identity-taxo__crumb { display: inline-flex; align-items: center; gap: 4px; }
+.object-editor .identity-taxo__sep { color: var(--ink-4); font-size: 11px; }
+.object-editor .identity-taxo__crumb-label {
+  font-size: 12px; font-weight: 600; color: var(--ink-2);
+  background: var(--surface-2);
+  border-radius: 6px; padding: 2px 8px;
+}
+.object-editor .identity-taxo__crumb:last-child .identity-taxo__crumb-label {
+  background: var(--accent-tint); color: var(--ink);
+}
+.object-editor .identity-taxo__none { color: var(--ink-4); font-size: 12px; }
+.object-editor .identity-taxo__notice {
+  margin: 0;
+  font-size: 11.5px; line-height: 1.5; color: var(--ink-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+
+/* Sous-catégorie picker — single-column searchable tree (redesign 2026-06-08). */
+.object-editor .taxo2 { display: flex; flex-direction: column; gap: 12px; }
+.object-editor .taxo2-path {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 8px 11px;
+}
+.object-editor .taxo2-path__label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.object-editor .taxo2-search { position: relative; display: flex; align-items: center; }
+.object-editor .taxo2-search__icon {
+  position: absolute; left: 11px; color: var(--ink-4); font-size: 15px; pointer-events: none;
+}
+.object-editor .taxo2-search__input {
+  width: 100%; height: 38px; padding: 0 11px 0 32px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  font-size: 13px; color: var(--ink);
+  outline: 0; font-family: var(--font-sans);
+}
+.object-editor .taxo2-search__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.object-editor .taxo2-tree,
+.object-editor .taxo2-children { list-style: none; margin: 0; padding: 0; }
+.object-editor .taxo2-tree {
+  max-height: 320px; overflow-y: auto;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+}
+.object-editor .taxo2-row {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 40px; padding-right: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.object-editor .taxo2-tree > li:last-child > .taxo2-row { border-bottom: 0; }
+.object-editor .taxo2-row.is-selected-path {
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.object-editor .taxo2-row.is-selected {
+  background: var(--accent-tint);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.object-editor .taxo2-opt {
+  display: flex; align-items: center; gap: 10px;
+  flex: 1; min-width: 0; cursor: pointer; padding: 8px 0;
+}
+.object-editor .taxo2-group {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1; min-width: 0;
+  background: none; border: 0; cursor: pointer;
+  text-align: left; padding: 8px 0; font: inherit;
+  color: var(--ink-2); font-weight: 600;
+}
+.object-editor .taxo2-radio { width: 16px; height: 16px; flex: none; accent-color: var(--accent); }
+.object-editor .taxo2-label {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 13px; color: var(--ink);
+}
+.object-editor .taxo2-group .taxo2-label { color: var(--ink-2); }
+.object-editor .taxo2-badge {
+  flex: none;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #1a6b48; background: var(--green-soft);
+  padding: 2px 7px; border-radius: 999px;
+}
+.object-editor .taxo2-caret {
+  flex: none;
+  background: none; border: 0; cursor: pointer;
+  color: var(--ink-4); font-size: 18px; line-height: 1;
+  padding: 4px 8px;
+  transition: transform 0.12s ease;
+}
+.object-editor .taxo2-caret.is-open { transform: rotate(90deg); }
+.object-editor .taxo2-empty { font-size: 12px; color: var(--ink-4); padding: 6px 2px; }
+
+
+/* ── Adapted-description compact card (§10) ─────────────────────────────────────── */
+.adapted-desc__card,
+.adapted-desc__empty {
+  border: 1px solid var(--line, #e3e3e3); border-radius: 10px;
+  padding: 12px 14px; background: var(--surface, #fff);
+}
+.adapted-desc__empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.adapted-desc__preview { max-height: 180px; overflow: hidden; }
+.adapted-desc__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.adapted-desc__langs { display: inline-flex; gap: 4px; }
+
+/* ── Markdown WYSIWYG (modal) ───────────────────────────────────────────────────── */
+.md-editor { border: 1px solid var(--line, #e3e3e3); border-radius: 8px; overflow: hidden; }
+.md-editor--loading { min-height: 180px; }
+.md-editor__toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
+  padding: 6px 8px; border-bottom: 1px solid var(--line, #e3e3e3);
+  background: var(--surface-2, #f7f7f5);
+}
+.md-editor__sep { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--line, #e3e3e3); }
+.md-editor__btn {
+  display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 6px;
+  border: 1px solid transparent; border-radius: 6px; background: transparent;
+  color: var(--ink-2, #555); cursor: pointer; font-size: 13px;
+}
+.md-editor__btn:hover:not(:disabled) { background: var(--surface, #fff); }
+.md-editor__btn.is-on { background: var(--surface, #fff); color: var(--ink, #222); border-color: var(--line, #e3e3e3); }
+.md-editor__btn:disabled { opacity: 0.4; cursor: default; }
+.md-editor__content { min-height: 220px; padding: 12px 14px; outline: none; }
+.object-editor .md-editor__content:where(:not(.crm-app *)) {
+  min-height: 2.5rem;
+  font-size: theme('fontSize.base.0');
+  line-height: theme('fontSize.base.1.lineHeight');
+  color: var(--ink);
+}
+.md-editor__content:focus { outline: none; }
+/* The frame clips its content; draw keyboard focus around the editor itself. */
+.md-editor:has(.md-editor__content:focus-visible) { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* ============================================================================
+   §19 Suivi prestataire — provider cards, CRM CTA, confirm dialog
+   ========================================================================== */
+
+/* Read-only / empty notices */
+.object-editor .provider-readonly {
+  font-size: 12px; color: var(--ink-4); margin: 0 0 8px;
+}
+.object-editor .provider-readonly strong { color: var(--ink-3); }
+.object-editor .provider-empty { font-size: 12px; color: var(--ink-4); margin: 0; }
+
+/* Card grid — auto-fit so cards sit side by side on wide editors, stack when narrow. */
+.object-editor .provider-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.object-editor .provider-card {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.object-editor .provider-card:hover {
+  border-color: var(--line);
+  box-shadow: 0 2px 10px rgba(20, 22, 28, 0.05);
+}
+.object-editor .provider-card__head { display: flex; align-items: flex-start; gap: 11px; }
+.object-editor .provider-card__avatar {
+  width: 36px; height: 36px; flex: none;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--accent-deep, var(--accent));
+  background: var(--accent-tint);
+}
+.object-editor .provider-card__id { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.object-editor .provider-card__name {
+  font-size: 14px; font-weight: 650; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.object-editor .provider-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.object-editor .provider-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; line-height: 1;
+  padding: 3px 8px; border-radius: 999px;
+  color: var(--ink-2); background: var(--bg-tint);
+  border: 1px solid var(--line-soft);
+}
+.object-editor .provider-badge--primary {
+  color: var(--accent-deep, var(--accent));
+  background: var(--accent-tint);
+  border-color: transparent;
+}
+.object-editor .provider-badge--primary svg { color: var(--accent); }
+.object-editor .provider-badge--vis { color: var(--ink-3); }
+/* Notification — l'acteur a des interactions EN ATTENTE (status 'planned'). Palette warn éditeur. */
+.object-editor .provider-card__alert {
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
+  align-self: flex-start;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  padding: 3px 8px; border-radius: 999px;
+  color: #8a5c1d;
+  background: rgba(214, 147, 58, 0.14);
+  border: 1px solid rgba(214, 147, 58, 0.30);
+}
+.object-editor .provider-card__alert svg { color: var(--warn); }
+.object-editor .provider-card__note {
+  margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.45;
+  padding-left: 11px; border-left: 2px solid var(--line-soft);
+}
+.object-editor .provider-card__actions {
+  display: flex; flex-wrap: nowrap; align-items: center; gap: 6px;
+  padding-top: 9px; margin-top: 1px;
+  border-top: 1px solid var(--line-soft);
+}
+/* Boutons d'action ICÔNE SEULE (libellé via aria-label + title). */
+.object-editor .provider-act {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 30px; padding: 0; flex: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.object-editor .provider-act svg { flex: none; color: var(--ink-4); }
+.object-editor .provider-act:hover { background: var(--surface-2); color: var(--ink); }
+.object-editor .provider-act:hover svg { color: inherit; }
+.object-editor .provider-act:focus-visible {
+  outline: 0; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+/* Détacher : bouton destructif ROUGE (poubelle), poussé à droite. */
+.object-editor .provider-act--danger {
+  margin-left: auto;
+  color: var(--red); border-color: var(--red);
+}
+.object-editor .provider-act--danger svg { color: var(--red); }
+.object-editor .provider-act--danger:hover {
+  color: #fff; border-color: var(--red);
+  background: var(--red);
+}
+.object-editor .provider-act--danger:hover svg { color: #fff; }
+
+/* Provider edit modal — role + visibility side by side. */
+.object-editor .provider-modal__grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+
+/* Confirm dialog message */
+.object-editor .confirm-dialog__message {
+  margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2);
+}
+
+/* Danger button (confirm-destructive) */
+.object-editor .btn.danger {
+  background: var(--red); border-color: var(--red); color: #fff;
+}
+.object-editor .btn.danger:hover { filter: brightness(1.05); }
+
+/* §95 — BlockersModal: groupes de blocages par section + séparateur alertes. */
+.object-editor .blockers-modal__body { display: grid; gap: 14px; }
+.object-editor .blockers-modal__intro { margin: 0; font-size: 12px; color: var(--ink-4); }
+.object-editor .blockers-group { display: grid; }
+.object-editor .blockers-group__head {
+  margin: 0; font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-3);
+}
+.object-editor .issue--static { cursor: default; }
+.object-editor .blockers-modal__warn { border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.object-editor .blockers-modal__warn-head {
+  margin: 0 0 4px; font-size: 11.5px; font-weight: 800; color: var(--ink-3);
+}
+
+/* §96 — §21 Publication : carte d'état du cycle de vie + rangée d'actions.
+   Remplace l'ancien faux champ read-only "Statut courant" par une carte lisible,
+   tonée selon le statut, et regroupe les actions (chacune confirmée par ConfirmDialog). */
+.object-editor .lifecycle-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+/* anti-pattern banni : pas de bordure latérale colorée — l'accent est porté par
+   le fond teinté + la pastille `lifecycle-state__dot`. */
+.object-editor .lifecycle-state--ok { background: var(--green-soft); }
+.object-editor .lifecycle-state--warn { background: rgba(214, 147, 58, 0.10); }
+
+/* Section repliable (impl. 6.2 — divulgation progressive §07/§16) */
+.object-editor .disclosure {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  background: var(--surface);
+}
+.object-editor .disclosure__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  border-radius: 10px;
+}
+.object-editor .disclosure__head:hover { background: var(--surface-2); }
+.object-editor .disclosure__chevron { color: var(--ink-3); font-size: 11px; flex: none; width: 12px; }
+.object-editor .disclosure__title { flex: 1; }
+.object-editor .disclosure__summary { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+.object-editor .disclosure__body { padding: 0 12px 12px; }
+.object-editor .lifecycle-state__dot {
+  width: 10px; height: 10px; margin-top: 5px;
+  border-radius: 999px; flex: none;
+  background: var(--ink-4);
+}
+.object-editor .lifecycle-state--ok .lifecycle-state__dot { background: #1a6b48; }
+.object-editor .lifecycle-state--warn .lifecycle-state__dot { background: #b9802f; }
+.object-editor .lifecycle-state__body { flex: 1 1 auto; min-width: 0; }
+.object-editor .lifecycle-state__label {
+  display: block;
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.object-editor .lifecycle-state__desc {
+  margin: 2px 0 0; font-size: 12px; line-height: 1.45; color: var(--ink-3);
+}
+.object-editor .lifecycle-state__meta {
+  flex: none; text-align: right;
+  display: grid; gap: 1px;
+  padding-left: 12px;
+}
+.object-editor .lifecycle-state__meta-k {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+.object-editor .lifecycle-state__meta-v {
+  font-size: 12px; font-weight: 600; color: var(--ink-2);
+  font-family: var(--font-mono);
+}
+
+.object-editor .lifecycle-actions { margin-top: 16px; }
+.object-editor .lifecycle-actions__row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+}
+.object-editor .lifecycle-actions__hint {
+  margin: 8px 0 0; font-size: 11px; color: var(--ink-4);
+}
+
+/* §108 — modale de suppression définitive */
+.delete-modal__warning { color: var(--text, #1f2937); line-height: 1.5; margin-bottom: 1rem; }
+.delete-modal__error { color: var(--danger, #b91c1c); margin-top: 0.75rem; font-size: 0.875rem; }
+
+/* MarkdownCellField — compact repeater-cell Markdown surface (near .adapted-desc) */
+.md-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.md-cell__preview { font-size: .85rem; max-height: 4.5em; overflow: hidden; }
+.md-cell__empty { font-size: .85rem; }
+.md-cell__btn { align-self: flex-start; }
+
+/* ====================================================================
+ * Collaborative presence — save-bar roster + per-section badges + conflict banner
+ * (§ editor collaborative presence design, 2026-06-22)
+ * ==================================================================== */
+
+/* Save-bar avatar band (everyone on the fiche) */
+.object-editor .editor-roster { display: inline-flex; align-items: center; gap: 8px; }
+.object-editor .editor-roster__stack { display: inline-flex; }
+.object-editor .editor-roster__chip {
+  display: inline-grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: .68rem; font-weight: 700; color: #fff;
+  border: 2px solid var(--surface); margin-left: -8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+.object-editor .editor-roster__chip:first-child { margin-left: 0; }
+.object-editor .editor-roster__chip.is-self { outline: 2px solid var(--accent); outline-offset: -2px; }
+.object-editor .editor-roster__count {
+  font-size: .72rem; font-weight: 600; color: var(--text-soft, #64748b); white-space: nowrap;
+}
+
+/* Per-section presence badge — floats at the top-right of each section card */
+.object-editor .edit-section-host { position: relative; }
+.object-editor .edit-section-host__badge {
+  position: absolute; top: 12px; right: 16px; z-index: 4; pointer-events: none;
+}
+.object-editor .section-presence { display: inline-flex; align-items: center; gap: 6px; pointer-events: auto; }
+.object-editor .section-presence__stack { display: inline-flex; }
+.object-editor .section-presence__chip {
+  display: inline-grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  font-size: .64rem; font-weight: 700; color: #fff;
+  border: 2px solid var(--surface); margin-left: -8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .12);
+}
+.object-editor .section-presence__chip:first-child { margin-left: 0; }
+.object-editor .section-presence__chip.is-overflow { background: var(--text-soft, #64748b); }
+.object-editor .section-presence__editing {
+  font-size: .66rem; font-weight: 600; color: var(--accent-deep, var(--accent));
+  background: var(--accent-tint, rgba(0, 0, 0, .05)); border-radius: 999px; padding: 1px 7px;
+}
+
+/* Conflict banner — a peer saved while you have the fiche open */
+.object-editor .peer-saved-banner {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 24px;
+  background: var(--warn-tint, #fff7ed);
+  border-bottom: 1px solid var(--warn-line, #fed7aa);
+  color: var(--text, #1f2937);
+}
+.object-editor .peer-saved-banner__text { flex: 1 1 320px; font-size: .85rem; line-height: 1.4; }
+.object-editor .peer-saved-banner__actions { display: inline-flex; gap: 8px; }
+.object-editor .peer-saved-banner[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 140ms var(--ease-premium-in), transform 140ms var(--ease-premium-in);
+}

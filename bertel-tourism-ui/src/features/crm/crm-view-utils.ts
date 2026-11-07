@@ -1,0 +1,315 @@
+// Utilitaires purs du module CRM acteur-centré (§61, design v2 2026-06-11).
+// Aucune dépendance service/réseau : tout est testable en isolation
+// (crm-view-utils.test.ts). Les composants de vue (CrmAnnuaire, CrmActorFiche,
+// CrmObjectView, CrmTaches) consomment ces helpers — ne pas dupliquer les
+// mappings dans les vues.
+
+/** Teinte d'avatar / type-tag — palette des 6 accents du design v2 (crm.css PAV_TINT). */
+export interface PavTint {
+  bg: string;
+  fg: string;
+}
+
+// Peps PO point 1 : 6 teintes pleinement colorées (alphas relevés 0.16/0.18 → 0.22/0.24)
+// pour que les avatars/type-tags se lisent comme de la COULEUR, pas un gris-wash. La même
+// gamme que les accents KPI/sentiment (teal/orange/blue/green/plum/rust) — l'annuaire et
+// les fiches cessent d'être tout-teal. Texte foncé AA sur blanc.
+export const PAV_TINTS: PavTint[] = [
+  { bg: 'rgba(23, 107, 106, 0.22)', fg: '#0d4f4e' }, // teal
+  { bg: 'rgba(201, 109, 59, 0.24)', fg: '#93501f' }, // orange
+  { bg: 'rgba(30, 116, 145, 0.24)', fg: '#0e5872' }, // blue
+  { bg: 'rgba(31, 157, 99, 0.22)', fg: '#1a5a30' }, // green
+  { bg: 'rgba(108, 79, 138, 0.24)', fg: '#4d3866' }, // plum
+  { bg: 'rgba(202, 138, 31, 0.24)', fg: '#8a5c10' }, // amber
+];
+
+/**
+ * Teinte stable pour une clé (actor_id ou object_type) — hash djb2 % 6.
+ * Le prototype mappait des classes acc-* éditoriales ; ici les entités sont
+ * réelles, la teinte est donc dérivée déterministiquement de la clé.
+ */
+export function pavTintOf(key: string): PavTint {
+  let hash = 5381;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = ((hash * 33) ^ key.charCodeAt(i)) >>> 0;
+  }
+  return PAV_TINTS[hash % PAV_TINTS.length];
+}
+
+// Teintes de SUJET (rectif PO v5 point 1) — « que les pilules sujets soient de teintes
+// différentes ». Palette de 8 accents harmonieux (la gamme PAV/sentiment teal/orange/blue/
+// green/plum/amber + bleu-soft + rust), PAS un arc-en-ciel criard : chaque sujet reçoit un
+// index STABLE dérivé de son code (hash djb2 % 8) → même sujet = même couleur PARTOUT (rail
+// « Sujets récurrents », chips top_topics de l'annuaire, pastille sujet de la timeline, chips
+// sujet de la vue objet). Le rendu CSS est `.topic-pill.topic--N` (N = cet index) : fond pastel
+// doux + texte foncé AA-lisible, déclarés une fois dans styles.css (accents only, hors thème).
+export const TOPIC_TINT_COUNT = 8;
+
+/**
+ * Index de teinte STABLE pour un code de sujet (`demand_topic`) — hash djb2 % TOPIC_TINT_COUNT.
+ * Déterministe : le même code retombe toujours sur le même index (donc la même classe
+ * `topic--N`) à travers toutes les vues. Une clé vide → 0 (jamais d'index négatif/NaN).
+ */
+export function topicTintOf(code: string): number {
+  if (!code) return 0;
+  let hash = 5381;
+  for (let i = 0; i < code.length; i += 1) {
+    hash = ((hash * 33) ^ code.charCodeAt(i)) >>> 0;
+  }
+  return hash % TOPIC_TINT_COUNT;
+}
+
+/** Initiales d'affichage (2 premiers mots, préfixe de forme juridique ignoré). */
+export function initialsOf(name: string): string {
+  const initials = name
+    .replace(/^(SARL|SAS|SCI|EARL|EI)\s+/i, '')
+    .split(/[\s'—-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase();
+  return initials || '—';
+}
+
+// Système 6 tons sentiment (peps PO point 1) — les 6 codes du domaine `crm_sentiment`
+// gardent CHACUN leur propre teinte (.mood--<ton>), + un ton `neutre` (gris doux) pour
+// le code absent/inconnu. C'est le signal couleur DOMINANT du module : sur les données
+// réelles, 100 % des interactions importées sont `note`, donc colorer par TYPE n'apporte
+// aucune variété — le sentiment, lui, varie réellement. L'ancien mapping 3 classes
+// faisait tomber interrogatif/inquiet en gris ; ici interrogatif passe en AMBRE.
+// Le libellé affiché reste le sentimentName réel ; le ton ne pilote que la couleur.
+export type MoodTone =
+  | 'tres_positif'
+  | 'positif'
+  | 'interrogatif'
+  | 'inquiet'
+  | 'mecontent'
+  | 'tres_mecontent'
+  | 'neutre';
+
+const KNOWN_MOOD_TONES: ReadonlySet<string> = new Set([
+  'tres_positif',
+  'positif',
+  'interrogatif',
+  'inquiet',
+  'mecontent',
+  'tres_mecontent',
+]);
+
+/** Ton couleur d'un code sentiment — 1 pour 1 sur les 6 codes connus, `neutre` sinon. */
+export function moodToneOf(sentimentCode: string | null | undefined): MoodTone {
+  if (sentimentCode && KNOWN_MOOD_TONES.has(sentimentCode)) {
+    return sentimentCode as MoodTone;
+  }
+  return 'neutre';
+}
+
+export type TaskGroup = 'late' | 'today' | 'week' | 'later';
+
+/**
+ * Groupe d'échéance d'une tâche (vue Tâches & relances) :
+ * late = jour calendaire passé ; today = jour même ; week = J+1..J+7 ;
+ * later = au-delà, sans échéance ou date invalide.
+ */
+export function taskGroupOf(dueAt: string | null, now: Date = new Date()): TaskGroup {
+  if (!dueAt) return 'later';
+  const ts = Date.parse(dueAt);
+  if (!Number.isFinite(ts)) return 'later';
+  const due = new Date(ts);
+  const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((dayStart(due) - dayStart(now)) / 86_400_000);
+  if (diffDays < 0) return 'late';
+  if (diffDays === 0) return 'today';
+  if (diffDays <= 7) return 'week';
+  return 'later';
+}
+
+/**
+ * Badge d'échéance d'une carte kanban (rectif PO point 1) : 'late' (rouge) si le jour
+ * calendaire est passé ET la tâche non terminée ; 'today' (orange) le jour même ; ''
+ * sinon. Réutilise taskGroupOf — la proximité d'échéance des anciens groupes temporels
+ * vit désormais DANS les cartes.
+ */
+export function dueBadgeClassOf(dueAt: string | null, status: string, now: Date = new Date()): '' | 'late' | 'today' {
+  if (status === 'done') return '';
+  const group = taskGroupOf(dueAt, now);
+  if (group === 'late') return 'late';
+  if (group === 'today') return 'today';
+  return '';
+}
+
+/** JJ/MM/AAAA (fr-FR) ; null/invalide → '—' / valeur brute. */
+export function formatShort(value: string | null): string {
+  if (!value) return '—';
+  const ts = Date.parse(value);
+  if (!Number.isFinite(ts)) return value;
+  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(ts));
+}
+
+/**
+ * Taille lisible d'une pièce jointe — SOURCE UNIQUE des deux panneaux qui en affichent une
+ * (`CrmTaskModal`, `CrmActorDocuments`). Chacun portait sa copie, et elles avaient déjà
+ * divergé sur le cas qui compte.
+ *
+ * `null` est une garde SQL DÉLIBÉRÉE (taille illisible côté serveur : le cast de
+ * `ref_document.extra->>'size_bytes'` est borné, une valeur non numérique sort à NULL au
+ * lieu d'abattre la lecture entière) et doit rester distinguable d'une taille de 0 octet —
+ * les confondre ferait mentir l'interface (« 0 Ko » n'est pas « on ne sait pas »).
+ *
+ * Cette fonction FORMATE une taille ; elle ne décide pas s'il faut en afficher une. Un
+ * appelant dont la route ne sait PAS distinguer 0 de « inconnu » doit garder son appel :
+ * c'est le cas de `CrmActorDocuments`, dont le SQL émet `coalesce(size_bytes, 0)`.
+ */
+export function formatDocumentSize(value: number | null): string {
+  if (value === null) return 'taille inconnue';
+  if (value < 1024) return `${value} o`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} Ko`;
+  return `${(value / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
+}
+
+/**
+ * `AAAA-MM-JJ` pour un `<input type="date">`, dérivé DANS LE MÊME FUSEAU que `formatShort`.
+ *
+ * POURQUOI CETTE FONCTION EXISTE. Le modal d'édition pré-remplissait son champ d'échéance
+ * par `task.dueAt.slice(0, 10)`, c'est-à-dire la date **UTC** de l'horodatage, alors que la
+ * carte kanban rend la même valeur par `formatShort`, qui n'impose aucun `timeZone` et
+ * s'affiche donc en heure **locale**. La Réunion étant à UTC+4, une `due_at` entre 20:00Z et
+ * 24:00Z fait afficher J+1 par la carte et J par le modal — et **enregistrer persiste le
+ * décalage** (`save_crm_task` accepte des heures, la valeur écrite est bien celle du champ).
+ * La fenêtre est étroite mais réelle, et la divergence est silencieuse : deux surfaces qui
+ * lisent la MÊME donnée doivent la dater dans le MÊME fuseau.
+ *
+ * Les accesseurs `getFullYear/getMonth/getDate` sont LOCAUX, exactement comme le formateur
+ * `Intl` sans `timeZone` de `formatShort` : la parité des deux surfaces est structurelle,
+ * pas une coïncidence de constantes recopiées. `''` sur valeur absente ou illisible — un
+ * `<input type="date">` n'accepte que le format exact, une valeur douteuse y serait ignorée
+ * en silence par le navigateur.
+ */
+export function toDateInputValue(value: string | null | undefined): string {
+  if (!value) return '';
+  const ts = Date.parse(value);
+  if (!Number.isFinite(ts)) return '';
+  const date = new Date(ts);
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** Date relative compacte (« il y a 5 sem. ») pour l'annuaire et la fiche. */
+export function formatRelative(value: string | null, now: Date = new Date()): string {
+  if (!value) return '—';
+  const ts = Date.parse(value);
+  if (!Number.isFinite(ts)) return value;
+  const diffMs = now.getTime() - ts;
+  if (diffMs < 60_000) return "à l'instant";
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `il y a ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `il y a ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `il y a ${days} j`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `il y a ${weeks} sem.`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `il y a ${months} mois`;
+  const years = Math.floor(days / 365);
+  return `il y a ${years} an${years > 1 ? 's' : ''}`;
+}
+
+/** Libellé de mois pour le groupage timeline (« Juin 2026 ») ; null → 'Sans date'. */
+export function monthLabelOf(value: string | null): string {
+  if (!value) return 'Sans date';
+  const ts = Date.parse(value);
+  if (!Number.isFinite(ts)) return 'Sans date';
+  const label = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(ts));
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+// Libellés FR des types d'interaction (enum DB crm_interaction_type) — vocabulaire
+// du composer v2 (Appel / E-mail / Visite terrain / Note interne) + les autres types DB.
+const INTERACTION_TYPE_LABELS: Record<string, string> = {
+  call: 'Appel',
+  email: 'E-mail',
+  meeting: 'Réunion',
+  visit: 'Visite terrain',
+  whatsapp: 'WhatsApp',
+  sms: 'SMS',
+  note: 'Note interne',
+};
+
+export function interactionTypeLabelOf(interactionType: string): string {
+  return INTERACTION_TYPE_LABELS[interactionType] ?? interactionType;
+}
+
+/**
+ * Auteur affiché d'une interaction (fix « par Système ») — résout le « par {auteur} » du pied
+ * de carte et des réponses. Priorité : l'AGENT qui a consigné (ownerName) ; à défaut
+ * l'INTERLOCUTEUR connu (interlocutor_email — l'établissement/le contact à l'origine de la
+ * demande) ; à défaut une étiquette dérivée de la SOURCE (les lignes reprises de l'ancien
+ * système portent `source` commençant par `import` ⇒ « Import initial »). « Système » n'est plus
+ * qu'un dernier recours quand AUCUN auteur réel n'est connu, au lieu de masquer
+ * systématiquement les imports et les demandes entrantes.
+ */
+export function interactionAuthorOf({
+  ownerName,
+  interlocutorEmail,
+  source,
+}: {
+  ownerName: string | null;
+  interlocutorEmail: string | null;
+  source: string | null;
+}): string {
+  return ownerName || interlocutorEmail || (source?.startsWith('import') ? 'Import initial' : 'Système');
+}
+
+/** Raison standard du gating page-wide (no-write-trap) — permission write_crm_notes. */
+export const CRM_READ_ONLY_REASON = 'Lecture seule : permission "Écrire des notes CRM" requise';
+
+/** Kinds de canal traités comme un numéro composable (href `tel:`). */
+const TEL_KINDS: ReadonlySet<string> = new Set(['phone', 'mobile', 'fax', 'whatsapp', 'sms']);
+
+/**
+ * Lien actionnable d'un canal de coordonnées (rectif PO §66+) — rend les Coordonnées cliquables.
+ * - e-mail (`email`) → `mailto:{valeur}` (interne).
+ * - téléphones (`phone`/`mobile`/`fax`/`whatsapp`/`sms`) → `tel:{valeur sans espaces}` (interne) :
+ *   on retire les espaces du HREF uniquement — le libellé affiché garde son formatage lisible.
+ * - site web (`website`) → `href` http(s) EXTERNE ; on préfixe `https://` si la valeur n'a pas de
+ *   schéma mais ressemble à un domaine (contient un point, pas d'espace). Sinon pas de lien.
+ * - tout autre kind, ou une valeur vide / non reconnaissable → `href: null` ⇒ la vue rend du
+ *   texte brut (jamais un lien cassé). `external` pilote `target=_blank rel=noreferrer` côté vue.
+ */
+export function channelHrefOf(
+  kindCode: string,
+  value: string,
+): { href: string | null; external: boolean } {
+  const trimmed = value.trim();
+  if (!trimmed) return { href: null, external: false };
+  if (kindCode === 'email') return { href: `mailto:${trimmed}`, external: false };
+  if (TEL_KINDS.has(kindCode)) return { href: `tel:${trimmed.replace(/\s+/g, '')}`, external: false };
+  if (kindCode === 'website') {
+    if (/^https?:\/\//i.test(trimmed)) return { href: trimmed, external: true };
+    // Pas de schéma : on n'en fabrique un que si ça ressemble à un domaine (un point, pas d'espace).
+    if (/^[^\s]+\.[^\s]+$/.test(trimmed)) return { href: `https://${trimmed}`, external: true };
+  }
+  return { href: null, external: false };
+}
+
+/** Vocabulaire sentiment (ref_code, domaine sentiment) — les 6 codes connus, labels FR. */
+export const CRM_SENTIMENT_OPTIONS = [
+  { code: 'tres_positif', name: 'Très positif' },
+  { code: 'positif', name: 'Positif' },
+  { code: 'interrogatif', name: 'Interrogatif' },
+  { code: 'inquiet', name: 'Inquiet' },
+  { code: 'mecontent', name: 'Mécontent' },
+  { code: 'tres_mecontent', name: 'Très mécontent' },
+] as const;
+
+export type TlIcoClass = 'call' | 'mail' | 'field' | 'sys';
+
+/** Classe d'icône timeline : call→call, email→mail, visit→field, tout le reste→sys. */
+export function tlIcoClassOf(interactionType: string): TlIcoClass {
+  if (interactionType === 'call') return 'call';
+  if (interactionType === 'email') return 'mail';
+  if (interactionType === 'visit') return 'field';
+  return 'sys';
+}

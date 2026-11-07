@@ -1,0 +1,169 @@
+'use client';
+import { ShieldCheck } from 'lucide-react';
+import type { OrgMember } from '@/services/rbac';
+import { resolveRoleLabel } from '@/utils/labels';
+import { formatLastSeen } from './format-last-seen';
+
+/** Shape returned by the `children` render-prop — controls both role cells. */
+export interface RoleCells { business: React.ReactNode; admin: React.ReactNode; }
+
+export function MembersTable({ members, currentUserId, onManagePermissions, onEditProfile, onDeactivate, onDelete, callerIsOwner, children }: {
+  members: OrgMember[];
+  currentUserId: string | null;
+  onManagePermissions: (m: OrgMember) => void;
+  /** Called when the admin clicks "Modifier" (identity modal) on a non-self row. */
+  onEditProfile?: (m: OrgMember) => void;
+  /** Called when the admin clicks "Désactiver" on a non-self row. */
+  onDeactivate?: (m: OrgMember) => void;
+  /** Called when the admin clicks "Supprimer" (hard delete) on a non-self row. */
+  onDelete?: (m: OrgMember) => void;
+  /**
+   * SEC-01 (audit sécurité 2026-09-05) — `isPlatformSuperuser` ne distingue pas owner de
+   * super_admin (les deux sources exposent le même booléen agrégé) : on ne peut donc pas deviner
+   * côté client LEQUEL des deux la cible est. Server-side, un owner reste refusé (toujours), et un
+   * super_admin exige un owner appelant — le client se contente de MASQUER le bouton pour toute
+   * cible superuser quand l'appelant n'est pas owner, sans prétendre à plus de précision que la
+   * donnée n'en expose. Le serveur reste la seule autorité.
+   */
+  callerIsOwner?: boolean;
+  /** When provided, renders interactive role selects in the Rôle métier + Rôle admin cells. */
+  children?: (m: OrgMember, isSelf: boolean) => RoleCells;
+}) {
+  if (members.length === 0) return <p className="muted">Aucun membre actif.</p>;
+  return (
+    <table className="data-table members-table">
+      <thead>
+        <tr>
+          <th scope="col">Membre</th>
+          <th scope="col">Rôle métier</th>
+          <th scope="col">Rôle admin</th>
+          <th scope="col">Permissions</th>
+          <th scope="col">Dernière activité</th>
+          <th scope="col" className="data-table__actions"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {members.map((m) => {
+          const isSelf = m.userId === currentUserId;
+          const cells = children ? children(m, isSelf) : null;
+          // §227 — le compteur doit couvrir les DEUX voies d'accès, sinon il rassure à tort :
+          // un Éditeur qui ne tient ses droits que de son rôle afficherait « 0 permission ».
+          // On compte l'UNION (un droit à la fois conféré et accordé en exception ne compte
+          // qu'une fois). Miroir exact de `api.user_has_permission`.
+          const effectiveCodes = new Set([...m.permissionCodes, ...m.rolePermissionCodes]);
+          const count = effectiveCodes.size;
+          const roleCount = m.rolePermissionCodes.length;
+          const lastSeen = formatLastSeen(m.lastSeenAt);
+          // Task 6 (revue) : trois boutons « Modifier » identiques se répètent d'une ligne à
+          // l'autre — le nom accessible doit nommer le membre, comme RoleSelect le fait déjà
+          // pour ses labels (`Rôle métier de ${…}`). Le texte VISIBLE reste « Modifier ».
+          const modifyLabel = `Modifier le profil de ${m.displayName ?? m.email ?? 'ce membre'}`;
+          return (
+            <tr key={m.membershipId}>
+              <td>
+                <div className="members-table__name">
+                  <span>{m.displayName ?? '—'}</span>
+                  {isSelf && <span className="badge badge--info badge--xs">vous-même</span>}
+                </div>
+                <div className="members-table__mail">{m.email ?? m.userId}</div>
+              </td>
+              <td>{cells ? cells.business : (m.businessRoleCode ? resolveRoleLabel(m.businessRoleCode) : '—')}</td>
+              <td>{cells ? cells.admin : (m.adminRoleCode ? resolveRoleLabel(m.adminRoleCode) : '—')}</td>
+              <td>
+                {/* D10 : aria-disabled + raison reliée (un `disabled` natif rendait le motif
+                    « vos propres permissions » injoignable au clavier et au lecteur d'écran). */}
+                {isSelf && (
+                  <span id={`perm-reason-${m.membershipId}`} className="sr-only">
+                    Vous ne pouvez pas modifier vos propres permissions
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className={count > 0 ? 'ghost-button members-perm-btn' : 'ghost-button members-perm-btn is-muted'}
+                  onClick={() => {
+                    if (isSelf) return;
+                    onManagePermissions(m);
+                  }}
+                  aria-disabled={isSelf || undefined}
+                  aria-describedby={isSelf ? `perm-reason-${m.membershipId}` : undefined}
+                  title={isSelf ? 'Vous ne pouvez pas modifier vos propres permissions' : undefined}
+                >
+                  <ShieldCheck size={13} aria-hidden /> {count} permission{count > 1 ? 's' : ''}
+                </button>
+                {/* Accès qui ne passe PAS par le compteur. Le superuser plateforme ouvre tout.
+                    Le rôle d'administration, lui, ouvrait aussi TOUTE l'écriture CRM jusqu'au
+                    2026-08-31 — 17j l'a fermé (arbitrage PO : « un lecteur ne doit jamais écrire
+                    le CRM »), il ne donne plus que la gestion d'équipe. La pastille reste : un
+                    rang admin ≥ 30 peut s'accorder des permissions, ce que le compteur ne dit pas. */}
+                <div className="members-table__access">
+                  {m.isPlatformSuperuser && (
+                    <span
+                      className="badge badge--warn badge--xs"
+                      title="Superuser plateforme : accès total, indépendamment des permissions et du rôle d’ORG"
+                    >
+                      superuser
+                    </span>
+                  )}
+                  {m.adminRoleCode && (
+                    <span
+                      className="badge badge--info badge--xs"
+                      title="Rôle d’administration d’ORG : gestion de l’équipe. À partir du rang 30, ce membre peut s’accorder des permissions. Il n’ouvre plus l’écriture CRM (17j)."
+                    >
+                      + rôle admin
+                    </span>
+                  )}
+                  {roleCount > 0 && (
+                    <span
+                      className="badge badge--xs"
+                      title="Droits conférés par le rôle métier — ils se règlent dans « Permissions par rôle », pas depuis cette fiche"
+                    >
+                      dont {roleCount} par le rôle
+                    </span>
+                  )}
+                </div>
+              </td>
+              <td>
+                {lastSeen ? (
+                  <>
+                    <div className="members-table__seen">{lastSeen.absolute}</div>
+                    <div className="members-table__mail">{lastSeen.relative}</div>
+                  </>
+                ) : (
+                  <span className="muted" title="Ce compte ne s'est jamais connecté">Jamais</span>
+                )}
+              </td>
+              <td className="data-table__actions">
+                {!isSelf && onEditProfile && (
+                  <button
+                    type="button"
+                    className="ghost-button members-perm-btn"
+                    onClick={() => onEditProfile(m)}
+                    aria-label={modifyLabel}
+                    title={modifyLabel}
+                  >
+                    Modifier
+                  </button>
+                )}
+                {!isSelf && onDeactivate && (
+                  <button type="button" className="ghost-button members-deactivate" onClick={() => onDeactivate(m)}>
+                    Désactiver
+                  </button>
+                )}
+                {!isSelf && onDelete && (!m.isPlatformSuperuser || callerIsOwner) && (
+                  <button
+                    type="button"
+                    className="ghost-button members-delete"
+                    onClick={() => onDelete(m)}
+                    title="Supprimer définitivement le compte"
+                  >
+                    Supprimer
+                  </button>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}

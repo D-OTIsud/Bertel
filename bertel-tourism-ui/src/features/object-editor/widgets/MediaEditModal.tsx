@@ -1,0 +1,250 @@
+import { useState, useEffect } from 'react';
+import {
+  Disclosure,
+  EditorModal,
+  Chip,
+  Field,
+  Input,
+  Readout,
+  Textarea,
+  Toggle,
+  LangTabs,
+} from '../primitives';
+import type {
+  ObjectWorkspaceMediaItem,
+  WorkspaceReferenceOption,
+} from '../../../services/object-workspace-parser';
+import { MediaUploadField } from './MediaUploadField';
+import { getSupabaseClient } from '../../../lib/supabase';
+import './geography-media-modals.css';
+
+interface Props {
+  open: boolean;
+  media: ObjectWorkspaceMediaItem;
+  typeOptions: WorkspaceReferenceOption[];
+  languages: string[];
+  objectId: string;
+  onClose: () => void;
+  onSave: (media: ObjectWorkspaceMediaItem) => void;
+}
+
+// Read-audience vocabulary (§52 precedent — aligned with §16): media.visibility gates
+// WHO reads the row, it is not a publication switch ("Publié" is). 'private' = Interne.
+const VISIBILITY = [
+  { v: 'public', l: 'Tout le monde' },
+  { v: 'partners', l: 'Partenaires' },
+  { v: 'private', l: 'Interne' },
+];
+const LANG_LABELS: Record<string, string> = { fr: 'FR', en: 'EN', cre: 'CRE' };
+
+/** Focused add/edit form for one media item, with per-language title/description. */
+export function MediaEditModal({ open, media, typeOptions, languages, objectId, onClose, onSave }: Props) {
+  const [draft, setDraft] = useState(media);
+  const primary = languages[0] ?? 'fr';
+  const [lang, setLang] = useState(primary);
+  const set = (patch: Partial<ObjectWorkspaceMediaItem>) => setDraft((d) => ({ ...d, ...patch }));
+
+  // Resolve the Supabase access token so the upload widget can authenticate against
+  // /api/media/upload. Session resolves asynchronously — render the upload widget
+  // only after we have a token, otherwise the field would fire unauthenticated requests.
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  useEffect(() => {
+    const client = getSupabaseClient();
+    if (!client) return;
+    client.auth.getSession().then(({ data }) => setAccessToken(data.session?.access_token ?? null));
+  }, []);
+
+  // Authorable = the user may (re)choose the type and upload a file. A document item
+  // (type outside the offered options) keeps its type/file read-only — documents are
+  // created from their owning sections (§05 decision).
+  const typeIsAuthorable = typeOptions.some((option) => option.code === draft.typeCode);
+  const rightsExpired = Boolean(
+    draft.rightsExpiresAt && draft.rightsExpiresAt < new Date().toISOString().slice(0, 10),
+  );
+
+  const isPrimary = lang === primary;
+  const titleValue = isPrimary ? draft.title : (draft.titleTranslations[lang] ?? '');
+  const descValue = isPrimary ? draft.description : (draft.descriptionTranslations[lang] ?? '');
+  // Primary-language edits write BOTH the flat column and the i18n key: public readers
+  // prefer the i18n map, so a flat-only edit would be silently shadowed by an existing
+  // imported key. An emptied value removes the key (no '' shadow left behind).
+  const withLangKey = (map: Record<string, string>, v: string) => {
+    if (v.trim()) return { ...map, [lang]: v };
+    const { [lang]: _removed, ...rest } = map;
+    return rest;
+  };
+  const setTitle = (v: string) =>
+    isPrimary
+      ? set({ title: v, titleTranslations: withLangKey(draft.titleTranslations, v) })
+      : set({ titleTranslations: { ...draft.titleTranslations, [lang]: v } });
+  const setDesc = (v: string) =>
+    isPrimary
+      ? set({ description: v, descriptionTranslations: withLangKey(draft.descriptionTranslations, v) })
+      : set({ descriptionTranslations: { ...draft.descriptionTranslations, [lang]: v } });
+
+  return (
+    <EditorModal
+      className="ed-record-modal--media"
+      open={open}
+      title={media.url ? 'Modifier le média' : 'Ajouter un média'}
+      eyebrow="Médias · Légende et diffusion"
+      onClose={onClose}
+      onSave={() => onSave(draft)}
+      // A media row without a file would fail the DB chk_media_url_* constraints at
+      // global save — block here with a disabled action instead of a late raw error.
+      saveDisabled={!draft.url.trim()}
+      saveLabel={media.url ? 'Appliquer' : 'Ajouter'}
+      aside={
+        <>
+          <h3>Sur la fiche</h3>
+          <div className="ed-record-modal__preview">
+            {draft.url ? (
+              draft.typeCode === 'video' ? (
+                <video className="ed-modal__preview" src={draft.url} controls preload="metadata" />
+              ) : typeIsAuthorable ? (
+                <img
+                  className="ed-modal__preview"
+                  src={draft.url}
+                  alt={draft.description || draft.title || 'Aperçu'}
+                />
+              ) : (
+                <p>Document joint</p>
+              )
+            ) : (
+              <p>Aperçu après dépôt du fichier</p>
+            )}
+            <strong>{titleValue || 'Sans titre'}</strong>
+            {draft.credit && <p>© {draft.credit}</p>}
+            <p>{VISIBILITY.find((option) => option.v === draft.visibility)?.l || 'Visibilité non définie'}</p>
+          </div>
+          <h3>Avant d’appliquer</h3>
+          <ul className="ed-record-modal__checks">
+            <li data-complete={Boolean(draft.url)}>{draft.url ? '✓' : '○'} Fichier</li>
+            <li data-complete={Boolean(titleValue)}>{titleValue ? '✓' : '!'} Titre · recommandé</li>
+            <li data-complete={Boolean(descValue)}>
+              {descValue ? '✓' : '!'} Description de l’image · accessibilité
+            </li>
+            <li data-complete={Boolean(draft.credit)}>{draft.credit ? '✓' : '!'} Crédit · recommandé</li>
+          </ul>
+        </>
+      }
+    >
+      {typeIsAuthorable ? (
+        <Field label="Type de média">
+          <div className="ed-modal__segmented ed-media-type" role="group" aria-label="Type de média">
+            {typeOptions.map((option) => (
+              <button
+                key={option.id || option.code}
+                type="button"
+                aria-pressed={draft.typeCode === option.code}
+                disabled={option.disabled && draft.typeCode !== option.code}
+                onClick={() => set({ typeCode: option.code, typeId: option.id ?? '', typeLabel: option.label ?? '' })}
+              >
+                {option.label || option.code}
+              </button>
+            ))}
+          </div>
+        </Field>
+      ) : (
+        // Documents are created from their owning sections (menus, labels…) — the type
+        // and the file are read-only here; only the metadata stays editable.
+        <Field label="Type de média">
+          <Readout value={draft.typeLabel || draft.typeCode} />
+        </Field>
+      )}
+      {!typeIsAuthorable && (
+        <p className="ed-modal__note">
+          Ce document est géré depuis sa section dédiée — seules les informations (titre, crédit, visibilité)
+          sont modifiables ici.
+        </p>
+      )}
+      {typeIsAuthorable && accessToken && (
+        <MediaUploadField
+          objectId={objectId}
+          accessToken={accessToken}
+          kind={draft.typeCode === 'video' ? 'video' : 'photo'}
+          onUploaded={(uploaded) => {
+            // `uploaded.mimeType` is intentionally not persisted: the `media` table has no
+            // mime_type column today; the storage extension reflects the stored bytes.
+            // Videos come back without dimensions (null) — keep them empty, the DB
+            // dimension trigger only allows width/height on photo/video rows anyway.
+            set({
+              url: uploaded.url,
+              width: uploaded.width == null ? '' : String(uploaded.width),
+              height: uploaded.height == null ? '' : String(uploaded.height),
+            });
+          }}
+        />
+      )}
+      <section className="ed-modal__section ed-media-section">
+        <div className="ed-media-heading">
+          <h3>Légende</h3>
+          {languages.length > 1 && (
+            <LangTabs
+              tabs={languages.map((code) => ({
+                code,
+                label: LANG_LABELS[code] ?? code.toUpperCase(),
+                filled:
+                  code === primary
+                    ? Boolean(draft.title.trim())
+                    : Boolean((draft.titleTranslations[code] ?? '').trim()),
+              }))}
+              active={lang}
+              onSelect={setLang}
+            />
+          )}
+        </div>
+        <Field label="Titre">
+          <Input value={titleValue} aria-label="Titre" onChange={setTitle} />
+        </Field>
+        <Field label="Description (texte alternatif)">
+          <Textarea value={descValue} rows={3} aria-label="Description (texte alternatif)" onChange={setDesc} />
+        </Field>
+      </section>
+      <section className="ed-modal__section ed-media-section">
+        <Field label="Crédit / auteur">
+          <Input value={draft.credit} aria-label="Crédit / auteur" onChange={(credit) => set({ credit })} />
+        </Field>
+      </section>
+      <section className="ed-modal__section ed-media-section">
+        <h3>Diffusion</h3>
+        <div className="ed-media-audience" role="group" aria-label="Visibilité">
+          <span>Visible par :</span>
+          {VISIBILITY.map((option) => (
+            <Chip
+              key={option.v}
+              label={option.l}
+              on={draft.visibility === option.v}
+              onClick={() => set({ visibility: option.v })}
+            />
+          ))}
+        </div>
+        {!VISIBILITY.some((option) => option.v === draft.visibility) && (
+          <p className="ed-media-audience-note" role="status">
+            {draft.visibility ? 'Visibilité actuelle : ' + draft.visibility : 'Visibilité non définie'}
+          </p>
+        )}
+        <div className="ed-media-publication">
+          <Toggle label="Photo de couverture" on={draft.isMain} onChange={(isMain) => set({ isMain })} />
+          <Toggle label="Publié" on={draft.isPublished} onChange={(isPublished) => set({ isPublished })} />
+        </div>
+      </section>
+      <Disclosure title="Droits d’utilisation" defaultOpen={rightsExpired}>
+        <Field label="Fin des droits d’utilisation">
+          <Input
+            type="date"
+            aria-label="Fin des droits d’utilisation"
+            value={draft.rightsExpiresAt}
+            onChange={(rightsExpiresAt) => set({ rightsExpiresAt })}
+          />
+        </Field>
+        {rightsExpired && (
+          <p role="status" className="muted">
+            Les droits d’utilisation sont expirés. Vérifiez l’autorisation avant diffusion ; la visibilité
+            n’est pas modifiée automatiquement.
+          </p>
+        )}
+      </Disclosure>
+    </EditorModal>
+  );
+}

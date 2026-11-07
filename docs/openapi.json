@@ -1,0 +1,2715 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Bertel — API publique partenaire",
+    "version": "1.0.0",
+    "summary": "Contrat de lecture pour les prestataires externes (passerelle /api/public/*).",
+    "description": "Surface **partenaire** de la plateforme touristique Bertel (OTI du Sud). Elle ne renvoie que des fiches **publiées** et vous garantit un **contrat HTTP stable** : votre intégration ne dépend que des endpoints documentés ici, jamais d'un accès direct à la base.\n\n**Authentification** : clé API `bk_live_…` fournie par l'OTI, à envoyer dans l'en-tête `Authorization: Bearer …`. Elle est révocable, scopée et à votre usage exclusif ; aucun autre identifiant n'est accepté.\n\n**Enveloppe** : toute réponse 200 a la forme `{ \"meta\": { \"contract_version\": \"1.0.0\", … }, \"data\": … }` et porte l'en-tête `X-Bertel-Api-Version`. Le versionnage vit dans l'enveloppe (additif dans une majeure ; une rupture sortirait sous `/api/public/v2/*`).\n\n**Texte** : les descriptions sont livrées en **texte propre** (Markdown retiré). Les clés `*_md` en portent la version Markdown si vous souhaitez un rendu riche.",
+    "contact": { "name": "OTI du Sud", "email": "d.philippe@otisud.com" },
+    "license": { "name": "Licence Ouverte / Etalab 2.0", "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence" }
+  },
+  "servers": [
+    {
+      "url": "https://{host}/api/public",
+      "description": "Passerelle partenaire Bertel.",
+      "variables": {
+        "host": {
+          "default": "bertel.example.org",
+          "description": "Domaine de déploiement Bertel — valeur réelle fournie par l'OTI du Sud."
+        }
+      }
+    }
+  ],
+  "security": [{ "bearerAuth": [] }],
+  "tags": [
+    { "name": "Objets", "description": "Fiches touristiques publiées (établissements, itinéraires, événements, …)." },
+    { "name": "Synchronisation", "description": "Flux delta pour maintenir un miroir à jour." },
+    { "name": "Référentiels", "description": "Vocabulaires contrôlés (types, aménités, labels, …)." },
+    { "name": "Thésaurus", "description": "Concepts touristiques, publications immuables et changements." }
+  ],
+  "paths": {
+    "/objects": {
+      "get": {
+        "tags": ["Objets"],
+        "operationId": "listObjects",
+        "summary": "Lister les objets publiés (paginé)",
+        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.\n\nAvec `format=<profil>` (`jsonld` | `datatourisme` | `apidae` | `tourinsoft`), chaque objet de la page porte en plus son document pivot sous une clé additive nommée d'après le profil — même pagination par curseur, un seul appel par page. Un objet non couvert par le profil n'a simplement pas la clé. Pour Tourinsoft, l'absence de `variant` conserve le contrat historique `legacy-v1`; `variant=reunion-hebergement-v1` active le contrat hébergement CRT Réunion pour HOT, HLO et CAMP ; `variant=reunion-regional-v1` route les fiches couvertes vers les six familles CRT Réunion.\n\nAvec `view=full`, chaque objet de la page est la **fiche complète** (identique à `GET /objects/{id}`) au lieu de la carte allégée. En mode `full` la page est bornée à **100** (défaut 25) pour la performance ; `track=gpx|kml` ajoute le blob GPX/KML des itinéraires (le tracé GeoJSON est de toute façon natif).",
+        "parameters": [
+          { "$ref": "#/components/parameters/Cursor" },
+          { "$ref": "#/components/parameters/PageSize" },
+          { "$ref": "#/components/parameters/View" },
+          { "$ref": "#/components/parameters/Track" },
+          { "$ref": "#/components/parameters/Types" },
+          { "name": "taxonomy", "in": "query", "description": "Codes taxonomiques CSV qualifiés, par exemple taxonomy_hlo:appartement. Inclut les descendants selon la hiérarchie publiée. Garder ce filtre identique pendant la pagination.", "schema": { "type": "string" } },
+          { "name": "include_equivalent_predecessors", "in": "query", "description": "Avec taxonomy uniquement : inclure les prédécesseurs déclarés exactement équivalents. Faux par défaut ; une scission ou un simple replaced_by ne provoque aucun élargissement.", "schema": { "type": "boolean", "default": false } },
+          { "$ref": "#/components/parameters/Lang" },
+          { "$ref": "#/components/parameters/Search" },
+          { "$ref": "#/components/parameters/Format" },
+          { "$ref": "#/components/parameters/TourinsoftVariant" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page d'objets.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" }, "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" }, "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["meta", "data"],
+                  "properties": {
+                    "meta": {
+                      "allOf": [{ "$ref": "#/components/schemas/Meta" }],
+                      "description": "Métadonnées de l'enveloppe + pagination par curseur.",
+                      "properties": {
+                        "next_cursor": { "type": ["string", "null"], "description": "Curseur opaque de la page suivante (à repasser en `cursor`). `null` = dernière page." },
+                        "total": { "type": "integer", "description": "Nombre total d'objets correspondant à la requête (toutes pages confondues)." }
+                      }
+                    },
+                    "data": { "type": "array", "items": { "oneOf": [ { "$ref": "#/components/schemas/CardItem" }, { "$ref": "#/components/schemas/ObjectResource" } ], "description": "Carte allégée (`view=card`, défaut) ou fiche complète (`view=full`, identique à `GET /objects/{id}`)." } }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Code types inconnu, filtre taxonomy malformé ou option d’équivalence invalide/sans taxonomy.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "bad_request", "detail": "unknown object type code(s): XXX" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "502": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    },
+    "/objects/{id}": {
+      "get": {
+        "tags": ["Objets"],
+        "operationId": "getObject",
+        "summary": "Récupérer une fiche publiée",
+        "description": "Retourne la ressource complète d'un objet **publié**. Un id inconnu ou non publié renvoie **404** (indistinguable, pas de fuite de brouillon).\n\nAvec `lang=all`, les clés de base restent en français et un bloc additif `i18n` (texte propre par langue) est ajouté à `data` — toutes les traductions en un seul appel.\n\nAvec `format=<profil>`, un bloc additif nommé d'après le profil est ajouté à `data` : `jsonld` (schema.org), `datatourisme`, `apidae`, `tourinsoft`. Pour Tourinsoft, l'absence de `variant` conserve `legacy-v1`; `variant=reunion-hebergement-v1` active la projection hébergement CRT Réunion ; `variant=reunion-regional-v1` sélectionne la projection taxonomique vers les six familles CRT. `@type`/classe selon le type d'objet (crosswalk piloté par table). Orthogonal à `lang` ; les clés de base sont inchangées.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ObjectId" },
+          { "$ref": "#/components/parameters/LangWithAll" },
+          { "$ref": "#/components/parameters/Format" },
+          { "$ref": "#/components/parameters/TourinsoftVariant" }
+        ],
+        "responses": {
+          "200": {
+            "description": "La fiche.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" }, "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" }, "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["meta", "data"],
+                  "properties": {
+                    "meta": { "$ref": "#/components/schemas/Meta" },
+                    "data": { "$ref": "#/components/schemas/ObjectResource" }
+                  }
+                },
+                "example": {
+                  "meta": {
+                    "contract_version": "1.0.0"
+                  },
+                  "data": {
+                    "id": "RESRUN00000000NQ",
+                    "fma": [],
+                    "name": "Ferme Lebon Papillon",
+                    "tags": [
+                      {
+                        "icon": "heart",
+                        "name": "Bien-être",
+                        "slug": "wellness",
+                        "color": "#ec4899",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "shopping-bag",
+                        "name": "Boutique",
+                        "slug": "shopping",
+                        "color": "#14b8a6",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "utensils",
+                        "name": "Cuisine",
+                        "slug": "food",
+                        "color": "#f97316",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "wheat",
+                        "name": "Ferme et agrotourisme",
+                        "slug": "farm",
+                        "color": "#65a30d",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "binoculars",
+                        "name": "Panorama",
+                        "slug": "panorama",
+                        "color": "#0ea5e9",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "mountain",
+                        "name": "Plein air",
+                        "slug": "outdoor",
+                        "color": "#16a34a",
+                        "icon_url": null
+                      }
+                    ],
+                    "type": "RES",
+                    "media": [
+                      {
+                        "id": "69165d0f-5c8e-4527-8847-0f88ca99c9f2",
+                        "url": "https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/old_media/daa43f48.Path.112724.webp",
+                        "tags": [],
+                        "title": null,
+                        "width": null,
+                        "credit": null,
+                        "height": null,
+                        "is_main": true,
+                        "icon_url": null,
+                        "position": 0,
+                        "type_code": "photo",
+                        "type_name": "Photo",
+                        "visibility": null,
+                        "description": null,
+                        "type_description": "Photographies officielles"
+                      },
+                      {
+                        "id": "16234d34-096e-4f36-a6d2-d095ad846a7c",
+                        "url": "https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/old_media/f0bb6beb.Path.055711.jpg",
+                        "tags": [],
+                        "title": null,
+                        "width": null,
+                        "credit": null,
+                        "height": null,
+                        "is_main": false,
+                        "icon_url": null,
+                        "position": 0,
+                        "type_code": "photo",
+                        "type_name": "Photo",
+                        "visibility": null,
+                        "description": null,
+                        "type_description": "Photographies officielles"
+                      },
+                      {
+                        "id": "1e000a40-2da7-4372-b3c6-fe8bd1fd47c5",
+                        "url": "https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/old_media/ab362207.Path.112625.webp",
+                        "tags": [],
+                        "title": null,
+                        "width": null,
+                        "credit": null,
+                        "height": null,
+                        "is_main": false,
+                        "icon_url": null,
+                        "position": 0,
+                        "type_code": "photo",
+                        "type_name": "Photo",
+                        "visibility": null,
+                        "description": null,
+                        "type_description": "Photographies officielles"
+                      }
+                    ],
+                    "menus": [],
+                    "actors": [
+                      {
+                        "id": "3f5c9b6b-7f36-4b1e-9b8b-58a2b1c4d9a1",
+                        "display_name": "Mme Murielle Lebon",
+                        "first_name": null,
+                        "last_name": null,
+                        "gender": null,
+                        "role": {
+                          "id": "8b0c1597-1bf7-4287-b764-2884a4e9b1a3",
+                          "code": "operator",
+                          "name": "Exploitant"
+                        },
+                        "is_primary": true,
+                        "valid_from": null,
+                        "valid_to": null,
+                        "visibility": "public",
+                        "note": null,
+                        "contacts_restricted": true,
+                        "contacts": []
+                      }
+                    ],
+                    "places": [],
+                    "prices": [],
+                    "render": {
+                      "lang": "fr",
+                      "locale": "fr-FR",
+                      "version": "1.0",
+                      "timezone": "UTC",
+                      "actor_lines": [
+                        "Mme Murielle Lebon (Exploitant)"
+                      ],
+                      "event_lines": [],
+                      "legal_lines": [],
+                      "media_lines": [
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo"
+                      ],
+                      "price_lines": [],
+                      "amenity_lines": [
+                        "Parking (Parking)",
+                        "Bar (Services)",
+                        "Restaurant (Services)"
+                      ],
+                      "contact_lines": [
+                        "Mobile : 0692 88 27 04",
+                        "Email : fermelebonpapillon@gmail.com",
+                        "Website : http://www.fermelebon.fr"
+                      ],
+                      "capacity_lines": [
+                        "20 seat Asientos"
+                      ],
+                      "discount_lines": [],
+                      "taxonomy_lines": [
+                        "Taxonomie RES : Table d'hôtes > Table d'hôte"
+                      ],
+                      "menu_item_lines": [],
+                      "meeting_room_lines": [],
+                      "classification_lines": [
+                        "Accueil Paysan : Restauration paysanne (granted)"
+                      ],
+                      "sustainability_lines": [],
+                      "event_occurrence_lines": []
+                    },
+                    "status": "published",
+                    "address": {
+                      "city": "Le Tampon",
+                      "address1": "90 Chemin des Papillons Pont d'Yves Tampon",
+                      "address2": null,
+                      "address3": null,
+                      "lieu_dit": "Bras de Pontho",
+                      "postcode": "97430",
+                      "direction": "De Saint-Pierre RN3 jusqu'au RP du 17ème km, prendre à gauche au petit RP, prendre le chemin de la Salette point de repère le champ d'agrume à droite, tourner au chemin Tiguet puis au radier le chemin Papillon, panneau Ferme Lebon Papillon à gauche, suivre le panneau. \nDepuis Saint-Benoît RN3 jusqu'au RP du 17ème km prendre à droite, même itinéraire.",
+                      "code_insee": null,
+                      "direction_md": "De Saint-Pierre RN3 jusqu'au RP du 17ème km, prendre à gauche au petit RP, prendre le chemin de la Salette point de repère le champ d'agrume à droite, tourner au chemin Tiguet puis au radier le chemin Papillon, panneau Ferme Lebon Papillon à gauche, suivre le panneau. \nDepuis Saint-Benoît RN3 jusqu'au RP du 17ème km prendre à droite, même itinéraire.",
+                      "address1_suite": null
+                    },
+                    "origins": [
+                      {
+                        "created_at": "2026-05-01T09:24:21.93396+00:00",
+                        "updated_at": "2026-05-01T09:24:21.93396+00:00",
+                        "source_system": "berta_v2_csv_export",
+                        "import_batch_id": null,
+                        "source_object_id": "recR99OmSXnqpQRCv",
+                        "first_imported_at": "2026-05-01T09:24:21.93396+00:00"
+                      }
+                    ],
+                    "capacity": [
+                      {
+                        "unit": "seat",
+                        "value": 20,
+                        "icon_url": null,
+                        "metric_code": "seats",
+                        "metric_name": "Places assises",
+                        "metric_description": "Nombre de sièges assis"
+                      }
+                    ],
+                    "contacts": [
+                      {
+                        "role": null,
+                        "value": "0692 88 27 04",
+                        "icon_url": null,
+                        "position": 1,
+                        "is_public": true,
+                        "kind_code": "mobile",
+                        "kind_name": "Mobile",
+                        "is_primary": true,
+                        "kind_description": "Numéro de portable pour joindre l'établissement"
+                      },
+                      {
+                        "role": null,
+                        "value": "fermelebonpapillon@gmail.com",
+                        "icon_url": null,
+                        "position": 4,
+                        "is_public": true,
+                        "kind_code": "email",
+                        "kind_name": "Email",
+                        "is_primary": true,
+                        "kind_description": "Adresse électronique principale"
+                      },
+                      {
+                        "role": null,
+                        "value": "http://www.fermelebon.fr",
+                        "icon_url": null,
+                        "position": 5,
+                        "is_public": true,
+                        "kind_code": "website",
+                        "kind_name": "Site web",
+                        "is_primary": true,
+                        "kind_description": "URL du site officiel"
+                      }
+                    ],
+                    "location": {
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [
+                          55.516476,
+                          -21.230521
+                        ]
+                      },
+                      "latitude": -21.230521,
+                      "longitude": 55.516476,
+                      "altitude_m": null
+                    },
+                    "position": 0,
+                    "taxonomy": {
+                      "domains": [
+                        {
+                          "path": [
+                            {
+                              "id": "45071891-a299-4183-a673-e3d6dfb8b3eb",
+                              "code": "table_d_hotes",
+                              "name": "Table d'hôtes",
+                              "depth": 0,
+                              "description": "Table d'hôtes"
+                            },
+                            {
+                              "id": "4b32363d-64d9-46b7-8098-44c9a1d09a2b",
+                              "code": "table_d_hote",
+                              "name": "Table d'hôte",
+                              "depth": 1,
+                              "description": "Table d'hôte"
+                            }
+                          ],
+                          "domain": "taxonomy_res",
+                          "source": "old_data_enrichment_20260512",
+                          "updated_at": "2026-05-14T08:49:19.006951+00:00",
+                          "domain_name": "Taxonomie RES",
+                          "object_type": "RES",
+                          "assigned_node": {
+                            "id": "4b32363d-64d9-46b7-8098-44c9a1d09a2b",
+                            "code": "table_d_hote",
+                            "name": "Table d'hôte",
+                            "depth": 1,
+                            "description": "Table d'hôte"
+                          }
+                        }
+                      ]
+                    },
+                    "allergens": [],
+                    "amenities": [
+                      {
+                        "code": "parking",
+                        "name": "Parking",
+                        "family": {
+                          "code": "parking",
+                          "name": "Parking",
+                          "icon_url": null
+                        },
+                        "icon_url": null,
+                        "disability_types": null
+                      },
+                      {
+                        "code": "bar",
+                        "name": "Bar",
+                        "family": {
+                          "code": "services",
+                          "name": "Services",
+                          "icon_url": null
+                        },
+                        "icon_url": null,
+                        "disability_types": null
+                      },
+                      {
+                        "code": "restaurant",
+                        "name": "Restaurant",
+                        "family": {
+                          "code": "services",
+                          "name": "Services",
+                          "icon_url": null
+                        },
+                        "icon_url": null,
+                        "disability_types": null
+                      }
+                    ],
+                    "discounts": [],
+                    "languages": [
+                      {
+                        "code": "rcf",
+                        "name": "Créole réunionnais",
+                        "level": null
+                      },
+                      {
+                        "code": "fr",
+                        "name": "Français",
+                        "level": null
+                      }
+                    ],
+                    "org_links": [
+                      {
+                        "note": "Publisher link from Berta v2 Old_data import",
+                        "role_id": "8b0c1597-1bf7-4287-b764-2884a4e9b1a2",
+                        "created_at": "2026-05-01T09:24:21.93396+00:00",
+                        "is_primary": true,
+                        "updated_at": "2026-05-01T09:24:21.93396+00:00",
+                        "org_object_id": "ORGRUN000000000B"
+                      }
+                    ],
+                    "created_at": "2026-05-01T09:24:21.93396+00:00",
+                    "is_editing": false,
+                    "promotions": [],
+                    "room_types": [],
+                    "updated_at": "2026-06-04T15:29:30.03687+00:00",
+                    "visibility": "public",
+                    "description": "Spécialités : poulet songe, poulet papaye sont proposés à la table paysanne. Découvrir ou redécouvrir les produits lontan avec Murielle et David.\nDans une ambiance calme et verdoyante, fraîcheur garantie avec les produits maraîchers cultivés sur place en agriculture bio.\nOuvert tous les jours midi et soir sur réservation 2 jours avant (min de 5 personnes).",
+                    "object_zone": [],
+                    "region_code": "RUN",
+                    "descriptions": [
+                      {
+                        "id": "719b7ee8-f3e2-4fc0-820c-6b158fa78d65",
+                        "position": 0,
+                        "created_at": "2026-05-01T09:24:21.93396+00:00",
+                        "updated_at": "2026-06-04T15:29:30.03687+00:00",
+                        "visibility": "public",
+                        "description": "Spécialités : poulet songe, poulet papaye sont proposés à la table paysanne. Découvrir ou redécouvrir les produits lontan avec Murielle et David.\nDans une ambiance calme et verdoyante, fraîcheur garantie avec les produits maraîchers cultivés sur place en agriculture bio.\nOuvert tous les jours midi et soir sur réservation 2 jours avant (min de 5 personnes).",
+                        "description_md": "Spécialités : poulet songe, poulet papaye sont proposés à la table paysanne. Découvrir ou redécouvrir les produits lontan avec Murielle et David.\nDans une ambiance calme et verdoyante, fraîcheur garantie avec les produits maraîchers cultivés sur place en agriculture bio.\nOuvert tous les jours midi et soir sur réservation 2 jours avant (min de 5 personnes).",
+                        "description_chapo": "Située au Tampon, Ferme Lebon Papillon dispose d'une table d'hôte labellisée Accueil Paysan qui propose une cuisine créole traditionnelle.",
+                        "sanitary_measures": null,
+                        "description_mobile": null,
+                        "description_adapted": null,
+                        "description_edition": null,
+                        "description_chapo_md": "Située au Tampon, Ferme Lebon Papillon dispose d'une table d'hôte labellisée Accueil Paysan qui propose une cuisine créole traditionnelle.",
+                        "description_mobile_md": null,
+                        "description_adapted_md": null,
+                        "description_edition_md": null,
+                        "description_offre_hors_zone": null
+                      }
+                    ],
+                    "dietary_tags": [],
+                    "external_ids": [
+                      {
+                        "id": "766df472-c16a-4d1f-8748-0dd40a98c3a0",
+                        "created_at": "2026-05-01T09:24:21.93396+00:00",
+                        "updated_at": "2026-05-01T09:24:21.93396+00:00",
+                        "external_id": "recR99OmSXnqpQRCv",
+                        "source_system": "berta_v2_csv_export",
+                        "last_synced_at": "2026-05-01T09:24:21.93396+00:00",
+                        "organization_object_id": "ORGRUN000000000B"
+                      }
+                    ],
+                    "web_channels": [],
+                    "cuisine_types": [],
+                    "legal_records": [],
+                    "meeting_rooms": [],
+                    "opening_times": {
+                      "periods_current": [],
+                      "periods_next_year": []
+                    },
+                    "description_md": "Spécialités : poulet songe, poulet papaye sont proposés à la table paysanne. Découvrir ou redécouvrir les produits lontan avec Murielle et David.\nDans une ambiance calme et verdoyante, fraîcheur garantie avec les produits maraîchers cultivés sur place en agriculture bio.\nOuvert tous les jours midi et soir sur réservation 2 jours avant (min de 5 personnes).",
+                    "group_policies": [],
+                    "menu_documents": [],
+                    "classifications": [
+                      {
+                        "value": "restauration",
+                        "scheme": "accueil_paysan",
+                        "status": "granted",
+                        "awarded_at": null,
+                        "value_name": "Restauration paysanne",
+                        "scheme_name": "Accueil Paysan",
+                        "valid_until": null,
+                        "disability_types_covered": []
+                      }
+                    ],
+                    "fma_occurrences": [],
+                    "payment_methods": [
+                      {
+                        "code": "cheque",
+                        "name": "Chèque",
+                        "icon_url": null,
+                        "description": "Chèques bancaires"
+                      },
+                      {
+                        "code": "especes",
+                        "name": "Espèces",
+                        "icon_url": null,
+                        "description": "Paiement en liquide"
+                      }
+                    ],
+                    "environment_tags": [
+                      {
+                        "code": "calme",
+                        "name": "Calme",
+                        "icon_url": null,
+                        "description": "Environnement calme"
+                      },
+                      {
+                        "code": "rural",
+                        "name": "Rural",
+                        "icon_url": null,
+                        "description": "Village ou hameau rural"
+                      },
+                      {
+                        "code": "vue_panoramique",
+                        "name": "Vue panoramique",
+                        "icon_url": null,
+                        "description": "Vue panoramique exceptionnelle"
+                      }
+                    ],
+                    "description_chapo": "Située au Tampon, Ferme Lebon Papillon dispose d'une table d'hôte labellisée Accueil Paysan qui propose une cuisine créole traditionnelle.",
+                    "incoming_relations": [],
+                    "outgoing_relations": [],
+                    "accessibility_labels": [],
+                    "description_chapo_md": "Située au Tampon, Ferme Lebon Papillon dispose d'une table d'hôte labellisée Accueil Paysan qui propose une cuisine créole traditionnelle.",
+                    "commercial_visibility": "active",
+                    "sustainability_labels": [],
+                    "sustainability_actions": [],
+                    "sustainability_action_labels": []
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Identifiant mal formé.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "invalid_object_id" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "502": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    },
+    "/objects/deletions": {
+      "get": {
+        "tags": ["Synchronisation"],
+        "operationId": "listDeletions",
+        "summary": "Flux tombstone (suppressions définitives)",
+        "description": "Liste les objets **définitivement supprimés** depuis `since`, pour qu'un miroir partenaire retire ses enregistrements fantômes. Projette uniquement `{object_id, type, deleted_at}` (jamais de données sensibles).\n\n**Périmètre** : suppressions définitives seulement. L'état courant / les ajouts-modifications viennent de `GET /objects`. Une dépublication est un tombstone **logique** (id absent de la liste publiée **et** absent d'ici). Reprendre la pagination avec `since = meta.cursor`.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Since" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page de tombstones.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["meta", "data"],
+                  "properties": {
+                    "meta": {
+                      "allOf": [{ "$ref": "#/components/schemas/Meta" }],
+                      "properties": {
+                        "cursor": { "type": ["string", "null"], "format": "date-time", "description": "Max deleted_at de la page (à repasser en `since`). Inchangé si la page est vide." },
+                        "count": { "type": "integer", "description": "Nombre de tombstones dans la page." }
+                      }
+                    },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Tombstone" } }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`since` n'est pas un timestamp ISO 8601.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "bad_request", "detail": "since must be an ISO 8601 timestamp" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "502": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    },
+    "/thesaurus": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "getThesaurus",
+        "summary": "Découvrir les vocabulaires et la publication courante",
+        "description": "Surface de lecture partenaire. Une publication fixe ses valeurs/dates ; les concepts dépréciés et retirés restent résolvables. Aucun scope supplémentaire n’est exigé.",
+        "parameters": [
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "getThesaurusRelease",
+        "summary": "Lire le manifeste d’une publication",
+        "description": "Le manifeste contient le périmètre, as_of, previous_release_id, empreinte, provenance, licence effective et attribution.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}/concepts": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "listThesaurusConcepts",
+        "summary": "Parcourir les concepts d’une publication",
+        "description": "Pagination déterministe attachée à la publication. Une nouvelle publication concurrente ne modifie pas le parcours.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1500
+            },
+            "description": "Curseur signé lié à la publication, langue, filtres et taille de page. Ne pas modifier les paramètres pendant le parcours."
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}/concepts/{conceptId}": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "getThesaurusConcept",
+        "summary": "Lire un concept dans une publication",
+        "description": "Un concept retiré connu répond 200 avec lifecycle et ses remplacements ; un inconnu répond 404.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "conceptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Identité publique pérenne du concept, indépendante du code et du libellé."
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/concepts/{conceptId}": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "resolveThesaurusConcept",
+        "summary": "Résoudre une URI pérenne dans la publication courante",
+        "description": "Résolution réservée aux partenaires authentifiés ; sans clé 401. Le concept ne change pas d’identité après renommage ou dépréciation.",
+        "parameters": [
+          {
+            "name": "conceptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Identité publique pérenne du concept, indépendante du code et du libellé."
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}/changes": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "listThesaurusChanges",
+        "summary": "Lire les changements depuis la publication précédente",
+        "description": "added/modified/deprecated/retired avec before et after ; aucun retrait ne supprime physiquement le concept. Enchaîner les publications intermédiaires pour un delta éloigné.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1500
+            },
+            "description": "Curseur signé lié à la publication, langue, filtres et taille de page. Ne pas modifier les paramètres pendant le parcours."
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/thesaurus/releases/{releaseId}/export": {
+      "get": {
+        "tags": [
+          "Thésaurus"
+        ],
+        "operationId": "exportThesaurus",
+        "summary": "Exporter une publication en JSON ou JSON-LD/SKOS",
+        "description": "format=json utilise l’enveloppe habituelle ; format=jsonld renvoie un document RDF autonome application/ld+json, version dans X-Bertel-Vocabulary-Release. Les langues absentes ne sont jamais inventées.",
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
+          },
+          {
+            "name": "domains",
+            "in": "query",
+            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "schema": {
+              "type": "string",
+              "example": "taxonomy_hlo,taxonomy_hot"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "in": "query",
+            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "schema": {
+              "type": "string",
+              "default": "fr",
+              "maxLength": 35
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "jsonld"
+              ],
+              "default": "json"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "description": "ETag précédent ; authentification et quota restent appliqués avant 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Données issues de la publication demandée.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThesaurusEnvelope"
+                }
+              },
+              "application/ld+json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "@context",
+                    "@graph"
+                  ],
+                  "properties": {
+                    "@context": {
+                      "type": "object"
+                    },
+                    "@graph": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Représentation inchangée ; clé et quota vérifiés, aucun corps.",
+            "headers": {
+              "X-Bertel-Api-Version": {
+                "$ref": "#/components/headers/ApiVersion"
+              },
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Empreinte de la représentation exacte."
+              },
+              "X-Bertel-Vocabulary-Release": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Publication des données, distincte du contrat API."
+              }
+            }
+          },
+          "400": {
+            "description": "Paramètre ou curseur invalide/incompatible ; domaine inconnu ou non autorisé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Publication ou concept inconnu/non publié.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/UpstreamError"
+          },
+          "503": {
+            "description": "Aucune publication activée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "release_unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalog": {
+      "get": {
+        "tags": ["Référentiels"],
+        "operationId": "getCatalog",
+        "summary": "Catalogues de vocabulaires contrôlés",
+        "description": "Retourne les référentiels publics résolus dans la langue demandée. Sans `domains`, renvoie **tous** les catalogues publics — les clés de l'objet sont la liste des domaines disponibles. Les domaines inconnus/non publics sont silencieusement ignorés.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Domains" },
+          { "$ref": "#/components/parameters/Lang" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bundle de référentiels.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["meta", "data"],
+                  "properties": {
+                    "meta": { "$ref": "#/components/schemas/Meta" },
+                    "data": {
+                      "type": "object",
+                      "description": "Objet `{ \"domaine\": [entrées] }`, où chaque clé est un domaine de référentiel public.",
+                      "additionalProperties": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogEntry" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "502": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "bk_live_<48 hex>",
+        "description": "Clé API partenaire opaque. En-tête `Authorization: Bearer bk_live_…`. Émise/révoquée par l'OTI du Sud."
+      }
+    },
+    "headers": {
+      "ApiVersion": {
+        "description": "Version du contrat public (semver).",
+        "schema": { "type": "string", "example": "1.0.0" }
+      },
+      "RetryAfter": {
+        "description": "Secondes à attendre avant de réessayer (rate-limit).",
+        "schema": { "type": "integer" }
+      },
+      "RateLimitLimit": {
+        "description": "Plafond de requêtes par fenêtre pour la clé (présent sur chaque réponse).",
+        "schema": { "type": "integer", "example": 120 }
+      },
+      "RateLimitRemaining": {
+        "description": "Requêtes restantes dans la fenêtre courante (présent sur chaque réponse ; 0 sur un 429).",
+        "schema": { "type": "integer", "example": 117 }
+      }
+    },
+    "parameters": {
+      "ObjectId": {
+        "name": "id", "in": "path", "required": true,
+        "description": "Identifiant d'objet (16 caractères).",
+        "schema": { "type": "string", "pattern": "^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$", "example": "HOTRUN0000000001" }
+      },
+      "Cursor": {
+        "name": "cursor", "in": "query", "required": false,
+        "description": "Curseur de pagination opaque renvoyé dans `meta` de la page précédente. Absent = première page.",
+        "schema": { "type": "string" }
+      },
+      "PageSize": {
+        "name": "page_size", "in": "query", "required": false,
+        "description": "Taille de page (bornée 1–200).",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 }
+      },
+      "Types": {
+        "name": "types", "in": "query", "required": false,
+        "description": "Liste de codes `object_type` séparés par des virgules. Codes insensibles à la casse (`res` = `RES`). Un code inconnu fait échouer toute la requête avec `400 bad_request`.",
+        "schema": { "type": "string", "example": "HOT,RES,ACT" }
+      },
+      "Search": {
+        "name": "search", "in": "query", "required": false,
+        "description": "Recherche par **nom de la fiche uniquement** (correspondance sur le nom de l'objet). Ne porte PAS sur la ville, les aménités, les tags, les menus, les cuisines, les labels, la taxonomie ni la description.",
+        "schema": { "type": "string" }
+      },
+      "Lang": {
+        "name": "lang", "in": "query", "required": false,
+        "description": "Code langue de résolution (fallback FR).",
+        "schema": { "type": "string", "default": "fr", "example": "fr" }
+      },
+      "LangWithAll": {
+        "name": "lang", "in": "query", "required": false,
+        "description": "Code langue de résolution (fallback FR). Valeur spéciale `all` : clés de base en FR + bloc additif `i18n` (texte propre par langue).",
+        "schema": { "type": "string", "default": "fr" },
+        "examples": { "français": { "value": "fr" }, "toutes les langues": { "value": "all" } }
+      },
+      "View": {
+        "name": "view", "in": "query", "required": false,
+        "description": "`card` (défaut) = carte allégée ; `full` = fiche complète par objet (photos, descriptions, équipements, classements/distinctions, chambres, horaires, tracé GeoJSON…). En `full`, `page_size` est borné à **100** (défaut 25).",
+        "schema": { "type": "string", "enum": ["card", "full"], "default": "card" }
+      },
+      "Track": {
+        "name": "track", "in": "query", "required": false,
+        "description": "En mode `view=full` uniquement : ajoute le blob `itinerary_details.track` au format demandé pour les itinéraires. Le tracé GeoJSON (`itinerary_details.track_geojson`) est natif et toujours présent, indépendamment de ce paramètre.",
+        "schema": { "type": "string", "enum": ["gpx", "kml"] }
+      },
+      "Format": {
+        "name": "format", "in": "query", "required": false,
+        "description": "Format pivot additif — ajoute un bloc `data.<format>`. `jsonld` : JSON-LD schema.org (SEO). `datatourisme` : JSON-LD ontologie nationale. `apidae` : JSON régional Apidae. `tourinsoft` : enregistrement de syndication SIT; sans `variant`, le contrat historique `legacy-v1` est conservé. Absent = ressource Bertel seule.",
+        "schema": { "type": "string", "enum": ["jsonld", "datatourisme", "apidae", "tourinsoft"] },
+        "examples": {
+          "schema.org JSON-LD": { "value": "jsonld" },
+          "DATAtourisme": { "value": "datatourisme" },
+          "Apidae": { "value": "apidae" },
+          "Tourinsoft": { "value": "tourinsoft" }
+        }
+      },
+      "TourinsoftVariant": {
+        "name": "variant", "in": "query", "required": false,
+        "description": "Uniquement avec `format=tourinsoft`. `legacy-v1` conserve les 13 champs historiques. `reunion-hebergement-v1` émet le contrat hébergement CRT Réunion pour HOT, HLO et CAMP. `reunion-regional-v1` route les fiches couvertes vers les six familles CRT Réunion (Découverte, Hébergement, Information/service, Loisir/plein air, Restauration, Transport). Une variante inconnue ou une combinaison avec un autre format renvoie 400.",
+        "schema": { "type": "string", "enum": ["legacy-v1", "reunion-hebergement-v1", "reunion-regional-v1"], "default": "legacy-v1" }
+      },
+      "Since": {
+        "name": "since", "in": "query", "required": false,
+        "description": "Ne renvoyer que les suppressions strictement postérieures à ce timestamp ISO 8601. Absent = historique complet (borné par `limit`).",
+        "schema": { "type": "string", "format": "date-time" }
+      },
+      "Limit": {
+        "name": "limit", "in": "query", "required": false,
+        "description": "Nombre max de tombstones (borné 1–1000).",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 500 }
+      },
+      "Domains": {
+        "name": "domains", "in": "query", "required": false,
+        "description": "Liste de domaines de référentiels séparés par des virgules. Absent = tous les domaines publics.",
+        "schema": { "type": "string", "example": "amenity,payment_method,language" }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Clé partenaire manquante, mal formée, inconnue, révoquée ou expirée.",
+        "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "unauthorized" } } }
+      },
+      "RateLimited": {
+        "description": "Quota par fenêtre dépassé.",
+        "headers": {
+          "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" },
+          "Retry-After": { "$ref": "#/components/headers/RetryAfter" }
+        },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "rate_limited", "retry_after": 42 } } }
+      },
+      "NotFound": {
+        "description": "Objet inconnu ou non publié (indistinguable).",
+        "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "not_found" } } }
+      },
+      "ServerError": {
+        "description": "Passerelle mal configurée côté serveur.",
+        "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "server_misconfigured" } } }
+      },
+      "UpstreamError": {
+        "description": "Erreur de la source de données en amont.",
+        "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "upstream_error", "detail": "…" } } }
+      }
+    },
+    "schemas": {
+      "ThesaurusConcept": {
+        "type": "object",
+        "required": [
+          "concept_id",
+          "uri",
+          "domain",
+          "code",
+          "preferred_labels",
+          "definitions",
+          "lifecycle",
+          "assignable"
+        ],
+        "properties": {
+          "context_key": { "type": "string", "description": "Portée opaque du code (schéma ou catégorie). Le code n’est unique que dans (domain,context_key,code) ; utiliser concept_id/uri comme identité de synchronisation." },
+          "concept_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "preferred_labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "definitions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "requested_lang": {
+            "type": "string"
+          },
+          "effective_lang": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "definition_lang": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "lang",
+                "kind",
+                "value"
+              ],
+              "properties": {
+                "lang": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "alt",
+                    "hidden"
+                  ]
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {}
+          },
+          "broader": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "narrower": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "related": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "replaced_by": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "relations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "lifecycle": {
+            "type": "string",
+            "enum": [
+              "active",
+              "deprecated",
+              "retired"
+            ]
+          },
+          "assignable": {
+            "type": "boolean"
+          },
+          "valid_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "valid_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "ThesaurusChange": {
+        "type": "object",
+        "required": [
+          "concept_id",
+          "change_type",
+          "before",
+          "after"
+        ],
+        "properties": {
+          "concept_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "added",
+              "modified",
+              "deprecated",
+              "retired"
+            ]
+          },
+          "before": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ThesaurusConcept"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "after": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ThesaurusConcept"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ThesaurusEnvelope": {
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "properties": {
+          "meta": {
+            "type": "object",
+            "required": [
+              "contract_version",
+              "release_id",
+              "vocabulary_release"
+            ],
+            "properties": {
+              "contract_version": {
+                "type": "string",
+                "const": "1.0.0"
+              },
+              "release_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "vocabulary_release": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "previous_release_id": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "as_of": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "page_size": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 200
+              },
+              "next_cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "total": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            }
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThesaurusConcept"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ThesaurusConcept"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ThesaurusChange"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "object",
+                "description": "Manifeste de publication : domaines, date, empreinte, provenance, licence et attribution."
+              }
+            ]
+          }
+        }
+      },
+      "Meta": {
+        "type": "object",
+        "description": "Métadonnées de l'enveloppe.",
+        "required": ["contract_version"],
+        "properties": {
+          "contract_version": { "type": "string", "description": "Version semver du contrat public.", "example": "1.0.0" },
+          "vocabulary_release": { "type": "integer", "minimum": 1, "description": "Publication du vocabulaire lue dans le même état SQL que le contenu, traductions et pivots de cette réponse. Présente après activation du thésaurus ; absente avant bootstrap. Ne promet pas un instantané global de plusieurs requêtes objets." }
+        },
+        "additionalProperties": true
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string", "description": "Code d'erreur stable.", "examples": ["unauthorized", "rate_limited", "not_found", "invalid_object_id", "bad_request", "server_misconfigured", "upstream_error"] },
+          "detail": { "type": "string", "description": "Détail optionnel lisible." },
+          "retry_after": { "type": "integer", "description": "Présent sur `rate_limited` : secondes avant réessai." }
+        }
+      },
+      "Tombstone": {
+        "type": "object",
+        "description": "Suppression définitive d'un objet.",
+        "required": ["object_id", "type", "deleted_at"],
+        "properties": {
+          "object_id": { "type": "string", "pattern": "^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$", "description": "Identifiant de l'objet supprimé (16 caractères, même format que le paramètre `id`)." },
+          "type": { "$ref": "#/components/schemas/ObjectType" },
+          "deleted_at": { "type": "string", "format": "date-time", "description": "Horodatage de la suppression définitive." }
+        },
+        "additionalProperties": false
+      },
+      "CatalogEntry": {
+        "type": "object",
+        "description": "Une valeur d'un référentiel contrôlé.",
+        "required": ["code", "name", "domain"],
+        "properties": {
+          "code": { "type": "string", "description": "Code stable de la valeur." },
+          "name": { "type": ["string", "null"], "description": "Libellé résolu dans la langue demandée (fallback FR)." },
+          "icon_url": { "type": ["string", "null"], "description": "URL d'icône éventuelle." },
+          "parent_code": { "type": ["string", "null"], "description": "Code parent (taxonomies / familles) ou null." },
+          "domain": { "type": "string", "description": "Domaine du référentiel." }
+        },
+        "additionalProperties": false
+      },
+      "ObjectType": {
+        "type": "string",
+        "description": "Type d'objet touristique.",
+        "enum": ["RES", "PCU", "PNA", "ORG", "ITI", "VIL", "HPA", "ASC", "COM", "HOT", "HLO", "LOI", "FMA", "CAMP", "PSV", "RVA", "ACT", "SPU", "PRD"]
+      },
+      "ObjectStatus": {
+        "type": "string",
+        "description": "Statut du cycle de vie. Sur cette API publique, toujours `published`.",
+        "enum": ["draft", "published", "archived", "hidden"]
+      },
+      "GeoPoint": {
+        "type": ["object", "null"],
+        "description": "Géométrie GeoJSON Point.",
+        "properties": {
+          "type": { "type": "string", "enum": ["Point"] },
+          "coordinates": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "[longitude, latitude]." }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "address1": { "type": ["string", "null"] },
+          "address1_suite": { "type": ["string", "null"] },
+          "address2": { "type": ["string", "null"] },
+          "address3": { "type": ["string", "null"] },
+          "postcode": { "type": ["string", "null"] },
+          "city": { "type": ["string", "null"] },
+          "code_insee": { "type": ["string", "null"] },
+          "lieu_dit": { "type": ["string", "null"] },
+          "direction": { "type": ["string", "null"], "description": "Indications d'accès en texte propre." },
+          "direction_md": { "type": ["string", "null"], "description": "Version Markdown brute de `direction`." }
+        },
+        "additionalProperties": true
+      },
+      "Location": {
+        "type": "object",
+        "properties": {
+          "latitude": { "type": ["number", "null"] },
+          "longitude": { "type": ["number", "null"] },
+          "altitude_m": { "type": ["number", "null"] },
+          "geometry": { "$ref": "#/components/schemas/GeoPoint" }
+        },
+        "additionalProperties": true
+      },
+      "I18nFieldMap": {
+        "type": "object",
+        "description": "Traductions d'un champ : { <code langue>: texte propre }. Le Markdown est neutralisé.",
+        "additionalProperties": { "type": "string" },
+        "example": { "fr": "Un hôtel de charme.", "en": "A charming hotel." }
+      },
+      "I18nBlock": {
+        "type": "object",
+        "description": "Bloc multi-langue additif, présent uniquement avec `?lang=all`. Ne contient que les champs réellement traduits (un champ FR-only sans traductions est absent ; son FR reste dans les clés de base).",
+        "properties": {
+          "description": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_chapo": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_mobile": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_edition": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_adapted": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_offre_hors_zone": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "sanitary_measures": { "$ref": "#/components/schemas/I18nFieldMap" }
+        },
+        "additionalProperties": false
+      },
+      "CardItem": {
+        "type": "object",
+        "description": "**Carte** d'objet renvoyée par la LISTE `GET /objects` — projection légère (RPC `get_object_cards_batch`), **pas** la ressource détail. Pour la fiche complète, appeler `GET /objects/{id}` (schéma `ObjectResource`). Additive : de nouvelles clés de carte peuvent apparaître sans rupture.",
+        "required": ["id", "type", "name"],
+        "properties": {
+          "id": { "type": "string", "description": "Identifiant stable (16 caractères)." },
+          "type": { "$ref": "#/components/schemas/ObjectType" },
+          "name": { "type": "string", "description": "Nom de la fiche." },
+          "status": { "$ref": "#/components/schemas/ObjectStatus" },
+          "commercial_visibility": { "type": ["string", "null"], "description": "Visibilité commerciale (ex. `active`) ou null." },
+          "image": { "type": ["string", "null"], "format": "uri", "description": "URL de l'image de couverture, ou null si aucune." },
+          "rating": { "type": ["number", "null"], "description": "Note moyenne, ou null si aucun avis." },
+          "review_count": { "type": "integer", "description": "Nombre d'avis pris en compte." },
+          "min_price": { "type": ["number", "null"], "description": "Tarif minimum affichable, ou null si non tarifé." },
+          "open_now": { "type": ["boolean", "null"], "description": "**Tri-état** : `true` = ouvert maintenant, `false` = fermé, `null` = indéterminé (horaires inconnus ou type sans horaires). Ne jamais présumer `false` sur `null`." },
+          "location": {
+            "type": ["object", "null"],
+            "description": "Localisation compacte de la carte.",
+            "properties": {
+              "lat": { "type": ["number", "null"], "description": "Latitude." },
+              "lon": { "type": ["number", "null"], "description": "Longitude." },
+              "city": { "type": ["string", "null"], "description": "Commune." },
+              "postcode": { "type": ["string", "null"], "description": "Code postal." },
+              "lieu_dit": { "type": ["string", "null"], "description": "Lieu-dit." },
+              "address": { "type": ["string", "null"], "description": "Adresse compacte." }
+            },
+            "additionalProperties": true
+          },
+          "description": { "type": ["string", "null"], "description": "Description tronquée (~200 caractères), texte propre (Markdown déjà retiré)." },
+          "taxonomy": {
+            "type": "array",
+            "description": "Nœuds de taxonomie assignés.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "domain": { "type": ["string", "null"], "description": "Domaine de taxonomie (ex. `taxonomy_res`)." },
+                "code": { "type": ["string", "null"], "description": "Code du nœud assigné." },
+                "name": { "type": ["string", "null"], "description": "Libellé du nœud assigné." },
+                "path": {
+                  "type": "array",
+                  "description": "Chemin structuré de la racine au nœud assigné.",
+                  "items": {
+                    "type": "object",
+                    "required": ["code", "name"],
+                    "properties": {
+                      "code": { "type": "string", "description": "Code stable du nœud dans le chemin." },
+                      "name": { "type": "string", "description": "Libellé d’affichage du nœud." }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "tags": {
+            "type": "array",
+            "description": "Tags éditoriaux.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slug": { "type": ["string", "null"] },
+                "name": { "type": ["string", "null"] },
+                "color": { "type": ["string", "null"] },
+                "icon": { "type": ["string", "null"] },
+                "icon_url": { "type": ["string", "null"] }
+              },
+              "additionalProperties": true
+            }
+          },
+          "amenity_codes": { "type": "array", "items": { "type": "string" }, "description": "Codes d'aménités (référentiel `amenity`)." },
+          "environment_tags": {
+            "type": "array",
+            "description": "Tags d'environnement.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": ["string", "null"] },
+                "name": { "type": ["string", "null"] }
+              },
+              "additionalProperties": true
+            }
+          },
+          "badges": {
+            "type": "array",
+            "description": "Badges dérivés (labels, distinctions, …).",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": { "type": ["string", "null"], "description": "Famille de badge." },
+                "code": { "type": ["string", "null"] },
+                "label": { "type": ["string", "null"] }
+              },
+              "additionalProperties": true
+            }
+          },
+          "updated_at": { "type": ["string", "null"], "format": "date-time", "description": "Dernière modification." }
+        },
+        "additionalProperties": true
+      },
+      "ObjectResource": {
+        "type": "object",
+        "description": "Fiche touristique. Le cœur est documenté ci-dessous ; la ressource est riche et **additive** (`additionalProperties: true`) : de nouveaux blocs (aménités, tarifs, chambres, menus, classements, itinéraire, médias, …) peuvent apparaître sans rupture. Les descriptions ont une clé texte propre et une clé sœur `*_md` (Markdown brut). Les couches d'édition internes (`canonical_description`/`org_description`) ne sont **pas** exposées ici.",
+        "required": ["id", "type", "name"],
+        "properties": {
+          "id": { "type": "string", "description": "Identifiant stable (16 caractères)." },
+          "type": { "$ref": "#/components/schemas/ObjectType" },
+          "status": { "$ref": "#/components/schemas/ObjectStatus" },
+          "commercial_visibility": { "type": ["string", "null"] },
+          "is_editing": { "type": ["boolean", "null"] },
+          "name": { "type": "string", "description": "Nom de la fiche." },
+          "region_code": { "type": ["string", "null"] },
+          "created_at": { "type": ["string", "null"], "format": "date-time" },
+          "updated_at": { "type": ["string", "null"], "format": "date-time" },
+          "updated_at_source": { "type": ["string", "null"], "format": "date-time" },
+          "published_at": { "type": ["string", "null"], "format": "date-time" },
+          "address": { "$ref": "#/components/schemas/Address" },
+          "location": { "$ref": "#/components/schemas/Location" },
+          "description": { "type": ["string", "null"], "description": "Description principale, texte propre." },
+          "description_md": { "type": ["string", "null"], "description": "Version Markdown brute de `description`." },
+          "description_chapo": { "type": ["string", "null"], "description": "Chapô, texte propre." },
+          "description_chapo_md": { "type": ["string", "null"] },
+          "description_mobile": { "type": ["string", "null"] },
+          "description_mobile_md": { "type": ["string", "null"] },
+          "description_edition": { "type": ["string", "null"] },
+          "description_edition_md": { "type": ["string", "null"] },
+          "description_adapted": { "type": ["string", "null"], "description": "Description accessibilité, texte propre." },
+          "description_adapted_md": { "type": ["string", "null"] },
+          "description_offre_hors_zone": { "type": ["string", "null"] },
+          "sanitary_measures": { "type": ["string", "null"] },
+          "descriptions": { "type": "array", "description": "Toutes les descriptions publiques.", "items": { "type": "object", "additionalProperties": true } },
+          "external_ids": { "type": "array", "description": "Identifiants externes (raccroche à des systèmes tiers).", "items": { "type": "object", "additionalProperties": true } },
+          "actors": {
+            "type": "array",
+            "description": "Acteurs rattachés (opérateurs, guides, contacts…). Depuis §208, un appel qui n'est pas un membre de l'organisation éditrice de la fiche reçoit `first_name`/`last_name`/`gender`/`note` à `null` et `contacts` à `[]` : les coordonnées personnelles des acteurs ne sortent plus par l'API publique/partenaire. La propriété additive `contacts_restricted` (`true` dans ce cas) permet de distinguer ce refus d'un simple « rien n'a été saisi ». Les contacts de l'ÉTABLISSEMENT (bloc `contacts` racine) sont inchangés.",
+            "items": { "type": "object", "additionalProperties": true }
+          },
+          "i18n": {
+            "allOf": [{ "$ref": "#/components/schemas/I18nBlock" }],
+            "description": "Présent uniquement avec `?lang=all`."
+          },
+          "jsonld": {
+            "allOf": [{ "$ref": "#/components/schemas/JsonLd" }],
+            "description": "Présent uniquement avec `?format=jsonld`."
+          },
+          "datatourisme": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Présent uniquement avec `?format=datatourisme`. Document JSON-LD ontologie DATAtourisme (`@context` @vocab, `@type [\"PointOfInterest\", <classe>]`, `rdfs:label`, `hasDescription`, `isLocatedAt`, `hasContact`). Pour HLO, la classe est résolue par le nœud taxonomique mappé le plus proche : Chambre d’hôtes → `Guesthouse`, Meublé de tourisme / gîte → `SelfCateringAccommodation`, Hébergement collectif → `GroupLodging`, Refuge et gîte d’étape → `StopOverOrGroupLodge`; sinon repli type HLO → `Accommodation`."
+          },
+          "apidae": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Présent uniquement avec `?format=apidae`. Objet JSON Apidae (`nom.libelleFr`, `type`, `presentation.descriptifCourt`, `localisation.adresse` + `geolocalisation.geoJson`, `informations.moyensCommunication`)."
+          },
+          "tourinsoft": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/TourinsoftLegacy" },
+              { "$ref": "#/components/schemas/TourinsoftReunionHebergementV1" },
+              { "$ref": "#/components/schemas/TourinsoftReunionRegionalV1" }
+            ],
+            "description": "Présent uniquement avec `?format=tourinsoft`. Sans variante : contrat historique `legacy-v1`. Avec `variant=reunion-hebergement-v1` : contrat hébergement CRT Réunion, public-only, limité à HOT/HLO/CAMP. Avec `variant=reunion-regional-v1` : projection public-only et taxonomique vers les six familles CRT ; une fiche sans route n'a pas ce bloc."
+          }
+        },
+        "additionalProperties": true
+      },
+      "TourinsoftLegacy": {
+        "type": "object",
+        "description": "Contrat historique Tourinsoft, inchangé lorsque `variant` est absent ou vaut `legacy-v1`.",
+        "required": ["SyndObjectID", "type", "NomOffre"],
+        "properties": {
+          "SyndObjectID": { "type": "string" },
+          "type": { "type": "string" },
+          "NomOffre": { "type": "string" },
+          "Descriptif": { "type": "string" },
+          "Adresse1": { "type": "string" },
+          "CodePostal": { "type": "string" },
+          "Commune": { "type": "string" },
+          "Latitude": { "type": "number" },
+          "Longitude": { "type": "number" },
+          "Telephone": { "type": "string" },
+          "Mel": { "type": "string" },
+          "SiteWeb": { "type": "string", "format": "uri" },
+          "Photo": { "type": "string", "format": "uri" }
+        },
+        "additionalProperties": false
+      },
+      "TourinsoftReunionHebergementV1": {
+        "type": "object",
+        "description": "Projection hébergement CRT Réunion issue uniquement de données publiées/publiables. Les clés scalaires absentes sont omises; les collections approuvées sont des tableaux. Les champs en attente de validation CRT ne sont pas émis.",
+        "required": ["SyndicObjectID", "SyndicObjectName", "Nometablissement", "ObjectTypeName", "ObjectTypeFix", "Published", "Updated"],
+        "properties": {
+          "SyndicObjectID": { "type": "string" },
+          "SyndicObjectName": { "type": "string" },
+          "Nometablissement": { "type": "string" },
+          "ObjectTypeName": { "type": "string", "enum": ["Hôtellerie", "Hébergement locatifs", "Camping"] },
+          "ObjectTypeFix": { "type": "string", "format": "uuid" },
+          "Published": { "type": ["string", "null"], "format": "date-time" },
+          "Updated": { "type": ["string", "null"], "format": "date-time" },
+          "Adresse1": { "type": "string" },
+          "Adresse2": { "type": "string" },
+          "Adresse3": { "type": "string" },
+          "CodePostal": { "type": "string" },
+          "Commune": { "type": "string" },
+          "CodeINSEE": { "type": "string" },
+          "GmapLatitude": { "type": "string" },
+          "GmapLongitude": { "type": "string" },
+          "Lieudit": {
+            "type": "object",
+            "properties": { "ThesLibelle": { "type": "string" } },
+            "additionalProperties": false
+          },
+          "Access": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Descriptifss": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Moyencommunications": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Reseauxsociauxs": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Reservations": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Photos": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "LanguesParleess": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "ModesPaiements": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Animauxacceptess": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Capacites": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Capacitecampings": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Horairearriveedeparts": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Tarifs": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "PeriodeOuvertures": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+        },
+        "additionalProperties": false
+      },
+      "TourinsoftReunionRegionalV1": {
+        "type": "object",
+        "description": "Projection régionale CRT Réunion opt-in. La fiche publiée est routée par taxonomie puis, lorsqu'il est sans ambiguïté, par type Bertel vers l'un des six profils de fil. Les valeurs absentes sont omises, les collections sont stables et les noms historiques exacts du profil cible sont conservés. Les données canoniques publiques de Bertel priment sur toute extension de round-trip réservée au connecteur. Le flux public de syndication et son `$metadata` documentent la forme de lecture, pas encore le contrat d'import CRT.",
+        "required": ["SyndicObjectName", "Nometablissement", "ObjectTypeName", "ObjectTypeFix", "Published", "Updated", "ClassificationType"],
+        "properties": {
+          "SyndicObjectID": { "type": "string", "description": "Identifiant Tourinsoft propre au profil, présent seulement après attribution ou confirmation par le CRT. L’identifiant Bertel n’est jamais utilisé comme repli." },
+          "SyndicObjectName": { "type": "string" },
+          "Nometablissement": { "type": "string" },
+          "ObjectTypeName": {
+            "type": "string",
+            "enum": ["Découverte", "Hôtellerie", "Hébergement locatifs", "Camping", "Information et service touristique", "Loisirs / Plein air", "Restauration", "Transport"]
+          },
+          "ObjectTypeFix": { "type": "string", "format": "uuid" },
+          "Published": { "type": ["string", "null"], "format": "date-time" },
+          "Updated": { "type": ["string", "null"], "format": "date-time" },
+          "EnLigne": { "type": "boolean", "const": true, "description": "Présent uniquement pour les profils Découverte et Restauration qui déclarent ce champ." },
+          "ClassificationType": {
+            "type": "object",
+            "required": ["ThesCode", "ThesLibelle"],
+            "properties": {
+              "ThesCode": { "type": "string", "enum": ["DECO", "HEB", "INF", "LPA", "REST", "TRAN"] },
+              "ThesLibelle": { "type": "string" },
+              "ThesID": { "type": "string", "format": "uuid", "description": "Identifiant auxiliaire Tourinsoft conservé uniquement lorsqu’il correspond au même ThesCode canonique." }
+            },
+            "additionalProperties": false
+          },
+          "Adresse1": { "type": "string" },
+          "Adresse2": { "type": "string" },
+          "Adresse3": { "type": "string" },
+          "CodePostal": { "type": "string" },
+          "Commune": { "type": "string" },
+          "CodeINSEE": { "type": "string" },
+          "GmapLatitude": { "type": "string" },
+          "GmapLongitude": { "type": "string" },
+          "SIRET": { "type": "string" },
+          "Descriptifss": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Moyencommunications": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Reservations": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Photos": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Videos": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Fichiers": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "LanguesParleess": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "ModesPaiements": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "PrestationsEquipementss": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Tarifs": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "PeriodeOuvertures": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+        },
+        "additionalProperties": true
+      },
+      "JsonLd": {
+        "type": "object",
+        "description": "Document JSON-LD schema.org de la fiche (bloc additif `?format=jsonld`). `@type` dépend du type d'objet (crosswalk piloté par table côté serveur). Texte propre ; contacts / médias / réseaux publics uniquement.",
+        "properties": {
+          "@context":   { "type": "string", "example": "https://schema.org" },
+          "@type":      { "type": "string", "example": "Hotel", "description": "Classe schema.org (Hotel, Restaurant, TouristAttraction, TouristTrip, Event, LodgingBusiness, Organization…)." },
+          "@id":        { "type": "string", "example": "urn:bertel:object:HOTRUN0000000001" },
+          "identifier": { "type": "string" },
+          "name":       { "type": "string" },
+          "description":{ "type": "string", "description": "Texte propre (Markdown neutralisé)." },
+          "image":      { "type": "string", "format": "uri" },
+          "url":        { "type": "string", "format": "uri", "description": "Site officiel (http/https)." },
+          "telephone":  { "type": "string" },
+          "email":      { "type": "string" },
+          "address":    { "type": "object", "description": "schema.org PostalAddress.", "additionalProperties": true },
+          "geo":        { "type": "object", "description": "schema.org GeoCoordinates.", "additionalProperties": true },
+          "sameAs":     { "type": "array", "items": { "type": "string", "format": "uri" }, "description": "Profils/réseaux publics (http/https)." }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

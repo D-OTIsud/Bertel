@@ -1,0 +1,225 @@
+export interface ThemeSettings {
+  brandName: string;
+  logoUrl: string | null;
+  primaryColor: string;
+  accentColor: string;
+  textColor: string;
+  backgroundColor: string;
+  surfaceColor: string;
+  // Attribution institutionnelle « en appui » de la marque produit (§171). Servie au
+  // runtime par get_public_branding (clés de `extra`) pour rester white-label (§167) :
+  // NULL par défaut ⇒ un déploiement sans opérateur n'affiche aucune attribution.
+  operatorName: string | null;
+  territory: string | null;
+  islandTagline: string | null;
+}
+
+export const defaultThemeSettings: ThemeSettings = {
+  brandName: 'Bertel',
+  // Marque produit = le « B » Bertel (réseau d'itinéraires → point de repère), icône seule
+  // (le wordmark est porté par le <h1>). Fond transparent ⇒ tient sur le chip clair du hero
+  // /login comme sur la sidebar. Le blason OTI reste l'attribution institutionnelle, pas le logo.
+  logoUrl: '/Logo/logo-bertel-icon.png',
+  primaryColor: '#176B6A',
+  accentColor: '#F28B54',
+  textColor: '#18313B',
+  backgroundColor: '#F4EEE5',
+  surfaceColor: '#FFFDF8',
+  // Défauts vides : l'attribution vient du branding runtime, jamais codée en dur.
+  operatorName: null,
+  territory: null,
+  islandTagline: null,
+};
+
+function clamp(value: number, min = 0, max = 255): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function sanitizeLogoUrl(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  return /^(data:image\/|blob:|https?:\/\/|\/)/i.test(normalized) ? normalized : null;
+}
+
+export function sanitizeHexColor(value: string, fallback: string): string {
+  const normalized = value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(normalized) ? normalized.toUpperCase() : fallback.toUpperCase();
+}
+
+export function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const normalized = sanitizeHexColor(hex, '#000000').slice(1);
+  return {
+    r: Number.parseInt(normalized.slice(0, 2), 16),
+    g: Number.parseInt(normalized.slice(2, 4), 16),
+    b: Number.parseInt(normalized.slice(4, 6), 16),
+  };
+}
+
+export function rgbToHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b].map((channel) => clamp(channel).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}
+
+export function mixColors(base: string, target: string, weight: number): string {
+  const a = hexToRgb(base);
+  const b = hexToRgb(target);
+  return rgbToHex(
+    Math.round(a.r + (b.r - a.r) * weight),
+    Math.round(a.g + (b.g - a.g) * weight),
+    Math.round(a.b + (b.b - a.b) * weight),
+  );
+}
+
+export function rgbChannels(hex: string): string {
+  const { r, g, b } = hexToRgb(hex);
+  return `${r} ${g} ${b}`;
+}
+
+export function luminance(hex: string): number {
+  const { r, g, b } = hexToRgb(hex);
+  const channels = [r, g, b].map((channel) => {
+    const srgb = channel / 255;
+    return srgb <= 0.03928 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+// Ratio de contraste WCAG 2.x entre deux couleurs (formule (L1+0.05)/(L2+0.05)).
+export function contrastRatio(hexA: string, hexB: string): number {
+  const a = luminance(hexA) + 0.05;
+  const b = luminance(hexB) + 0.05;
+  return a > b ? a / b : b / a;
+}
+
+// Choisit noir ou blanc selon le ratio AA (4.5:1) réel plutôt qu'un seuil de luminance
+// arbitraire, pour rester lisible avec n'importe quelle couleur primaire valide.
+function contrastText(background: string): string {
+  const black = '#000000';
+  const white = '#FFFFFF';
+  const ratioBlack = contrastRatio(background, black);
+  const ratioWhite = contrastRatio(background, white);
+  return ratioBlack >= ratioWhite ? black : white;
+}
+
+export async function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(new Error('Lecture du logo impossible.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+export function applyThemeToDocument(theme: ThemeSettings): void {
+  const root = document.documentElement;
+  const primary = sanitizeHexColor(theme.primaryColor, defaultThemeSettings.primaryColor);
+  const accent = sanitizeHexColor(theme.accentColor, defaultThemeSettings.accentColor);
+  const text = sanitizeHexColor(theme.textColor, defaultThemeSettings.textColor);
+  const background = sanitizeHexColor(theme.backgroundColor, defaultThemeSettings.backgroundColor);
+  const surface = sanitizeHexColor(theme.surfaceColor, defaultThemeSettings.surfaceColor);
+  const bgStrong = mixColors(background, primary, 0.08);
+  const panel = mixColors(surface, background, 0.18);
+  const surfaceSoft = mixColors(surface, primary, 0.06);
+  const line = mixColors(text, background, 0.9);
+  const accentSoft = mixColors(accent, surface, 0.86);
+  const accentStrong = mixColors(accent, text, 0.18);
+  // audit S7 : muted (texte secondaire) doit passer AA. Un mix à 0.54 vers le
+  // fond donnait #8F9797 (~2.9:1). Rapproché du texte (0.34) pour ~AA sur surface
+  // claire ; ce token injecté au runtime prime sur le :root statique.
+  const muted = mixColors(text, background, 0.34);
+  const primaryForeground = contrastText(primary);
+  const shadowColor = rgbChannels(mixColors(text, '#000000', 0.12)).replace(/ /g, ', ');
+
+  const variables: Record<string, string> = {
+    '--theme-primary': primary,
+    '--theme-primary-rgb': rgbChannels(primary),
+    '--theme-accent': accent,
+    '--theme-accent-rgb': rgbChannels(accent),
+    '--theme-text': text,
+    '--theme-text-rgb': rgbChannels(text),
+    '--theme-bg': background,
+    '--theme-bg-rgb': rgbChannels(background),
+    '--theme-surface': surface,
+    '--theme-surface-rgb': rgbChannels(surface),
+    '--bg': background,
+    '--bg-strong': bgStrong,
+    '--panel': panel,
+    '--panel-strong': surface,
+    '--surface-soft': surfaceSoft,
+    '--line': line,
+    '--text': text,
+    '--text-muted': muted,
+    '--accent-soft': accentSoft,
+    '--accent-brand': accent,
+    '--accent-brand-strong': accentStrong,
+    '--teal': primary,
+    '--warning': '#D6933A',
+    '--shadow-soft': `0 18px 48px rgba(${shadowColor}, 0.08)`,
+    '--shadow': `0 30px 80px rgba(${shadowColor}, 0.14)`,
+    '--shadow-s': `0 1px 0 rgba(${shadowColor}, 0.04), 0 6px 16px -8px rgba(${shadowColor}, 0.1)`,
+    '--shadow-m': `0 1px 0 rgba(${shadowColor}, 0.04), 0 14px 30px -16px rgba(${shadowColor}, 0.18)`,
+    '--shadow-l': `0 24px 60px -20px rgba(${shadowColor}, 0.3)`,
+    '--background': background,
+    '--foreground': text,
+    '--surface': surface,
+    '--card': surface,
+    '--card-foreground': text,
+    '--popover': surface,
+    '--popover-foreground': text,
+    '--primary': primary,
+    '--primary-foreground': primaryForeground,
+    '--secondary': surfaceSoft,
+    '--secondary-foreground': text,
+    '--muted': surfaceSoft,
+    '--muted-foreground': muted,
+    '--accent': accentSoft,
+    '--accent-foreground': text,
+    '--border': line,
+    '--input': line,
+    '--ring': primary,
+    '--radius': '8px',
+    '--radius-xl': '28px',
+    '--radius-lg': '20px',
+    '--radius-md': '14px',
+    '--radius-sm': '10px',
+  };
+
+  Object.entries(variables).forEach(([key, value]) => {
+    root.style.setProperty(key, value);
+  });
+
+  root.style.colorScheme = 'light';
+}
+
+// Chaîne d'attribution : trim, null si vide (jamais de chaîne vide qui rendrait un nœud creux).
+function sanitizeOptionalText(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
+export function coerceThemeSettings(value: unknown): ThemeSettings {
+  const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+
+  return {
+    brandName: String(raw.brandName ?? defaultThemeSettings.brandName).trim() || defaultThemeSettings.brandName,
+    logoUrl: sanitizeLogoUrl(raw.logoUrl ?? raw.logoDataUrl ?? defaultThemeSettings.logoUrl),
+    primaryColor: sanitizeHexColor(String(raw.primaryColor ?? ''), defaultThemeSettings.primaryColor),
+    accentColor: sanitizeHexColor(String(raw.accentColor ?? ''), defaultThemeSettings.accentColor),
+    textColor: sanitizeHexColor(String(raw.textColor ?? ''), defaultThemeSettings.textColor),
+    backgroundColor: sanitizeHexColor(String(raw.backgroundColor ?? ''), defaultThemeSettings.backgroundColor),
+    surfaceColor: sanitizeHexColor(String(raw.surfaceColor ?? ''), defaultThemeSettings.surfaceColor),
+    operatorName: sanitizeOptionalText(raw.operatorName),
+    territory: sanitizeOptionalText(raw.territory),
+    islandTagline: sanitizeOptionalText(raw.islandTagline),
+  };
+}
+

@@ -1,0 +1,229 @@
+{
+  "cluster": 9,
+  "generated": "2026-06-15",
+  "scope": [
+    "ref_org_role",
+    "ref_org_admin_role",
+    "ref_org_business_role",
+    "ref_actor_role",
+    "ref_object_relation_type",
+    "ref_permission",
+    "ref_legal_type",
+    "ref_document",
+    "ref_review_source",
+    "ref_commune"
+  ],
+  "notes": {
+    "i18n_global": "All tables in this cluster lack dedicated i18n columns (no *_i18n or _en/_es/_zh/_el columns) except ref_document which has title_i18n/issuer_i18n/description_i18n (jsonb) — i18n coverage is N/A for all except ref_document, noted once here and not repeated per row.",
+    "source_files": {
+      "ref_org_role": "Base de donnée DLL et API/seeds_data.sql:3898",
+      "ref_org_admin_role": "Base de donnée DLL et API/seeds_data.sql:3929",
+      "ref_org_business_role": "Base de donnée DLL et API/seeds_data.sql:3915",
+      "ref_actor_role": "Base de donnée DLL et API/seeds_data.sql:963",
+      "ref_object_relation_type": "Base de donnée DLL et API/seeds_data.sql:986 (9 codes) + Base de donnée DLL et API/migration_taxonomy_seeds_coverage.sql:176 (1 code: sur_le_parcours_de)",
+      "ref_permission": "Base de donnée DLL et API/seeds_data.sql:3947",
+      "ref_legal_type": "Base de donnée DLL et API/schema_unified.sql:5427 (17 codes, seeded inline with CREATE TABLE)",
+      "ref_document": "No INSERT INTO ref_document in any seed file — intentional data table (not vocabulary); 0 rows live",
+      "ref_review_source": "Base de donnée DLL et API/seeds_data.sql:145",
+      "ref_commune": "Base de donnée DLL et API/migration_ref_commune.sql:36 (24 communes, manifest 8l)"
+    },
+    "consumer_tables": {
+      "ref_org_role": "object_org_link.role_id",
+      "ref_org_admin_role": "user_org_admin_role.role_id",
+      "ref_org_business_role": "user_org_business_role.role_id",
+      "ref_actor_role": "actor_object_role.role_id",
+      "ref_object_relation_type": "object_relation.relation_type_id",
+      "ref_permission": "user_permission.permission_id, org_permission.permission_id",
+      "ref_legal_type": "object_legal.type_id",
+      "ref_document": "object_classification.document_id, object_legal.document_id, object_iti.status_document_id, object_sustainability_action.document_id, actor_consent.document_id",
+      "ref_review_source": "object_review.source_id",
+      "ref_commune": "object_zone.insee_commune (FK on text key insee_code)"
+    }
+  },
+  "matrix": [
+    {
+      "unit": "ref_org_role",
+      "live_count": 3,
+      "source_count": 3,
+      "doc_count": 3,
+      "db_usage_distinct": {"publisher": 837, "contributor": 0, "reader": 0},
+      "verdict": "CLEAN — live=source=doc; only 'publisher' has live usage (837 object_org_link rows); 'contributor' and 'reader' are forward-looking roles"
+    },
+    {
+      "unit": "ref_org_admin_role",
+      "live_count": 3,
+      "source_count": 3,
+      "doc_count": 3,
+      "db_usage_distinct": {"org_admin": 1, "org_manager": 0, "team_lead": 0},
+      "verdict": "CLEAN — live=source=doc; 'org_admin' has 1 live grant; 'org_manager' and 'team_lead' are forward-looking"
+    },
+    {
+      "unit": "ref_org_business_role",
+      "live_count": 3,
+      "source_count": 3,
+      "doc_count": 3,
+      "db_usage_distinct": {"viewer": 0, "contributor": 0, "editor": 1},
+      "verdict": "CLEAN — live=source=doc; 'editor' has 1 live assignment; 'viewer' and 'contributor' are forward-looking"
+    },
+    {
+      "unit": "ref_actor_role",
+      "live_count": 5,
+      "source_count": 5,
+      "doc_count": 5,
+      "db_usage_distinct": {"operator": 799, "guide": 0, "sales_manager": 0, "receptionist": 0, "content_editor": 0},
+      "verdict": "CLEAN — live=source=doc; 'operator' dominates (799 actor_object_role rows); 4 other roles are forward-looking; CLAUDE.md §WORKFLOW confirms operator seed present (verified 2026-06-10)"
+    },
+    {
+      "unit": "ref_object_relation_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": {"based_at_site": 0, "managed_by": 0, "nearby": 0, "parent_of": 0, "part_of": 0, "partner_of": 0, "recommended_with": 0, "sister": 0, "sur_le_parcours_de": 0, "uses_itinerary": 0},
+      "verdict": "CLEAN (counts) — live=source=doc=10; 0 live usages (object_relation is empty — no relation data authored yet, forward-looking); NOTE: 9 codes in seeds_data.sql:986, 1 code ('sur_le_parcours_de') in migration_taxonomy_seeds_coverage.sql:176 (manifest 8y) — split source, idempotent WHERE NOT EXISTS guard"
+    },
+    {
+      "unit": "ref_permission",
+      "live_count": 11,
+      "source_count": 11,
+      "doc_count": 11,
+      "db_usage_distinct": {
+        "attach_documents": {"user_grants": 1, "org_grants": 0},
+        "create_object": {"user_grants": 1, "org_grants": 0},
+        "edit_canonical_when_publisher": {"user_grants": 1, "org_grants": 0},
+        "edit_gallery": {"user_grants": 1, "org_grants": 0},
+        "edit_hours": {"user_grants": 1, "org_grants": 0},
+        "edit_org_enrichment": {"user_grants": 1, "org_grants": 0},
+        "edit_pricing": {"user_grants": 1, "org_grants": 0},
+        "manage_team_messages": {"user_grants": 1, "org_grants": 0},
+        "publish_object": {"user_grants": 1, "org_grants": 0},
+        "validate_changes": {"user_grants": 1, "org_grants": 0},
+        "write_crm_notes": {"user_grants": 0, "org_grants": 0}
+      },
+      "verdict": "MOSTLY CLEAN — live=source=doc=11; 10 of 11 permissions have exactly 1 user grant (test/seed user); 'write_crm_notes' has 0 user grants and 0 org grants — the only permission with no live grants at all; forward-looking (SP-2 not yet running real grants); org_permission has 0 rows for all codes"
+    },
+    {
+      "unit": "ref_legal_type",
+      "live_count": 16,
+      "source_count": 17,
+      "doc_count": 16,
+      "db_usage_distinct": {"siren": 1, "siret": 1, "all_others": 0},
+      "verdict": "GAP — source has 17 codes (schema_unified.sql:5427-5453 includes 'raison_sociale'), live has 16 — 'raison_sociale' is SOURCE-ONLY; fresh apply will include it, live DB does not; doc correctly reflects 16 live rows"
+    },
+    {
+      "unit": "ref_document",
+      "live_count": 0,
+      "source_count": 0,
+      "doc_count": 0,
+      "db_usage_distinct": 0,
+      "verdict": "CLEAN (intentional empty) — ref_document is a DATA table (document registry per object/classification), not a vocabulary; no seed rows are expected; table has 5 FK consumers (object_classification, object_legal, object_iti, object_sustainability_action, actor_consent) all with 0 document_id refs; i18n columns present (title_i18n/issuer_i18n/description_i18n jsonb) but 0 rows; no drift"
+    },
+    {
+      "unit": "ref_review_source",
+      "live_count": 7,
+      "source_count": 7,
+      "doc_count": 7,
+      "db_usage_distinct": {"tripadvisor": 0, "google": 0, "booking": 0, "expedia": 0, "hotels_com": 0, "airbnb": 0, "internal": 0},
+      "verdict": "CLEAN — live=source=doc=7; all 7 codes have 0 usages (object_review has 0 rows — review import not yet executed); forward-looking; all codes have icon_url/base_url seeded in seeds_data.sql:145"
+    },
+    {
+      "unit": "ref_commune",
+      "live_count": 24,
+      "source_count": 24,
+      "doc_count": 24,
+      "db_usage_distinct": 0,
+      "verdict": "CLEAN — live=source=doc=24; all 24 INSEE codes 97401-97424 present; 0 live usages in object_zone (no zone assignments yet — forward-looking since §41 authoring feature); FK is on text key object_zone.insee_commune -> ref_commune.insee_code (not UUID), confirmed live; FE reads via client.from('ref_commune') for the §16 commune picker"
+    }
+  ],
+  "findings": [
+    {
+      "dimension": "D4",
+      "severity": "HIGH",
+      "unit": "ref_legal_type",
+      "code": "raison_sociale",
+      "title": "Source-only row: 'raison_sociale' in schema_unified.sql but absent from live DB",
+      "evidence": "SELECT code FROM public.ref_legal_type returns 16 rows; schema_unified.sql:5431 contains ('raison_sociale', 'Raison sociale', ...) in the INSERT block; live count=16, source count=17. A fresh DB from schema_unified.sql will have raison_sociale; the live DB does not. The missing row means object_legal rows keyed to raison_sociale cannot be inserted on live (FK constraint would reject them). No object_legal.type_id references raison_sociale live (confirmed: only siren=1, siret=1).",
+      "recommendation": "Apply a targeted migration: INSERT INTO ref_legal_type (code, name, description, category, is_required, is_public) VALUES ('raison_sociale', 'Raison sociale', 'Dénomination ou raison sociale de la personne morale exploitante', 'business', false, false) ON CONFLICT (code) DO NOTHING; — add to manifest + runbook to close the fresh-vs-live drift. This is a deploy integrity violation per CLAUDE.md §Deploy integrity."
+    },
+    {
+      "dimension": "D2",
+      "severity": "MEDIUM",
+      "unit": "ref_permission",
+      "code": "write_crm_notes",
+      "title": "'write_crm_notes' has 0 grants (user and org) while all other 10 permissions have 1 user grant each",
+      "evidence": "user_permission: write_crm_notes user_grants=0, org_grants=0. All other 10 codes have user_grants=1 (test seed user). The CRM module (§61) gates crm note writes on this permission. The discrepancy suggests the test-user seed was not updated when write_crm_notes was added (migration_crm_module.sql, §61). Forward-looking per SP-2 but the test-user inconsistency is a seeding gap.",
+      "recommendation": "Add write_crm_notes to the test-user permission grant seed (or document explicitly that this permission requires a real multi-user SP-2 grant and is intentionally absent from the single-user seed fixture). If the single test user should exercise CRM authoring, run: INSERT INTO user_permission (user_id, permission_id) SELECT '<test_user_id>', id FROM ref_permission WHERE code='write_crm_notes' ON CONFLICT DO NOTHING;"
+    },
+    {
+      "dimension": "D2",
+      "severity": "LOW",
+      "unit": "ref_org_role",
+      "code": "contributor|reader",
+      "title": "Only 'publisher' role is in use; 'contributor' and 'reader' have 0 object_org_link rows",
+      "evidence": "object_org_link: publisher=837, contributor=0, reader=0. The contributor and reader roles have no semantic consumers in the live data or any write RPC. The contributor arm of the description overlay (rpc_write_org_description) checks for org membership, not ref_org_role code.",
+      "recommendation": "FORWARD-LOOKING — no action required now. Document in decision log that contributor/reader roles are skeleton vocabulary for multi-org publishing workflows not yet implemented. Confirm before adding any editor UI that selects these roles that there is a corresponding RPC that enforces the role semantics."
+    },
+    {
+      "dimension": "D2",
+      "severity": "LOW",
+      "unit": "ref_actor_role",
+      "code": "guide|sales_manager|receptionist|content_editor",
+      "title": "4 of 5 actor roles have 0 live usages in actor_object_role",
+      "evidence": "actor_object_role: operator=799, guide=0, sales_manager=0, receptionist=0, content_editor=0. The four unused roles are seeded and forward-looking (§48 wired actor-role authoring in the editor). No broken FK or missing data — pure zero-usage.",
+      "recommendation": "FORWARD-LOOKING — no action. These roles become active as actors are tagged during data enrichment passes (B1+). Confirm the editor §17 actor-role picker surfaces all 5 roles (not just operator) when adding actor links."
+    },
+    {
+      "dimension": "D3",
+      "severity": "LOW",
+      "unit": "ref_object_relation_type",
+      "code": "sur_le_parcours_de",
+      "title": "Split seed source: 9 codes in seeds_data.sql, 'sur_le_parcours_de' only in migration_taxonomy_seeds_coverage.sql (manifest 8y)",
+      "evidence": "seeds_data.sql:986 contains 9 codes with ON CONFLICT DO NOTHING. sur_le_parcours_de is seeded exclusively in migration_taxonomy_seeds_coverage.sql:176-180 with a WHERE NOT EXISTS guard. A fresh apply that runs seeds_data.sql without running 8y would be missing one relation type.",
+      "recommendation": "The ci_fresh_apply.sql manifest includes 8y after seeds_data.sql (line 98), so fresh apply is correct. However, if seeds_data.sql is ever run standalone, the 10th code is silently missing. Consider backporting sur_le_parcours_de into seeds_data.sql:986 block (or add a comment cross-reference) to prevent standalone-run confusion."
+    },
+    {
+      "dimension": "D2",
+      "severity": "INFO",
+      "unit": "ref_object_relation_type",
+      "code": "ALL",
+      "title": "All 10 relation types have 0 live usages in object_relation",
+      "evidence": "object_relation has 0 rows for all 10 codes. The §15 relations editor (§29) is wired and the save_object_relations RPC exists, but no relation data has been authored yet.",
+      "recommendation": "FORWARD-LOOKING — no action. Track at first data entry pass (B1) to confirm the editor produces valid FK references for the relation types actually needed (based_at_site, uses_itinerary, sur_le_parcours_de are the most likely first users)."
+    },
+    {
+      "dimension": "D4",
+      "severity": "INFO",
+      "unit": "ref_document",
+      "code": "N/A",
+      "title": "ref_document is empty (0 rows) and has no seed — intentional data table, not vocabulary",
+      "evidence": "No INSERT INTO ref_document found in seeds_data.sql, schema_unified.sql, or any migration. Live count=0. The table has i18n-capable jsonb columns (title_i18n, issuer_i18n, description_i18n). 5 FK consumer tables (object_classification, object_legal, object_iti, object_sustainability_action, actor_consent) all have 0 document_id references live. API doc notes ref_document as 'Tables publiques de référence sans ligne directe extraite'.",
+      "recommendation": "No action — empty-by-design for this stage. Documents will be inserted as real classification certificates, prefectoral orders, etc. are attached. Ensure the first authoring pass that writes to object_classification.document_id or object_iti.status_document_id first creates the ref_document row; there is no admin UI for this yet (deferred per §59 decision log)."
+    },
+    {
+      "dimension": "D2",
+      "severity": "INFO",
+      "unit": "ref_review_source",
+      "code": "ALL",
+      "title": "All 7 review sources have 0 live usages — object_review is empty",
+      "evidence": "object_review count=0. The RLS for object_review was completed in §56 (manifest 8w). Review import has not been executed. All source codes (tripadvisor, google, booking, expedia, hotels_com, airbnb, internal) are seeded correctly.",
+      "recommendation": "FORWARD-LOOKING — no action until review import. Confirm the import pipeline maps source identifiers to these exact codes before running."
+    },
+    {
+      "dimension": "D2",
+      "severity": "INFO",
+      "unit": "ref_commune",
+      "code": "ALL",
+      "title": "0 live usages in object_zone despite 24 communes seeded and FE picker wired",
+      "evidence": "object_zone has 0 rows. The §41 zones authoring feature is live (migration_ref_commune.sql applied, FK confirmed: object_zone.insee_commune -> ref_commune.insee_code). FE §16 multi-select loads ref_commune via client.from('ref_commune'). Zero usage is expected — no commune zones have been authored yet.",
+      "recommendation": "FORWARD-LOOKING — no action. The zone-authoring path is complete. First use will happen during the B1 object enrichment pass. Confirm the FE picker correctly maps the selected insee_code to object_zone rows via save_object_places({zones})."
+    },
+    {
+      "dimension": "D1",
+      "severity": "INFO",
+      "unit": "ALL",
+      "code": "N/A",
+      "title": "i18n N/A for all cluster-9 tables (no i18n columns) except ref_document",
+      "evidence": "ref_org_role, ref_org_admin_role, ref_org_business_role, ref_actor_role, ref_object_relation_type, ref_permission, ref_legal_type, ref_review_source, ref_commune: all have only a single 'name' TEXT column; no *_i18n jsonb, no _en/_es/_zh/_el columns. ref_document is the only exception: has title_i18n, issuer_i18n, description_i18n (jsonb) — but 0 rows, so i18n fields are unpopulated. Global i18n target (fr+en/es/zh/el) is NOT met for any table in this cluster.",
+      "recommendation": "These are governance/admin vocabulary tables primarily consumed server-side (DEFINER RPCs) or in the admin UI (team settings, /team page). The FR values are correct. i18n for these tables is low-value vs. tourism object content. If the admin UI or API responses ever expose role/permission names to non-FR users, add *_i18n jsonb columns via migration. Not urgent for MVP."
+    }
+  ]
+}

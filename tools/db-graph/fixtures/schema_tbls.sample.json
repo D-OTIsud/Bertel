@@ -1,0 +1,17 @@
+{
+  "name": "bertel",
+  "tables": [
+    {"name": "public.object", "type": "TABLE", "comment": "Root entity",
+     "columns": [{"name":"id","type":"text","nullable":false,"comment":"PK"},
+                 {"name":"object_type","type":"object_type","nullable":false,"comment":""}],
+     "constraints": [{"name":"object_pkey","type":"PRIMARY KEY","columns":["id"]}],
+     "triggers": [{"name":"trg_guard_object_type_change","def":"CREATE TRIGGER trg_guard_object_type_change BEFORE UPDATE OF object_type ON object FOR EACH ROW EXECUTE FUNCTION api.assert_object_type_change_consistent()","comment":""}]},
+    {"name": "public.object_fma", "type": "TABLE", "comment": "",
+     "columns": [{"name":"object_id","type":"text","nullable":false,"comment":""}],
+     "constraints": [], "triggers": []}
+  ],
+  "relations": [
+    {"table": {"name": "public.object_fma"}, "columns": [{"name": "object_id"}],
+     "parent_table": {"name": "public.object"}, "parent_columns": [{"name": "id"}]}
+  ]
+}

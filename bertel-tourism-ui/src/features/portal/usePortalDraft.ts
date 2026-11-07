@@ -1,0 +1,603 @@
+/**
+ * Brouillon local du portail partenaire (18a) — le STOCKAGE.
+ *
+ * La FORME persistée (schéma, empreinte, garde de version) vit dans `portal-draft-schema.ts` ;
+ * ce fichier est la seule porte vers `localStorage`, et le hook qui relie tout ça à l'éditeur.
+ *
+ * La clé est PRÉFIXÉE PAR LE COMPTE (`portal-draft:<userId>:<objectId>`) : un téléphone ou un
+ * ordinateur d'office est souvent partagé, et rejouer le brouillon d'un autre partenaire
+ * enverrait ses données à l'office sous le nom du suivant.
+ *
+ * TROIS RÈGLES QUI ONT CHACUNE COÛTÉ UNE PANNE :
+ *
+ *  1. L'EMPREINTE SE PREND SUR LES MODULES SERVEUR, jamais sur `editor.baseline`.
+ *     `commitModules` réécrit la baseline avec les valeurs ENVOYÉES, alors que la fiche
+ *     publiée ne bouge qu'à l'approbation de l'office. Un brouillon écrit pendant la
+ *     vérification serait rangé sous une empreinte qu'aucun rechargement ne reproduit :
+ *     il serait écarté au retour, avec la bannière mensongère « l'office a modifié votre
+ *     fiche ».
+ *
+ *  2. NI L'EMPREINTE NI LE CONTENU NE PORTENT LES CATALOGUES. Un code ajouté au référentiel
+ *     par l'office changerait sinon l'empreinte de TOUS les brouillons ; et les 29 tranches
+ *     avec leurs options saturent vite un quota `localStorage` partagé entre les fiches.
+ *     Les catalogues sont remis À LA LECTURE depuis les modules serveur
+ *     (`restoreCatalogOptions`) : sans eux, les listes déroulantes d'une rubrique restaurée
+ *     seraient vides et l'écriture ne saurait plus résoudre un code.
+ *
+ *  3. LE MESSAGE À L'OFFICE FAIT PARTIE DU BROUILLON. Il peut être la SEULE chose saisie
+ *     (« Erreur signalée : … »), et `submit_actor_fiche` refuse un envoi sans modification :
+ *     il ne peut donc pas vivre dans un état d'écran, où un rechargement l'effacerait sans
+ *     un mot.
+ *
+ * Tous les accès sont gardés : `localStorage` n'existe pas au rendu serveur, et il JETTE
+ * (SecurityError) en navigation privée sur certains navigateurs. Une panne de stockage ne
+ * doit pas faire tomber l'écran — au pire, l'appareil ne retient rien.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { WorkspaceModuleId } from '../../services/object-workspace';
+import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
+import { MODULE_KEY_MAP } from '../object-editor/editor-state';
+import { mergeDraftAgainstServer } from '../object-editor/draft-recovery';
+import { restoreCatalogOptions, stripCatalogOptions } from '../object-editor/io/object-io-serialize';
+import { parsePortalDraft, portalDraftFingerprint, serializePortalDraft } from './portal-draft-schema';
+import { PORTAL_MODULES, PORTAL_RUBRICS } from './portal-rubrics';
+import {
+  portalDraftKey,
+  portalFormKey,
+  readRaw,
+  writeRaw,
+  removeRaw,
+  hasPortalDraft,
+  clearPortalDraft,
+} from './portal-storage';
+
+export {
+  portalDraftKey,
+  portalSentKey,
+  portalFormKey,
+  hasPortalDraft,
+  hasUnsentPortalWork,
+  clearAllPortalDrafts,
+  clearPortalDraft,
+  type PortalSentSnapshot,
+  writePortalSent,
+  readPortalSent,
+  clearPortalSent,
+} from './portal-storage';
+
+/** Temporisation d'écriture. Assez longue pour ne pas écrire à chaque frappe du message,
+ *  assez courte pour qu'un onglet mis en veille juste après une saisie ait déjà écrit. */
+const WRITE_DEBOUNCE_MS = 800;
+
+type PortalSlices = Partial<Record<WorkspaceModuleId, unknown>>;
+
+/**
+ * Écrit ce qui reste en attente quand la page se CACHE ou que le composant se démonte.
+ *
+ * Le débounce de 800 ms se réarme à chaque frappe : une saisie tapée sans pause, puis
+ * interrompue tout de suite — un appel entrant, l'onglet tué par le système — n'était
+ * JAMAIS écrite. La fenêtre est passée d'illimitée à 800 ms ; ceci la ferme.
+ *
+ * `pagehide` couvre la fermeture et la mise en bfcache ; `visibilitychange → hidden` est le
+ * SEUL signal fiable sur iOS Safari, où `beforeunload` n'est ni garanti ni souhaitable (il
+ * empêche la mise en bfcache). L'écriture est SYNCHRONE — `localStorage.setItem` l'est, et
+ * rien ne doit s'interposer : un `setTimeout(0)` ou une promesse ne s'exécuteraient plus.
+ */
+function useFlushOnHide(flush: () => void): void {
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+  useEffect(() => {
+    const run = () => flushRef.current();
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') run();
+    };
+    window.addEventListener('pagehide', run);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', run);
+      document.removeEventListener('visibilitychange', onVisibility);
+      // Démontage React sans rechargement : même fenêtre, même perte.
+      run();
+    };
+  }, []);
+}
+
+/** Les tranches SANS catalogues, prêtes à être écrites. La clé de stockage est le module id
+ *  (`capacity-policies`), la clé de `stripCatalogOptions` est la clé de MODULE (`capacityPolicies`). */
+function stripSlices(slices: PortalSlices): PortalSlices {
+  const byModuleKey: Record<string, unknown> = {};
+  for (const module of PORTAL_MODULES) {
+    if (Object.prototype.hasOwnProperty.call(slices, module)) {
+      byModuleKey[MODULE_KEY_MAP[module]] = slices[module];
+    }
+  }
+  const stripped = stripCatalogOptions(byModuleKey as unknown as ObjectWorkspaceModules) as unknown as Record<
+    string,
+    unknown
+  >;
+  const out: PortalSlices = {};
+  for (const module of PORTAL_MODULES) {
+    const key = MODULE_KEY_MAP[module];
+    if (Object.prototype.hasOwnProperty.call(stripped, key)) out[module] = stripped[key];
+  }
+  return out;
+}
+
+/**
+ * L'empreinte des tranches du portail QUE CE BROUILLON PORTE, catalogues exclus.
+ *
+ * Portée aux seules tranches concernées : une empreinte globale faisait perdre un brouillon
+ * de tarifs parce que l'office avait corrigé une coquille dans la description — deux
+ * travaux sans le moindre rapport. Un brouillon qui ne porte QUE le message n'a alors plus
+ * d'empreinte du tout : il ne peut écraser aucun travail, il n'y a rien à comparer.
+ */
+function withoutGalleryReadId(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  const media = value as Record<string, unknown>;
+  const baseline = media.galleryWriteBaseline;
+  if (!baseline || typeof baseline !== 'object' || Array.isArray(baseline)) return value;
+  const { readId: _readId, ...stableBaseline } = baseline as Record<string, unknown>;
+  void _readId;
+  return { ...media, galleryWriteBaseline: stableBaseline };
+}
+
+function galleryReadId(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const baseline = (value as Record<string, unknown>).galleryWriteBaseline;
+  if (!baseline || typeof baseline !== 'object' || Array.isArray(baseline)) return undefined;
+  const readId = (baseline as Record<string, unknown>).readId;
+  return typeof readId === 'string' ? readId : undefined;
+}
+
+/** Align only the per-read office token; its CAS rows/models and all photo data stay intact. */
+function withGalleryReadId(value: unknown, readId: string | undefined): unknown {
+  if (readId === undefined || galleryReadId(value) === undefined) return value;
+  const media = value as Record<string, unknown>;
+  return { ...media, galleryWriteBaseline: { ...media.galleryWriteBaseline as Record<string, unknown>, readId } };
+}
+
+function fingerprintOf(serverModules: ObjectWorkspaceModules, modules: WorkspaceModuleId[], legacyReadId = false): string {
+  const live = stripCatalogOptions(serverModules) as unknown as Record<string, unknown>;
+  const scoped: Record<string, unknown> = {};
+  for (const module of modules) {
+    const key = MODULE_KEY_MAP[module];
+    scoped[key] = module === 'media' && !legacyReadId ? withoutGalleryReadId(live[key]) : live[key];
+  }
+  // Les tranches absentes hachent comme `null` des deux côtés : l'empreinte ne dépend que
+  // de ce que le brouillon transporte.
+  return portalDraftFingerprint(scoped as unknown as ObjectWorkspaceModules);
+}
+
+function carriedModules(slices: PortalSlices): WorkspaceModuleId[] {
+  return PORTAL_MODULES.filter((module) => Object.prototype.hasOwnProperty.call(slices, module));
+}
+
+export function writePortalDraft(
+  userId: string | null,
+  objectId: string,
+  serverModules: ObjectWorkspaceModules,
+  dirtySlices: PortalSlices,
+  note: string,
+): boolean {
+  if (!userId) return false;
+  return writeRaw(
+    portalDraftKey(userId, objectId),
+    serializePortalDraft({
+      objectId,
+      fingerprint: fingerprintOf(serverModules, carriedModules(dirtySlices)),
+      note,
+      modules: stripSlices(dirtySlices),
+      baseline: stripSlices(Object.fromEntries(carriedModules(dirtySlices).map((module) => [module, (serverModules as unknown as Record<string, unknown>)[MODULE_KEY_MAP[module]]]))),
+      savedAt: new Date().toISOString(),
+    }),
+  );
+}
+
+export interface PortalDraftRead {
+  /** Les tranches enregistrées, catalogues REMIS depuis les modules serveur. */
+  draft: PortalSlices;
+  note: string;
+  savedAt: string;
+  /**
+   * Les tranches ÉCARTÉES parce que l'office a travaillé dessus entre-temps. L'appelant
+   * les NOMME à l'écran : « refaites vos changements » sans dire lesquels n'aide personne.
+   */
+  droppedModules: WorkspaceModuleId[];
+}
+
+export function readPortalDraft(
+  userId: string | null,
+  objectId: string,
+  serverModules: ObjectWorkspaceModules,
+): PortalDraftRead | null {
+  if (!userId) return null;
+  const payload = parsePortalDraft(readRaw(portalDraftKey(userId, objectId)));
+  if (!payload || payload.objectId !== objectId) return null;
+
+  const carried = carriedModules(payload.modules);
+  // L'office a travaillé sur CES tranches depuis la prise : les rejouer écraserait son
+  // travail. On les écarte — et on les NOMME. Le MESSAGE, lui, reste : un texte libre
+  // n'écrase rien, et c'est souvent la seule chose que le partenaire ait écrite.
+  const draft: PortalSlices = {};
+  const live = serverModules as unknown as Record<string, unknown>;
+  const currentFingerprint = fingerprintOf(serverModules, carried);
+  const conflicts: WorkspaceModuleId[] = [];
+  for (const module of carried) {
+    const key = MODULE_KEY_MAP[module];
+    const local = payload.modules[module];
+    if (payload.fingerprint !== currentFingerprint) {
+      const base = payload.baseline?.[module];
+      if (base === undefined) {
+        // v1 drafts have no baseline for a safe merge. Preserve the partner's intent and
+        // clearly flag the affected slice; never silently throw away what they typed.
+        draft[module] = restoreCatalogOptions(local, live[key], key);
+        conflicts.push(module);
+        continue;
+      }
+      const current = stripSlices({ [module]: live[key] })[module];
+      const readId = module === 'media' ? galleryReadId(current) : undefined;
+      const merged = mergeDraftAgainstServer(withGalleryReadId(base, readId), withGalleryReadId(local, readId), current);
+      draft[module] = restoreCatalogOptions(merged.value, live[key], key);
+      if (merged.conflicts.length) conflicts.push(module);
+    } else {
+      draft[module] = restoreCatalogOptions(module === 'media' ? withGalleryReadId(local, galleryReadId(live[key])) : local, live[key], key);
+    }
+  }
+  return { draft, note: payload.note, savedAt: payload.savedAt, droppedModules: conflicts };
+}
+
+// ═══════════════ La saisie EN COURS, celle qui n'a pas encore été validée ═══════════════
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════════
+ * CE QUI A ÉTÉ TAPÉ SURVIT À UN RECHARGEMENT, PAS SEULEMENT À UN CHANGEMENT D'ÉCRAN.
+ * ═══════════════════════════════════════════════════════════════════════════════════
+ *
+ * Le brouillon (`portal-draft:`) n'est écrit que depuis `editor.dirtySections`, qui ne
+ * bouge qu'au clic sur « Valider ». Entre l'ouverture d'une rubrique et cette validation,
+ * la saisie ne vivait qu'en mémoire : un rechargement, un onglet tué par le système, un
+ * appel entrant — le scénario le PLUS probable sur un téléphone — l'effaçaient sans un mot.
+ *
+ * Même discipline que le brouillon, pour les mêmes raisons :
+ *  · clé préfixée par le COMPTE (`portal-form:<userId>:<objectId>`) — un appareil partagé
+ *    ne rejoue jamais la saisie d'un autre partenaire ;
+ *  · EMPREINTE portée aux seules tranches concernées — si l'office a retouché la rubrique
+ *    entre-temps, rejouer un formulaire pris sur l'ancienne valeur écraserait son travail ;
+ *  · purgée par `clearPortalDraft` (envoi réussi, abandon explicite) et par la déconnexion.
+ */
+export interface PortalFormStore {
+  get(key: string): unknown;
+  set(key: string, value: unknown): void;
+  delete(key: string): void;
+}
+
+interface PortalFormPayload {
+  fingerprint: string;
+  forms: Record<string, unknown>;
+  /** New photo forms use a stable fingerprint, with the office per-read token excluded. */
+  fingerprintVersion?: 2;
+}
+
+/** Old photo forms stored only a hash. Accept them only when an evidenced readId reproduces
+ * that exact old hash against today's full data; a real office change still fails closed. */
+function matchesLegacyPhotoForm(fingerprint: string | undefined, userId: string, objectId: string,
+  serverModules: ObjectWorkspaceModules, modules: WorkspaceModuleId[]): boolean {
+  if (!modules.includes('media') || typeof fingerprint !== 'string') return false;
+  const saved = parsePortalDraft(readRaw(portalDraftKey(userId, objectId)));
+  const matchingDraft = saved?.objectId === objectId ? saved : null;
+  const candidates = new Set([
+    galleryReadId(serverModules.media), galleryReadId(matchingDraft?.baseline?.media), galleryReadId(matchingDraft?.modules.media),
+  ].filter((readId): readId is string => readId !== undefined));
+  return [...candidates].some(readId => fingerprint === fingerprintOf({ ...serverModules,
+    media: withGalleryReadId(serverModules.media, readId) as ObjectWorkspaceModules['media'],
+  }, modules, true));
+}
+
+/** Les modules des rubriques présentes — l'empreinte ne couvre qu'eux. */
+function modulesOfForms(forms: Record<string, unknown>): WorkspaceModuleId[] {
+  const modules = new Set<WorkspaceModuleId>();
+  for (const rubricId of Object.keys(forms)) {
+    const rubric = PORTAL_RUBRICS.find((entry) => entry.id === rubricId);
+    if (rubric) modules.add(rubric.module);
+  }
+  return PORTAL_MODULES.filter((module) => modules.has(module));
+}
+
+export function readPortalForms(
+  userId: string | null,
+  objectId: string,
+  serverModules: ObjectWorkspaceModules,
+): Record<string, unknown> {
+  if (!userId) return {};
+  const raw = readRaw(portalFormKey(userId, objectId));
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    const record = parsed as Partial<PortalFormPayload>;
+    const forms = record.forms;
+    if (!forms || typeof forms !== 'object' || Array.isArray(forms)) return {};
+    // L'office a retouché la rubrique depuis : rejouer un formulaire pris sur l'ancienne
+    // valeur ferait renvoyer, sans le savoir, une donnée périmée.
+    const modules = modulesOfForms(forms);
+    if (record.fingerprint !== fingerprintOf(serverModules, modules)
+      && !(record.fingerprintVersion === undefined && matchesLegacyPhotoForm(record.fingerprint, userId, objectId, serverModules, modules))) return {};
+    return forms as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+export function writePortalForms(
+  userId: string | null,
+  objectId: string,
+  serverModules: ObjectWorkspaceModules,
+  forms: Record<string, unknown>,
+): boolean {
+  if (!userId) return false;
+  if (Object.keys(forms).length === 0) {
+    removeRaw(portalFormKey(userId, objectId));
+    return true;
+  }
+  const modules = modulesOfForms(forms);
+  const payload: PortalFormPayload = {
+    fingerprint: fingerprintOf(serverModules, modules),
+    forms,
+    ...(modules.includes('media') ? { fingerprintVersion: 2 as const } : {}),
+  };
+  try {
+    return writeRaw(portalFormKey(userId, objectId), JSON.stringify(payload));
+  } catch {
+    // Un formulaire non sérialisable ne doit pas casser la saisie en cours.
+    return false;
+  }
+}
+
+/**
+ * Le magasin persistant passé aux rubriques. Stable pour la vie du montage — les
+ * formulaires le reçoivent en prop et ne doivent jamais le voir changer d'identité.
+ */
+export function usePortalFormCache({
+  userId,
+  objectId,
+  serverModules,
+  onStorageFailure,
+}: {
+  userId: string | null;
+  objectId: string;
+  serverModules: ObjectWorkspaceModules;
+  /** L'appareil ne peut plus retenir : l'écran doit le DIRE, pas le taire. */
+  onStorageFailure?: () => void;
+}): PortalFormStore {
+  const serverRef = useRef(serverModules);
+  serverRef.current = serverModules;
+  const timerRef = useRef<number | null>(null);
+  const formsRef = useRef<Record<string, unknown> | null>(null);
+  /** Une écriture est due : c'est ce que le flush de dernière seconde doit poser. */
+  const dirtyRef = useRef(false);
+  const accountRef = useRef({ userId, objectId });
+  accountRef.current = { userId, objectId };
+  const failureRef = useRef(onStorageFailure);
+  failureRef.current = onStorageFailure;
+
+  const store = useMemo<PortalFormStore & { flushNow: () => void }>(() => {
+    const load = () => {
+      if (formsRef.current === null) {
+        formsRef.current = readPortalForms(accountRef.current.userId, accountRef.current.objectId, serverRef.current);
+      }
+      return formsRef.current;
+    };
+    const commit = () => {
+      if (!dirtyRef.current) return;
+      dirtyRef.current = false;
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      const written = writePortalForms(
+        accountRef.current.userId,
+        accountRef.current.objectId,
+        serverRef.current,
+        formsRef.current ?? {},
+      );
+      if (!written && accountRef.current.userId) failureRef.current?.();
+    };
+    const schedule = () => {
+      dirtyRef.current = true;
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      // Différé : sans cela, chaque frappe écrirait dans `localStorage`. Le débounce se
+      // réarme à chaque touche — d'où le flush de dernière seconde, sans lequel une
+      // saisie tapée sans pause puis interrompue ne serait jamais écrite.
+      timerRef.current = window.setTimeout(commit, WRITE_DEBOUNCE_MS);
+    };
+    return {
+      get: (key) => load()[key],
+      set: (key, value) => {
+        load()[key] = value;
+        schedule();
+      },
+      delete: (key) => {
+        delete load()[key];
+        schedule();
+      },
+      flushNow: commit,
+    };
+    // Un magasin par montage : `key={objectId}` garantit un remontage par fiche.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useFlushOnHide(store.flushNow);
+  return store;
+}
+
+// ═════════════════════════════════ Le hook ══════════════════════════════════
+
+interface DraftEditor {
+  draft: ObjectWorkspaceModules;
+  dirtySections: Partial<Record<WorkspaceModuleId, boolean>>;
+  replaceModule: (key: keyof ObjectWorkspaceModules, value: never) => void;
+}
+
+export interface UsePortalDraftInput {
+  userId: string | null;
+  objectId: string;
+  /** Les modules tels que le SERVEUR les rend (cache React Query), JAMAIS `editor.baseline`. */
+  serverModules: ObjectWorkspaceModules;
+  editor: DraftEditor;
+  /** L'appareil ne peut plus retenir (quota plein) : l'écran doit le DIRE. */
+  onStorageFailure?: () => void;
+}
+
+export interface UsePortalDraftResult {
+  /** Le message à l'office. Vit dans le brouillon, pas dans un état d'écran. */
+  note: string;
+  setNote: (value: string) => void;
+  /** Un brouillon existait mais la fiche a changé côté office : il a été écarté. */
+  discarded: boolean;
+  /** Les modules écartés — l'écran les NOMME plutôt que de dire « refaites vos changements ». */
+  discardedModules: WorkspaceModuleId[];
+  /** Horodatage du dernier enregistrement local, ou `null`. */
+  savedAt: string | null;
+  /** Efface le brouillon local ET le message (envoi réussi, ou abandon explicite). */
+  clear: () => void;
+  /** Acknowledge a conflicted portal slice after the partner reviewed and validated it. */
+  resolveConflict: (module: WorkspaceModuleId) => void;
+}
+
+/**
+ * Restaure au montage, puis enregistre en différé chaque changement.
+ *
+ * Monté sous `key={objectId}` par l'appelant : `useObjectEditorState` est init-once et ne
+ * resynchronise jamais, la restauration n'a donc qu'UNE occasion de s'exécuter.
+ */
+export function usePortalDraft({
+  userId,
+  objectId,
+  serverModules,
+  editor,
+  onStorageFailure,
+}: UsePortalDraftInput): UsePortalDraftResult {
+  const [note, setNote] = useState('');
+  const [discarded, setDiscarded] = useState(false);
+  const [discardedModules, setDiscardedModules] = useState<WorkspaceModuleId[]>([]);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [cleared, setCleared] = useState(0);
+  const restoredRef = useRef(false);
+
+  // Les dernières valeurs, lues par l'effet de restauration SANS le faire dépendre d'elles :
+  // il ne doit s'exécuter qu'une fois, et un `editor` recréé à chaque rendu le relancerait
+  // en boucle — en réécrasant la saisie en cours par le brouillon d'origine.
+  const editorRef = useRef(editor);
+  editorRef.current = editor;
+  const serverRef = useRef(serverModules);
+  serverRef.current = serverModules;
+  const failureRef = useRef(onStorageFailure);
+  failureRef.current = onStorageFailure;
+
+  useEffect(() => {
+    // Pas encore de compte : la session arrive APRÈS le premier rendu. Sortir en marquant
+    // la restauration « faite » armait un piège muet — le brouillon n'était jamais relu.
+    if (!userId || restoredRef.current) return;
+    restoredRef.current = true;
+    const stored = readPortalDraft(userId, objectId, serverRef.current);
+    if (!stored) {
+      // Une clé présente que la lecture a refusée = un brouillon d'une autre VERSION du
+      // schéma : rien n'en est réutilisable, mais le silence ferait croire à une perte
+      // inexpliquée.
+      if (hasPortalDraft(userId, objectId)) {
+        setDiscarded(true);
+      }
+      return;
+    }
+
+    for (const [module, slice] of Object.entries(stored.draft) as [WorkspaceModuleId, unknown][]) {
+      editorRef.current.replaceModule(MODULE_KEY_MAP[module], slice as never);
+    }
+    setNote(stored.note);
+    setSavedAt(stored.savedAt);
+    if (stored.droppedModules.length > 0) {
+      setDiscarded(true);
+      setDiscardedModules(stored.droppedModules);
+    }
+  }, [userId, objectId]);
+
+  /** Les tranches modifiées, dans l'ordre stable du registre — la signature sert de
+   *  déclencheur d'écriture, elle ne doit pas dépendre de l'ordre d'insertion. */
+  const dirtySlices = useMemo(() => {
+    const slices: PortalSlices = {};
+    for (const module of PORTAL_MODULES) {
+      if (editor.dirtySections[module]) slices[module] = editor.draft[MODULE_KEY_MAP[module]];
+    }
+    return slices;
+  }, [editor.dirtySections, editor.draft]);
+
+  const signature = useMemo(() => {
+    try {
+      return JSON.stringify(stripSlices(dirtySlices));
+    } catch {
+      return '';
+    }
+  }, [dirtySlices]);
+
+  /** L'écriture DUE mais pas encore faite — ce que le flush de dernière seconde doit poser. */
+  const pendingWriteRef = useRef<(() => string | null) | null>(null);
+
+  useEffect(() => {
+    // Tant que la restauration n'a pas eu lieu, écrire écraserait le brouillon stocké
+    // par un état vide — précisément celui qu'on vient de lire.
+    if (!restoredRef.current || !userId) return;
+    const empty = Object.keys(dirtySlices).length === 0 && note.trim() === '';
+    const write = (): string | null => {
+      if (empty) {
+        clearPortalDraft(userId, objectId);
+        return null;
+      }
+      const written = writePortalDraft(userId, objectId, serverRef.current, dirtySlices, note);
+      if (!written) {
+        failureRef.current?.();
+        return null;
+      }
+      return new Date().toISOString();
+    };
+    // Le message à l'office se tape lettre par lettre : sans ce relais, une note écrite
+    // d'un trait puis interrompue partagerait le sort de la saisie de rubrique.
+    pendingWriteRef.current = () => {
+      const at = write();
+      pendingWriteRef.current = null;
+      return at;
+    };
+    const timer = window.setTimeout(() => {
+      const at = write();
+      pendingWriteRef.current = null;
+      setSavedAt(at);
+    }, WRITE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+    // `signature` remplace `dirtySlices` : l'objet est recréé à chaque rendu de l'éditeur.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature, note, userId, objectId, cleared]);
+
+  useFlushOnHide(() => {
+    pendingWriteRef.current?.();
+  });
+
+  const clear = useCallback(() => {
+    clearPortalDraft(userId, objectId);
+    setNote('');
+    setSavedAt(null);
+    setDiscarded(false);
+    setDiscardedModules([]);
+    // Réarme l'effet d'écriture pour qu'il reparte d'un état vide au lieu de réécrire
+    // immédiatement ce qu'on vient d'effacer.
+    setCleared((value) => value + 1);
+  }, [userId, objectId]);
+
+  const resolveConflict = useCallback((module: WorkspaceModuleId) => {
+    setDiscardedModules((previous) => {
+      const next = previous.filter((entry) => entry !== module);
+      if (next.length === 0) setDiscarded(false);
+      return next;
+    });
+  }, []);
+
+  return { note, setNote, discarded, discardedModules, savedAt, clear, resolveConflict };
+}

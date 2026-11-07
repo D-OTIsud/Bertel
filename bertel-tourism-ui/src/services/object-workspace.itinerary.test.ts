@@ -1,0 +1,170 @@
+import { buildItineraryUpsertPayload, buildItineraryStagesPayload, buildItineraryInfoPayload, buildItineraryAssociatedObjectsPayload } from './object-workspace';
+import type { ObjectWorkspaceItineraryModule } from './object-workspace-parser';
+
+// Pins the object_iti WRITE contract to the REAL columns after the greenfield retype
+// (duration_hours -> duration_min INTEGER; elevation_gain + elevation_loss).
+// The previous save wrote elevation_positive_m / elevation_negative_m, which do NOT exist
+// in the object_iti DDL — so every itinerary save silently failed. This test guards against
+// regressing to non-existent columns.
+const baseInput: ObjectWorkspaceItineraryModule = {
+  distanceKm: '8.5',
+  durationMin: '120',
+  difficultyLevel: '3',
+  elevationPositiveM: '500',
+  elevationNegativeM: '480',
+  loop: false,
+  openStatus: 'open',
+  statusNote: '',
+  practiceOptions: [],
+  practiceCodes: [],
+  difficultyOptions: [],
+  openStatusOptions: [],
+  stageKindOptions: [],
+  assocRoleOptions: [],
+  mediaOptions: [],
+  associatedObjects: [],
+  access: '',
+  ambiance: '',
+  recommendedParking: '',
+  requiredEquipment: '',
+  infoPlaces: '',
+  childFriendly: false,
+  trackGeojson: null,
+  stages: [],
+  sectionsCount: 0,
+  profilesCount: 0,
+  geometrySummary: '',
+  traceEditable: false,
+  unavailableReason: null,
+};
+
+describe('buildItineraryUpsertPayload', () => {
+  it('maps editor fields to the real object_iti columns', () => {
+    const p = buildItineraryUpsertPayload('ITI1', baseInput);
+    expect(p).toMatchObject({
+      object_id: 'ITI1',
+      distance_km: 8.5,
+      duration_min: 120,        // minutes, stored directly (no hours round-trip)
+      elevation_gain: 500,      // was elevation_positive_m (non-existent)
+      elevation_loss: 480,      // was elevation_negative_m (non-existent)
+      is_loop: false,
+      open_status: 'open',
+    });
+  });
+
+  it('never writes columns absent from the object_iti DDL', () => {
+    const p = buildItineraryUpsertPayload('ITI1', baseInput) as Record<string, unknown>;
+    expect('elevation_positive_m' in p).toBe(false);
+    expect('elevation_negative_m' in p).toBe(false);
+    expect('duration_hours' in p).toBe(false);
+  });
+
+  it('coerces empty numeric strings to null', () => {
+    const p = buildItineraryUpsertPayload('ITI1', {
+      ...baseInput,
+      durationMin: '',
+      elevationPositiveM: '',
+      elevationNegativeM: '',
+    });
+    expect(p.duration_min).toBeNull();
+    expect(p.elevation_gain).toBeNull();
+    expect(p.elevation_loss).toBeNull();
+  });
+});
+
+describe('buildItineraryStagesPayload', () => {
+  // Phase 1: stages persist via api.save_object_itinerary_nested, which replaces all stages
+  // (delete + reinsert). The editor manages stages (BlockITI / SectionPlaces add/edit/remove),
+  // so module.stages is the source of truth; the guard below avoids clobbering on a failed load.
+  const stages = [
+    { recordId: 'stage-1', name: 'Col de Bellevue', description: 'Point haut', position: '1', kind: 'panorama', lng: '55.5', lat: '-21', mediaIds: ['m1', 'm2'] },
+    { recordId: null, name: 'Nouvelle etape', description: '', position: '2', kind: '', lng: '', lat: '', mediaIds: [] },
+  ];
+
+  it('maps managed stages to the RPC shape — recordId→id, kind→extra.kind, lng/lat + media preserved', () => {
+    expect(buildItineraryStagesPayload({ ...baseInput, stages })).toEqual([
+      {
+        id: 'stage-1', name: 'Col de Bellevue', description: 'Point haut', position: '1',
+        extra: { kind: 'panorama' }, name_i18n: null, description_i18n: null, lng: '55.5', lat: '-21',
+        media: [{ media_id: 'm1', position: 0 }, { media_id: 'm2', position: 1 }],
+      },
+      { name: 'Nouvelle etape', description: '', position: '2', extra: {}, name_i18n: null, description_i18n: null, media: [] },
+    ]);
+  });
+
+  it('returns null when the module did not load (guard against clobbering existing stages)', () => {
+    expect(
+      buildItineraryStagesPayload({ ...baseInput, stages, unavailableReason: 'Le live ne fournit pas le detail.' }),
+    ).toBeNull();
+  });
+
+  it('returns [] for a loaded module with no stages (intentional clear)', () => {
+    expect(buildItineraryStagesPayload(baseInput)).toEqual([]);
+  });
+
+  it('keeps raw Markdown in the stage save payload (D2 phase F)', () => {
+    const RAW = '## Sommet **panoramique** au [refuge](https://ex.re)';
+    const module = { unavailableReason: null,
+      stages: [{ recordId: 'stg-1', name: 'Sommet', description: RAW, position: '1', kind: '', lng: '', lat: '', mediaIds: [] }] } as unknown as Parameters<typeof buildItineraryStagesPayload>[0];
+    const payload = buildItineraryStagesPayload(module);
+    expect(payload![0].description).toBe(RAW);
+  });
+
+  it('preserves stage metadata and translation maps while merging kind into extra', () => {
+    const module = { unavailableReason: null, stages: [{ recordId: 'stg-1', name: 'Sommet', rawName: 'Sommet', nameTranslations: { en: 'Summit' }, description: 'texte', descriptionTranslations: { en: 'text' }, position: '1', kind: 'panorama', extra: { marker: 'x', kind: 'old' }, lng: '', lat: '', mediaIds: [] }] } as unknown as Parameters<typeof buildItineraryStagesPayload>[0];
+    expect(buildItineraryStagesPayload(module)?.[0]).toMatchObject({
+      name_i18n: { en: 'Summit' }, description_i18n: { en: 'text' }, extra: { marker: 'x', kind: 'panorama' },
+    });
+  });
+
+  it('removes the former kind when the stage kind is cleared and preserves other metadata', () => {
+    const module = { ...baseInput, stages: [{ ...stages[0], kind: '', extra: { kind: 'panorama', marker: 'legacy' } }] };
+    expect(buildItineraryStagesPayload(module)?.[0].extra).toEqual({ marker: 'legacy' });
+    expect(module.stages[0].extra).toEqual({ kind: 'panorama', marker: 'legacy' });
+  });
+});
+
+describe('buildItineraryInfoPayload (§111 B5 — object_iti_info)', () => {
+  it('maps the Infos pratiques editor fields to the RPC columns', () => {
+    expect(buildItineraryInfoPayload({
+      ...baseInput,
+      access: 'Depuis le col',
+      ambiance: 'Forêt',
+      recommendedParking: 'Aire belvédère',
+      requiredEquipment: 'Chaussures',
+      infoPlaces: 'Source à mi-parcours',
+      childFriendly: true,
+      infoTranslations: { access_i18n: { en: 'From the pass' } },
+    })).toEqual({
+      access: 'Depuis le col',
+      ambiance: 'Forêt',
+      recommended_parking: 'Aire belvédère',
+      required_equipment: 'Chaussures',
+      info_places: 'Source à mi-parcours',
+      is_child_friendly: true,
+      access_i18n: { en: 'From the pass' },
+    });
+  });
+
+  it('returns null when the module did not load (no clobber of existing info)', () => {
+    expect(buildItineraryInfoPayload({ ...baseInput, access: 'x', unavailableReason: 'Le live ne fournit pas le detail.' })).toBeNull();
+  });
+});
+
+describe('buildItineraryAssociatedObjectsPayload (§111 C3 — object_iti_associated_object)', () => {
+  it('maps linked objects to the RPC shape (role_id is the ref_iti_assoc_role UUID)', () => {
+    expect(buildItineraryAssociatedObjectsPayload({
+      ...baseInput,
+      associatedObjects: [
+        { associatedObjectId: 'RES1', roleId: 'role-uuid-1', note: 'à mi-parcours', targetName: 'Snack', targetType: 'RES' },
+      ],
+    })).toEqual([
+      { associated_object_id: 'RES1', role_id: 'role-uuid-1', note: 'à mi-parcours' },
+    ]);
+  });
+
+  it('returns [] when there are no links (intentional clear) and null when the module did not load', () => {
+    expect(buildItineraryAssociatedObjectsPayload(baseInput)).toEqual([]);
+    expect(buildItineraryAssociatedObjectsPayload({ ...baseInput, unavailableReason: 'x' })).toBeNull();
+  });
+});

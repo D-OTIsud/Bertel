@@ -1,0 +1,293 @@
+import { validateForPublication } from './editor-validation';
+import { allowAll, fullModulesFixture } from './sections/section-fixture.test-utils';
+
+describe('editor publication validation', () => {
+  it('returns a blocker when the object name is missing', () => {
+    const draft = fullModulesFixture();
+    draft.generalInfo.name = '';
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers).toContainEqual({
+      section: '01',
+      message: expect.stringContaining('nom commercial'),
+      tone: 'req',
+    });
+  });
+
+  it('blocks publication when the canonical description is empty in every language', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.description = { baseValue: '', values: {} };
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers).toContainEqual({
+      section: '04',
+      message: expect.stringContaining('descriptif'),
+      tone: 'req',
+    });
+  });
+
+  it('does not block when the description exists in any language', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.description = { baseValue: '', values: { en: 'Some text' } };
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers.some((b) => b.section === '04')).toBe(false);
+  });
+
+  it('blocks publication when the canonical accroche is empty in every language', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.chapo = { baseValue: '', values: {} };
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers).toContainEqual({
+      section: '04',
+      message: expect.stringContaining('accroche'),
+      tone: 'req',
+    });
+  });
+
+  it('does not block when the accroche exists in any language', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.chapo = { baseValue: '', values: { en: 'Short teaser' } };
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers.some((b) => b.section === '04' && /accroche/i.test(b.message))).toBe(false);
+  });
+
+  it('returns a warning when descriptions are thin', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.description = { baseValue: 'Trop court', values: {} };
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '04',
+      message: expect.stringContaining('descriptif'),
+      tone: 'warn',
+    });
+  });
+
+  it('does not warn a roomless HEB to add a room type (rooms are optional, §64)', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items = [];
+    draft.rooms.unavailableReason = null;
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(
+      [...result.blockers, ...result.warnings].some((i) => /type de chambre/i.test(i.message)),
+    ).toBe(false);
+  });
+
+  it('warns when a PMR room exists but no accessibility equipment is selected (§10)', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items[0].accessible = true;
+    draft.characteristics.selectedAmenityCodes = ['wifi']; // no accessibility-family code
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '09',
+      message: expect.stringContaining('PMR'),
+      tone: 'warn',
+    });
+  });
+
+  it('does not warn about PMR rooms when an accessibility equipment is selected', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items[0].accessible = true;
+    draft.characteristics.selectedAmenityCodes = ['wifi', 'pmr_access'];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => w.section === '09' && /PMR/.test(w.message))).toBe(false);
+  });
+
+  it('does not warn about rooms when the rooms module is type-gated', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items = [];
+    draft.rooms.unavailableReason = 'Module non applicable au type RES.';
+
+    const result = validateForPublication(draft, allowAll, 'RES');
+
+    expect(result.warnings.some((w) => w.section === '06')).toBe(false);
+  });
+
+  it('requires an itinerary trace for ITI objects', () => {
+    const draft = fullModulesFixture();
+    draft.itinerary.geometrySummary = '';
+    draft.itinerary.trackGeojson = null;
+
+    const result = validateForPublication(draft, allowAll, 'ITI');
+
+    expect(result.blockers).toContainEqual({
+      section: '06',
+      message: expect.stringContaining('itinéraire'),
+      tone: 'req',
+    });
+  });
+
+  it('does not ask for lodging or weekly opening data on an itinerary', () => {
+    const draft = fullModulesFixture();
+    draft.openings.periods = [];
+    draft.rooms.items = [{ ...draft.rooms.items[0], accessible: true }];
+    draft.characteristics.selectedAmenityCodes = [];
+    const result = validateForPublication(draft, allowAll, 'ITI');
+    expect(result.warnings.some((issue) => /chambre|période d’ouverture|Langues parlées/i.test(issue.message))).toBe(false);
+    draft.itinerary.geometrySummary = '';
+    expect(validateForPublication(draft, allowAll, 'ITI').blockers.some((issue) => issue.section === '06')).toBe(false);
+  });
+
+  it('requires a commune of location (§02)', () => {
+    const draft = fullModulesFixture();
+    draft.location.main.city = '';
+    draft.location.main.codeInsee = '';
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers).toContainEqual({
+      section: '02',
+      message: expect.stringContaining('commune'),
+      tone: 'req',
+    });
+  });
+
+  it('warns when no PUBLIC contact exists (internal-only is not enough)', () => {
+    const draft = fullModulesFixture();
+    draft.contacts.objectItems = [
+      { ...draft.contacts.objectItems[0], isPublic: false },
+    ];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '03',
+      message: expect.stringContaining('public'),
+      tone: 'warn',
+    });
+  });
+
+  it('does not warn about contacts when a public contact exists', () => {
+    const draft = fullModulesFixture();
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => w.section === '03')).toBe(false);
+  });
+
+  it('warns on a malformed e-mail contact before save', () => {
+    const draft = fullModulesFixture();
+    draft.contacts.objectItems = [
+      { ...draft.contacts.objectItems[0], kindCode: 'email', value: 'pas-un-email' },
+    ];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '03',
+      message: expect.stringContaining('format'),
+      tone: 'warn',
+    });
+  });
+
+  it('warns on a malformed phone contact', () => {
+    const draft = fullModulesFixture();
+    draft.contacts.objectItems = [
+      { ...draft.contacts.objectItems[0], kindCode: 'phone', value: 'abc' },
+    ];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => w.section === '03' && /format/.test(w.message))).toBe(true);
+  });
+
+  it('does not flag well-formed contact values', () => {
+    const draft = fullModulesFixture();
+    draft.contacts.objectItems = [
+      { ...draft.contacts.objectItems[0], kindCode: 'phone', value: '+262 692 12 34 56' },
+      { ...draft.contacts.objectItems[0], id: 'c2', kindCode: 'email', value: 'contact@otisud.re' },
+      { ...draft.contacts.objectItems[0], id: 'c3', kindCode: 'website', value: 'https://www.otisud.re' },
+    ];
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => w.section === '03' && /format/.test(w.message))).toBe(false);
+  });
+
+  it('accepts a commune given by its INSEE code alone', () => {
+    const draft = fullModulesFixture();
+    draft.location.main.city = '';
+    draft.location.main.codeInsee = '97411';
+
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.blockers.some((b) => b.section === '02')).toBe(false);
+  });
+
+  it('warns when a spoken language has no complete translation (accroche + descriptif)', () => {
+    const draft = fullModulesFixture();
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'fr', code: 'fr', label: 'Français', levelId: '', levelCode: '', levelLabel: '' },
+      { languageId: 'de', code: 'de', label: 'Allemand', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    // fr is complete in the fixture; de has neither chapo nor description.
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings).toContainEqual({
+      section: '04',
+      message: expect.stringContaining('Allemand'),
+      tone: 'warn',
+    });
+  });
+
+  it('does not warn when every spoken language is fully translated', () => {
+    const draft = fullModulesFixture();
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'fr', code: 'fr', label: 'Français', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => /traduction complète/.test(w.message))).toBe(false);
+  });
+
+  it('does not mistake French base text for a translation matching the account preference', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.localLanguage = 'en';
+    draft.descriptions.object.chapo = { baseValue: 'Accroche française', values: {} };
+    draft.descriptions.object.description = { baseValue: 'Présentation française', values: {} };
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'en', code: 'en', label: 'Anglais', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    const result = validateForPublication(draft, allowAll, 'HEB');
+    expect(result.warnings).toContainEqual({ section: '04', message: expect.stringContaining('Anglais'), tone: 'warn' });
+  });
+
+  it('does not warn about spoken languages when the characteristics module is degraded', () => {
+    const draft = fullModulesFixture();
+    draft.characteristics.unavailableReason = 'Module dégradé';
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'de', code: 'de', label: 'Allemand', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    expect(result.warnings.some((w) => /traduction complète/.test(w.message))).toBe(false);
+  });
+
+  it('maps the reunion creole spoken code rcf to the cre description key', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.object.chapo = { baseValue: '', values: { fr: 'Chapo', cre: 'Chapo kreol' } };
+    draft.descriptions.object.description = { baseValue: '', values: { fr: 'Desc', cre: 'Desc kreol' } };
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'rcf', code: 'rcf', label: 'Créole réunionnais', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    const result = validateForPublication(draft, allowAll, 'HEB');
+
+    // The creole translation exists under key 'cre' → no warning despite the spoken code being 'rcf'.
+    expect(result.warnings.some((w) => /traduction complète/.test(w.message))).toBe(false);
+  });
+});

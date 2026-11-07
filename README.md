@@ -1,0 +1,242 @@
+# Bertel
+
+**B**ase d'**E**nregistrement et de **R**éférentiel **T**ouristique des **É**tablissements et **L**ieux.  
+Espace de développement pour le projet Bertel - API de gestion touristique avec système de données unifié.
+
+## 📁 Structure du projet
+
+```
+Bertel/
+├── docs/                           # Documentation API
+│   ├── index.html                 # Documentation principale
+│   ├── media/                     # Vidéos explicatives
+│   ├── Dockerfile                 # Configuration déploiement
+│   ├── *.json                     # Collections Postman
+│   └── README.md                  # Guide documentation
+├── Base de donnée DLL et API/     # Schéma de base de données unifié
+│   ├── [Fresh install core]
+│   │   ├── schema_unified.sql
+│   │   ├── migration_sustainability_v5.sql
+│   │   ├── migration_room_type_ref.sql
+│   │   ├── migration_tag_link_position.sql
+│   │   ├── api_views_functions.sql
+│   │   ├── rls_policies.sql
+│   │   ├── object_workspace_safe_write_rpcs.sql
+│   │   ├── object_workspace_gap_rpcs.sql
+│   │   ├── ui_whitelabel_branding.sql
+│   │   ├── media_bucket.sql
+│   │   └── seeds_data.sql
+│   ├── [Post-seed / post-import fixups]
+│   │   ├── migration_legal_siret_canonical.sql
+│   │   └── migration_object_location_address1_dedupe.sql
+│   ├── [Maintenance and benchmarks]
+│   │   ├── maintenance.sql
+│   │   └── test_performance.sql
+│   ├── [Upgrade-only patch]
+│   │   └── branding_admin_profile_role_patch.sql
+│   ├── [Local / pilot-only inserts]
+│   │   └── lot1_pilot_inserts.sql
+│   ├── README.md                  # Documentation technique complète
+│   └── erd_diagram.md             # Diagramme ER en Mermaid
+├── bertel-tourism-ui/             # Application Next.js (front-end)
+└── README.md                      # Ce fichier
+```
+
+## 🛠️ Stack Technique
+
+Bertel repose sur une architecture moderne et flexible :
+- **Front-end / UI** : Next.js (React), Tailwind CSS, Zustand.
+- **Base de données / Backend** : **Supabase** (PostgreSQL). 
+  *Note : Le projet utilise actuellement Supabase pour profiter de son écosystème (Auth, API), mais le cœur du schéma est standard. Il est donc tout à fait possible d'adapter et de faire tourner le projet sur **n'importe quelle base de données PostgreSQL classic**.*
+
+## 🗄️ Base de données unifiée
+
+Le projet Bertel utilise un système de données unifié PostgreSQL avec des fonctionnalités avancées :
+
+### Fonctionnalités principales
+
+- **Système de localisation unifié** : Table `object_location` fusionnant adresses et coordonnées géographiques
+- **Système d'ouverture riche** : Gestion flexible des horaires avec périodes, plannings et créneaux
+- **Workflow de modération** : Système d'approbation des modifications avec `pending_change`
+- **Référentiel unifié** : Table `ref_code` partitionnée par domaine pour tous les codes de référence
+- **Gestion complète** : Hôtels, restaurants, activités, itinéraires, événements, etc.
+
+### Documentation technique
+
+- **Schéma complet** : [`Base de donnée DLL et API/schema_unified.sql`](./Base de donnée DLL et API/schema_unified.sql)
+- **Documentation détaillée** : [`Base de donnée DLL et API/README.md`](./Base de donnée DLL et API/README.md)
+- **Diagramme ER** : [`Base de donnée DLL et API/erd_diagram.md`](./Base de donnée DLL et API/erd_diagram.md)
+
+## 🚀 Documentation API
+
+La documentation complète de l'API Bertel v3.0 est disponible dans le dossier [`docs/`](./docs/).
+
+### Accès rapide
+
+- **Documentation web** : [docs/index.html](./docs/index.html)
+- **Collection Postman** : [docs/Bertel_API_v3.postman_collection.json](./docs/Bertel_API_v3.postman_collection.json)
+- **Guide Postman** : [docs/README_Postman.md](./docs/README_Postman.md)
+- **Vidéos explicatives** : [docs/media/](./docs/media/)
+
+### Déploiement
+
+La documentation peut être déployée via Coolify en utilisant les fichiers dans le dossier `docs/` :
+
+```bash
+cd docs/
+docker build -t bertel-api-docs .
+docker run -p 8080:80 bertel-api-docs
+```
+
+## 🔗 Liens utiles
+
+- [Documentation API complète](./docs/)
+- [Collection Postman publique](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/61gyd5k/bertel-api-v3-0)
+
+## 🚀 Démarrage rapide
+
+### Installation de la base de données
+
+```bash
+# 0. Préactiver les extensions PostgreSQL nécessaires (Supabase/Postgres neuf)
+psql -d votre_database -c "CREATE SCHEMA IF NOT EXISTS extensions;"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"postgis\";"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"unaccent\" WITH SCHEMA extensions;"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS \"pg_trgm\";"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
+psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+# Optionnel: psql -d votre_database -c "CREATE EXTENSION IF NOT EXISTS pg_cron;"
+
+# 1. Schéma principal
+psql -d votre_database -f "Base de donnée DLL et API/schema_unified.sql"
+
+# 2. Migrations DDL — AVANT api/seeds (ajoutent des colonnes/tables requises)
+psql -d votre_database -f "Base de donnée DLL et API/migration_sustainability_v5.sql"
+psql -d votre_database -f "Base de donnée DLL et API/migration_room_type_ref.sql"
+psql -d votre_database -f "Base de donnée DLL et API/migration_tag_link_position.sql"
+psql -d votre_database -f "Base de donnée DLL et API/migration_iti_duration_elevation.sql"
+
+# 3. Vues et fonctions API
+psql -d votre_database -f "Base de donnée DLL et API/api_views_functions.sql"
+
+# 4. Politiques RLS (définit api.is_object_owner)
+psql -d votre_database -f "Base de donnée DLL et API/rls_policies.sql"
+
+# 5. RPC d'écriture éditeur (schéma internal + garde d'écriture, puis sections restantes)
+psql -d votre_database -f "Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql"
+psql -d votre_database -f "Base de donnée DLL et API/object_workspace_gap_rpcs.sql"
+
+# 5b. SP-1 autorisation d'écriture canonique (après les RPC workspace, avant le branding)
+psql -d votre_database -f "Base de donnée DLL et API/migration_permission_write_paths.sql"
+# 5c. SP-1b couverture canonique complète (tables éditeur restantes)
+psql -d votre_database -f "Base de donnée DLL et API/migration_permission_write_paths_b.sql"
+# 5d. P0.3 garde-lecture RLS (tables enfant lisibles seulement si objet publié ou can_read_extended)
+psql -d votre_database -f "Base de donnée DLL et API/migration_rls_read_gate_p03.sql"
+# 5e. SP-4 — RPC lecture roster api.rpc_list_org_members (identités membres pour la page admin équipe)
+psql -d votre_database -f "Base de donnée DLL et API/migration_sp4_list_org_members.sql"
+# 5f. RPC machine à états du statut objet api.rpc_set_object_status (+ rpc_publish_object devient un wrapper)
+psql -d votre_database -f "Base de donnée DLL et API/migration_object_status_lifecycle.sql"
+# 5g. Correctif sécurité RLS object_act (lecture/écriture gardées comme les tables enfant sœurs)
+psql -d votre_database -f "Base de donnée DLL et API/migration_object_act_rls.sql"
+# 5h. Ménage: RLS sur 3 tables ref_* + suppression des 5 tables de sauvegarde *_bak_20260519_082607z
+psql -d votre_database -f "Base de donnée DLL et API/migration_rls_ref_and_bak_cleanup.sql"
+# 5i. §41 zones: ref_commune (24 communes de La Réunion) + RLS + FK object_zone.insee_commune
+psql -d votre_database -f "Base de donnée DLL et API/migration_ref_commune.sql"
+# 5j. §46 registre type→facette: ref_facet_registry + ref_facet_applicability + triggers d'applicabilité (+ violations fn)
+psql -d votre_database -f "Base de donnée DLL et API/migration_facet_applicability.sql"
+# 5k. §47 object_fma: triple de politiques d'écriture par commande (canonical_ins/upd/del) — corrige l'upsert FMA RLS-refusé
+psql -d votre_database -f "Base de donnée DLL et API/migration_object_fma_write_policy.sql"
+# 5l. §47 convergence: 93 politiques FOR ALL → triples par commande (canonical/admin_ins/upd/del) sur 57 tables enfant
+psql -d votre_database -f "Base de donnée DLL et API/migration_write_policy_percommand.sql"
+# 5m. §38 lectures: 25 politiques de lecture plates passent au gabarit ensembliste (InitPlan unique au lieu d'un scalaire par ligne)
+psql -d votre_database -f "Base de donnée DLL et API/migration_child_read_gate_setbased.sql"
+# 5n. §193 conformité juridique : permission dédiée + rétroattribution aux éditeurs + RLS object_legal
+psql -d votre_database -f "Base de donnée DLL et API/migration_unblock_team_legal_access.sql"
+
+# 6. Branding UI white-label (fichier complet pour une installation neuve)
+psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"
+
+# 7. Bucket de stockage media (+ RLS d'écriture restrictive)
+psql -d votre_database -f "Base de donnée DLL et API/media_bucket.sql"
+# 7b. Bucket privé des justificatifs juridiques
+psql -d votre_database -f "Base de donnée DLL et API/legal_documents_bucket.sql"
+
+# 8. Peupler avec les données de seed (nécessite migration_sustainability_v5 ci-dessus)
+psql -d votre_database -f "Base de donnée DLL et API/seeds_data.sql"
+
+# 9. Correctifs de données APRÈS seeds (no-op sur une base neuve sans données importées)
+psql -d votre_database -f "Base de donnée DLL et API/migration_legal_siret_canonical.sql"
+psql -d votre_database -f "Base de donnée DLL et API/migration_object_location_address1_dedupe.sql"
+# §46: seed ref_capacity_applicability (facettes capacité Explorer HOT/RES) — nécessite ref_capacity_metric (seeds)
+psql -d votre_database -f "Base de donnée DLL et API/migration_capacity_applicability_seed.sql"
+
+# Ordre complet, refresh des vues matérialisées et rollback : voir docs/SQL_ROLLOUT_RUNBOOK.md
+```
+
+### Test de l'API
+
+```sql
+-- Vérifier que l'API fonctionne
+SELECT api.get_object_resource('HOTRUN0000000001', ARRAY['fr'], 'none', '{}'::jsonb);
+
+-- Tester le système de modération
+SELECT api.submit_pending_change(
+  p_object_id    => 'HOTRUN0000000001',
+  p_target_table => 'object',
+  p_target_pk    => 'HOTRUN0000000001',
+  p_action       => 'update',
+  p_payload      => '{"name":"Nouveau nom test"}'::jsonb
+);
+```
+
+## 📝 Développement
+
+Ce repository contient :
+- **Base de données** : Schéma PostgreSQL unifié avec fonctionnalités avancées
+- **API RPC** : Fonctions PostgreSQL dans le schéma `api` avec authentification et workflow de modération
+- **Documentation** : Interface moderne avec navigation synchronisée
+- **Collection Postman** : Tests et exemples d'utilisation des fonctions RPC
+- **Vidéos** : Explications techniques du système unifié
+
+### Branding public et schema `api`
+
+Le branding white-label de l'UI est gere par une migration SQL dediee :
+
+- Fichier : `Base de donnée DLL et API/ui_whitelabel_branding.sql`
+- Installation neuve : executer ce fichier dans le flux normal apres `rls_policies.sql`
+- Table singleton : `public.app_branding_settings`
+- Fonctions definies dans le schema `api` :
+  - `api.get_public_branding()` : payload public pour la page de login / shell anonyme
+  - `api.get_app_branding()` : payload complet pour l'application authentifiee (theme + styles de marqueurs)
+  - `api.upsert_app_branding(...)` : mise a jour admin des reglages de branding
+
+Pour une base deja installee avec une ancienne version du branding, utilisez uniquement le patch ciblé
+`Base de donnée DLL et API/branding_admin_profile_role_patch.sql`; les nouvelles installations doivent
+passer par le fichier complet `ui_whitelabel_branding.sql`.
+
+Dans le front-end (`bertel-tourism-ui`), ces fonctions sont appelees via **un client Supabase dedie au schema `api`** :
+
+```ts
+const api = getApiClient();
+
+// Lecture du branding public
+api.schema('api').rpc('get_public_branding');
+
+// Lecture du branding authentifie
+api.schema('api').rpc('get_app_branding');
+
+// Mise a jour du branding
+api.schema('api').rpc('upsert_app_branding', { ... });
+```
+
+Le schema par defaut `public` reste utilise pour les tables via `getSupabaseClient()` et `client.from('table').select('*')`, tandis que les appels RPC passent par `getApiClient()` puis `client.schema('api').rpc(...)` pour garantir que le bon schema est effectivement cible.
+
+## 🏢 Organisation
+
+Projet développé par **OTI du Sud** - Office de Tourisme Intercommunal du Sud.
+
+## 📄 Licence et Open Source
+
+Ce projet est publié en **Open Source** sous la licence **MIT**. 
+Vous êtes libre d'utiliser, de modifier et de distribuer ce code. Voir le fichier [LICENSE](./LICENSE) pour plus de détails.

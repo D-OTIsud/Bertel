@@ -1,0 +1,225 @@
+import { create } from 'zustand';
+import { useProviderScopeStore } from './provider-scope-store';
+import { env } from '../lib/env';
+import type { UserRole } from '../types/domain';
+import { sessionAvatarInitials as initialsFromName } from '../utils/avatar-initials';
+
+type SessionStatus = 'booting' | 'ready' | 'guest' | 'error';
+type AuthAuthority = { userId: string | null; epoch: number; hydrated: boolean };
+
+function hydratedAuthority(previous: AuthAuthority | null, userId: string | null, hydrated: boolean): AuthAuthority {
+  if (previous?.userId === userId && previous.hydrated === hydrated) return previous;
+  return { userId, epoch: (previous?.epoch ?? 0) + (previous?.userId !== userId ? 1 : 0), hydrated };
+}
+
+// Messages de l'état invité. Ils s'affichent à TOUT LE MONDE — dont un partenaire invité
+// par e-mail qui n'a jamais vu de bouton Google — d'où l'absence de toute mention d'un
+// fournisseur d'identité. Exportés parce que /login décide d'en faire un toast : la page
+// les comparait par `includes('deconnecte')`, un fragment sans accent qu'un simple
+// renommage aurait rendu muet. Une constante partagée, pas un mot deviné.
+export const GUEST_SIGNED_OUT_MESSAGE = 'Vous êtes déconnecté.';
+export const GUEST_SIGN_IN_MESSAGE = 'Connectez-vous pour accéder à votre espace.';
+
+interface SessionState {
+  status: SessionStatus;
+  role: UserRole | null;
+  userId: string | null;
+  /** Auth's synchronous subject is separate from the profile still displayed
+   * while bootstrap awaits its reads. null means Auth has not been observed. */
+  authAuthority: AuthAuthority | null;
+  observeAuthUser: (userId: string | null) => void;
+  email: string;
+  userName: string;
+  /** Initiales dérivées du nom (fallback quand aucune photo de profil). */
+  avatar: string;
+  /** URL publique de la photo de profil (app_user_profile.avatar_url), null si aucune. */
+  avatarUrl: string | null;
+  langPrefs: string[];
+  demoMode: boolean;
+  errorMessage: string | null;
+  /**
+   * Capability flag: TRUE if the current user can edit at least one object
+   * within their active organisation (super_admin, owner, ORG admin role, or
+   * holder of any of the create/edit/publish permissions).
+   * Source of truth is the SQL helper `api.current_user_can_edit_objects()`,
+   * resolved once at session bootstrap. Used (today) to broaden the Explorer
+   * to non-published statuses for users that can act on them. RLS still gates
+   * which non-published rows are actually returned.
+   */
+  canEditObjects: boolean;
+  /**
+   * Capability flag: TRUE if the current user can CREATE objects — i.e. has an
+   * active ORG membership AND the `create_object` permission. Source of truth is
+   * the SQL helper `api.user_can_create_object()`, resolved once at session
+   * bootstrap. Strictly narrower than `canEditObjects` (which is true for anyone
+   * who can edit *something*). Gates the "Créer une fiche" CTA so only users who
+   * can actually create a fiche see it; the RPC re-checks server-side.
+   */
+  canCreateObjects: boolean;
+  /**
+   * The current user's active organisation id and display name, resolved at
+   * session bootstrap via `api.current_user_active_org()`. Used for UI labels
+   * (e.g. scope switch "Mon organisation · <orgName>"). Degrades to null when
+   * the user has no active org or the helper is unavailable.
+   */
+  orgId: string | null;
+  orgName: string | null;
+  /**
+   * The current user's admin rank (integer ≥ 10 means they hold a team-admin
+   * role), resolved at session bootstrap via `api.current_user_admin_rank()`.
+   * NULL when the user has no admin role or the helper is unavailable.
+   */
+  adminRank: number | null;
+  /**
+   * The current user's admin role code (e.g. 'ADMIN_ORG'), resolved at session
+   * bootstrap via `api.current_user_admin_role_code()`. NULL when the user has
+   * no admin role or the helper is unavailable.
+   */
+  adminRoleCode: string | null;
+  /**
+   * VRAI quand le compte appartient a une organisation « bac a sable »
+   * (org_config.is_test_org). Source de verite : `api.current_user_test_realm()`,
+   * la MEME feuille que la garde SQL — on ne re-transcrit pas la regle ici, sinon
+   * l'interface et le serveur divergeraient au premier changement (cf. §214, §17c).
+   *
+   * Purement INDICATIF : c'est le serveur qui cloisonne. Ce drapeau ne sert qu'a
+   * dire au testeur ou il se trouve — sans lui, un corpus volontairement realiste
+   * est indiscernable de la production, ce qui est exactement ce qu'on a fabrique.
+   */
+  isTestRealm: boolean;
+  setDemoRole: (role: UserRole) => void;
+  setLangPrefs: (langPrefs: string[]) => void;
+  /**
+   * Applique une mise à jour du profil courant (nom / photo) depuis « Mon compte »
+   * sans re-bootstrapper la session. Recalcule les initiales quand le nom change.
+   */
+  applyProfile: (patch: { userName?: string; avatarUrl?: string | null }) => void;
+  hydrateFromAuth: (payload: {
+    role: UserRole;
+    userId: string;
+    email: string;
+    userName: string;
+    avatar: string;
+    avatarUrl: string | null;
+    langPrefs: string[];
+    canEditObjects: boolean;
+    canCreateObjects: boolean;
+    orgId: string | null;
+    orgName: string | null;
+    adminRank: number | null;
+    adminRoleCode: string | null;
+    isTestRealm: boolean;
+  }) => void;
+  setBooting: () => void;
+  setGuest: (message?: string | null) => void;
+  setSessionError: (message: string) => void;
+}
+
+export const useSessionStore = create<SessionState>((set) => ({
+  status: env.demoMode ? 'ready' : 'booting',
+  role: env.demoMode ? 'tourism_agent' : null,
+  userId: env.demoMode ? 'usr-local-marie' : null,
+  authAuthority: null,
+  observeAuthUser: (userId) => set((state) => state.authAuthority?.userId === userId
+    ? state : { authAuthority: hydratedAuthority(state.authAuthority, userId, false) }),
+  email: env.demoMode ? 'marie@example.com' : '',
+  userName: env.demoMode ? 'Marie D.' : '',
+  avatar: env.demoMode ? 'MA' : '--',
+  avatarUrl: null,
+  langPrefs: ['fr', 'en'],
+  demoMode: env.demoMode,
+  errorMessage: null,
+  // Demo mode: show drafts so the showcase reflects the editor experience.
+  // Real auth: must wait for the SQL capability check to resolve before
+  // broadening the Explorer.
+  canEditObjects: env.demoMode,
+  canCreateObjects: env.demoMode,
+  orgId: env.demoMode ? 'ORG-DEMO' : null,
+  orgName: env.demoMode ? 'OTI du Sud' : null,
+  adminRank: null,
+  adminRoleCode: null,
+  isTestRealm: false,
+  setDemoRole: (role) => {
+    const state = useSessionStore.getState();
+    if (!state.demoMode) {
+      return;
+    }
+    set({
+      role,
+      // In demo mode the capability flags track the role: tourism_agent
+      // is treated as a read-only persona, super_admin/owner can edit + create.
+      canEditObjects: role !== 'tourism_agent',
+      canCreateObjects: role !== 'tourism_agent',
+    });
+  },
+  setLangPrefs: (langPrefs) => set({ langPrefs }),
+  applyProfile: ({ userName, avatarUrl }) =>
+    set((state) => ({
+      userName: userName ?? state.userName,
+      avatar: userName ? initialsFromName(userName) : state.avatar,
+      avatarUrl: avatarUrl === undefined ? state.avatarUrl : avatarUrl,
+    })),
+  hydrateFromAuth: ({ role, userId, email, userName, avatar, avatarUrl, langPrefs, canEditObjects, canCreateObjects, orgId, orgName, adminRank, adminRoleCode, isTestRealm }) =>
+    set((state) => ({
+      status: 'ready',
+      role,
+      userId,
+      authAuthority: hydratedAuthority(state.authAuthority, userId, true),
+      email,
+      userName,
+      avatar,
+      avatarUrl,
+      langPrefs,
+      canEditObjects,
+      canCreateObjects,
+      orgId,
+      orgName,
+      adminRank,
+      adminRoleCode,
+      isTestRealm,
+      errorMessage: null,
+    })),
+  setBooting: () => set((state) => ({ status: state.status === 'ready' ? 'ready' : 'booting', errorMessage: null })),
+  setGuest: (message = null) => {
+    useProviderScopeStore.getState().clear();
+    set((state) => ({
+      status: 'guest',
+      authAuthority: hydratedAuthority(state.authAuthority, null, false),
+      errorMessage: message,
+      role: null,
+      userId: null,
+      email: '',
+      userName: '',
+      avatar: '--',
+      avatarUrl: null,
+      canEditObjects: false,
+      canCreateObjects: false,
+      orgId: null,
+      orgName: null,
+      adminRank: null,
+      adminRoleCode: null,
+      isTestRealm: false,
+    }));
+  },
+  setSessionError: (message) => {
+    useProviderScopeStore.getState().clear();
+    set((state) => ({
+      status: 'error',
+      authAuthority: hydratedAuthority(state.authAuthority, null, false),
+      errorMessage: message,
+      role: null,
+      userId: null,
+      email: '',
+      userName: '',
+      avatar: '--',
+      avatarUrl: null,
+      canEditObjects: false,
+      canCreateObjects: false,
+      orgId: null,
+      orgName: null,
+      adminRank: null,
+      adminRoleCode: null,
+      isTestRealm: false,
+    }));
+  },
+}));

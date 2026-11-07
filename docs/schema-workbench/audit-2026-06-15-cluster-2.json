@@ -1,0 +1,145 @@
+{
+  "cluster": 2,
+  "audit_date": "2026-06-15",
+  "scope": [
+    "ref_code:accommodation_type",
+    "ref_code:room_type",
+    "ref_code:view_type",
+    "ref_code:meeting_equipment",
+    "ref_code:season_type",
+    "ref_capacity_metric",
+    "ref_capacity_applicability"
+  ],
+  "matrix": [
+    {
+      "unit": "accommodation_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "HEALTHY — all counts match; en/es i18n complete; 0 live usage (FORWARD-LOOKING: HOT/HLO/etc. taxonomy not yet assigned for imported objects)"
+    },
+    {
+      "unit": "room_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "HEALTHY — all counts match; en/es i18n complete; 0 live usage (FORWARD-LOOKING: ref_code:room_type drives object_room_type.room_type_id via object_taxonomy; 0 object_room_type rows live)"
+    },
+    {
+      "unit": "view_type",
+      "live_count": 13,
+      "source_count": 13,
+      "doc_count": 13,
+      "db_usage_distinct": 0,
+      "verdict": "PARTIAL — counts match; ALL 13 en/es i18n MISSING (source never wrote a translation block for this domain); 0 live usage (FORWARD-LOOKING); i18n gap is D2/medium"
+    },
+    {
+      "unit": "meeting_equipment",
+      "live_count": 11,
+      "source_count": 11,
+      "doc_count": 11,
+      "db_usage_distinct": 0,
+      "verdict": "HEALTHY — all counts match; en/es i18n complete; 0 live usage (FORWARD-LOOKING: object_meeting_room 0 rows live); minor D3: all position values NULL (source inserts without position); ordering is undefined"
+    },
+    {
+      "unit": "season_type",
+      "live_count": 10,
+      "source_count": 10,
+      "doc_count": 10,
+      "db_usage_distinct": 0,
+      "verdict": "HEALTHY — all counts match; en/es i18n complete; 0 live usage via promotion.season_id (promotion table empty); vocabulary is also used as object_price.season_code (string FK, not verified here)"
+    },
+    {
+      "unit": "ref_capacity_metric",
+      "live_count": 12,
+      "source_count": 12,
+      "doc_count": 12,
+      "db_usage_distinct": 2,
+      "verdict": "HEALTHY — all counts match; 2 metrics active (max_capacity: 566 rows, seats: 92 rows); remaining 10 metrics at 0 rows (FORWARD-LOOKING: depend on HPA/CAMP/HOT room-level data not yet imported); i18n via EAV i18n_translation table (not name_i18n jsonb — correct schema design, not a gap)"
+    },
+    {
+      "unit": "ref_capacity_applicability",
+      "live_count": 60,
+      "source_count": 60,
+      "doc_count": 60,
+      "db_usage_distinct": null,
+      "verdict": "HEALTHY — 60 rows match source (19 max_capacity cross-join for all enum types + 41 explicit metric-type pairs); all 19 object_type enum values covered by max_capacity; minor D3: ACT type has only max_capacity (no seats/standing_places — design choice, acceptable for guided-tour model)"
+    }
+  ],
+  "findings": [
+    {
+      "dimension": "D2",
+      "severity": "medium",
+      "unit": "view_type",
+      "code": "ALL",
+      "title": "view_type: en/es i18n completely absent for all 13 codes",
+      "evidence": "Live DB: all 13 codes have en=false, es=false in ref_code.name_i18n. Source: seeds_data.sql lines 889-904 insert FR labels only; no UPDATE ref_code ... SET name_i18n block exists for domain='view_type' anywhere in seeds_data.sql or any migration file. Other domains (accommodation_type lines 1482-1491, room_type lines 1642-1651, meeting_equipment lines 1351-1361, season_type lines 1522-1531) all received en/es translations via the bulk UPDATE block starting around line 1240. The view_type domain was omitted from that block.",
+      "recommendation": "Add an en/es translation UPDATE block for view_type to seeds_data.sql (same pattern as accommodation_type/room_type) and apply to live DB via an idempotent MCP execute_sql. The 13 codes are straightforward geographic terms (sea, ocean, mountain, garden, pool, city, courtyard, street, park, lake, river, forest, none). This is the only en/es gap in Cluster 2."
+    },
+    {
+      "dimension": "D3",
+      "severity": "low",
+      "unit": "meeting_equipment",
+      "code": "ALL",
+      "title": "meeting_equipment: all 11 codes have position=NULL (undefined sort order)",
+      "evidence": "Live DB: position=NULL for all 11 meeting_equipment codes. Source: seeds_data.sql lines 288-298 use INSERT INTO ref_code (domain, code, name, description) VALUES — position column omitted. All other Cluster 2 domains (accommodation_type, room_type, view_type, season_type) specify position. The FE object-workspace.ts loads this domain with .order('position') which will produce undefined ordering when position is NULL.",
+      "recommendation": "Add position values (1-11) to the meeting_equipment seed block. A migration UPDATE ref_code SET position = CASE code WHEN 'paperboard' THEN 1 ... END WHERE domain='meeting_equipment' would make display order deterministic. The natural ordering could follow the existing source order: paperboard(1), ecran(2), videoprojecteur(3), sonorisation(4), micro(5), wifi(6), visioconference(7), scene(8), lumieres(9), pupitre(10), traduction(11)."
+    },
+    {
+      "dimension": "D1",
+      "severity": "low",
+      "unit": "accommodation_type",
+      "code": "ALL",
+      "title": "accommodation_type: 0 live usage despite 534 HOT+HLO+HPA+RVA+CAMP+HPA objects having capacity data",
+      "evidence": "SELECT COUNT(*) FROM object_taxonomy WHERE domain='accommodation_type' returns 0. However the object_taxonomy table has a composite FK (ref_code_id, domain) -> ref_code_accommodation_type partition. HOT objects (9 with capacity), HLO (484), CAMP (3) have max_capacity rows but no accommodation_type taxonomy classification. This is a DATA gap, not a vocabulary gap: the import loaded capacity but not the sub-type taxonomy.",
+      "recommendation": "FORWARD-LOOKING: flag for the B1/import pass. When HOT/HLO objects are authored or imported, their accommodation_type taxonomy should be populated. The vocabulary is correct and complete; this is a data completeness issue."
+    },
+    {
+      "dimension": "D1",
+      "severity": "low",
+      "unit": "room_type",
+      "code": "ALL",
+      "title": "room_type: 0 live usage; 0 object_room_type rows means no room-level ref needed yet",
+      "evidence": "SELECT COUNT(*) FROM object_room_type returns 0 (verified via live capacity audit: HOT/HLO imported with max_capacity only). The ref_code room_type domain links to object_room_type.room_type_id but no room rows exist. Also used in object_taxonomy via ref_code_room_type partition: 0 rows there too.",
+      "recommendation": "FORWARD-LOOKING: vocabulary is correct. Room-type data will be populated when HOT/HLO objects are enriched with room-level details (B1 object creation pass)."
+    },
+    {
+      "dimension": "D1",
+      "severity": "low",
+      "unit": "season_type",
+      "code": "ALL",
+      "title": "season_type: 0 live usage via promotion.season_id; domain also powers object_price.season_code (string FK) which is unverified",
+      "evidence": "SELECT COUNT(DISTINCT season_id) FROM promotion WHERE season_id IS NOT NULL returns 0 (promotion table empty). season_type is also referenced as object_price.season_code (text column, not a FK to ref_code.id — it stores the code string directly per object-workspace-parser.ts). The object_price table usage was not counted here because the linkage is by code string, not by id.",
+      "recommendation": "FORWARD-LOOKING for promotion usage. For object_price.season_code: verify that the price parser stores and reads back the code string consistently. This is an auditor note for the §13 row-detail UX pass (season_code orphaned editor-wide per decision log §61 deferred items)."
+    },
+    {
+      "dimension": "D3",
+      "severity": "low",
+      "unit": "ref_capacity_applicability",
+      "code": "ACT",
+      "title": "ref_capacity_applicability: ACT type only has max_capacity — no seats or standing_places",
+      "evidence": "FROM ref_capacity_applicability WHERE object_type='ACT': only 1 row (max_capacity). ACT objects (activités commerciales encadrées: guided hikes, dives, paragliding) commonly limit groups by seat count. The migration_capacity_applicability_seed.sql comment explains seats->ASC, seats->RES, seats->PCU, seats->FMA, seats->LOI, seats->SPU, seats->PRD but ACT is absent from the seats rows. The max_capacity cross-join provides max group size but not differentiated seat counts.",
+      "recommendation": "Design decision: if ACT objects need to declare min/max seats (e.g. minimum group size), add (seats, ACT) to ref_capacity_applicability. Currently acceptable because guided-tour capacity is naturally expressed as max_capacity (pax). Defer to first ACT object authoring; update migration_capacity_applicability_seed.sql."
+    },
+    {
+      "dimension": "D2",
+      "severity": "info",
+      "unit": "ref_capacity_metric",
+      "code": "ALL",
+      "title": "ref_capacity_metric: i18n in EAV table (i18n_translation), not name_i18n jsonb — this is by design",
+      "evidence": "ref_capacity_metric schema: columns id, code, name, unit, icon_url, position, description, created_at, updated_at — no name_i18n or description_i18n jsonb columns. Translation is stored in the EAV i18n_translation table (target_table='ref_capacity_metric'). Seeds_data.sql lines 1829-1853 and 2216-2237 write en/es translations for all 12 metrics. This diverges from ref_code which has name_i18n jsonb.",
+      "recommendation": "No action required for correctness. Informational: this architectural inconsistency (ref_code uses jsonb, ref_capacity_metric uses EAV) may complicate API aggregation if a future endpoint tries to resolve all vocabulary translations uniformly. The §6 data dictionary and FE parser handle it correctly today."
+    },
+    {
+      "dimension": "D2",
+      "severity": "info",
+      "unit": "ALL",
+      "code": "zh/el",
+      "title": "zh and el i18n absent across all Cluster 2 domains (global gap, reported once)",
+      "evidence": "No ref_code rows in any Cluster 2 domain have name_i18n keys 'zh' or 'el'. This is the confirmed global gap per audit instructions — zh and el are 100% absent across ALL ref_code. Not a Cluster 2-specific issue.",
+      "recommendation": "Global i18n pass when zh/el markets are targeted. Out of scope for Cluster 2 patch."
+    }
+  ]
+}

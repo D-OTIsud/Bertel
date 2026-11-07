@@ -1,0 +1,394 @@
+import type {
+  ExplorerBucketKey,
+  ExplorerFilters,
+  ExplorerStatusFilter,
+  MissingEssentialBucket,
+  MissingEssentialCode,
+} from '@/types/domain';
+import { DEFAULT_EXPLORER_FILTERS, EXPLORER_BUCKET_OPTIONS, EXPLORER_STATUS_OPTIONS, normalizeExplorerFilters } from '@/utils/facets';
+
+const EXPLORER_BUCKETS: ExplorerBucketKey[] = EXPLORER_BUCKET_OPTIONS.map((bucket) => bucket.code);
+// §205 — dérivée du vocabulaire unique ; un statut hors liste (ex. hidden) est
+// écarté au parse. Pour un non-éditeur, resolveExplorerStatuses neutralise de
+// toute façon la sélection portée par une URL partagée.
+const EXPLORER_STATUS_VALUES: readonly ExplorerStatusFilter[] = EXPLORER_STATUS_OPTIONS.map((option) => option.code);
+
+function parseCapacityFilters(value: string | null): Array<{ code: string; min?: number; max?: number }> | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const filters = value
+    .split(';')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .flatMap((item) => {
+      const [code = '', minRaw = '', maxRaw = ''] = item.split(':');
+      if (!code) {
+        return [];
+      }
+      const min = parseOptionalNumber(minRaw);
+      const max = parseOptionalNumber(maxRaw);
+      return [{ code, min, max }];
+    });
+
+  return filters.length > 0 ? filters : undefined;
+}
+
+function serializeCapacityFilters(filters: Array<{ code: string; min?: number; max?: number }>): string | null {
+  const encoded = filters
+    .filter((filter) => filter.code && (filter.min != null || filter.max != null))
+    .map((filter) => `${filter.code}:${filter.min ?? ''}:${filter.max ?? ''}`)
+    .join(';');
+
+  return encoded || null;
+}
+
+function normalizeHotTaxonomyDomain(domain: string): string {
+  const normalized = domain.trim().toLowerCase();
+  return normalized === 'type_hot' ? 'taxonomy_hot' : domain;
+}
+
+export function parseSearchParams(searchParams: URLSearchParams): Partial<ExplorerFilters> {
+  const bucketsParam = searchParams.get('buckets');
+  const selectedBuckets =
+    bucketsParam !== null
+      ? bucketsParam.split(',').filter((bucket): bucket is ExplorerBucketKey => EXPLORER_BUCKETS.includes(bucket as ExplorerBucketKey))
+      : undefined;
+
+  const rankedLabelSchemeCode = searchParams.get('rankedLabel')?.trim() || undefined;
+  const rankedLabelValueCodes = searchParams.get('rankedLabelValues')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
+  const accessibilityDisabilityTypesAny =
+    searchParams.get('accessibilityTypes')?.split(',').map((item) => item.trim()).filter(Boolean) as
+      | ExplorerFilters['common']['accessibilityDisabilityTypesAny']
+      | undefined;
+  const accessibilityAmenityCodesAny = searchParams.get('accessibilityAmenities')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
+  const sustainabilityCategoryCodesAny = searchParams.get('sustainabilityCategories')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
+  const sustainabilityActionCodesAny = searchParams.get('sustainabilityActions')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
+  const statuses =
+    searchParams
+      .get('status')
+      ?.split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter((item): item is ExplorerStatusFilter => (EXPLORER_STATUS_VALUES as readonly string[]).includes(item)) ?? undefined;
+  // §204 — remplissage. Les valeurs sont VALIDÉES contre les vocabulaires : une
+  // URL trafiquée ne doit pas injecter un code inconnu que le RPC ignorerait en
+  // silence, laissant une puce active qui ne filtre rien.
+  const missingEssentialsBuckets =
+    searchParams
+      .get('remplissage')
+      ?.split(',')
+      .map((item) => item.trim())
+      .filter((item): item is MissingEssentialBucket =>
+        (['complete', 'few', 'many'] as readonly string[]).includes(item),
+      ) ?? undefined;
+  const missingEssentialsAny =
+    searchParams
+      .get('manque')
+      ?.split(',')
+      .map((item) => item.trim())
+      .filter((item): item is MissingEssentialCode =>
+        (
+          ['name', 'subcategory', 'location', 'contact', 'description', 'photos', 'type_block', 'tags'] as readonly string[]
+        ).includes(item),
+      ) ?? undefined;
+  const hotSubtypes = searchParams.get('hotSubtypes')?.split(',').filter(Boolean) ?? undefined;
+  const visSubtypes = searchParams.get('visSubtypes')?.split(',').filter(Boolean) ?? undefined;
+  const srvSubtypes = searchParams.get('srvSubtypes')?.split(',').filter(Boolean) ?? undefined;
+  // §155 — `taxonomy` (générique) + les params legacy hotTaxonomy/hotClassifications
+  // des anciens signets, tous fusionnés dans common.taxonomyAny.
+  const taxonomyAny =
+    (searchParams.get('taxonomy') ?? searchParams.get('hotTaxonomy') ?? searchParams.get('hotClassifications'))
+      ?.split(',')
+      .filter(Boolean)
+      .flatMap((value) => {
+        const [domain = '', code = ''] = value.split(':');
+        if (!domain || !code) {
+          return [];
+        }
+        return [{ domain: normalizeHotTaxonomyDomain(domain), code }];
+      }) ?? undefined;
+
+  const itiPractices = searchParams.get('itiPractices')?.split(',').filter(Boolean) ?? undefined;
+  const commonPatch = {
+    ...(['true', 'false'].includes(searchParams.get('providerOnly') ?? '') && {
+      providerOnly: searchParams.get('providerOnly') === 'true',
+    }),
+    ...(searchParams.get('search') != null && { search: searchParams.get('search') ?? '' }),
+    // Support both 'cities' (multi, new) and legacy 'city' (single, old bookmarks).
+    ...(searchParams.get('cities') != null && {
+      cities: (searchParams.get('cities') ?? '').split(',').filter(Boolean),
+    }),
+    ...(searchParams.get('city') != null && !searchParams.has('cities') && {
+      cities: [searchParams.get('city') ?? ''].filter(Boolean),
+    }),
+    ...(searchParams.get('lieuDit') != null && { lieuDit: searchParams.get('lieuDit') ?? '' }),
+    ...((searchParams.get('pmr') != null || accessibilityDisabilityTypesAny !== undefined || accessibilityAmenityCodesAny !== undefined) && {
+      pmr:
+        searchParams.get('pmr') === 'true' ||
+        Boolean(accessibilityDisabilityTypesAny?.length) ||
+        Boolean(accessibilityAmenityCodesAny?.length),
+    }),
+    ...(accessibilityDisabilityTypesAny !== undefined && { accessibilityDisabilityTypesAny }),
+    ...(accessibilityAmenityCodesAny !== undefined && { accessibilityAmenityCodesAny }),
+    ...((searchParams.get('sustainable') != null || sustainabilityCategoryCodesAny !== undefined || sustainabilityActionCodesAny !== undefined) && {
+      sustainable:
+        searchParams.get('sustainable') === 'true' ||
+        Boolean(sustainabilityCategoryCodesAny?.length) ||
+        Boolean(sustainabilityActionCodesAny?.length),
+    }),
+    ...(sustainabilityCategoryCodesAny !== undefined && { sustainabilityCategoryCodesAny }),
+    ...(sustainabilityActionCodesAny !== undefined && { sustainabilityActionCodesAny }),
+    ...(searchParams.get('pets') != null && { petsAccepted: searchParams.get('pets') === 'true' }),
+    ...(searchParams.get('openNow') != null && { openNow: searchParams.get('openNow') === 'true' }),
+    ...(searchParams.get('openAt') != null && {
+      // §157 — garde de format (datetime-local) : un param trafiqué ne part jamais au RPC.
+      openAt: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(searchParams.get('openAt') ?? '') ? searchParams.get('openAt') : null,
+    }),
+    ...(searchParams.get('environment') != null && {
+      environmentTagsAny: (searchParams.get('environment') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
+    }),
+    ...(searchParams.get('accommodationUnitTypes') != null && {
+      accommodationUnitTypesAny: (searchParams.get('accommodationUnitTypes') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
+    }),
+    ...(searchParams.get('accommodationPositionings') != null && {
+      accommodationPositioningsAny: (searchParams.get('accommodationPositionings') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
+    }),
+    ...(taxonomyAny !== undefined && { taxonomyAny }),
+    ...(searchParams.get('includeEquivalentPredecessors') != null && {
+      includeEquivalentPredecessors: searchParams.get('includeEquivalentPredecessors') === 'true',
+    }),
+    ...(searchParams.get('amenityFamilies') != null && {
+      amenityFamiliesAny: (searchParams.get('amenityFamilies') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
+    }),
+    ...(rankedLabelSchemeCode !== undefined && { rankedLabelSchemeCode }),
+    ...(searchParams.get('rankedLabelExact') != null && {
+      rankedLabelIncludeEquivalents: searchParams.get('rankedLabelExact') !== 'true',
+    }),
+    ...(rankedLabelValueCodes !== undefined && { rankedLabelValueCodes }),
+    ...(statuses !== undefined && { statuses }),
+    ...(missingEssentialsBuckets !== undefined && { missingEssentialsBuckets }),
+    ...(missingEssentialsAny !== undefined && { missingEssentialsAny }),
+  };
+
+  const itiPatch = {
+    ...(searchParams.get('itiIsLoop') != null && {
+      isLoop: searchParams.get('itiIsLoop') === 'true' ? true : searchParams.get('itiIsLoop') === 'false' ? false : null,
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDifficultyMin')) !== undefined && {
+      difficultyMin: parseOptionalNumber(searchParams.get('itiDifficultyMin')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDifficultyMax')) !== undefined && {
+      difficultyMax: parseOptionalNumber(searchParams.get('itiDifficultyMax')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDistanceMinKm')) !== undefined && {
+      distanceMinKm: parseOptionalNumber(searchParams.get('itiDistanceMinKm')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDistanceMaxKm')) !== undefined && {
+      distanceMaxKm: parseOptionalNumber(searchParams.get('itiDistanceMaxKm')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDurationMinH')) !== undefined && {
+      durationMinH: parseOptionalNumber(searchParams.get('itiDurationMinH')),
+    }),
+    ...(parseOptionalNumber(searchParams.get('itiDurationMaxH')) !== undefined && {
+      durationMaxH: parseOptionalNumber(searchParams.get('itiDurationMaxH')),
+    }),
+    ...(itiPractices !== undefined && { practicesAny: itiPractices }),
+  };
+
+  return {
+    ...(selectedBuckets !== undefined && selectedBuckets.length > 0 && { selectedBuckets }),
+    ...(Object.keys(commonPatch).length > 0 && {
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        ...commonPatch,
+        // undefined signifie « utiliser la préférence », même si l'URL porte
+        // d'autres filtres. Un false explicite doit en revanche être respecté.
+        providerOnly: 'providerOnly' in commonPatch ? commonPatch.providerOnly : undefined,
+      },
+    }),
+    ...(hotSubtypes !== undefined || parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined
+      ? {
+          hot: {
+            ...DEFAULT_EXPLORER_FILTERS.hot,
+            ...(hotSubtypes !== undefined && { subtypes: hotSubtypes as ExplorerFilters['hot']['subtypes'] }),
+            ...(parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined && {
+              capacityFilters: parseCapacityFilters(searchParams.get('hotCapacity')),
+            }),
+          },
+        }
+      : {}),
+    ...(parseCapacityFilters(searchParams.get('resCapacity')) !== undefined
+      ? {
+          res: {
+            ...DEFAULT_EXPLORER_FILTERS.res,
+            capacityFilters: parseCapacityFilters(searchParams.get('resCapacity')) ?? DEFAULT_EXPLORER_FILTERS.res.capacityFilters,
+          },
+        }
+      : {}),
+    ...(Object.keys(itiPatch).length > 0 && {
+      iti: {
+        ...DEFAULT_EXPLORER_FILTERS.iti,
+        ...itiPatch,
+      },
+    }),
+    ...((searchParams.get('evtFrom') != null || searchParams.get('evtTo') != null) && {
+      evt: {
+        eventFrom: /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('evtFrom') ?? '') ? searchParams.get('evtFrom') : null,
+        eventTo: /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('evtTo') ?? '') ? searchParams.get('evtTo') : null,
+      },
+    }),
+    ...(visSubtypes !== undefined && { vis: { subtypes: visSubtypes as ExplorerFilters['vis']['subtypes'] } }),
+    ...(srvSubtypes !== undefined && { srv: { subtypes: srvSubtypes as ExplorerFilters['srv']['subtypes'] } }),
+  };
+}
+
+function parseOptionalNumber(s: string | null): number | undefined {
+  if (s === null || s === '') return undefined;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
+  const normalizedFilters = normalizeExplorerFilters(filters);
+  const p = new URLSearchParams();
+  // Un lien partagé reste fidèle même si son destinataire a la préférence
+  // inverse. Ouvrir un lien ne change jamais la préférence personnelle.
+  p.set('providerOnly', String(normalizedFilters.common.providerOnly === true));
+  if (normalizedFilters.selectedBuckets.length > 0) {
+    p.set('buckets', normalizedFilters.selectedBuckets.join(','));
+  }
+  if (normalizedFilters.common.rankedLabelSchemeCode) {
+    p.set('rankedLabel', normalizedFilters.common.rankedLabelSchemeCode);
+  }
+  if (normalizedFilters.common.rankedLabelSchemeCode && !normalizedFilters.common.rankedLabelIncludeEquivalents) {
+    p.set('rankedLabelExact', 'true');
+  }
+  if (normalizedFilters.common.taxonomyAny.length > 0 && normalizedFilters.common.includeEquivalentPredecessors === true) {
+    p.set('includeEquivalentPredecessors', 'true');
+  }
+  if (normalizedFilters.common.rankedLabelSchemeCode && normalizedFilters.common.rankedLabelValueCodes.length > 0) {
+    p.set('rankedLabelValues', normalizedFilters.common.rankedLabelValueCodes.join(','));
+  }
+  if (normalizedFilters.common.search) {
+    p.set('search', normalizedFilters.common.search);
+  }
+  if (normalizedFilters.common.cities.length > 0) {
+    p.set('cities', normalizedFilters.common.cities.join(','));
+  }
+  if (normalizedFilters.common.lieuDit) {
+    p.set('lieuDit', normalizedFilters.common.lieuDit);
+  }
+  if (normalizedFilters.common.pmr) {
+    p.set('pmr', 'true');
+  }
+  if (normalizedFilters.common.accessibilityDisabilityTypesAny.length > 0) {
+    p.set('accessibilityTypes', normalizedFilters.common.accessibilityDisabilityTypesAny.join(','));
+  }
+  if (normalizedFilters.common.accessibilityAmenityCodesAny.length > 0) {
+    p.set('accessibilityAmenities', normalizedFilters.common.accessibilityAmenityCodesAny.join(','));
+  }
+  if (normalizedFilters.common.sustainable) {
+    p.set('sustainable', 'true');
+  }
+  if (normalizedFilters.common.sustainabilityCategoryCodesAny.length > 0) {
+    p.set('sustainabilityCategories', normalizedFilters.common.sustainabilityCategoryCodesAny.join(','));
+  }
+  if (normalizedFilters.common.sustainabilityActionCodesAny.length > 0) {
+    p.set('sustainabilityActions', normalizedFilters.common.sustainabilityActionCodesAny.join(','));
+  }
+  if (normalizedFilters.common.petsAccepted) {
+    p.set('pets', 'true');
+  }
+  if (normalizedFilters.common.openNow) {
+    p.set('openNow', 'true');
+  }
+  if (normalizedFilters.common.environmentTagsAny.length > 0) {
+    p.set('environment', normalizedFilters.common.environmentTagsAny.join(','));
+  }
+  if (normalizedFilters.common.openAt) {
+    p.set('openAt', normalizedFilters.common.openAt);
+  }
+  if (normalizedFilters.common.amenityFamiliesAny.length > 0) {
+    p.set('amenityFamilies', normalizedFilters.common.amenityFamiliesAny.join(','));
+  }
+  if (normalizedFilters.evt.eventFrom) {
+    p.set('evtFrom', normalizedFilters.evt.eventFrom);
+  }
+  if (normalizedFilters.evt.eventTo) {
+    p.set('evtTo', normalizedFilters.evt.eventTo);
+  }
+  if (normalizedFilters.common.statuses.length > 0) {
+    // Persist explicit status picks only. Empty array means "use the
+    // session-aware default" (cf. resolveExplorerStatuses) and does NOT
+    // belong in the URL — keeps shareable links shorter and survives a
+    // role change between sessions.
+    p.set('status', normalizedFilters.common.statuses.join(','));
+  }
+  // §204 — remplissage : sérialisé comme tous les autres filtres, sinon il ne
+  // survivrait ni au rechargement ni au partage de lien, seul dans le panneau.
+  if (normalizedFilters.common.missingEssentialsBuckets.length > 0) {
+    p.set('remplissage', normalizedFilters.common.missingEssentialsBuckets.join(','));
+  }
+  if (normalizedFilters.common.missingEssentialsAny.length > 0) {
+    p.set('manque', normalizedFilters.common.missingEssentialsAny.join(','));
+  }
+  if (normalizedFilters.hot.subtypes.length > 0) {
+    p.set('hotSubtypes', normalizedFilters.hot.subtypes.join(','));
+  }
+  // 3.2 — ne sérialiser VIS/SRV que sur une SOUS-sélection réelle (pas le défaut « tous »).
+  if (
+    normalizedFilters.vis.subtypes.length > 0 &&
+    normalizedFilters.vis.subtypes.length < DEFAULT_EXPLORER_FILTERS.vis.subtypes.length
+  ) {
+    p.set('visSubtypes', normalizedFilters.vis.subtypes.join(','));
+  }
+  if (
+    normalizedFilters.srv.subtypes.length > 0 &&
+    normalizedFilters.srv.subtypes.length < DEFAULT_EXPLORER_FILTERS.srv.subtypes.length
+  ) {
+    p.set('srvSubtypes', normalizedFilters.srv.subtypes.join(','));
+  }
+  if (normalizedFilters.common.taxonomyAny.length > 0) {
+    p.set('taxonomy', normalizedFilters.common.taxonomyAny.map((item) => `${item.domain}:${item.code}`).join(','));
+  }
+  if (normalizedFilters.common.accommodationUnitTypesAny.length > 0) {
+    p.set('accommodationUnitTypes', normalizedFilters.common.accommodationUnitTypesAny.join(','));
+  }
+  if (normalizedFilters.common.accommodationPositioningsAny.length > 0) {
+    p.set('accommodationPositionings', normalizedFilters.common.accommodationPositioningsAny.join(','));
+  }
+  const hotCapacity = serializeCapacityFilters(normalizedFilters.hot.capacityFilters);
+  if (hotCapacity) {
+    p.set('hotCapacity', hotCapacity);
+  }
+  const resCapacity = serializeCapacityFilters(normalizedFilters.res.capacityFilters);
+  if (resCapacity) {
+    p.set('resCapacity', resCapacity);
+  }
+  if (normalizedFilters.iti.isLoop != null) {
+    p.set('itiIsLoop', String(normalizedFilters.iti.isLoop));
+  }
+  if (normalizedFilters.iti.difficultyMin != null) {
+    p.set('itiDifficultyMin', String(normalizedFilters.iti.difficultyMin));
+  }
+  if (normalizedFilters.iti.difficultyMax != null) {
+    p.set('itiDifficultyMax', String(normalizedFilters.iti.difficultyMax));
+  }
+  if (normalizedFilters.iti.distanceMinKm != null) {
+    p.set('itiDistanceMinKm', String(normalizedFilters.iti.distanceMinKm));
+  }
+  if (normalizedFilters.iti.distanceMaxKm != null) {
+    p.set('itiDistanceMaxKm', String(normalizedFilters.iti.distanceMaxKm));
+  }
+  if (normalizedFilters.iti.durationMinH != null) {
+    p.set('itiDurationMinH', String(normalizedFilters.iti.durationMinH));
+  }
+  if (normalizedFilters.iti.durationMaxH != null) {
+    p.set('itiDurationMaxH', String(normalizedFilters.iti.durationMaxH));
+  }
+  if (normalizedFilters.iti.practicesAny.length > 0) {
+    p.set('itiPractices', normalizedFilters.iti.practicesAny.join(','));
+  }
+  return p;
+}

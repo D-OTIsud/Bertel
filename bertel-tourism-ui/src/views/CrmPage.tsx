@@ -1,0 +1,208 @@
+"use client";
+import { crmQueryKeys } from '../lib/crm-query-keys';
+
+
+// Page /crm (§61, design v2 acteur-centré 2026-06-11) — shell du module CRM.
+// Modèle : l'ACTEUR (personne/organisation) est l'entité CRM principale ; l'objet
+// (établissement) n'est que le CONTEXTE. Le même acteur peut être lié à plusieurs
+// objets avec des rôles différents — les interactions le suivent à travers tous
+// ses contextes, et l'UI porte les deux sens de navigation (acteur ⇄ objet).
+//
+// 3 onglets (Acteurs / Tâches & relances / Timeline) + 2 drill-ins (fiche acteur,
+// vue établissement). État de navigation persisté dans localStorage
+// `bertel-crm-nav-v2`. Toutes les vues sont sur données réelles (RPCs api.*) via
+// src/services/crm. Gating page-wide write_crm_notes : aucune écriture rendue
+// active sans permission (no-write-trap), raison affichée.
+
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { usePresenceRoom } from '../hooks/usePresenceRoom';
+import { listCrmDirectory, listCrmTasks, userCanWriteCrmNotes } from '../services/crm';
+import { CrmAnnuaire } from '../features/crm/CrmAnnuaire';
+import { CrmActorFiche } from '../features/crm/CrmActorFiche';
+import { CrmObjectView } from '../features/crm/CrmObjectView';
+import { CrmTaches } from '../features/crm/CrmTaches';
+import { CrmTimelineView } from '../features/crm/CrmTimelineView';
+import { CRM_READ_ONLY_REASON } from '../features/crm/crm-view-utils';
+import { effectiveCrmSearch, useCrmSearchStore } from '../store/crm-search-store';
+
+const NAV_KEY = 'bertel-crm-nav-v2';
+
+type CrmView = 'annuaire' | 'taches' | 'timeline';
+
+interface CrmNav {
+  view: CrmView;
+  actorId?: string;
+  objectId?: string;
+  /** Acteur d'origine d'une vue établissement — le retour y revient. */
+  originActorId?: string;
+}
+
+const DEFAULT_NAV: CrmNav = { view: 'annuaire' };
+
+// Libellé du retour de la vue établissement quand on n'arrive PAS d'une fiche
+// acteur : il nomme l'onglet d'origine (le retour, lui, y revient déjà — backFromObject).
+const TAB_BACK_LABELS: Record<CrmView, string> = {
+  annuaire: 'Annuaire des acteurs',
+  taches: 'Tâches & relances',
+  timeline: 'Timeline',
+};
+
+function loadNav(): CrmNav {
+  try {
+    const raw = localStorage.getItem(NAV_KEY);
+    if (!raw) return DEFAULT_NAV;
+    const parsed = JSON.parse(raw) as Partial<CrmNav> | null;
+    if (!parsed || (parsed.view !== 'annuaire' && parsed.view !== 'taches' && parsed.view !== 'timeline')) {
+      return DEFAULT_NAV;
+    }
+    return {
+      view: parsed.view,
+      actorId: typeof parsed.actorId === 'string' ? parsed.actorId : undefined,
+      objectId: typeof parsed.objectId === 'string' ? parsed.objectId : undefined,
+      originActorId: typeof parsed.originActorId === 'string' ? parsed.originActorId : undefined,
+    };
+  } catch {
+    return DEFAULT_NAV;
+  }
+}
+
+export default function CrmPage() {
+  // Hydratation différée du nav : l'état initial est stable côté SSR, puis le nav
+  // persisté est restauré au mount (pas de mismatch d'hydratation).
+  const [nav, setNav] = useState<CrmNav>(DEFAULT_NAV);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    // Deep-link d'onglet (hub personnel 2026-07-03) : ?tab= prime sur le nav persisté —
+    // même esprit que ?fiche= (§142). Lu via window.location au mount (pas de
+    // useSearchParams : évite la contrainte Suspense, le nav est déjà hydraté client-only).
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    const isValidTab = tab === 'annuaire' || tab === 'taches' || tab === 'timeline';
+    // Deep-link d'ACTEUR (2026-08-28) : la carte d'acteur du tiroir de fiche y mène.
+    // ?acteur= prime sur ?tab= ET sur le nav persisté — c'est l'intention la plus précise.
+    // ?tab= est alors simplement ignoré : le retour de la fiche acteur revient toujours à
+    // l'annuaire (backFromActor le fige en dur), il n'y a pas de vue de repli à choisir.
+    // Validation minimale (chaîne non vide, comme loadNav) : le format uuid est éprouvé
+    // par le serveur, et un id fabriqué à la main n'est pas un cas à instrumenter ici.
+    const actorId = params.get('acteur')?.trim();
+
+    if (actorId) {
+      setNav({ view: 'annuaire', actorId });
+    } else {
+      setNav(isValidTab ? { view: tab as CrmView } : loadNav());
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(NAV_KEY, JSON.stringify(nav));
+    } catch {
+      /* stockage indisponible : la navigation reste fonctionnelle, juste non persistée */
+    }
+  }, [nav, hydrated]);
+
+  // Portée de la recherche du header (PO 2026-07-27) : elle ne s'applique qu'à l'annuaire.
+  // Taper depuis Tâches / Timeline / un drill-in y ramène — mais SEULEMENT quand le terme
+  // franchit le seuil serveur (2 caractères) : sinon un simple « M » éjecterait l'utilisateur
+  // alors qu'aucune recherche n'est encore appliquée.
+  const searchIsActive = effectiveCrmSearch(useCrmSearchStore((state) => state.search)) !== undefined;
+  useEffect(() => {
+    if (!hydrated || !searchIsActive) return;
+    setNav((current) =>
+      current.actorId || current.objectId || current.view !== 'annuaire' ? { view: 'annuaire' } : current,
+    );
+  }, [hydrated, searchIsActive]);
+
+  // Requêtes partagées (mêmes clés que les vues → une seule charge réseau) :
+  // compteurs d'onglets + résolution du libellé de retour de la vue établissement.
+  const directoryQuery = useQuery({ queryKey: crmQueryKeys.directory(), queryFn: () => listCrmDirectory() });
+  const tasksQuery = useQuery({ queryKey: crmQueryKeys.tasks, queryFn: listCrmTasks });
+  const canWriteQuery = useQuery({ queryKey: crmQueryKeys.canWrite, queryFn: userCanWriteCrmNotes });
+  // Salon de présence du CRM : on n'en garde que l'indicateur « est en train d'écrire ».
+  // Le compteur « X live » du header est désormais alimenté par useGlobalPresence (site-wide).
+  const { typingUsers } = usePresenceRoom('crm:tasks');
+
+  const canWrite = canWriteQuery.data === true;
+  // Tant que la sonde de permission charge, ne pas afficher « Lecture seule » (flash pour les éditeurs).
+  const canWriteKnown = !canWriteQuery.isLoading;
+
+  const actorCount = directoryQuery.data?.length ?? null;
+  const activeTasks = (tasksQuery.data ?? []).filter((task) => task.status === 'todo' || task.status === 'in_progress').length;
+
+  const originActorName = useMemo(() => {
+    if (!nav.originActorId) return null;
+    return directoryQuery.data?.find((entry) => entry.actorId === nav.originActorId)?.displayName ?? null;
+  }, [directoryQuery.data, nav.originActorId]);
+
+  const goTab = (view: CrmView) => setNav({ view });
+  const openActor = (actorId: string) => setNav((current) => ({ view: current.view, actorId }));
+  const openObject = (objectId: string) =>
+    setNav((current) => ({ ...current, objectId, originActorId: current.actorId ?? current.originActorId }));
+  const backFromActor = () => setNav({ view: 'annuaire' });
+  const backFromObject = () =>
+    setNav((current) =>
+      current.originActorId ? { view: current.view, actorId: current.originActorId } : { view: current.view },
+    );
+
+  const tabs: Array<{ key: CrmView; label: string; count: number | null }> = [
+    { key: 'annuaire', label: 'Acteurs', count: actorCount },
+    { key: 'taches', label: 'Tâches & relances', count: tasksQuery.data ? activeTasks : null },
+    { key: 'timeline', label: 'Timeline', count: null },
+  ];
+
+  let body;
+  if (nav.objectId) {
+    body = (
+      <CrmObjectView
+        objectId={nav.objectId}
+        backLabel={originActorName ?? (nav.originActorId ? 'Fiche acteur' : TAB_BACK_LABELS[nav.view])}
+        canWrite={canWrite}
+        onBack={backFromObject}
+        onOpenActor={openActor}
+      />
+    );
+  } else if (nav.actorId) {
+    body = <CrmActorFiche actorId={nav.actorId} canWrite={canWrite} onBack={backFromActor} onOpenObject={openObject} />;
+  } else if (nav.view === 'taches') {
+    body = <CrmTaches canWrite={canWrite} onOpenObject={openObject} onOpenActor={openActor} />;
+  } else if (nav.view === 'timeline') {
+    body = <CrmTimelineView canWrite={canWrite} onOpenObject={openObject} onOpenActor={openActor} />;
+  } else {
+    body = <CrmAnnuaire canWrite={canWrite} onOpenActor={openActor} />;
+  }
+
+  return (
+    <section className="crm-app">
+      <div className="crm-sub">
+        <div className="crm-sub__title">
+          Relation acteurs
+        </div>
+        <div className="crm-tabs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={nav.view === tab.key && !nav.actorId && !nav.objectId ? 'is-on' : ''}
+              onClick={() => goTab(tab.key)}
+            >
+              {tab.label}
+              {tab.count !== null && <span className="n">{tab.count}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="crm-sub__actions">
+          {typingUsers.length > 0 && <span className="pill-mini">{typingUsers.join(' · ')}</span>}
+          {canWriteKnown && !canWrite && <span className="pill-mini crm-readonly-pill">{CRM_READ_ONLY_REASON}</span>}
+        </div>
+      </div>
+
+      {body}
+    </section>
+  );
+}
+
+export { CrmPage };

@@ -1,0 +1,252 @@
+import { buildExplorerActiveChips } from './explorer-active-chips';
+import { DEFAULT_EXPLORER_FILTERS } from '../../utils/facets';
+import type { ExplorerFilters } from '../../types/domain';
+
+function filters(overrides: Partial<ExplorerFilters['common']> = {}, top: Partial<ExplorerFilters> = {}): ExplorerFilters {
+  return {
+    ...DEFAULT_EXPLORER_FILTERS,
+    ...top,
+    common: { ...DEFAULT_EXPLORER_FILTERS.common, ...overrides },
+  };
+}
+
+describe('buildExplorerActiveChips', () => {
+  it('ne renvoie aucune pastille pour les filtres par défaut', () => {
+    expect(buildExplorerActiveChips(DEFAULT_EXPLORER_FILTERS)).toEqual([]);
+  });
+
+  it('rend le terme de recherche comme une pastille retirable', () => {
+    const chips = buildExplorerActiveChips(filters({ search: 'tamarins' }));
+    const search = chips.find((c) => c.group === 'search');
+    expect(search).toBeTruthy();
+    expect(search!.label).toMatch(/tamarins/);
+    expect(search!.value).toBe('tamarins');
+  });
+
+  it('rend une pastille par bucket sélectionné avec libellé FR', () => {
+    const chips = buildExplorerActiveChips(filters({}, { selectedBuckets: ['HOT', 'VIS'] }));
+    const buckets = chips.filter((c) => c.group === 'bucket');
+    expect(buckets.map((c) => c.value).sort()).toEqual(['HOT', 'VIS']);
+    expect(buckets.every((c) => !/^(HOT|VIS)$/.test(c.label))).toBe(true); // libellé, pas code brut
+  });
+
+  it('rend une pastille par commune et par tag', () => {
+    const chips = buildExplorerActiveChips(
+      filters({
+        cities: ['Saint-Paul', 'Salazie'],
+        tagsAny: [{ slug: 'spa', name: 'Spa', color: '#176b6a' }],
+      }),
+    );
+    expect(chips.filter((c) => c.group === 'city')).toHaveLength(2);
+    expect(chips.find((c) => c.group === 'tag')?.value).toBe('spa');
+  });
+
+  it('rend les bascules booléennes actives (PMR, animaux, ouvert)', () => {
+    const chips = buildExplorerActiveChips(filters({ pmr: true, petsAccepted: true, openNow: true }));
+    expect(chips.map((c) => c.group)).toEqual(expect.arrayContaining(['pmr', 'pets', 'openNow']));
+  });
+
+  it('chaque pastille a une clé unique', () => {
+    const chips = buildExplorerActiveChips(
+      filters({ search: 'x', cities: ['A', 'B'], pmr: true }, { selectedBuckets: ['HOT'] }),
+    );
+    const keys = chips.map((c) => c.key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  describe('D23 — complétude des pastilles (filtres jusqu’ici invisibles)', () => {
+    it('zone dessinée, types de handicap (FR) et compteurs a11y/durable', () => {
+      const chips = buildExplorerActiveChips(
+        filters({
+          polygon: { type: 'Polygon', coordinates: [[[55, -21], [55.1, -21], [55.1, -21.1], [55, -21]]] },
+          accessibilityDisabilityTypesAny: ['motor', 'hearing'],
+          accessibilityAmenityCodesAny: ['acc_ramp', 'acc_wc'],
+          sustainabilityCategoryCodesAny: ['CAT_WATER'],
+          sustainabilityActionCodesAny: ['SA_1', 'SA_2', 'SA_3'],
+        }),
+      );
+      expect(chips.find((c) => c.group === 'zone')?.label).toMatch(/Zone dessinée/);
+      expect(chips.filter((c) => c.group === 'accessDisability').map((c) => c.label)).toEqual([
+        'Accessibilité · Moteur',
+        'Accessibilité · Auditif',
+      ]);
+      expect(chips.find((c) => c.group === 'accessAmenities')?.label).toBe('Accessibilité · 2 critères');
+      expect(chips.find((c) => c.group === 'sustCategories')?.label).toBe('Durable · 1 catégorie');
+      expect(chips.find((c) => c.group === 'sustActions')?.label).toBe('Durable · 3 actions');
+    });
+
+    it('facettes par bucket : sous-catégories, capacité HÉB, capacité RES, facettes ITI', () => {
+      const chips = buildExplorerActiveChips(
+        filters(
+          { taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'gite_villa' }] },
+          {
+            hot: {
+              subtypes: ['HOT'],
+              capacityFilters: [{ code: 'bedrooms', min: 2 }],
+              meetingRoom: {},
+            },
+            res: { capacityFilters: [{ code: 'seats', max: 60 }] },
+            iti: {
+              isLoop: true,
+              practicesAny: ['walk', 'vtt'],
+              difficultyMin: 2,
+              difficultyMax: 4,
+              distanceMinKm: 5,
+              durationMaxH: 3,
+            },
+          },
+        ),
+      );
+      expect(chips.find((c) => c.group === 'taxonomy')?.label).toBe('Sous-catégorie · 1');
+      expect(chips.find((c) => c.group === 'hotCapacity')?.label).toBe('Capacité héb. · ≥ 2');
+      expect(chips.find((c) => c.group === 'resCapacity')?.label).toBe('Capacité resto · ≤ 60');
+      expect(chips.find((c) => c.group === 'itiLoop')?.label).toBe('Itinéraire · Boucle');
+      expect(chips.find((c) => c.group === 'itiDifficulty')?.label).toBe('Difficulté · ≥ 2 · ≤ 4');
+      expect(chips.find((c) => c.group === 'itiDistance')?.label).toBe('Distance · ≥ 5 km');
+      expect(chips.find((c) => c.group === 'itiDuration')?.label).toBe('Durée · ≤ 3 h');
+      expect(chips.find((c) => c.group === 'itiPractices')?.label).toBe('Pratique · 2 sélectionnées');
+    });
+  });
+});
+
+describe('cadre & environnement (§154)', () => {
+  it('rend une chip compteur retirable pour les tags environnement', () => {
+    const chips = buildExplorerActiveChips(filters({ environmentTagsAny: ['volcan', 'foret'] }));
+    expect(chips.find((c) => c.group === 'environment')?.label).toBe('Cadre · 2 critères');
+  });
+});
+
+describe('§157 — chips ouvert à … + dates événements', () => {
+  it('rend la chip « Ouvert le JJ/MM à HH:mm »', () => {
+    const chips = buildExplorerActiveChips(filters({ openAt: '2026-07-03T18:00' }));
+    expect(chips.find((c) => c.group === 'openAt')?.label).toBe('Ouvert le 03/07 à 18:00');
+  });
+
+  it('rend la chip de plage événements', () => {
+    const chips = buildExplorerActiveChips(
+      filters({}, { evt: { eventFrom: '2026-07-10', eventTo: null } }),
+    );
+    expect(chips.find((c) => c.group === 'evtDates')?.label).toBe('Événements du 10/07/2026');
+  });
+});
+
+describe('chip « Label obtenu uniquement » (rankedLabelExact)', () => {
+  it('rend la chip quand un schéma est actif et includeEquivalents est désactivé', () => {
+    const chips = buildExplorerActiveChips(
+      filters({ rankedLabelSchemeCode: 'LBL_CLEF_VERTE', rankedLabelIncludeEquivalents: false }),
+    );
+    const chip = chips.find((c) => c.group === 'rankedLabelExact');
+    expect(chip).toBeTruthy();
+    expect(chip!.value).toBe('LBL_CLEF_VERTE');
+    expect(chip!.label).toBe('Label obtenu uniquement');
+  });
+
+  it('ne rend pas la chip quand includeEquivalents est à sa valeur par défaut (true)', () => {
+    const chips = buildExplorerActiveChips(filters({ rankedLabelSchemeCode: 'LBL_CLEF_VERTE' }));
+    expect(chips.find((c) => c.group === 'rankedLabelExact')).toBeUndefined();
+  });
+
+  it('ne rend pas la chip en l’absence de schéma classé, même si includeEquivalents est false', () => {
+    const chips = buildExplorerActiveChips(filters({ rankedLabelIncludeEquivalents: false }));
+    expect(chips.find((c) => c.group === 'rankedLabelExact')).toBeUndefined();
+  });
+});
+
+describe('chip « Niveau · N sélectionné(s) » (rankedLabelValues, §174)', () => {
+  it('rend la chip compteur quand un schéma est actif et des niveaux sont sélectionnés', () => {
+    const chips = buildExplorerActiveChips(
+      filters({ rankedLabelSchemeCode: 'meuble_stars', rankedLabelValueCodes: ['3', '5'] }),
+    );
+    const chip = chips.find((c) => c.group === 'rankedLabelValues');
+    expect(chip).toBeTruthy();
+    expect(chip!.label).toBe('Niveau · 2 sélectionnés');
+  });
+
+  it('utilise le singulier pour un seul niveau sélectionné', () => {
+    const chips = buildExplorerActiveChips(
+      filters({ rankedLabelSchemeCode: 'meuble_stars', rankedLabelValueCodes: ['3'] }),
+    );
+    expect(chips.find((c) => c.group === 'rankedLabelValues')?.label).toBe('Niveau · 1 sélectionné');
+  });
+
+  it('ne rend pas la chip sans schéma actif, même avec des niveaux sélectionnés', () => {
+    const chips = buildExplorerActiveChips(filters({ rankedLabelValueCodes: ['3'] }));
+    expect(chips.find((c) => c.group === 'rankedLabelValues')).toBeUndefined();
+  });
+
+  it('ne rend pas la chip quand aucun niveau n’est sélectionné', () => {
+    const chips = buildExplorerActiveChips(filters({ rankedLabelSchemeCode: 'meuble_stars' }));
+    expect(chips.find((c) => c.group === 'rankedLabelValues')).toBeUndefined();
+  });
+});
+
+/**
+ * Complétude de la barre (audit filtres 2026-07-27 §3.6). Ces trois critères restaient
+ * actifs SANS pastille : invisibles, non retirables depuis la barre, et absents du
+ * compteur « N actifs » qui en dérive désormais.
+ */
+describe('buildExplorerActiveChips — sous-types et MICE', () => {
+  it('rend une pastille quand la sélection de sous-types est rétrécie', () => {
+    const chips = buildExplorerActiveChips(
+      filters({}, { hot: { ...DEFAULT_EXPLORER_FILTERS.hot, subtypes: ['HOT', 'HLO'] } }),
+    );
+    const chip = chips.find((c) => c.group === 'hotSubtypes');
+    expect(chip).toBeTruthy();
+    expect(chip!.label).toMatch(/2 types sur/);
+  });
+
+  it('ne rend rien quand tous les sous-types sont cochés (« tous » n’est pas un critère)', () => {
+    const chips = buildExplorerActiveChips(filters({}, { hot: { ...DEFAULT_EXPLORER_FILTERS.hot } }));
+    expect(chips.find((c) => c.group === 'hotSubtypes')).toBeUndefined();
+  });
+
+  it('couvre aussi les sous-types VIS et SRV', () => {
+    const chips = buildExplorerActiveChips(
+      filters({}, { vis: { subtypes: ['PCU'] }, srv: { subtypes: ['COM'] } }),
+    );
+    expect(chips.find((c) => c.group === 'visSubtypes')).toBeTruthy();
+    expect(chips.find((c) => c.group === 'srvSubtypes')).toBeTruthy();
+  });
+
+  it('rend une pastille pour les critères MICE', () => {
+    const chips = buildExplorerActiveChips(
+      filters({}, { hot: { ...DEFAULT_EXPLORER_FILTERS.hot, meetingRoom: { minCount: 2, minCapTheatre: 80 } } }),
+    );
+    const chip = chips.find((c) => c.group === 'meetingRoom');
+    expect(chip).toBeTruthy();
+    expect(chip!.label).toMatch(/2 critères/);
+  });
+});
+
+describe('§204 — puces du remplissage', () => {
+  it('un palier actif produit une puce au libellé lisible, jamais le code brut', () => {
+    const chips = buildExplorerActiveChips(filters({ missingEssentialsBuckets: ['many'] }));
+    const chip = chips.find((c) => c.group === 'missingEssentialsBuckets');
+    expect(chip).toBeDefined();
+    expect(chip?.label).toBe('Remplissage · 3 et plus');
+    expect(chip?.value).toBe('many');
+  });
+
+  it('chaque essentiel demandé produit sa propre puce, retirable seule', () => {
+    const chips = buildExplorerActiveChips(
+      filters({ missingEssentialsAny: ['photos', 'contact'] }),
+    );
+    const labels = chips.filter((c) => c.group === 'missingEssentialsAny').map((c) => c.label);
+    expect(labels).toEqual(['Il manque · Photos', 'Il manque · Contact public']);
+  });
+
+  it('aucune puce quand aucun critère de remplissage n’est actif', () => {
+    const chips = buildExplorerActiveChips(DEFAULT_EXPLORER_FILTERS);
+    expect(chips.some((c) => c.group.startsWith('missingEssentials'))).toBe(false);
+  });
+});
+
+// §205 — les statuts en pastilles, libellés résolus depuis le vocabulaire unique.
+describe('buildExplorerActiveChips — statuts (§205)', () => {
+  it('rend une pastille par statut sélectionné, « Archivé » inclus', () => {
+    const chips = buildExplorerActiveChips(filters({ statuses: ['draft', 'archived'] }));
+    const statuses = chips.filter((c) => c.group === 'status');
+    expect(statuses.map((c) => c.label)).toEqual(['Statut · Brouillon', 'Statut · Archivé']);
+    expect(statuses.map((c) => c.value)).toEqual(['draft', 'archived']);
+  });
+});

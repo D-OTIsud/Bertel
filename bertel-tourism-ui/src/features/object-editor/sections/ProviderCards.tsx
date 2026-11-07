@@ -1,0 +1,212 @@
+import { useState } from 'react';
+import { ArrowUpRight, Bell, Pencil, Star, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
+import { ConfirmDialog } from '../primitives';
+import { ActorPicker } from '../widgets/ActorPicker';
+import { ProviderEditModal } from '../widgets/ProviderEditModal';
+import type {
+  ObjectWorkspaceActorLinkItem,
+  ObjectWorkspaceRelationshipsModule,
+} from '../../../services/object-workspace-parser';
+import { actorVisibilityLabel, addActorLink, commitActorEdit, removeActorLink } from './actor-links';
+
+function initialsOf(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean).slice(0, 2);
+  const initials = parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
+  return initials || '?';
+}
+
+interface ProviderCardsProps {
+  itinerary?: boolean;
+  relationships: ObjectWorkspaceRelationshipsModule;
+  canWrite: boolean;
+  /** Persist the next actor-link list (drives `editor.replaceModule('relationships', …)`). */
+  onChange: (actors: ObjectWorkspaceActorLinkItem[]) => void;
+  /** Open a prestataire's CRM fiche (e.g. to edit its addresses). */
+  onOpenActor?: (actorId: string) => void;
+  /**
+   * Nombre d'interactions OUVERTES par acteur (clé = actor.id) — « ouverte » au sens du
+   * registre crm-status.ts (isOpenInteractionStatus), et non d'un statut nommé : c'est ce
+   * que calcule réellement SectionCrm. > 0 ⇒ badge de notification sur la carte du
+   * prestataire concerné.
+   */
+  openCountByActor?: Record<string, number>;
+}
+
+/**
+ * §19 — "Prestataires rattachés" : cartes des liens actor_object_role. Chaque carte est un
+ * RÉSUMÉ lisible (identité + rôle + visibilité + principal) ; l'édition passe par une modale
+ * (ProviderEditModal, pattern §03/§08) et le détachement par une confirmation (ConfirmDialog).
+ * Le rattachement ouvre une recherche (ActorPicker → api.search_actors). Source unique de
+ * l'authoring acteur (hors §17). Persisté par api.save_object_relations (arme actors).
+ * Gate : permissions.relationships + actorWriteUnavailableReason (no-write-trap).
+ */
+export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, openCountByActor = {}, itinerary = false }: ProviderCardsProps) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [detachIndex, setDetachIndex] = useState<number | null>(null);
+
+  const actors = relationships.actors;
+  const roleOptions = relationships.actorRoleOptions;
+  const reason = relationships.actorWriteUnavailableReason;
+  const editable = canWrite && !reason;
+
+  const editingActor = editIndex !== null ? actors[editIndex] : undefined;
+  const detachingActor = detachIndex !== null ? actors[detachIndex] : undefined;
+
+  return (
+    <div>
+      <div className="chip-group__label" style={{ marginTop: 0 }}>{itinerary ? 'Gestionnaires du parcours' : 'Prestataires rattachés'}</div>
+
+      {reason && (
+        <p className="provider-readonly">
+          <strong>Lecture seule.</strong> {reason}
+        </p>
+      )}
+
+      {actors.length === 0 ? (
+        <p className="provider-empty">{itinerary ? 'Aucun gestionnaire rattaché à ce parcours.' : 'Aucun prestataire rattaché à cette fiche.'}</p>
+      ) : (
+        <div className="provider-grid">
+          {actors.map((actor, index) => {
+            const openCount = openCountByActor[actor.id] ?? 0;
+            return (
+            <article key={`${actor.id}-${actor.roleCode}-${index}`} className="provider-card">
+              <div className="provider-card__head">
+                <span className="provider-card__avatar" aria-hidden>{initialsOf(actor.displayName)}</span>
+                <div className="provider-card__id">
+                  <strong className="provider-card__name">{actor.displayName}</strong>
+                  <div className="provider-card__meta">
+                    <span className="provider-badge">{actor.roleLabel || actor.roleCode}</span>
+                    {actor.isPrimary && (
+                      <span className="provider-badge provider-badge--primary">
+                        <Star size={11} aria-hidden /> Principal
+                      </span>
+                    )}
+                    <span className="provider-badge provider-badge--vis">
+                      {actorVisibilityLabel(actor.visibility || 'public')}
+                    </span>
+                  </div>
+                </div>
+                {openCount > 0 && (
+                  <span
+                    className="provider-card__alert"
+                    title={`${openCount} interaction(s) en attente`}
+                    aria-label={`${openCount} interaction(s) en attente avec ${actor.displayName}`}
+                  >
+                    <Bell size={11} aria-hidden />
+                    {openCount}
+                  </span>
+                )}
+              </div>
+
+              {actor.note.trim() && <p className="provider-card__note">{actor.note}</p>}
+
+              <div className="provider-card__actions">
+                {onOpenActor && (
+                  <button
+                    type="button"
+                    className="provider-act"
+                    aria-label={`Fiche CRM de ${actor.displayName}`}
+                    title="Ouvrir la fiche CRM (interactions, coordonnées, adresses)"
+                    onClick={() => onOpenActor(actor.id)}
+                  >
+                    <ArrowUpRight size={15} aria-hidden />
+                  </button>
+                )}
+                {editable && (
+                  <button
+                    type="button"
+                    className="provider-act"
+                    aria-label={`Modifier ${actor.displayName}`}
+                    title={itinerary ? 'Modifier le gestionnaire' : 'Modifier le prestataire'}
+                    onClick={() => setEditIndex(index)}
+                  >
+                    <Pencil size={15} aria-hidden />
+                  </button>
+                )}
+                {editable && (
+                  <button
+                    type="button"
+                    className="provider-act provider-act--danger"
+                    aria-label={`Détacher ${actor.displayName}`}
+                    title={itinerary ? 'Détacher le gestionnaire' : 'Détacher le prestataire'}
+                    onClick={() => setDetachIndex(index)}
+                  >
+                    <Trash2 size={15} aria-hidden />
+                  </button>
+                )}
+              </div>
+            </article>
+            );
+          })}
+        </div>
+      )}
+
+      {editable && (
+        roleOptions.length === 0 ? (
+          <p className="provider-empty" style={{ marginTop: 8 }}>
+            Catalogue des rôles acteur indisponible — le rattachement est désactivé.
+          </p>
+        ) : (
+          <button type="button" className="rep-add" style={{ marginTop: 10 }} onClick={() => setPickerOpen(true)}>
+            {itinerary ? '+ Rattacher un gestionnaire' : '+ Rattacher un nouveau prestataire'}
+          </button>
+        )
+      )}
+
+      {/* Attach — search modal (ActorPicker). */}
+      <Dialog open={pickerOpen} onOpenChange={(next: boolean) => { if (!next) setPickerOpen(false); }}>
+        <DialogContent className="object-editor">
+          <DialogHeader>
+            <DialogTitle>{itinerary ? 'Rattacher un gestionnaire' : 'Rattacher un prestataire'}</DialogTitle>
+          </DialogHeader>
+          <div className="ed-modal__body">
+            <ActorPicker
+              onPick={(picked) => {
+                onChange(addActorLink(actors, picked, roleOptions));
+                setPickerOpen(false);
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit — role / visibility / primary / note. */}
+      {editingActor && (
+        <ProviderEditModal
+          open
+          actor={editingActor}
+          roleOptions={roleOptions}
+          // §208 — verdict PAR FICHE (résolu une fois au chargement), y compris pour un lien
+          // qu'on vient d'ajouter et dont le serveur n'a encore rien dit.
+          noteUnavailableReason={relationships.actorNoteWriteUnavailableReason}
+          onClose={() => setEditIndex(null)}
+          onSave={(patched) => {
+            onChange(commitActorEdit(actors, editIndex as number, patched));
+            setEditIndex(null);
+          }}
+        />
+      )}
+
+      {/* Detach — confirmation. */}
+      <ConfirmDialog
+        open={detachingActor !== undefined}
+        title={itinerary ? 'Détacher le gestionnaire' : 'Détacher le prestataire'}
+        message={
+          <>
+            Voulez-vous vraiment détacher <strong>{detachingActor?.displayName}</strong> de cette fiche ?
+            {itinerary ? 'Le gestionnaire et son historique sont conservés ; seul son rattachement au parcours est retiré.' : "Le prestataire (et son historique CRM) n'est pas supprimé — seul son rattachement à cet objet est retiré."}
+          </>
+        }
+        confirmLabel="Détacher"
+        tone="danger"
+        onCancel={() => setDetachIndex(null)}
+        onConfirm={() => {
+          onChange(removeActorLink(actors, detachIndex as number));
+          setDetachIndex(null);
+        }}
+      />
+    </div>
+  );
+}

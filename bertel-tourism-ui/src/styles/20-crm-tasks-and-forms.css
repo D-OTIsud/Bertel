@@ -1,0 +1,614 @@
+/* ---------- Tâches & relances — kanban (rectif PO point 1, board du prototype v2) ----------
+   3 colonnes = statuts réels todo / in_progress / done ; dots + liserés colorés par
+   colonne (orange / teal / vert) ; la proximité d'échéance vit en badge .due DANS la
+   carte (.ticket). Le déplacement se fait par boutons (persisté via save_crm_task). */
+.crm-app .tasks-wrap { max-width: 980px; }
+.crm-app .board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.crm-app .bcol { border-top: 3px solid var(--line-strong); padding-top: 8px; min-width: 0; border-radius: 0 0 8px 8px; transition: background 0.12s ease, box-shadow 0.12s ease; }
+/* Surbrillance de dépôt (PO point 5) : la colonne survolée par une carte en cours de drag.
+   Accent only (teinte d'accent translucide) — ne touche pas le canevas thémé. */
+.crm-app .bcol--drop { background: var(--accent-tint); box-shadow: inset 0 0 0 1px var(--accent); }
+/* Zone de dépôt valide pendant un glissement (colonnes ≠ source) : liseré pointillé discret. */
+.crm-app .bcol--target { box-shadow: inset 0 0 0 1px var(--line-strong); }
+/* Placeholder « Déposer ici » matérialisé dans chaque colonne cible. */
+.crm-app .bcol__dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 1.5px dashed var(--accent);
+  border-radius: var(--r-md);
+  background: var(--accent-tint);
+  color: var(--accent-deep);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.crm-app .bcol--drop .bcol__dropzone { background: var(--surface); }
+.crm-app .bcol--todo { border-top-color: var(--accent-brand-strong); }
+.crm-app .bcol--doing { border-top-color: var(--teal); }
+.crm-app .bcol--done { border-top-color: var(--green); }
+.crm-app .bcol__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.crm-app .bcol__head .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--ink-4); }
+.crm-app .bcol--todo .bcol__head .dot { background: var(--accent-brand-strong); }
+.crm-app .bcol--doing .bcol__head .dot { background: var(--teal); }
+.crm-app .bcol--done .bcol__head .dot { background: var(--green); }
+.crm-app .bcol__head .n {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-4);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.crm-app .bcol__list { display: flex; flex-direction: column; gap: 10px; }
+.crm-app .bcol__empty { font-size: 12px; color: var(--ink-4); padding: 8px 6px; }
+.crm-app .ticket {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-s);
+  padding: 13px 14px;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+}
+.crm-app .ticket:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: var(--shadow-m); }
+/* Carte saisie pendant le glisser : estompée à 40 % (fantôme) — affordance « en mouvement ». */
+.crm-app .ticket--dragging { opacity: 0.4; }
+.crm-app .ticket.is-done { opacity: 0.62; }
+.crm-app .ticket.is-done .ticket__title { text-decoration: line-through; }
+/* Carte déplaçable : curseur de préhension (l'affordance visuelle = la poignée ci-dessous). */
+.crm-app .ticket[draggable="true"] { cursor: grab; }
+.crm-app .ticket[draggable="true"]:active { cursor: grabbing; }
+.crm-app .ticket__grip { color: var(--ink-4); vertical-align: -2px; margin-right: 3px; cursor: grab; }
+.crm-app .ticket__title { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.4; }
+.crm-app .ticket__title small { display: block; font-size: 11px; font-weight: 500; color: var(--ink-4); margin-top: 1px; text-decoration: none; }
+.crm-app .ticket__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--ink-4);
+  flex-wrap: wrap;
+}
+.crm-app .ticket__meta .presta,
+.crm-app .ticket__actor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+}
+.crm-app .ticket__meta .presta:hover { color: var(--accent-deep); text-decoration: underline; }
+.crm-app .ticket__actor { color: var(--accent-deep); }
+.crm-app .ticket__actor::before { content: ''; width: 5px; height: 5px; border-radius: 999px; background: currentColor; flex: none; }
+.crm-app .ticket__actor:hover { text-decoration: underline; }
+/* §66 — badge « interaction liée » : pastille d'accent cliquable (ouvre la fiche acteur ou la
+   vue établissement où vit l'interaction). Petit, discret, scopé .crm-app (accent only). */
+.crm-app .ticket__linked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  background: var(--accent-tint);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crm-app .ticket__linked:hover { border-color: var(--accent); }
+.crm-app .ticket__linked svg { flex: none; }
+/* §66 — texte du prompt de clôture (modal). */
+.crm-app .crm-prompt-text { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink); }
+.crm-app .ticket__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.crm-app .ticket__who { display: inline-flex; align-items: center; }
+/* 16w — pile d'assignés : les avatars se chevauchent légèrement, le « +N » ferme la pile.
+   L'information accessible reste le texte .sr-only qui énumère TOUS les noms. */
+.crm-app .ticket__who--stack .agav + .agav { margin-left: -6px; }
+.crm-app .ticket__who-more {
+  margin-left: 3px; padding: 0 5px; border-radius: 999px;
+  background: var(--bg-tint); color: var(--ink-3);
+  font-size: 10px; font-weight: 700; line-height: 18px;
+}
+/* 16w — provenance : ligne discrète, jamais confondue avec la liste des assignés. */
+.crm-app .ticket__author { margin-top: 6px; font-size: 11px; color: var(--ink-4); }
+.crm-app .ticket__actions { margin-left: auto; display: inline-flex; gap: 6px; }
+.crm-app .crm-btn.sm { height: 24px; padding: 0 9px; font-size: 11px; border-radius: 7px; }
+.crm-app .due {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.crm-app .due.late { color: var(--red); font-weight: 700; }
+.crm-app .due.today { color: var(--accent-brand-strong); font-weight: 700; }
+
+/* Note de réactivité des filtres annuaire (rectif PO point 7) */
+.crm-app .crm-filter-note {
+  margin: -6px 0 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent-deep);
+}
+
+/* ---------- Modals (rectifs PO points 3+4+5 — CrmModal + formulaires) ----------
+   Carte surface shadow-m max 640px ; pas de canvas thémé en dur (garde-fou org-theme :
+   seul l'overlay porte un voile rgba fixe).
+   640 et non 560 (arbitrage PO 2026-08-28) : les formulaires de tâche et d'interaction
+   portent des puces d'assignés qui s'empilent, et 560 les serrait. La variante --drawer
+   ci-dessous garde sa propre largeur (440) et n'est PAS concernée. */
+.crm-app .crm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(24, 49, 59, 0.38);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.crm-app .crm-modal {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-m);
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+.crm-app .crm-modal__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.crm-app .crm-modal__head h3 {
+  margin: 0;
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.crm-app .crm-modal__close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.crm-app .crm-modal__close:hover { background: var(--surface-2); color: var(--ink); }
+.crm-app .crm-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+.crm-app .crm-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line-soft);
+}
+/* Phase 5.2 — variante tiroir latéral droit (dé-modalisation de l'édition acteur).
+   Même primitive CrmModal (role=dialog, focus-trap, footer) ; le chrome s'ancre à
+   droite pleine hauteur et la barre de save devient collante. Vocabulaire maison
+   (pas de Sheet shadcn) → un seul design system. */
+.crm-app .crm-modal-overlay--drawer {
+  place-items: stretch end;
+  padding: 0;
+}
+.crm-app .crm-modal--drawer {
+  width: 440px;
+  max-width: 440px;
+  height: 100%;
+  max-height: 100vh;
+  border: 0;
+  border-left: 1px solid var(--line-soft);
+  border-radius: 0;
+  box-shadow: -24px 0 48px -28px rgba(16, 30, 36, 0.5);
+}
+.crm-app .crm-modal--drawer .crm-modal__body {
+  flex: 1;
+  gap: 18px;
+}
+.crm-app .crm-modal--drawer .crm-modal__foot {
+  position: sticky;
+  bottom: 0;
+  background: var(--surface-2);
+}
+@media (max-width: 760px) {
+  .crm-app .crm-modal--drawer { width: 100%; max-width: 100%; }
+}
+/* Phase 5.2 — bandeau de confirmation « interaction enregistrée » (état 2-temps de la
+   modale d'interaction, avant l'affordance « + Ajouter une relance »). */
+.crm-app .crm-saved-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--teal-soft);
+  color: var(--teal-deep);
+  font-size: 13px;
+  font-weight: 600;
+}
+.crm-app .crm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.crm-app .crm-field input {
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  outline: 0;
+  font-family: inherit;
+  min-width: 0;
+}
+.crm-app .crm-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.crm-app .crm-field .crm-select { max-width: none; height: 34px; }
+.crm-app .crm-field__static {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.crm-app .crm-field__hint { margin: -4px 0 0; font-size: 11.5px; font-weight: 500; color: #8a5c1d; }
+/* Note NEUTRE sous un champ (explique un choix), à ne pas confondre avec `__hint`, qui est
+   ambré parce qu'il signale une saisie manquante. */
+.crm-app .crm-field__note { margin: -1px 0 0; font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
+/* Task 9 — liste des pièces jointes d'une tâche (modal d'édition). Rangée compacte : titre
+   tronqué, taille, puis les deux actions (Ouvrir/Supprimer) via .crm-btn.sm existant. */
+.crm-app .crm-doc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.crm-app .crm-doc-list__row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.crm-app .crm-doc-list__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.crm-app .crm-doc-list__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--ink); }
+/* `sizeBytes: null` (garde SQL, taille illisible) rend « taille inconnue » ici — jamais « 0 Ko ». */
+.crm-app .crm-doc-list__size { flex: none; font-size: 10.5px; font-weight: 500; color: var(--ink-4); }
+/* §66 — aperçu du nom affiché COMPOSÉ (lecture seule, pas un champ éditable). */
+.crm-app .crm-display-name-preview {
+  margin: -2px 0 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-4);
+}
+.crm-app .crm-display-name-preview strong { font-size: 13px; color: var(--ink-2); }
+.crm-app .crm-display-name-preview em { font-style: italic; color: var(--ink-4); font-weight: 500; }
+.crm-app .crm-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Ligne d'édition d'un canal : kind + valeur + principal + supprimer */
+.crm-app .chan-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.crm-app .chan-row__primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.crm-app .actor-address-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) 92px minmax(120px, 0.7fr) auto auto;
+  gap: 8px;
+  align-items: end;
+}
+.crm-app .actor-address-row__street { min-width: 0; }
+.crm-app .actor-address-row__action { height: 34px; align-self: end; }
+.crm-app .actor-address-row__message {
+  grid-column: 1 / -1;
+  margin: -2px 0 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #1a6b48;
+}
+.crm-app .actor-address-row__message.is-warn { color: #8a5c1d; }
+.crm-app .location-combobox {
+  position: relative;
+}
+.crm-app .location-combobox__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 8px 20px rgba(26, 22, 18, 0.12);
+}
+.crm-app .location-combobox__item {
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.crm-app .location-combobox__item:hover,
+.crm-app .location-combobox__item--active {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Choix de portrait (PO point 4) : vignette + bouton fichier masqué dans un label-bouton. */
+.crm-app .crm-photo-pick { display: flex; align-items: center; gap: 10px; }
+.crm-app .crm-photo-pick__thumb {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-4);
+}
+.crm-app .crm-photo-pick__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.crm-app .crm-photo-pick__btn { position: relative; overflow: hidden; cursor: pointer; }
+/* Le vrai input file est superposé invisible sur le label-bouton (accessible via aria-label). */
+.crm-app .crm-photo-pick__btn input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+
+/* Suggestions de contacts de l'établissement (PO point 2) : chips d'ajout en un clic. */
+.crm-app .crm-contact-suggestions { margin-top: 2px; }
+.crm-app .crm-suggestion-chip { gap: 5px; }
+.crm-app .crm-suggestion-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+.crm-app .crm-suggestion-chip__src {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+  margin-left: 2px;
+}
+
+/* Coordonnées de l'acteur (rail fiche, rectif PO point 4) */
+.crm-app .coord-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  color: var(--accent-deep);
+}
+.crm-app .coord-row:last-of-type { border-bottom: 0; padding-bottom: 0; }
+.crm-app .coord-row .val {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Segmented (filtre agent) */
+.crm-app .seg {
+  display: inline-flex;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  padding: 3px;
+  border-radius: 10px;
+  gap: 2px;
+}
+.crm-app .seg button {
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-family: inherit;
+}
+.crm-app .seg button.is-on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s); }
+
+/* Footer hint */
+.crm-app .crm-foot-hint {
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: var(--ink-4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- Responsive (breakpoints du prototype v2, adaptés aux colonnes réelles) ---------- */
+@media (max-width: 1280px) {
+  .crm-app .crm-list__head,
+  .crm-app .crm-row {
+    grid-template-columns: minmax(200px, 1.5fr) minmax(170px, 1.1fr) minmax(150px, 1fr) 100px 24px;
+  }
+  .crm-app .crm-list .col-topics { display: none; }
+}
+@media (max-width: 1180px) {
+  .crm-app .crm-fgrid { grid-template-columns: 1fr; }
+  .crm-app .crm-rail { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .crm-app .board { grid-template-columns: repeat(2, minmax(230px, 1fr)); }
+}
+@media (max-width: 760px) {
+  .crm-app .board { grid-template-columns: 1fr; }
+}
+@media (max-width: 1100px) {
+  .crm-app .crm-kpis { grid-template-columns: 1fr; }
+  .crm-app .crm-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 1040px) {
+  .crm-app .crm-list__head,
+  .crm-app .crm-row {
+    grid-template-columns: minmax(190px, 1.5fr) minmax(170px, 1.2fr) 90px 24px;
+  }
+  .crm-app .crm-list .col-last,
+  .crm-app .crm-cell.col-last { display: none; }
+  .crm-app .crm-rail { grid-template-columns: 1fr; }
+  .crm-app .crm-row2 { grid-template-columns: 1fr; }
+  .crm-app .actor-address-row {
+    grid-template-columns: minmax(0, 1fr) 92px;
+    align-items: end;
+  }
+  .crm-app .actor-address-row__street { grid-column: 1 / -1; }
+}
+/* ---------- Responsive fiche acteur (rectif PO v5 point 7) ----------
+   Symptôme : sur petit écran les actions du hero (« Nouvelle tâche » / « Nouvelle interaction »)
+   chevauchaient le nom de l'acteur. Correctif : sous ~720px le hero s'empile — avatar +
+   identité/coordonnées d'abord, puis la rangée d'actions EN-DESSOUS, pleine largeur (les
+   boutons ne recouvrent plus jamais le nom). Les KPI passent à 1 colonne, les pills/coordonnées
+   s'enroulent déjà. Accents/layout uniquement — aucun override du canvas (garde-fou org-theme). */
+@media (max-width: 720px) {
+  .crm-app .crm-hero {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  /* Le bloc principal prend toute la largeur restante à côté de l'avatar (jamais comprimé). */
+  .crm-app .crm-hero__main { flex: 1 1 calc(100% - 80px); }
+  /* La rangée d'actions descend sur sa propre ligne, pleine largeur, et s'enroule au besoin. */
+  .crm-app .crm-hero__actions {
+    flex: 1 0 100%;
+    width: 100%;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .crm-app .crm-hero__actions .crm-btn { flex: 1 1 auto; justify-content: center; }
+  /* KPI fiche : 2 → 1 colonne (les KPI annuaire sont déjà à 1 col dès 1100px). */
+  .crm-app .crm-stats { grid-template-columns: 1fr; }
+}
+
+/* ---------- Responsive grille acteur deux colonnes (rectif PO §66+) ----------
+   Trois régimes :
+   - DESKTOP (≥ 961px, défaut) : grille 2 colonnes. La région repliable est forcée visible
+     (display:flex dans la règle de base) et le toggle masqué ⇒ l'état JS sideExpanded est ignoré.
+   - INTERMÉDIAIRE (721–960px) : la grille s'effondre en 1 colonne, le rail remonte AVANT la
+     colonne main (order) ⇒ carte acteur + indicateurs en tête. Toujours sans repli (tout visible).
+   - MOBILE (≤ 720px) : 1 colonne + le rail en premier ; la carte acteur reste visible mais la
+     région KPI + listes est REPLIÉE par défaut (display:none) et le toggle « Voir les indicateurs »
+     apparaît ; .is-open (piloté par JS) la rouvre. Ordre vertical mobile : carte acteur →
+     [toggle → KPI + listes] → actions + timeline. */
+@media (max-width: 960px) {
+  /* 1 colonne ; le rail (carte acteur + indicateurs) repasse AVANT la colonne principale. */
+  .crm-app .crm-actor-grid { grid-template-columns: 1fr; }
+  .crm-app .crm-actor-grid__side { order: -1; }
+  .crm-app .crm-actor-grid__main { order: 0; }
+}
+@media (max-width: 720px) {
+  /* Le toggle mobile apparaît ; la région repliable est masquée sauf .is-open. */
+  .crm-app .crm-actor-side-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    margin-top: 12px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .crm-app .crm-actor-side-toggle:hover { border-color: var(--line-strong); color: var(--ink); }
+  .crm-app .crm-actor-side-toggle .chev { transition: transform 0.16s ease; }
+  .crm-app .crm-actor-side-toggle .chev.is-open { transform: rotate(180deg); }
+  /* Replié par défaut sur mobile ; .is-open (JS) rouvre. */
+  .crm-app .crm-actor-collapsible { display: none; }
+  .crm-app .crm-actor-collapsible.is-open { display: flex; }
+  /* KPI : 2×2 reste lisible même en pleine largeur mobile ; passe à 1 colonne sous ~420px. */
+}
+@media (max-width: 420px) {
+  .crm-app .crm-actor-kpis { grid-template-columns: 1fr; }
+}

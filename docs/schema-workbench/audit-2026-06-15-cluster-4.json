@@ -1,0 +1,160 @@
+{
+  "cluster": 4,
+  "audit_date": "2026-06-15",
+  "scope": [
+    "ref_code:contact_kind",
+    "ref_code:social_network",
+    "ref_code:media_type",
+    "ref_code:media_tag",
+    "ref_code:language_level",
+    "ref_language",
+    "ref_contact_role",
+    "ref_tag"
+  ],
+  "notes": {
+    "i18n_global": "zh and el translations are 100% absent across ALL domains in this cluster (confirmed by live dump: no name_i18n key for 'zh' or 'el' exists in any row). This is noted once here and not repeated per domain.",
+    "doc_row_counts": "The api-db-reference.html table index does not include row counts for ref_code partition tables or standalone ref_* tables. doc_count fields reflect FK-←-consumer count from the doc where available, else null.",
+    "media_tag_link_table": "The media_tag (link table, not ref_code domain) has 0 rows live despite 4014 media rows. No tag UI exists and the editor explicitly skips writing media_tag (object-workspace.ts:5396 comment). The 23 ref_code:media_tag codes are purely forward-looking.",
+    "social_network_consumer": "There is no direct-FK consumer table for social_network codes (no object_social_network, no social_network_link). The only FK consumers are object_taxonomy and ref_code_taxonomy_closure (structural closure tables). Social network data for objects/actors is not stored via this domain."
+  },
+  "matrix": [
+    {
+      "unit": "ref_code:contact_kind",
+      "live_count": 14,
+      "source_count": 14,
+      "doc_count": null,
+      "db_usage_distinct": 4,
+      "verdict": "HEALTHY — live=source=14; all 14 en/es present; 4 codes actively used (contact_channel + actor_channel: email 860+681, mobile 458+672, website 344, phone 239); 10 codes unused but forward-looking (fax/sms/skype/messenger/telegram/viber/wechat/line/booking_engine/whatsapp)"
+    },
+    {
+      "unit": "ref_code:social_network",
+      "live_count": 11,
+      "source_count": 11,
+      "doc_count": null,
+      "db_usage_distinct": 0,
+      "verdict": "FORWARD-LOOKING — live=source=11 (9 base + 2 additions wechat/line via idempotent LEFT JOIN guard); all 11 en/es present; 0 direct-FK consumer rows (no object_social_network table exists); codes reachable only via object_taxonomy taxonomy path which has 0 rows for this domain"
+    },
+    {
+      "unit": "ref_code:media_type",
+      "live_count": 11,
+      "source_count": 11,
+      "doc_count": null,
+      "db_usage_distinct": 1,
+      "verdict": "PARTIAL-USE — live=source=11 (10 base + 1 vector); all 11 en/es present; only 'photo' is used (4014 media rows); 10 codes unused but forward-looking (video/audio/brochure_pdf/brochure_print/plan/virtual_tour/webcam/logo/press_kit/vector)"
+    },
+    {
+      "unit": "ref_code:media_tag",
+      "live_count": 23,
+      "source_count": 23,
+      "doc_count": null,
+      "db_usage_distinct": 0,
+      "verdict": "GAP — live=source=23; 0 en/es translations for ALL 23 codes (no i18n UPDATE block covers this domain in seeds_data.sql); 0 link-table (media_tag) rows live; api.get_media_for_web uses preferred_tags codes (facade/interieur/cuisine/paysage) as hardcoded strings — i18n gap is latent now but will surface when tag UI ships"
+    },
+    {
+      "unit": "ref_code:language_level",
+      "live_count": 7,
+      "source_count": 7,
+      "doc_count": null,
+      "db_usage_distinct": 0,
+      "verdict": "HEALTHY — live=source=7; all 7 en/es present; level_id is nullable in object_language (0 rows with a non-null level currently); forward-looking"
+    },
+    {
+      "unit": "ref_language",
+      "live_count": 20,
+      "source_count": 20,
+      "doc_count": null,
+      "db_usage_distinct": 9,
+      "verdict": "HEALTHY — live=source=20; table uses native_name (no name_i18n column — not applicable); 9 languages actively used in object_language (fr=626, rcf=442, en=258, es=48, de=24, it=6, pt=4, zh=2, nl=1); 11 codes with 0 usage are forward-looking (ar/haw/hi/ja/ko/mg/sw/ta/th/ty/zu)"
+    },
+    {
+      "unit": "ref_contact_role",
+      "live_count": 6,
+      "source_count": 6,
+      "doc_count": null,
+      "db_usage_distinct": 0,
+      "verdict": "DEAD-VOCABULARY — live=source=6; table has no i18n columns (not applicable); role_id is nullable in both contact_channel and actor_channel; 0 rows in either table reference any role; the field was never populated during the Berta 2.0 import; all 6 codes are dead but low-risk (nullable FK)"
+    },
+    {
+      "unit": "ref_tag",
+      "live_count": 16,
+      "source_count": 16,
+      "doc_count": null,
+      "db_usage_distinct": 16,
+      "verdict": "HEALTHY — live=source=16 (14 base in old_data_enrichment + 2 later additions shopping/local_products in seeds_data.sql:2209-2213); no i18n columns on table (not applicable); all 16 tags in active use via tag_link (4539 total rows; accommodation=633, outdoor=578, food=556, panorama=444, volcano=357)"
+    }
+  ],
+  "findings": [
+    {
+      "dimension": "D2",
+      "severity": "medium",
+      "unit": "ref_code:media_tag",
+      "code": "ALL_23",
+      "title": "All 23 media_tag codes missing en/es translations",
+      "evidence": "Live DB: coalesce(name_i18n->>'en','') = '' for all 23 codes in domain='media_tag'. Source: seeds_data.sql contains no UPDATE block for media_tag in the §999 translation section (lines 1192-1252 cover contact_kind/social_network/weekday/opening_schedule_type/media_type; lines 1255+ cover language_level/amenity_family/payment_method/environment_tag — media_tag is absent). api.get_media_for_web uses p_preferred_tags defaulting to ARRAY['facade','interieur','cuisine','paysage'] as hardcoded strings.",
+      "recommendation": "Add a media_tag i18n UPDATE block in seeds_data.sql §999 covering all 23 codes (en + es at minimum). Priority is low while the media_tag link table has 0 rows, but the translation gap should be closed before the tag-labelling UI ships. The api.get_media_for_web preferred_tags parameter will benefit from translated labels in future client-facing contexts."
+    },
+    {
+      "dimension": "D1",
+      "severity": "low",
+      "unit": "ref_contact_role",
+      "code": "ALL_6",
+      "title": "ref_contact_role is dead vocabulary — 0 usage across contact_channel and actor_channel",
+      "evidence": "Live DB: COUNT(contact_channel WHERE role_id IS NOT NULL) = 0; COUNT(actor_channel WHERE role_id IS NOT NULL) = 0. Both FK columns are nullable. The role field was never populated during the Berta 2.0 import (10_actor_channel_temp__*.sql files do not set role_id). Source: 6 codes seeded correctly (seeds_data.sql:215-222).",
+      "recommendation": "No immediate action required — the vocabulary is sound and the FK is nullable (safe to leave). If the CRM actor-channel authoring UI (§63, actor_consent deferred) adds a role picker, this will activate. Document as FORWARD-LOOKING in the deferred tracker. If role enrichment is out of scope for MVP, annotate the seed block with a comment explaining the current 0-usage state."
+    },
+    {
+      "dimension": "D1",
+      "severity": "low",
+      "unit": "ref_code:social_network",
+      "code": "ALL_11",
+      "title": "social_network codes have no direct-FK consumer table — effectively unlinked to object/actor data",
+      "evidence": "FK map (live-foreign-keys.csv): no table other than object_taxonomy and ref_code_taxonomy_closure holds a FK to ref_code_social_network. There is no object_social_network, social_network_link, or equivalent table. The doc confirms FK←3 (all taxonomy/closure). Live actor_channel and contact_channel use ref_code_contact_kind (which includes wechat/line for messaging), not social_network.",
+      "recommendation": "Clarify the intended consumption model for social_network codes. If social media links for objects/actors are meant to be stored (e.g. a Facebook page URL for an establishment), a consumer table is missing. If social_network is taxonomy-only (for filtering/tagging objects by presence on a platform), document this explicitly. Current state: forward-looking with no data. Low risk."
+    },
+    {
+      "dimension": "D3",
+      "severity": "low",
+      "unit": "ref_code:social_network",
+      "code": "wechat,line",
+      "title": "wechat and line use a non-standard idempotent INSERT pattern (LEFT JOIN guard) while all other codes use ON CONFLICT DO NOTHING",
+      "evidence": "seeds_data.sql:975-983: social_network wechat and line are inserted via SELECT … FROM (VALUES…) LEFT JOIN ref_code … WHERE rc.id IS NULL — a bespoke guard pattern. All other domains use ON CONFLICT DO NOTHING. The two codes appear later in the file than the base 9 social_network codes (lines 63-74), suggesting they were added in a separate pass and the guard was used to avoid a conflict clause rewrite.",
+      "recommendation": "Normalize to ON CONFLICT DO NOTHING in the next seed cleanup pass. The LEFT JOIN guard is functionally correct but adds an inconsistent pattern that is harder to maintain. Also add wechat and line to the base INSERT block (lines 63-74) with the other social_network codes and remove the separate supplemental block."
+    },
+    {
+      "dimension": "D3",
+      "severity": "low",
+      "unit": "ref_tag",
+      "code": "shopping,local_products",
+      "title": "shopping and local_products tags seeded in two separate single-row INSERTs at the end of seeds_data.sql instead of in the enrichment batch",
+      "evidence": "seeds_data.sql:2209-2213: two isolated INSERT INTO ref_tag ... VALUES ('shopping',...) and ('local_products',...) appear far from the main ref_tag seeding block in old_data_enrichment_20260512/01_enrich_imported_old_data.sql:465-477. The seeds_data.sql block does not contain the main ref_tag seed — the primary seeding is in the enrichment file.",
+      "recommendation": "Consolidate all ref_tag seeds into one canonical location. Currently the 14 base tags come from the enrichment file and 2 come from seeds_data.sql. Consider moving all 16 into seeds_data.sql with ON CONFLICT DO UPDATE so the canonical vocabulary is self-contained, and removing the dependency on the enrichment file for reference data."
+    },
+    {
+      "dimension": "D1",
+      "severity": "info",
+      "unit": "ref_code:contact_kind",
+      "code": "fax,sms,skype,messenger,telegram,viber,wechat,line,booking_engine,whatsapp",
+      "title": "10 of 14 contact_kind codes have 0 usage in contact_channel and actor_channel",
+      "evidence": "Live DB: contact_channel usage — email=860, mobile=458, website=344, phone=239, all others=0. actor_channel usage — email=681, mobile=672, all others=0. The unused 10 codes include fax, sms, skype, messenger, telegram, viber, wechat, line, booking_engine, whatsapp.",
+      "recommendation": "No action required — forward-looking codes aligned with international tourism (Asian messaging apps, booking engines). Mark as FORWARD-LOOKING in documentation. Consider whether booking_engine belongs in contact_kind or in distribution_channel (a comment in seeds_data.sql already removed booking.com from social_network for this reason)."
+    },
+    {
+      "dimension": "D1",
+      "severity": "info",
+      "unit": "ref_code:media_type",
+      "code": "video,audio,brochure_pdf,brochure_print,plan,virtual_tour,webcam,logo,press_kit,vector",
+      "title": "10 of 11 media_type codes have 0 usage (only photo is used)",
+      "evidence": "Live DB: media.media_type_id counts — photo=4014, all others=0. The upload pipeline (POST /api/media/upload) currently handles photo (image/*) and video — but video rows count as 0, suggesting no video has been uploaded yet via the pipeline.",
+      "recommendation": "No action required — forward-looking. When the document-upload-by-section feature ships (deferred per WORKFLOW.md), brochure_pdf/press_kit/vector will activate. Confirm whether video=0 is expected (pipeline handles video but no objects have been given video media yet)."
+    },
+    {
+      "dimension": "D2",
+      "severity": "info",
+      "unit": "ref_code:ALL_DOMAINS",
+      "code": "zh,el",
+      "title": "zh (Chinese) and el (Greek) translations 100% absent across all 5 ref_code domains in this cluster",
+      "evidence": "Live DB dump: name_i18n contains only 'en' and 'es' keys for all rows in contact_kind, social_network, media_type, media_tag, language_level. zh and el keys are absent. ref_language includes zh='Chinois' (2 object_language rows) indicating zh-speaking staff exists in the data.",
+      "recommendation": "Noted once per audit spec — do not repeat per domain. zh/el translation pass is deferred post-MVP per WORKFLOW.md. When zh translations are added, prioritize contact_kind and language_level (the two domains with active FE consumers that render user-facing labels). media_tag and social_network are lower priority while usage is 0."
+    }
+  ]
+}

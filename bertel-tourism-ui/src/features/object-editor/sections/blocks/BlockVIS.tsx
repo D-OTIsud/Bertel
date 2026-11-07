@@ -1,0 +1,89 @@
+import { ChipMultiSelect, Fs, Toggle } from '../../primitives';
+import type { SectionProps } from '../section-types';
+import { OwnedElsewhereNote } from './block-notes';
+
+function toggle(values: string[], code: string) {
+  return values.includes(code) ? values.filter((value) => value !== code) : [...values, code];
+}
+
+export function BlockVIS({ editor, folded }: SectionProps) {
+  const characteristics = editor.draft.characteristics;
+  const openings = editor.draft.openings;
+  const pricing = editor.draft.pricing;
+  const visitOptions = characteristics.amenityGroups.flatMap((group) => group.options);
+  const visitModes = ['visite_libre', 'visite_guidee', 'audioguide'].filter((code) =>
+    characteristics.selectedAmenityCodes.includes(code),
+  ).length;
+
+  return (
+    <Fs
+      num="06"
+      title="Visite & médiation"
+      sub="Modes de visite et équipements de médiation — tarifs gérés en §13, horaires en §14"
+      folded={folded}
+      pill={{
+        tone: visitModes > 0 || pricing.prices.length > 0 ? 'ok' : 'warn',
+        label:
+          visitModes > 0
+            ? `${visitModes} mode(s) · ${pricing.prices.length} tarif(s)`
+            : `${pricing.prices.length} tarif(s)`,
+      }}
+    >
+      <div className="chip-group__label" style={{ marginTop: 0 }}>
+        Modes de visite proposés
+      </div>
+      <div className="grid-3" style={{ marginBottom: 10 }}>
+        <Toggle
+          label="Visite libre"
+          disabled={visitOptions.find((option) => option.code === 'visite_libre')?.disabled}
+          sub="Livret distribué à l'entrée"
+          on={characteristics.selectedAmenityCodes.includes('visite_libre')}
+          onChange={() =>
+            editor.replaceModule('characteristics', {
+              ...characteristics,
+              selectedAmenityCodes: toggle(characteristics.selectedAmenityCodes, 'visite_libre'),
+            })
+          }
+        />
+        <Toggle
+          label="Visite guidée"
+          disabled={visitOptions.find((option) => option.code === 'visite_guidee')?.disabled}
+          sub="Sur réservation"
+          on={characteristics.selectedAmenityCodes.includes('visite_guidee')}
+          onChange={() =>
+            editor.replaceModule('characteristics', {
+              ...characteristics,
+              selectedAmenityCodes: toggle(characteristics.selectedAmenityCodes, 'visite_guidee'),
+            })
+          }
+        />
+        <Toggle
+          label="Audioguide"
+          disabled={visitOptions.find((option) => option.code === 'audioguide')?.disabled}
+          on={characteristics.selectedAmenityCodes.includes('audioguide')}
+          onChange={() =>
+            editor.replaceModule('characteristics', {
+              ...characteristics,
+              selectedAmenityCodes: toggle(characteristics.selectedAmenityCodes, 'audioguide'),
+            })
+          }
+        />
+      </div>
+
+      <div className="chip-group__label">Équipements de visite</div>
+      <ChipMultiSelect
+        options={visitOptions}
+        selected={characteristics.selectedAmenityCodes}
+        modalTitle="Choisir les équipements de visite"
+        searchPlaceholder="Rechercher un équipement…"
+        onChange={(codes) =>
+          editor.replaceModule('characteristics', { ...characteristics, selectedAmenityCodes: codes })
+        }
+      />
+
+      {/* §48 single-owner: tariffs are edited in §13, opening hours in §14 (last-edit-wins trap otherwise) */}
+      <OwnedElsewhereNote num="13" label="Tarifs & extras" summary={`${pricing.prices.length} ligne(s) tarifaire(s)`} />
+      <OwnedElsewhereNote num="14" label="Périodes d'ouverture" summary={`${openings.periods.length} période(s)`} />
+    </Fs>
+  );
+}

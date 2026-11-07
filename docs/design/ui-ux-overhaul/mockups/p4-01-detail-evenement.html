@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4.1 · Fiche Événement (FMA) · Bertel</title>
+<link rel="stylesheet" href="../assets/bertel-ui.css">
+<style>
+  /* Gabarit de fiche : entête + deux colonnes (principal + aside) dans un .panel */
+  .detail { max-width: 980px; margin: 0 auto; }
+  .detail__head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:18px 20px; }
+  .detail__title-wrap { display:flex; flex-direction:column; gap:8px; }
+  .detail__title { font-size:24px; font-weight:800; letter-spacing:-0.01em; }
+  .detail__id { font-size:12px; color:var(--muted); font-weight:600; font-family:'IBM Plex Mono', ui-monospace, monospace; }
+  .detail__edit { white-space:nowrap; }
+  .detail__tabs { padding:0 20px; }
+  .detail__cols { display:grid; grid-template-columns: 1fr 312px; gap:24px; padding:20px; }
+  .col-main { display:flex; flex-direction:column; gap:22px; min-width:0; }
+  .col-aside { display:flex; flex-direction:column; gap:16px; }
+  .sec__title { font-size:16px; font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .sec__title .material-symbols-outlined { font-size:19px; color:var(--accent, var(--teal)); }
+
+  /* HERO « Prochaine date » */
+  .next { background:linear-gradient(135deg, color-mix(in srgb, var(--acc-fma) 14%, white), var(--surface)); border:1px solid color-mix(in srgb, var(--acc-fma) 28%, var(--line)); border-radius:var(--r-lg); padding:20px; display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; }
+  .next__when { display:flex; flex-direction:column; gap:4px; }
+  .next__kicker { font-size:11px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--acc-fma); }
+  .next__date { font-size:32px; font-weight:800; letter-spacing:-0.02em; color:var(--ink); line-height:1.05; }
+  .next__where { color:var(--ink-2); font-size:14px; display:flex; align-items:center; gap:6px; }
+  .next__cta { display:flex; flex-direction:column; gap:8px; align-items:flex-end; }
+
+  /* Occurrences */
+  .occ { display:flex; flex-direction:column; gap:0; border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; }
+  .occ__row { display:grid; grid-template-columns: 64px 1fr auto; gap:14px; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line-soft); }
+  .occ__row:last-child { border-bottom:0; }
+  .occ__row:hover { background:var(--surface-2); }
+  .occ__day { text-align:center; background:var(--surface-2); border:1px solid var(--line-soft); border-radius:var(--r-sm); padding:5px 0; }
+  .occ__day b { display:block; font-size:18px; font-weight:800; color:var(--ink); line-height:1; }
+  .occ__day span { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--acc-fma); letter-spacing:.04em; }
+  .occ__main { font-weight:600; }
+  .occ__sub { color:var(--muted); font-size:13px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .occ__sep { color:#b9c2c6; }
+
+  .prose p { margin:0 0 10px; color:var(--ink-2); }
+  .prose p:last-child { margin-bottom:0; }
+
+  /* Aside cards */
+  .thumbs { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .thumb { aspect-ratio:1; border-radius:var(--r-sm); background:var(--surface-2); border:1px solid var(--line-soft); display:flex; align-items:center; justify-content:center; color:var(--muted); }
+  .thumb .material-symbols-outlined { font-size:22px; }
+  .contact-line { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--line-soft); font-size:14px; }
+  .contact-line:last-child { border-bottom:0; }
+  .contact-line .material-symbols-outlined { font-size:18px; color:var(--muted); }
+  .mapcard { height:148px; border-radius:var(--r-md); border:1px solid var(--line); background:
+      linear-gradient(0deg, rgba(23,107,106,.06), rgba(23,107,106,.06)),
+      repeating-linear-gradient(45deg, var(--surface-2) 0 12px, var(--bg-2) 12px 24px);
+    position:relative; overflow:hidden; }
+  .mapcard__pin { position:absolute; top:50%; left:50%; transform:translate(-50%,-100%); color:var(--acc-fma); }
+  .mapcard__pin .material-symbols-outlined { font-size:30px; }
+  .aside-card__title { font-size:13px; font-weight:700; color:var(--ink-2); margin-bottom:10px; text-transform:uppercase; letter-spacing:.04em; }
+
+  @media (max-width: 820px){ .detail__cols { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="mock-frame acc-fma">
+  <div class="mock-head">
+    <span class="kicker">Phase 4 · Implémentation 4.1</span>
+    <h1>Fiche Événement (FMA)</h1>
+    <p class="lead">Aujourd'hui un événement tombe sur le gabarit générique : aucune date, un onglet « Tarifs (0) » vide. La fiche mène désormais par le <b>quand &amp; où</b>, à partir de données que le parser extrait déjà (<code>parsed.fma</code>, <code>fma_occurrences</code>).</p>
+  </div>
+
+  <div class="mock-stage">
+    <div class="panel detail">
+
+      <!-- ENTÊTE -->
+      <div class="detail__head">
+        <div class="detail__title-wrap">
+          <div class="row" style="gap:10px; flex-wrap:wrap">
+            <span class="type-pill acc-fma"><span class="material-symbols-outlined">festival</span> Événement</span>
+            <span class="badge badge--ok"><span class="dot dot--ok"></span> Publié</span>
+          </div>
+          <span class="detail__title">Fête de la vanille</span>
+          <span class="detail__id">FMARUN000000004B · Bras-Panon</span>
+        </div>
+        <a class="btn btn--secondary detail__edit" href="#"><span class="material-symbols-outlined">edit</span> Modifier la fiche</a>
+      </div>
+
+      <!-- TABS (scroll-spy) -->
+      <div class="detail__tabs">
+        <div class="tabs">
+          <button class="tab is-active">Aperçu</button>
+          <button class="tab">Dates</button>
+          <button class="tab">Médias</button>
+          <button class="tab">Contact</button>
+        </div>
+      </div>
+
+      <!-- DEUX COLONNES -->
+      <div class="detail__cols">
+
+        <!-- PRINCIPAL -->
+        <div class="col-main">
+
+          <!-- HERO : prochaine date (porte le signet Label sur la zone média, pas de classement pour les événements) -->
+          <section>
+            <div class="next thumb" style="overflow:visible">
+              <div class="next__when">
+                <span class="next__kicker">Prochaine date</span>
+                <span class="next__date">14 juil · 18h00</span>
+                <span class="next__where"><span class="material-symbols-outlined" style="font-size:17px">location_on</span> Place du marché, Bras-Panon</span>
+              </div>
+              <div class="next__cta">
+                <a class="btn btn--primary" href="#"><span class="material-symbols-outlined">confirmation_number</span> Billetterie</a>
+                <span class="muted small">Entrée 5 € · gratuit -12 ans</span>
+              </div>
+              <!-- Signet « à cheval » : un seul logo-label plausible pour un événement (Qualité Tourisme). Pas de classement étoiles : un FMA n'est jamais classé. -->
+              <div class="thumb__labels">
+                <span class="label-logo lbl-qualite" title="Qualité Tourisme · accordé"><span class="material-symbols-outlined">verified</span></span>
+              </div>
+            </div>
+          </section>
+
+          <!-- OCCURRENCES -->
+          <section>
+            <h2 class="sec__title"><span class="material-symbols-outlined">event_repeat</span> Occurrences <span class="badge badge--info" style="margin-left:4px">Tous les ans · juillet</span></h2>
+            <div class="occ">
+              <div class="occ__row">
+                <div class="occ__day"><b>14</b><span>juil</span></div>
+                <div>
+                  <div class="occ__main">Ouverture &amp; marché des producteurs</div>
+                  <div class="occ__sub">18h00 – 23h00 <span class="occ__sep">·</span> Place du marché, Bras-Panon</div>
+                </div>
+                <span class="badge badge--ok">Prochaine</span>
+              </div>
+              <div class="occ__row">
+                <div class="occ__day"><b>15</b><span>juil</span></div>
+                <div>
+                  <div class="occ__main">Ateliers vanille &amp; concours culinaire</div>
+                  <div class="occ__sub">09h00 – 18h00 <span class="occ__sep">·</span> Halle couverte</div>
+                </div>
+                <span class="chip">Au programme</span>
+              </div>
+              <div class="occ__row">
+                <div class="occ__day"><b>16</b><span>juil</span></div>
+                <div>
+                  <div class="occ__main">Bal &amp; clôture en musique</div>
+                  <div class="occ__sub">19h30 – 01h00 <span class="occ__sep">·</span> Parvis de la mairie</div>
+                </div>
+                <span class="chip">Au programme</span>
+              </div>
+            </div>
+            <p class="muted small" style="margin-top:8px">Les lignes proviennent de <code>fma_occurrences</code> (date · heure · lieu). La récurrence affichée vient de <code>object_fma.recurrence</code>.</p>
+          </section>
+
+          <!-- DESCRIPTION -->
+          <section>
+            <h2 class="sec__title"><span class="material-symbols-outlined">notes</span> Description</h2>
+            <div class="prose">
+              <p>Chaque été, Bras-Panon célèbre l'or noir de l'Est réunionnais. La Fête de la vanille réunit planteurs, préparateurs et artisans autour de la culture emblématique de la commune, classée parmi les meilleures vanilles Bourbon du monde.</p>
+              <p>Au programme : marché des producteurs, démonstrations de préparation, ateliers de dégustation, animations pour enfants et concerts en soirée. Un rendez-vous familial et gourmand qui rythme le mois de juillet depuis plus de trente ans.</p>
+            </div>
+          </section>
+
+          <!-- LABELS & TAGS (conservés sur la fiche · pas de classement pour les événements) -->
+          <section>
+            <h2 class="sec__title"><span class="material-symbols-outlined">workspace_premium</span> Labels &amp; tags</h2>
+
+            <!-- Label phare mis en avant -->
+            <div class="distinction-highlights" style="margin-bottom:14px">
+              <div class="distinction-highlight">
+                <span class="distinction-highlight__icon lbl-qualite"><span class="material-symbols-outlined">verified</span></span>
+                <div>
+                  <div class="distinction-highlight__kicker">Label accordé</div>
+                  <div class="distinction-highlight__label">Qualité Tourisme</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Puces-labels : uniquement les labels valides, sans pastille d'état -->
+            <div class="wrap" style="margin-bottom:12px">
+              <span class="label-chip">
+                <span class="label-chip__logo lbl-qualite"><span class="material-symbols-outlined">verified</span></span>
+                Qualité Tourisme
+              </span>
+            </div>
+
+            <!-- Tags colorés (couche d'affichage §09) -->
+            <div class="wrap">
+              <span class="tag-chip" style="--tag:#2f6fb0">Famille</span>
+              <span class="tag-chip" style="--tag:#1a7a55">Gratuit</span>
+              <span class="tag-chip" style="--tag:#d8602f">Marché de producteurs</span>
+              <span class="tag-chip" style="--tag:#b9892f">Vanille</span>
+            </div>
+            <p class="muted small" style="margin-top:8px">Labels = <code>object_classification</code> (statut <code>granted</code>) ; tags = <code>tag_link</code> (§09). Aucun classement étoiles : un événement (FMA) n'est jamais classé.</p>
+          </section>
+
+        </div>
+
+        <!-- ASIDE -->
+        <div class="col-aside">
+          <div class="card" style="padding:14px">
+            <div class="aside-card__title">Médias</div>
+            <div class="thumbs">
+              <div class="thumb"><span class="material-symbols-outlined">image</span></div>
+              <div class="thumb"><span class="material-symbols-outlined">image</span></div>
+              <div class="thumb"><span class="material-symbols-outlined">image</span></div>
+            </div>
+          </div>
+
+          <div class="card" style="padding:14px">
+            <div class="aside-card__title">Contact</div>
+            <div class="contact-line"><span class="material-symbols-outlined">call</span> 0262 51 50 62</div>
+            <div class="contact-line"><span class="material-symbols-outlined">mail</span> tourisme@braspanon.re</div>
+            <div class="contact-line"><span class="material-symbols-outlined">language</span> braspanon.re/vanille</div>
+          </div>
+
+          <div class="card" style="padding:14px">
+            <div class="aside-card__title">Lieu</div>
+            <div class="mapcard"><span class="mapcard__pin"><span class="material-symbols-outlined">location_on</span></span></div>
+            <a class="btn btn--secondary btn--sm" style="margin-top:10px; width:100%; justify-content:center" href="#"><span class="material-symbols-outlined">directions</span> Itinéraire</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="spec">
+    <h2>Fonctionnalités &amp; portée</h2>
+    <div class="grid2">
+      <div>
+        <h3>Comportement</h3>
+        <ul>
+          <li>Nouveau <code>EventDetailView</code> enregistré dans le dispatcher de type (FMA tombe aujourd'hui sur <code>GenericDetailView</code>).</li>
+          <li>La fiche mène par un KPI <b>prochaine occurrence</b> (date · heure · lieu) calculé sur la liste triée d'occurrences à venir.</li>
+          <li>Section <b>Occurrences</b> = liste datée (jour · heure · lieu) + badge de récurrence ; pas d'interpolation.</li>
+          <li>Onglets construits à partir des sections réellement rendues : <code>Aperçu / Dates / Médias / Contact</code>. Plus d'onglet « Tarifs (0) ».</li>
+          <li>Retrait des contrôles « cul-de-sac » lecture seule hérités du gabarit générique.</li>
+          <li><b>Labels &amp; tags conservés</b> sur la fiche : section dédiée (puce-label + statut) + tags colorés, et signet « à cheval » d'un logo-label sur la zone média de l'entête. <b>Aucun classement étoiles</b> : un événement (FMA) n'est pas classé.</li>
+        </ul>
+        <h3>Critères d'acceptation</h3>
+        <ul>
+          <li>Un événement affiche clairement <b>quand</b> et <b>où</b> dès le haut de fiche.</li>
+          <li>Aucun onglet vide (Tarifs/Équipements absents si vides).</li>
+          <li>Onglets = liste dérivée des sections rendues, scroll-spy actif.</li>
+          <li>Si l'événement porte un label <code>granted</code>, il reste <b>visible</b> : signet logo « à cheval » sur la zone média + puce-label avec point de statut (accordé / en cours / expiré) ; les tags §09 restent affichés. Le bloc classement étoiles n'apparaît jamais pour un FMA.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Données &amp; fichiers</h3>
+        <ul>
+          <li><code>src/features/object-drawer/ObjectDetailView.tsx</code> : ajout de <code>EventDetailView</code> + entrée FMA dans le dispatch.</li>
+          <li>Config <code>ARCHETYPE_SECTIONS</code> : ordre de sections propre à FMA (next-date · occurrences · description · médias · contact).</li>
+          <li>Parser : <code>parsed.itinerary.fma</code> + <code>parsed.itinerary.fmaOccurrences</code> (déjà extraits · <code>object-detail-parser.ts</code>).</li>
+          <li><code>buildDetailTabItems</code> : émettre les onglets depuis les sections non vides au lieu de la liste figée à 6 entrées.</li>
+        </ul>
+        <div class="callout" style="margin-top:14px">
+          <span class="material-symbols-outlined" style="color:var(--info)">lightbulb</span>
+          <span>La pastille de récurrence et la billetterie ne s'affichent que si <code>recurrence</code> / <code>booking_url</code> existent ; sinon la fiche reste honnête (date unique, pas de bouton mort).</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

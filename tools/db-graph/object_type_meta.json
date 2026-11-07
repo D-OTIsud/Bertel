@@ -1,0 +1,33 @@
+{
+  "_source": "Mirrors bertel-tourism-ui/src/features/object-editor/archetypes.ts (TYPE_LABEL + TYPE_ARCHETYPES). The DB object_type enum is the source of truth for WHICH codes exist; this file adds the human label + editor archetype for each. Keep in sync with archetypes.ts when an object type is added/retyped (CLAUDE.md: 'Adding an object type = enum value + registry/applicability seeds + TYPE_ARCHETYPES/TYPE_LABEL + taxonomy domain').",
+  "_archetypes": {
+    "HEB": { "codeName": "Hébergement", "family": "Hôtel · Hébergement loisir · Camping · Résidence" },
+    "RES": { "codeName": "Restaurant", "family": "Restauration · Bar · Snack" },
+    "ASC": { "codeName": "Activité sportive & culturelle", "family": "Activité encadrée · Stage · Initiation" },
+    "ITI": { "codeName": "Itinéraire", "family": "Randonnée · Trail · VTT · Boucle" },
+    "VIS": { "codeName": "Site & visite", "family": "Patrimoine · Loisir · Site naturel · Producteur" },
+    "SRV": { "codeName": "Service & commerce", "family": "OT · Commerce · Service · Service public" },
+    "FMA": { "codeName": "Fête & manifestation", "family": "Événement · Animation · Manifestation" }
+  },
+  "types": {
+    "HOT":  { "label": "Hotel",                  "archetype": "HEB" },
+    "HPA":  { "label": "Hebergement plein air",  "archetype": "HEB" },
+    "HLO":  { "label": "Hebergement loisir",     "archetype": "HEB" },
+    "CAMP": { "label": "Camping",                "archetype": "HEB" },
+    "RVA":  { "label": "Residence vacances",     "archetype": "HEB" },
+    "RES":  { "label": "Restaurant",             "archetype": "RES" },
+    "ASC":  { "label": "Activite",               "archetype": "ASC" },
+    "ACT":  { "label": "Activite encadree",      "archetype": "ASC" },
+    "ITI":  { "label": "Itineraire",             "archetype": "ITI" },
+    "FMA":  { "label": "Fete / manifestation",   "archetype": "FMA" },
+    "LOI":  { "label": "Loisir",                 "archetype": "VIS" },
+    "PCU":  { "label": "Patrimoine",             "archetype": "VIS" },
+    "PNA":  { "label": "Site naturel",           "archetype": "VIS" },
+    "PRD":  { "label": "Producteur",             "archetype": "VIS" },
+    "PSV":  { "label": "Prestataire",            "archetype": "SRV" },
+    "VIL":  { "label": "Ville",                  "archetype": "SRV" },
+    "COM":  { "label": "Commerce",               "archetype": "SRV" },
+    "SPU":  { "label": "Service public",         "archetype": "SRV" },
+    "ORG":  { "label": "Organisation",           "archetype": null }
+  }
+}

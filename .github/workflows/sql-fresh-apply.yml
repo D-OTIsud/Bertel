@@ -1,0 +1,709 @@
+name: SQL fresh-apply gate
+
+# Proves that a BLANK database built from the canonical manifest
+# (docs/SQL_ROLLOUT_RUNBOOK.md → "Fresh Database — Complete Ordered Manifest")
+# applies cleanly, in order, with no error. This enforces the
+# "Deploy integrity (no PROD-only DDL)" invariant in CLAUDE.md: if a future
+# migration is applied only to live PROD and never folded into the manifest,
+# a fresh apply diverges and this gate goes red.
+#
+# Environment: the SQL files target Supabase (auth/storage schemas, auth.uid(),
+# roles anon/authenticated/service_role), so the gate boots a real Supabase
+# local database via the CLI rather than a bare Postgres container.
+
+on:
+  push:
+    paths:
+      - 'Base de donnée DLL et API/**.sql'
+      - 'supabase/migrations/**.sql'
+      - 'supabase/config.toml'
+      - 'docs/integrations/tourinsoft/**'
+      - 'tools/tourinsoft/**'
+      - 'tools/private-media/**'
+      - 'tools/ai-quota/**'
+      - 'tools/list-email/**'
+      - 'tools/current-rights/**'
+      - 'docs/SQL_ROLLOUT_RUNBOOK.md'
+      - '.github/workflows/sql-fresh-apply.yml'
+  pull_request:
+    paths:
+      - 'Base de donnée DLL et API/**.sql'
+      - 'supabase/migrations/**.sql'
+      - 'supabase/config.toml'
+      - 'docs/integrations/tourinsoft/**'
+      - 'tools/tourinsoft/**'
+      - 'tools/private-media/**'
+      - 'tools/ai-quota/**'
+      - 'tools/list-email/**'
+      - 'tools/current-rights/**'
+      - 'docs/SQL_ROLLOUT_RUNBOOK.md'
+      - '.github/workflows/sql-fresh-apply.yml'
+  workflow_dispatch:
+    inputs:
+      storage_contract:
+        description: 'Run only strict synthetic Storage capability (known v1.41.8 concurrency failure; no production)'
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  fresh-apply:
+    # Push/PR always run the mandatory application/rights gate. The explicit
+    # manual selector below starts a separate upstream capability probe only.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.storage_contract != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Tourinsoft Reunion contract inventory
+        run: |
+          node tools/tourinsoft/check-contract.mjs
+          node --check tools/tourinsoft/compare-payload.mjs
+          node tools/tourinsoft/compare-payload.mjs --input="Base de donnée DLL et API/tests/fixtures/tourinsoft_reunion_common.expected.json"
+          python tools/tourinsoft/check-regional-contract.py
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.78.1
+
+      - name: Ensure psql is available
+        run: psql --version || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Prepare blank Supabase bootstrap project
+        # This gate tests ci_fresh_apply.sql as the single source of truth. Starting
+        # from the checkout would auto-run supabase/migrations first; those files are
+        # incremental PROD patches and legitimately depend on tables created by the
+        # canonical manifest (for example ref_code).
+        run: |
+          mkdir -p "$RUNNER_TEMP/bertel-fresh/supabase"
+          printf 'BERTEL_CURRENT_RIGHTS_DISPOSABLE_V1\n' > "$RUNNER_TEMP/bertel-fresh/.bertel-current-rights-disposable"
+          cp supabase/config.toml "$RUNNER_TEMP/bertel-fresh/supabase/config.toml"
+          # Expose the existing api namespace only in this disposable HTTP test
+          # stack. Production config/visibility is not changed by this gate.
+          cat >> "$RUNNER_TEMP/bertel-fresh/supabase/config.toml" <<'TOML'
+
+          [api]
+          schemas = ["public", "graphql_public", "api"]
+          TOML
+          # PostgREST checks exposed namespaces before the canonical manifest
+          # can run. Bootstrap only this empty namespace, no Bertel objects.
+          supabase migration new bootstrap_empty_api --workdir "$RUNNER_TEMP/bertel-fresh"
+          for bootstrap_file in "$RUNNER_TEMP/bertel-fresh/supabase/migrations/"*_bootstrap_empty_api.sql; do
+            test -f "$bootstrap_file"
+            printf 'CREATE SCHEMA IF NOT EXISTS api;\n' > "$bootstrap_file"
+          done
+
+      - name: Prepare owned list-email disposable stack guard
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: |
+          node --test tools/list-email/disposable.test.mjs tools/list-email/sql-session.test.mjs
+          node tools/list-email/init-disposable.mjs --prepare
+
+      - name: Start Supabase local database
+        # Boots the Supabase-flavoured Postgres (DB image provides the auth/storage
+        # schemas, the anon/authenticated/service_role roles, and the extensions the
+        # manifest depends on). config.toml pins major_version 17 to match PROD.
+        env:
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        # Native startup normally prints generated keys. Keep its raw streams in
+        # memory, never in Actions output or an uploaded diagnostic file.
+        run: node tools/current-rights/start-disposable.mjs
+
+      - name: Verify newly started list-email stack ownership before fresh SQL
+        id: list_email_owned_stack
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: node tools/list-email/init-disposable.mjs --verify-start
+
+      - name: Apply the canonical fresh-install manifest (aborts on first error)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"
+
+      - name: Smoke — assert the manifest produced the expected schema
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            ASSERT (SELECT count(*) FROM information_schema.columns WHERE table_name='tag_link' AND column_name='position') = 1,
+              'tag_link.position missing (migration_tag_link_position.sql not applied)';
+            ASSERT (SELECT count(*) FROM information_schema.columns WHERE table_name='object_room_type' AND column_name='room_type_id') = 1,
+              'object_room_type.room_type_id missing (migration_room_type_ref.sql not applied)';
+            ASSERT (SELECT count(*) FROM information_schema.tables WHERE table_name='ref_sustainability_action_group') = 1,
+              'ref_sustainability_action_group missing (migration_sustainability_v5.sql not applied)';
+            ASSERT (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                    WHERE n.nspname='api' AND p.proname='save_object_workspace_tags') = 1,
+              'api.save_object_workspace_tags missing (object_workspace_gap_rpcs.sql not applied)';
+            ASSERT (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                    WHERE n.nspname='internal' AND p.proname='workspace_assert_can_write_object') = 1,
+              'internal.workspace_assert_can_write_object missing (object_workspace_safe_write_rpcs.sql not applied)';
+            ASSERT (SELECT count(*) FROM storage.buckets WHERE id='media') = 1,
+              'media storage bucket missing (media_bucket.sql not applied)';
+            ASSERT (SELECT relrowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                    WHERE n.nspname='public' AND c.relname='object_act'),
+              'object_act RLS not enabled (migration_object_act_rls.sql not applied)';
+            ASSERT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                    WHERE n.nspname='public' AND c.relrowsecurity AND c.relname IN
+                      ('ref_classification_equivalent_action','ref_classification_equivalent_group','ref_sustainability_action_group')) = 3,
+              'ref_* cleanup RLS not enabled (migration_rls_ref_and_bak_cleanup.sql not applied)';
+            RAISE NOTICE 'Smoke checks passed: manifest reproduced the expected schema.';
+          END$$;
+          SQL
+
+      - name: Platform branding authorization (canonical roles, metadata denial, real writer and RLS)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_branding_admin_authorization.sql"
+
+      - name: Derived object realm guard (authorized writers, organization transitions, public isolation)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_realm_derived_write_guard.sql"
+
+      - name: Derived realm real seed replay (bootstrap UPSERT, predecessor denial, two complete reseeds)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_realm_seed_replay.sql"
+
+      - name: Photo-only album contract (closed defaults, CAS receipts, actor isolation and anonymous denial)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        # The manifest already runs the before/after public-reader differential
+        # in one session. This independently repeats the rolled-back behavior
+        # suite after the complete fresh installation; no opt-in flag is needed.
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_photo_album_fresh.sql"
+
+      # Current-rights core/surfaces and the eight adapted legacy probes run
+      # exactly once, together after the final overlay inside the manifest.
+      # Committed revocation remains a separate final disposable-DB phase.
+      - name: SP-1 structural assertions (canonical-write authorization)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp1_canonical_write_auth.sql"
+
+      - name: SP-1b coverage assertions (every editor-write table is canonical-covered)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp1b_canonical_coverage.sql"
+
+      - name: SP-2 behavioral test (permission convention + status guard + team notes)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp2_permission_behavior.sql"
+
+      - name: Section A legal access and role hardening
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_unblock_team_legal_access.sql"
+
+      - name: P0.3 coverage assertions (read-gate; no residual USING(true); nested FKs indexed)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_p03_read_gate_coverage.sql"
+
+      - name: P0.3 behavioral test (anon/other-ORG cannot read draft child rows)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_p03_read_gate_behavior.sql"
+
+      - name: object_act RLS test (anon reads published, not draft; anon cannot write)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_act_rls.sql"
+
+      - name: SP-4 roster RPC test (rpc_list_org_members auth + shape)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp4_list_org_members.sql"
+
+      - name: Initial object publication guard (real client role, create and publish rights, ORG onboarding)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_initial_publication_guard.sql"
+
+      - name: Object status lifecycle test (rpc_set_object_status + wrapper)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_status_lifecycle.sql"
+
+      - name: Public discovery external effects (trusted provenance, positive mail, durable suppression, service ACL)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sandbox_external_effects.sql"
+
+      - name: ITI model test (duration_min + elevation_loss; get_object_resource shape; hour→minute filter)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_iti_model.sql"
+
+      - name: Read-gate set-based test (object policy via current_user_extended_object_ids; draft ownership)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_read_gate_setbased.sql"
+
+      - name: Cards-batch authorize test (DEFINER self-authorizes p_ids; no cross-persona draft leak)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_cards_batch_authorize.sql"
+
+      - name: Cards published fast-path test (split gate skips extended scan for all-published; no leak)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_cards_published_fastpath.sql"
+
+      - name: Open-status timezone test (get_local_now_for_timezone no longer scans pg_timezone_names; fallback contract preserved)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_open_status_timezone.sql"
+
+      - name: ref_commune test (24-commune seed + RLS pub-read/admin-write + object_zone FK)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ref_commune.sql"
+
+      - name: facet applicability registry test (§46 — registry + triggers + violations fn)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_facet_applicability.sql"
+
+      - name: capacity applicability seed test (§46 companion — ref_capacity_applicability populated)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_capacity_applicability_seed.sql"
+
+      - name: actor links editor test (§48 8r — per-command actor_object_role + actors branch + search_actors)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_links_editor.sql"
+
+      - name: contact_channel read gate test (§49 8s — anon draft-contact leak closed, extended arm intact)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_contact_channel_read_gate.sql"
+
+      - name: media + object_description read gate test (§51 8t — anon draft media/description leak closed, place leg + extended arm intact)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_media_description_read_gate.sql"
+
+      - name: object type SPU test (§53 8u — enum value + taxonomy_spu tree + SPU insert passes facet guard)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_type_spu.sql"
+
+      - name: object_review read gate test (§56 8w — anon draft review leak closed, extended arm added, admin writes intact)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_review_read_gate.sql"
+
+      - name: object type PRD + taxonomy seeds test (§57 8x/8y — enum, taxonomy_prd tree, 8 seeded domains, SPU/COM/LOI extensions, MICE applicability)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_type_prd.sql"
+
+      - name: media visibility gate test (§59 14a — anon private/partners leak closed, cover cache gated, extended arm intact)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_media_visibility_gate.sql"
+
+      - name: ranked label search test (label_scheme_ranked + label_match — exact rank 0 before evidence rank 1; T&H amenity vs sustainability equivalence kept separate)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ranked_label_search.sql"
+
+      - name: CRM module test (§61 8z — vocab merge + crm_sentiment, actor/object anchor CHECK, publisher read/write scopes + cross-ORG denial)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_crm_module.sql"
+
+      - name: CRM directory search test (p_search — perimetre nom/prenom/etablissement/tel/e-mail, flou trgm calibre 0.45, classement exact avant flou, echappement LIKE, ordre par defaut non regresse, persona cross-ORG)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_crm_directory_search.sql"
+
+      - name: room-type bed test (§70 14c — bed_type vocab + i18n + object_room_type_bed RLS per-command + qualified)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_room_type_bed.sql"
+
+      - name: opening period test (§81/§92 14i+14o — final 3-type catalog + recurrence/closure + FK + read helper)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_opening_period_type.sql"
+
+      - name: object stay policy test (§85 14k — object_stay_policy table + §38 read gate + per-command canonical write + triggers)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_stay_policy.sql"
+
+      - name: metric_snapshot table test (Brique 2 14s — table + RLS enabled + unique constraint)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_metric_snapshot.sql"
+
+      - name: resource facet exposure test (§101 — get_object_resource exposes stay_policy + activity; compose survival, omit-when-empty, ACT/ASC type-gate)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_resource_facet_exposure.sql"
+
+      - name: "global + fuzzy + phonetic search test (§109 14y / §197 16k2 / §199 16k3 — search_document: amenities/dishes/dietary/description surface in global mode, name mode not broadened, private menu excluded, relevance ranking; fuzzy: search_document_text filled by the same triggers, jaccusy finds jacuzzi, FALLBACK only when full-text finds nothing, length-aware threshold pinned, private menu still hidden, MV path covered; phonetic: kafé finds café with prior proof trigrams alone cannot, phonetic-only collision rejected, word-level confirmation trap)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_global_search.sql"
+
+      - name: Section 06 ITI vocab test (§111 15e — ref_iti_assoc_role seed + iti_difficulty/iti_open_status/iti_stage_kind partitions + house RLS)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_iti_section06_vocab.sql"
+
+      - name: "set_itinerary_track test (§111 — GPX/KML trace ingestion: 2D store + auto distance/elevation/profile + cache-invalidate trigger fix + workspace gate)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_set_itinerary_track.sql"
+
+      - name: ITI stage geom roundtrip test (§111 — save_object_itinerary_nested persists stage geom + kind; get_object_resource emits track_geojson + stage lng/lat)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_iti_stage_geom_roundtrip.sql"
+
+      - name: "reference catalog test (I1 — list_catalog/list_reference_bundle: whitelist default-deny, uniform shape, i18n fallback, parent resolution, anon-executable)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_reference_catalog.sql"
+
+      - name: partner API keys test (R1a — internal partner_api_key/_call + fail-closed superuser gate + auth-by-hash/scopes/revoke/log; service-role-only auth)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_api_keys.sql"
+
+      - name: "partner rate-limit test (R2 — partner_rate_bucket + partner_rate_check fixed-window: under limit allowed, over denied + retry_after; service-role-only)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_rate_limit.sql"
+
+      - name: partner i18n=all test (C-5 — strip_markdown_i18n per-language strip/lowercase/empty-drop + get_object_i18n_all overlay->canonical, public-only, published gate, map-only, service-role-only)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_i18n_all.sql"
+
+      - name: "open-status tri-state test (§133 — refresh_open_status: no opening_period -> NULL (no pill), open-without-hours today -> TRUE, hours on another day -> FALSE)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_open_status_tristate.sql"
+
+      - name: "object JSON-LD schema.org test (I4 — ref_interop_crosswalk table-driven @type + get_object_jsonld: published gate, public-only contacts/website/sameAs, PostalAddress/geo, strip_markdown description, unmapped profile/unknown id -> NULL, service-role-only)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_jsonld_schemaorg.sql"
+
+      - name: "interop profiles test (I4b — datatourisme/apidae/tourinsoft: crosswalk class per profile, interop_object_core shared reader, per-format shape, address/geo, public-only contacts, published/unknown/unmapped -> NULL, service-role-only)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_interop_profiles.sql"
+
+      - name: "interop batch test (I4c — get_objects_interop_batch: published-only map, draft/unknown absent, per-profile dispatch, dedup, 200-id clamp, NULL/empty/unmapped -> empty map, service-role-only)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_interop_batch.sql"
+
+      - name: "Tourinsoft Reunion export test (I4e — opt-in variant, legacy parity, public-only projection, HOT/HLO/CAMP, unit/batch parity)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_tourinsoft_reunion_export_v1.sql"
+
+      - name: "Tourinsoft Reunion regional export test (I4f — six exact feeds, fail-closed routing, allowlisted round-trip, public-only projection)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_tourinsoft_reunion_regional_v1.sql"
+
+      - name: "partition maintenance hardening test (16e §146 — born-gated creators: fresh object_version/audit partitions get RLS + wrapped policy; maintain_partitions covers both parents; no bare partition; default partition empty)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partition_maintenance_hardening.sql"
+
+      - name: "ref_code duplicate-policy cleanup test (16f §146 — the 6 partitions carry EXACTLY the house pair; the 12 legacy duplicate policies are gone)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ref_code_dup_policy_cleanup.sql"
+
+      - name: "FK covering indexes test (16g §146 — every FK on object_taxonomy/object_web_channel/object_relation/crm_interaction/object_membership/object_menu_item/object_private_description has a covering index)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_fk_covering_indexes.sql"
+
+      - name: "RLS initplan guard (16h §146 — PERMANENT GATE: zero policies in public/audit with unwrapped auth.uid/role/jwt/email; any migration creating a raw-auth policy fails here — CLAUDE.md §39)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_rls_initplan_broad_sweep.sql"
+
+      - name: "open_at + event filters test (16i §157 — compute_open_status(now) parity with cached_is_open_now, open_at(now)==open_now filter parity, tri-state NULL never matched, FMA event range overlap/disjoint via rollback fixture)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_filters_open_at_event.sql"
+
+      - name: "accessibility label filter test (16j §162 — accessibility_any = équipement OU label T&H granted ; disability_types_any bras label + couverture inconnue ; amenity_families_any reste équipement-pur ; bypass MV prouvé par fixtures en transaction)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_accessibility_label_filter.sql"
+
+      - name: "org onboarding test (ORG1 — rpc_create_org: superuser crée une ORG published + org_config, id ORGRUN…; gardes FORBIDDEN/MISSING_REQUIRED_FIELD/DUPLICATE_ORG/INVALID_ACCESS_SCOPE; rpc_list_orgs superuser-only avec memberCount)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_org_onboarding.sql"
+
+      - name: "org branding per-org test (ORG2 — get_app_branding résout la surcharge ORG selon le membership, héritage champ par champ + fallback plateforme, markerStyles plateforme, orgObjectId; gates upsert superuser|org_admin>=30, cross-org refusé; reset; get_public_branding inchangée; anon 0 ligne)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_org_branding.sql"
+
+      - name: "label section filter test (16k §173 — exact_only exclut les équivalents + tri label_rank prioritaire sous recherche + meta.label_rank_counts présent)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_label_filter_sections.sql"
+
+      - name: "classification graded-label group test (16l§175→16m§176 — gites_epics + clevacances_keys + logis en graded_label « Labels notés », hors official_classification ET quality_label: distinctions notées de réseau privé ≠ classement officiel Atout France ≠ label binaire)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_classification_regroup_network_labels.sql"
+
+      - name: "§211 E1 — dynamic-list resolver split (internal engine reaches 205, public contract still capped at 200, internal helper not executable by anon/authenticated)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_list_resolver_internal.sql"
+
+      # The historical 17k/17l contract runs in the manifest BEFORE 19d.
+      # After 19d, personal visibility and published-only items are intentional.
+      - name: "19d — Listes personnelles, une, retention, couvertures et isolation"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_listes_cycle_vie.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_listes_dynamic_cover_realm.sql"
+
+      - name: "19e — Inbox des propositions de listes (reviewers actuels, dedupe, no-mail, resolution)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_list_feature_notifications.sql"
+
+      - name: "§211 E2 — bulk email export (operator→object cascade, publisher scope isolates a PUBLISHED foreign-ORG object, expired/future/private/non-operator links ignored, consent refusal honoured, PT400/PT404/PT413 contracts, reader refused)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_selection_emails.sql"
+
+      - name: "moderation RPCs test (P2.1 §120 + §182 section F — user_can_moderate_object/submit/list/approve/reject, whitelist re-dispatch — save_object_rooms EXCLU, cf. 18a §7)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_moderation_rpcs.sql"
+
+      - name: "Internal moderation notifications (rights, coalescing, bell, email, lifecycle, portal isolation)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_internal_pending_change_notifications.sql"
+
+      - name: "SURF1-3 test (§182 — activity equipment-details contract, save_object_places reconcile incl. coordinate range, save_object_rooms full-column round-trip + atomicity)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_surface_base_front_fix.sql"
+
+      - name: "CRM actor prospects + private document library test"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_prospects_documents.sql"
+
+      - name: "ref_amenity visit modes test (18b — seed visite_libre/visite_guidee/audioguide, famille visit_mediation ; répare le blocage de sauvegarde §06 BlockVIS sans mélanger avec accessibility)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ref_amenity_visit_modes.sql"
+
+      - name: "RGPD erasure test (api.rpc_gdpr_erase_subject Art. 17 — anonymisation acteur, canaux supprimés, interaction déliée, journal d'audit rédigé). Garde qui EXISTAIT au dépôt sans être jouée nulle part : ni ci_fresh_apply.sql ni ce workflow ne la référençaient."
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_gdpr_erasure.sql"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Garde d'alignement du miroir RGPD (18a §8.5).
+      #
+      # api.rpc_gdpr_erase_subject vit en DEUX exemplaires au dépôt qui doivent rester
+      # identiques : schema_unified.sql (le miroir, joué en étape 1 du manifeste) et
+      # migration_actor_portal.sql (18a, joué en fin de manifeste). Sur une base fraîche
+      # 18a passe APRÈS et gagne : une divergence du miroir ne produirait AUCUNE erreur
+      # de fresh-apply, et l'écart ne se verrait qu'à la prochaine install qui rejouerait
+      # schema_unified seul. Ce step compare les deux corps octet pour octet.
+      #
+      # Le dépôt porte une TROISIÈME rédaction, migration_gdpr_erasure.sql, sans la
+      # branche acteur : elle est volontairement absente de ci_fresh_apply.sql, car
+      # rejouée après 18a elle EFFACERAIT le déliage du compte portail sans lever.
+      # Le second test le vérifie.
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: "RGPD mirror alignment (schema_unified.sql ≡ migration_actor_portal.sql pour api.rpc_gdpr_erase_subject ; migration_gdpr_erasure.sql hors manifeste)"
+        run: |
+          set -euo pipefail
+          extract() {
+            awk '/^CREATE OR REPLACE FUNCTION api\.rpc_gdpr_erase_subject\(/{f=1} f{print} f&&/^\$\$;$/{exit}' "$1"
+          }
+          # Prémisse de NON-VACUITÉ : sans elle, un renommage de la fonction ferait rendre
+          # DEUX extractions vides — donc deux md5 égaux — et la garde passerait au vert
+          # en ne comparant plus rien.
+          NA=$(extract "Base de donnée DLL et API/schema_unified.sql" | wc -l)
+          NB=$(extract "Base de donnée DLL et API/migration_actor_portal.sql" | wc -l)
+          if [ "$NA" -lt 50 ] || [ "$NB" -lt 50 ]; then
+            echo "::error::extraction vide ou tronquée (schema_unified: $NA lignes, migration_actor_portal: $NB) — le marqueur 'CREATE OR REPLACE FUNCTION api.rpc_gdpr_erase_subject(' a bougé. Réparer ce step AVANT de croire son verdict."
+            exit 1
+          fi
+          A=$(extract "Base de donnée DLL et API/schema_unified.sql" | md5sum | cut -d' ' -f1)
+          B=$(extract "Base de donnée DLL et API/migration_actor_portal.sql" | md5sum | cut -d' ' -f1)
+          echo "schema_unified.sql        : $A ($NA lignes)"
+          echo "migration_actor_portal.sql: $B ($NB lignes)"
+          if [ "$A" != "$B" ]; then
+            echo "::error::api.rpc_gdpr_erase_subject a DIVERGÉ entre schema_unified.sql et migration_actor_portal.sql (18a §8.5). Sur base fraîche 18a écrase le miroir : la divergence ne lève nulle part, elle se paie à la prochaine install. Réaligner les deux corps."
+            exit 1
+          fi
+          # On cherche une INCLUSION (\i / \ir), pas une mention : le \echo de l'étape 18a
+          # nomme ce fichier pour dire précisément qu'il ne doit PAS être joué.
+          if grep -qE '^[[:space:]]*\\ir?[[:space:]]+migration_gdpr_erasure\.sql' "Base de donnée DLL et API/ci_fresh_apply.sql"; then
+            echo "::error::migration_gdpr_erasure.sql est entré dans ci_fresh_apply.sql. Cette rédaction ignore la branche acteur de 18a §8.5 et effacerait le déliage du compte portail SANS lever. La retirer du manifeste, ou l'aligner d'abord."
+            exit 1
+          fi
+          echo "RGPD mirror alignment OK."
+
+      - name: Private object evidence (current rights, exact pair, archive consultation, anon denial)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          node --test tools/private-media/prepare-cutover.test.mjs
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_private_object_document_access.sql"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_private_object_document_legal_access.sql"
+
+      - name: Admission source and upgrade provenance (offline only)
+        run: node --test tools/ai-quota/mcp-packaging.test.mjs
+
+      - name: Distributed AI admission (service-only, sliding window, concurrent consumers)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          AI_QUOTA_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          AI_QUOTA_DISPOSABLE: 'true'
+          AI_QUOTA_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_distributed_ai_admission.sql"
+          node --test tools/ai-quota/distributed-admission.test.mjs
+          node --test tools/ai-quota/postgrest-admission.test.mjs
+
+      - name: Attest owned list-mail disposable target (no product fixture yet)
+        timeout-minutes: 5
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: |
+          cmp "Base de donnée DLL et API/distributed_list_email_intents.sql" supabase/migrations/20261106194635_distributed_list_email_intents.sql
+          node tools/list-email/init-disposable.mjs
+
+      - name: Manual list-mail SQL contract (synthetic, service-only, list lifetime)
+        timeout-minutes: 5
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: node tools/list-email/sql-fixture.mjs
+
+      - name: Manual list-mail concurrent intentions (owned bounded workers, no SMTP)
+        timeout-minutes: 5
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: node --test tools/list-email/distributed-intents.test.mjs
+
+      - name: Manual list-mail through real GoTrue and PostgREST (synthetic only)
+        timeout-minutes: 5
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          LIST_EMAIL_DISPOSABLE: 'true'
+          LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: node --test tools/list-email/postgrest-intents.test.mjs
+
+      # This final test intentionally crosses COMMIT boundaries to emulate new
+      # requests with the same claims. Its exact-ID synthetic fixtures are cleaned;
+      # append-only audit/version traces die with this disposable local database.
+      - name: Current rights after committed revocation (same claims, fresh requests)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -v current_rights_disposable=true -f "Base de donnée DLL et API/tests/test_object_current_rights_committed_revocation.sql"
+
+      - name: Current rights through real GoTrue and PostgREST (same JWT after COMMIT)
+        env:
+          CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+        run: |
+          node --test tools/current-rights/disposable.test.mjs
+          node --test tools/current-rights/storage-refusals.test.mjs
+          node --test tools/current-rights/postgrest-rights.test.mjs
+
+      - name: PostgreSQL diagnostics on failure
+        if: ${{ failure() && steps.list_email_owned_stack.outcome == 'success' }}
+        run: echo "Owned disposable PostgreSQL stage failed; raw database logs withheld."
+
+      - name: Stop Supabase
+        if: ${{ always() && steps.list_email_owned_stack.outcome == 'success' }}
+        run: supabase stop --workdir "$RUNNER_TEMP/bertel-fresh"
+
+  storage-contract:
+    name: Strict Storage capability (manual, synthetic only)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.storage_contract == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      CURRENT_RIGHTS_DISPOSABLE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.78.1
+
+      - name: Prepare owned blank Storage stack
+        # No Bertel schema or real object is needed by this independent probe.
+        run: |
+          mkdir -p "$RUNNER_TEMP/bertel-storage/supabase"
+          printf 'BERTEL_CURRENT_RIGHTS_DISPOSABLE_V1\n' > "$RUNNER_TEMP/bertel-storage/.bertel-current-rights-disposable"
+          cp supabase/config.toml "$RUNNER_TEMP/bertel-storage/supabase/config.toml"
+
+      - name: Start disposable Supabase with generated keys withheld
+        env:
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
+        run: node tools/current-rights/start-disposable.mjs
+
+      - name: Strict private Storage HTTP capability (failure is not tolerated)
+        env:
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
+        # This is deliberately separate from required Auth coverage. Two accepted
+        # concurrent copies remain a failed capability, never a security success.
+        run: |
+          node --test tools/current-rights/disposable.test.mjs tools/current-rights/storage-refusals.test.mjs
+          docker ps --format '{{.Image}}' --filter 'name=supabase_storage_'
+          node --test tools/current-rights/storage-contract.test.mjs
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --workdir "$RUNNER_TEMP/bertel-storage"

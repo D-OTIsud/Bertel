@@ -1,0 +1,156 @@
+import {
+  buildSettingsNav, settingsSectionIds, resolveSettingsSection, DEFAULT_SETTINGS_SECTION,
+  isSettingsSectionNew, SETTINGS_NEW_BADGE_DURATION_MS,
+} from './settings-nav';
+
+describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
+  it('super-admin voit « Mon compte » ET « Plateforme »', () => {
+    const groups = buildSettingsNav('super_admin');
+    expect(groups.map((g) => g.id)).toEqual(['account', 'platform']);
+    const platform = groups.find((g) => g.id === 'platform');
+    expect(platform?.sections.map((s) => s.id)).toEqual(['appearance', 'markers', 'referentiels', 'smtp', 'ai', 'partner-keys', 'organisations', 'test-corpus', 'diagnostic']);
+  });
+
+  it('un rôle non super-admin ne voit QUE « Mon compte » (pas de groupe plateforme)', () => {
+    for (const role of ['tourism_agent', 'owner'] as const) {
+      const groups = buildSettingsNav(role);
+      expect(groups.map((g) => g.id)).toEqual(['account']);
+      expect(groups[0].sections.map((s) => s.id)).toEqual(['profile', 'preferences', 'session', 'legal']);
+    }
+  });
+
+  it('rôle null (session non chargée) : « Mon compte » seul', () => {
+    expect(buildSettingsNav(null).map((g) => g.id)).toEqual(['account']);
+  });
+
+  it('settingsSectionIds aplatit les sections accessibles', () => {
+    expect(settingsSectionIds('super_admin')).toEqual(['profile', 'preferences', 'session', 'legal', 'appearance', 'markers', 'referentiels', 'smtp', 'ai', 'partner-keys', 'organisations', 'test-corpus', 'diagnostic']);
+    expect(settingsSectionIds('owner')).toEqual(['profile', 'preferences', 'session', 'legal']);
+  });
+
+  // 7.4 — « Mon organisation » (Équipe) apparaît quand canManageTeam, entre « Mon compte »
+  // et « Plateforme ».
+  it('canManageTeam ⇒ groupe « Mon organisation » (Équipe) inséré entre compte et plateforme', () => {
+    const superGroups = buildSettingsNav('super_admin', { canManageTeam: true });
+    expect(superGroups.map((g) => g.id)).toEqual(['account', 'org', 'platform']);
+    const org = superGroups.find((g) => g.id === 'org');
+    expect(org?.sections.map((s) => s.id)).toEqual(['team']);
+    // un admin d'ORG non super-admin : compte + organisation, PAS plateforme
+    const orgAdmin = buildSettingsNav('tourism_agent', { canManageTeam: true });
+    expect(orgAdmin.map((g) => g.id)).toEqual(['account', 'org']);
+  });
+
+  it('sans canManageTeam : pas de groupe « Mon organisation »', () => {
+    expect(buildSettingsNav('tourism_agent').map((g) => g.id)).toEqual(['account']);
+    expect(settingsSectionIds('tourism_agent')).not.toContain('team');
+    expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).toContain('team');
+  });
+
+  it('resolveSettingsSection : honore un ?section accessible, sinon retombe sur le défaut', () => {
+    expect(resolveSettingsSection('super_admin', 'markers')).toBe('markers');
+    expect(resolveSettingsSection('super_admin', null)).toBe(DEFAULT_SETTINGS_SECTION);
+    // un non super-admin demandant une section plateforme → repli sur le défaut (pas d'accès)
+    expect(resolveSettingsSection('owner', 'markers')).toBe(DEFAULT_SETTINGS_SECTION);
+    expect(resolveSettingsSection('owner', 'zzz')).toBe(DEFAULT_SETTINGS_SECTION);
+  });
+
+  test('la section organisations est exposée aux super-admins uniquement', () => {
+    expect(settingsSectionIds('super_admin')).toContain('organisations');
+    expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).not.toContain('organisations');
+  });
+
+  test('la configuration SMTP est accessible directement aux seuls super-admins', () => {
+    expect(resolveSettingsSection('super_admin', 'smtp')).toBe('smtp');
+    expect(resolveSettingsSection('tourism_agent', 'smtp', { canManageTeam: true })).toBe(DEFAULT_SETTINGS_SECTION);
+    expect(resolveSettingsSection('owner', 'smtp')).toBe(DEFAULT_SETTINGS_SECTION);
+  });
+
+  // Task 11 — branding par ORG : section « org-branding » gated par canManageOrgBranding
+  // (admin d'ORG rang ≥ 30), indépendamment de canManageTeam.
+  test('org-branding n’apparaît que pour un admin d’ORG (canManageOrgBranding)', () => {
+    expect(settingsSectionIds('tourism_agent', { canManageOrgBranding: true })).toContain('org-branding');
+    expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).not.toContain('org-branding');
+  });
+
+  // « Mentions légales » : section d'information non gated, foyer découvrable des pages
+  // légales publiques (confidentialité / CGU / DPIA). Visible sous TOUS les rôles.
+  test('la section « legal » (Mentions légales) est exposée à tous les rôles, dans « Mon compte »', () => {
+    for (const role of ['super_admin', 'tourism_agent', 'owner', null] as const) {
+      expect(settingsSectionIds(role)).toContain('legal');
+    }
+    const account = buildSettingsNav('tourism_agent').find((g) => g.id === 'account');
+    expect(account?.sections.map((s) => s.id)).toContain('legal');
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  // Task 19 — « Portail acteurs ». Ce qui est éprouvé n'est pas la présence d'un libellé,
+  // c'est le GATING : la matrice décide de ce qu'un partenaire peut modifier sur une fiche
+  // publiée. Elle est réservée à l'admin d'ORG de rang ≥ 30 — le seuil qu'applique
+  // api.rpc_set_actor_section_visibility. Plus bas, l'écran offrirait un geste refusé en 42501.
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  describe('section « Portail acteurs » (18a)', () => {
+    it('absente tant que l’option n’est pas accordée', () => {
+      expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).not.toContain('actor-portal');
+      // …y compris pour un super-admin plateforme : c'est un réglage d'ORG, pas de plateforme.
+      expect(settingsSectionIds('super_admin', {})).not.toContain('actor-portal');
+    });
+
+    it('présente dans « Mon organisation » quand l’option est accordée', () => {
+      const org = buildSettingsNav('tourism_agent', { canManageActorPortal: true }).find((g) => g.id === 'org');
+      expect(org?.sections.map((s) => s.id)).toContain('actor-portal');
+      expect(org?.sections.find((s) => s.id === 'actor-portal')?.label).toBe('Portail acteurs');
+    });
+
+    it('ouvre le groupe « Mon organisation » à elle seule (aucune autre section accordée)', () => {
+      // Le groupe est construit dynamiquement : sans cette section il n'existerait pas, et le
+      // `?section=actor-portal` d'une URL partagée retomberait sur le profil.
+      expect(buildSettingsNav('tourism_agent', { canManageActorPortal: true }).map((g) => g.id))
+        .toEqual(['account', 'org']);
+    });
+
+    it('un ?section=actor-portal non accordé retombe sur le défaut, il n’ouvre rien', () => {
+      expect(resolveSettingsSection('tourism_agent', 'actor-portal', {})).toBe(DEFAULT_SETTINGS_SECTION);
+      expect(resolveSettingsSection('tourism_agent', 'actor-portal', { canManageActorPortal: true }))
+        .toBe('actor-portal');
+    });
+  });
+});
+
+describe('durée des badges « Nouveau »', () => {
+  const introducedAt = '2026-09-06T00:00:00Z';
+  const start = Date.parse(introducedAt);
+  const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+
+  it.each([
+    ['avant le lancement', -1, false],
+    ['au lancement', 0, true],
+    ['juste avant les 14 jours', fourteenDays - 1, true],
+    ['exactement après 14 jours', fourteenDays, false],
+    ['après six semaines', 6 * 7 * 24 * 60 * 60 * 1000, false],
+  ])('%s', (_label, offset, expected) => {
+    expect(SETTINGS_NEW_BADGE_DURATION_MS).toBe(fourteenDays);
+    expect(isSettingsSectionNew({ introducedAt }, start + Number(offset))).toBe(expected);
+  });
+
+  it.each([undefined, '', 'date-invalide'])('masque un lancement absent ou invalide : %s', (date) => {
+    expect(isSettingsSectionNew({ introducedAt: date }, start)).toBe(false);
+  });
+
+  it('date seulement les nouveautés récentes, sans prolonger les anciennes sections', () => {
+    const sections = buildSettingsNav('super_admin', { canManageOrgBranding: true, canManageActorPortal: true })
+      .flatMap((group) => group.sections);
+    const launches = Object.fromEntries(sections.filter((section) => section.introducedAt)
+      .map((section) => [section.id, section.introducedAt]));
+
+    expect(launches).toEqual({
+      'actor-portal': '2026-09-04T00:00:00Z',
+      smtp: '2026-09-06T00:00:00Z',
+      'test-corpus': '2026-09-04T00:00:00Z',
+    });
+    for (const id of ['org-branding', 'referentiels', 'partner-keys', 'organisations']) {
+      const section = sections.find((candidate) => candidate.id === id);
+      expect(section).toBeDefined();
+      expect(isSettingsSectionNew(section!, start)).toBe(false);
+    }
+  });
+});

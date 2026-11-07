@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { pipeline } from 'node:stream/promises';
 import { Transform } from 'node:stream';
 import { createGzip } from 'node:zlib';
+import { manualEmailProfile, requireManualEmailProofFile, manualEmailToolsHash } from './manual-email-contract.mjs';
 
 export const CONFIG_URL = 'https://bertel.otisud.re/runtime-config.js';
 export const PROJECT_ORIGIN = 'https://ryycrdhlkmzpxwwwwupy.supabase.co';
@@ -114,12 +115,13 @@ const localJson = async (base, path) => {
 
 async function prepare() {
   const sha = sourceContext();
+  const profile = manualEmailProfile(process.env.MANUAL_EMAIL_PROFILE);
   const response = await fetch(CONFIG_URL, { redirect: 'error', signal: AbortSignal.timeout(10000), cache: 'no-store' });
   const config = parsePublicConfig(await readBounded(response));
   console.log(`::add-mask::${config.NEXT_PUBLIC_SUPABASE_ANON_KEY}`);
   await mkdir(work, { recursive: true, mode: 0o700 });
   await writeFile(resolve(work, 'inputs.json'), JSON.stringify({ sha, tree: exec('git', ['rev-parse', 'HEAD^{tree}'], true),
-    config, config_sha256: digest(JSON.stringify(config)), captured_at: new Date().toISOString() }), { flag: 'wx', mode: 0o600 });
+    config, config_sha256: digest(JSON.stringify(config)), captured_at: new Date().toISOString(), manual_email_profile: profile }), { flag: 'wx', mode: 0o600 });
   console.log('Public configuration captured and validated; no server credential accepted.');
 }
 
@@ -175,6 +177,12 @@ async function smoke(inputs) {
 
 async function exportImage(inputs) {
   const image = await imageMetadata(inputs.sha);
+  const mailProofPath = resolve(work, 'manual-email-proof.json');
+  await requireManualEmailProofFile(mailProofPath, {
+    profile: manualEmailProfile(process.env.MANUAL_EMAIL_PROFILE), source_sha: inputs.sha, source_tree: inputs.tree,
+    image_id: image.id, public_config_sha256: inputs.config_sha256, tools_sha256: await manualEmailToolsHash(),
+    run_id: process.env.GITHUB_RUN_ID, run_attempt: process.env.GITHUB_RUN_ATTEMPT,
+  });
   const proof = JSON.parse(await readFile(resolve(work, 'smoke.json'), 'utf8'));
   requireThat(proof.id === image.id && proof.public_config_matches && proof.contract === '2/2', 'smoke_missing');
   const folder = resolve(work, 'artifact'); await mkdir(folder, { recursive: true, mode: 0o700 });
@@ -198,7 +206,8 @@ async function main(command) {
   const sha = sourceContext();
   const inputs = JSON.parse(await readFile(resolve(work, 'inputs.json'), 'utf8'));
   requireThat(inputs.sha === sha && inputs.tree === exec('git', ['rev-parse', 'HEAD^{tree}'], true)
-    && inputs.config_sha256 === digest(JSON.stringify(validatePublicConfig(inputs.config))), 'inputs_changed');
+    && inputs.config_sha256 === digest(JSON.stringify(validatePublicConfig(inputs.config)))
+    && inputs.manual_email_profile === manualEmailProfile(process.env.MANUAL_EMAIL_PROFILE), 'inputs_changed');
   if (command === 'build') return exec('docker', buildArguments(sha, inputs.config));
   if (command === 'smoke') return smoke(inputs);
   if (command === 'export') return exportImage(inputs);

@@ -11,6 +11,10 @@ on:
         description: 'Exact reviewed master SHA. A different workflow snapshot is refused.'
         required: true
         type: string
+      manual_email_profile:
+        description: 'Required runtime contract: hard-closed for the S2 bridge, protocol-v1 for the guarded new protocol. A wrong profile fails.'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -32,6 +36,8 @@ jobs:
       - name: Import and isolated smoke guards (synthetic Docker, real Node and Linux filesystem)
         run: sudo -n env NODE_BINARY="$(command -v node)" "$(command -v python)" -I -m unittest discover -s tools/release-artifact -p 'test_import_smoke.py' -v
       - run: node --test tools/release-artifact/candidate.test.mjs
+      - name: Manual email qualification guards (synthetic fixtures; no Docker or external network)
+        run: node --test tools/release-artifact/manual-email.test.mjs
       - name: Prebuilt Compose contract (config only, synthetic parameters)
         run: node --test tools/release-artifact/prebuilt-compose.test.mjs
 
@@ -42,6 +48,7 @@ jobs:
     timeout-minutes: 30
     env:
       EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+      MANUAL_EMAIL_PROFILE: ${{ inputs.manual_email_profile }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -64,6 +71,23 @@ jobs:
             "$image" check-tooling-runtime.cjs /app
       - name: Private-loopback smoke with public parameters only, without a service credential
         run: node tools/release-artifact/candidate.mjs smoke
+      - name: Check out the real ungated calibration source separately
+        uses: actions/checkout@v4
+        with:
+          ref: '50805933d9489974690f9bb208b633cfb5440070'
+          path: '.release-work/calibration-source'
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Qualify the same final image in four runtime modes and reject the real ungated calibration
+        run: node tools/release-artifact/manual-email-runtime.mjs qualify
+      - name: Upload separate manual email qualification proof (outside the historical two-file bundle)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bertel-manual-email-proof-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .release-work/manual-email-proof.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
       - name: Export bounded image and source/checksum manifest
         run: node tools/release-artifact/candidate.mjs export
       - uses: actions/upload-artifact@v4

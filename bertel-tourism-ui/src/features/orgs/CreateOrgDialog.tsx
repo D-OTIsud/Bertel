@@ -61,7 +61,12 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
         ? `Le rôle de premier administrateur a été attribué à ${recipient}.`
         : `Invitation envoyée à ${recipient} — premier admin de l’organisation.`);
       onDone(); close();
-    } catch (e) { toast.error(friendlyRbacError(e as { message?: string })); }
+    } catch (e) {
+      if (resend && e instanceof Error && 'code' in e && e.code === 'already_active') {
+        setInvitation((current) => current === previous ? null : current);
+      }
+      toast.error(friendlyRbacError(e as { message?: string }));
+    }
     finally { setBusy(false); }
   }
 

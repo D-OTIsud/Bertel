@@ -115,6 +115,29 @@ test('requires a pending receipt and another click before retrying delivery', as
   expect(onDone).toHaveBeenCalledTimes(2);
 });
 
+test('rechecks the membership on the next click when the recipient becomes active', async () => {
+  jest.mocked(inviteUser)
+    .mockResolvedValueOnce(pending)
+    .mockRejectedValueOnce(Object.assign(new Error('Ce compte est déjà actif.'), { code: 'already_active' }))
+    .mockResolvedValueOnce({ ...pending, neverSignedIn: false });
+  render(<CreateOrgDialog onDone={jest.fn()} />);
+  await fillAdminForm();
+
+  const input = { email: recipient, orgObjectId: 'ORGNEW', businessRoleCode: 'contributor' };
+  submitInvite();
+  await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('invitation est en attente')));
+  submitInvite();
+  await waitFor(() => expect(toast.error).toHaveBeenLastCalledWith('Ce compte est déjà actif.'));
+  expect(inviteUser).toHaveBeenNthCalledWith(2, { ...input, resend: true });
+  expect(inviteUser).toHaveBeenCalledTimes(2);
+  expect(setAdminRole).not.toHaveBeenCalled();
+
+  submitInvite();
+  await waitFor(() => expect(setAdminRole).toHaveBeenCalledWith('m9', 'org_admin'));
+  expect(inviteUser).toHaveBeenNthCalledWith(3, input);
+  expect(toast.success).not.toHaveBeenCalledWith(sentMessage);
+});
+
 test.each(['address', 'organization'])('discards a pending receipt when the %s changes', async (changed) => {
   jest.mocked(inviteUser).mockResolvedValueOnce(pending);
   render(<CreateOrgDialog onDone={jest.fn()} />);

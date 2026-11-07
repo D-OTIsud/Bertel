@@ -108,6 +108,23 @@ describe('rbac service', () => {
     }
   });
 
+  it('preserves the scoped already-active outcome without treating it as a sent invite', async () => {
+    const auth = { getSession: jest.fn().mockResolvedValue({ data: { session: { access_token: 'synthetic' } } }) };
+    jest.mocked(getSupabaseClient).mockReturnValue({ auth } as never);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: 'already_active' }), { status: 409 }),
+    );
+    try {
+      await expect(inviteUser({
+        email: 'a@b.c', orgObjectId: 'ORG1', businessRoleCode: 'editor', resend: true,
+      })).rejects.toMatchObject({ code: 'already_active', message: 'Ce compte est déjà actif.' });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      fetchMock.mockRestore();
+      jest.mocked(getSupabaseClient).mockReset();
+    }
+  });
+
   it('asks to reload if the server does not offer invite v2 and never falls back to the legacy POST', async () => {
     const input = { email: 'a@b.c', orgObjectId: 'ORG1', businessRoleCode: 'editor' };
     const auth = { getSession: jest.fn().mockResolvedValue({ data: { session: { access_token: 'synthetic' } } }) };

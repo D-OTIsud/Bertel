@@ -151,7 +151,13 @@ export async function inviteUser(input: { email: string; orgObjectId: string; bu
   if (res.status === 409 && body?.userId && body?.membershipId) {
     return { userId: body.userId, membershipId: body.membershipId, alreadyExisted: true, neverSignedIn: body.neverSignedIn === true };
   }
-  if (!res.ok) throw rbacRouteError(res.status === 404 ? { error: 'bad_request' } : body, res.status);
+  if (!res.ok) {
+    const error = rbacRouteError(res.status === 404 ? { error: 'bad_request' } : body, res.status);
+    if (input.resend === true && res.status === 409 && body?.error === 'already_active') {
+      throw Object.assign(error, { code: 'already_active' });
+    }
+    throw error;
+  }
   if (!body?.userId || !body?.membershipId) throw rbacRouteError({ error: 'create_failed' }, 500);
   return { userId: body.userId, membershipId: body.membershipId, alreadyExisted: false };
 }

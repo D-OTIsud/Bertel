@@ -16,17 +16,25 @@ const record = (value: unknown): Rec | null =>
     ? (value as Rec)
     : null;
 
+function approvalPath(documentId: string, claimId: string) {
+  return `portal-approved/${documentId}/${claimId}.jpg`;
+}
+
 /** On uncertain SQL delivery, the database decides which public copies can be removed. */
 async function compensate(server: ServerClient, claimId: string) {
   const result = await server
     .schema("api")
     .rpc("portal_photo_failed_approval", { p_claim_id: claimId });
   if (result.error || !Array.isArray(result.data)) return;
-  const paths = result.data.filter(
-    (path): path is string =>
-      typeof path === "string" &&
-      /^portal-approved\/[0-9a-f-]{36}\.jpg$/i.test(path),
-  );
+  const paths = result.data.filter((path): path is string => {
+    if (typeof path !== "string") return false;
+    const [, documentId] = path.split("/");
+    return (
+      typeof documentId === "string" &&
+      UUID_SHAPE.test(documentId) &&
+      path === approvalPath(documentId, claimId)
+    );
+  });
   if (paths.length) await server.storage.from("media").remove(paths);
 }
 
@@ -81,7 +89,7 @@ export async function POST(req: NextRequest) {
         doc.bucket !== PRIVATE_BUCKET ||
         typeof doc.path !== "string" ||
         !doc.path.startsWith("portal-photos/") ||
-        doc.publicPath !== `portal-approved/${docId}.jpg`
+        doc.publicPath !== approvalPath(docId, claimId)
       )
         throw Error("invalid_registered_photo");
       const privateFile = await auth.server.storage
@@ -97,7 +105,7 @@ export async function POST(req: NextRequest) {
       const copied = await publicBucket.upload(
         doc.publicPath,
         Buffer.from(await privateFile.data.arrayBuffer()),
-        { contentType: "image/jpeg", cacheControl: "3600", upsert: true },
+        { contentType: "image/jpeg", cacheControl: "3600", upsert: false },
       );
       if (copied.error) throw Error("publication_copy_failed");
       const publicUrl = publicBucket.getPublicUrl(doc.publicPath).data

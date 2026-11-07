@@ -45,12 +45,17 @@ on:
         type: boolean
         required: false
         default: false
+      storage_db07_profile:
+        description: 'Run only the synthetic DB07 copy profile on the disposable Storage stack'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   fresh-apply:
     # Push/PR always run the mandatory application/rights gate. The explicit
     # manual selector below starts a separate upstream capability probe only.
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.storage_contract != true }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.storage_contract != true && inputs.storage_db07_profile != true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -663,8 +668,8 @@ jobs:
         run: supabase stop --workdir "$RUNNER_TEMP/bertel-fresh"
 
   storage-contract:
-    name: Strict Storage capability (manual, synthetic only)
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.storage_contract == true }}
+    name: ${{ inputs.storage_contract == true && 'Strict Storage capability (manual, synthetic only)' || 'DB07 Storage copy profile (manual, synthetic only)' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -692,7 +697,34 @@ jobs:
           CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
         run: node tools/current-rights/start-disposable.mjs
 
+      - name: DB07 private copy profile on Storage v1.41.8
+        if: ${{ inputs.storage_db07_profile == true }}
+        env:
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
+        run: |
+          container=supabase_storage_bertel
+          test "$(docker inspect --format '{{.State.Running}}' "$container")" = true
+          image_ref="$(docker inspect --format '{{.Config.Image}}' "$container")"
+          case "$image_ref" in
+            ghcr.io/supabase/storage-api:v1.41.8|public.ecr.aws/supabase/storage-api:v1.41.8|docker.io/supabase/storage-api:v1.41.8|supabase/storage-api:v1.41.8) ;;
+            *) printf 'Expected the disposable Storage image v1.41.8, got %s\n' "$image_ref" >&2; exit 1 ;;
+          esac
+          image_id="$(docker inspect --format '{{.Image}}' "$container")"
+          backend="$(docker exec "$container" printenv STORAGE_BACKEND)"
+          global_limit="$(docker exec "$container" printenv UPLOAD_FILE_SIZE_LIMIT)"
+          standard_limit="$(docker exec "$container" sh -c 'printf "%s" "${UPLOAD_FILE_SIZE_LIMIT_STANDARD:-${FILE_SIZE_LIMIT_STANDARD_UPLOAD:-0}}"')"
+          [[ "$backend" == file && "$global_limit" =~ ^[1-9][0-9]{0,14}$ && "$standard_limit" =~ ^(0|[1-9][0-9]{0,14})$ ]]
+          # v1.41.8 uses the global ceiling when the optional standard ceiling is zero.
+          effective_standard="$global_limit"
+          if (( standard_limit > 0 && standard_limit < global_limit )); then
+            effective_standard="$standard_limit"
+          fi
+          printf 'Storage image %s (%s), local %s backend, global %s bytes, standard effective %s bytes\n' "$image_ref" "$image_id" "$backend" "$global_limit" "$effective_standard"
+          (( global_limit > 42305171 && effective_standard > 42305171 ))
+          node --test tools/current-rights/storage-db07-profile.test.mjs
+
       - name: Strict private Storage HTTP capability (failure is not tolerated)
+        if: ${{ inputs.storage_contract == true }}
         env:
           CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-storage
         # This is deliberately separate from required Auth coverage. Two accepted

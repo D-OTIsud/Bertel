@@ -2,6 +2,7 @@ import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { routeFailure } from '../../_route-failure';
 import { processImage, MediaProcessingError, MAX_INPUT_BYTES } from '../../media/upload/process-image';
 import { authorizeAdminRoute, sharesActiveOrg } from '../../admin/_authorize';
 import {
@@ -138,10 +139,7 @@ async function handlePostAuthenticated(
       const status = err.code === 'mime' || err.code === 'size' ? 415 : 400;
       return NextResponse.json({ error: err.code, detail: err.message }, { status });
     }
-    return NextResponse.json(
-      { error: 'process_failed', detail: err instanceof Error ? err.message : 'unknown' },
-      { status: 500 },
-    );
+    return routeFailure('avatar/upload.POST', 'process_failed');
   }
 
   // Chemin STABLE dérivé du user.id : un seul fichier par utilisateur (pas d'orphelins).
@@ -153,7 +151,7 @@ async function handlePostAuthenticated(
     upsert: true,
   });
   if (upErr) {
-    return NextResponse.json({ error: 'upload_failed', detail: upErr.message }, { status: 502 });
+    return routeFailure('avatar/upload.POST', 'upload_failed', { status: 502 });
   }
   const { data: pub } = server.storage.from(BUCKET).getPublicUrl(path);
   const url = `${pub.publicUrl}?v=${Date.now()}`;
@@ -176,7 +174,7 @@ async function handlePostAuthenticated(
     ({ error: profErr } = await asCaller.from('app_user_profile').update({ avatar_url: url }).eq('id', userId));
   }
   if (profErr) {
-    return NextResponse.json({ error: 'profile_update_failed', detail: profErr.message }, { status: 500 });
+    return routeFailure('avatar/upload.POST', 'profile_update_failed');
   }
 
   return NextResponse.json({ url }, { status: 201 });

@@ -261,8 +261,42 @@ async function testPublicDiscoveryEffects(app, ordinary, ownedBrowser) {
   }
 }
 
-const proposal = [{ target_table: 'contact_channel', target_pk: null, action: 'update', payload: { objectItems: [] },
-  metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
+const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
+  metadata: { rpc: null, section: 'descriptions', manual_apply: true, field: 'Descriptions', before: 'a', after: 'b' } }];
+
+async function testPortalMaskedModule() {
+  const submit = () => rpc(headers('portal'), 'submit_actor_fiche', {
+    p_object_id: A, p_changes: proposal, p_note: 'Synthetic real-JWT request',
+  });
+  const visibility = async () => json(await rpc(headers('portal'), 'get_portal_section_visibility', { p_object_id: A }),
+    'current portal section visibility');
+  const state = () => JSON.parse(local.sql(`SELECT json_build_array(
+    (SELECT count(*) FROM public.fiche_submission WHERE object_id='${A}'),
+    (SELECT count(*) FROM public.pending_change WHERE object_id='${A}'),
+    (SELECT count(*) FROM public.crm_task WHERE object_id='${A}' AND extra->>'kind'='fiche_verification'))`,
+  'count portal submissions, changes and verification tasks'));
+
+  assert.ok(!(await visibility()).masked_modules.includes('descriptions'), 'the fixture module starts visible');
+  assert.deepEqual(state(), [0, 0, 0]);
+  commit(`INSERT INTO public.org_actor_module_visibility (org_object_id,object_type,module_id,is_visible,updated_by)
+    VALUES ('ORGRUN999999AR01','HOT','descriptions',false,'${ids.admin}')`, 'commit the portal module mask');
+  try {
+    assert.ok((await visibility()).masked_modules.includes('descriptions'), 'the same JWT must read the current mask');
+    const response = await submit();
+    assert.equal(response.status, 400, 'the direct portal submission must refuse the masked module');
+    const refusal = await response.json();
+    assert.equal(refusal.code, '22023');
+    assert.equal(refusal.message, 'La section « descriptions » est masquée par votre organisation');
+    assert.deepEqual(state(), [0, 0, 0], 'the rejected submission must create no proposal, change or verification task');
+  } finally {
+    commit(`DELETE FROM public.org_actor_module_visibility WHERE org_object_id='ORGRUN999999AR01'
+      AND object_type='HOT' AND module_id='descriptions'`, 'remove only the synthetic portal module mask');
+  }
+  assert.ok(!(await visibility()).masked_modules.includes('descriptions'), 'the same JWT must see the module reopen');
+  const accepted = await json(await submit(), 'identical portal submission after reopening the module');
+  assert.equal(accepted.change_count, 1);
+  assert.deepEqual(state(), [1, 1, 1], 'the positive control must create the expected verification workflow');
+}
 
 const testName = sandboxWitness
   ? 'Chromium opens public discovery and separates GoTrue sessions and test data without external effects'
@@ -572,7 +606,8 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90
     assert.ok(workspace.published.length === 2, 'portal positive must contain real synthetic media rows');
     const preview = await json(await rpc(headers('portal'), 'portal_photo_preview', { p_document_id: PHOTO }), 'private portal locator positive');
     assert.ok(preview.bucket === 'actor-documents' && typeof preview.path === 'string');
-    await json(await rpc(headers('portal'), 'submit_actor_fiche', { p_object_id: A, p_changes: proposal, p_note: 'Synthetic real-JWT request' }), 'portal proposal positive');
+    await testPortalMaskedModule();
+    t.diagnostic('ACC-08: a committed module mask refused the unchanged GoTrue JWT before any effects, and reopening allowed the identical submission.');
     const proposalHash = () => local.sql(`SELECT md5(jsonb_agg(to_jsonb(p) ORDER BY id)::text) FROM public.pending_change p WHERE object_id='${A}'`, 'proposal integrity');
     const beforeProposal = proposalHash();
     assert.ok(beforeProposal.length === 32, 'positive proposal must exist');

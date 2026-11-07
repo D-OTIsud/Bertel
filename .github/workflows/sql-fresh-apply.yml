@@ -45,6 +45,11 @@ on:
         type: boolean
         required: false
         default: false
+      editor_browser:
+        description: 'Also run the authenticated editor witness on the disposable fresh stack (leave storage_contract off)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   fresh-apply:
@@ -653,6 +658,35 @@ jobs:
           node --test tools/current-rights/disposable.test.mjs
           node --test tools/current-rights/storage-refusals.test.mjs
           node --test tools/current-rights/postgrest-rights.test.mjs
+
+      - name: Set up Node 22 for the authenticated editor witness
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: bertel-tourism-ui/package-lock.json
+
+      - name: Install Chromium for the authenticated editor witness
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
+        working-directory: bertel-tourism-ui
+        timeout-minutes: 7
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
+        run: |
+          npm ci --legacy-peer-deps
+          node scripts/run-playwright.mjs install --with-deps chromium
+
+      - name: Authenticated editor publication and restore races (disposable only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
+        timeout-minutes: 6
+        env:
+          CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+          CURRENT_RIGHTS_EDITOR_BROWSER: 'true'
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
+        run: node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: PostgreSQL diagnostics on failure
         if: ${{ failure() && steps.list_email_owned_stack.outcome == 'success' }}

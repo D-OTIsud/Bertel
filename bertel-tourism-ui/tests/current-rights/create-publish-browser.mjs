@@ -202,7 +202,8 @@ export async function testCreatePublishBrowser({ local, commit, writerId, email,
     await page.getByRole('button', { name: 'Créer une fiche', exact: true }).click();
     const createDialog = page.getByRole('dialog', { name: 'Créer une fiche' });
     await createDialog.getByLabel('Nom de la fiche', { exact: true }).fill(initialName);
-    await createDialog.getByRole('button', { name: 'Hôtellerie', exact: true }).click();
+    // The dialog falls back to the same family code if taxonomy settles first.
+    await createDialog.getByRole('button', { name: /^(?:Hôtellerie|hotellerie)$/ }).click();
     await createDialog.getByRole('button', { name: 'Hôtel', exact: true }).click();
     await createDialog.getByRole('button', { name: 'Créer la fiche', exact: true }).click();
     await page.waitForURL((url) => Boolean(objectId) && url.origin === app.origin

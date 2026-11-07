@@ -2,6 +2,11 @@ name: DB07 copy operator image
 
 on:
   workflow_dispatch:
+    inputs:
+      expected_source_sha:
+        description: 'Exact reviewed master SHA for this archive'
+        required: true
+        type: string
   pull_request:
     paths:
       - '.github/workflows/db07-copy-operator-image.yml'
@@ -21,7 +26,19 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+      - name: Verify the reviewed export source
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+        shell: bash
+        run: |
+          test "$GITHUB_REPOSITORY" = D-OTIsud/Bertel
+          test "$GITHUB_REF" = refs/heads/master
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
       - name: Build the exact commit with an allowlisted context
+        id: build
         shell: bash
         run: |
           dockerfile=tools/storage-reservation/Dockerfile.copy-operator
@@ -36,16 +53,21 @@ jobs:
             tools/storage-reservation/protocol.py \
           | docker build --platform linux/amd64 --file "$dockerfile" --tag "$OPERATOR_IMAGE" \
               --label "org.opencontainers.image.revision=$GITHUB_SHA" -
-          docker image inspect --format '{{.Id}} {{.Os}}/{{.Architecture}} {{.Config.User}}' "$OPERATOR_IMAGE"
+          image_id=$(docker image inspect --format '{{.Id}}' "$OPERATOR_IMAGE")
+          [[ "$image_id" =~ ^sha256:[0-9a-f]{64}$ ]]
+          printf 'image_id=%s\n' "$image_id" >> "$GITHUB_OUTPUT"
+          docker image inspect --format '{{.Id}} {{.Os}}/{{.Architecture}} {{.Config.User}}' "$image_id"
       - name: Verify the native tools and run the synthetic CLI checks offline
+        env:
+          BUILT_IMAGE_ID: ${{ steps.build.outputs.image_id }}
         shell: bash
         run: |
-          docker run --rm --network none --read-only --cap-drop ALL \
+          docker run --rm --pull never --network none --read-only --cap-drop ALL \
             --security-opt no-new-privileges \
             --tmpfs /tmp:rw,nosuid,nodev,noexec,mode=0700,uid=1000,gid=1000 \
             --mount "type=bind,source=$PWD/tools/private-media/copy-verified.test.mjs,target=/operator/tools/private-media/copy-verified.test.mjs,readonly" \
             --mount "type=bind,source=$PWD/tools/private-media/copy-reserved-resume.test.mjs,target=/operator/tools/private-media/copy-reserved-resume.test.mjs,readonly" \
-            --entrypoint /usr/bin/env "$OPERATOR_IMAGE" \
+            --entrypoint /usr/bin/env "$BUILT_IMAGE_ID" \
             -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/node TMPDIR=/tmp \
             GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
             DB07_TEST_PYTHON=/usr/bin/python3 /bin/sh -eu -c '
@@ -62,4 +84,60 @@ jobs:
                 tools/private-media/copy-verified.test.mjs tools/private-media/copy-reserved-resume.test.mjs
             '
       - name: Verify PostgreSQL TLS with the image's native client
-        run: bash tools/storage-reservation/smoke-copy-operator-tls.sh "$OPERATOR_IMAGE"
+        env:
+          BUILT_IMAGE_ID: ${{ steps.build.outputs.image_id }}
+        run: bash tools/storage-reservation/smoke-copy-operator-tls.sh "$BUILT_IMAGE_ID"
+      - name: Archive the image that passed both smoke checks
+        if: success() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
+        env:
+          BUILT_IMAGE_ID: ${{ steps.build.outputs.image_id }}
+        shell: bash
+        run: |
+          metadata=$(docker image inspect --format '{{.Id}} {{.Os}}/{{.Architecture}} {{.Config.User}} {{index .Config.Labels "org.opencontainers.image.revision"}}' "$BUILT_IMAGE_ID")
+          test "$metadata" = "$BUILT_IMAGE_ID linux/amd64 1000:1000 $GITHUB_SHA"
+          umask 077
+          folder="$RUNNER_TEMP/db07-operator-artifact"
+          mkdir "$folder"
+          archive="$folder/db07-copy-operator.docker.tar.gz"
+          docker image save "$BUILT_IMAGE_ID" | gzip -n > "$archive"
+          gzip -t "$archive"
+          python3 - "$archive" "$(git rev-parse 'HEAD^{tree}')" <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import sys
+
+          archive = Path(sys.argv[1])
+          env = os.environ
+          with archive.open("rb") as source:
+              sha256 = hashlib.file_digest(source, "sha256").hexdigest()
+          manifest = {
+              "schema_version": 1,
+              "repository": env["GITHUB_REPOSITORY"],
+              "source_sha": env["GITHUB_SHA"],
+              "source_tree": sys.argv[2],
+              "image": {
+                  "id": env["BUILT_IMAGE_ID"], "platform": "linux/amd64",
+                  "user": "1000:1000", "revision": env["GITHUB_SHA"],
+              },
+              "archive": {"filename": archive.name, "bytes": archive.stat().st_size, "sha256": sha256},
+              "smoke": {"offline_cli": True, "postgresql_tls": True},
+              "run_id": env["GITHUB_RUN_ID"],
+              "run_attempt": env["GITHUB_RUN_ATTEMPT"],
+          }
+          with archive.with_name("manifest.json").open("x", encoding="utf-8") as output:
+              json.dump(manifest, output, indent=2)
+              output.write("\n")
+          PY
+      - name: Retain the tested operator archive for one day
+        if: success() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: db07-copy-operator-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/db07-operator-artifact/db07-copy-operator.docker.tar.gz
+            ${{ runner.temp }}/db07-operator-artifact/manifest.json
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0

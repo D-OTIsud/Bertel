@@ -25,6 +25,20 @@ describe('ConfirmDialog (maison)', () => {
     expect(screen.getByRole('button', { name: 'Annuler' })).toBeInTheDocument();
   });
 
+  it('rend les paragraphes du message dans une structure HTML valide', () => {
+    render(
+      <ConfirmDialog
+        {...base}
+        message={<><p>Le rôle sera modifié.</p><p>Les exceptions seront conservées.</p></>}
+      />,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: base.title });
+    expect(dialog).toHaveTextContent('Le rôle sera modifié.');
+    expect(dialog).toHaveTextContent('Les exceptions seront conservées.');
+    expect(dialog.querySelector('p p')).toBeNull();
+  });
+
   it('appelle onConfirm au clic sur Confirmer et onCancel au clic sur Annuler', () => {
     render(<ConfirmDialog {...base} confirmLabel="Supprimer" />);
     fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));

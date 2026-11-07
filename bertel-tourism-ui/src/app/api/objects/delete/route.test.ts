@@ -146,12 +146,12 @@ describe('POST /api/objects/delete', () => {
     });
   });
 
-  it('skips both buckets when the purge report defers physical cleanup, even if URLs remain', async () => {
+  it.each([false, true])('skips both buckets when the purge report defers cleanup (nonempty arrays: %s)', async (hasUrls) => {
     const report = {
       deleted: true,
       storage_cleanup_deferred: true,
-      media_to_delete: ['http://supabase.test/storage/v1/object/public/media/o1/a.jpg'],
-      documents_to_delete: ['http://supabase.test/storage/v1/object/public/documents/o1/d.pdf'],
+      media_to_delete: hasUrls ? ['http://supabase.test/storage/v1/object/public/media/o1/a.jpg'] : [],
+      documents_to_delete: hasUrls ? ['http://supabase.test/storage/v1/object/public/documents/o1/d.pdf'] : [],
     };
     rpcMock.mockResolvedValue({ data: report, error: null });
 

@@ -141,6 +141,9 @@ BEGIN
     VALUES (gen_random_uuid(), v_priv, 'Carte secrete', TRUE, 'private') RETURNING id INTO v_menu_priv;
   INSERT INTO object_menu_item (menu_id, name) VALUES (v_menu_priv, 'Bredes mafane maison');
 
+  -- Draft fixtures are searchable with the technical JWT claim used by the API.
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
   -- ---------- GLOBAL mode: child content surfaces ----------
   ASSERT EXISTS(SELECT 1 FROM api.get_filtered_object_ids('{"search_mode":"global"}'::jsonb,NULL,ARRAY['draft']::object_status[],'jacuzzi') f WHERE f.object_id=v_res),
          'global: amenity jacuzzi must surface the restaurant';
@@ -336,6 +339,7 @@ BEGIN
   -- ---------- Chemin PUBLIÉ : le MV porte bien le texte ----------
   -- Sans cette assertion, oublier la colonne dans le MV rendrait le flou muet pour les
   -- visiteurs anonymes — le seul chemin qui compte en production — sans aucune erreur.
+  PERFORM set_config('request.jwt.claims', '{}', true);
   REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
   ASSERT (SELECT search_document_text FROM internal.mv_filtered_objects WHERE id = v_pub) LIKE '%jacuzzi%',
          '§197: le MV doit projeter search_document_text pour les fiches publiées';

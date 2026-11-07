@@ -762,6 +762,10 @@ COMMIT;
 \ir ../supabase/migrations/20261107192259_restrict_private_note_author_rank_execute.sql
 \ir tests/test_private_note_author_rank_execute.sql
 
+\echo '== Explorer direct reader authority before filtering and ranking =='
+\ir ../supabase/migrations/20261107193944_explorer_filtered_read_authority.sql
+\ir tests/test_explorer_filtered_read_authority.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -329,6 +329,33 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     assert.ok(await canWrite('other', B) === true && await canWrite('other', A) === false);
     assert.ok(await json(await rpc(headers('writer'), 'is_platform_superuser'), 'current platform authority') === false,
       'a signed but stale app_metadata super_admin value must not become current platform authority');
+
+    // ACC-07: the export RPC itself must recheck the caller's current scope.
+    const actorA = '00000000-0000-4000-a000-00000000aa01';
+    const exportRun = randomUUID();
+    const exportContacts = (objectIds, runId) => rpc(headers('writer'), 'export_actor_contacts', {
+      p_object_ids: objectIds, p_reason: 'Synthetic current-rights export', p_format: 'csv', p_export_run_id: runId,
+    });
+    assert.equal(local.sql(`SELECT count(DISTINCT r.object_id) FROM public.actor_object_role r
+      JOIN public.actor_channel c ON c.actor_id=r.actor_id
+      WHERE r.object_id IN ('${B}','${TEST}')`, 'foreign ORG and realm both have synthetic contacts'), '2');
+    const exported = await json(await exportContacts([A, B, TEST], exportRun), 'mixed contact export');
+    assert.equal(exported.export_run_id, exportRun);
+    assert.deepEqual(exported.authorized_object_ids, [A]);
+    assert.deepEqual(exported.denied_object_ids.sort(), [B, TEST].sort());
+    assert.deepEqual(exported.rows.map((row) => [row.object_id, row.actor_id,
+      row.contacts.map((contact) => [contact.kind_code, contact.value]).sort()]), [[A, actorA, [
+      ['email', 'current-rights-email@example.invalid'], ['email', 'current-rights-writer@example.invalid'],
+    ]]]);
+    assert.equal(exported.emitted_contact_count, 2);
+    const exportLogCount = (runId) => local.sql(`SELECT count(*) FROM public.actor_contact_export_log
+      WHERE export_run_id='${runId}'`, 'count exact synthetic export logs');
+    assert.equal(exportLogCount(exportRun), '1');
+    assert.equal(local.sql(`SELECT count(*) FROM public.actor_contact_export_log
+      WHERE export_run_id='${exportRun}' AND performed_by='${ids.writer}' AND object_ids=ARRAY['${A}']
+        AND denied_object_ids @> ARRAY['${B}','${TEST}'] AND cardinality(denied_object_ids)=2
+        AND actor_ids=ARRAY['${actorA}'::uuid] AND emitted_contact_count=2`, 'exact scoped contact export audit'), '1');
+
     let changed = await json(await local.request(`/rest/v1/object?id=eq.${A}`, headers('writer'),
       { name: 'Real JWT current writer positive' }, 'PATCH', { prefer: 'return=representation' }), 'positive canonical DML');
     assert.ok(changed.length === 1 && changed[0].name === 'Real JWT current writer positive');
@@ -377,6 +404,11 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       UPDATE public.user_org_membership SET is_active=false WHERE id='00000000-0000-4000-a000-00000000ab11'`, 'committed departure');
     assert.ok((await rows(headers('writer'), A)).length === 0 && await canWrite('writer', A) === false,
       'a former creator with a still-active individual permission must not invent publisher scope');
+    const refusedExportRun = randomUUID();
+    await denied(await exportContacts([A], refusedExportRun), 'contact export after committed departure');
+    assert.equal(exportLogCount(refusedExportRun), '0', 'the wholly refused export must add no audit entry');
+    assert.equal(exportLogCount(exportRun), '1', 'the original scoped export must retain its audit entry');
+    t.diagnostic('ACC-07: mixed export returned only authorized synthetic contacts and refused the same JWT after departure.');
     await denied(await rpc(headers('writer'), 'get_object_versions', { p_object_id: A, p_limit: 50, p_offset: 0 }), 'private history after departure');
     await denied(await rpc(headers('writer'), 'get_object_version_snapshot', { p_object_id: A, p_version_number: versionA }), 'private snapshot after departure');
     const departedFile = await json(await rpc(headers('writer'), 'get_object_document_file', { p_object_id: A, p_document_id: DOC }), 'private locator after departure');

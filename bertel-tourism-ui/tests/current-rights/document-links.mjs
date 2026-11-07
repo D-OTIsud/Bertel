@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { startApp, stopApp, waitForApp } from './editor-races.mjs';
 
 const bucket = 'legal-documents';
@@ -38,6 +38,44 @@ export async function testDocumentLinks({ local, commit, objectId, documentId, w
     // This HTTP witness has no Chromium context.
     app = await startApp(local, { signDocuments: true });
     await waitForApp(app);
+
+    // ACC-12: the same published object and opaque key after committed revocation.
+    const label = `Synthetic ACC-12 ${randomUUID()}`;
+    const publicObjectId = 'HOTRUN999999AR03';
+    const partnerUrl = `${app.origin}/api/public/objects/${publicObjectId}`;
+    const partnerRpc = (name, body) => local.request(`/rest/v1/rpc/${name}`, local.service, body, 'POST',
+      { 'content-profile': 'api', 'accept-profile': 'api' });
+    try {
+      const issued = await partnerRpc('rpc_issue_partner_key', {
+        p_label: label, p_scopes: ['read'], p_expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+      });
+      assert.equal(issued.status, 200, 'issue the synthetic partner key');
+      const { id: partnerKeyId, api_key: rawKey } = await issued.json();
+      assert.ok(typeof partnerKeyId === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(partnerKeyId)
+        && typeof rawKey === 'string' && /^bk_live_[a-f0-9]{48}$/.test(rawKey), 'expected the generated key shape');
+      const authorization = `Bearer ${rawKey}`;
+      const readObject = (etag) => fetch(partnerUrl, {
+        headers: { authorization, ...(etag ? { 'if-none-match': etag } : {}) },
+        redirect: 'error', signal: AbortSignal.timeout(30_000),
+      });
+      const warm = await readObject();
+      assert.equal(warm.status, 200, 'active partner key must read the published synthetic object');
+      const published = (await warm.json()).data;
+      assert.ok(published?.id === publicObjectId && published.status === 'published', 'expected the exact published fixture');
+
+      const revoke = await partnerRpc('rpc_revoke_partner_key', { p_id: partnerKeyId });
+      assert.ok(revoke.ok && (await revoke.json()).revoked === true, 'partner revocation RPC must succeed');
+      assert.equal(local.sql(`SELECT count(*) FROM internal.partner_api_key
+        WHERE id='${partnerKeyId}' AND label='${label}' AND NOT is_active AND revoked_at IS NOT NULL`,
+      'verify committed synthetic key revocation'), '1');
+      const refused = await readObject(warm.headers.get('etag'));
+      assert.equal(refused.status, 401, 'the same key must be refused on the same object after revocation');
+      const denial = await refused.json();
+      assert.ok(denial?.error === 'unauthorized' && Object.keys(denial).length === 1, 'refusal must contain no object data');
+    } finally {
+      commit(`DELETE FROM internal.partner_api_key WHERE label='${label}'`, 'remove only the synthetic partner key');
+    }
+
     async function sign(authorization, accessContext) {
       const response = await fetch(app.origin + '/api/object-document/url', {
         method: 'POST', headers: { authorization, 'content-type': 'application/json' },

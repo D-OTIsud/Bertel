@@ -44,8 +44,8 @@ export function prepareCutover(manifest, receipt, manifestHash, expectedCount = 
   }
   const ready = records.map((r) => {
     const copy = verified.get(r.document_id);
-    assert(copy && uuid.test(copy.destination_id) && copy.source_etag === r.source_metadata.etag
-      && copy.destination_path === r.destination_path, 'receipt_identity');
+    assert(copy && copy.source_id === r.source_metadata.id && copy.source_etag === r.source_metadata.etag
+      && uuid.test(copy.destination_id) && copy.destination_path === r.destination_path, 'receipt_identity');
     assert(hash.test(copy.source_sha256) && copy.source_sha256 === copy.destination_sha256
       && copy.source_bytes === r.source_metadata.size && copy.destination_bytes === copy.source_bytes
       && text(copy.destination_etag), 'receipt_content');
@@ -64,12 +64,20 @@ DECLARE
   storage_id uuid;
   storage_etag text;
   storage_size bigint;
+  private_buckets bigint;
 BEGIN
-  PERFORM 1 FROM storage.buckets WHERE id = 'legal-documents' AND public = false FOR SHARE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'DB07 destination must remain private';
+  PERFORM 1 FROM storage.buckets b
+    WHERE b.id IN ('old_legal_media', 'legal-documents') AND b.public = false
+    ORDER BY b.id COLLATE pg_catalog."C" FOR SHARE;
+  GET DIAGNOSTICS private_buckets = ROW_COUNT;
+  IF private_buckets <> 2 THEN
+    RAISE EXCEPTION 'DB07 source and destination must remain private';
   END IF;
   FOR r IN SELECT value FROM jsonb_array_elements(${literal(payload)}::jsonb) LOOP
+    PERFORM 1 FROM public.object WHERE id = r->>'object_id' FOR KEY SHARE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'DB07 mapped object is missing';
+    END IF;
     SELECT * INTO STRICT d FROM public.ref_document WHERE id = (r->>'document_id')::uuid FOR UPDATE;
     IF d.access_scope IS DISTINCT FROM 'legal_private'
        OR (d.extra #>> '{bertel_pj_import,mapped_object_id}') IS DISTINCT FROM r->>'object_id' THEN
@@ -77,26 +85,32 @@ BEGIN
     END IF;
     SELECT o.id, o.metadata->>'eTag', (o.metadata->>'size')::bigint
       INTO STRICT storage_id, storage_etag, storage_size
-      FROM storage.objects o WHERE o.bucket_id = 'legal-documents' AND o.name = r->>'destination_path' FOR SHARE;
+      FROM storage.objects o
+      WHERE o.bucket_id = 'legal-documents' AND o.name COLLATE pg_catalog."C" = (r->>'destination_path')
+        AND o.archived_at IS NULL AND NOT o.is_delete_marker
+      FOR SHARE;
     IF storage_id IS DISTINCT FROM (r->>'destination_id')::uuid
        OR storage_etag IS DISTINCT FROM (r->>'destination_etag')
        OR storage_size IS DISTINCT FROM (r#>>'{source_metadata,size}')::bigint THEN
       RAISE EXCEPTION 'DB07 verified destination changed';
     END IF;
-    IF d.storage_bucket = 'legal-documents' AND d.storage_path = r->>'destination_path' AND d.url = r->>'destination_url' THEN
-      CONTINUE; -- Safe resume for an already moved reference with the same verified destination.
-    END IF;
-    IF d.storage_bucket IS DISTINCT FROM 'old_legal_media' OR d.storage_path IS DISTINCT FROM r->>'source_path'
-       OR d.url IS DISTINCT FROM r->>'source_url' THEN
-      RAISE EXCEPTION 'DB07 source reference changed';
-    END IF;
     SELECT o.id, o.metadata->>'eTag', (o.metadata->>'size')::bigint
       INTO STRICT storage_id, storage_etag, storage_size
-      FROM storage.objects o WHERE o.bucket_id = 'old_legal_media' AND o.name = r->>'source_path' FOR SHARE;
+      FROM storage.objects o
+      WHERE o.bucket_id = 'old_legal_media' AND o.name COLLATE pg_catalog."C" = (r->>'source_path')
+        AND o.archived_at IS NULL AND NOT o.is_delete_marker
+      FOR SHARE;
     IF storage_id IS DISTINCT FROM (r#>>'{source_metadata,id}')::uuid
        OR storage_etag IS DISTINCT FROM (r#>>'{source_metadata,etag}')
        OR storage_size IS DISTINCT FROM (r#>>'{source_metadata,size}')::bigint THEN
       RAISE EXCEPTION 'DB07 verified source changed';
+    END IF;
+    IF d.storage_bucket = 'legal-documents' AND d.storage_path = r->>'destination_path' AND d.url = r->>'destination_url' THEN
+      CONTINUE; -- Safe resume after both live Storage identities have been reverified.
+    END IF;
+    IF d.storage_bucket IS DISTINCT FROM 'old_legal_media' OR d.storage_path IS DISTINCT FROM r->>'source_path'
+       OR d.url IS DISTINCT FROM r->>'source_url' THEN
+      RAISE EXCEPTION 'DB07 source reference changed';
     END IF;
     UPDATE public.ref_document SET storage_bucket = 'legal-documents', storage_path = r->>'destination_path', url = r->>'destination_url'
       WHERE id = d.id;
@@ -113,6 +127,7 @@ BEGIN;
 SET LOCAL lock_timeout = '500ms';
 SET LOCAL statement_timeout = '30s';
 SET LOCAL standard_conforming_strings = on;
+SET LOCAL search_path = pg_catalog, pg_temp;
 ${batches.join('\n\n')}
 COMMIT;
 `;

@@ -19,7 +19,8 @@ export function fixture(count = 1) {
       source_metadata: { id: id(8801 + index), name: sourcePath, etag: 'source-tag', size: 7 },
     });
     copies.push({
-      document_id: documentId, source_etag: 'source-tag', destination_id: id(9801 + index), destination_path: destination,
+      document_id: documentId, source_id: id(8801 + index), source_etag: 'source-tag',
+      destination_id: id(9801 + index), destination_path: destination,
       source_bytes: 7, destination_bytes: 7, source_sha256: sha256('fixture'), destination_sha256: sha256('fixture'),
       destination_etag: 'destination-tag',
     });
@@ -36,11 +37,17 @@ test('prepares only the reviewed object/document namespace and a quoted, referen
   assert.match(sql, /synthetic\/''file\.pdf/);
   assert.doesNotMatch(sql, /(?:UPDATE|DELETE FROM|INSERT INTO) storage\./);
   assert.match(sql, /FOR UPDATE/);
+  assert.match(sql, /PERFORM 1 FROM public\.object WHERE id = r->>'object_id' FOR KEY SHARE;\s+IF NOT FOUND THEN\s+RAISE EXCEPTION 'DB07 mapped object is missing';/);
   assert.equal([...sql.matchAll(/FOR SHARE;/g)].length, 3);
   assert.ok(sql.includes(receipt.records[0].destination_id));
   const destinationGuard = "storage_id IS DISTINCT FROM (r->>'destination_id')::uuid";
   assert.ok(sql.includes(destinationGuard) && sql.indexOf(destinationGuard) < sql.indexOf('CONTINUE; -- Safe resume'));
-  assert.match(sql, /storage_id IS DISTINCT FROM \(r#>>'\{source_metadata,id\}'\)::uuid/);
+  const sourceGuard = "storage_id IS DISTINCT FROM (r#>>'{source_metadata,id}')::uuid";
+  assert.ok(sql.includes(sourceGuard) && sql.indexOf(sourceGuard) < sql.indexOf('CONTINUE; -- Safe resume'));
+  assert.match(sql, /b.id IN \('old_legal_media', 'legal-documents'\) AND b.public = false/);
+  assert.equal([...sql.matchAll(/o.name COLLATE pg_catalog\."C"/g)].length, 2);
+  assert.equal([...sql.matchAll(/o.archived_at IS NULL AND NOT o.is_delete_marker/g)].length, 2);
+  assert.ok(sql.indexOf('SET LOCAL search_path = pg_catalog, pg_temp;') < sql.indexOf('\nDO '));
 });
 
 test('100-record statements share one transaction and one final commit', () => {
@@ -74,6 +81,8 @@ for (const [label, mutate] of [
   ['different content', (r) => { r.records[0].destination_sha256 = sha256('other'); }],
   ['short copy', (r) => { r.records[0].destination_bytes = 6; }],
   ['changed source', (r) => { r.records[0].source_etag = 'new'; }],
+  ['missing source identity', (r) => { delete r.records[0].source_id; }],
+  ['different source identity', (r) => { r.records[0].source_id = r.records[0].destination_id; }],
   ['duplicate receipt', (r) => { r.records.push(r.records[0]); }],
 ]) test(`refuses a ${label}`, () => {
   const { manifest, receipt } = fixture(); const expected = receipt.manifest_sha256; mutate(receipt);

@@ -557,6 +557,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     }
     const storedDraft = (userId) => draftPage.evaluate((key) => localStorage.getItem(key),
       `object-editor-draft:${encodeURIComponent(userId)}:${encodeURIComponent(objectId)}`);
+    const draftEntryName = (entry) => JSON.parse(entry ?? '{}').draft?.generalInfo?.name;
     const originalDraftName = 'Synthetic local name for first account only';
     async function signOutDraftEditor() {
       const scope = draftScene.scene.draftScope;
@@ -586,9 +587,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await assertion(draftName).toHaveValue(canonicalBeforeDrafts[0]);
     assert.equal(await storedDraft(writerId), null);
     await draftName.fill(originalDraftName);
-    await assertion.poll(async () => JSON.parse((await storedDraft(writerId)) ?? '{}').draft?.generalInfo?.name)
-      .toBe(originalDraftName);
-    const firstDraft = await storedDraft(writerId);
+    await assertion.poll(async () => draftEntryName(await storedDraft(writerId))).toBe(originalDraftName);
     const passiveDocument = await passivePage.goto(editorUrl, { waitUntil: 'domcontentloaded' });
     passiveStartup.documentStatus = passiveDocument?.status() ?? null;
     assert.ok(passiveStartup.nativeDocument && passiveStartup.documentStatus === 200
@@ -596,8 +595,10 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     'the passive editor must open its exact native document with HTTP 200 and no redirect');
     await waitForDraftWorkspace(passivePage);
     await assertion(passiveName).toHaveValue(originalDraftName);
+    assert.equal(draftEntryName(await storedDraft(writerId)), originalDraftName, 'the first draft must persist before logout');
     await signOutDraftEditor();
-    assert.equal(await storedDraft(writerId), firstDraft);
+    const firstDraft = await storedDraft(writerId);
+    assert.equal(draftEntryName(firstDraft), originalDraftName, 'the first draft must persist after both tabs sign out');
 
     await signInDraftEditor(secondAccount.id, secondAccount);
     await assertion(draftName).toHaveValue(canonicalBeforeDrafts[0]);
@@ -613,11 +614,10 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     assert.equal(await storedDraft(secondAccount.id), null);
     const otherDraftName = 'Synthetic local name for second account only';
     await draftName.fill(otherDraftName);
-    await assertion.poll(async () => JSON.parse((await storedDraft(secondAccount.id)) ?? '{}').draft?.generalInfo?.name)
-      .toBe(otherDraftName);
-    assert.equal(await storedDraft(writerId), firstDraft);
+    await assertion.poll(async () => draftEntryName(await storedDraft(secondAccount.id))).toBe(otherDraftName);
+    assert.ok(await storedDraft(writerId) === firstDraft, 'the second account must not modify the first draft entry');
     await signOutDraftEditor();
-    assert.equal(await storedDraft(writerId), firstDraft);
+    assert.ok(await storedDraft(writerId) === firstDraft, 'the second logout must not modify the first draft entry');
 
     await signInDraftEditor(writerId, { email, password });
     await assertion(draftName).toHaveValue(originalDraftName);

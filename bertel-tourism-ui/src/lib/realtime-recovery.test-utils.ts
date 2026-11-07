@@ -11,6 +11,7 @@
 export interface FakeRealtimeChannel {
   topic: string;
   params: { config: { private?: boolean } };
+  presence: { state: object; pendingDiffs: unknown[]; joinRef: string | null };
   /** Types d'événements passés à `.on(...)`, dans l'ordre d'installation. */
   bindings: string[];
   /** Déclenche le callback de `subscribe()` avec un statut realtime. */
@@ -44,6 +45,7 @@ export function makeFakeRealtimeClient() {
       const chan: FakeRealtimeChannel = {
         topic,
         params,
+        presence: { state: {}, pendingDiffs: [], joinRef: null },
         bindings: [],
         emit: (status) => statusCallback?.(status),
         syncPresence: () => presenceSync?.(),

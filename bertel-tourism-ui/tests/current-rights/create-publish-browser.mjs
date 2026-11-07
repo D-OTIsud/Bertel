@@ -102,6 +102,7 @@ export async function testCreatePublishBrowser({ local, commit, writerId, email,
     const context = await browser.newContext();
     const explorer = app.origin + '/explorer';
     const loginUrl = app.origin + '/login?from=' + encodeURIComponent('/explorer');
+    let nativeLoginRequested = false;
     await context.route('**/*', async (route) => {
       const request = route.request();
       const url = new URL(request.url());
@@ -109,6 +110,16 @@ export async function testCreatePublishBrowser({ local, commit, writerId, email,
       const localApi = url.origin === local.origin;
       const method = request.method();
       const path = url.pathname;
+      if (url.origin === app.origin && method === 'GET' && path === '/login'
+        && (url.searchParams.has('email') || url.searchParams.has('password'))) {
+        if (!closing) routeFailure ??= new Error('Owned login attempted a native GET form submission');
+        return route.abort().catch(() => {});
+      }
+      // Let Chromium consume the initial Next document and its hydration stream directly.
+      if (!nativeLoginRequested && url.href === loginUrl && request.isNavigationRequest() && method === 'GET') {
+        nativeLoginRequested = true;
+        return route.continue();
+      }
       const login = localApi && method === 'POST' && path === '/auth/v1/token'
         && url.searchParams.get('grant_type') === 'password';
       const create = localApi && method === 'POST' && path === '/rest/v1/rpc/rpc_create_object';
@@ -184,7 +195,8 @@ export async function testCreatePublishBrowser({ local, commit, writerId, email,
 
     const page = await context.newPage();
     const login = await page.goto(loginUrl);
-    assert.ok(login?.status() === 200 && login.url() === loginUrl, 'the real login document must open');
+    assert.ok(nativeLoginRequested && login?.status() === 200 && login.url() === loginUrl
+      && login.request().redirectedFrom() === null, 'exact native login document must return HTTP 200 without redirects');
     await signIn(page, { email, password }, explorer);
 
     await page.getByRole('button', { name: 'Créer une fiche', exact: true }).click();

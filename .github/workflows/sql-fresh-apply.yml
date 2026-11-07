@@ -586,8 +586,8 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_private_object_document_access.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_private_object_document_legal_access.sql"
 
-      - name: Admission source and upgrade provenance (offline only)
-        run: node --test tools/ai-quota/mcp-packaging.test.mjs
+      - name: AI and list-mail source and upgrade provenance (offline only)
+        run: node --test tools/ai-quota/mcp-packaging.test.mjs tools/list-email/mcp-packaging.test.mjs
 
       - name: Distributed AI admission (service-only, sliding window, concurrent consumers)
         env:
@@ -607,9 +607,7 @@ jobs:
           LIST_EMAIL_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
           LIST_EMAIL_DISPOSABLE: 'true'
           LIST_EMAIL_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
-        run: |
-          cmp "Base de donnée DLL et API/distributed_list_email_intents.sql" supabase/migrations/20261106194635_distributed_list_email_intents.sql
-          node tools/list-email/init-disposable.mjs
+        run: node tools/list-email/init-disposable.mjs
 
       - name: Manual list-mail SQL contract (synthetic, service-only, list lifetime)
         timeout-minutes: 5

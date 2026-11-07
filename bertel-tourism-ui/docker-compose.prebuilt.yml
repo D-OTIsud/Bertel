@@ -5,7 +5,8 @@ services:
     image: "bertel-candidate:${SOURCE_COMMIT:?Exact reviewed source commit is required}"
     pull_policy: never
     ports:
-      - "8081:3000"
+      - "127.0.0.1:8081:3000"
+      - "[::1]:8081:3000"
     environment:
       # Canonical origin used by server-generated notification links.
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}

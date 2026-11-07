@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { supabaseServerFetch } from '@/lib/supabase-fetch.server';
 
 export const runtime = 'nodejs';
 const headers = { 'Cache-Control': 'no-store, private' };
@@ -46,6 +47,7 @@ async function issueSession() {
   // le singleton service_role à un compte utilisateur (cela remplacerait son JWT).
   const auth = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: supabaseServerFetch },
   });
   for (let attempt = 0; attempt < 2; attempt++) {
     const link = await server.auth.admin.generateLink({ type: 'magiclink', email: data.user.email });

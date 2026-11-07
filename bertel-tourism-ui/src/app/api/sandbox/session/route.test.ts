@@ -49,6 +49,34 @@ it('opens discovery without account credentials, emitting only the restricted se
   expect(createClient).toHaveBeenCalledWith('https://project.supabase.co', 'public-key', expect.any(Object));
 });
 
+it('redacts actual verifyOtp transport failures and retains the unavailable response', async () => {
+  const { admin } = setup();
+  process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://sandbox-auth.invalid';
+  const sdk = jest.requireActual<typeof import('@supabase/supabase-js')>('@supabase/supabase-js');
+  jest.mocked(createClient).mockImplementationOnce(sdk.createClient);
+  const raw = new TypeError('raw synthetic OTP transport cause');
+  const transport = jest.spyOn(globalThis, 'fetch').mockRejectedValue(raw);
+  const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+  try {
+    const response = await POST(request());
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('Cache-Control')).toBe('no-store, private');
+    await expect(response.json()).resolves.toEqual({ error: 'sandbox_unavailable' });
+    expect(admin.generateLink).toHaveBeenCalledTimes(2);
+    expect(transport.mock.calls.map(([url, init]) => [String(url), new Headers(init?.headers).get('apikey')]))
+      .toEqual(Array(2).fill(['https://sandbox-auth.invalid/auth/v1/verify', 'public-key']));
+    expect(log).toHaveBeenCalledTimes(2);
+    for (const [logged] of log.mock.calls) {
+      expect(logged).not.toBe(raw);
+      expect(logged).toMatchObject({ message: 'Supabase transport request failed' });
+    }
+  } finally {
+    transport.mockRestore();
+    log.mockRestore();
+  }
+});
+
 it('provisions the fixed test scope before minting the first session', async () => {
   const { rpc, admin } = setup({ existing: false });
   expect((await POST(request())).status).toBe(200);

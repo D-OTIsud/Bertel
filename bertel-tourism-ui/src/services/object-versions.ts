@@ -78,6 +78,38 @@ function readRow(raw: unknown): Record<string, unknown> {
   return raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
 }
 
+type Session = ReturnType<typeof useSessionStore.getState>;
+const authorityKey = (state: Session) => JSON.stringify([state.userId, state.orgId,
+  state.status, state.role, state.canEditObjects, state.adminRank, state.isTestRealm,
+  state.demoMode, state.authAuthority]);
+
+/** Keep the observed Auth subject authoritative while the visible profile is
+ * still hydrating. The signal stays attached through the SDK's token wait. */
+async function versionRequest<T>(
+  request: (signal: AbortSignal) => PromiseLike<{ data: T; error: unknown }>,
+  message: string,
+): Promise<T> {
+  const session = useSessionStore.getState();
+  const key = authorityKey(session);
+  const current = () => {
+    const state = useSessionStore.getState();
+    return authorityKey(state) === key && state.status === 'ready' && Boolean(state.userId)
+      && state.authAuthority?.hydrated === true && state.authAuthority.userId === state.userId;
+  };
+  if (!current()) throw new Error(message);
+  const controller = new AbortController();
+  const unsubscribe = useSessionStore.subscribe((state) => {
+    if (authorityKey(state) !== key) controller.abort();
+  });
+  try {
+    const { data, error } = await request(controller.signal);
+    if (controller.signal.aborted || !current() || error) throw new Error(message);
+    return data;
+  } finally {
+    unsubscribe();
+  }
+}
+
 /** api.get_object_versions — timeline of canonical versions, newest first. */
 export async function getObjectVersions(
   objectId: string,
@@ -92,14 +124,11 @@ export async function getObjectVersions(
   if (!apiClient) {
     throw new Error("Connexion backend indisponible pour l'historique des versions.");
   }
-  const { data, error } = await apiClient.schema('api').rpc('get_object_versions', {
+  const data = await versionRequest((signal) => apiClient.schema('api').rpc('get_object_versions', {
     p_object_id: objectId,
     p_limit: limit,
     p_offset: offset,
-  });
-  if (error) {
-    throw new Error("Impossible de charger l'historique des versions.");
-  }
+  }).abortSignal(signal), "Impossible de charger l'historique des versions.");
   const rows = Array.isArray(data) ? data : [];
   return rows.map((raw) => {
     const row = readRow(raw);
@@ -127,13 +156,10 @@ export async function getObjectVersionSnapshot(
   if (!apiClient) {
     throw new Error("Connexion backend indisponible pour l'historique des versions.");
   }
-  const { data, error } = await apiClient.schema('api').rpc('get_object_version_snapshot', {
+  const data = await versionRequest((signal) => apiClient.schema('api').rpc('get_object_version_snapshot', {
     p_object_id: objectId,
     p_version_number: versionNumber,
-  });
-  if (error) {
-    throw new Error("Impossible de charger cette version.");
-  }
+  }).abortSignal(signal), "Impossible de charger cette version.");
   return data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
 }
 
@@ -147,11 +173,8 @@ export async function restoreObjectVersion(objectId: string, versionNumber: numb
   if (!apiClient) {
     throw new Error("Connexion backend indisponible pour restaurer cette version.");
   }
-  const { error } = await apiClient.schema('api').rpc('rpc_restore_object_version', {
+  await versionRequest((signal) => apiClient.schema('api').rpc('rpc_restore_object_version', {
     p_object_id: objectId,
     p_version_number: versionNumber,
-  });
-  if (error) {
-    throw new Error("Impossible de restaurer cette version.");
-  }
+  }).abortSignal(signal), "Impossible de restaurer cette version.");
 }

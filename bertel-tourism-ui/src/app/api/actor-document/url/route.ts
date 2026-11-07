@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { routeFailure } from '../../_route-failure';
 import { UUID_SHAPE, PRIVATE_BUCKET, authenticated, callerClient } from '../../_document-auth';
 import { authorizeActor } from '../authorize';
 import { legalDocumentObjectHint, resolveActorDocument } from '../resolve-document';
@@ -30,7 +31,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const results = await Promise.all(['get_object_document_file', 'get_legal_object_document_file'].map((rpc) => caller.rpc(rpc, {
       p_object_id: objectId, p_document_id: documentId,
     })));
-    if (results.some((result) => result.error)) return NextResponse.json({ error: 'authorization_check_failed' }, { status: 503, headers: NO_STORE });
+    if (results.some((result) => result.error)) {
+      return routeFailure('actor-document.url.POST', 'authorization_check_failed', { status: 503, headers: NO_STORE });
+    }
     const authorized = results.map((result) => result.data).filter((data) => data && typeof data === 'object' && data.authorized === true);
     if (!authorized.length) return NextResponse.json({ error: 'forbidden' }, { status: 403, headers: NO_STORE });
     const files = authorized.map((data) => data.file).filter((value) => value && typeof value === 'object');
@@ -45,6 +48,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   if (typeof file.bucket !== 'string' || !isExactDocumentPath(file.path)) return NextResponse.json({ error: 'file_missing' }, { status: 409, headers: NO_STORE });
   const url = await signExactDocumentUrl(auth.server, file);
-  if (!url) return NextResponse.json({ error: 'signed_url_failed' }, { status: 503, headers: NO_STORE });
+  if (!url) return routeFailure('actor-document.url.POST', 'signed_url_failed', { status: 503, headers: NO_STORE });
   return NextResponse.json({ url }, { headers: NO_STORE });
 }

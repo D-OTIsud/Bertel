@@ -6,6 +6,7 @@ jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
+import { readApiErrorMessage } from '@/services/api-error';
 
 const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedCreate = jest.mocked(createClient);
@@ -118,6 +119,32 @@ describe('POST /api/admin/invite', () => {
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body).toEqual({ userId: 'u9', alreadyExisted: true, neverSignedIn: true });
+  });
+
+  it('500 keeps the invitation fallback without exposing a GoTrue error or logging the email', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const inviteUserByEmail = jest.fn().mockResolvedValue({ data: null, error: { message: 'fictional GoTrue error SECRET_INVITE' } });
+      const listUsers = jest.fn().mockResolvedValue({ data: { users: [] } });
+      mockedServer.mockReturnValue({
+        auth: {
+          getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin' } }, error: null }),
+          admin: { inviteUserByEmail, listUsers },
+        },
+      } as never);
+      mockedCreate.mockReturnValue(superuserCaller() as never);
+      const response = await POST(req({ authorization: 'Bearer t' }, { email: 'x@y.z' }));
+      const payload = await response.json();
+      expect(response.status).toBe(500);
+      expect(payload).toEqual({ error: 'create_failed' });
+      expect(readApiErrorMessage(payload, response.status)).toBe('La création a échoué.');
+      const requestId = response.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+      expect(warn.mock.calls).toEqual([['[route-error]', { route: 'admin/invite.POST', code: 'create_failed', requestId }]]);
+      expect(listUsers).toHaveBeenCalledWith({ page: 1, perPage: 1000 });
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('resend: deletes the never-signed-in account then re-invites', async () => {

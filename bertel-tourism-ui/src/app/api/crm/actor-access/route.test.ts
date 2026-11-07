@@ -293,7 +293,9 @@ describe('POST /api/crm/actor-access — identité et gate', () => {
     expect(mockedCreateClient).toHaveBeenCalledWith(
       'https://x.supabase.co',
       'anon-key',
-      expect.objectContaining({ global: { headers: { Authorization: 'Bearer jwt-agent' } } }),
+      expect.objectContaining({
+        global: { headers: { Authorization: 'Bearer jwt-agent' }, fetch: expect.any(Function) },
+      }),
     );
     expect(schema).toHaveBeenCalledWith('api');
     expect(rpc).toHaveBeenCalledWith('user_can_write_crm_actor', { p_actor_id: ACTOR });

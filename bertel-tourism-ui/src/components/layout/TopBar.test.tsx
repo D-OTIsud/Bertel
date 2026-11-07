@@ -9,6 +9,7 @@ import { TopBar } from './TopBar';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useCrmSearchStore } from '../../store/crm-search-store';
 import { useUiStore } from '../../store/ui-store';
+import { useSessionStore } from '../../store/session-store';
 import { searchObjectsByName } from '../../services/name-search';
 
 const pathnameMock = jest.fn<string, []>();
@@ -17,7 +18,7 @@ jest.mock('next/navigation', () => ({ usePathname: () => pathnameMock() }));
 jest.mock('../../features/object-editor/create/CreateObjectButton', () => ({
   CreateObjectButton: () => null,
 }));
-jest.mock('./LivePresenceIndicator', () => ({ LivePresenceIndicator: () => null }));
+jest.mock('./LivePresenceIndicator', () => ({ LivePresenceIndicator: () => <span data-testid="live-presence" /> }));
 // Le menu de concordances (spec 2026-08-26) interroge le serveur : on borne au service.
 jest.mock('../../services/name-search', () => ({
   ...jest.requireActual('../../services/name-search'),
@@ -39,6 +40,26 @@ beforeEach(() => {
   useCrmSearchStore.setState({ search: '' });
   useExplorerStore.getState().setSearch('');
   useUiStore.getState().closeDrawer();
+});
+
+describe('TopBar — présence autorisée', () => {
+  afterEach(() => act(() => useSessionStore.setState(useSessionStore.getInitialState(), true)));
+
+  it.each([
+    ['personnel affilié', {}, true],
+    ['découverte publique', { isSandboxDiscovery: true, isTestRealm: true }, false],
+    ['personnel sans affiliation', { orgId: null }, false],
+    ['démo locale', { demoMode: true, authAuthority: null }, true],
+  ] as const)('affiche la pastille selon la session %s', (_label, override, visible) => {
+    useSessionStore.setState({
+      status: 'ready', role: 'tourism_agent', userId: 'u-me', orgId: 'ORG-OTI', demoMode: false,
+      isSandboxDiscovery: false, isTestRealm: false, authAuthority: { userId: 'u-me', epoch: 1, hydrated: true },
+      ...override,
+    });
+    pathnameMock.mockReturnValue('/explorer');
+    render(<TopBar />);
+    expect(Boolean(screen.queryByTestId('live-presence'))).toBe(visible);
+  });
 });
 
 describe('TopBar — cible du champ de recherche', () => {

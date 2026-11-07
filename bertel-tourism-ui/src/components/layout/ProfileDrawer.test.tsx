@@ -59,7 +59,8 @@ beforeEach(() => {
     status: 'ready', demoMode: false, role: 'tourism_agent', adminRank: null,
     canEditObjects: true,
     userId: 'u-me', email: 'david@otisud.re', userName: 'David P.', avatarUrl: null,
-    orgName: 'OTI du Sud',
+    orgId: 'ORG-OTI', orgName: 'OTI du Sud', isSandboxDiscovery: false, isTestRealm: false,
+    authAuthority: { userId: 'u-me', epoch: 1, hydrated: true },
   } as never);
   useUiStore.setState({
     networkStatus: 'connected',
@@ -194,6 +195,17 @@ describe('ProfileDrawer (hub personnel)', () => {
     useUiStore.setState({ networkStatus: 'degraded' } as never);
     renderDrawer();
     expect(await screen.findByRole('status')).toHaveTextContent('Connexion dégradée');
+  });
+
+  it.each([
+    ['découverte publique', { isSandboxDiscovery: true, isTestRealm: true }],
+    ['personnel sans affiliation', { orgId: null }],
+  ] as const)('masque l’état Realtime pour %s', async (_label, override) => {
+    useSessionStore.setState(override);
+    useUiStore.setState({ networkStatus: 'offline' });
+    renderDrawer();
+    expect(await screen.findByText('En ligne maintenant')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('déconnexion masquée en mode démo', async () => {

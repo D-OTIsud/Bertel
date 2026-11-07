@@ -169,7 +169,7 @@ test('ignores a late pending receipt from a different organization when enabling
   render(<CreateOrgDialog onDone={jest.fn()} />);
   await fillAdminForm();
   submitInvite();
-  fireEvent.click(screen.getByRole('button', { name: 'Fermer', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: /^Fermer$/ }));
   resolvePending(pending);
   await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('invitation est en attente')));
 
@@ -177,6 +177,10 @@ test('ignores a late pending receipt from a different organization when enabling
   await fillAdminForm();
   expect(screen.getByLabelText(/^Rôle métier/)).toBeEnabled();
   expect(inviteUser).toHaveBeenCalledTimes(1);
+  submitInvite();
+  await waitFor(() => expect(inviteUser).toHaveBeenNthCalledWith(2, {
+    email: recipient, orgObjectId: 'ORGOTHER', businessRoleCode: 'contributor',
+  }));
 });
 
 test('assigns the admin role to an existing active member without announcing an email', async () => {

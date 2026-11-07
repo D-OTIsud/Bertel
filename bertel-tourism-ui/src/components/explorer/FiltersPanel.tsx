@@ -1108,6 +1108,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               <FilterDropdown<string>
                 mode="single"
                 placeholder="Tous les lieux-dits"
+                allLabel={references?.lieuDits?.length || common.lieuDit ? 'Tous les lieux-dits' : undefined}
                 options={(references?.lieuDits ?? []).map((v) => ({ code: v, label: v }))}
                 selected={common.lieuDit ? [common.lieuDit] : []}
                 onChange={(vals) => setLieuDit(vals[0] ?? '')}

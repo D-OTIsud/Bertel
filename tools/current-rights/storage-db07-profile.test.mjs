@@ -6,14 +6,15 @@ import { assertAnonymousHeadRefusal, assertStorageRefusal, storageErrorIdentity 
 
 const local = loadDisposable();
 const limit = 10 * 1024 * 1024;
+const profileLimit = 42_305_170;
 const sourceLimit = 50_000_000;
 const pdf = 'application/pdf';
 const png = 'image/png';
-const destinationMimes = [pdf, 'image/jpeg'];
+const initialMimes = [pdf, 'image/jpeg'];
 const samples = [
   [pdf, limit + 1, 'pdf'],
   ['image/jpeg', limit + 1, 'jpg'],
-  [png, 42_305_170, 'png'],
+  [png, profileLimit, 'png'],
   ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 4096, 'docx'],
   ['image/heif', 4096, 'heif'],
 ];
@@ -53,7 +54,7 @@ async function hashObject(bucket, key, size, mime) {
   return hash.digest('hex');
 }
 
-test('DB07 v1.41.8 sequential copy preserves five MIME types through the 10 MiB private destination', { timeout: 120_000 }, async (t) => {
+test('DB07 v1.41.8 updates the private destination and copies five MIME types under the reviewed profile', { timeout: 120_000 }, async (t) => {
   const run = randomUUID();
   const source = `db07-src-${run}`, destination = `db07-dst-${run}`;
   const buckets = new Map();
@@ -69,27 +70,33 @@ test('DB07 v1.41.8 sequential copy preserves five MIME types through the 10 MiB 
     assert.equal(Number(bucket.file_size_limit), size);
     assert.deepEqual([...bucket.allowed_mime_types].sort(), [...types].sort());
   };
-  const checkRefusals = async (phase) => {
-    const large = `controls/${phase}-large.pdf`, wrongMime = `controls/${phase}-mime.png`;
+  const checkRefusals = async (phase, maxSize, excludedMime) => {
+    const large = `controls/${phase}-large.pdf`, wrongMime = `controls/${phase}-mime`;
     buckets.get(destination).push(large, wrongMime);
-    const oversized = await upload(destination, large, Buffer.alloc(limit + 1, 1), pdf);
+    const oversized = await upload(destination, large, Buffer.alloc(maxSize + 1, 1), pdf);
     const problem = await oversized.json().catch(() => null);
     const code = problem?.code === undefined ? problem?.error : problem.code;
     assert.ok((oversized.status === 413 && (problem?.statusCode === undefined || Number(problem.statusCode) === 413)
         || oversized.status === 400 && Number(problem?.statusCode) === 413)
       && ['EntityTooLarge', 'Payload too large'].includes(code), 'direct oversized PDF must receive an explicit size refusal');
-    await assertStorageRefusal(await upload(destination, wrongMime, Buffer.alloc(4096, 2), png), 'mime', 'direct PNG');
+    await assertStorageRefusal(await upload(destination, wrongMime, Buffer.alloc(4096, 2), excludedMime), 'mime', 'direct disallowed MIME');
     await assertMissing(destination, large);
     await assertMissing(destination, wrongMime);
   };
 
   try {
-    const sourceMimes = samples.map(([mime]) => mime);
-    await createBucket(source, true, sourceLimit, sourceMimes);
-    await createBucket(destination, false, limit, destinationMimes);
-    await checkBucket(source, true, sourceLimit, sourceMimes);
-    await checkBucket(destination, false, limit, destinationMimes);
-    await checkRefusals('before');
+    const profileMimes = samples.map(([mime]) => mime);
+    await createBucket(source, true, sourceLimit, profileMimes);
+    await createBucket(destination, false, limit, initialMimes);
+    await checkBucket(source, true, sourceLimit, profileMimes);
+    await checkBucket(destination, false, limit, initialMimes);
+    await checkRefusals('before', limit, png);
+
+    const updated = await json(await local.request(`/storage/v1/bucket/${destination}`, local.service, {
+      public: false, file_size_limit: profileLimit, allowed_mime_types: profileMimes,
+    }, 'PUT'), 'update private synthetic bucket');
+    assert.equal(updated.message, 'Successfully updated');
+    await checkBucket(destination, false, profileLimit, profileMimes);
 
     for (const [index, [mime, size, extension]] of samples.entries()) {
       const sourceKey = `synthetic/${index}.${extension}`, destinationKey = `objects/HOTRUN9970070001/${randomUUID()}`;
@@ -122,8 +129,8 @@ test('DB07 v1.41.8 sequential copy preserves five MIME types through the 10 MiB 
       t.diagnostic(`${mime} ${size} bytes: stored metadata and both hashes match`);
     }
 
-    await checkBucket(destination, false, limit, destinationMimes);
-    await checkRefusals('after');
+    await checkBucket(destination, false, profileLimit, profileMimes);
+    await checkRefusals('after', profileLimit, 'text/plain');
   } finally {
     let cleanupOk = true;
     for (const [bucket, paths] of [...buckets].reverse()) {

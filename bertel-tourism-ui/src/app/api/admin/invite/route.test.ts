@@ -1,6 +1,7 @@
 /** @jest-environment node */
 jest.mock('server-only', () => ({}));
-import { POST } from './route';
+import { POST as legacyPOST } from './route';
+import { POST } from './v2/route';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
@@ -10,241 +11,560 @@ import { readApiErrorMessage } from '@/services/api-error';
 
 const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedCreate = jest.mocked(createClient);
+const target = { email: 'x@y.z', orgObjectId: 'ORG1', businessRoleCode: 'editor' };
+const candidate = { id: 'target', email: target.email, last_sign_in_at: null };
+const headers = { authorization: 'Bearer t' };
+type SyntheticUser = { id: string; email: string; last_sign_in_at?: string | null; email_confirmed_at?: string; is_sso_user?: boolean };
+type DirectoryPage = { users: SyntheticUser[]; nextPage: number | null; total: number };
 
-function req(headers: Record<string, string>, body: unknown): never {
-  return { headers: new Headers(headers), json: async () => body, url: 'https://app.test/api/admin/invite' } as never;
+function directoryUsers(page: number): SyntheticUser[] {
+  return Array.from({ length: 1000 }, (_, index) => ({
+    id: `directory-${page}-${index}`, email: `directory-${page}-${index}@example.test`,
+  }));
 }
 
-/** asCaller client whose gate answers superuser=true. */
-function superuserCaller() {
-  const rpc = jest.fn()
-    .mockResolvedValueOnce({ data: true, error: null })
-    .mockResolvedValueOnce({ data: null, error: null });
-  return { schema: () => ({ rpc }) };
+function req(body: unknown, requestHeaders: Record<string, string> = headers): never {
+  return { headers: new Headers(requestHeaders), json: async () => body } as never;
 }
 
-/** asCaller client whose gate answers org_admin (rang 30), pas superuser. */
-function orgAdminCaller() {
-  const rpc = jest.fn()
-    .mockResolvedValueOnce({ data: false, error: null })
-    .mockResolvedValueOnce({ data: 30, error: null });
-  return { schema: () => ({ rpc }) };
-}
-
-/**
- * `server.from(...)` qui sait répondre AUX DEUX usages de la route : le select `user_org_membership`
- * de la garde `sharesActiveOrg` (branche resend) et l'upsert `app_user_profile` (invitation réussie).
- * Un test qui n'atteint jamais la garde (piège A : pas de `resend`) n'a besoin d'aucune ligne de
- * membership — s'il en fallait une, ce serait la preuve que la garde s'est glissée hors de la
- * branche `resend`.
- */
-function fromWithMembership(
-  rows: Array<{ user_id: string; org_object_id: string }>,
-  upsert: jest.Mock = jest.fn().mockResolvedValue({ error: null }),
-) {
-  return jest.fn((table: string) => {
-    if (table === 'user_org_membership') {
-      const eq = jest.fn().mockResolvedValue({ data: rows, error: null });
-      const inFn = jest.fn().mockReturnValue({ eq });
-      const select = jest.fn().mockReturnValue({ in: inFn });
-      return { select };
+function fixture(options: {
+  platform?: boolean;
+  rank?: number;
+  callerOrg?: string;
+  callerOrgRanks?: Record<string, number | null>;
+  callerRankReads?: Array<number | null>;
+  callerMayReadTarget?: boolean;
+  users?: SyntheticUser[];
+  pages?: DirectoryPage[];
+  orgExists?: boolean;
+  roleExists?: boolean;
+  activeOrgs?: string[];
+  membershipInOrg?: boolean;
+  activeMembershipId?: string;
+  nextPage?: number;
+  attachError?: boolean;
+  attachUnknown?: boolean;
+  attachAlreadyActive?: boolean;
+  providerError?: boolean;
+  returnedUserId?: string;
+  profileRole?: string | null;
+  profileError?: boolean;
+} = {}) {
+  const users = options.users ?? [];
+  const pages = options.pages ?? [{ users, nextPage: options.nextPage ?? null, total: users.length }];
+  const listUsers = jest.fn(async ({ page }: { page: number }) => ({ data: pages[page - 1], error: null }));
+  const inviteUserByEmail = jest.fn().mockResolvedValue(options.providerError
+    ? { data: { user: null }, error: { message: 'synthetic GoTrue error INVITE_SENTINEL' } }
+    : { data: { user: { id: options.returnedUserId ?? 'new-user' } }, error: null });
+  const deleteUser = jest.fn().mockResolvedValue({ error: null });
+  const rpc = jest.fn(async (name: string) => {
+    if (name === 'is_platform_superuser') return { data: options.platform === true, error: null };
+    if (name === 'current_user_admin_rank') return { data: options.rank ?? 30, error: null };
+    if (name === 'current_user_org_id') return { data: options.callerOrg ?? 'ORG1', error: null };
+    if (name === 'rpc_attach_invite_membership') {
+      if (options.attachError) return { data: null, error: { code: '40P01', message: 'synthetic deadlock failure' } };
+      return {
+        data: options.attachUnknown ? null : { membership_id: 'membership-1', already_active: options.attachAlreadyActive === true },
+        error: null,
+      };
     }
-    return { upsert };
+    throw new Error(`Unexpected RPC ${name}`);
   });
+  function single(data: object | null, error: object | null = null) {
+    const eq = jest.fn();
+    const chain = { eq, maybeSingle: jest.fn().mockResolvedValue({ data, error }) };
+    eq.mockReturnValue(chain);
+    return { select: jest.fn(() => chain), eq };
+  }
+  const membership = single(options.membershipInOrg ? { id: options.activeMembershipId ?? 'membership-1' } : null);
+  const callerRanks = options.callerOrgRanks ?? { [options.callerOrg ?? 'ORG1']: options.rank ?? 30 };
+  const callerFilters = new Map<string, unknown>();
+  let callerRankRead = 0;
+  const callerMembership = {
+    eq(column: string, value: unknown) {
+      callerFilters.set(column, value);
+      return callerMembership;
+    },
+    async maybeSingle() {
+      const orgId = callerFilters.get('org_object_id');
+      const visible = callerFilters.get('user_id') === 'admin' && callerFilters.get('is_active') === true
+        && typeof orgId === 'string' && Object.hasOwn(callerRanks, orgId);
+      const rank = visible && options.callerRankReads
+        ? options.callerRankReads[callerRankRead++]
+        : typeof orgId === 'string' ? callerRanks[orgId] : null;
+      return {
+        data: visible ? {
+          user_org_admin_role: rank == null ? [] : [{ is_active: true, ref_org_admin_role: { rank } }],
+        } : null,
+        error: null,
+      };
+    },
+  };
+  const businessRole = single(options.roleExists === false ? null : { code: 'editor' });
+  const callerTargetMembership = options.callerMayReadTarget === false ? single(null) : membership;
+  const callerFrom = jest.fn((table: string) => {
+    if (table === 'user_org_membership') return {
+      select: (columns: string) => columns === 'id' ? callerTargetMembership.select() : callerMembership,
+    };
+    if (table === 'ref_org_business_role') return businessRole;
+    throw new Error(`Unexpected caller table ${table}`);
+  });
+  const is = jest.fn().mockResolvedValue({ error: null });
+  const update = jest.fn(() => ({ eq: jest.fn(() => ({ is })) }));
+  const serverFrom = jest.fn((table: string) => {
+    if (table === 'object') return single(options.orgExists === false ? null : { id: 'ORG1' });
+    if (table === 'user_org_membership') {
+      return {
+        select: (columns: string) => columns === 'id' ? membership.select() : ({
+          eq: () => ({
+            eq: () => Promise.resolve({
+              data: (options.activeOrgs ?? []).map((org_object_id) => ({
+                id: options.activeMembershipId ?? `active-membership-${org_object_id}`, org_object_id,
+              })),
+              error: null,
+            }),
+          }),
+        }),
+      };
+    }
+    if (table === 'app_user_profile') return {
+      update,
+      ...single({ role: options.profileRole ?? null }, options.profileError ? { message: 'synthetic profile failure' } : null),
+    };
+    throw new Error(`Unexpected service table ${table}`);
+  });
+  mockedServer.mockReturnValue({
+    auth: {
+      getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin' } }, error: null }),
+      admin: { listUsers, inviteUserByEmail, deleteUser },
+    },
+    from: serverFrom,
+  } as never);
+  mockedCreate.mockReturnValue({ schema: () => ({ rpc }), from: callerFrom } as never);
+  return { rpc, listUsers, inviteUserByEmail, deleteUser, membership, businessRole, update, is };
 }
 
-describe('POST /api/admin/invite', () => {
-  beforeEach(() => { mockedServer.mockReset(); mockedCreate.mockReset(); process.env.NEXT_PUBLIC_SUPABASE_URL='https://x.supabase.co'; process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY='anon'; process.env.NEXT_PUBLIC_APP_URL='https://bertel.otisud.re'; });
+describe('POST /api/admin/invite (legacy)', () => {
+  it('asks old clients to reload before any authentication or invite work', async () => {
+    mockedServer.mockClear();
+    mockedCreate.mockClear();
+    const res = legacyPOST();
+    expect(res.status).toBe(426);
+    const payload = await res.json();
+    expect(payload).toEqual({ error: 'bad_request' });
+    expect(readApiErrorMessage(payload, res.status)).toBe('Requête invalide. Rechargez la page et réessayez.');
+    expect(mockedServer).not.toHaveBeenCalled();
+    expect(mockedCreate).not.toHaveBeenCalled();
+  });
+});
 
-  it('401 when no bearer token', async () => {
-    mockedServer.mockReturnValue({ auth: {} } as never);
-    const res = await POST(req({}, {}));
-    expect(res.status).toBe(401);
+describe('POST /api/admin/invite/v2', () => {
+  beforeEach(() => {
+    mockedServer.mockReset();
+    mockedCreate.mockReset();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://x.supabase.co';
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://bertel.otisud.re';
   });
 
-  it('403 when caller is neither superuser nor org_admin', async () => {
-    mockedServer.mockReturnValue({ auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }) } } as never);
-    const rpc = jest.fn()
-      .mockResolvedValueOnce({ data: false, error: null })
-      .mockResolvedValueOnce({ data: null, error: null });
-    mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
-    const res = await POST(req({ authorization: 'Bearer t' }, { email: 'x@y.z', orgObjectId: 'ORG1' }));
-    expect(res.status).toBe(403);
-  });
-
-  it('201 sends the invite email with the /set-password redirect', async () => {
-    const inviteUserByEmail = jest.fn().mockResolvedValue({ data: { user: { id: 'new1' } }, error: null });
-    const upsert = jest.fn().mockResolvedValue({ error: null });
-    mockedServer.mockReturnValue({
-      auth: {
-        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin' } }, error: null }),
-        admin: { inviteUserByEmail },
-      },
-      from: () => ({ upsert }),
-    } as never);
-    mockedCreate.mockReturnValue(superuserCaller() as never);
-    const res = await POST(req({ authorization: 'Bearer t', origin: 'https://outside.example', host: 'outside.example', forwarded: 'host=outside.example;proto=https' }, { email: 'x@y.z' }));
-    expect(res.status).toBe(201);
-    expect(inviteUserByEmail).toHaveBeenCalledWith('x@y.z', { redirectTo: 'https://bertel.otisud.re/set-password' });
-    expect((await res.json()).userId).toBe('new1');
-  });
-
-  it('503 sans origine canonique avant renvoi, suppression de compte ou invitation', async () => {
-    delete process.env.NEXT_PUBLIC_APP_URL;
-    const inviteUserByEmail = jest.fn(); const deleteUser = jest.fn(); const listUsers = jest.fn();
-    mockedServer.mockReturnValue({ auth: {
-      getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin' } }, error: null }),
-      admin: { inviteUserByEmail, deleteUser, listUsers },
-    } } as never);
-    mockedCreate.mockReturnValue(superuserCaller() as never);
-    const response = await POST(req({ authorization: 'Bearer t', origin: 'https://outside.example' }, { email: 'x@y.z', resend: true }));
-    expect(response.status).toBe(503);
-    await expect(response.json()).resolves.toEqual({ error: 'app_origin_unavailable' });
-    expect(inviteUserByEmail).not.toHaveBeenCalled();
-    expect(deleteUser).not.toHaveBeenCalled();
+  it('401 without a bearer token', async () => {
+    const { listUsers } = fixture();
+    expect((await POST(req(target, {}))).status).toBe(401);
     expect(listUsers).not.toHaveBeenCalled();
   });
 
-  it('409 with neverSignedIn when the email already exists', async () => {
-    const inviteUserByEmail = jest.fn().mockResolvedValue({ data: null, error: { message: 'exists' } });
-    const listUsers = jest.fn().mockResolvedValue({ data: { users: [{ id: 'u9', email: 'x@y.z', last_sign_in_at: null }] } });
-    mockedServer.mockReturnValue({
-      auth: {
-        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin' } }, error: null }),
-        admin: { inviteUserByEmail, listUsers },
-      },
-    } as never);
-    mockedCreate.mockReturnValue(superuserCaller() as never);
-    const res = await POST(req({ authorization: 'Bearer t' }, { email: 'x@y.z' }));
-    expect(res.status).toBe(409);
-    const body = await res.json();
-    expect(body).toEqual({ userId: 'u9', alreadyExisted: true, neverSignedIn: true });
+  it('403 before lookup when caller rank is below 30', async () => {
+    const { listUsers, inviteUserByEmail } = fixture({ rank: 20 });
+    expect((await POST(req(target))).status).toBe(403);
+    expect(listUsers).not.toHaveBeenCalled();
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
   });
 
-  it('500 keeps the invitation fallback without exposing a GoTrue error or logging the email', async () => {
+  it.each([null, 20])('403 before lookup when rank 30 is held only in another organisation (local rank %s)', async (localRank) => {
+    const { listUsers, inviteUserByEmail, rpc } = fixture({
+      rank: 30, callerOrg: 'ORG1', callerOrgRanks: { ORG1: localRank, ORG2: 30 },
+      users: [candidate], membershipInOrg: true, returnedUserId: 'target',
+    });
+    for (const resend of [false, true]) {
+      const response = await POST(req({ ...target, resend }));
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: 'out_of_scope' });
+    }
+    expect(listUsers).not.toHaveBeenCalled();
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+  });
+
+  it('resends in another administered organisation after an exact service-side membership check', async () => {
+    const { inviteUserByEmail, membership } = fixture({
+      callerOrg: 'ORG1', callerOrgRanks: { ORG1: 20, ORG2: 30 }, callerMayReadTarget: false,
+      users: [candidate], membershipInOrg: true, returnedUserId: 'target',
+    });
+    const response = await POST(req({ ...target, orgObjectId: 'ORG2', resend: true }));
+    expect(response.status).toBe(201);
+    expect(membership.eq).toHaveBeenCalledWith('user_id', 'target');
+    expect(membership.eq).toHaveBeenCalledWith('org_object_id', 'ORG2');
+    expect(membership.eq).toHaveBeenCalledWith('is_active', true);
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])('rechecks current ORG rank after the directory read (resend=%s)', async (resend) => {
+    const { listUsers, inviteUserByEmail, rpc } = fixture({
+      callerRankReads: [30, 20], users: resend ? [candidate] : [],
+      membershipInOrg: resend, returnedUserId: resend ? 'target' : 'new-user',
+    });
+    const response = await POST(req({ ...target, resend }));
+    expect(response.status).toBe(403);
+    expect(listUsers).toHaveBeenCalledTimes(1);
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+  });
+
+  it.each([
+    [{ callerOrg: 'ORG2' }, 'editor', 403],
+    [{ orgExists: false }, 'editor', 422],
+    [{ roleExists: false }, 'owner', 422],
+  ] as const)('validates target scope and role before a directory lookup (%j)', async (options, roleCode, status) => {
+    const { listUsers, inviteUserByEmail, rpc, update, businessRole } = fixture(options);
+    expect((await POST(req({ ...target, businessRoleCode: roleCode }))).status).toBe(status);
+    if (roleCode === 'owner') expect(businessRole.eq).toHaveBeenCalledWith('code', 'owner');
+    expect(listUsers).not.toHaveBeenCalled();
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('invites and attaches a new account with a canonical redirect (platform=%s)', async (platform) => {
+    const { listUsers, inviteUserByEmail, rpc, update, is } = fixture({ platform, callerOrg: platform ? 'ORG2' : 'ORG1', rank: platform ? 0 : 30 });
+    const res = await POST(req(target, { ...headers, origin: 'https://outside.example', host: 'outside.example', forwarded: 'host=outside.example;proto=https' }));
+    expect(res.status).toBe(201);
+    await expect(res.json()).resolves.toEqual({ userId: 'new-user', membershipId: 'membership-1', alreadyExisted: false });
+    expect(listUsers).toHaveBeenCalledWith({ page: 1, perPage: 1000 });
+    expect(inviteUserByEmail).toHaveBeenCalledWith('x@y.z', { redirectTo: 'https://bertel.otisud.re/set-password' });
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
+      p_target_user_id: 'new-user', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
+    });
+    expect(update).toHaveBeenCalledWith({ role: 'tourism_agent' });
+    expect(is).toHaveBeenCalledWith('role', null);
+  });
+
+  it('503 when the app origin is missing, before any account lookup or invitation', async () => {
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    const { listUsers, inviteUserByEmail } = fixture();
+    const res = await POST(req({ ...target, resend: true }));
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({ error: 'app_origin_unavailable' });
+    expect(listUsers).not.toHaveBeenCalled();
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {},
+    { last_sign_in_at: '2026-07-01T00:00:00Z', email_confirmed_at: '2026-06-30T00:00:00Z' },
+  ])('same refusal for an unconfirmed or confirmed foreign account (%j)', async (state) => {
+    const { inviteUserByEmail, deleteUser, rpc, update } = fixture({
+      users: [{ ...candidate, ...state }], activeOrgs: ['ORG2'],
+    });
+    for (const resend of [false, true]) {
+      const res = await POST(req({ ...target, resend }));
+      expect(res.status).toBe(403);
+      await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
+    }
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('resend returns the same refusal for a missing or inactive membership', async () => {
+    for (const users of [[], [candidate]]) {
+      const { inviteUserByEmail } = fixture({ users });
+      const res = await POST(req({ ...target, resend: true }));
+      expect(res.status).toBe(403);
+      await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
+      expect(inviteUserByEmail).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each([false, true])('attaches an eligible confirmed account without exposing prior activity (platform=%s)', async (platform) => {
+    const { rpc, inviteUserByEmail, update } = fixture({
+      users: [{ ...candidate, email_confirmed_at: '2026-07-01T00:00:00Z' }],
+      platform, activeOrgs: platform ? ['ORG2'] : [], profileRole: platform ? 'owner' : 'tourism_agent',
+    });
+    const res = await POST(req(target));
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: true });
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
+      p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
+    });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { profileRole: 'owner' },
+    { profileRole: 'super_admin' },
+    { profileError: true },
+  ])('does not attach an unscoped privileged or unverified target for a local admin (%j)', async (options) => {
+    const { rpc, inviteUserByEmail, update, deleteUser } = fixture({ users: [candidate], ...options });
+    const res = await POST(req(target));
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it.each(['tourism_agent', 'owner'])('returns the active confirmed %s membership without writing the selected role', async (profileRole) => {
+    const { rpc, inviteUserByEmail, deleteUser, update } = fixture({
+      users: [{ ...candidate, email_confirmed_at: '2026-07-01T00:00:00Z' }],
+      activeOrgs: profileRole === 'owner' ? ['ORG2', 'ORG1'] : ['ORG1'], profileRole,
+    });
+    const res = await POST(req({ ...target, resend: false }));
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'active-membership-ORG1', alreadyExisted: true });
+  });
+
+  it('returns the existing invitation as pending and sends only on explicit resend', async () => {
+    const { rpc, inviteUserByEmail, deleteUser, update } = fixture({
+      users: [candidate], activeOrgs: ['ORG1'], membershipInOrg: true,
+      activeMembershipId: 'active-membership-ORG1', returnedUserId: 'target',
+    });
+    const response = await POST(req({ ...target, resend: false }));
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      userId: 'target', membershipId: 'active-membership-ORG1', alreadyExisted: true, neverSignedIn: true,
+    });
+
+    const resent = await POST(req({ ...target, resend: true }));
+    expect(resent.status).toBe(201);
+    await expect(resent.json()).resolves.toEqual({
+      userId: 'target', membershipId: 'active-membership-ORG1', alreadyExisted: false,
+    });
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('withholds the exact active membership after the caller loses its ORG rank', async () => {
+    const { rpc, inviteUserByEmail } = fixture({
+      users: [candidate], activeOrgs: ['ORG1'], callerRankReads: [30, 20],
+    });
+    const response = await POST(req({ ...target, resend: false }));
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: 'out_of_scope' });
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+  });
+
+  it('uses the concurrent active result without implicitly sending to the existing account', async () => {
+    const { rpc, inviteUserByEmail, update } = fixture({
+      users: [candidate], attachAlreadyActive: true, returnedUserId: 'target',
+    });
+    const response = await POST(req({ ...target, resend: false }));
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
+      p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
+    });
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      userId: 'target', membershipId: 'membership-1', alreadyExisted: true, neverSignedIn: true,
+    });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('preserves the acknowledged fresh invitation if a concurrent call attached it first', async () => {
+    const { inviteUserByEmail, update } = fixture({ attachAlreadyActive: true });
+    const response = await POST(req(target));
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({
+      userId: 'new-user', membershipId: 'membership-1', alreadyExisted: false,
+    });
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it.each([{ attachError: true }, { attachUnknown: true }])('no disclosure or email after an attachment deadlock or unknown ACK (%j)', async (outcome) => {
+    const { inviteUserByEmail, rpc, deleteUser, update } = fixture({ users: [candidate], platform: true, ...outcome });
+    const res = await POST(req(target));
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
+      p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
+    });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('invites an existing unconfirmed account only after attachment, preserving its UUID', async () => {
+    const { rpc, inviteUserByEmail, deleteUser, update } = fixture({ users: [candidate], returnedUserId: 'target' });
+    const res = await POST(req(target));
+    expect(res.status).toBe(201);
+    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: false });
+    expect(rpc).toHaveBeenLastCalledWith('rpc_attach_invite_membership', {
+      p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
+    });
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+    expect(inviteUserByEmail.mock.invocationCallOrder[0]).toBeGreaterThan(rpc.mock.invocationCallOrder.at(-1)!);
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('reports delivery failure after attachment without retrying or undoing the membership', async () => {
+    const { rpc, inviteUserByEmail, deleteUser, update } = fixture({ users: [candidate], providerError: true });
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      const inviteUserByEmail = jest.fn().mockResolvedValue({ data: null, error: { message: 'fictional GoTrue error SECRET_INVITE' } });
-      const listUsers = jest.fn().mockResolvedValue({ data: { users: [] } });
-      mockedServer.mockReturnValue({
-        auth: {
-          getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin' } }, error: null }),
-          admin: { inviteUserByEmail, listUsers },
-        },
-      } as never);
-      mockedCreate.mockReturnValue(superuserCaller() as never);
-      const response = await POST(req({ authorization: 'Bearer t' }, { email: 'x@y.z' }));
-      const payload = await response.json();
-      expect(response.status).toBe(500);
-      expect(payload).toEqual({ error: 'create_failed' });
-      expect(readApiErrorMessage(payload, response.status)).toBe('La création a échoué.');
-      const requestId = response.headers.get('x-request-id');
-      expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
-      expect(warn.mock.calls).toEqual([['[route-error]', { route: 'admin/invite.POST', code: 'create_failed', requestId }]]);
-      expect(listUsers).toHaveBeenCalledWith({ page: 1, perPage: 1000 });
+      const res = await POST(req(target));
+      expect(res.status).toBe(500);
+      await expect(res.json()).resolves.toEqual({ error: 'resend_failed' });
+      expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+      expect(rpc.mock.calls.filter(([name]) => name === 'rpc_attach_invite_membership')).toHaveLength(1);
+      expect(inviteUserByEmail.mock.invocationCallOrder[0]).toBeGreaterThan(rpc.mock.invocationCallOrder.at(-1)!);
+      expect(deleteUser).not.toHaveBeenCalled();
+      expect(update).not.toHaveBeenCalled();
     } finally {
       warn.mockRestore();
     }
   });
 
-  it('resend: deletes the never-signed-in account then re-invites', async () => {
-    const deleteUser = jest.fn().mockResolvedValue({ error: null });
-    const inviteUserByEmail = jest.fn().mockResolvedValue({ data: { user: { id: 'new2' } }, error: null });
-    const listUsers = jest.fn().mockResolvedValue({ data: { users: [{ id: 'old1', email: 'x@y.z', last_sign_in_at: null }] } });
-    const upsert = jest.fn().mockResolvedValue({ error: null });
-    mockedServer.mockReturnValue({
-      auth: {
-        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin' } }, error: null }),
-        admin: { inviteUserByEmail, listUsers, deleteUser },
-      },
-      from: () => ({ upsert }),
-    } as never);
-    mockedCreate.mockReturnValue(superuserCaller() as never);
-    const res = await POST(req({ authorization: 'Bearer t' }, { email: 'x@y.z', resend: true }));
-    expect(res.status).toBe(201);
-    expect(deleteUser).toHaveBeenCalledWith('old1');
-    expect(inviteUserByEmail).toHaveBeenCalled();
-    expect((await res.json()).userId).toBe('new2');
-  });
-
-  it('resend: 409 already_active when the account has signed in', async () => {
-    const deleteUser = jest.fn();
-    const inviteUserByEmail = jest.fn();
-    const listUsers = jest.fn().mockResolvedValue({ data: { users: [{ id: 'old1', email: 'x@y.z', last_sign_in_at: '2026-07-01T00:00:00Z' }] } });
-    mockedServer.mockReturnValue({
-      auth: {
-        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin' } }, error: null }),
-        admin: { inviteUserByEmail, listUsers, deleteUser },
-      },
-    } as never);
-    mockedCreate.mockReturnValue(superuserCaller() as never);
-    const res = await POST(req({ authorization: 'Bearer t' }, { email: 'x@y.z', resend: true }));
-    expect(res.status).toBe(409);
-    expect((await res.json()).error).toBe('already_active');
-    expect(deleteUser).not.toHaveBeenCalled();
-    expect(inviteUserByEmail).not.toHaveBeenCalled();
-  });
-
-  it('201 — un rang 30 invite une adresse NOUVELLE normalement (piège A : sans compte existant, la garde ne doit PAS s’appliquer)', async () => {
-    const inviteUserByEmail = jest.fn().mockResolvedValue({ data: { user: { id: 'newAddr' } }, error: null });
-    mockedServer.mockReturnValue({
-      auth: {
-        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin30' } }, error: null }),
-        admin: { inviteUserByEmail },
-      },
-      // Aucune ligne de membership fournie : si la garde de périmètre s'appliquait ici (hors de la
-      // branche resend), l'appel à sharesActiveOrg planterait sur `.select` indéfini et ce test
-      // rougirait — c'est précisément ce qui prouve que la garde reste bien scopée au resend.
-      from: fromWithMembership([]),
-    } as never);
-    mockedCreate.mockReturnValue(orgAdminCaller() as never);
-    const res = await POST(req({ authorization: 'Bearer t' }, { email: 'nouveau@y.z' }));
-    expect(res.status).toBe(201);
-    expect(inviteUserByEmail).toHaveBeenCalledWith('nouveau@y.z', expect.any(Object));
-    expect((await res.json()).userId).toBe('newAddr');
-  });
-
-  it('resend: 403 out_of_scope + ni deleteUser ni inviteUserByEmail quand le compte existant est d’une AUTRE ORG (rang 30)', async () => {
-    const deleteUser = jest.fn();
-    const inviteUserByEmail = jest.fn();
-    const listUsers = jest.fn().mockResolvedValue({ data: { users: [{ id: 'old2', email: 'x@y.z', last_sign_in_at: null }] } });
-    mockedServer.mockReturnValue({
-      auth: {
-        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin30' } }, error: null }),
-        admin: { inviteUserByEmail, listUsers, deleteUser },
-      },
-      from: fromWithMembership([
-        { user_id: 'admin30', org_object_id: 'ORG1' },
-        { user_id: 'old2', org_object_id: 'ORG2' },
-      ]),
-    } as never);
-    mockedCreate.mockReturnValue(orgAdminCaller() as never);
-    const res = await POST(req({ authorization: 'Bearer t' }, { email: 'x@y.z', resend: true }));
+  it('does not disclose or update the profile of a foreign user returned after the directory lookup', async () => {
+    const { inviteUserByEmail, rpc, update } = fixture({ activeOrgs: ['ORG2'], returnedUserId: 'foreign' });
+    const res = await POST(req(target));
     expect(res.status).toBe(403);
-    expect((await res.json()).error).toBe('out_of_scope');
+    await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('resends on the same scoped, unconfirmed account without changing the account or membership', async () => {
+    const { deleteUser, inviteUserByEmail, membership, rpc, update } = fixture({
+      users: [candidate], membershipInOrg: true, returnedUserId: 'target',
+    });
+    const res = await POST(req({ ...target, resend: true }));
+    expect(res.status).toBe(201);
+    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: false });
+    expect(membership.eq.mock.calls).toEqual([['user_id', 'target'], ['org_object_id', 'ORG1'], ['is_active', true]]);
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
     expect(deleteUser).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+  });
+
+  it.each([
+    { last_sign_in_at: '2026-07-01T00:00:00Z' },
+    { email_confirmed_at: '2026-07-01T00:00:00Z' },
+  ])('409 for a scoped signed-in or confirmed account, without email or deletion (%j)', async (state) => {
+    const { inviteUserByEmail, deleteUser } = fixture({ users: [{ ...candidate, ...state }], membershipInOrg: true });
+    const res = await POST(req({ ...target, resend: true }));
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({ error: 'already_active' });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it('does not treat an incomplete directory page as absence', async () => {
+    const { inviteUserByEmail } = fixture({ nextPage: 2 });
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect((await POST(req(target))).status).toBe(500);
+      expect(inviteUserByEmail).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('invites a new address only after a complete large lookup, even when nextPage is truncated', async () => {
+    const total = 9_001;
+    const pages = Array.from({ length: 9 }, (_, index) => ({
+      users: directoryUsers(index + 1), total, nextPage: index === 8 ? 1 : index + 2,
+    }));
+    const { listUsers, inviteUserByEmail } = fixture({
+      pages: [...pages, { users: directoryUsers(10).slice(0, 1), total, nextPage: null }],
+    });
+    const res = await POST(req(target));
+    expect(res.status).toBe(201);
+    expect(listUsers.mock.calls).toEqual(Array.from({ length: 10 }, (_, index) => [{ page: index + 1, perPage: 1000 }]));
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+    expect(inviteUserByEmail.mock.invocationCallOrder[0]).toBeGreaterThan(listUsers.mock.invocationCallOrder.at(-1)!);
+  });
+
+  it('attaches the exact known address on page 2 instead of inviting a new account', async () => {
+    const { listUsers, inviteUserByEmail, rpc } = fixture({
+      pages: [
+        { users: directoryUsers(1), total: 1001, nextPage: 2 },
+        { users: [{ ...candidate, email: 'X@Y.Z', email_confirmed_at: '2026-07-01T00:00:00Z' }], total: 1001, nextPage: null },
+      ],
+    });
+    const res = await POST(req(target));
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: true });
+    expect(listUsers).toHaveBeenLastCalledWith({ page: 2, perPage: 1000 });
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
+      p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
+    });
     expect(inviteUserByEmail).not.toHaveBeenCalled();
   });
 
-  it('resend: 201 quand le compte existant est de la MÊME ORG (rang 30) — comportement inchangé', async () => {
-    const deleteUser = jest.fn().mockResolvedValue({ error: null });
-    const inviteUserByEmail = jest.fn().mockResolvedValue({ data: { user: { id: 'new5' } }, error: null });
-    const listUsers = jest.fn().mockResolvedValue({ data: { users: [{ id: 'old3', email: 'x@y.z', last_sign_in_at: null }] } });
-    mockedServer.mockReturnValue({
-      auth: {
-        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin30' } }, error: null }),
-        admin: { inviteUserByEmail, listUsers, deleteUser },
-      },
-      from: fromWithMembership([
-        { user_id: 'admin30', org_object_id: 'ORG1' },
-        { user_id: 'old3', org_object_id: 'ORG1' },
-      ]),
-    } as never);
-    mockedCreate.mockReturnValue(orgAdminCaller() as never);
-    const res = await POST(req({ authorization: 'Bearer t' }, { email: 'x@y.z', resend: true }));
-    expect(res.status).toBe(201);
-    expect(deleteUser).toHaveBeenCalledWith('old3');
-    expect(inviteUserByEmail).toHaveBeenCalled();
-    expect((await res.json()).userId).toBe('new5');
+  it.each([
+    { user: { id: 'directory-1-0', email: 'other@example.test' }, total: 1001 },
+    { user: { id: 'directory-2-0', email: 'other@example.test' }, total: 1000 },
+  ])('refuses an inconsistent directory before any invitation or attachment (%j)', async ({ user, total }) => {
+    const { inviteUserByEmail, rpc } = fixture({
+      pages: [
+        { users: directoryUsers(1), total: 1001, nextPage: 2 },
+        { users: [user], total, nextPage: null },
+      ],
+    });
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const res = await POST(req(target));
+      expect(res.status).toBe(500);
+      await expect(res.json()).resolves.toEqual({ error: 'create_failed' });
+      expect(inviteUserByEmail).not.toHaveBeenCalled();
+      expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('refuses ambiguous email across pages, including an SSO account', async () => {
+    const { inviteUserByEmail, rpc } = fixture({
+      pages: [
+        { users: [candidate, ...directoryUsers(1).slice(1)], total: 1001, nextPage: 2 },
+        { users: [{ ...candidate, id: 'sso-target', is_sso_user: true }], total: 1001, nextPage: null },
+      ],
+    });
+    const res = await POST(req(target));
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
+  });
+
+  it('500 keeps the invitation fallback without exposing a GoTrue error or logging the email', async () => {
+    fixture({ providerError: true });
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const res = await POST(req(target));
+      const payload = await res.json();
+      expect(res.status).toBe(500);
+      expect(payload).toEqual({ error: 'create_failed' });
+      expect(readApiErrorMessage(payload, res.status)).toBe('La création a échoué.');
+      const requestId = res.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+      expect(warn.mock.calls).toEqual([['[route-error]', { route: 'admin/invite.POST', code: 'create_failed', requestId }]]);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

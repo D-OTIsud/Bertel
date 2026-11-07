@@ -754,6 +754,10 @@ COMMIT;
 \ir ../supabase/migrations/20261107131728_object_enrichment_realm_guard.sql
 \ir tests/test_object_enrichment_realm_guard.sql
 
+\echo '== SP4 organization membership cannot expand scope over a platform account =='
+\ir ../supabase/migrations/20261107171528_org_membership_platform_target_guard.sql
+\ir tests/test_sp4_membership_platform_target.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -13,7 +13,8 @@ function req(body:unknown={},form?:FormData):never{return {headers:new Headers()
 function photoForm(rights='true',file=new File(['raw image'],'image.jpg',{type:'image/jpeg'})){
  const f=new FormData();f.append('object_id','HOTRUN9999998401');f.append('file',file);f.append('rights',rights);f.append('upload_id',DOC);return f;
 }
-function context(){return {data:{documents:[{id:DOC,bucket:'actor-documents',path:`portal-photos/${ACTOR}/source.jpg`,publicPath:`portal-approved/${DOC}.jpg`}]},error:null};}
+function approvalPath(claimId: string) { return `portal-approved/${DOC}/${claimId}.jpg`; }
+function context(){return {data:{documents:[{id:DOC,bucket:'actor-documents',path:`portal-photos/${ACTOR}/source.jpg`,publicPath:approvalPath(claim)}]},error:null};}
 beforeEach(()=>{
  jest.clearAllMocks();claim='';upload.mockResolvedValue({error:null});remove.mockResolvedValue({error:null});sign.mockResolvedValue({data:{signedUrl:'https://private.test/signed'},error:null});download.mockResolvedValue({data:new Blob(['clean JPEG']),error:null});serviceRpc.mockImplementation(async(name)=>({data:name==='complete_portal_photo_upload'?{id:DOC,title:'image.jpg',width:1800,height:1200}:[],error:null}));
  rpc.mockImplementation(async(name,args)=>{if(name==='portal_photo_upload_context')return{data:{actorId:ACTOR},error:null};if(name==='reserve_portal_photo_upload')return{data:{id:DOC,actorId:ACTOR,path:`portal-photos/${ACTOR}/${DOC}.jpg`,ready:false},error:null};if(name==='portal_photo_preview')return{data:{bucket:'actor-documents',path:`portal-photos/${ACTOR}/source.jpg`},error:null};if(name==='prepare_portal_photo_approval'){claim=args.p_claim_id;return context();}return{data:{applied_count:1,submission_status:'approved'},error:null};});
@@ -88,12 +89,15 @@ test('un partenaire ou un office non habilité ne déclenche aucune copie publiq
 });
 test('approbation : droits appelant, copie enregistrée par le serveur, puis validation SQL appelant',async()=>{
  const result=await approvePhotos(req({id:PC,batch:false,manual:false}));expect(result.status).toBe(200);
- expect(download).toHaveBeenCalledWith(`portal-photos/${ACTOR}/source.jpg`);expect(upload).toHaveBeenCalledWith(`portal-approved/${DOC}.jpg`,Buffer.from('clean JPEG'),expect.objectContaining({upsert:true,contentType:'image/jpeg'}));
+ expect(download).toHaveBeenCalledWith(`portal-photos/${ACTOR}/source.jpg`);expect(upload).toHaveBeenCalledWith(approvalPath(claim),Buffer.from('clean JPEG'),expect.objectContaining({upsert:false,contentType:'image/jpeg'}));
  expect(rpc).toHaveBeenLastCalledWith('approve_pending_change',{p_id:PC,p_review_note:null,p_applied_manually:false});expect(callerClient).toHaveBeenCalledWith('caller-token');
 });
 test('un échec de validation retire seulement les copies confirmées sans média canonique',async()=>{
  rpc.mockImplementation(async(name,args)=>{if(name==='prepare_portal_photo_approval'){claim=args.p_claim_id;return context();}return{error:{code:'22023'},data:null};});
- serviceRpc.mockResolvedValue({data:[`portal-approved/${DOC}.jpg`],error:null});const result=await approvePhotos(req({id:PC,batch:false,manual:false}));expect(result.status).toBe(500);expect(remove).toHaveBeenCalledWith([`portal-approved/${DOC}.jpg`]);
+ serviceRpc.mockImplementation(async (_name, args) => ({data:[
+   approvalPath(args.p_claim_id), `portal-approved/${DOC}.jpg`, approvalPath(PC),
+ ],error:null}));
+ const result=await approvePhotos(req({id:PC,batch:false,manual:false}));expect(result.status).toBe(500);expect(remove).toHaveBeenCalledWith([approvalPath(claim)]);
 });
 test('réponse SQL perdue après application : la compensation ne supprime aucune photo publiée',async()=>{
  rpc.mockImplementation(async(name,args)=>{if(name==='prepare_portal_photo_approval'){claim=args.p_claim_id;return context();}return{error:{message:'Network lost'},data:null};});
@@ -101,4 +105,57 @@ test('réponse SQL perdue après application : la compensation ne supprime aucun
 });
 test('réessayer une approbation déjà appliquée confirme le résultat sans copier ni approuver deux fois',async()=>{
  rpc.mockResolvedValue({data:{documents:[],alreadyApplied:true},error:null});const result=await approvePhotos(req({id:PC,batch:false,manual:false}));expect(result.status).toBe(200);expect(download).not.toHaveBeenCalled();expect(upload).not.toHaveBeenCalled();expect(rpc).toHaveBeenCalledTimes(1);
+});
+
+test('un DELETE différé de la tentative A préserve la copie publiée par B', async () => {
+  const stored = new Map<string, Buffer>();
+  const claims: string[] = [];
+  let approvals = 0;
+  let releaseDelete!: () => void;
+  const deleteAllowed = new Promise<void>(resolve => { releaseDelete = resolve; });
+  let deletionStarted!: (paths: string[]) => void;
+  const waitingForDelete = new Promise<string[]>(resolve => { deletionStarted = resolve; });
+  upload.mockImplementation(async (path: string, bytes: Buffer) => {
+    stored.set(path, bytes);
+    return {error: null};
+  });
+  remove.mockImplementationOnce(async (paths: string[]) => {
+    deletionStarted(paths);
+    await deleteAllowed;
+    for (const path of paths) stored.delete(path);
+    return {error: null};
+  });
+  rpc.mockImplementation(async (name, args) => {
+    if (name === 'prepare_portal_photo_approval') {
+      claim = args.p_claim_id;
+      claims.push(claim);
+      return context();
+    }
+    approvals += 1;
+    return approvals === 1 ? {data: null, error: {code: '22023'}} : {data: {status: 'applied'}, error: null};
+  });
+  serviceRpc.mockImplementation(async (_name, args) => ({data: [approvalPath(args.p_claim_id)], error: null}));
+
+  const first = approvePhotos(req({id: PC, batch: false, manual: false}));
+  try {
+    const paths = await waitingForDelete;
+    expect(paths).toEqual([approvalPath(claims[0])]);
+    const second = await approvePhotos(req({id: PC, batch: false, manual: false}));
+    expect(second.status).toBe(200);
+  } finally {
+    releaseDelete();
+  }
+  expect((await first).status).toBe(500);
+  expect(claims[0]).not.toBe(claims[1]);
+  expect(stored.get(approvalPath(claims[1]))).toEqual(Buffer.from('clean JPEG'));
+});
+
+test('un chemin historique renvoyé par le backend est refusé avant Storage', async () => {
+  rpc.mockResolvedValue({data:{documents:[{
+    id:DOC,bucket:'actor-documents',path:`portal-photos/${ACTOR}/source.jpg`,publicPath:`portal-approved/${DOC}.jpg`,
+  }]},error:null});
+  expect((await approvePhotos(req({id:PC,batch:false,manual:false}))).status).toBe(500);
+  expect(download).not.toHaveBeenCalled();
+  expect(upload).not.toHaveBeenCalled();
+  expect(remove).not.toHaveBeenCalled();
 });

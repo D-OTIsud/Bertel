@@ -304,6 +304,22 @@ it('a paused restore with an unchanged gesture identity resumes and adopts the r
   expect(mockEditor.isDirty).toBe(false);
 });
 
+it('a paused restore does not dispatch after the editor unmounts under the same session', async () => {
+  const view = mount();
+  await queueOfflineRestore(view);
+  const [restore] = view.client.getMutationCache().getAll();
+  const session = useSessionStore.getState();
+  view.unmount();
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await view.client.resumePausedMutations();
+  });
+  expect(useSessionStore.getState()).toBe(session);
+  expect(restore.state.status).toBe('error');
+  expect(restoreObjectVersion).not.toHaveBeenCalled();
+  expect(view.server.generalInfo.name).toBe('A');
+});
+
 it.each(['RPC', 'reread'])('an account A→B→A transition without an intermediate render invalidates an old restore during %s', async (phase) => {
   const view = mount();
   const rpc = deferred();

@@ -7,12 +7,14 @@ type MockPeer = { userId: string; name: string; avatar: string; color: string; o
 const FIVE_MIN_MS = 5 * 60 * 1000;
 
 let mockPeers: MockPeer[] = [];
+let mockContext: string | null = 'synthetic-room';
 let mockMe: MockPeer = { userId: 'me-self', name: 'Moi', avatar: 'MO', color: '#176b6a' };
 
 jest.mock('sonner', () => ({ toast: jest.fn() }));
 
 jest.mock('../../../hooks/usePresenceRoom', () => ({
   usePresenceRoom: () => ({
+    contextKey: mockContext,
     peers: mockPeers,
     me: mockMe,
     typingUsers: [],
@@ -64,6 +66,7 @@ describe('computeDepartedPeers', () => {
 describe('PresenceRail leave snackbar', () => {
   beforeEach(() => {
     (toast as unknown as jest.Mock).mockClear();
+    mockContext = 'synthetic-room';
     mockMe = { userId: 'me-self', name: 'Moi', avatar: 'MO', color: '#176b6a' };
   });
 
@@ -86,6 +89,17 @@ describe('PresenceRail leave snackbar', () => {
     const { rerender } = render(<PresenceRail objectId="o1" />);
 
     mockPeers = [mockMe, florence, { userId: 'u3', name: 'Inès', avatar: '', color: '#78c67a' }];
+    rerender(<PresenceRail objectId="o1" />);
+
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('does not announce the previous roster as departing on a scope change', () => {
+    mockPeers = [mockMe, { userId: 'u1', name: 'Florence G', avatar: '', color: '#176b6a' }];
+    const { rerender } = render(<PresenceRail objectId="o1" />);
+
+    mockContext = null;
+    mockPeers = [];
     rerender(<PresenceRail objectId="o1" />);
 
     expect(toast).not.toHaveBeenCalled();

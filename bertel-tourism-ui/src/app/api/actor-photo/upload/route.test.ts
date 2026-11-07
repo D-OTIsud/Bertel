@@ -49,14 +49,17 @@ function req(headers: Record<string, string>, form: FormData): never {
 }
 
 /** Server client : getUser OK + storage upload OK + getPublicUrl + actor update OK. */
-function serverOk(updateSpy = jest.fn().mockResolvedValue({ error: null })) {
+function serverOk(
+  updateSpy = jest.fn().mockResolvedValue({ error: null }),
+  uploadSpy = jest.fn().mockResolvedValue({ error: null }),
+) {
   const eqSpy = jest.fn(() => updateSpy());
   const updateFrom = jest.fn(() => ({ eq: eqSpy }));
   return {
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }) },
     storage: {
       from: jest.fn(() => ({
-        upload: jest.fn().mockResolvedValue({ error: null }),
+        upload: uploadSpy,
         getPublicUrl: jest.fn(() => ({ data: { publicUrl: 'https://cdn/actors/actor-1/x.jpg' } })),
       })),
     },
@@ -109,18 +112,50 @@ describe('POST /api/actor-photo/upload — gate as-the-caller + pipeline', () =>
     expect(res.status).toBe(403);
   });
 
-  it('415 sur un MIME non autorisé (gate process-image)', async () => {
+  it.each([
+    ['mime', 'Unsupported MIME type', 415],
+    ['decode', 'Image illisible.', 400],
+  ] as const)('keeps the public %s message for an invalid image', async (code, detail, status) => {
     mockedServer.mockReturnValue(serverOk());
     const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
     mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
     const { MediaProcessingError } = jest.requireMock('../../media/upload/process-image');
-    mockedProcess.mockRejectedValueOnce(new MediaProcessingError('mime', 'Unsupported MIME type'));
+    mockedProcess.mockRejectedValueOnce(new MediaProcessingError(code, detail));
 
-    const form = new FormData();
-    form.append('file', new File([new Uint8Array([1])], 'doc.pdf', { type: 'application/pdf' }));
-    form.append('actorId', ACTOR_UUID);
+    const form = makeForm();
+    if (code === 'mime') form.set('file', new File([new Uint8Array([1])], 'doc.pdf', { type: 'application/pdf' }));
     const res = await POST(req({ authorization: 'Bearer t' }, form));
-    expect(res.status).toBe(415);
+    expect(res.status).toBe(status);
+    expect(await res.json()).toEqual({ error: code, detail });
+    expect(res.headers.has('x-request-id')).toBe(false);
+  });
+
+  it.each([
+    ['processing', 'upload_failed'],
+    ['storage', 'upload_failed'],
+    ['actor update', 'update_failed'],
+  ] as const)('correlates the %s failure without returning its internal message', async (kind, code) => {
+    const cause = 'synthetic internal detail ACTOR_PHOTO_SENTINEL';
+    const upload = jest.fn().mockResolvedValue({ error: kind === 'storage' ? { message: cause } : null });
+    const update = jest.fn().mockResolvedValue({ error: { message: cause } });
+    mockedServer.mockReturnValue(serverOk(update, upload));
+    const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+    if (kind === 'processing') mockedProcess.mockRejectedValueOnce(new Error(cause));
+
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const res = await POST(req({ authorization: 'Bearer t' }, makeForm()));
+      expect(res.status).toBe(500);
+      expect(upload).toHaveBeenCalledTimes(kind === 'processing' ? 0 : 1);
+      expect(update).toHaveBeenCalledTimes(kind === 'actor update' ? 1 : 0);
+      expect(await res.json()).toEqual({ error: code });
+      const requestId = res.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+      expect(warn.mock.calls).toEqual([['[route-error]', { route: 'actor-photo/upload.POST', code, requestId }]]);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('201 + { url } quand autorisé : process-image appelé, actor.photo_url posé', async () => {

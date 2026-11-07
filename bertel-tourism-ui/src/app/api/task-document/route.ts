@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { engineErrorDetail } from '@/lib/db-error-message';
+import { routeFailure } from '../_route-failure';
 import {
   readBoundedFormData,
   assertFormDataShape,
@@ -104,7 +105,7 @@ async function handlePostAuthenticated(
       cacheControl: '3600',
       upsert: false,
     });
-    if (uploadError) return NextResponse.json({ error: 'upload_failed', detail: uploadError.message }, { status: 500 });
+    if (uploadError) return routeFailure('task-document.POST', 'upload_failed');
 
     const title = file.name.trim() || 'Document de tâche';
     const storageUrl = `storage://${PRIVATE_BUCKET}/${path}`;
@@ -124,7 +125,7 @@ async function handlePostAuthenticated(
       // Le fichier est déjà dans le bucket : sans ce retrait, il devient orphelin (plus
       // aucune ligne ref_document ne le référence, plus aucune purge automatique).
       await auth.server.storage.from(PRIVATE_BUCKET).remove([path]);
-      return NextResponse.json({ error: 'document_create_failed', detail: documentError?.message }, { status: 500 });
+      return routeFailure('task-document.POST', 'document_create_failed');
     }
 
     const documentId = String((document as { id: string }).id);
@@ -139,7 +140,7 @@ async function handlePostAuthenticated(
       // ref_document + le fichier storage sont deux orphelins muets. On retire les deux.
       await auth.server.from('ref_document').delete().eq('id', documentId);
       await auth.server.storage.from(PRIVATE_BUCKET).remove([path]);
-      return NextResponse.json({ error: 'task_document_create_failed', detail: linkError.message }, { status: 500 });
+      return routeFailure('task-document.POST', 'task_document_create_failed');
     }
     return NextResponse.json({ documentId, title }, { status: 201 });
   } catch (error) {
@@ -147,7 +148,7 @@ async function handlePostAuthenticated(
       const status = error.code === 'size' ? 413 : error.code === 'mime' ? 415 : 400;
       return NextResponse.json({ error: error.code, detail: error.message }, { status });
     }
-    return NextResponse.json({ error: 'upload_failed', detail: error instanceof Error ? error.message : 'unknown' }, { status: 500 });
+    return routeFailure('task-document.POST', 'upload_failed');
   }
 }
 
@@ -191,15 +192,14 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   if (resolved.file) {
     const { error: removeError } = await auth.server.storage.from(PRIVATE_BUCKET).remove([resolved.file.path]);
     if (removeError && !isMissingObjectError(removeError)) {
-      return NextResponse.json({ error: 'storage_remove_failed', detail: removeError.message }, { status: 500 });
+      return routeFailure('task-document.DELETE', 'storage_remove_failed');
     }
   }
   const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
   if (error) {
-    return NextResponse.json(
-      { error: 'delete_failed', detail: engineErrorDetail(error, { operation: 'delete' }) },
-      { status: 500 },
-    );
+    return routeFailure('task-document.DELETE', 'delete_failed', {
+      detail: engineErrorDetail(error, { operation: 'delete', logUnknown: false }),
+    });
   }
   // crm_task_document.document_id référence ref_document en CASCADE FK : la ligne de lien
   // tombe automatiquement, jamais supprimée à la main (source unique de vérité = la FK).

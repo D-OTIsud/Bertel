@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { engineErrorDetail } from '@/lib/db-error-message';
+import { routeFailure } from '../_route-failure';
 import { MediaProcessingError, MAX_INPUT_BYTES } from '../media/upload/process-image';
 import { processActorDocumentBuffer, ACTOR_PDF_MAX_BYTES } from './process-actor-document';
 import {
@@ -19,6 +20,7 @@ import {
   type AuthenticatedRequest,
 } from '../_document-auth';
 import { authorizeActor, authorizeObject } from './authorize';
+import { resolveActorDocument } from './resolve-document';
 
 // Documents privés d'un ACTEUR CRM. Le socle d'authentification (Bearer → getUser, client
 // « en tant qu'appelant », bucket privé, forme UUID) est partagé avec /api/task-document
@@ -113,7 +115,7 @@ async function handlePostAuthenticated(
       cacheControl: '3600',
       upsert: false,
     });
-    if (uploadError) return NextResponse.json({ error: 'upload_failed', detail: uploadError.message }, { status: 500 });
+    if (uploadError) return routeFailure('actor-document.POST', 'upload_failed');
 
     const title = file.name.trim() || 'Document acteur';
     const storageUrl = `storage://${PRIVATE_BUCKET}/${path}`;
@@ -131,7 +133,7 @@ async function handlePostAuthenticated(
       .single();
     if (documentError || !document) {
       await auth.server.storage.from(PRIVATE_BUCKET).remove([path]);
-      return NextResponse.json({ error: 'document_create_failed', detail: documentError?.message }, { status: 500 });
+      return routeFailure('actor-document.POST', 'document_create_failed');
     }
 
     const documentId = String((document as { id: string }).id);
@@ -144,7 +146,7 @@ async function handlePostAuthenticated(
     if (linkError) {
       await auth.server.from('ref_document').delete().eq('id', documentId);
       await auth.server.storage.from(PRIVATE_BUCKET).remove([path]);
-      return NextResponse.json({ error: 'actor_document_create_failed', detail: linkError.message }, { status: 500 });
+      return routeFailure('actor-document.POST', 'actor_document_create_failed');
     }
     return NextResponse.json({ documentId, title }, { status: 201 });
   } catch (error) {
@@ -152,7 +154,7 @@ async function handlePostAuthenticated(
       const status = error.code === 'size' ? 413 : error.code === 'mime' ? 415 : 400;
       return NextResponse.json({ error: error.code, detail: error.message }, { status });
     }
-    return NextResponse.json({ error: 'upload_failed', detail: error instanceof Error ? error.message : 'unknown' }, { status: 500 });
+    return routeFailure('actor-document.POST', 'upload_failed');
   }
 }
 
@@ -174,24 +176,12 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   }
   if (!await authorizeActor(auth.jwt, actorId)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-  const { data: link } = await auth.server
-    .from('actor_document')
-    .select('status')
-    .eq('actor_id', actorId)
-    .eq('document_id', documentId)
-    .maybeSingle();
-  if (!link) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-  if ((link as { status?: string }).status === 'promoted') {
-    return NextResponse.json({ error: 'promoted_document', detail: 'Un document transféré reste dans l’historique.' }, { status: 409 });
-  }
-  const { data: document } = await auth.server
-    .from('ref_document')
-    .select('storage_bucket, storage_path')
-    .eq('id', documentId)
-    .maybeSingle();
-  const bucket = String((document as { storage_bucket?: string } | null)?.storage_bucket ?? '');
-  const path = String((document as { storage_path?: string } | null)?.storage_path ?? '');
-  if (bucket && path) await auth.server.storage.from(bucket).remove([path]);
+  const resolved = await resolveActorDocument(auth.server, actorId, documentId, true);
+  if (!resolved.ok) return resolved.response;
+  if (resolved.path) await auth.server.storage.from(PRIVATE_BUCKET).remove([resolved.path]);
+  // A Storage wait must not carry an earlier namespace verdict into ref deletion.
+  const current = await resolveActorDocument(auth.server, actorId, documentId, true);
+  if (!current.ok) return current.response;
   const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
   if (error) {
     // `delete_failed` est dans `CODES_WITH_BUSINESS_DETAIL` (api-error.ts) : son `detail` est
@@ -200,10 +190,9 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     // "ref_document" violates foreign key constraint … ». `engineErrorDetail` rend une phrase FR
     // pour les SQLSTATE actionnables et `undefined` sinon, auquel cas le client retombe sur
     // « La suppression a échoué. » — générique, mais jamais l'anglais du moteur.
-    return NextResponse.json(
-      { error: 'delete_failed', detail: engineErrorDetail(error, { operation: 'delete' }) },
-      { status: 500 },
-    );
+    return routeFailure('actor-document.DELETE', 'delete_failed', {
+      detail: engineErrorDetail(error, { operation: 'delete', logUnknown: false }),
+    });
   }
   return NextResponse.json({ deleted: true });
 }
@@ -260,7 +249,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'source_missing' }, { status: 409 });
   }
   const { data: blob, error: downloadError } = await auth.server.storage.from(sourceBucket).download(sourcePath);
-  if (downloadError || !blob) return NextResponse.json({ error: 'download_failed', detail: downloadError?.message }, { status: 500 });
+  if (downloadError || !blob) return routeFailure('actor-document.PATCH', 'download_failed');
 
   const extension = sourcePath.toLowerCase().endsWith('.pdf') ? 'pdf' : 'jpg';
   const mimeType = extension === 'pdf' ? 'application/pdf' : 'image/jpeg';
@@ -271,7 +260,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     cacheControl: '31536000',
     upsert: false,
   });
-  if (uploadError) return NextResponse.json({ error: 'promotion_upload_failed', detail: uploadError.message }, { status: 500 });
+  if (uploadError) return routeFailure('actor-document.PATCH', 'promotion_upload_failed');
 
   const { data: publicUrlData } = auth.server.storage.from(PUBLIC_BUCKET).getPublicUrl(targetPath);
   const title = requestedTitle || String((link as { title?: string }).title ?? (source as { title?: string } | null)?.title ?? 'Document');
@@ -289,7 +278,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     .single();
   if (targetError || !targetDocument) {
     await auth.server.storage.from(PUBLIC_BUCKET).remove([targetPath]);
-    return NextResponse.json({ error: 'promotion_document_failed', detail: targetError?.message }, { status: 500 });
+    return routeFailure('actor-document.PATCH', 'promotion_document_failed');
   }
   const targetDocumentId = String((targetDocument as { id: string }).id);
   const { data: role } = await auth.server
@@ -317,7 +306,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   if (objectLinkError) {
     await auth.server.from('ref_document').delete().eq('id', targetDocumentId);
     await auth.server.storage.from(PUBLIC_BUCKET).remove([targetPath]);
-    return NextResponse.json({ error: 'object_link_failed', detail: objectLinkError.message }, { status: 500 });
+    return routeFailure('actor-document.PATCH', 'object_link_failed');
   }
   const { error: historyError } = await auth.server.from('actor_document').update({
     document_id: targetDocumentId,
@@ -330,7 +319,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   if (historyError) {
     await auth.server.from('ref_document').delete().eq('id', targetDocumentId);
     await auth.server.storage.from(PUBLIC_BUCKET).remove([targetPath]);
-    return NextResponse.json({ error: 'history_update_failed', detail: historyError.message }, { status: 500 });
+    return routeFailure('actor-document.PATCH', 'history_update_failed');
   }
 
   // Migration réelle, sans duplication durable : la ligne d'historique pointe désormais vers

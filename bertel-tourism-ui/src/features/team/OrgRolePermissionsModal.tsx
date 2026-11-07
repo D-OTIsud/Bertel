@@ -6,7 +6,7 @@ import { Modal } from '@/components/common/Modal';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { setRolePermission, friendlyRbacError, type RefPermission, type RefRole } from '@/services/rbac';
 import { businessRoleLabel } from '@/features/team/permission-presets';
-import { groupByCategory } from '@/features/team/MemberPermissionsDrawer';
+import { groupByCategory, visibleTeamPermissions } from '@/features/team/MemberPermissionsDrawer';
 import { impactOfToggle, type MemberRef, type RoleMatrix } from '@/features/team/role-permission-matrix';
 
 interface OrgRolePermissionsModalProps {
@@ -49,7 +49,7 @@ export function OrgRolePermissionsModal({
 }: OrgRolePermissionsModalProps) {
   const [pending, setPending] = useState<PendingToggle | null>(null);
   const [busy, setBusy] = useState(false);
-  const groups = groupByCategory(catalog);
+  const groups = groupByCategory(visibleTeamPermissions(catalog));
 
   function requestToggle(roleCode: string, perm: RefPermission, granted: boolean) {
     const { affected, retainedByException } = impactOfToggle(matrix, roleCode, perm.code, granted, members);

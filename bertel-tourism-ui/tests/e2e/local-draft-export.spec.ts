@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }, testInfo) => {
   await page.route(/^https?:\/\//, (route) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
 });
 
-test('a failed local draft write can export the latest edits while keeping the previous recovery copy', async ({ page }, testInfo) => {
+test('a failed local draft write can export and recover the latest edits', async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     const setItem = Storage.prototype.setItem;
     Object.defineProperty(window, '__draftStoreBlocked', { value: false, writable: true });
@@ -20,18 +20,18 @@ test('a failed local draft write can export the latest edits while keeping the p
     };
   });
   const objectId = 'HOTRUN0000000001';
+  const draftKey = `object-editor-draft:usr-local-marie:${objectId}`;
+  const currentName = 'C — saisie actuelle à exporter';
   await page.goto(`/objects/${objectId}/edit`);
   const name = page.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
   await expect(name).toBeVisible();
   await name.fill('B — récupération précédente');
-  const storedDraft = () => page.evaluate((id) => {
-    const key = Object.keys(localStorage).find((candidate) => candidate.startsWith('object-editor-draft:') && candidate.endsWith(`:${id}`));
-    return key ? localStorage.getItem(key) : null;
-  }, objectId);
-  await expect.poll(async () => JSON.parse((await storedDraft()) ?? '{}').draft?.generalInfo?.name).toBe('B — récupération précédente');
+  const storedDraft = () => page.evaluate((key) => localStorage.getItem(key), draftKey);
+  const storedName = async () => JSON.parse((await storedDraft()) ?? '{}').draft?.generalInfo?.name;
+  await expect.poll(storedName).toBe('B — récupération précédente');
   const previousCopy = await storedDraft();
   await page.evaluate(() => { (window as unknown as Record<string, unknown>).__draftStoreBlocked = true; });
-  await name.fill('C — saisie actuelle à exporter');
+  await name.fill(currentName);
   const warning = page.getByRole('alert').filter({ hasText: 'Brouillon local indisponible' });
   await expect(warning).toContainText('Vos modifications restent dans cet onglet. Enregistrez ou exportez-les avant de fermer.');
   const exportButton = warning.getByRole('button', { name: 'Exporter le brouillon JSON', exact: true });
@@ -39,12 +39,12 @@ test('a failed local draft write can export the latest edits while keeping the p
   await exportButton.click();
   const download = await downloadEvent;
   expect(download.suggestedFilename()).toBe(`${objectId}-brouillon.json`);
-  const filename = await download.path();
-  if (!filename) throw new Error('The browser did not produce a draft download');
+  const filename = testInfo.outputPath(download.suggestedFilename());
+  await download.saveAs(filename);
   const exported = JSON.parse(await readFile(filename, 'utf8'));
   expect(exported).toMatchObject({ format: 'bertel-object', version: 2, objectId, type: 'HOT' });
-  expect(exported.modules.generalInfo.name).toBe('C — saisie actuelle à exporter');
-  await expect(name).toHaveValue('C — saisie actuelle à exporter');
+  expect(exported.modules.generalInfo.name).toBe(currentName);
+  await expect(name).toHaveValue(currentName);
   await expect(warning).toBeVisible();
   expect(await storedDraft()).toBe(previousCopy);
 
@@ -57,6 +57,26 @@ test('a failed local draft write can export the latest edits while keeping the p
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
     await warning.screenshot({ path: testInfo.outputPath(`draft-warning-${width}.png`) });
   }
+
+  await page.evaluate(() => { (window as unknown as Record<string, unknown>).__draftStoreBlocked = false; });
+  const replacementName = 'D — saisie après rétablissement';
+  await name.fill(replacementName);
+  await expect.poll(storedName).toBe(replacementName);
+  await expect(warning).toBeHidden();
+
+  await page.getByRole('button', { name: 'Import / export', exact: true }).click();
+  const importDialog = page.getByRole('dialog', { name: 'Import / export de la fiche' });
+  await importDialog.getByLabel('Importer un fichier JSON').setInputFiles(filename);
+  const confirmation = page.getByRole('dialog', { name: 'Importer et remplacer le brouillon' });
+  await expect(confirmation).toBeVisible();
+  expect(await storedName()).toBe(replacementName);
+  await confirmation.getByRole('button', { name: 'Remplacer', exact: true }).click();
+  await expect(name).toHaveValue(currentName);
+  await expect.poll(storedName).toBe(currentName);
+
+  await page.reload();
+  await expect(name).toHaveValue(currentName);
+  await expect(warning).toBeHidden();
 });
 
 for (const denied of [['localStorage'], ['localStorage', 'sessionStorage']]) {

@@ -12,16 +12,22 @@ jest.mock('sonner', () => ({ toast: { error: jest.fn(), success: jest.fn() } }))
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { setRolePermission } = require('@/services/rbac') as { setRolePermission: jest.Mock };
 
+const HIDDEN_PERMISSIONS = [
+  { code: 'edit_hours', name: 'Modifier les horaires', category: 'content' },
+  { code: 'edit_pricing', name: 'Modifier les tarifs', category: 'content' },
+  { code: 'edit_gallery', name: 'Modifier la galerie', category: 'media' },
+  { code: 'attach_documents', name: 'Attacher des documents', category: 'media' },
+];
 const CATALOG = [
   { code: 'manage_actor_portal_access', name: 'Gérer l’accès au portail prestataire', category: 'crm' },
   { code: 'write_crm_notes', name: 'Écrire dans le CRM', category: 'crm' },
-  { code: 'edit_hours', name: 'Horaires', category: 'content' },
+  ...HIDDEN_PERMISSIONS,
 ];
 const ROLES = [
   { code: 'viewer', name: 'Lecteur', rank: null, position: 1 },
   { code: 'editor', name: 'Éditeur', rank: null, position: 3 },
 ];
-const MATRIX = { viewer: [], editor: ['write_crm_notes', 'edit_hours'] };
+const MATRIX = { viewer: [], editor: ['write_crm_notes', ...HIDDEN_PERMISSIONS.map(({ code }) => code)] };
 const MEMBERS: MemberRef[] = [
   { userId: 'u1', displayName: 'Isabelle', businessRoleCode: 'viewer', individualCodes: [] },
   { userId: 'u2', displayName: 'Nicolas', businessRoleCode: 'viewer', individualCodes: [] },
@@ -40,6 +46,15 @@ function renderModal() {
 beforeEach(() => setRolePermission.mockClear());
 
 describe('OrgRolePermissionsModal', () => {
+  it('masque les quatre lignes du catalogue même déjà accordées à un rôle', () => {
+    renderModal();
+    for (const { name } of HIDDEN_PERMISSIONS) {
+      expect(screen.queryByText(name)).not.toBeInTheDocument();
+    }
+    expect(screen.getByRole('checkbox', { name: 'Écrire dans le CRM — Éditeur' })).toBeChecked();
+    expect(setRolePermission).not.toHaveBeenCalled();
+  });
+
   it('permet d’accorder aux éditeurs la permission portail initialement décochée', async () => {
     renderModal();
     const checkbox = screen.getByRole('checkbox', { name: 'Gérer l’accès au portail prestataire — Éditeur' });

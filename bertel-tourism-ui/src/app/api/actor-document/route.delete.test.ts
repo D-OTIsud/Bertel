@@ -63,7 +63,11 @@ describe('DELETE /api/actor-document — le `detail` de `delete_failed` n’est 
   async function del(deleteError: unknown) {
     mockedServer.mockReturnValue(serverWith(deleteError) as never);
     const res = await DELETE(req({ actorId: ACTOR_ID, documentId: DOCUMENT_ID }));
-    return { status: res.status, payload: (await res.json()) as { error?: string; detail?: string } };
+    return {
+      status: res.status,
+      payload: (await res.json()) as { error?: string; detail?: string },
+      requestId: res.headers.get('x-request-id'),
+    };
   }
 
   it('200 quand la suppression aboutit', async () => {
@@ -94,13 +98,13 @@ describe('DELETE /api/actor-document — le `detail` de `delete_failed` n’est 
   });
 
   it('un SQLSTATE non actionnable ⇒ AUCUN detail, et l’utilisateur lit le libellé générique FR', async () => {
-    const { status, payload } = await del({ code: 'XX000', message: 'internal error: cache lookup failed for relation 1234' });
+    const { status, payload, requestId } = await del({ code: 'XX000', message: 'internal error: cache lookup failed for relation 1234' });
 
     expect(payload.error).toBe('delete_failed');
     expect(payload.detail).toBeUndefined();
     expect(readApiErrorMessage(payload, status)).toBe('La suppression a échoué.');
-    // Le brut n'est pas perdu : il part au journal serveur.
-    expect(JSON.stringify(warn.mock.calls)).toContain('cache lookup failed');
+    expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+    expect(warn.mock.calls).toEqual([['[route-error]', { route: 'actor-document.DELETE', code: 'delete_failed', requestId }]]);
   });
 
   it('une erreur PostgREST sans code ⇒ AUCUN detail non plus', async () => {

@@ -28,6 +28,21 @@ test('high-bit bytes cannot impersonate the RIFF/WEBP signature', async () => {
   expect(sharp).not.toHaveBeenCalled();
 });
 
+test('maps a native decode failure without logging decoder details', async () => {
+  const truncatedJpeg = Buffer.from([0xff, 0xd8, 0xff]);
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  try {
+    await expect(processImage({ buffer: truncatedJpeg, mimeType: 'image/jpeg' })).rejects.toMatchObject({
+      code: 'decode',
+      message: "Cette image n'a pas pu être traitée. Réessayez avec un autre fichier.",
+    });
+    expect(sharp).toHaveBeenCalledTimes(1);
+    expect(warn).not.toHaveBeenCalled();
+  } finally {
+    warn.mockRestore();
+  }
+});
+
 test.each(['jpeg', 'png', 'webp'] as const)('still processes a genuine %s raster through the installed native decoder', async (format) => {
   const input = await nativeSharp({ create: { width: 12, height: 8, channels: 3, background: '#235678' } })
     .toFormat(format).toBuffer();

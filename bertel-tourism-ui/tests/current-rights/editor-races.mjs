@@ -181,11 +181,12 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         return route.continue();
       }
       const activity = scene.activity;
-      if (activity?.reloadPending && url.href === activity.url && request.resourceType() === 'document'
+      if (activity?.reload && !activity.reload.nativeDocument && url.href === activity.url && request.resourceType() === 'document'
         && request.isNavigationRequest() && request.method() === 'GET' && request.redirectedFrom() === null) {
-        activity.reloadPending = false;
+        activity.reload.nativeDocument = true;
         return route.continue();
       }
+      const activityReload = activity?.reload?.nativeDocument ? activity.reload : null;
       if (scene.reload && !scene.reload.nativeDocument && url.href === editorUrl
         && request.resourceType() === 'document' && request.isNavigationRequest() && request.method() === 'GET') {
         scene.reload.nativeDocument = true;
@@ -215,6 +216,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
             activity.writes += 1;
             kind = 'activity-write';
           }
+        } else if (activityReload && request.method() === 'GET' && url.pathname === '/auth/v1/user') {
+          kind = 'activity-auth';
+        } else if (activityReload && request.method() === 'POST' && editorRpcKinds.get(url.pathname) === 'reread'
+          && request.postDataJSON()?.p_object_id === activity.objectId) {
+          kind = 'activity-workspace';
         } else if (realmPhase && request.method() === 'POST' && url.pathname === '/rest/v1/rpc/current_user_test_realm') {
           kind = 'realm-bootstrap';
         } else if (realmPhase && request.method() === 'POST' && url.pathname === '/rest/v1/rpc/list_object_resources_filtered_page') {
@@ -266,21 +272,31 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
             assert.ok(body.object_id === activity.objectId && body.equipment_provided === true
               && !Object.hasOwn(body, 'equipment_provided_details'));
           } else if (kind === 'legal-write') assert.equal(headers['content-profile'], 'public');
-          else if (kind !== 'patch' && kind !== 'reload-auth' && kind !== 'draft-logout') {
+          else if (kind !== 'patch' && kind !== 'reload-auth' && kind !== 'draft-logout' && kind !== 'activity-auth') {
             assert.equal(headers['content-profile'], 'api');
           }
         }
         failureStage = 'response';
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
         assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
-        if (kind === 'activity-read' || kind === 'activity-write') {
+        if (kind === 'activity-auth') {
+          activityReload.authStatus = response.status();
+          if (response.ok()) activityReload.authenticatedUser ||= (await response.json())?.id === activity.account.id;
+        } else if (kind === 'activity-workspace') {
+          activityReload.workspaceStatus = response.status();
+          if (response.ok()) {
+            const body = await response.json();
+            activityReload.workspace ||= (body?.object ?? body)?.id === activity.objectId;
+          }
+        } else if (kind === 'activity-read' || kind === 'activity-write') {
           assert.ok(response.ok());
           if (kind === 'activity-read') {
             const body = await response.json();
             const row = Array.isArray(body) && body.length === 1 ? body[0] : body;
             assert.ok(row?.duration_min === activity.duration && typeof row.equipment_provided === 'boolean'
               && !Object.hasOwn(row, 'equipment_provided_details'));
-            activity.reads.push(row.equipment_provided);
+            if (activityReload) activityReload.persistedActivityRead ||= row.equipment_provided;
+            else activity.reads.push(row.equipment_provided);
           }
         } else if (kind === 'legal-summary') {
           assert.ok(response.ok(), 'authorized legal summary must work before fault injection');
@@ -745,7 +761,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       for (const fixture of activities) {
         const destination = '/objects/' + fixture.objectId + '/edit';
         const activity = { ...fixture, destination, url: app.origin + destination,
-          account: secondAccount, reads: [], writes: 0, reloadPending: false };
+          account: secondAccount, reads: [], writes: 0 };
         const activityScene = await openAuthenticatedEditor(undefined, undefined, undefined, activity);
         try {
           const { page } = activityScene;
@@ -753,14 +769,9 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           const equipment = section.getByRole('button', { name: 'Équipement fourni', exact: true });
           const detail = section.getByPlaceholder('ex. casque, baudrier');
           const save = page.locator('.edit-top__right').getByRole('button', { name: 'Enregistrer', exact: true });
-          const openActivity = async () => {
-            const complete = page.getByRole('button', { name: 'Complet', exact: true });
-            if (await complete.getAttribute('aria-pressed') !== 'true') await complete.click();
-            await assertion(equipment).toBeEnabled();
-          };
           const persisted = () => local.sql(`SELECT jsonb_build_array(equipment_provided,duration_min,xmin::text)
             FROM public.object_act WHERE object_id='${fixture.objectId}'`, 'read the physical activity fixture row');
-          await openActivity();
+          await assertion(equipment).toBeEnabled();
           await assertion.poll(() => activity.reads.includes(false), { message: 'the authorized browser must read the seeded activity row' })
             .toBe(true);
           await assertion(equipment).not.toHaveClass(/\bis-on\b/);
@@ -772,13 +783,25 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           const saved = persisted();
           assert.deepEqual(JSON.parse(saved).slice(0, 2), [true, fixture.duration]);
 
-          activity.reads.length = 0;
-          activity.reloadPending = true;
-          const document = await page.reload({ waitUntil: 'domcontentloaded' });
-          assert.ok(!activity.reloadPending && document?.status() === 200 && document.url() === activity.url
-            && document.request().redirectedFrom() === null, 'the editor must reload its exact native document');
-          await openActivity();
-          await assertion.poll(() => activity.reads.includes(true)).toBe(true);
+          const reload = { nativeDocument: false, authStatus: null, workspaceStatus: null,
+            authenticatedUser: false, workspace: false, persistedActivityRead: false };
+          activity.reload = reload;
+          let pageErrors = 0;
+          page.on('pageerror', () => { pageErrors += 1; });
+          try {
+            const document = await page.reload();
+            assert.ok(reload.nativeDocument && document?.status() === 200 && document.url() === activity.url
+              && document.request().redirectedFrom() === null, 'the editor must reload its exact native document');
+            assert.equal(await page.evaluate(() => performance.getEntriesByType('navigation')[0]?.type), 'reload');
+            await assertion.poll(() => ({
+              authenticatedUser: reload.authenticatedUser, workspace: reload.workspace, activity: reload.persistedActivityRead,
+            })).toEqual({ authenticatedUser: true, workspace: true, activity: true });
+            await assertion(equipment).toBeEnabled();
+          } catch (error) {
+            const phases = { ...reload, pageErrors,
+              location: page.url() === activity.url ? 'editor' : new URL(page.url()).pathname === '/login' ? 'login' : 'other' };
+            throw new Error(`Native ${fixture.type} activity reload failed: ${JSON.stringify(phases)}`, { cause: error });
+          }
           await assertion(equipment).toHaveClass(/\bis-on\b/);
           await assertion(detail).toHaveValue('');
 

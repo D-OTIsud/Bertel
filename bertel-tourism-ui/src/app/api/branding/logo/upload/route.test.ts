@@ -111,15 +111,46 @@ describe('POST /api/branding/logo/upload — admin gate as-the-caller + pipeline
     expect(uploadSpy).not.toHaveBeenCalled();
   });
 
-  it('415 sur un MIME non autorisé (gate process-image)', async () => {
+  it.each([
+    ['mime', 'Unsupported MIME type', 415],
+    ['decode', 'Image illisible.', 400],
+  ] as const)('keeps the public %s message for an invalid image', async (code, detail, status) => {
     mockedServer.mockReturnValue(serverOk());
     const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
     mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
     const { MediaProcessingError } = jest.requireMock('../../../media/upload/process-image');
-    mockedProcess.mockRejectedValueOnce(new MediaProcessingError('mime', 'Unsupported MIME type'));
+    mockedProcess.mockRejectedValueOnce(new MediaProcessingError(code, detail));
 
     const res = await POST(req({ authorization: 'Bearer t' }, makeForm()));
-    expect(res.status).toBe(415);
+    expect(res.status).toBe(status);
+    expect(await res.json()).toEqual({ error: code, detail });
+    expect(res.headers.has('x-request-id')).toBe(false);
+    expect(uploadSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['processing', 'process_failed', 500],
+    ['storage', 'upload_failed', 502],
+  ] as const)('correlates the %s failure without returning its internal message', async (kind, code, status) => {
+    const cause = 'synthetic internal detail LOGO_SENTINEL';
+    mockedServer.mockReturnValue(serverOk());
+    const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+    if (kind === 'processing') mockedProcess.mockRejectedValueOnce(new Error(cause));
+    if (kind === 'storage') uploadSpy.mockResolvedValueOnce({ error: { message: cause } });
+
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const res = await POST(req({ authorization: 'Bearer t' }, makeForm()));
+      expect(res.status).toBe(status);
+      expect(uploadSpy).toHaveBeenCalledTimes(kind === 'processing' ? 0 : 1);
+      expect(await res.json()).toEqual({ error: code });
+      const requestId = res.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+      expect(warn.mock.calls).toEqual([['[route-error]', { route: 'branding/logo/upload.POST', code, requestId }]]);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('201 + { logoStoragePath, logoPublicUrl, logoMimeType } quand admin : preserve, extension = format réel', async () => {

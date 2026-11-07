@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { buildSearchParams, parseSearchParams } from '@/lib/explorer-search-params';
 import { DRAWER_URL_PARAM } from '@/hooks/useExplorerContextSync';
@@ -21,8 +21,17 @@ function filtersView(search: string): string {
   return params.toString();
 }
 
+function replaceFilterUrl(serializedFilters: string) {
+  const params = new URLSearchParams(serializedFilters);
+  const fiche = new URLSearchParams(window.location.search).get(DRAWER_URL_PARAM);
+  if (fiche) params.set(DRAWER_URL_PARAM, fiche);
+  const query = params.toString();
+  // Écrit immédiatement et laisse Next synchroniser useSearchParams, sans
+  // navigation asynchrone qui pourrait restaurer une fiche déjà fermée.
+  window.history.replaceState(null, '', query ? `/explorer?${query}` : '/explorer');
+}
+
 export function useExplorerUrlSync() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams?.toString() ?? '';
   const replaceFiltersFromUrl = useExplorerStore((state) => state.replaceFiltersFromUrl);
@@ -32,8 +41,8 @@ export function useExplorerUrlSync() {
   // 1. URL -> Store : On lit l'URL au chargement ou lors d'un "Précédent / Suivant"
   useEffect(() => {
     const filterParams = filtersView(searchParamsString);
-    // router.replace est asynchrone : StrictMode peut rejouer l'effet avec l'URL
-    // encore nue. Attendre sa confirmation évite d'effacer l'état à restaurer.
+    // useSearchParams peut encore refléter l'ancienne URL pendant la
+    // restauration. Ne pas réappliquer cet état intermédiaire au store.
     if (pendingRestorationRef.current && !filterParams) return;
     pendingRestorationRef.current = false;
     if (lastUrlRef.current === filterParams) return;
@@ -53,7 +62,7 @@ export function useExplorerUrlSync() {
       if (restored && restored !== DEFAULT_FILTER_PARAMS) {
         lastUrlRef.current = restored;
         pendingRestorationRef.current = true;
-        router.replace(`/explorer?${restored}`, { scroll: false });
+        replaceFilterUrl(restored);
         return;
       }
     }
@@ -61,30 +70,25 @@ export function useExplorerUrlSync() {
     const parsed = parseSearchParams(new URLSearchParams(filterParams));
     lastUrlRef.current = filterParams;
     replaceFiltersFromUrl(parsed);
-  }, [searchParamsString, replaceFiltersFromUrl, router]);
+  }, [searchParamsString, replaceFiltersFromUrl]);
 
   // 2. Store -> URL : On s'abonne au store Zustand DIRECTEMENT (évite les boucles React)
-  // Debounce 300ms pour ne pas lancer router.replace sur chaque frappe du champ recherche
+  // Debounce 300ms pour regrouper les frappes du champ recherche.
   useEffect(() => {
+    const pathname = window.location.pathname;
     let debounceTimer: ReturnType<typeof setTimeout>;
 
     const unsubscribe = useExplorerStore.subscribe((state) => {
       const next = buildSearchParams(state);
       const str = next.toString();
 
+      clearTimeout(debounceTimer);
       if (lastUrlRef.current === str) return;
 
-      clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
+        if (window.location.pathname !== pathname) return;
         lastUrlRef.current = str;
-        // D25 : ré-attache la clé `fiche` courante (lue au moment de l'écriture —
-        // le drawer a pu changer pendant le debounce) pour ne pas l'effacer.
-        const withContext = new URLSearchParams(str);
-        const fiche = new URLSearchParams(window.location.search).get(DRAWER_URL_PARAM);
-        if (fiche) withContext.set(DRAWER_URL_PARAM, fiche);
-        const full = withContext.toString();
-        const url = full ? `/explorer?${full}` : '/explorer';
-        router.replace(url, { scroll: false });
+        replaceFilterUrl(str);
       }, 300);
     });
 
@@ -92,5 +96,5 @@ export function useExplorerUrlSync() {
       unsubscribe();
       clearTimeout(debounceTimer);
     };
-  }, [router]);
+  }, []);
 }

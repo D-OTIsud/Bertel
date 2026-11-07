@@ -63,7 +63,7 @@ describe('GET /api/ready', () => {
 
   it.each([
     ['https://project-a.supabase.test/', 'https://project-a.supabase.test', 'public-key-a'],
-    ['https://project-b.supabase.test/proxy/', 'https://project-b.supabase.test/proxy', 'public-key-b'],
+    ['https://project-b.supabase.test/proxy%3Fsegment%23encoded/', 'https://project-b.supabase.test/proxy%3Fsegment%23encoded', 'public-key-b'],
   ])('probes all three dependencies on the configured tenant %s', async (url, base, apikey) => {
     setEnv({
       NEXT_PUBLIC_SUPABASE_URL: url,
@@ -192,16 +192,41 @@ describe('GET /api/ready', () => {
     expect(fetchMock).toHaveBeenCalledTimes(6);
   });
 
-  it('rejects a configured URL that embeds credentials', async () => {
+  it.each([5, 6, 7])('keeps one batch when a request joins after %i microtasks', async (turns) => {
     setEnv({
-      NEXT_PUBLIC_SUPABASE_URL: 'https://user:pass@project.supabase.co',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      NEXT_PUBLIC_SUPABASE_URL: 'https://project.supabase.test',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'public-key',
     });
+    fetchMock.mockResolvedValue({ status: 200 });
+    const { GET } = await loadRoute();
+
+    const first = GET();
+    for (let turn = 0; turn < turns; turn++) await Promise.resolve();
+    const [a, b] = await Promise.all([first, GET()]);
+
+    expect(a.status).toBe(200);
+    expect(b.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    'https://user:pass@project.supabase.test',
+    'https://project.supabase.test/proxy?status=ready',
+    'https://project.supabase.test/proxy#fragment',
+    'https://project.supabase.test/proxy?',
+    'https://project.supabase.test/proxy#',
+  ])('rejects a configured URL with credentials, a query or a fragment: %s', async (url) => {
+    setEnv({
+      NEXT_PUBLIC_SUPABASE_URL: url,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'public-key',
+    });
+    fetchMock.mockResolvedValue({ status: 200 });
     const { GET } = await loadRoute();
 
     const res = await GET();
 
     expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toEqual({ ready: false, reason: 'misconfigured' });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

@@ -9,4 +9,4 @@ Le 7 novembre 2026, une seule exécution approuvée a installé le registre DB07
 
 Le contrôle a confirmé les postconditions du catalogue, dont les trois tables vides, les privilèges privés et le XID commun au reçu et aux trois tables. La migration versionne les octets du corps appliqué. Le manifeste d'installation neuve utilise le même fichier dans une transaction distincte, sans le garde lié au registre de production.
 
-Aucune admission de copie n'a été créée. La copie physique et l'ouverture de l'opérateur restent des étapes distinctes. Sur Storage v1.41.8, les sondes concurrentes create-only ont accepté les deux requêtes pour la copie et pour l’upload. Le registre contrôle la réservation côté PostgreSQL.
+Aucune admission de copie n'a été créée. La copie physique et l'ouverture de l'opérateur restent des étapes distinctes. Sur un banc isolé équipé de Storage v1.41.8, hors production, les deux requêtes concurrentes create-only ont réussi aussi bien pour la copie que pour l’upload. Le registre contrôle la réservation côté PostgreSQL.

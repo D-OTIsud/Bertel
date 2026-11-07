@@ -22,7 +22,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <article class="mini-card"><div class="metric">6318</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les 3 174 valeurs proviennent de l’instantané public du 6 novembre 2026, entre 20:23 et 20:32 UTC, conservé octet pour octet. Il couvre 28 tables autorisées et 246 documents de scope explicite public. Aucune valeur de seed n’a complété cet instantané.</p>
-<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T19:07:25.792691+00:00, ledger 199, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
+<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T20:20:03.921172+00:00, ledger 201, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
 <p class="muted">Lecture live MCP effectuée sur 28 tables publiques de référence. 0 lignes seed SQL restent disponibles comme filet de secours.</p>
 <details><summary>Écarts de couverture à surveiller</summary>
 <table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>
@@ -4352,7 +4352,7 @@ liste reçue n&#x27;est jamais crue sur parole. Mesuré: 2,0 ms pour une page de
 <div class="detail-grid">
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
+<p><b>Exécution directe</b><br>Réservée au propriétaire PostgreSQL. Appel interne par <code>api.can_manage_object_private_note(uuid)</code>.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/rls_policies.sql:428</code></p>
 </div>
 <blockquote>Retourne le rang admin de l&#x27;auteur de la note dans l&#x27;ORG de la note (NULL si aucun).</blockquote>

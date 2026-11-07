@@ -44,11 +44,12 @@ export function prepareCutover(manifest, receipt, manifestHash, expectedCount = 
   }
   const ready = records.map((r) => {
     const copy = verified.get(r.document_id);
-    assert(copy && copy.source_etag === r.source_metadata.etag && copy.destination_path === r.destination_path, 'receipt_identity');
+    assert(copy && uuid.test(copy.destination_id) && copy.source_etag === r.source_metadata.etag
+      && copy.destination_path === r.destination_path, 'receipt_identity');
     assert(hash.test(copy.source_sha256) && copy.source_sha256 === copy.destination_sha256
       && copy.source_bytes === r.source_metadata.size && copy.destination_bytes === copy.source_bytes
       && text(copy.destination_etag), 'receipt_content');
-    return { ...r, destination_etag: copy.destination_etag };
+    return { ...r, destination_id: copy.destination_id, destination_etag: copy.destination_etag };
   });
   const batches = [];
   for (let offset = 0; offset < ready.length; offset += 100) {
@@ -56,14 +57,16 @@ export function prepareCutover(manifest, receipt, manifestHash, expectedCount = 
     // Do not let a hostile source filename close the DO body or an SQL literal.
     let delimiter = `$db07_${sha256(payload).slice(0, 12)}$`;
     while (payload.includes(delimiter)) delimiter = delimiter.replace(/\$$/, '_x$');
-    batches.push(`BEGIN;
-SET LOCAL lock_timeout = '500ms';
-SET LOCAL statement_timeout = '30s';
-SET LOCAL standard_conforming_strings = on;
-DO ${delimiter}
-DECLARE r jsonb; d public.ref_document%ROWTYPE;
+    batches.push(`DO ${delimiter}
+DECLARE
+  r jsonb;
+  d public.ref_document%ROWTYPE;
+  storage_id uuid;
+  storage_etag text;
+  storage_size bigint;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'legal-documents' AND public = false) THEN
+  PERFORM 1 FROM storage.buckets WHERE id = 'legal-documents' AND public = false FOR SHARE;
+  IF NOT FOUND THEN
     RAISE EXCEPTION 'DB07 destination must remain private';
   END IF;
   FOR r IN SELECT value FROM jsonb_array_elements(${literal(payload)}::jsonb) LOOP
@@ -72,33 +75,47 @@ BEGIN
        OR (d.extra #>> '{bertel_pj_import,mapped_object_id}') IS DISTINCT FROM r->>'object_id' THEN
       RAISE EXCEPTION 'DB07 classification or mapping changed';
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM storage.objects o
-      WHERE o.bucket_id = 'legal-documents' AND o.name = r->>'destination_path'
-        AND o.metadata->>'eTag' = r->>'destination_etag'
-        AND (o.metadata->>'size')::bigint = (r#>>'{source_metadata,size}')::bigint) THEN
-      RAISE EXCEPTION 'DB07 verified destination changed or missing';
+    SELECT o.id, o.metadata->>'eTag', (o.metadata->>'size')::bigint
+      INTO STRICT storage_id, storage_etag, storage_size
+      FROM storage.objects o WHERE o.bucket_id = 'legal-documents' AND o.name = r->>'destination_path' FOR SHARE;
+    IF storage_id IS DISTINCT FROM (r->>'destination_id')::uuid
+       OR storage_etag IS DISTINCT FROM (r->>'destination_etag')
+       OR storage_size IS DISTINCT FROM (r#>>'{source_metadata,size}')::bigint THEN
+      RAISE EXCEPTION 'DB07 verified destination changed';
     END IF;
     IF d.storage_bucket = 'legal-documents' AND d.storage_path = r->>'destination_path' AND d.url = r->>'destination_url' THEN
-      CONTINUE; -- Safe resume after an already committed batch, even after source retirement.
+      CONTINUE; -- Safe resume for an already moved reference with the same verified destination.
     END IF;
     IF d.storage_bucket IS DISTINCT FROM 'old_legal_media' OR d.storage_path IS DISTINCT FROM r->>'source_path'
        OR d.url IS DISTINCT FROM r->>'source_url' THEN
       RAISE EXCEPTION 'DB07 source reference changed';
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM storage.objects o WHERE o.id = (r#>>'{source_metadata,id}')::uuid
-      AND o.bucket_id = 'old_legal_media' AND o.name = r->>'source_path'
-      AND o.metadata->>'eTag' = r#>>'{source_metadata,etag}'
-      AND (o.metadata->>'size')::bigint = (r#>>'{source_metadata,size}')::bigint) THEN
-      RAISE EXCEPTION 'DB07 verified source changed or missing';
+    SELECT o.id, o.metadata->>'eTag', (o.metadata->>'size')::bigint
+      INTO STRICT storage_id, storage_etag, storage_size
+      FROM storage.objects o WHERE o.bucket_id = 'old_legal_media' AND o.name = r->>'source_path' FOR SHARE;
+    IF storage_id IS DISTINCT FROM (r#>>'{source_metadata,id}')::uuid
+       OR storage_etag IS DISTINCT FROM (r#>>'{source_metadata,etag}')
+       OR storage_size IS DISTINCT FROM (r#>>'{source_metadata,size}')::bigint THEN
+      RAISE EXCEPTION 'DB07 verified source changed';
     END IF;
     UPDATE public.ref_document SET storage_bucket = 'legal-documents', storage_path = r->>'destination_path', url = r->>'destination_url'
       WHERE id = d.id;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'DB07 reference update did not apply';
+    END IF;
   END LOOP;
 END;
-${delimiter};
-COMMIT;`);
+${delimiter};`);
   }
-  return `-- PRIVATE: reference changes only; contains locations. Never commit this output.\n${batches.join('\n\n')}\n`;
+  return `-- PRIVATE: reference changes only; contains locations. Never commit this output.
+-- Run the complete script in one session (psql -X -v ON_ERROR_STOP=1).
+BEGIN;
+SET LOCAL lock_timeout = '500ms';
+SET LOCAL statement_timeout = '30s';
+SET LOCAL standard_conforming_strings = on;
+${batches.join('\n\n')}
+COMMIT;
+`;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

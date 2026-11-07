@@ -31,6 +31,15 @@ async function json(response, label) {
   if (response.status === 204) return null;
   return response.json();
 }
+async function signIn(id, { email, password }) {
+  const signedIn = await json(await local.request('/auth/v1/token?grant_type=password', local.anonymous,
+    { email, password }), 'real synthetic password login');
+  assert.ok(typeof signedIn.access_token === 'string', 'GoTrue must issue a real access JWT');
+  const auth = Object.freeze({ ...local.anonymous, authorization: `Bearer ${signedIn.access_token}` });
+  const verified = await json(await local.request('/auth/v1/user', auth, undefined, 'GET'), 'independent Auth verification');
+  assert.ok(verified.id === id, 'Auth must independently verify the same synthetic UID');
+  return auth;
+}
 async function rows(who, object) {
   return json(await local.request(`/rest/v1/object?select=id,name,status,is_test&id=eq.${object}`, who, undefined, 'GET'), 'object RLS read');
 }
@@ -129,13 +138,8 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       if (browserWitness && key === 'writer') writerCredentials = { email, password };
       if (browserWitness && key === 'other') otherCredentials = { email, password };
       if (key === 'admin') continue; // Only a fixture FK; never used to bypass HTTP assertions.
-      const signedIn = await json(await local.request('/auth/v1/token?grant_type=password', local.anonymous,
-        { email, password }), 'real synthetic password login');
-      assert.ok(typeof signedIn.access_token === 'string', 'GoTrue must issue a real access JWT');
-      const auth = Object.freeze({ ...local.anonymous, authorization: `Bearer ${signedIn.access_token}` });
+      const auth = await signIn(id, { email, password });
       sessions.set(key, auth); originalTokens.set(key, auth.authorization);
-      const verified = await json(await local.request('/auth/v1/user', auth, undefined, 'GET'), 'independent Auth verification');
-      assert.ok(verified.id === id, 'Auth must independently verify the same synthetic UID');
     }
     assert.ok(createdIds.length === 6 && sessions.size === 5 && originalTokens.size === 5
       && new Set(originalTokens.values()).size === 5 && !sessions.has('admin'),
@@ -164,11 +168,18 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
           AND org_object_id='ORGRUN999999AR01' AND is_active;
         IF NOT FOUND THEN RAISE EXCEPTION 'missing second browser membership'; END IF;
       END; $fixture$`, 'restore the other organization before the document witness');
-      assert.equal(await canWrite('other', A), false);
-      assert.equal(await canWrite('other', B), true);
+      // The browser signs these users out globally. Start verified GoTrue sessions
+      // after that scenario, then keep these exact JWTs across the document revocation.
+      const [writer, other] = await Promise.all([
+        signIn(ids.writer, writerCredentials), signIn(ids.other, otherCredentials),
+      ]);
+      for (const [objectId, expected] of [[A, false], [B, true]]) {
+        assert.equal(await json(await rpc(other, 'user_can_write_object_canonical', { p_object_id: objectId }),
+          'fresh foreign canonical authority'), expected);
+      }
       const { testDocumentLinks } = await import('../../bertel-tourism-ui/tests/current-rights/document-links.mjs');
       await testDocumentLinks({ local, commit, objectId: A, documentId: DOC, writerId: ids.writer,
-        writerAuthorization: headers('writer').authorization, foreignAuthorization: headers('other').authorization });
+        writerAuthorization: writer.authorization, foreignAuthorization: other.authorization });
       t.diagnostic('Disposable document route verified canonical and legal-only signed bytes, foreign refusal and same-JWT revocation.');
       return;
     }

@@ -19,6 +19,7 @@ const editorRpcKinds = new Map([
 const legalRpcKinds = new Map([
   ['/rest/v1/rpc/get_object_legal_data', 'legal-read'],
   ['/rest/v1/rpc/get_object_legal_compliance', 'legal-summary'],
+  ['/rest/v1/rpc/get_object_workspace_permissions', 'legal-permission'],
 ]);
 
 async function startApp(local) {
@@ -87,6 +88,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
   let legalWitness = false;
   let legalReads = 0;
   let legalSummaryFailures = 0;
+  let legalPermissions = 0;
   let legalWrites = 0;
   function hold(kind) {
     const gate = { observed: Promise.withResolvers(), release: Promise.withResolvers() };
@@ -175,14 +177,27 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
         if (kind === 'legal-summary') {
           assert.ok(response.ok(), 'authorized legal summary must work before fault injection');
-          legalSummaryFailures += 1;
-          return await route.fulfill({ status: 503, headers: { 'access-control-allow-origin': app.origin },
+          failureStage = 'deliver-synthetic-summary-failure';
+          await route.fulfill({ status: 503, headers: { 'access-control-allow-origin': app.origin },
             json: { code: 'FQ08', message: 'Synthetic compliance summary unavailable' } });
+          legalSummaryFailures += 1;
+          return;
         }
-        if (kind === 'legal-read' || kind === 'legal-write') {
-          assert.ok(response.ok(), kind + ' must reach the real PostgREST fixture successfully');
-          if (kind === 'legal-read') legalReads += 1;
-          else legalWrites += 1;
+        if (kind === 'legal-read') {
+          assert.ok(response.ok());
+          failureStage = 'fixture-legal-record';
+          const records = await response.json();
+          assert.ok(Array.isArray(records) && records.some((record) =>
+            record.id === legalRecordId && record.type?.code === 'raison_sociale'));
+          legalReads += 1;
+        } else if (kind === 'legal-permission') {
+          assert.ok(response.ok());
+          failureStage = 'fixture-legal-permission';
+          assert.equal((await response.json())?.legal, true);
+          legalPermissions += 1;
+        } else if (kind === 'legal-write') {
+          assert.ok(response.ok());
+          legalWrites += 1;
         }
         const reread = kind === 'reread' ? holds.get(kind) : undefined;
         if (reread && response.ok()) {
@@ -299,12 +314,19 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       WHERE id='${legalRecordId}' AND object_id='${objectId}'`, 'read the exact synthetic legal record');
     assert.equal(legalValue(), 'Synthetic legal company before');
     legalWitness = true;
-    await page.reload();
+    const reloaded = await page.reload();
+    assert.ok(reloaded?.status() === 200 && reloaded.url() === app.origin + destination
+      && reloaded.request().redirectedFrom() === null, 'the fixture editor reload must return HTTP 200 without redirects');
+    await assertion(page).toHaveURL(app.origin + destination);
+    await assertion.poll(() => ({
+      realLegalPermission: legalPermissions > 0,
+      realLegalRecord: legalReads > 0,
+      syntheticSummaryFailure: legalSummaryFailures > 0,
+    })).toEqual({ realLegalPermission: true, realLegalRecord: true, syntheticSummaryFailure: true });
     const legal = page.locator('#section-18');
     const company = legal.getByLabel('Raison sociale', { exact: true });
     await assertion(legal.getByText('Résumé de conformité indisponible. Les données juridiques restent modifiables.', { exact: true })).toBeVisible();
     await assertion(company).toHaveValue('Synthetic legal company before');
-    assert.ok(legalReads > 0 && legalSummaryFailures > 0, 'legal data must be read while the summary fails in the browser');
     await company.fill('Synthetic legal company saved');
     await assertion(save).toBeEnabled();
     await save.click();

@@ -263,7 +263,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
 
     async function openAuthenticatedEditor(legalMode, draftScope) {
       const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
-      const scene = { legalMode, draftScope, closed: false, nativeLoginRequested: false,
+      const scene = { legalMode, draftScope, closed: false, nativeLoginRequested: false, pageErrors: 0,
         legalReads: 0, legalPermissions: 0, summaryReads: 0, summaryFailures: 0, legalWrites: 0 };
       await context.routeWebSocket('**/*', (route) => {
         const url = new URL(route.url());
@@ -273,6 +273,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       });
       await context.route('**/*', (route) => routeEditorRequest(route, scene));
       const page = await context.newPage();
+      if (draftScope) page.on('pageerror', () => { scene.pageErrors += 1; });
       const login = await page.goto(loginUrl);
       assert.ok(scene.nativeLoginRequested && login?.status() === 200 && login.url() === loginUrl
         && login.request().redirectedFrom() === null, 'exact native login document must return HTTP 200 without redirects');
@@ -441,7 +442,12 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     const originalDraftName = 'Synthetic local name for first account only';
     async function signOutDraftEditor() {
       const scope = draftScene.scene.draftScope;
-      await draftPage.getByRole('button', { name: /^Profil / }).click();
+      assert.equal(draftScene.scene.pageErrors, 0);
+      // The Next dev indicator occupies the same corner as the sidebar profile.
+      const profile = draftPage.getByRole('button', { name: /^Profil / });
+      await profile.focus();
+      await assertion(profile).toBeFocused();
+      await draftPage.keyboard.press('Enter');
       await draftPage.getByRole('button', { name: 'Se déconnecter', exact: true }).click();
       await assertion(draftPage).toHaveURL(loginUrl);
       await assertion.poll(() => scope.loggedOut).toBe(true);
@@ -481,6 +487,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await assertion(draftName).toHaveValue(originalDraftName);
     assert.deepEqual(canonical(), canonicalBeforeDrafts);
     assert.deepEqual([patches.length, publishCalls, restoreCalls], mutationsBeforeDrafts);
+    assert.equal(draftScene.scene.pageErrors, 0);
     await draftScene.close();
   } catch (error) {
     throw routeFailure ?? error;

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { authorizeAdminRoute } from '../../_authorize';
+import { authorizeAdminRoute, MIN_ADMIN_RANK } from '../../_authorize';
 import { routeFailure } from '../../../_route-failure';
 import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
@@ -75,8 +75,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const callerApi = asCaller.schema('api');
   if (!auth.isSuper) {
-    const { data: callerOrgId, error } = await callerApi.rpc('current_user_org_id');
-    if (error || callerOrgId !== orgId) return outOfScope();
+    const { data: membership, error } = await asCaller.from('user_org_membership')
+      .select('user_org_admin_role(is_active, ref_org_admin_role(rank))')
+      .eq('user_id', auth.callerId).eq('org_object_id', orgId).eq('is_active', true).maybeSingle();
+    if (error) return routeFailure('admin/invite.POST', 'authorization_check_failed', { status: 503 });
+    const roles = (membership as { user_org_admin_role?: unknown } | null)?.user_org_admin_role;
+    const isOrgAdmin = Array.isArray(roles) && roles.some((role) => {
+      const rank: unknown = role?.ref_org_admin_role?.rank;
+      return role?.is_active === true && typeof rank === 'number'
+        && Number.isFinite(rank) && rank >= MIN_ADMIN_RANK;
+    });
+    if (!isOrgAdmin) return outOfScope();
   }
   const [org, role] = await Promise.all([
     server.from('object').select('id').eq('id', orgId).eq('object_type', 'ORG').maybeSingle(),
@@ -141,12 +150,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       if (inviteError || data.user?.id !== userId) return routeFailure('admin/invite.POST', 'resend_failed');
       return NextResponse.json({ userId, membershipId, alreadyExisted: false }, { status: 201 });
     }
-    return NextResponse.json({
-      userId,
-      membershipId,
-      alreadyExisted: true,
-      ...(alreadyInOrg ? { neverSignedIn: !existing.last_sign_in_at } : {}),
-    }, { status: 409 });
+    return NextResponse.json({ userId, membershipId, alreadyExisted: true }, { status: 409 });
   }
 
   // The Auth trigger creates the profile. A simultaneous invitation must not overwrite

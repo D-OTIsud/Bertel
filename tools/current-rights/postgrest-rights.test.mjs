@@ -4,6 +4,10 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { loadDisposable } from './disposable.mjs';
 
+const browserWitness = process.env.CURRENT_RIGHTS_EDITOR_BROWSER === 'true';
+const realtimeWitness = process.env.CURRENT_RIGHTS_REALTIME_SECURITY === 'true';
+const sandboxWitness = process.env.CURRENT_RIGHTS_SANDBOX_DISCOVERY === 'true';
+assert.ok(!sandboxWitness || (!browserWitness && !realtimeWitness), 'public discovery must run as a standalone witness');
 const local = loadDisposable();
 const ids = {
   writer: '00000000-0000-4000-a000-00000000ae11', other: '00000000-0000-4000-a000-00000000ae12',
@@ -13,6 +17,7 @@ const ids = {
 const emails = { writer: 'current-rights-writer', other: 'current-rights-email', portal: 'current-rights-portal',
   foreignPortal: 'current-rights-other-portal', admin: 'current-rights-admin', tester: 'current-rights-test-realm' };
 const A = 'HOTRUN999999AR01', B = 'HOTRUN999999AR02', PUBLIC = 'HOTRUN999999AR03', TEST = 'HOTRUN999999AR05';
+const INITIAL_PUBLISHED = 'HOTRUN999999AR06', INITIAL_DRAFT = 'HOTRUN999999AR07';
 const DOC = '00000000-0000-4000-a000-00000000ae41', PHOTO = '00000000-0000-4000-a000-00000000ae42';
 const originalTokens = new Map();
 const sessions = new Map();
@@ -29,6 +34,15 @@ async function json(response, label) {
   if (response.status === 204) return null;
   return response.json();
 }
+async function signIn(id, { email, password }) {
+  const signedIn = await json(await local.request('/auth/v1/token?grant_type=password', local.anonymous,
+    { email, password }), 'real synthetic password login');
+  assert.ok(typeof signedIn.access_token === 'string', 'GoTrue must issue a real access JWT');
+  const auth = Object.freeze({ ...local.anonymous, authorization: `Bearer ${signedIn.access_token}` });
+  const verified = await json(await local.request('/auth/v1/user', auth, undefined, 'GET'), 'independent Auth verification');
+  assert.ok(verified.id === id, 'Auth must independently verify the same synthetic UID');
+  return auth;
+}
 async function rows(who, object) {
   return json(await local.request(`/rest/v1/object?select=id,name,status,is_test&id=eq.${object}`, who, undefined, 'GET'), 'object RLS read');
 }
@@ -42,13 +56,270 @@ async function denied(response, label) {
 function commit(sql, stage) {
   return local.sql(`BEGIN; SELECT set_config('request.jwt.claims','{"role":"service_role"}',true); ${sql}; COMMIT;`, stage);
 }
-const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
-  metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
+async function testInitialPublication() {
+  const writerRole = (code) => commit(
+    `UPDATE public.user_org_business_role
+       SET role_id=(SELECT id FROM public.ref_org_business_role WHERE code='${code}')
+     WHERE membership_id='00000000-0000-4000-a000-00000000ab11' AND is_active`,
+    `committed writer role: ${code}`,
+  );
+  const permission = () => rpc(headers('writer'), 'user_has_permission', { p_permission_code: 'publish_object' });
+  // A separate GET observes the publisher link created by the AFTER INSERT trigger.
+  const create = (body) => local.request('/rest/v1/object', headers('writer'), body, 'POST',
+    { prefer: 'return=minimal' });
+  async function verifyCreated(id, status) {
+    const inserted = await rows(headers('writer'), id);
+    assert.deepEqual(inserted.map((row) => ({ id: row.id, status: row.status })), [{ id, status }]);
+  }
+  const body = {
+    id: INITIAL_DRAFT, object_type: 'HOT', name: 'Synthetic initial publication', created_by: ids.writer, status: 'published',
+  };
 
-test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation', { timeout: 90000 }, async (t) => {
+  assert.equal(await json(await permission(), 'editor publication permission'), true);
+  const editor = await create({ ...body, id: INITIAL_PUBLISHED });
+  assert.equal(editor.status, 201, 'current editor/publisher must create an initially published object');
+  await verifyCreated(INITIAL_PUBLISHED, 'published');
+
+  writerRole('contributor');
+  try {
+    assert.equal(await json(await rpc(headers('writer'), 'user_can_create_object'), 'contributor creation permission'), true);
+    assert.equal(await json(await permission(), 'contributor publication permission'), false);
+    const refused = await create(body);
+    assert.equal(refused.status, 403, 'initial publication must refuse the same still-authenticated JWT');
+    const { code, message } = await refused.json();
+    assert.equal(code, '42501');
+    assert.match(message, /^Initial publication requires the publish_object permission and a publisher ORG/);
+    const noEffects = local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.object WHERE id='${INITIAL_DRAFT}')
+      AND NOT EXISTS (SELECT 1 FROM public.object_org_link WHERE object_id='${INITIAL_DRAFT}')`,
+    'refused initial publication left neither object nor publisher link');
+    assert.equal(noEffects, 't');
+    const control = await create({ ...body, status: 'draft' });
+    assert.equal(control.status, 201, 'the same contributor payload must create a draft');
+    await verifyCreated(INITIAL_DRAFT, 'draft');
+    const publisherLinks = local.sql(`SELECT count(DISTINCT l.object_id)
+      FROM public.object_org_link l JOIN public.ref_org_role r ON r.id=l.role_id
+      WHERE l.org_object_id='ORGRUN999999AR01' AND r.code='publisher'
+        AND l.object_id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}')`,
+      'publisher links after each authorized insert');
+    assert.equal(publisherLinks, '2');
+  } finally {
+    writerRole('editor');
+  }
+}
+
+async function testOrgEnrichment() {
+  const orgA = 'ORGRUN999999AR01';
+  const orgB = 'ORGRUN999999AR02';
+  const permission = 'edit_org_enrichment';
+  const write = (description) => rpc(headers('other'), 'rpc_write_org_description', {
+    p_object_id: PUBLIC, p_payload: { description },
+  });
+  const permissions = () => rpc(headers('other'), 'get_object_workspace_permissions', { p_object_id: PUBLIC });
+  const descriptions = () => JSON.parse(local.sql(
+    `SELECT jsonb_object_agg(COALESCE(org_object_id,'canonical'), to_jsonb(d))
+      FROM public.object_description d WHERE object_id='${PUBLIC}'`,
+    'disposable canonical and organization descriptions',
+  ));
+  async function assertWorkspace(expected) {
+    const actual = await json(await permissions(), 'current workspace permissions for enrichment');
+    assert.equal(actual.enrichment, expected);
+    assert.equal(actual.canonical, false, 'the target remains outside canonical scope');
+  }
+
+  // The existing fixture owns both ORGs, the user and the published object; its
+  // cleanup removes the link, descriptions and ORG permission rows by those IDs.
+  const [published] = await rows(headers('other'), PUBLIC);
+  assert.equal(published?.status, 'published');
+  assert.equal(published.is_test, false, 'the object must belong to the production-shaped synthetic corpus');
+  assert.equal(await json(await rpc(headers('other'), 'current_user_test_realm'), 'same realm'), false);
+  assert.equal(await canWrite('other', PUBLIC), false, 'ORG B is not the publisher');
+  commit(`INSERT INTO public.object_description(object_id,org_object_id,visibility,description) VALUES
+      ('${PUBLIC}',NULL,'public','Synthetic canonical description'),
+      ('${PUBLIC}','${orgA}','public','Synthetic publisher overlay'),
+      ('${PUBLIC}','${orgB}','public','Synthetic contributor overlay');
+    INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)
+      SELECT '${PUBLIC}','${orgB}',id,false FROM public.ref_org_role WHERE code='contributor'`,
+  'seed nonempty canonical and ORG controls and an explicit contributor link');
+  const before = descriptions();
+  assert.deepEqual(Object.keys(before).sort(), [orgA, orgB, 'canonical'].sort());
+
+  assert.equal(await json(await rpc(headers('other'), 'user_has_permission', { p_permission_code: permission }),
+    'the fixture business role has the seeded enrichment permission'), true);
+  await assertWorkspace(true);
+  const updated = await json(await write('Synthetic permitted contributor edit'), 'independent contributor enrichment');
+  const saved = descriptions();
+  assert.deepEqual(updated, { id: before[orgB].id, org_object_id: orgB });
+  assert.deepEqual(Object.keys(saved).sort(), Object.keys(before).sort());
+  assert.equal(saved[orgB].description, 'Synthetic permitted contributor edit');
+  assert.deepEqual(saved.canonical, before.canonical);
+  assert.deepEqual(saved[orgA], before[orgA]);
+
+  commit(`UPDATE public.org_role_permission SET is_active=false
+    WHERE org_object_id='${orgB}' AND role_id=(SELECT id FROM public.ref_org_business_role WHERE code='editor')
+      AND permission_id=(SELECT id FROM public.ref_permission WHERE code='${permission}')`,
+  'revoke the ORG business-role permission while retaining the contributor link');
+  await assertWorkspace(false);
+  await denied(await write('Revoked grant must not change its overlay'), 'enrichment after committed revocation');
+  assert.deepEqual(descriptions(), saved, 'the revoked grant changed no description');
+}
+
+async function testPublicDiscoveryEffects(app, ordinary, ownedBrowser) {
+  assert.ok(/^http:\/\/127\.0\.0\.1:[0-9]+$/.test(app.origin), 'owned Next loopback required');
+  assert.equal(local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.app_ai_provider_config WHERE is_active)
+    AND NOT EXISTS (SELECT 1 FROM public.app_smtp_config WHERE enabled)`, 'check disposable external effect configuration'),
+  't', 'the disposable stack must have no active AI or business SMTP provider');
+  const registry = async () => json(await rpc(local.service, 'get_sandbox_discovery_user'), 'owned discovery registry');
+  assert.ok(await registry() === null, 'the disposable discovery identity must be absent before provisioning');
+  const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+  const search = 'SandboxDiscoveryCorpusWitness';
+  const fixture = { search, testId: TEST, testTitle: `${search} test`, publicId: PUBLIC, publicTitle: `${search} real` };
+  assert.equal(local.sql(`WITH witness(id,is_test,name) AS (VALUES
+      ('${TEST}',true,'${fixture.testTitle}'), ('${PUBLIC}',false,'${fixture.publicTitle}')),
+    renamed AS (UPDATE public.object o SET name=w.name FROM witness w
+      WHERE o.id=w.id AND o.is_test=w.is_test AND o.status='published' RETURNING o.id)
+    SELECT count(*) FROM renamed`, 'name both published discovery catalogue fixtures'), '2');
+  const { openDiscoveryVisitor } = await import('../../bertel-tourism-ui/tests/current-rights/sandbox-discovery.mjs');
+
+  function assertDedicatedIdentity(id) {
+    assert.ok(typeof id === 'string' && uuid.test(id) && !Object.values(ids).includes(id),
+      'the registry must identify a separate disposable discovery user');
+  }
+  function request(path, options) {
+    return fetch(app.origin + path, { ...options, redirect: 'error', signal: AbortSignal.timeout(30_000) });
+  }
+  async function open() {
+    const token = await openDiscoveryVisitor(app, local, ownedBrowser, fixture);
+    return { ...local.anonymous, authorization: `Bearer ${token}` };
+  }
+  async function verify(auth, id) {
+    const user = await json(await local.request('/auth/v1/user', auth, undefined, 'GET'), 'independent discovery Auth verification');
+    assert.ok(user.id === id && user.email?.endsWith('@sandbox.bertel.invalid')
+      && user.app_metadata?.sandbox_discovery === true, 'GoTrue must verify the same restricted discovery identity');
+    assert.equal(await json(await rpc(auth, 'current_user_test_realm'), 'discovery PostgREST realm'), true);
+    let claims;
+    try {
+      claims = JSON.parse(Buffer.from(auth.authorization.split('.')[1], 'base64url').toString('utf8'));
+    } catch {
+      throw new Error('the verified discovery JWT must have decodable claims');
+    }
+    assert.ok(claims?.sub === id && typeof claims.session_id === 'string' && uuid.test(claims.session_id),
+      'the verified discovery JWT must identify a GoTrue session for the dedicated user');
+    return claims.session_id;
+  }
+  async function probe(path, { authorization }, status, code) {
+    // Malformed input can never reach a sender. Discovery must refuse before parsing it.
+    const response = await request(path, { method: 'POST', headers: { authorization, 'content-type': 'application/json' }, body: '{' });
+    assert.equal(response.status, status, `${path} must reject at the expected stage`);
+    assert.ok((await response.json()).error === code, `${path} must return the expected refusal code`);
+  }
+
+  let id;
+  try {
+    const first = await open();
+    id = await registry();
+    assertDedicatedIdentity(id);
+    const firstSession = await verify(first, id);
+    const second = await open();
+    const secondSession = await verify(second, id);
+    assert.ok(firstSession !== secondSession, 'the second visitor must receive a distinct GoTrue session ID');
+    assert.ok(await verify(first, id) === firstSession, 'the first session must remain valid after the second opening');
+
+    const published = await rows(ordinary, PUBLIC);
+    assert.ok(published.length === 1 && published[0].id === PUBLIC
+      && published[0].status === 'published' && published[0].is_test === false,
+      'the ordinary account must see the published fixture outside the test realm');
+
+    const admissions = () => local.sql(`SELECT count(*) FROM internal.ai_request_rate_state WHERE user_id='${id}'`,
+      'count discovery AI admissions');
+    assert.equal(admissions(), '0');
+    const availability = await request('/api/service-availability', { headers: { authorization: first.authorization } });
+    assert.deepEqual(await json(availability, 'discovery availability'), { translation: false, imageAnalysis: false, email: false });
+    for (const auth of [first, second]) {
+      const test = await rows(auth, TEST);
+      assert.ok(test.length === 1 && test[0].id === TEST && test[0].status === 'published' && test[0].is_test === true,
+        'each discovery session must see the published test fixture');
+      assert.deepEqual(await rows(auth, PUBLIC), [], 'each discovery session must be isolated from the published fixture outside its realm');
+      await probe('/api/lists/send', auth, 403, 'sandbox_external_effects_disabled');
+      await probe('/api/ai/translate', auth, 403, 'sandbox_external_effects_disabled');
+    }
+    assert.equal(admissions(), '0', 'discovery must not reach AI admission');
+    await probe('/api/lists/send', ordinary, 400, 'bad_json');
+  } finally {
+    const registered = await registry();
+    assert.ok(id == null || id === registered, 'cleanup must find the original registered identity');
+    // If provisioning never reached the registry, the disposable stack teardown owns cleanup.
+    if (registered !== null) {
+      assertDedicatedIdentity(registered);
+      assert.equal(local.sql(`SELECT EXISTS (SELECT 1 FROM auth.users WHERE id='${registered}'
+        AND email LIKE 'discovery-%@sandbox.bertel.invalid' AND raw_app_meta_data @> '{"sandbox_discovery":true}')`,
+        'confirm the registered disposable discovery account'), 't');
+      const removed = await local.request(`/auth/v1/admin/users/${registered}`, local.service,
+        { should_soft_delete: false }, 'DELETE');
+      assert.ok(removed.ok, 'only the disposable discovery identity must be cleaned up');
+      assert.ok(await registry() === null, 'the discovery registry must be empty after cleanup');
+    }
+  }
+}
+
+const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
+  metadata: { rpc: null, section: 'descriptions', manual_apply: true, field: 'Descriptions', before: 'a', after: 'b' } }];
+
+async function testPortalMaskedModule() {
+  const submit = () => rpc(headers('portal'), 'submit_actor_fiche', {
+    p_object_id: A, p_changes: proposal, p_note: 'Synthetic real-JWT request',
+  });
+  const visibility = async () => json(await rpc(headers('portal'), 'get_portal_section_visibility', { p_object_id: A }),
+    'current portal section visibility');
+  const state = () => JSON.parse(local.sql(`SELECT json_build_array(
+    (SELECT count(*) FROM public.fiche_submission WHERE object_id='${A}'),
+    (SELECT count(*) FROM public.pending_change WHERE object_id='${A}'),
+    (SELECT count(*) FROM public.crm_task WHERE object_id='${A}' AND extra->>'kind'='fiche_verification'))`,
+  'count portal submissions, changes and verification tasks'));
+
+  assert.ok(!(await visibility()).masked_modules.includes('descriptions'), 'the fixture module starts visible');
+  assert.deepEqual(state(), [0, 0, 0]);
+  commit(`INSERT INTO public.org_actor_module_visibility (org_object_id,object_type,module_id,is_visible,updated_by)
+    VALUES ('ORGRUN999999AR01','HOT','descriptions',false,'${ids.admin}')`, 'commit the portal module mask');
+  try {
+    assert.ok((await visibility()).masked_modules.includes('descriptions'), 'the same JWT must read the current mask');
+    const response = await submit();
+    assert.equal(response.status, 400, 'the direct portal submission must refuse the masked module');
+    const refusal = await response.json();
+    assert.equal(refusal.code, '22023');
+    assert.equal(refusal.message, 'La section « descriptions » est masquée par votre organisation');
+    assert.deepEqual(state(), [0, 0, 0], 'the rejected submission must create no proposal, change or verification task');
+  } finally {
+    commit(`DELETE FROM public.org_actor_module_visibility WHERE org_object_id='ORGRUN999999AR01'
+      AND object_type='HOT' AND module_id='descriptions'`, 'remove only the synthetic portal module mask');
+  }
+  assert.ok(!(await visibility()).masked_modules.includes('descriptions'), 'the same JWT must see the module reopen');
+  const accepted = await json(await submit(), 'identical portal submission after reopening the module');
+  assert.equal(accepted.change_count, 1);
+  assert.deepEqual(state(), [1, 1, 1], 'the positive control must create the expected verification workflow');
+}
+
+const testName = sandboxWitness
+  ? 'Chromium opens public discovery and separates GoTrue sessions and test data without external effects'
+  : browserWitness ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
+  : realtimeWitness ? 'real Realtime SDK enforces fixture roster and broadcast boundaries'
+  : 'real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation';
+test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90000 }, async (t) => {
   const createdIds = [];
   let fixtureCreated = false;
+  let writerCredentials;
+  let portalCredentials;
+  let otherCredentials;
+  let testerCredentials;
+  let foreignPortalCredentials;
   try {
+    const publicationFixtures = local.sql(`SELECT count(*) FROM public.object WHERE id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}')`,
+      'initial publication fixtures are absent');
+    assert.equal(publicationFixtures, '0', 'the publication fixture IDs must be unused before setup and cleanup');
+    if (browserWitness) {
+      const clean = local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.object WHERE id='${A}')
+        AND NOT EXISTS (SELECT 1 FROM public.object_version WHERE object_id='${A}')`, 'check clean editor fixture');
+      assert.equal(clean, 't', 'the editor fixture and its history must be absent before browser setup');
+    }
     assert.ok(Object.keys(ids).length === 6 && new Set(Object.values(ids)).size === 6, 'the fixture must own exactly six distinct synthetic identities');
     for (const [key, id] of Object.entries(ids)) {
       const email = `${emails[key]}@example.invalid`;
@@ -60,20 +331,154 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
         { id, email, password, email_confirm: true, app_metadata: appMetadata }), 'confirmed synthetic Auth creation');
       if (typeof created.id === 'string' && /^[0-9a-f-]{36}$/i.test(created.id)) createdIds.push(created.id);
       assert.ok(created.id === id && created.email === email && created.email_confirmed_at, 'GoTrue must create the exact confirmed synthetic identity');
+      if (browserWitness && key === 'writer') writerCredentials = { email, password };
+      if (browserWitness && key === 'portal') portalCredentials = { email, password };
+      if (browserWitness && key === 'other') otherCredentials = { email, password };
+      if ((browserWitness || realtimeWitness) && key === 'tester') testerCredentials = { email, password };
+      if (realtimeWitness && key === 'foreignPortal') foreignPortalCredentials = { email, password };
       if (key === 'admin') continue; // Only a fixture FK; never used to bypass HTTP assertions.
-      const signedIn = await json(await local.request('/auth/v1/token?grant_type=password', local.anonymous,
-        { email, password }), 'real synthetic password login');
-      assert.ok(typeof signedIn.access_token === 'string', 'GoTrue must issue a real access JWT');
-      const auth = Object.freeze({ ...local.anonymous, authorization: `Bearer ${signedIn.access_token}` });
+      const auth = await signIn(id, { email, password });
       sessions.set(key, auth); originalTokens.set(key, auth.authorization);
-      const verified = await json(await local.request('/auth/v1/user', auth, undefined, 'GET'), 'independent Auth verification');
-      assert.ok(verified.id === id, 'Auth must independently verify the same synthetic UID');
     }
     assert.ok(createdIds.length === 6 && sessions.size === 5 && originalTokens.size === 5
       && new Set(originalTokens.values()).size === 5 && !sessions.has('admin'),
     'exactly six identities and five distinct real JWTs are required; the fixture-only admin never authenticates');
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
+    if (sandboxWitness) {
+      const { startApp, waitForApp, stopApp, launchOwnedBrowser } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
+      const app = await startApp(local, { signDocuments: true });
+      let ownedBrowser;
+      try {
+        await waitForApp(app);
+        ownedBrowser = await launchOwnedBrowser(app, local);
+        await testPublicDiscoveryEffects(app, headers('other'), ownedBrowser);
+        t.diagnostic('Both visitors opened /test and saw the test corpus in Explorer. Their GoTrue sessions refused business mail and AI before admission.');
+      } finally {
+        try { await ownedBrowser?.close(); }
+        finally { await stopApp(app); }
+      }
+      return;
+    }
+    if (realtimeWitness) {
+      assert.equal(await canWrite('writer', A), true);
+      assert.equal(await canWrite('other', B), true);
+      assert.equal(await canWrite('tester', TEST), true);
+      assert.deepEqual(await Promise.all([rows(headers('other'), A), rows(headers('tester'), A), rows(local.anonymous, A)]),
+        [[], [], []], 'foreign, test realm and anonymous clients must lack access to the draft fixture');
+      commit(`DO $fixture$ BEGIN
+        DELETE FROM public.app_user_profile WHERE id='${ids.foreignPortal}' AND role='actor';
+        IF NOT FOUND THEN RAISE EXCEPTION 'missing profileless Realtime control fixture'; END IF;
+      END; $fixture$`, 'remove only the synthetic second portal profile');
+      for (const key of ['other', 'portal', 'foreignPortal']) {
+        const published = await rows(headers(key), PUBLIC);
+        assert.equal(published.length, 1, key + ' must see the published fixture');
+        assert.equal(published[0].status, 'published');
+        assert.equal(await json(await rpc(headers(key), 'can_read_object', { p_object_id: PUBLIC }),
+          key + ' published read authority'), true);
+        assert.equal(await canWrite(key, PUBLIC), false, key + ' must lack canonical write authority');
+      }
+      const identity = (key) => ({ id: ids[key], headers: headers(key) });
+      const { testRealtimeSecurity } = await import('../../bertel-tourism-ui/tests/current-rights/realtime-security.mjs');
+      await testRealtimeSecurity({ local, objectId: A, publishedId: PUBLIC, testObjectId: TEST, writer: identity('writer'),
+        foreign: identity('other'), testRealm: identity('tester'), portal: identity('portal'),
+        profileless: identity('foreignPortal'),
+        restoreUnaffiliatedProfile: async () => {
+          commit(`DO $fixture$ BEGIN
+            IF EXISTS (SELECT 1 FROM public.user_org_membership WHERE user_id='${ids.foreignPortal}' AND is_active) THEN
+              RAISE EXCEPTION 'unexpected active membership for the unaffiliated fixture';
+            END IF;
+            INSERT INTO public.app_user_profile(id,role,actor_id) VALUES('${ids.foreignPortal}','tourism_agent',NULL);
+          END; $fixture$`, 'restore only a default staff profile without granting an organization');
+          const auth = await signIn(ids.foreignPortal, foreignPortalCredentials);
+          assert.equal(await json(await rpc(auth, 'current_user_org_id'), 'unaffiliated current organization'), null);
+          assert.equal((await rows(auth, PUBLIC)).length, 1, 'unaffiliated user keeps published read access');
+          return { id: ids.foreignPortal, headers: auth };
+        },
+        markTesterAsDiscovery: async () => {
+          commit(`DO $fixture$ BEGIN
+            UPDATE auth.users SET raw_app_meta_data=jsonb_set(coalesce(raw_app_meta_data,'{}'::jsonb),
+              '{sandbox_discovery}','true'::jsonb)
+            WHERE id='${ids.tester}' AND NOT coalesce(raw_app_meta_data @> '{"sandbox_discovery":true}'::jsonb,false);
+            IF NOT FOUND THEN RAISE EXCEPTION 'missing unmarked synthetic tester'; END IF;
+          END; $fixture$`, 'mark only the existing test editor as public discovery');
+          const auth = await signIn(ids.tester, testerCredentials);
+          assert.ok(auth.authorization !== headers('tester').authorization, 'a fresh discovery JWT is required');
+          const encoded = auth.authorization.split('.')[1];
+          const claims = JSON.parse(Buffer.from(encoded, 'base64url'));
+          assert.equal(claims.app_metadata?.sandbox_discovery, true, 'fresh signed JWT carries the discovery provenance');
+          assert.equal(await json(await rpc(auth, 'current_user_test_realm'), 'discovery realm'), true);
+          assert.equal(await json(await rpc(auth, 'user_can_write_object_canonical', { p_object_id: TEST }),
+            'discovery fixture keeps the same test editor rights'), true);
+          return { id: ids.tester, headers: auth };
+        },
+        revokeWriter: async () => {
+          commit(`DO $fixture$ BEGIN
+            UPDATE public.user_org_membership SET is_active=false
+            WHERE id='00000000-0000-4000-a000-00000000ab11' AND user_id='${ids.writer}' AND is_active;
+            IF NOT FOUND THEN RAISE EXCEPTION 'missing realtime writer membership'; END IF;
+          END; $fixture$`, 'commit Realtime writer departure');
+          assert.deepEqual(await rows(headers('writer'), A), []);
+          assert.equal(await canWrite('writer', A), false);
+          const stillAuthenticated = await json(await local.request('/auth/v1/user', headers('writer'), undefined, 'GET'),
+            'the original GoTrue JWT still authenticates after the business-rights revocation');
+          assert.equal(stillAuthenticated.id, ids.writer);
+        },
+        diagnostic: (message) => t.diagnostic(message),
+      });
+      return;
+    }
+    if (browserWitness) {
+      await t.test('Chromium preserves independent bootstrap results and the lean partner path', async () => {
+        const { testBootstrapFallbacks } = await import('../../bertel-tourism-ui/tests/current-rights/bootstrap-fallbacks.mjs');
+        await testBootstrapFallbacks({ local, objectId: A, writer: { id: ids.writer, ...writerCredentials },
+          partner: { id: ids.portal, ...portalCredentials } });
+      });
+      assert.equal(await canWrite('other', A), false, 'the second account starts outside the publisher organization');
+      await t.test('Chromium creates a HOT draft and retries its first publication', async () => {
+        const { testCreatePublishBrowser } = await import('../../bertel-tourism-ui/tests/current-rights/create-publish-browser.mjs');
+        await testCreatePublishBrowser({ local, commit, writerId: ids.writer, ...writerCredentials });
+      });
+      const { testTaskMultipartHttp } = await import('../../bertel-tourism-ui/tests/current-rights/task-multipart-http.mjs');
+      await testTaskMultipartHttp({ local, commit, objectId: A, writerId: ids.writer,
+        writerAuthorization: headers('writer').authorization, foreignAuthorization: headers('other').authorization });
+      t.diagnostic('Disposable Next HTTP upload bounds, cross-route leases and task document writes passed.');
+      // Move the existing fixture membership only in this disposable browser run.
+      // Its editor role and cleanup both follow the same membership ID.
+      commit(`DO $fixture$ BEGIN
+        UPDATE public.user_org_membership SET org_object_id='ORGRUN999999AR01'
+        WHERE id='00000000-0000-4000-a000-00000000ab12' AND user_id='${ids.other}'
+          AND org_object_id='ORGRUN999999AR02' AND is_active;
+        IF NOT FOUND THEN RAISE EXCEPTION 'missing second browser membership'; END IF;
+      END; $fixture$`, 'give both browser accounts current rights on the same synthetic object');
+      assert.equal(await canWrite('writer', A), true);
+      assert.equal(await canWrite('other', A), true);
+      const { testEditorRaces } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
+      await testEditorRaces({ local, objectId: A, writerId: ids.writer, ...writerCredentials,
+        realmAccount: { userId: ids.tester, ...testerCredentials },
+        secondAccount: { id: ids.other, ...otherCredentials } });
+      t.diagnostic('Authenticated Chromium and PostgREST publication, restore, legal, account draft isolation and same-JWT Explorer realm switch passed.');
+      commit(`DO $fixture$ BEGIN
+        UPDATE public.user_org_membership SET org_object_id='ORGRUN999999AR02'
+        WHERE id='00000000-0000-4000-a000-00000000ab12' AND user_id='${ids.other}'
+          AND org_object_id='ORGRUN999999AR01' AND is_active;
+        IF NOT FOUND THEN RAISE EXCEPTION 'missing second browser membership'; END IF;
+      END; $fixture$`, 'restore the other organization before the document witness');
+      // The browser signs these users out globally. Start verified GoTrue sessions
+      // after that scenario, then keep these exact JWTs across the document revocation.
+      const [writer, other] = await Promise.all([
+        signIn(ids.writer, writerCredentials), signIn(ids.other, otherCredentials),
+      ]);
+      for (const [objectId, expected] of [[A, false], [B, true]]) {
+        assert.equal(await json(await rpc(other, 'user_can_write_object_canonical', { p_object_id: objectId }),
+          'fresh foreign canonical authority'), expected);
+      }
+      const { testDocumentLinks } = await import('../../bertel-tourism-ui/tests/current-rights/document-links.mjs');
+      await testDocumentLinks({ local, commit, objectId: A, documentId: DOC, writerId: ids.writer,
+        writerAuthorization: writer.authorization, foreignAuthorization: other.authorization });
+      t.diagnostic('Disposable document route verified canonical and legal-only signed bytes, foreign refusal and same-JWT revocation.');
+      return;
+    }
     const versionA = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${A}'`, 'private history witness'));
     const versionPublic = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${PUBLIC}'`, 'public history witness'));
     assert.ok(Number.isInteger(versionA) && versionA > 0 && Number.isInteger(versionPublic) && versionPublic > 0, 'history positives must be nonempty');
@@ -81,10 +486,90 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
     // Independent positive scopes; creator provenance and e-mail links are not grants.
     assert.ok((await rows(headers('writer'), A)).length === 1 && (await rows(headers('writer'), B)).length === 0);
     assert.ok((await rows(headers('other'), B)).length === 1 && (await rows(headers('other'), A)).length === 0);
+    const filtered = async (key, statuses) => {
+      const result = await json(await rpc(headers(key), 'get_filtered_object_ids', {
+        p_filters: {}, p_types: ['HOT'], p_status: statuses, p_search: null,
+      }), 'direct Explorer filter authority');
+      return result.map(({ object_id }) => object_id)
+        .filter((id) => [A, B, PUBLIC, TEST].includes(id)).sort();
+    };
+    assert.deepEqual(await filtered('writer', ['draft']), [A], 'direct RPC excludes the foreign draft');
+    assert.deepEqual(await filtered('other', ['draft', 'published']), [B, PUBLIC],
+      'direct RPC retains current own draft and real publication');
+    assert.deepEqual(await filtered('tester', ['draft', 'published']), [TEST],
+      'test JWT can only list the test corpus through the direct RPC');
     assert.ok(await canWrite('writer', A) === true && await canWrite('writer', B) === false);
     assert.ok(await canWrite('other', B) === true && await canWrite('other', A) === false);
     assert.ok(await json(await rpc(headers('writer'), 'is_platform_superuser'), 'current platform authority') === false,
       'a signed but stale app_metadata super_admin value must not become current platform authority');
+
+    // ACC-07: the export RPC itself must recheck the caller's current scope.
+    const actorA = '00000000-0000-4000-a000-00000000aa01';
+    const exportRun = randomUUID();
+    const exportContacts = (objectIds, runId, caller = 'writer') => rpc(headers(caller), 'export_actor_contacts', {
+      p_object_ids: objectIds, p_reason: 'Synthetic current-rights export', p_format: 'csv', p_export_run_id: runId,
+    });
+    assert.equal(local.sql(`SELECT count(DISTINCT r.object_id) FROM public.actor_object_role r
+      JOIN public.actor_channel c ON c.actor_id=r.actor_id
+      WHERE r.object_id IN ('${B}','${TEST}')`, 'foreign ORG and realm both have synthetic contacts'), '2');
+    const exported = await json(await exportContacts([A, B, TEST], exportRun), 'mixed contact export');
+    assert.equal(exported.export_run_id, exportRun);
+    assert.deepEqual(exported.authorized_object_ids, [A]);
+    assert.deepEqual(exported.denied_object_ids.sort(), [B, TEST].sort());
+    assert.deepEqual(exported.rows.map((row) => [row.object_id, row.actor_id,
+      row.contacts.map((contact) => [contact.kind_code, contact.value]).sort()]), [[A, actorA, [
+      ['email', 'current-rights-email@example.invalid'], ['email', 'current-rights-writer@example.invalid'],
+    ]]]);
+    assert.equal(exported.emitted_contact_count, 2);
+    const exportLogCount = (runId) => local.sql(`SELECT count(*) FROM public.actor_contact_export_log
+      WHERE export_run_id='${runId}'`, 'count exact synthetic export logs');
+    assert.equal(exportLogCount(exportRun), '1');
+    assert.equal(local.sql(`SELECT count(*) FROM public.actor_contact_export_log
+      WHERE export_run_id='${exportRun}' AND performed_by='${ids.writer}' AND object_ids=ARRAY['${A}']
+        AND denied_object_ids @> ARRAY['${B}','${TEST}'] AND cardinality(denied_object_ids)=2
+        AND actor_ids=ARRAY['${actorA}'::uuid] AND emitted_contact_count=2`, 'exact scoped contact export audit'), '1');
+
+    // Both objects have a publisher link to the tester's ORG. The secondary
+    // link leaves A in its real corpus because its primary ORG still defines it.
+    const testOrg = 'ORGRUN999999AR03';
+    const testActor = '00000000-0000-4000-a000-00000000aa03';
+    const realmExportRun = randomUUID();
+    commit(`INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)
+      SELECT '${A}','${testOrg}',id,false FROM public.ref_org_role WHERE code='publisher'`,
+    'attach the real-corpus witness to the same publisher ORG as the test-corpus witness');
+    try {
+      assert.deepEqual(JSON.parse(local.sql(`SELECT jsonb_object_agg(o.id,jsonb_build_array(o.is_test,l.is_primary))
+        FROM public.user_org_membership m
+        JOIN public.object_org_link l ON l.org_object_id=m.org_object_id
+        JOIN public.ref_org_role r ON r.id=l.role_id AND r.code='publisher'
+        JOIN public.object o ON o.id=l.object_id
+        WHERE m.user_id='${ids.tester}' AND m.is_active AND m.org_object_id='${testOrg}'
+          AND o.id IN ('${A}','${TEST}')`, 'same publisher ORG and opposite persisted corpora')),
+      { [A]: [false, false], [TEST]: [true, true] });
+      assert.equal(await json(await rpc(headers('tester'), 'current_user_test_realm'), 'export caller test corpus'), true);
+      assert.equal(await json(await rpc(headers('tester'), 'user_has_permission', {
+        p_permission_code: 'edit_canonical_when_publisher',
+      }), 'export caller still has general editor permission'), true);
+      const scoped = await json(await exportContacts([TEST, A], realmExportRun, 'tester'), 'same-ORG mixed-corpus contact export');
+      assert.equal(scoped.export_run_id, realmExportRun);
+      assert.deepEqual(scoped.authorized_object_ids, [TEST]);
+      assert.deepEqual(scoped.denied_object_ids, [A]);
+      assert.deepEqual(scoped.rows.map((row) => [row.object_id, row.actor_id,
+        row.contacts.map((contact) => [contact.kind_code, contact.value])]), [[TEST, testActor, [
+        ['email', 'current-rights-writer@example.invalid'],
+      ]]]);
+      assert.equal(scoped.emitted_contact_count, 1);
+      assert.equal(exportLogCount(realmExportRun), '1');
+      assert.equal(local.sql(`SELECT count(*) FROM public.actor_contact_export_log
+        WHERE export_run_id='${realmExportRun}' AND performed_by='${ids.tester}' AND object_ids=ARRAY['${TEST}']
+          AND denied_object_ids=ARRAY['${A}'] AND actor_ids=ARRAY['${testActor}'::uuid] AND emitted_contact_count=1`,
+      'exact same-ORG corpus-filtered contact export audit'), '1');
+    } finally {
+      commit(`DELETE FROM public.object_org_link WHERE object_id='${A}' AND org_object_id='${testOrg}'
+        AND NOT is_primary AND role_id=(SELECT id FROM public.ref_org_role WHERE code='publisher')`,
+      'remove the synthetic secondary publisher link');
+    }
+
     let changed = await json(await local.request(`/rest/v1/object?id=eq.${A}`, headers('writer'),
       { name: 'Real JWT current writer positive' }, 'PATCH', { prefer: 'return=representation' }), 'positive canonical DML');
     assert.ok(changed.length === 1 && changed[0].name === 'Real JWT current writer positive');
@@ -99,6 +584,10 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
     assert.ok(file.authorized === true && file.file?.path === 'synthetic-http.pdf');
     const foreignFile = await json(await rpc(headers('other'), 'get_object_document_file', { p_object_id: A, p_document_id: DOC }), 'foreign private pair');
     assert.ok(foreignFile.authorized === false && foreignFile.file === null);
+
+    await testOrgEnrichment();
+    t.diagnostic('Same-realm ORG enrichment and committed permission revocation passed with the same JWT.');
+    await testInitialPublication();
 
     commit("UPDATE public.user_org_business_role SET is_active=false WHERE membership_id='00000000-0000-4000-a000-00000000ab11'", 'committed demotion');
     assert.ok(await canWrite('writer', A) === false && (await rows(headers('writer'), A)).length === 1);
@@ -129,6 +618,11 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
       UPDATE public.user_org_membership SET is_active=false WHERE id='00000000-0000-4000-a000-00000000ab11'`, 'committed departure');
     assert.ok((await rows(headers('writer'), A)).length === 0 && await canWrite('writer', A) === false,
       'a former creator with a still-active individual permission must not invent publisher scope');
+    const refusedExportRun = randomUUID();
+    await denied(await exportContacts([A], refusedExportRun), 'contact export after committed departure');
+    assert.equal(exportLogCount(refusedExportRun), '0', 'the wholly refused export must add no audit entry');
+    assert.equal(exportLogCount(exportRun), '1', 'the original scoped export must retain its audit entry');
+    t.diagnostic('ACC-07: mixed export returned only authorized synthetic contacts and refused the same JWT after departure.');
     await denied(await rpc(headers('writer'), 'get_object_versions', { p_object_id: A, p_limit: 50, p_offset: 0 }), 'private history after departure');
     await denied(await rpc(headers('writer'), 'get_object_version_snapshot', { p_object_id: A, p_version_number: versionA }), 'private snapshot after departure');
     const departedFile = await json(await rpc(headers('writer'), 'get_object_document_file', { p_object_id: A, p_document_id: DOC }), 'private locator after departure');
@@ -153,6 +647,14 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
     const testChanged = await json(await local.request(`/rest/v1/object?id=eq.${TEST}`, headers('tester'),
       { name: 'Real JWT test realm positive' }, 'PATCH', { prefer: 'return=representation' }), 'test realm DML positive');
     assert.ok(testChanged.length === 1 && testChanged[0].is_test === true);
+    const spoofedRealm = await local.request(`/rest/v1/object?id=eq.${TEST}`, headers('tester'),
+      { name: 'Forbidden derived realm mutation', is_test: false }, 'PATCH', { prefer: 'return=minimal' });
+    assert.equal(spoofedRealm.status, 403, 'an otherwise authorized test writer cannot set is_test');
+    const realmError = await spoofedRealm.json();
+    assert.equal(realmError.code, '42501');
+    assert.equal(realmError.details, 'object_realm_is_derived');
+    assert.deepEqual((await rows(headers('tester'), TEST)).map(({ name, is_test }) => ({ name, is_test })),
+      [{ name: 'Real JWT test realm positive', is_test: true }], 'the refused PATCH preserves the name and derived realm');
     commit("UPDATE public.user_org_membership SET org_object_id='ORGRUN999999AR02' WHERE id='00000000-0000-4000-a000-00000000ab16'", 'committed realm scope switch');
     assert.ok(await json(await rpc(headers('tester'), 'current_user_test_realm'), 'current production realm') === false);
     assert.ok((await rows(headers('tester'), TEST)).length === 0 && (await rows(headers('tester'), PUBLIC)).length === 1);
@@ -168,7 +670,8 @@ test('real GoTrue JWTs enforce current multi-ORG/realm rights after committed de
     assert.ok(workspace.published.length === 2, 'portal positive must contain real synthetic media rows');
     const preview = await json(await rpc(headers('portal'), 'portal_photo_preview', { p_document_id: PHOTO }), 'private portal locator positive');
     assert.ok(preview.bucket === 'actor-documents' && typeof preview.path === 'string');
-    await json(await rpc(headers('portal'), 'submit_actor_fiche', { p_object_id: A, p_changes: proposal, p_note: 'Synthetic real-JWT request' }), 'portal proposal positive');
+    await testPortalMaskedModule();
+    t.diagnostic('ACC-08: a committed module mask refused the unchanged GoTrue JWT before any effects, and reopening allowed the identical submission.');
     const proposalHash = () => local.sql(`SELECT md5(jsonb_agg(to_jsonb(p) ORDER BY id)::text) FROM public.pending_change p WHERE object_id='${A}'`, 'proposal integrity');
     const beforeProposal = proposalHash();
     assert.ok(beforeProposal.length === 32, 'positive proposal must exist');

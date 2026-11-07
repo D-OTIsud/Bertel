@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { routeFailure } from '../_route-failure';
 import { PRIVATE_BUCKET, callerClient, type ServerClient } from '../_document-auth';
 
 // Autorisation PROPRE aux pièces jointes de tâche, partagée par les trois verbes de
@@ -69,7 +70,7 @@ export async function resolveLinkedDocument(
     .eq('document_id', documentId)
     .maybeSingle();
   if (linkError) {
-    return { ok: false, response: NextResponse.json({ error: 'link_lookup_failed', detail: linkError.message }, { status: 500 }) };
+    return { ok: false, response: routeFailure('task-document.resolve', 'link_lookup_failed') };
   }
   if (!link) return { ok: false, response: NextResponse.json({ error: 'not_found' }, { status: 404 }) };
 
@@ -79,7 +80,7 @@ export async function resolveLinkedDocument(
     .eq('id', documentId)
     .maybeSingle();
   if (documentError) {
-    return { ok: false, response: NextResponse.json({ error: 'document_lookup_failed', detail: documentError.message }, { status: 500 }) };
+    return { ok: false, response: routeFailure('task-document.resolve', 'document_lookup_failed') };
   }
 
   const bucket = String((document as { storage_bucket?: string } | null)?.storage_bucket ?? '');

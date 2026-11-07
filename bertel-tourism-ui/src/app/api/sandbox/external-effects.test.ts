@@ -6,7 +6,7 @@ import { POST as extract } from '../menu/extract/route';
 import { POST as sendList } from '../lists/send/route';
 import { POST as drain } from '../crm/notify-drain/route';
 import { POST as testAi } from '../admin/ai-config/test/route';
-import { POST as invite } from '../admin/invite/route';
+import { POST as invite } from '../admin/invite/v2/route';
 import { POST as actorAccess } from '../crm/actor-access/route';
 import { GET as availability } from '../service-availability/route';
 import { getServerSupabaseClient } from '@/lib/supabase-server';

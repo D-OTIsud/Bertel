@@ -210,7 +210,7 @@ export default function LoginPage() {
 
       {!demoMode ? (
         <>
-          <form onSubmit={handleSubmit(onEmailSubmit)} className="auth-form" noValidate>
+          <form method="dialog" onSubmit={handleSubmit(onEmailSubmit)} className="auth-form" noValidate>
             <div className="auth-field">
               <label htmlFor="login-email">Adresse e-mail</label>
               <Input

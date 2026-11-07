@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { readServerEnv } from './env.server';
+import { supabaseServerFetch } from './supabase-fetch.server';
 
 let serverClient: SupabaseClient | null = null;
 
@@ -16,6 +17,7 @@ export function getServerSupabaseClient(): SupabaseClient | null {
   if (!url || !supabaseServiceRoleKey) return null;
   serverClient = createClient(url, supabaseServiceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: supabaseServerFetch },
   });
   return serverClient;
 }

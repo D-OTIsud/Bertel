@@ -13,11 +13,17 @@ jest.mock('sonner', () => ({ toast: { error: jest.fn(), success: jest.fn() } }))
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const rbac = require('@/services/rbac') as { grantUserPermission: jest.Mock; revokeUserPermission: jest.Mock };
 
+const HIDDEN_PERMISSIONS = [
+  { code: 'edit_hours', name: 'Modifier les horaires', category: 'content' },
+  { code: 'edit_pricing', name: 'Modifier les tarifs', category: 'content' },
+  { code: 'edit_gallery', name: 'Modifier la galerie', category: 'media' },
+  { code: 'attach_documents', name: 'Attacher des documents', category: 'media' },
+];
 const CATALOG = [
   { code: 'write_crm_notes', name: 'Écrire dans le CRM', category: 'crm' },
-  { code: 'edit_hours', name: 'Horaires', category: 'content' },
+  ...HIDDEN_PERMISSIONS,
 ];
-const MATRIX = { viewer: [], editor: ['write_crm_notes'] };
+const MATRIX = { viewer: [], editor: ['write_crm_notes', ...HIDDEN_PERMISSIONS.map(({ code }) => code)] };
 
 const base: OrgMember = {
   membershipId: 'm1', userId: 'u1', email: 'isabelle@example.re', displayName: 'Isabelle',
@@ -71,8 +77,18 @@ describe('MemberPermissionsDrawer — §227', () => {
 
   it('cocher une exception individuelle appelle le bon octroi', async () => {
     renderDrawer(base);
-    await userEvent.click(screen.getByRole('checkbox', { name: /Horaires/ }));
-    expect(rbac.grantUserPermission).toHaveBeenCalledWith('u1', 'edit_hours');
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Écrire dans le CRM' }));
+    expect(rbac.grantUserPermission).toHaveBeenCalledWith('u1', 'write_crm_notes');
+  });
+
+  it('masque les quatre droits du catalogue même déjà accordés au membre et à son rôle', () => {
+    renderDrawer({ ...base, businessRoleCode: 'editor', permissionCodes: HIDDEN_PERMISSIONS.map(({ code }) => code) });
+    for (const { name } of HIDDEN_PERMISSIONS) {
+      expect(screen.queryAllByText(name)).toHaveLength(0);
+    }
+    expect(screen.getByRole('checkbox', { name: /Écrire dans le CRM/ })).toBeInTheDocument();
+    expect(rbac.grantUserPermission).not.toHaveBeenCalled();
+    expect(rbac.revokeUserPermission).not.toHaveBeenCalled();
   });
 
   it('le réglage des rôles est proposé en lien, jamais en case dans ce tiroir', async () => {

@@ -1,6 +1,6 @@
 // Découpe une saisie libre (une adresse par ligne, ou séparées par virgule / point-virgule /
 // espace) en e-mails normalisés, dédupliqués, et sépare les valides des invalides.
-// Même regex que la garde serveur de /api/admin/invite (source unique du critère de validité).
+// Même regex que la garde serveur de /api/admin/invite/v2.
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export interface ParsedInviteEmails {

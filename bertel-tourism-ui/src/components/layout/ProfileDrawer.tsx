@@ -1,5 +1,6 @@
 'use client';
 import { crmQueryKeys } from '../../lib/crm-query-keys';
+import { realtimeScopeKey } from '../../lib/realtime-scope';
 
 
 // Hub personnel (spec 2026-07-03) — le tiroir de la pastille utilisateur devient un espace
@@ -43,6 +44,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
   const sessionStatus = useSessionStore((state) => state.status);
   const demoMode = useSessionStore((state) => state.demoMode);
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
+  const showLivePresence = useSessionStore((state) => state.demoMode || realtimeScopeKey(state) !== null);
   const networkStatus = useUiStore((state) => state.networkStatus);
   const liveMembers = useUiStore((state) => state.liveMembers);
   const [editOpen, setEditOpen] = useState(false);
@@ -94,7 +96,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
               </button>
             </div>
 
-            {networkStatus !== 'connected' ? (
+            {showLivePresence && networkStatus !== 'connected' ? (
               <p className="profile-drawer__network" role="status">
                 <WifiOff className="h-4 w-4" aria-hidden />
                 {networkStatus === 'degraded'

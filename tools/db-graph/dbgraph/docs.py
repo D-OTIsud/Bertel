@@ -6,11 +6,18 @@ defined and not the inline `--` header blocks that often document RPC behavior.
 import re
 
 
-def _source_path(path):
-    cleaned = path.replace("\\", "/")
-    for marker in ("Base de donnée DLL et API/", "tools/db-graph/"):
-        if marker in cleaned:
-            return marker + cleaned.split(marker, 1)[1]
+def sql_source_path(path):
+    """Keep repository paths and omit local directories from public output."""
+    cleaned = str(path).replace("\\", "/")
+    for directory in ("Base de donnée DLL et API/", "supabase/migrations/", "tools/db-graph/"):
+        _, marker, relative = cleaned.rpartition("/" + directory)
+        if marker:
+            return directory + relative
+    if re.match(r"^[A-Za-z]:", cleaned):
+        cleaned = cleaned[2:]
+        return cleaned.rsplit("/", 1)[-1]
+    if cleaned.startswith("/"):
+        return cleaned.rsplit("/", 1)[-1]
     return cleaned
 
 
@@ -75,7 +82,7 @@ def _index_definitions(sql_text, path):
         doc = "\n".join(reversed(block)) if block else None
         schema = m.group(1).lower()
         name = m.group(2).lower()
-        source = {"path": _source_path(path), "line": i + 1}
+        source = {"path": sql_source_path(path), "line": i + 1}
         signature = _entry_signature(sql_text, offset + m.end(), name)
         entry = {"doc": doc, "source": source, "signature": signature}
         by_name.setdefault(("function", schema, name), []).append(entry)

@@ -82,8 +82,8 @@ BEGIN
   ASSERT api.get_object_version_snapshot('HOTRUN999999AR03',v_public_min) ? 'name';
   RESET ROLE;
 
-  v_proposal:=jsonb_build_array(jsonb_build_object('target_table','object_description','target_pk',NULL,'action','update',
-    'payload',jsonb_build_object('chapo','Synthetic current portal proposal'),
+  v_proposal:=jsonb_build_array(jsonb_build_object('target_table','contact_channel','target_pk',NULL,'action','update',
+    'payload',jsonb_build_object('objectItems','[]'::jsonb),
     'metadata',jsonb_build_object('rpc',NULL,'section','contacts','manual_apply',true,'field','Contacts','before','a','after','b')));
   PERFORM set_config('request.jwt.claims',v_portal,true); SET LOCAL ROLE authenticated;
   ASSERT api.user_can_write_object_canonical('HOTRUN999999AR01') IS FALSE;

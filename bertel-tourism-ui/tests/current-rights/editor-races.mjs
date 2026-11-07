@@ -16,6 +16,10 @@ const editorRpcKinds = new Map([
   ['/rest/v1/rpc/get_object_with_deep_data', 'reread'],
   ['/rest/v1/rpc/get_object_resource', 'reread'],
 ]);
+const legalRpcKinds = new Map([
+  ['/rest/v1/rpc/get_object_legal_data', 'legal-read'],
+  ['/rest/v1/rpc/get_object_legal_compliance', 'legal-summary'],
+]);
 
 async function startApp(local) {
   const socket = createServer();
@@ -79,6 +83,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
   const patches = [];
   let publishCalls = 0;
   let restoreCalls = 0;
+  const legalRecordId = '00000000-0000-4000-a000-00000000ae43';
+  let legalWitness = false;
+  let legalReads = 0;
+  let legalSummaryFailures = 0;
+  let legalWrites = 0;
   function hold(kind) {
     const gate = { observed: Promise.withResolvers(), release: Promise.withResolvers() };
     holds.set(kind, gate);
@@ -136,8 +145,12 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         if (request.method() === 'PATCH' && url.pathname === '/rest/v1/object' && url.searchParams.get('id') === 'eq.' + objectId) {
           kind = 'patch';
           patches.push(request.postDataJSON().name);
+        } else if (legalWitness && request.method() === 'PATCH' && url.pathname === '/rest/v1/object_legal'
+          && url.searchParams.get('id') === 'eq.' + legalRecordId && request.postDataJSON()?.object_id === objectId) {
+          kind = 'legal-write';
         } else if (request.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
-          if (editorRpcKinds.has(url.pathname) && request.postDataJSON()?.p_object_id === objectId) kind = editorRpcKinds.get(url.pathname);
+          const rpcKind = editorRpcKinds.get(url.pathname) ?? (legalWitness ? legalRpcKinds.get(url.pathname) : undefined);
+          if (rpcKind && request.postDataJSON()?.p_object_id === objectId) kind = rpcKind;
           if (kind === 'publish') publishCalls += 1;
           if (kind === 'restore') restoreCalls += 1;
         }
@@ -154,11 +167,23 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           assert.ok(headers.apikey === local.anonymous.apikey && bearer?.[0] === 'Bearer'
             && claims.role === 'authenticated' && claims.sub === writerId, 'browser must use the exact synthetic user JWT and anonymous API key');
           failureStage = 'content-profile';
-          if (kind !== 'patch') assert.equal(headers['content-profile'], 'api');
+          if (kind === 'legal-write') assert.equal(headers['content-profile'], 'public');
+          else if (kind !== 'patch') assert.equal(headers['content-profile'], 'api');
         }
         failureStage = 'response';
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
         assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
+        if (kind === 'legal-summary') {
+          assert.ok(response.ok(), 'authorized legal summary must work before fault injection');
+          legalSummaryFailures += 1;
+          return await route.fulfill({ status: 503, headers: { 'access-control-allow-origin': app.origin },
+            json: { code: 'FQ08', message: 'Synthetic compliance summary unavailable' } });
+        }
+        if (kind === 'legal-read' || kind === 'legal-write') {
+          assert.ok(response.ok(), kind + ' must reach the real PostgREST fixture successfully');
+          if (kind === 'legal-read') legalReads += 1;
+          else legalWrites += 1;
+        }
         const reread = kind === 'reread' ? holds.get(kind) : undefined;
         if (reread && response.ok()) {
           // Save and publish also refetch the workspace. Hold only the restored resource.
@@ -257,6 +282,35 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     assert.equal(restoreCalls, 1);
     assert.equal(patches.length, 2);
     assert.equal(publishCalls, 1);
+
+    // Seed after the restore assertions so the original version remains unchanged.
+    local.sql(`BEGIN;
+      SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
+      INSERT INTO public.org_role_permission(org_object_id,role_id,permission_id,is_active,granted_by)
+        SELECT 'ORGRUN999999AR01',role_def.id,permission.id,true,'00000000-0000-4000-a000-00000000ae15'
+        FROM public.ref_org_business_role role_def CROSS JOIN public.ref_permission permission
+        WHERE role_def.code='editor' AND permission.code='manage_legal_compliance'
+        ON CONFLICT ON CONSTRAINT org_role_permission_uniq DO UPDATE SET is_active=true;
+      INSERT INTO public.object_legal(id,object_id,type_id,value,validity_mode)
+        SELECT '${legalRecordId}','${objectId}',id,'{"value":"Synthetic legal company before"}'::jsonb,'forever'
+        FROM public.ref_legal_type WHERE code='raison_sociale';
+      COMMIT;`, 'seed the synthetic legal record and its current organization right');
+    const legalValue = () => local.sql(`SELECT value->>'value' FROM public.object_legal
+      WHERE id='${legalRecordId}' AND object_id='${objectId}'`, 'read the exact synthetic legal record');
+    assert.equal(legalValue(), 'Synthetic legal company before');
+    legalWitness = true;
+    await page.reload();
+    const legal = page.locator('#section-18');
+    const company = legal.getByLabel('Raison sociale', { exact: true });
+    await assertion(legal.getByText('Résumé de conformité indisponible. Les données juridiques restent modifiables.', { exact: true })).toBeVisible();
+    await assertion(company).toHaveValue('Synthetic legal company before');
+    assert.ok(legalReads > 0 && legalSummaryFailures > 0, 'legal data must be read while the summary fails in the browser');
+    await company.fill('Synthetic legal company saved');
+    await assertion(save).toBeEnabled();
+    await save.click();
+    await assertion.poll(() => legalWrites).toBe(1);
+    await assertion.poll(legalValue).toBe('Synthetic legal company saved');
+    assert.equal(patches.length, 2);
   } catch (error) {
     throw routeFailure ?? error;
   } finally {

@@ -85,8 +85,8 @@
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `ext_actor_read` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR ( SELECT api.is_platform_superuser() AS is_platform_superuser) OR (id = ( SELECT auth.uid() AS uid)) OR (EXISTS ( SELECT 1
-   FROM (actor_object_role aor
-     JOIN object o ON ((o.id = aor.object_id)))
+   FROM (public.actor_object_role aor
+     JOIN public.object o ON ((o.id = aor.object_id)))
   WHERE ((aor.actor_id = actor.id) AND api.can_read_extended(o.id)))))`
 
 ## `public.actor_channel`
@@ -164,7 +164,7 @@
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_audit_criteria_read` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM audit_template t
+   FROM public.audit_template t
   WHERE ((t.id = audit_criteria.template_id) AND ((t.is_active = true) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))))))`
 
 ## `public.audit_result`
@@ -188,8 +188,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_contact_channel` — roles ['public']
   - `(((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = contact_channel.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = contact_channel.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_contact_channel` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -258,86 +258,84 @@
 ## `public.media`
 - **DELETE** `canonical_del_media` — roles ['public']
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id))))))`
 - **DELETE RESTRICTIVE** `gallery_photo_no_direct_delete` — roles ['anon', 'authenticated']
   - `(NOT ((object_id IS NOT NULL) AND (place_id IS NULL) AND (media_type_id IN ( SELECT ref_code_media_type.id
-   FROM ref_code_media_type
+   FROM public.ref_code_media_type
   WHERE (ref_code_media_type.code = 'photo'::text)))))`
 - **INSERT** `canonical_ins_media` — roles ['public']
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id))))))`
 - **INSERT RESTRICTIVE** `gallery_photo_no_direct_insert` — roles ['anon', 'authenticated']
   - `(NOT ((object_id IS NOT NULL) AND (place_id IS NULL) AND (media_type_id IN ( SELECT ref_code_media_type.id
-   FROM ref_code_media_type
+   FROM public.ref_code_media_type
   WHERE (ref_code_media_type.code = 'photo'::text)))))`
 - **SELECT** `correction_read_root_gallery` — roles ['authenticated']
   - `((place_id IS NULL) AND api.can_read_object_for_correction(object_id))`
 - **SELECT** `read_media` — roles ['public']
   - `(((is_published IS TRUE) AND ((visibility IS NULL) OR (visibility = 'public'::text)) AND (((object_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = media.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM (object_place p
-   …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM public.object o
+  WHERE ((o.id = media.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
+   FROM (pub …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE** `canonical_upd_media` — roles ['public']
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id)))))) | (((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object_place p
-  WHE …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM public.object …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE RESTRICTIVE** `gallery_photo_no_direct_update` — roles ['anon', 'authenticated']
   - `(NOT ((object_id IS NOT NULL) AND (place_id IS NULL) AND (media_type_id IN ( SELECT ref_code_media_type.id
-   FROM ref_code_media_type
+   FROM public.ref_code_media_type
   WHERE (ref_code_media_type.code = 'photo'::text))))) | (NOT ((object_id IS NOT NULL) AND (place_id IS NULL) AND (media_type_id IN ( SELECT ref_code_media_type.id
-   FROM ref_code_media_type
+   FROM public.ref_code_media_type
   WHERE (ref_code_media_type.code = 'photo'::text)))))`
 
 ## `public.media_tag`
 - **DELETE** `canonical_del_media_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM media m
+   FROM public.media m
   WHERE ((m.id = media_tag.media_id) AND (((m.object_id IS NOT NULL) AND api.user_can_write_object_canonical(m.object_id)) OR ((m.place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-           FROM object_place p
+           FROM public.object_place p
           WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id)))))))))`
 - **INSERT** `canonical_ins_media_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM media m
+   FROM public.media m
   WHERE ((m.id = media_tag.media_id) AND (((m.object_id IS NOT NULL) AND api.user_can_write_object_canonical(m.object_id)) OR ((m.place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-           FROM object_place p
+           FROM public.object_place p
           WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id)))))))))`
 - **SELECT** `read_media_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (media m
-     LEFT JOIN object o ON ((o.id = m.object_id)))
+   FROM (public.media m
+     LEFT JOIN public.object o ON ((o.id = m.object_id)))
   WHERE ((m.id = media_tag.media_id) AND (((m.is_published IS TRUE) AND (COALESCE(o.is_test, false) = ( SELECT api.current_user_test_realm() AS current_user_test_realm))) OR api.can_read_extended(m.object_id)))))`
 - **UPDATE** `canonical_upd_media_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM media m
+   FROM public.media m
   WHERE ((m.id = media_tag.media_id) AND (((m.object_id IS NOT NULL) AND api.user_can_write_object_canonical(m.object_id)) OR ((m.place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-           FROM object_place p
+           FROM public.object_place p
           WHERE ((p.id = m.place_id) AND api.user_can_write_object_canonical(p.object_id))))))))) | (EXISTS ( SELECT 1
-   FROM media m
-  WHERE ((m.id = media_t …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM public.media m
+  W …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.meeting_room_equipment`
 - **DELETE** `canonical_del_meeting_room_equipment` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_meeting_room omr
+   FROM public.object_meeting_room omr
   WHERE ((omr.id = meeting_room_equipment.room_id) AND api.user_can_write_object_canonical(omr.object_id))))`
 - **INSERT** `canonical_ins_meeting_room_equipment` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_meeting_room omr
+   FROM public.object_meeting_room omr
   WHERE ((omr.id = meeting_room_equipment.room_id) AND api.user_can_write_object_canonical(omr.object_id))))`
 - **SELECT** `read_meeting_room_equipment` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_meeting_room omr
+   FROM public.object_meeting_room omr
   WHERE ((omr.id = meeting_room_equipment.room_id) AND api.can_read_object(omr.object_id))))`
 - **UPDATE** `canonical_upd_meeting_room_equipment` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_meeting_room omr
+   FROM public.object_meeting_room omr
   WHERE ((omr.id = meeting_room_equipment.room_id) AND api.user_can_write_object_canonical(omr.object_id)))) | (EXISTS ( SELECT 1
-   FROM object_meeting_room omr
+   FROM public.object_meeting_room omr
   WHERE ((omr.id = meeting_room_equipment.room_id) AND api.user_can_write_object_canonical(omr.object_id))))`
 
 ## `public.metric_snapshot`
@@ -354,7 +352,7 @@
 - **SELECT** `extended_objects_org_actor` — roles ['public']
   - `(id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids))`
 - **SELECT** `public_objects_published` — roles ['public']
-  - `((status = 'published'::object_status) AND (is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))`
+  - `((status = 'published'::public.object_status) AND (is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `owner_update_object` — roles ['public']
@@ -369,8 +367,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_accommodation_unit_type` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_accommodation_unit_type.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_accommodation_unit_type.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_accommodation_unit_type` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -381,8 +379,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_act` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_act.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_act.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_act` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -393,8 +391,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_amenity` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_amenity.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_amenity.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_amenity` — roles ['public']
@@ -407,8 +405,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_capacity` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_capacity.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_capacity.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_capacity` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -419,8 +417,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_classification` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_classification.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_classification.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_classification` — roles ['public']
@@ -433,8 +431,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_cuisine_type` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_cuisine_type.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_cuisine_type.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_cuisine_type` — roles ['public']
@@ -451,8 +449,8 @@
   - `(api.is_object_owner(object_id) OR (api.user_can_write_canonical(object_id) AND (org_object_id IS NULL)))`
 - **SELECT** `read_object_description` — roles ['public']
   - `(((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_description.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) AND (visibility = 'public'::text)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_description.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) AND (visibility = 'public'::text)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_description` — roles ['public']
@@ -475,8 +473,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_document` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_document.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_document.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_document` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -487,8 +485,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_environment_tag` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_environment_tag.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_environment_tag.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_environment_tag` — roles ['public']
@@ -513,8 +511,8 @@
   - `api.can_read_extended(object_id)`
 - **SELECT** `pub_fma_published` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_fma.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))`
+   FROM public.object o
+  WHERE ((o.id = object_fma.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))`
 - **UPDATE** `canonical_upd_object_fma` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -525,8 +523,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_fma_occurrence` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_fma_occurrence.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_fma_occurrence.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_fma_occurrence` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -547,8 +545,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_hotel_positioning` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_hotel_positioning.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_hotel_positioning.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_hotel_positioning` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -561,8 +559,8 @@
   - `api.can_read_extended(object_id)`
 - **SELECT** `pub_iti_published` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_iti.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))`
+   FROM public.object o
+  WHERE ((o.id = object_iti.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))`
 - **UPDATE** `canonical_upd_object_iti` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -573,8 +571,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_iti_associated_object` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_iti_associated_object.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_iti_associated_object.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_iti_associated_object` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -585,8 +583,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_iti_info` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_iti_info.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_iti_info.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_iti_info` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -597,8 +595,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_iti_practice` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_iti_practice.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_iti_practice.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_iti_practice` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -609,8 +607,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_iti_profile` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_iti_profile.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_iti_profile.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_iti_profile` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -621,8 +619,8 @@
   - `api.user_can_write_object_canonical(parent_object_id)`
 - **SELECT** `read_object_iti_section` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_iti_section.parent_object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (parent_object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_iti_section.parent_object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (parent_object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_iti_section` — roles ['public']
   - `api.user_can_write_object_canonical(parent_object_id) | api.user_can_write_object_canonical(parent_object_id)`
 
@@ -633,29 +631,29 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_iti_stage` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_iti_stage.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_iti_stage.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_iti_stage` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.object_iti_stage_media`
 - **DELETE** `canonical_del_object_iti_stage_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_iti_stage ois
+   FROM public.object_iti_stage ois
   WHERE ((ois.id = object_iti_stage_media.stage_id) AND api.user_can_write_object_canonical(ois.object_id))))`
 - **INSERT** `canonical_ins_object_iti_stage_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_iti_stage ois
+   FROM public.object_iti_stage ois
   WHERE ((ois.id = object_iti_stage_media.stage_id) AND api.user_can_write_object_canonical(ois.object_id))))`
 - **SELECT** `read_object_iti_stage_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_iti_stage ois
+   FROM public.object_iti_stage ois
   WHERE ((ois.id = object_iti_stage_media.stage_id) AND api.can_read_object(ois.object_id))))`
 - **UPDATE** `canonical_upd_object_iti_stage_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_iti_stage ois
+   FROM public.object_iti_stage ois
   WHERE ((ois.id = object_iti_stage_media.stage_id) AND api.user_can_write_object_canonical(ois.object_id)))) | (EXISTS ( SELECT 1
-   FROM object_iti_stage ois
+   FROM public.object_iti_stage ois
   WHERE ((ois.id = object_iti_stage_media.stage_id) AND api.user_can_write_object_canonical(ois.object_id))))`
 
 ## `public.object_language`
@@ -665,8 +663,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_language` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_language.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_language.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_language` — roles ['public']
@@ -693,21 +691,21 @@
 ## `public.object_location`
 - **DELETE** `canonical_del_object_location` — roles ['public']
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = object_location.place_id) AND api.user_can_write_object_canonical(p.object_id))))))`
 - **INSERT** `canonical_ins_object_location` — roles ['public']
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = object_location.place_id) AND api.user_can_write_object_canonical(p.object_id))))))`
 - **SELECT** `read_object_location` — roles ['public']
   - `api.can_read_object(COALESCE(object_id, ( SELECT op.object_id
-   FROM object_place op
+   FROM public.object_place op
   WHERE (op.id = object_location.place_id))))`
 - **UPDATE** `canonical_upd_object_location` — roles ['public']
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = object_location.place_id) AND api.user_can_write_object_canonical(p.object_id)))))) | (((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
-   FROM object_pla …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM pub …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_meeting_room`
 - **DELETE** `canonical_del_object_meeting_room` — roles ['public']
@@ -716,8 +714,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_meeting_room` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_meeting_room.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_meeting_room.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_meeting_room` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -730,8 +728,8 @@
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.can_read_extended(COALESCE(object_id, org_object_id)))`
 - **SELECT** `pub_object_membership_read` — roles ['public']
   - `((object_id IS NOT NULL) AND (status = ANY (ARRAY['invoiced'::text, 'paid'::text])) AND ((starts_at IS NULL) OR (starts_at <= CURRENT_DATE)) AND ((ends_at IS NULL) OR (ends_at >= CURRENT_DATE)) AND (EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_membership.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_tes …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM public.object o
+  WHERE ((o.id = object_membership.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS cu …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE** `canonical_upd_object_membership` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.user_can_write_object_canonical(COALESCE(object_id, org_object_id))) | ((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.user_can_write_object_canonical(COALESCE(object_id, org_object_id)))`
 
@@ -742,8 +740,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_menu` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_menu.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_menu.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_menu` — roles ['public']
@@ -752,128 +750,128 @@
 ## `public.object_menu_item`
 - **DELETE** `canonical_del_object_menu_item` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_menu om
+   FROM public.object_menu om
   WHERE ((om.id = object_menu_item.menu_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **INSERT** `canonical_ins_object_menu_item` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_menu om
+   FROM public.object_menu om
   WHERE ((om.id = object_menu_item.menu_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **SELECT** `read_object_menu_item` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_menu om
+   FROM public.object_menu om
   WHERE ((om.id = object_menu_item.menu_id) AND api.can_read_object(om.object_id))))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_menu_item` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_menu om
+   FROM public.object_menu om
   WHERE ((om.id = object_menu_item.menu_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1
-   FROM object_menu om
+   FROM public.object_menu om
   WHERE ((om.id = object_menu_item.menu_id) AND api.user_can_write_object_canonical(om.object_id))))`
 
 ## `public.object_menu_item_allergen`
 - **DELETE** `canonical_del_object_menu_item_allergen` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **INSERT** `canonical_ins_object_menu_item_allergen` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **SELECT** `read_object_menu_item_allergen` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.can_read_object(om.object_id))))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_menu_item_allergen` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
-  WHERE ((omi.id = object_menu_item_allergen.menu_item_id) AND api.user_can_wr …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
+  WHERE ((omi.id = object_menu_item_allergen.menu_ …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_menu_item_cuisine_type`
 - **DELETE** `canonical_del_object_menu_item_cuisine_type` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **INSERT** `canonical_ins_object_menu_item_cuisine_type` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **SELECT** `read_object_menu_item_cuisine_type` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.can_read_object(om.object_id))))`
 - **UPDATE** `canonical_upd_object_menu_item_cuisine_type` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
-  WHERE ((omi.id = object_menu_item_cuisine_type.menu_item_id) AND api.use …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
+  WHERE ((omi.id = object_menu_item_cuisine_ty …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_menu_item_dietary_tag`
 - **DELETE** `canonical_del_object_menu_item_dietary_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **INSERT** `canonical_ins_object_menu_item_dietary_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **SELECT** `read_object_menu_item_dietary_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.can_read_object(om.object_id))))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_menu_item_dietary_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
-  WHERE ((omi.id = object_menu_item_dietary_tag.menu_item_id) AND api.user_ …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
+  WHERE ((omi.id = object_menu_item_dietary_tag …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_menu_item_media`
 - **DELETE** `canonical_del_object_menu_item_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **INSERT** `canonical_ins_object_menu_item_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_object_canonical(om.object_id))))`
 - **SELECT** `read_object_menu_item_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.can_read_object(om.object_id))))`
 - **UPDATE** `canonical_upd_object_menu_item_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
   WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_object_canonical(om.object_id)))) | (EXISTS ( SELECT 1
-   FROM (object_menu_item omi
-     JOIN object_menu om ON ((om.id = omi.menu_id)))
-  WHERE ((omi.id = object_menu_item_media.menu_item_id) AND api.user_can_write_ob …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM (public.object_menu_item omi
+     JOIN public.object_menu om ON ((om.id = omi.menu_id)))
+  WHERE ((omi.id = object_menu_item_media.menu_item_i …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_org_link`
 - **DELETE** `canonical_del_object_org_link` — roles ['public']
@@ -882,8 +880,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_org_link` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_org_link.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_org_link.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_org_link` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -894,8 +892,8 @@
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `read_object_origin` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_origin.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_origin.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `admin_upd_object_origin` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser()) | ((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
@@ -906,8 +904,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_payment_method` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_payment_method.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_payment_method.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
 - **UPDATE** `canonical_upd_object_payment_method` — roles ['public']
@@ -920,8 +918,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_pet_policy` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_pet_policy.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_pet_policy.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_pet_policy` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -932,29 +930,29 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_place` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_place.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_place.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_place` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.object_place_description`
 - **DELETE** `canonical_del_object_place_description` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = object_place_description.place_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **INSERT** `canonical_ins_object_place_description` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = object_place_description.place_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **SELECT** `read_object_place_description` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = object_place_description.place_id) AND api.can_read_object(p.object_id))))`
 - **UPDATE** `canonical_upd_object_place_description` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = object_place_description.place_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1
-   FROM object_place p
+   FROM public.object_place p
   WHERE ((p.id = object_place_description.place_id) AND api.user_can_write_object_canonical(p.object_id))))`
 
 ## `public.object_price`
@@ -964,29 +962,29 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_price` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_price.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_price.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_price` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.object_price_period`
 - **DELETE** `canonical_del_object_price_period` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_price op
+   FROM public.object_price op
   WHERE ((op.id = object_price_period.price_id) AND api.user_can_write_object_canonical(op.object_id))))`
 - **INSERT** `canonical_ins_object_price_period` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_price op
+   FROM public.object_price op
   WHERE ((op.id = object_price_period.price_id) AND api.user_can_write_object_canonical(op.object_id))))`
 - **SELECT** `read_object_price_period` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_price op
+   FROM public.object_price op
   WHERE ((op.id = object_price_period.price_id) AND api.can_read_object(op.object_id))))`
 - **UPDATE** `canonical_upd_object_price_period` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_price op
+   FROM public.object_price op
   WHERE ((op.id = object_price_period.price_id) AND api.user_can_write_object_canonical(op.object_id)))) | (EXISTS ( SELECT 1
-   FROM object_price op
+   FROM public.object_price op
   WHERE ((op.id = object_price_period.price_id) AND api.user_can_write_object_canonical(op.object_id))))`
 
 ## `public.object_private_description`
@@ -1006,8 +1004,8 @@
   - `api.user_can_write_object_canonical(source_object_id)`
 - **SELECT** `read_object_relation` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_relation.source_object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (source_object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_relation.source_object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (source_object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_relation` — roles ['public']
   - `api.user_can_write_object_canonical(source_object_id) | api.user_can_write_object_canonical(source_object_id)`
 
@@ -1018,8 +1016,8 @@
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `read_object_review` — roles ['public']
   - `(((is_published IS TRUE) AND (EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_review.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_review.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `admin_upd_object_review` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser()) | ((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
@@ -1030,78 +1028,75 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_room_type` — roles ['public']
   - `(((is_published IS TRUE) AND (EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_room_type.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_room_type.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_room_type` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.object_room_type_amenity`
 - **DELETE** `canonical_del_object_room_type_amenity` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_amenity.room_type_id) AND api.user_can_write_object_canonical(rt.object_id))))`
 - **INSERT** `canonical_ins_object_room_type_amenity` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_amenity.room_type_id) AND api.user_can_write_object_canonical(rt.object_id))))`
 - **SELECT** `read_object_room_type_amenity` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM (object_room_type rt
-     JOIN object o ON ((o.id = rt.object_id)))
-  WHERE ((rt.id = object_room_type_amenity.room_type_id) AND (rt.is_published IS TRUE) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (room_type_id IN ( SELECT rt.id
-   FROM object_room_type rt
-  WHERE (rt.object_i …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM (public.object_room_type rt
+     JOIN public.object o ON ((o.id = rt.object_id)))
+  WHERE ((rt.id = object_room_type_amenity.room_type_id) AND (rt.is_published IS TRUE) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (room_type_id IN ( SELECT rt.id
+   FROM public.object_room_ …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE** `canonical_upd_object_room_type_amenity` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_amenity.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) | (EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_amenity.room_type_id) AND api.user_can_write_object_canonical(rt.object_id))))`
 
 ## `public.object_room_type_bed`
 - **DELETE** `canonical_del_object_room_type_bed` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_bed.room_type_id) AND api.user_can_write_object_canonical(rt.object_id))))`
 - **INSERT** `canonical_ins_object_room_type_bed` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_bed.room_type_id) AND api.user_can_write_object_canonical(rt.object_id))))`
 - **SELECT** `read_object_room_type_bed` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM (object_room_type rt
-     JOIN object o ON ((o.id = rt.object_id)))
-  WHERE ((rt.id = object_room_type_bed.room_type_id) AND (rt.is_published IS TRUE) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (room_type_id IN ( SELECT rt.id
-   FROM object_room_type rt
-  WHERE (rt.object_id IN …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM (public.object_room_type rt
+     JOIN public.object o ON ((o.id = rt.object_id)))
+  WHERE ((rt.id = object_room_type_bed.room_type_id) AND (rt.is_published IS TRUE) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (room_type_id IN ( SELECT rt.id
+   FROM public.object_room_type …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE** `canonical_upd_object_room_type_bed` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_bed.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) | (EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_bed.room_type_id) AND api.user_can_write_object_canonical(rt.object_id))))`
 
 ## `public.object_room_type_media`
 - **DELETE** `canonical_del_object_room_type_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_media.room_type_id) AND api.user_can_write_object_canonical(rt.object_id))))`
 - **INSERT** `canonical_ins_object_room_type_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_media.room_type_id) AND api.user_can_write_object_canonical(rt.object_id))))`
 - **SELECT** `read_object_room_type_media` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM (object_room_type rt
-     JOIN object o ON ((o.id = rt.object_id)))
-  WHERE ((rt.id = object_room_type_media.room_type_id) AND (rt.is_published IS TRUE) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (room_type_id IN ( SELECT rt.id
-   FROM object_room_type rt
-  WHERE (rt.object_id  …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM (public.object_room_type rt
+     JOIN public.object o ON ((o.id = rt.object_id)))
+  WHERE ((rt.id = object_room_type_media.room_type_id) AND (rt.is_published IS TRUE) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (room_type_id IN ( SELECT rt.id
+   FROM public.object_room_ty …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE** `canonical_upd_object_room_type_media` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_media.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) | (EXISTS ( SELECT 1
-   FROM object_room_type rt
+   FROM public.object_room_type rt
   WHERE ((rt.id = object_room_type_media.room_type_id) AND api.user_can_write_object_canonical(rt.object_id))))`
 
 ## `public.object_stay_policy`
@@ -1111,8 +1106,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_stay_policy` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_stay_policy.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_stay_policy.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_stay_policy` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -1123,7 +1118,7 @@
   - `(api.user_can_write_object_canonical(object_id) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `pub_object_sustainability_action_read` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object o
+   FROM public.object o
   WHERE (o.id = object_sustainability_action.object_id)))`
 - **UPDATE** `canonical_upd_object_sustainability_action` — roles ['public']
   - `(api.user_can_write_object_canonical(object_id) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser()) | (api.user_can_write_object_canonical(object_id) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
@@ -1131,23 +1126,22 @@
 ## `public.object_sustainability_action_label`
 - **DELETE** `canonical_del_object_sustainability_action_label` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object_sustainability_action osa
+   FROM public.object_sustainability_action osa
   WHERE ((osa.id = object_sustainability_action_label.object_sustainability_action_id) AND api.user_can_write_object_canonical(osa.object_id)))) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **INSERT** `canonical_ins_object_sustainability_action_label` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object_sustainability_action osa
+   FROM public.object_sustainability_action osa
   WHERE ((osa.id = object_sustainability_action_label.object_sustainability_action_id) AND api.user_can_write_object_canonical(osa.object_id)))) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `pub_object_sustainability_action_label_read` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (object_sustainability_action osa
-     JOIN object o ON ((o.id = osa.object_id)))
+   FROM (public.object_sustainability_action osa
+     JOIN public.object o ON ((o.id = osa.object_id)))
   WHERE (osa.id = object_sustainability_action_label.object_sustainability_action_id)))`
 - **UPDATE** `canonical_upd_object_sustainability_action_label` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object_sustainability_action osa
+   FROM public.object_sustainability_action osa
   WHERE ((osa.id = object_sustainability_action_label.object_sustainability_action_id) AND api.user_can_write_object_canonical(osa.object_id)))) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser()) | ((EXISTS ( SELECT 1
-   FROM object_sustainability_action osa
-  WHERE ((osa …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM public.object_sustainability_action osa …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.object_taxonomy`
 - **DELETE** `canonical_del_object_taxonomy` — roles ['public']
@@ -1156,7 +1150,7 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `pub_object_taxonomy_read` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM object o
+   FROM public.object o
   WHERE (o.id = object_taxonomy.object_id)))`
 - **SELECT** `thesaurus_projection_read` — roles ['bertel_thesaurus_publisher']
   - `(CURRENT_USER = 'bertel_thesaurus_publisher'::name)`
@@ -1222,8 +1216,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_web_channel` — roles ['public']
   - `(((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_web_channel.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_web_channel.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_web_channel` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -1234,8 +1228,8 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_object_zone` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = object_zone.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = object_zone.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_object_zone` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
@@ -1246,113 +1240,111 @@
   - `api.user_can_write_object_canonical(object_id)`
 - **SELECT** `read_opening_period` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = opening_period.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = opening_period.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `canonical_upd_opening_period` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.opening_schedule`
 - **DELETE** `canonical_del_opening_schedule` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM opening_period p
+   FROM public.opening_period p
   WHERE ((p.id = opening_schedule.period_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **INSERT** `canonical_ins_opening_schedule` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM opening_period p
+   FROM public.opening_period p
   WHERE ((p.id = opening_schedule.period_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **SELECT** `read_opening_schedule` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM opening_period p
+   FROM public.opening_period p
   WHERE ((p.id = opening_schedule.period_id) AND api.can_read_object(p.object_id))))`
 - **UPDATE** `canonical_upd_opening_schedule` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM opening_period p
+   FROM public.opening_period p
   WHERE ((p.id = opening_schedule.period_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1
-   FROM opening_period p
+   FROM public.opening_period p
   WHERE ((p.id = opening_schedule.period_id) AND api.user_can_write_object_canonical(p.object_id))))`
 
 ## `public.opening_time_frame`
 - **DELETE** `canonical_del_opening_time_frame` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s ON ((s.id = tp.schedule_id)))
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((tp.id = opening_time_frame.time_period_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **INSERT** `canonical_ins_opening_time_frame` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s ON ((s.id = tp.schedule_id)))
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((tp.id = opening_time_frame.time_period_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **SELECT** `read_opening_time_frame` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s ON ((s.id = tp.schedule_id)))
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((tp.id = opening_time_frame.time_period_id) AND api.can_read_object(p.object_id))))`
 - **UPDATE** `canonical_upd_opening_time_frame` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s ON ((s.id = tp.schedule_id)))
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((tp.id = opening_time_frame.time_period_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN ope …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s ON ((s.i …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.opening_time_period`
 - **DELETE** `canonical_del_opening_time_period` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (opening_schedule s
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM (public.opening_schedule s
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **INSERT** `canonical_ins_opening_time_period` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (opening_schedule s
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM (public.opening_schedule s
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **SELECT** `read_opening_time_period` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (opening_schedule s
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM (public.opening_schedule s
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((s.id = opening_time_period.schedule_id) AND api.can_read_object(p.object_id))))`
 - **UPDATE** `canonical_upd_opening_time_period` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM (opening_schedule s
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM (public.opening_schedule s
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1
-   FROM (opening_schedule s
-     JOIN opening_period p ON ((p.id = s.period_id)))
-  WHERE ((s.id = opening_time_period.schedule_id) AND api.user_can_write_object_canonical( …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM (public.opening_schedule s
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
+  WHERE ((s.id = opening_time_period.schedule_id) AND api.user …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.opening_time_period_weekday`
 - **DELETE** `canonical_del_opening_time_period_weekday` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s ON ((s.id = tp.schedule_id)))
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((tp.id = opening_time_period_weekday.time_period_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **INSERT** `canonical_ins_opening_time_period_weekday` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s ON ((s.id = tp.schedule_id)))
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((tp.id = opening_time_period_weekday.time_period_id) AND api.user_can_write_object_canonical(p.object_id))))`
 - **SELECT** `read_opening_time_period_weekday` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s ON ((s.id = tp.schedule_id)))
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((tp.id = opening_time_period_weekday.time_period_id) AND api.can_read_object(p.object_id))))`
 - **UPDATE** `canonical_upd_opening_time_period_weekday` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     JOIN opening_period p ON ((p.id = s.period_id)))
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s ON ((s.id = tp.schedule_id)))
+     JOIN public.opening_period p ON ((p.id = s.period_id)))
   WHERE ((tp.id = opening_time_period_weekday.time_period_id) AND api.user_can_write_object_canonical(p.object_id)))) | (EXISTS ( SELECT 1
-   FROM ((opening_time_period tp
-     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
-     …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM ((public.opening_time_period tp
+     JOIN public.opening_schedule s …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `public.org_actor_module_visibility`
 - **ALL** `admin_org_actor_module_visibility` — roles ['public']
@@ -1367,7 +1359,7 @@
   - `api.is_platform_superuser() | api.is_platform_superuser()`
 - **SELECT** `member_org_config_read` — roles ['public']
   - `(api.is_platform_superuser() OR (EXISTS ( SELECT 1
-   FROM user_org_membership m
+   FROM public.user_org_membership m
   WHERE ((m.org_object_id = org_config.org_object_id) AND (m.user_id = ( SELECT auth.uid() AS uid)) AND (m.is_active = true)))))`
 
 ## `public.org_permission`
@@ -1375,13 +1367,13 @@
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `member_org_permission_read` — roles ['public']
   - `(api.is_platform_superuser() OR ((is_active = true) AND (EXISTS ( SELECT 1
-   FROM user_org_membership m
+   FROM public.user_org_membership m
   WHERE ((m.org_object_id = org_permission.org_object_id) AND (m.user_id = ( SELECT auth.uid() AS uid)) AND (m.is_active = true))))))`
 
 ## `public.org_role_permission`
 - **SELECT** `org_role_permission_read` — roles ['authenticated']
   - `(EXISTS ( SELECT 1
-   FROM user_org_membership uom
+   FROM public.user_org_membership uom
   WHERE ((uom.user_id = ( SELECT auth.uid() AS uid)) AND (uom.org_object_id = org_role_permission.org_object_id) AND uom.is_active)))`
 
 ## `public.pending_change`
@@ -1401,8 +1393,8 @@
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `read_promotion_object` — roles ['public']
   - `((EXISTS ( SELECT 1
-   FROM object o
-  WHERE ((o.id = promotion_object.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+   FROM public.object o
+  WHERE ((o.id = promotion_object.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
 - **UPDATE** `admin_upd_promotion_object` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser()) | ((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
@@ -1999,7 +1991,7 @@
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `member_user_org_admin_role_read` — roles ['public']
   - `(api.is_platform_superuser() OR ((is_active = true) AND (EXISTS ( SELECT 1
-   FROM user_org_membership m
+   FROM public.user_org_membership m
   WHERE ((m.id = user_org_admin_role.membership_id) AND (m.is_active = true) AND ((m.user_id = ( SELECT auth.uid() AS uid)) OR (m.org_object_id = api.current_user_org_id())))))))`
 
 ## `public.user_org_business_role`
@@ -2007,7 +1999,7 @@
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `member_user_org_business_role_read` — roles ['public']
   - `(api.is_platform_superuser() OR ((is_active = true) AND (EXISTS ( SELECT 1
-   FROM user_org_membership m
+   FROM public.user_org_membership m
   WHERE ((m.id = user_org_business_role.membership_id) AND (m.is_active = true) AND ((m.user_id = ( SELECT auth.uid() AS uid)) OR (m.org_object_id = api.current_user_org_id())))))))`
 
 ## `public.user_org_membership`
@@ -2021,10 +2013,9 @@
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `member_user_permission_read` — roles ['public']
   - `(api.is_platform_superuser() OR ((is_active = true) AND (user_id = ( SELECT auth.uid() AS uid))) OR ((is_active = true) AND (EXISTS ( SELECT 1
-   FROM user_org_membership m_target
+   FROM public.user_org_membership m_target
   WHERE ((m_target.user_id = user_permission.user_id) AND (m_target.is_active = true) AND (m_target.org_object_id = api.current_user_org_id())))) AND (EXISTS ( SELECT 1
-   FROM (user_org_membership m_caller
-     JOIN use …[truncated — full text in catalog_extra.json or live pg_policies]`
+   FROM (public.user_org_membership m_caller …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `storage.objects`
 - **ALL RESTRICTIVE** `actor_documents_no_direct_access` — roles ['anon', 'authenticated']

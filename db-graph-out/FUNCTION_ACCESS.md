@@ -10,13 +10,18 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _4) Validation anti-chevauchement (même rang : croisement partiel interdit, imbrication tolérée)._
 
+### `api.ack_list_email_client(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_result_token text)`
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/ack_list_email_client`
+- **object types served:** —
+
 ### `api.actor_portal_floor_modules()`
 - **returns:** `text[]`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/actor_portal_floor_modules`
 - **object types served:** —
 - _4.1 Le plancher dur : modules JAMAIS montrés/acceptés côté acteur, quelle que soit la_
 
-### `api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT 'fixed_end_date'::legal_validity_mode, p_status text DEFAULT 'active'::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
+### `api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode public.legal_validity_mode DEFAULT 'fixed_end_date'::public.legal_validity_mode, p_status text DEFAULT 'active'::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
 - **returns:** `uuid`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/add_legal_record`
 - **object types served:** **all object types**
@@ -103,6 +108,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** —
 - _Génération d'ID si absent_
+
+### `api.begin_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_fingerprint text, p_recipient_fingerprint text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/begin_list_email`
+- **object types served:** **all object types**
 
 ### `api.build_iti_track(p_object_id text, p_format text DEFAULT 'kml'::text, p_include_stages boolean DEFAULT true, p_stage_color text DEFAULT 'red'::text)`
 - **returns:** `text`
@@ -230,6 +240,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/commit_staging_to_public`
 - **object types served:** **all object types**
+
+### `api.complete_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_outcome text, p_tracking_updated boolean DEFAULT false, p_rejection_code text DEFAULT NULL::text, p_result_token text DEFAULT NULL::text)`
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/complete_list_email`
+- **object types served:** —
 
 ### `api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -507,7 +522,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - _Publication export for print workflows (InDesign-ready)_
 
 ### `api.facet_applicability_violations()` _(dyn-SQL)_
-- **returns:** `TABLE(facet_table text, object_id text, object_type object_type)`
+- **returns:** `TABLE(facet_table text, object_id text, object_type public.object_type)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/facet_applicability_violations`
 - **object types served:** **all object types**
 - _6. Violations report (ops/CI; legacy rows are NOT auto-deleted)_
@@ -563,13 +578,13 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Payload branding authentifié — résout la surcharge ORG selon le membership actif, champ par champ, fallback plateforme. markerStyles/extra plateforme. Clé orgObjectId = ORG résolue (NULL si aucun membership)._
 
-### `api.get_dashboard_actualisation(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_threshold_days integer DEFAULT 90)` _(DEFINER)_
+### `api.get_dashboard_actualisation(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_threshold_days integer DEFAULT 90)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_actualisation`
 - **object types served:** **all object types**
 - _Dashboard §10: per-type freshness breakdown against a configurable threshold._
 
-### `api.get_dashboard_city_distribution(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_limit integer DEFAULT 20)` _(DEFINER)_
+### `api.get_dashboard_city_distribution(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_limit integer DEFAULT 20)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_city_distribution`
 - **object types served:** **all object types**
@@ -581,7 +596,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Returns a sorted TEXT[] of distinct cities present in object_location_
 
-### `api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)` _(DEFINER)_
+### `api.get_dashboard_completeness(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_completeness`
 - **object types served:** **all object types**
@@ -599,7 +614,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Open CRM counters in the caller real/test realm, independent of object facets. Provider RPC uses the same base realm._
 
-### `api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
+### `api.get_dashboard_distinction_overview(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_distinction_overview`
 - **object types served:** **all object types**
@@ -632,7 +647,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_provider_team_activity`
 - **object types served:** **all object types**
 
-### `api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
+### `api.get_dashboard_scorecards(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_scorecards`
 - **object types served:** **all object types**
@@ -644,7 +659,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Twelve weeks of author activity on tourism objects in the caller real/test realm; unchanged editor-day formulas._
 
-### `api.get_dashboard_type_breakdown(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
+### `api.get_dashboard_type_breakdown(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_type_breakdown`
 - **object types served:** **all object types**
@@ -662,11 +677,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Function to get expiring legal records in API format_
 
-### `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)` _(DEFINER)_
+### `api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_filtered_object_ids`
 - **object types served:** **all object types**
-- _4) get_filtered_object_ids : les deux cles de remplissage_
+- _1) api.get_filtered_object_ids (corps complet §157+§162+§173)_
 
 ### `api.get_gallery_write_receipt(p_object_id text, p_request_id uuid)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -706,6 +721,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_list`
 - **object types served:** —
 - _8. Détail public (authenticated) — inchangé en surface, corps factorisé_
+
+### `api.get_list_email_context(p_user_id uuid, p_list_id uuid)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_list_email_context`
+- **object types served:** —
 
 ### `api.get_local_now_for_timezone(p_business_timezone text)`
 - **returns:** `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
@@ -1256,6 +1276,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Ensemble effectif d'une liste (statique = items curatés ; dynamique = résolution vive des filtres). published_only=TRUE exige désormais status = published ET is_test = current_user_test_realm() (§2, 2e revue architecte) — published seul n'est pas lisibilité. Périmètre/signature/ACL et branche dynamique inchangés depuis migration_object_list.sql._
 
+### `api.list_email_measurements(p_from timestamp with time zone, p_until timestamp with time zone)`
+- **returns:** `TABLE(minute_start timestamp with time zone, user_id uuid, org_object_id text, admitted bigint, started bigint, accepted bigint, rejected bigint, uncertain bigint, conflicts bigint)`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_email_measurements`
+- **object types served:** —
+
 ### `api.list_featured_lists()` _(DEFINER)_
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_featured_lists`
@@ -1325,24 +1350,24 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Vue CRM d'un objet : interactions + tâches + répartition des sujets + acteurs liés_
 
-### `api.list_object_markers(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_search text DEFAULT NULL::text)` _(DEFINER)_
+### `api.list_object_markers(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_search text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_markers`
 - **object types served:** **all object types**
 - _Explorer map markers: lightweight {id,type,name,image,open_now,location{lat,lon,city}} for ALL matching geolocated objects in one call. Authorize-once SECURITY DEFINER (§36): filtered set ∩ current_user_readable_object_ids() then object_location read RLS-free. Replaces the per-page card fetch as the map data source; avoids the per-row can_read_object scalar (§35) and per-row enrichment (cf. list_objects_map_view). See decision log §125._
 
-### `api.list_object_resources_filtered_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+### `api.list_object_resources_filtered_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_resources_filtered_page`
 - **object types served:** **all object types**
-- _5) list_object_resources_filtered_page : le champ sur les cartes_
+- _2) api.list_object_resources_filtered_page (tri label_rank + meta.label_rank_counts)_
 
-### `api.list_object_resources_filtered_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+### `api.list_object_resources_filtered_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_resources_filtered_since_fast`
 - **object types served:** **all object types**
 
-### `api.list_object_resources_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)`
+### `api.list_object_resources_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)`
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_resources_page`
 - **object types served:** **all object types**
@@ -1352,7 +1377,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_resources_page_text`
 - **object types served:** —
 
-### `api.list_object_resources_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+### `api.list_object_resources_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_resources_since_fast`
 - **object types served:** **all object types**
@@ -1600,6 +1625,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.portal_photo_upload_context(p_object_id text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/portal_photo_upload_context`
+- **object types served:** **all object types**
+
+### `api.prepare_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_fingerprint text, p_recipient_fingerprint text, p_expected_generation bigint, p_confirm_resend boolean DEFAULT false, p_confirmed_previous_operation_ids uuid[] DEFAULT '{}'::uuid[])`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/prepare_list_email`
 - **object types served:** **all object types**
 
 ### `api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)` _(DEFINER)_
@@ -2128,7 +2158,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - _Search objects by label with partial action matches_
 
 ### `api.search_objects_by_name(p_term text, p_limit integer DEFAULT 8)` _(DEFINER)_
-- **returns:** `TABLE(id text, name text, object_type object_type, status object_status, city text, image_url text)`
+- **returns:** `TABLE(id text, name text, object_type public.object_type, status public.object_status, city text, image_url text)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/search_objects_by_name`
 - **object types served:** **all object types**
 - _Concordance directe par nom (spec 2026-08-26) : navigation, pas filtrage — cherche tout le corpus visible indépendamment des filtres de l'Exploreur. Périmètre auto-gardé : published pour tous, + draft du périmètre étendu pour un éditeur (COALESCE sur la sonde à trois valeurs, §204) ; archived/hidden jamais. Consommée par le menu de la barre de recherche, le bandeau de résultats et la palette ⌘K._
@@ -2392,7 +2422,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** —
 
-### `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT NULL::legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
+### `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode public.legal_validity_mode DEFAULT NULL::public.legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/update_legal_record`
 - **object types served:** **all object types**
@@ -2705,7 +2735,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 
 ### `internal.dashboard_crm_interactions()`
-- **returns:** `SETOF crm_interaction`
+- **returns:** `SETOF public.crm_interaction`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
@@ -2789,6 +2819,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 - _Source transitions serialize by organization before touching derived object_
+
+### `internal.measure_list_email(p_user_id uuid, p_org_object_id text, p_event text)`
+- **returns:** `void`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
 
 ### `internal.notification_has_sandbox_context(p_recipient_id uuid, p_created_by uuid, p_task_id uuid, p_payload jsonb)` _(DEFINER)_
 - **returns:** `boolean`
@@ -2905,7 +2940,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 
 ### `internal.provider_crm_interactions()`
-- **returns:** `SETOF crm_interaction`
+- **returns:** `SETOF public.crm_interaction`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
@@ -3256,13 +3291,13 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** thesaurus.assert_preparation_contract
 - **object types served:** —
 
-### `thesaurus.concept_document(p_id uuid)`
+### `thesaurus.concept_document(p_id uuid, p_include_source_fingerprint boolean)`
 - **returns:** `jsonb`
 - **access:** thesaurus.concept_document
 - **object types served:** —
 - _Editorial callers retain their semantic conflict fingerprint. Immutable public_
 
-### `thesaurus.concept_document(p_id uuid, p_include_source_fingerprint boolean)`
+### `thesaurus.concept_document(p_id uuid)`
 - **returns:** `jsonb`
 - **access:** thesaurus.concept_document
 - **object types served:** —

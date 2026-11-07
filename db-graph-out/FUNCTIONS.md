@@ -9,6 +9,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Fermetures exclues, périodes sans dates ignorées. Miroir SQL EXACT de la fonction pure
 > TS periodsPartialOverlap : intersection ensembliste des jours couverts.
 
+## `api.ack_list_email_client(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_result_token text)`
+- returns: `boolean`
+- reads `internal.list_email_intent` _(high)_
+- writes `internal.list_email_intent` _(high)_
+
 ## `api.actor_portal_floor_modules()`
 - returns: `text[]`
 
@@ -22,7 +27,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > d'upload ni d'application pour un acteur, D11). Fonction plutôt que table : non
 > paramétrable PAR CONSTRUCTION.
 
-## `api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT 'fixed_end_date'::legal_validity_mode, p_status text DEFAULT 'active'::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
+## `api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode public.legal_validity_mode DEFAULT 'fixed_end_date'::public.legal_validity_mode, p_status text DEFAULT 'active'::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
 - returns: `uuid`
 - reads `public.ref_legal_type` _(high)_
 - writes `public.object_legal` _(high)_
@@ -129,6 +134,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger`
 
 > Génération d'ID si absent
+
+## `api.begin_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_fingerprint text, p_recipient_fingerprint text)`
+- returns: `jsonb`
+- reads `internal.list_email_intent` _(high)_
+- reads `internal.list_email_scope` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
+- reads `public.object_list` _(high)_
+- writes `internal.list_email_intent` _(high)_
 
 ## `api.build_iti_track(p_object_id text, p_format text DEFAULT 'kml'::text, p_include_stages boolean DEFAULT true, p_stage_color text DEFAULT 'red'::text)`
 - returns: `text`
@@ -318,6 +331,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `staging.ref_classification_scheme_temp` _(high)_
 - writes `staging.ref_classification_value_temp` _(high)_
 - writes `staging.ref_code_temp` _(high)_
+
+## `api.complete_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_outcome text, p_tracking_updated boolean DEFAULT false, p_rejection_code text DEFAULT NULL::text, p_result_token text DEFAULT NULL::text)`
+- returns: `boolean`
+- reads `internal.list_email_intent` _(high)_
+- writes `internal.list_email_intent` _(high)_
 
 ## `api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -725,7 +743,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > =====================================================
 
 ## `api.facet_applicability_violations()`
-- returns: `TABLE(facet_table text, object_id text, object_type object_type)` — dynamic SQL
+- returns: `TABLE(facet_table text, object_id text, object_type public.object_type)` — dynamic SQL
 - reads `public.object` _(high)_
 - reads `public.ref_facet_applicability` _(high)_
 - reads `public.ref_facet_registry` _(high)_
@@ -801,7 +819,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Payload branding authentifié — résout la surcharge ORG selon le membership actif, champ par champ, fallback plateforme. markerStyles/extra plateforme. Clé orgObjectId = ORG résolue (NULL si aucun membership).
 
-## `api.get_dashboard_actualisation(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_threshold_days integer DEFAULT 90)`
+## `api.get_dashboard_actualisation(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_threshold_days integer DEFAULT 90)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
 
@@ -813,7 +831,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > by the update_object_updated_at_business trigger).
 > ORG objects excluded. p_updated_at_from/to scope the object pool (inclusive DATE boundaries).
 
-## `api.get_dashboard_city_distribution(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_limit integer DEFAULT 20)`
+## `api.get_dashboard_city_distribution(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_limit integer DEFAULT 20)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
 - reads `public.object_location` _(high)_
@@ -833,7 +851,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > No filter parameters. Used to populate the dashboard city filter dropdown.
 > Represents the full corpus city domain, not the current filtered slice.
 
-## `api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)`
+## `api.get_dashboard_completeness(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `internal.v_object_essentials` _(high)_
 - reads `public.object` _(high)_
@@ -856,7 +874,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Open CRM counters in the caller real/test realm, independent of object facets. Provider RPC uses the same base realm.
 
-## `api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
+## `api.get_dashboard_distinction_overview(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
 - reads `public.object_classification` _(high)_
@@ -903,7 +921,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.app_user_profile` _(high)_
 - reads `public.object_version` _(high)_
 
-## `api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
+## `api.get_dashboard_scorecards(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
 - reads `public.object_classification` _(high)_
@@ -927,7 +945,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Twelve weeks of author activity on tourism objects in the caller real/test realm; unchanged editor-day formulas.
 
-## `api.get_dashboard_type_breakdown(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
+## `api.get_dashboard_type_breakdown(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
 
@@ -953,7 +971,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Function to get expiring legal records in API format
 > =====================================================
 
-## `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)`
+## `api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)`
 - returns: `TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)` — SECURITY DEFINER
 - reads `internal.mv_filtered_objects` _(high)_
 - reads `public.actor_object_role` _(high)_
@@ -989,40 +1007,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.tag_link` _(high)_
 - reads `thesaurus.source_rows` _(medium)_
 
-> ---- 4) get_filtered_object_ids : les deux cles de remplissage ------------
->
-> COUT MESURE ET ASSUME — +4,4 ms de PLANIFICATION par appel, filtre ETEINT.
-> Localise par bissection sur live (30 iterations x 2 series, ecart stable) :
-> temoin sans patch ................................. 22,7 ms
-> ajouts au CTE params seuls ........................ 22,9 ms  (gratuit)
-> CASE par ligne SANS reference a la vue ............ 23,0 ms  (gratuit)
-> patch complet, filtre eteint ...................... 27,0 ms  (+4,4)
-> Le surcout n'est donc NI le CASE NI le parsing : c'est la simple PRESENCE du
-> EXISTS sur internal.v_object_essentials dans le texte de la requete. Le
-> planificateur plante le sous-plan a chaque appel meme quand la branche n'est
-> jamais prise, et la fonction etant SECURITY DEFINER elle n'est pas inlinee.
-> AUCUNE garde ne peut supprimer ce cout : il precede l'execution.
->
-> Pourquoi on l'accepte plutot que de le supprimer :
-> * le supprimer vraiment demanderait de materialiser les essentiels (une MV
-> rafraichie par le cron des 10 min). La planification tomberait a ~0, mais
-> la fiche ne quitterait la liste de travail qu'au rafraichissement suivant
-> — or ce filtre EST une liste de travail : l'agent corrige puis refiltre.
-> La fraicheur est la fonctionnalite, pas un detail.
-> * l'autre issue serait de sortir le predicat vers le RPC de page (plpgsql :
-> une branche IF n'est planifiee que si elle s'execute), mais la carte et le
-> tableau de bord passent aussi par get_filtered_object_ids : le filtre
-> cesserait de s'appliquer a la carte. Incoherence, pas optimisation.
-> * ordre de grandeur : 4,4 ms contre 220-310 ms de latence Reunion->Supabase
-> par aller-retour, soit ~1,5 % d'un seul aller-retour.
-> Si le corpus grossit ou si ce chemin devient critique, la MV est l'echappatoire
-> documentee (cf. journal de decision).
-> Corps DERIVE de la definition live par .tmp_pgapply/_gen_remplissage.cjs
-> (ancres assertees, refus d ecrire si une ancre bouge ou est ambigue).
-> NE PAS EDITER A LA MAIN : regenerer.
-> La derniere definition vivait dans migration_accommodation_unit_type.sql
-> (taxo6), PAS dans la migration phonetique : partir de la mauvaise source
-> ferait regresser 199 (dmetaphone) et 201 (types d unite).
+> ---- 1) api.get_filtered_object_ids (corps complet §157+§162+§173) ----
 
 ## `api.get_gallery_write_receipt(p_object_id text, p_request_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1072,6 +1057,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > =====================================================================
 > 8. Détail public (authenticated) — inchangé en surface, corps factorisé
 > =====================================================================
+
+## `api.get_list_email_context(p_user_id uuid, p_list_id uuid)`
+- returns: `jsonb`
+- reads `internal.list_email_scope` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
 
 ## `api.get_local_now_for_timezone(p_business_timezone text)`
 - returns: `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
@@ -2022,6 +2012,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Ensemble effectif d'une liste (statique = items curatés ; dynamique = résolution vive des filtres). published_only=TRUE exige désormais status = published ET is_test = current_user_test_realm() (§2, 2e revue architecte) — published seul n'est pas lisibilité. Périmètre/signature/ACL et branche dynamique inchangés depuis migration_object_list.sql.
 
+## `api.list_email_measurements(p_from timestamp with time zone, p_until timestamp with time zone)`
+- returns: `TABLE(minute_start timestamp with time zone, user_id uuid, org_object_id text, admitted bigint, started bigint, accepted bigint, rejected bigint, uncertain bigint, conflicts bigint)`
+- reads `internal.list_email_metric` _(high)_
+
 ## `api.list_featured_lists()`
 - returns: `json` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
@@ -2130,37 +2124,31 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Vue CRM d'un objet : interactions + tâches + répartition des sujets + acteurs liés
 > (navigation objet → acteurs du modèle acteur-centré ; cf. en-tête point 5).
 
-## `api.list_object_markers(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_search text DEFAULT NULL::text)`
+## `api.list_object_markers(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_search text DEFAULT NULL::text)`
 - returns: `json` — SECURITY DEFINER
 - reads `public.object` _(high)_
 - reads `public.object_location` _(high)_
 
 > Explorer map markers: lightweight {id,type,name,image,open_now,location{lat,lon,city}} for ALL matching geolocated objects in one call. Authorize-once SECURITY DEFINER (§36): filtered set ∩ current_user_readable_object_ids() then object_location read RLS-free. Replaces the per-page card fetch as the map data source; avoids the per-row can_read_object scalar (§35) and per-row enrichment (cf. list_objects_map_view). See decision log §125.
 
-## `api.list_object_resources_filtered_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+## `api.list_object_resources_filtered_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - returns: `json`
 - reads `public.object` _(high)_
 
-> ---- 5) list_object_resources_filtered_page : le champ sur les cartes -----
-> Corps DERIVE de la definition live par .tmp_pgapply/_gen_page204.cjs.
-> NE PAS EDITER A LA MAIN : regenerer.
-> Emis des que l appelant est editeur, sans condition sur le filtre :
-> 2,0 ms mesures pour une page de 24 (tout en index scan). Le conditionner
-> au filtre economiserait 2 ms et priverait la colonne Table de ses donnees
-> filtre eteint.
+> ---- 2) api.list_object_resources_filtered_page (tri label_rank + meta.label_rank_counts) ----
 
-## `api.list_object_resources_filtered_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+## `api.list_object_resources_filtered_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - returns: `json`
 - reads `public.object` _(high)_
 
-## `api.list_object_resources_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)`
+## `api.list_object_resources_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)`
 - returns: `json`
 - reads `public.object` _(high)_
 
 ## `api.list_object_resources_page_text(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_omit_empty boolean DEFAULT NULL::boolean, p_view text DEFAULT 'card'::text)`
 - returns: `json`
 
-## `api.list_object_resources_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
+## `api.list_object_resources_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - returns: `json`
 - reads `public.object` _(high)_
 
@@ -2459,6 +2447,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.actor_document` _(high)_
 - reads `public.ref_document` _(high)_
+
+## `api.prepare_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_fingerprint text, p_recipient_fingerprint text, p_expected_generation bigint, p_confirm_resend boolean DEFAULT false, p_confirmed_previous_operation_ids uuid[] DEFAULT '{}'::uuid[])`
+- returns: `jsonb`
+- reads `internal.list_email_intent` _(high)_
+- reads `internal.list_email_scope` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
+- reads `public.object_list` _(high)_
+- writes `internal.list_email_intent` _(high)_
+- writes `internal.list_email_scope` _(high)_
 
 ## `api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -3338,7 +3335,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > =====================================================
 
 ## `api.search_objects_by_name(p_term text, p_limit integer DEFAULT 8)`
-- returns: `TABLE(id text, name text, object_type object_type, status object_status, city text, image_url text)` — SECURITY DEFINER
+- returns: `TABLE(id text, name text, object_type public.object_type, status public.object_status, city text, image_url text)` — SECURITY DEFINER
 - reads `public.object` _(high)_
 - reads `public.object_location` _(high)_
 
@@ -3663,7 +3660,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger` — SECURITY DEFINER
 - reads `public.ref_code_domain_registry` _(high)_
 
-## `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT NULL::legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
+## `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode public.legal_validity_mode DEFAULT NULL::public.legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
 - returns: `boolean`
 - writes `public.object_legal` _(high)_
 
@@ -4073,7 +4070,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `boolean` — SECURITY DEFINER
 
 ## `internal.dashboard_crm_interactions()`
-- returns: `SETOF crm_interaction`
+- returns: `SETOF public.crm_interaction`
 - reads `public.actor` _(high)_
 - reads `public.crm_interaction` _(high)_
 - reads `public.object` _(high)_
@@ -4193,6 +4190,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > whereas a config transition owns its config row before updating objects.
 > A SHARE lock on the organization row also makes a stale REPEATABLE READ source
 > transition fail with 40001 instead of accepting a pre-flip snapshot.
+
+## `internal.measure_list_email(p_user_id uuid, p_org_object_id text, p_event text)`
+- returns: `void`
+- writes `internal.list_email_metric` _(high)_
 
 ## `internal.notification_has_sandbox_context(p_recipient_id uuid, p_created_by uuid, p_task_id uuid, p_payload jsonb)`
 - returns: `boolean` — SECURITY DEFINER
@@ -4327,7 +4328,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_code_media_type` _(high)_
 
 ## `internal.provider_crm_interactions()`
-- returns: `SETOF crm_interaction`
+- returns: `SETOF public.crm_interaction`
 - reads `public.actor_object_role` _(high)_
 - reads `storage.objects` _(medium)_
 
@@ -4840,12 +4841,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `thesaurus.assert_preparation_contract()`
 - returns: `void`
 
-## `thesaurus.concept_document(p_id uuid)`
-- returns: `jsonb`
-
-> Editorial callers retain their semantic conflict fingerprint. Immutable public
-> snapshots discard that private field and avoid computing it for every concept.
-
 ## `thesaurus.concept_document(p_id uuid, p_include_source_fingerprint boolean)`
 - returns: `jsonb`
 - reads `thesaurus.concept` _(high)_
@@ -4858,6 +4853,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `thesaurus.revision` _(high)_
 - reads `thesaurus.source_rows` _(high)_
 - reads `thesaurus.vocabulary` _(high)_
+
+> Editorial callers retain their semantic conflict fingerprint. Immutable public
+> snapshots discard that private field and avoid computing it for every concept.
+
+## `thesaurus.concept_document(p_id uuid)`
+- returns: `jsonb`
 
 > Editorial callers retain their semantic conflict fingerprint. Immutable public
 > snapshots discard that private field and avoid computing it for every concept.

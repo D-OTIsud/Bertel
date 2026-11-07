@@ -706,8 +706,8 @@ jobs:
           test "$(docker inspect --format '{{.State.Running}}' "$container")" = true
           image_ref="$(docker inspect --format '{{.Config.Image}}' "$container")"
           case "$image_ref" in
-            public.ecr.aws/supabase/storage-api:v1.41.8|docker.io/supabase/storage-api:v1.41.8|supabase/storage-api:v1.41.8) ;;
-            *) echo 'Expected the disposable Storage image v1.41.8'; exit 1 ;;
+            ghcr.io/supabase/storage-api:v1.41.8|public.ecr.aws/supabase/storage-api:v1.41.8|docker.io/supabase/storage-api:v1.41.8|supabase/storage-api:v1.41.8) ;;
+            *) printf 'Expected the disposable Storage image v1.41.8, got %s\n' "$image_ref" >&2; exit 1 ;;
           esac
           image_id="$(docker inspect --format '{{.Image}}' "$container")"
           backend="$(docker exec "$container" printenv STORAGE_BACKEND)"

@@ -39,16 +39,6 @@ function page() {
   const view = render(ui(A));
   return { client, navigate: (id: string) => view.rerender(ui(id)) };
 }
-async function pauseMetadata(view: ReturnType<typeof page>) {
-  onlineManager.setOnline(false);
-  const field = await screen.findByLabelText('Nom de la liste');
-  fireEvent.change(field, { target: { value: 'Sent A' } }); fireEvent.blur(field);
-  await waitFor(() => expect(view.client.getMutationCache().getAll().some((mutation) => mutation.state.isPaused)).toBe(true));
-  expect(updateList).not.toHaveBeenCalled();
-}
-async function resume(client: QueryClient) {
-  await act(async () => { onlineManager.setOnline(true); await client.resumePausedMutations(); });
-}
 beforeEach(() => {
   jest.clearAllMocks();
   onlineManager.setOnline(true);

@@ -76,6 +76,8 @@ export function makeFakeRealtimeClient() {
     }),
     /** Simule un canal qui n'a pas fini de quitter le topic (phx_leave en vol). */
     keepTopicBusy: (chan: FakeRealtimeChannel) => live.set(chan.topic, chan),
+    routeBroadcast: (topic: string, event: string, payload: unknown) => live.get(topic)?.broadcastEvent(event, payload),
+    routePresence: (topic: string) => live.get(topic)?.syncPresence(),
   };
 
   return { client, created };

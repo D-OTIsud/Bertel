@@ -84,7 +84,7 @@ export function useGlobalPresence(): void {
       bind: (channel) => {
         activeChannel = channel;
         channel.on('presence', { event: 'sync' }, () => {
-          if (!isCurrent() || channel !== activeChannel) return;
+          if (!isCurrent() || channel !== activeChannel || realtimeStatus !== 'subscribed') return;
           setLivePresence(dedupePresenceMembers(readRealtimePresence(channel.presenceState()), userId));
         });
       },

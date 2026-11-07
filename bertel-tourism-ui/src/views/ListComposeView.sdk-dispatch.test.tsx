@@ -31,7 +31,7 @@ beforeAll(() => {
 });
 beforeEach(() => {
   jest.clearAllMocks();
-  useSessionStore.setState({ userId: 'user-A', orgId: 'ORG1', status: 'ready', role: 'tourism_agent', demoMode: false, canEditObjects: true, isTestRealm: false, adminRank: null });
+  useSessionStore.setState({ authAuthority: { userId: 'user-A', epoch: 1, hydrated: true }, userId: 'user-A', orgId: 'ORG1', status: 'ready', role: 'tourism_agent', demoMode: false, canEditObjects: true, isTestRealm: false, adminRank: null });
   jest.mocked(getList).mockResolvedValue(parseListDetail(raw()));
 });
 afterEach(() => { for (const client of clients.splice(0)) client.clear(); });
@@ -61,7 +61,7 @@ it.each(['same A', 'A token refresh', 'other B', 'account ABA', 'unmount'] as co
     const view = render(<QueryClientProvider client={query}><ListComposeView listId={LIST} /></QueryClientProvider>);
     const field = await screen.findByLabelText('Nom de la liste'); fireEvent.change(field, { target: { value: 'Sent A' } }); fireEvent.blur(field);
     await entered.promise; expect(transport).not.toHaveBeenCalled();
-    if (mode === 'other B' || mode === 'account ABA') act(() => { useSessionStore.setState({ userId: 'user-B' }); if (mode === 'account ABA') useSessionStore.setState({ userId: 'user-A' }); });
+    if (mode === 'other B' || mode === 'account ABA') act(() => { useSessionStore.setState({ authAuthority: { userId: 'user-B', epoch: 1, hydrated: true }, userId: 'user-B' }); if (mode === 'account ABA') useSessionStore.setState({ authAuthority: { userId: 'user-A', epoch: 1, hydrated: true }, userId: 'user-A' }); });
     if (mode === 'unmount') view.unmount();
     await act(async () => { token.resolve({ data: { session: { access_token: mode === 'other B' ? 'SYNTHETIC_TOKEN_B' : mode === 'A token refresh' ? 'SYNTHETIC_REFRESH_A' : 'SYNTHETIC_TOKEN_A' } }, error: null }); });
     await waitFor(() => expect(query.getMutationCache().getAll().every((mutation) => mutation.state.status !== 'pending')).toBe(true));

@@ -52,7 +52,7 @@ async function resume(client: QueryClient) {
 beforeEach(() => {
   jest.clearAllMocks();
   onlineManager.setOnline(true);
-  useSessionStore.setState({ userId: 'user-A', orgId: 'ORG1', status: 'ready', role: 'tourism_agent', demoMode: false,
+  useSessionStore.setState({ authAuthority: { userId: 'user-A', epoch: 1, hydrated: true }, userId: 'user-A', orgId: 'ORG1', status: 'ready', role: 'tourism_agent', demoMode: false,
     canEditObjects: true, isTestRealm: false, adminRank: null });
   jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
   jest.mocked(getList).mockImplementation(async (id) => detail(id));

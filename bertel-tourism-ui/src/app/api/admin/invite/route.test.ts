@@ -32,6 +32,8 @@ function fixture(options: {
   rank?: number;
   callerOrg?: string;
   callerOrgRanks?: Record<string, number | null>;
+  callerRankReads?: Array<number | null>;
+  callerMayReadTarget?: boolean;
   users?: SyntheticUser[];
   pages?: DirectoryPage[];
   orgExists?: boolean;
@@ -72,6 +74,7 @@ function fixture(options: {
   const membership = single(options.membershipInOrg ? { id: 'membership-1' } : null);
   const callerRanks = options.callerOrgRanks ?? { [options.callerOrg ?? 'ORG1']: options.rank ?? 30 };
   const callerFilters = new Map<string, unknown>();
+  let callerRankRead = 0;
   const callerMembership = {
     eq(column: string, value: unknown) {
       callerFilters.set(column, value);
@@ -81,7 +84,9 @@ function fixture(options: {
       const orgId = callerFilters.get('org_object_id');
       const visible = callerFilters.get('user_id') === 'admin' && callerFilters.get('is_active') === true
         && typeof orgId === 'string' && Object.hasOwn(callerRanks, orgId);
-      const rank = typeof orgId === 'string' ? callerRanks[orgId] : null;
+      const rank = visible && options.callerRankReads
+        ? options.callerRankReads[callerRankRead++]
+        : typeof orgId === 'string' ? callerRanks[orgId] : null;
       return {
         data: visible ? {
           user_org_admin_role: rank == null ? [] : [{ is_active: true, ref_org_admin_role: { rank } }],
@@ -91,9 +96,10 @@ function fixture(options: {
     },
   };
   const businessRole = single(options.roleExists === false ? null : { code: 'editor' });
+  const callerTargetMembership = options.callerMayReadTarget === false ? single(null) : membership;
   const callerFrom = jest.fn((table: string) => {
     if (table === 'user_org_membership') return {
-      select: (columns: string) => columns === 'id' ? membership.select() : callerMembership,
+      select: (columns: string) => columns === 'id' ? callerTargetMembership.select() : callerMembership,
     };
     if (table === 'ref_org_business_role') return businessRole;
     throw new Error(`Unexpected caller table ${table}`);
@@ -103,9 +109,13 @@ function fixture(options: {
   const serverFrom = jest.fn((table: string) => {
     if (table === 'object') return single(options.orgExists === false ? null : { id: 'ORG1' });
     if (table === 'user_org_membership') {
-      return { select: () => ({ eq: () => ({
-        eq: () => Promise.resolve({ data: (options.activeOrgs ?? []).map((org_object_id) => ({ org_object_id })), error: null }),
-      }) }) };
+      return {
+        select: (columns: string) => columns === 'id' ? membership.select() : ({
+          eq: () => ({
+            eq: () => Promise.resolve({ data: (options.activeOrgs ?? []).map((org_object_id) => ({ org_object_id })), error: null }),
+          }),
+        }),
+      };
     }
     if (table === 'app_user_profile') return {
       update,
@@ -171,6 +181,31 @@ describe('POST /api/admin/invite/v2', () => {
       await expect(response.json()).resolves.toEqual({ error: 'out_of_scope' });
     }
     expect(listUsers).not.toHaveBeenCalled();
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+  });
+
+  it('resends in another administered organisation after an exact service-side membership check', async () => {
+    const { inviteUserByEmail, membership } = fixture({
+      callerOrg: 'ORG1', callerOrgRanks: { ORG1: 20, ORG2: 30 }, callerMayReadTarget: false,
+      users: [candidate], membershipInOrg: true, returnedUserId: 'target',
+    });
+    const response = await POST(req({ ...target, orgObjectId: 'ORG2', resend: true }));
+    expect(response.status).toBe(201);
+    expect(membership.eq).toHaveBeenCalledWith('user_id', 'target');
+    expect(membership.eq).toHaveBeenCalledWith('org_object_id', 'ORG2');
+    expect(membership.eq).toHaveBeenCalledWith('is_active', true);
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])('rechecks current ORG rank after the directory read (resend=%s)', async (resend) => {
+    const { listUsers, inviteUserByEmail, rpc } = fixture({
+      callerRankReads: [30, 20], users: resend ? [candidate] : [],
+      membershipInOrg: resend, returnedUserId: resend ? 'target' : 'new-user',
+    });
+    const response = await POST(req({ ...target, resend }));
+    expect(response.status).toBe(403);
+    expect(listUsers).toHaveBeenCalledTimes(1);
     expect(inviteUserByEmail).not.toHaveBeenCalled();
     expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
   });

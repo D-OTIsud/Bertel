@@ -118,6 +118,11 @@ function assertPrivateRoot(root, files = []) {
   if (result.status !== 0 || result.stdout !== 'OK') throw new Error('backup_acl');
 }
 
+export function assertPrivateBackupDirectory(root) {
+  if (typeof root !== 'string' || !isAbsolute(root)) throw new Error('backup_inputs');
+  assertPrivateRoot(resolve(root));
+}
+
 export async function readPrivateBackupInput(filename, maxBytes) {
   if (!isAbsolute(filename) || /:/.test(basename(filename))) throw new Error('backup_inputs');
   const path = resolve(filename);
@@ -278,15 +283,20 @@ export async function backupSources(manifestBytes, options) {
   }
 }
 
-export async function verifyBackup(manifestBytes, options) {
+export async function verifyBackupReceipt(manifestBytes, options) {
   const { key } = options;
   const { root, inventory } = backupInputs(manifestBytes, options);
   const context = backupContext(root, key, options);
   const files = inventory.records.map(archiveName);
   assertPrivateRoot(root, [RECEIPT]);
   let receipt;
-  try { receipt = JSON.parse(await readLocalFile(join(root, RECEIPT), RECEIPT_MAX)); }
-  catch { throw new Error('backup_receipt'); }
+  let receiptSha256;
+  try {
+    const raw = await readLocalFile(join(root, RECEIPT), RECEIPT_MAX);
+    receiptSha256 = createHash('sha256').update(raw).digest('hex');
+    if (options.receiptSha256 !== undefined && receiptSha256 !== options.receiptSha256) throw new Error('backup_receipt');
+    receipt = JSON.parse(raw);
+  } catch { throw new Error('backup_receipt'); }
   if (!receipt || !HASH.test(receipt.tag) || receipt.format !== MAGIC.toString() ||
       receipt.manifest_sha256 !== inventory.digest || receipt.attempt_id !== context.attempt_id ||
       receipt.key_sha256 !== context.key_sha256 || !Array.isArray(receipt.records) ||
@@ -300,5 +310,11 @@ export async function verifyBackup(manifestBytes, options) {
         saved.bytes !== record.source_metadata.size || !HASH.test(saved.sha256)) throw new Error('backup_receipt');
     await verifySavedObject(join(root, files[index]), key, archiveAAD(inventory, record, context), saved);
   }
-  return { records: files.length, bytes: receipt.records.reduce((sum, saved) => sum + saved.bytes, 0) };
+  return { receiptSha256, records: receipt.records.map(({ document_id, bytes, sha256 }) => ({ document_id, bytes, sha256 })),
+    bytes: receipt.records.reduce((sum, saved) => sum + saved.bytes, 0) };
+}
+
+export async function verifyBackup(manifestBytes, options) {
+  const verified = await verifyBackupReceipt(manifestBytes, options);
+  return { records: verified.records.length, bytes: verified.bytes };
 }

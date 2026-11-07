@@ -62,28 +62,35 @@ async function testExplorerVolume(t) {
   const fixtureCount = 1025;
   const pageSize = 50;
   const pageCount = Math.ceil(fixtureCount / pageSize);
+  const batchSize = 128;
   const prefix = 'HOTRUNVOL';
   const search = 'ZzBertelVolumeProbe';
-  const fixtures = `SELECT '${prefix}' || lpad(n::text,7,'0') AS id,
+  const fixtureRows = (first, last) => `SELECT '${prefix}' || lpad(n::text,7,'0') AS id,
     '${search} ' || lpad(n::text,7,'0') AS name,
     CASE WHEN n % 2 = 0 THEN 'ORGRUN999999AR01' ELSE 'ORGRUN999999AR02' END AS org_id
-    FROM generate_series(1,${fixtureCount}) AS g(n)`;
-  const fixtureIds = `SELECT id FROM (${fixtures}) AS f`;
+    FROM generate_series(${first},${last}) AS g(n)`;
+  const batches = Array.from({ length: Math.ceil(fixtureCount / batchSize) }, (_, index) =>
+    fixtureRows(index * batchSize + 1, Math.min((index + 1) * batchSize, fixtureCount)));
+  const fixtureIds = `SELECT id FROM (${fixtureRows(1, fixtureCount)}) AS f`;
   const absent = () => local.sql(`SELECT NOT EXISTS (SELECT FROM public.object WHERE id IN (${fixtureIds}))
     AND NOT EXISTS (SELECT FROM internal.mv_filtered_objects WHERE id IN (${fixtureIds}))`, 'Explorer volume namespace');
   assert.equal(absent(), 't', 'Explorer volume IDs must be absent before seeding');
 
   const bounds = "SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='30s';";
+  const refreshProjection = (stage) => commit("SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='60s';"
+    + ' REFRESH MATERIALIZED VIEW internal.mv_filtered_objects', stage);
   const remaining = new Set(Array.from({ length: fixtureCount }, (_, index) => prefix + String(index + 1).padStart(7, '0')));
   const samples = [];
   let witnessError;
   try {
-    commit(`${bounds}
-      INSERT INTO public.object(id,object_type,name,status,published_at)
-        SELECT id,'HOT',name,'published',now() FROM (${fixtures}) AS f;
-      INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)
-        SELECT f.id,f.org_id,r.id,true FROM (${fixtures}) AS f JOIN public.ref_org_role r ON r.code='publisher';
-      REFRESH MATERIALIZED VIEW internal.mv_filtered_objects`, 'commit and project synthetic published Explorer volume');
+    for (const [index, batch] of batches.entries()) {
+      commit(`${bounds} INSERT INTO public.object(id,object_type,name,status,published_at)
+        SELECT id,'HOT',name,'published',now() FROM (${batch}) AS f`, `seed Explorer volume objects batch ${index + 1}`);
+      commit(`${bounds} INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)
+        SELECT f.id,f.org_id,r.id,true FROM (${batch}) AS f JOIN public.ref_org_role r ON r.code='publisher'`,
+      `link Explorer volume publishers batch ${index + 1}`);
+    }
+    refreshProjection('project synthetic published Explorer volume');
 
     let cursor = null;
     for (let page = 0; page < pageCount; page += 1) {
@@ -112,8 +119,11 @@ async function testExplorerVolume(t) {
     throw error;
   } finally {
     try {
-      commit(`${bounds} DELETE FROM public.object o USING (${fixtures}) AS f WHERE o.id=f.id AND o.name=f.name;
-        REFRESH MATERIALIZED VIEW internal.mv_filtered_objects`, 'remove only the synthetic Explorer volume and refresh');
+      for (const [index, batch] of batches.entries()) {
+        commit(`${bounds} DELETE FROM public.object o USING (${batch}) AS f WHERE o.id=f.id AND o.name=f.name`,
+          `remove synthetic Explorer volume batch ${index + 1}`);
+      }
+      refreshProjection('clear synthetic Explorer volume projection');
       assert.equal(absent(), 't', 'synthetic Explorer volume must be absent after cleanup');
     } catch (error) {
       if (witnessError) throw new AggregateError([witnessError, error], 'Explorer volume and cleanup both failed');

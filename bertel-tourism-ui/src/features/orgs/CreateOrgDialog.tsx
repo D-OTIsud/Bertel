@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/common/Modal';
 import { createOrg, friendlyOrgError } from '@/services/orgs';
-import { inviteUser, upsertMembership, setAdminRole, friendlyRbacError } from '@/services/rbac';
+import { inviteUser, setAdminRole, friendlyRbacError } from '@/services/rbac';
 import { BUSINESS_ROLE_CODES, businessRoleLabel } from '@/features/team/permission-presets';
 
 // Rôle admin remis au premier membre (rang 30 — vérifié en base : ref_org_admin_role).
@@ -41,10 +41,9 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
     setBusy(true);
     try {
       const invited = await inviteUser({ email: email.trim(), orgObjectId: orgId, businessRoleCode: roleCode });
-      const membershipId = await upsertMembership(invited.userId, orgId, roleCode);
       // §227 — aucun octroi individuel : le rôle métier confère ses droits. La matrice de la
       // nouvelle ORG est semée côté base par le trigger `trg_seed_org_role_permission`.
-      await setAdminRole(membershipId, FIRST_ADMIN_ROLE_CODE);
+      await setAdminRole(invited.membershipId, FIRST_ADMIN_ROLE_CODE);
       toast.success(`Invitation envoyée à ${email.trim()} — premier admin de l’organisation.`);
       onDone(); close();
     } catch (e) { toast.error(friendlyRbacError(e as { message?: string })); }

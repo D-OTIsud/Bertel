@@ -769,7 +769,7 @@ jobs:
 
   storage-contract:
     name: ${{ inputs.storage_contract == true && 'Strict Storage capability (manual, synthetic only)' || 'DB07 Storage copy profile (manual, synthetic only)' }}
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery != true && (inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery != true && inputs.portal_photo_browser != true && (inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

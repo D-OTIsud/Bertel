@@ -163,4 +163,6 @@ $$;
 REVOKE EXECUTE ON FUNCTION api.rpc_attach_invite_membership(uuid,text,text) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION api.rpc_attach_invite_membership(uuid,text,text) TO authenticated;
 
+NOTIFY pgrst, 'reload schema';
+
 COMMIT;

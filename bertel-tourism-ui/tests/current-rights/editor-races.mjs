@@ -192,8 +192,9 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await page.getByRole('button', { name: 'Se connecter' }).click();
     await page.waitForURL(app.origin + destination, { timeout: 60_000 });
     const name = page.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
-    const publish = page.getByRole('button', { name: 'Publier', exact: true });
-    const save = page.getByRole('button', { name: 'Enregistrer', exact: true });
+    const editorActions = page.locator('.edit-top__right');
+    const publish = editorActions.getByRole('button', { name: 'Publier', exact: true });
+    const save = editorActions.getByRole('button', { name: 'Enregistrer', exact: true });
     await assertion(name).toHaveValue(canonical()[0]);
 
     const patch = hold('patch');

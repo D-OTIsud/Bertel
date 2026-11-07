@@ -37,6 +37,23 @@ INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)VALUES
 ('HLORUNTHESAUR104','taxonomy_hlo','b73e1000-0000-4000-8000-000000000107');
 UPDATE public.object SET status='published' WHERE id='HLORUNTHESAUR101';
 UPDATE public.object SET status='published'WHERE id IN('HLORUNTHESAUR103','HLORUNTHESAUR104');
+
+-- Same publication, search and taxonomy as the real control, with a realm
+-- derived from a test organization through the normal publisher link.
+SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
+INSERT INTO public.object(id,object_type,name,status) VALUES
+  ('ORGRUNTHESAUR105','ORG','Organisation de test du catalogue partenaire','published'),
+  ('HLORUNTHESAUR105','HLO','Fiche publiée témoin','draft');
+INSERT INTO public.org_config(org_object_id,access_scope,is_test_org)
+VALUES ('ORGRUNTHESAUR105','own_objects_only',true);
+INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)
+SELECT 'HLORUNTHESAUR105','ORGRUNTHESAUR105',id,true FROM public.ref_org_role WHERE code='publisher';
+INSERT INTO public.object_taxonomy(object_id,domain,ref_code_id)
+SELECT 'HLORUNTHESAUR105',domain,ref_code_id FROM public.object_taxonomy
+WHERE object_id='HLORUNTHESAUR101' AND domain='taxonomy_hlo';
+UPDATE public.object SET status='published' WHERE id='HLORUNTHESAUR105';
+SELECT set_config('request.jwt.claims','{"sub":"b73e0000-0000-4000-8000-000000000101","role":"authenticated"}',true);
+
 -- The fresh manifest intentionally leaves these WITH NO DATA until its final step.
 -- Populate the real fixture before exercising the canonical filtered-object reader.
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
@@ -125,6 +142,40 @@ BEGIN
   RAISE NOTICE 'Thesaurus reference snapshot, atomic object contract, visibility and taxonomy consumer tests passed.';
 END
 $test$;
+
+-- The real HTTP routes call these wrappers with service_role, which can see
+-- both physical rows. Both catalogue branches must still expose only reality.
+SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
+SET LOCAL ROLE service_role;
+DO $partner_realm$
+DECLARE
+  codes text[];
+  page jsonb;
+BEGIN
+  ASSERT api.current_user_test_realm() IS FALSE, 'Partner server must use the real realm';
+  ASSERT EXISTS (SELECT 1 FROM public.object WHERE id='HLORUNTHESAUR101' AND status='published'
+    AND NOT is_test AND name='Fiche publiée témoin');
+  ASSERT EXISTS (SELECT 1 FROM public.object WHERE id='HLORUNTHESAUR105' AND status='published'
+    AND is_test AND name='Fiche publiée témoin');
+  ASSERT (SELECT count(*) FROM public.object_taxonomy
+    WHERE object_id IN ('HLORUNTHESAUR101','HLORUNTHESAUR105') AND domain='taxonomy_hlo'
+      AND ref_code_id='b73e1000-0000-4000-8000-000000000102') = 2;
+  ASSERT api.get_partner_object_with_vocabulary('HLORUNTHESAUR101') #>> '{data,id}' = 'HLORUNTHESAUR101';
+  ASSERT api.get_partner_object_with_vocabulary('HLORUNTHESAUR105') IS NULL,
+    'Published test object leaked through the partner detail wrapper';
+
+  FOR codes IN SELECT f.codes FROM (VALUES (NULL::text[]), (ARRAY['taxonomy_hlo:consumer_root'])) AS f(codes)
+  LOOP
+    page := api.list_partner_objects_with_vocabulary(
+      p_types=>ARRAY['HLO'], p_search=>'Fiche publiée témoin', p_taxonomy_codes=>codes);
+    ASSERT (SELECT array_agg(item->>'id') FROM jsonb_array_elements(page->'data') AS item) = ARRAY['HLORUNTHESAUR101'],
+      'Partner catalogue must return only the real witness for the shared search';
+  END LOOP;
+END
+$partner_realm$;
+RESET ROLE;
+SELECT set_config('request.jwt.claims','{"sub":"b73e0000-0000-4000-8000-000000000101","role":"authenticated"}',true);
+
 -- Exercise the actual invoker permission chain after moving the legacy serializer
 -- into the private schema: a postgres-only test would miss a missing EXECUTE grant.
 -- Isolated minimal test databases may omit the canonical bootstrap's public-reference

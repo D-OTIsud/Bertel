@@ -1,9 +1,7 @@
 jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn() }));
-jest.mock('../store/session-store', () => ({
-  useSessionStore: { getState: () => ({ demoMode: false }) },
-}));
 
 import { getApiClient } from '../lib/supabase';
+import { useSessionStore } from '../store/session-store';
 import {
   computeVersionDiff,
   formatChangeType,
@@ -13,6 +11,15 @@ import {
 } from './object-versions';
 
 const mockGetApiClient = getApiClient as jest.Mock;
+const rpcResponse = (response: unknown) => jest.fn().mockReturnValue(Object.assign(Promise.resolve(response), {
+  abortSignal: jest.fn().mockReturnThis(),
+}));
+beforeEach(() => {
+  jest.clearAllMocks();
+  useSessionStore.setState({ ...useSessionStore.getInitialState(), demoMode: false,
+    status: 'ready', userId: 'synthetic-version-user',
+    authAuthority: { userId: 'synthetic-version-user', epoch: 1, hydrated: true } });
+});
 
 describe('computeVersionDiff', () => {
   it('lists only the keys that differ, with before/after stringified', () => {
@@ -55,7 +62,7 @@ describe('formatChangeType', () => {
 
 describe('getObjectVersions', () => {
   it('calls the RPC and maps snake_case rows to camelCase', async () => {
-    const rpc = jest.fn().mockResolvedValue({
+    const rpc = rpcResponse({
       data: [
         {
           version_number: 3,
@@ -89,7 +96,7 @@ describe('getObjectVersions', () => {
   });
 
   it('throws a friendly message on RPC error', async () => {
-    const rpc = jest.fn().mockResolvedValue({ data: null, error: { message: 'boom' } });
+    const rpc = rpcResponse({ data: null, error: { message: 'boom' } });
     mockGetApiClient.mockReturnValue({ schema: () => ({ rpc }) });
     await expect(getObjectVersions('PCURUN0000000001')).rejects.toThrow(/historique/i);
   });
@@ -97,7 +104,7 @@ describe('getObjectVersions', () => {
 
 describe('getObjectVersionSnapshot', () => {
   it('returns the data record from the RPC', async () => {
-    const rpc = jest.fn().mockResolvedValue({ data: { name: 'X' }, error: null });
+    const rpc = rpcResponse({ data: { name: 'X' }, error: null });
     mockGetApiClient.mockReturnValue({ schema: () => ({ rpc }) });
     const snap = await getObjectVersionSnapshot('PCURUN0000000001', 2);
     expect(rpc).toHaveBeenCalledWith('get_object_version_snapshot', {
@@ -110,7 +117,7 @@ describe('getObjectVersionSnapshot', () => {
 
 describe('restoreObjectVersion', () => {
   it('calls the restore RPC and resolves on success', async () => {
-    const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
+    const rpc = rpcResponse({ data: null, error: null });
     mockGetApiClient.mockReturnValue({ schema: () => ({ rpc }) });
     await restoreObjectVersion('PCURUN0000000001', 2);
     expect(rpc).toHaveBeenCalledWith('rpc_restore_object_version', {
@@ -120,7 +127,7 @@ describe('restoreObjectVersion', () => {
   });
 
   it('throws a friendly message on RPC error', async () => {
-    const rpc = jest.fn().mockResolvedValue({ data: null, error: { message: 'boom' } });
+    const rpc = rpcResponse({ data: null, error: { message: 'boom' } });
     mockGetApiClient.mockReturnValue({ schema: () => ({ rpc }) });
     await expect(restoreObjectVersion('PCURUN0000000001', 2)).rejects.toThrow(/restaur/i);
   });

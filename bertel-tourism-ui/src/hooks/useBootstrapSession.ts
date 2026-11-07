@@ -6,6 +6,7 @@ import { getOrCreateUserProfile, readLangPrefsFromAuth } from '../services/user-
 import { GUEST_SIGN_IN_MESSAGE, GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-store';
 import type { UserRole } from '../types/domain';
 import { isSandboxMode } from '../lib/sandbox-mode';
+import { isSandboxDiscoveryUser } from '../lib/sandbox-effects';
 import { leaveSandbox } from '../services/sandbox';
 import { clearServiceAvailabilityForSessionTransition } from '../services/service-availability';
 import { sessionAvatarInitials as initialsFromName } from '../utils/avatar-initials';
@@ -196,6 +197,7 @@ export function useBootstrapSession() {
       }
 
       const user = data.user;
+      const isSandboxDiscovery = isSandboxDiscoveryUser(user);
       const metadataRole = normalizeRole(user.app_metadata?.role ?? user.user_metadata?.role);
       const fallbackName = String(user.user_metadata?.full_name ?? user.email ?? user.id);
       const fallbackLangPrefs = readLangPrefsFromAuth(user);
@@ -226,6 +228,7 @@ export function useBootstrapSession() {
         useProviderScopeStore.getState().initialize(user.id, profile?.preferences?.provider_only === true);
         hydrateFromAuth({
           isTestRealm,
+          isSandboxDiscovery,
           role,
           userId: user.id,
           email: String(user.email ?? ''),
@@ -278,6 +281,7 @@ export function useBootstrapSession() {
         adminRank,
         adminRoleCode,
         isTestRealm,
+        isSandboxDiscovery,
       });
     }
 

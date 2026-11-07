@@ -378,6 +378,14 @@ Fresh-install migrations and post-seed fixups use idempotent DDL/data patterns a
 
 18d. `migration_test_org_seed.sql` — Corpus et remise a zero du bac a sable, apres 18c et 18d0 ; suivi de `tests/test_test_org_seed.sql`.
 
+### CL-SEC-03 — Autorisation des canaux Realtime privés
+
+Le manifeste exécutable inclut `supabase/migrations/20261107123311_realtime_channel_acl.sql` après le registre DB07 et avant le rafraîchissement des vues. Le test `tests/test_realtime_channel_acl.sql` exerce les politiques sous les rôles réels de la pile jetable puis annule les données synthétiques.
+
+Les trois salons exigent un profil back-office courant et excluent les comptes Découverte identifiés dans les métadonnées Auth serveur. Un agent de tourisme doit avoir une adhésion ORG active. Les rôles de plateforme owner et super_admin gardent leurs accès selon le salon. Le roster global sépare production et test tout en restant inter-ORG dans le même realm. Le salon CRM reprend le droit d’entrée de la page. Realtime v2.78.10 exige le droit de lecture Broadcast pour rejoindre ces deux salons privés. Seule l’émission Presence est autorisée aux clients. Le salon d’une fiche exige une lecture courante dans le realm et réserve l’émission Broadcast à l’autorité d’écriture canonique.
+
+La migration prépare les politiques de jointure. Une connexion ouverte conserve les droits mis en cache jusqu’à une nouvelle jointure, un nouveau JWT ou l’expiration du jeton. Les clients doivent utiliser les salons privés avant la désactivation du réglage Realtime « Allow public access ». Qualifier la coexistence, la reconnexion et l’arrêt des anciens salons sur une pile jetable avant la bascule du réglage.
+
 ### CI enforcement (deploy integrity)
 A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest step for step **hormis les étapes foldées — no-op sur base fraîche — et `migration_gdpr_erasure.sql` (14j), dont l'entrée est activement INTERDITE par le step CI *RGPD mirror alignment***, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
 
@@ -2494,3 +2502,23 @@ jamais appliqué ne rejouent aucun SQL ni ne modifient l’historique distant.
 Ne pas exécuter à nouveau cette garde, ni lancer un `db push` global. Un rollback
 applicatif conserve ce schéma additif ; la protection distribuée exige encore
 le déploiement du nouveau serveur sur toutes les répliques.
+
+### Autorité de lecture de l’Explorer
+
+La migration `20261107193944_explorer_filtered_read_authority.sql` est appliquée
+à la fin du manifeste frais. Elle filtre les candidats de
+`api.get_filtered_object_ids` avant le classement et le repli flou. Le chemin
+sur table vive exige le corpus courant et une publication, un droit étendu
+actuel ou une identité technique reconnue par la policy objet. Le chemin sur
+vue matérialisée exige que la fiche réelle soit encore publiée au moment de la
+requête. Le wrapper invoker et ses appels restent identiques.
+
+Pour un upgrade, comparer les empreintes du corps et de la définition sous
+`search_path = pg_catalog, pg_temp`, avec les retours chariot retirés. La
+migration accepte les prédécesseurs frais et live épinglés, vérifie ses trois
+ancres et contrôle les empreintes finales, l’OID, le propriétaire et l’ACL.
+Une empreinte inconnue arrête la transaction. Contrôler les mêmes métadonnées
+après application, sans appel métier. Le test SQL frais couvre les brouillons
+des deux ORG, la recherche floue, l’identité absente, le service technique et
+la publication devenue obsolète dans la vue. La matrice HTTP utilise les JWT
+synthétiques de la pile jetable et appelle directement la RPC.

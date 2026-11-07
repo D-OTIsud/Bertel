@@ -1,23 +1,38 @@
 {
-  "status": "proposal_only_not_applied",
+  "status": "applied_verified",
   "bucket": "legal-documents",
-  "observed_precondition": {
+  "historical_profile": {
     "public": false,
     "file_size_limit": 10485760,
-    "allowed_mime_types": ["application/pdf", "image/jpeg"]
-  },
-  "proposed_storage_api_update": {
-    "id": "legal-documents",
-    "name": "legal-documents",
-    "public": false,
-    "file_size_limit": 42305170,
     "allowed_mime_types": [
       "application/pdf",
-      "image/jpeg",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "image/png",
-      "image/heif"
+      "image/jpeg"
     ]
+  },
+  "applied_storage_api_update": {
+    "method": "PUT",
+    "path": "/storage/v1/bucket/legal-documents",
+    "body": {
+      "public": false,
+      "file_size_limit": 42305170,
+      "allowed_mime_types": [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/heif"
+      ]
+    }
+  },
+  "production_evidence": {
+    "put_acknowledged_at_utc": "2026-11-07T05:50:23.702Z",
+    "read_only_verified_at_utc": "2026-11-07T05:50:43.906955Z",
+    "destination_type": "STANDARD",
+    "destination_versioning_enabled": false,
+    "destination_lifecycle_enabled": false,
+    "destination_restrictive_all_policy_unchanged": true,
+    "source_visibility_unchanged": true,
+    "objects_touched": false
   },
   "bounds": {
     "classified_files": 1710,

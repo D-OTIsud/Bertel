@@ -28,9 +28,9 @@ export function computeDepartedPeers(
 
 
 export function PresenceRail({ objectId }: PresenceRailProps) {
-  const { peers, me, typingUsers } = usePresenceRoom(`room:${objectId}`);
+  const { contextKey, peers, me, typingUsers } = usePresenceRoom(`room:${objectId}`);
   const [now, setNow] = useState(() => Date.now());
-  const previousPeersRef = useRef<PresenceMember[]>(peers);
+  const previousRef = useRef({ contextKey, peers });
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), TICK_MS);
@@ -40,12 +40,14 @@ export function PresenceRail({ objectId }: PresenceRailProps) {
   // Notify when another editor leaves the page. Compares each presence sync against the
   // previous one; no toast on first render (previous === current) or when a peer joins.
   useEffect(() => {
-    const departed = computeDepartedPeers(previousPeersRef.current, peers, me?.userId ?? '');
-    previousPeersRef.current = peers;
+    const previous = previousRef.current;
+    previousRef.current = { contextKey, peers };
+    if (!contextKey || previous.contextKey !== contextKey) return;
+    const departed = computeDepartedPeers(previous.peers, peers, me?.userId ?? '');
     departed.forEach((peer) => {
       toast(`${peer.name} a quitté la page`, { duration: PRESENCE_LEAVE_TOAST_MS });
     });
-  }, [peers, me?.userId]);
+  }, [contextKey, peers, me?.userId]);
 
   return (
     <div className="card">

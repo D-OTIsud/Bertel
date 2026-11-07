@@ -128,7 +128,7 @@ describe('/api/actor-document — socle d’authentification', () => {
       SUPABASE_URL,
       ANON_KEY,
       expect.objectContaining({
-        global: { headers: { Authorization: 'Bearer jwt' } },
+        global: { headers: { Authorization: 'Bearer jwt' }, fetch: expect.any(Function) },
         auth: { persistSession: false, autoRefreshToken: false },
       }),
     );

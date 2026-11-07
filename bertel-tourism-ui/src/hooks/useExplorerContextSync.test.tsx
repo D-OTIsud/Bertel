@@ -34,6 +34,32 @@ describe('useExplorerContextSync (D25 : ?fiche=<id>)', () => {
     await waitFor(() => expect(window.location.search).toBe(''));
   });
 
+  it('laisse Next intégrer les écritures et restaure un vrai changement de fiche dans l’URL', () => {
+    window.history.replaceState({ __NA: true }, '', '/explorer');
+    const replace = jest.spyOn(window.history, 'replaceState');
+    try {
+      const { rerender } = renderHook(() => useExplorerContextSync());
+      act(() => useUiStore.getState().openDrawer('RES-7'));
+      expect(replace).toHaveBeenLastCalledWith(null, '', '/explorer?fiche=RES-7');
+      mockSearch = new URLSearchParams(window.location.search);
+      rerender();
+
+      act(() => useUiStore.getState().closeDrawer());
+      expect(replace).toHaveBeenLastCalledWith(null, '', '/explorer');
+      mockSearch = new URLSearchParams(window.location.search);
+      rerender();
+
+      window.history.replaceState({ __NA: true }, '', '/explorer?fiche=HOT-42');
+      replace.mockClear();
+      mockSearch = new URLSearchParams(window.location.search);
+      rerender();
+      expect(useUiStore.getState().drawerObjectId).toBe('HOT-42');
+      expect(replace).not.toHaveBeenCalled();
+    } finally {
+      replace.mockRestore();
+    }
+  });
+
   it('préserve les autres clés de l’URL (filtres) en écrivant fiche', async () => {
     window.history.replaceState(null, '', '/explorer?buckets=HOT&q=cilaos');
     renderHook(() => useExplorerContextSync());

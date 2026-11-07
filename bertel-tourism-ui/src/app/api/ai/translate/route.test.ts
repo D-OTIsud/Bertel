@@ -59,7 +59,7 @@ describe('POST /api/ai/translate', () => {
     expect(await result.json()).toEqual({ translations: { description: 'Welcome' } });
     expect(user).toHaveBeenCalledWith('caller-token');
     expect(mockedCreate).toHaveBeenCalledWith('https://test.supabase.co', 'anon', expect.objectContaining({
-      global: { headers: { Authorization: 'Bearer caller-token' } },
+      global: { headers: { Authorization: 'Bearer caller-token' }, fetch: expect.any(Function) },
     }));
     expect(callerRpc).toHaveBeenCalledTimes(1);
     expect(callerRpc).toHaveBeenCalledWith('user_can_write_object_canonical', { p_object_id: body.objectId });

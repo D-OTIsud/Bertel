@@ -20,7 +20,7 @@ test('real GoTrue/PostgREST enforce prepare/dispatch/result ACK, reload, generat
     user = (await created.json()).id; assert.match(user, /^[0-9a-f-]{36}$/);
     const login = await request('/auth/v1/token?grant_type=password', anonymous, { email, password });
     assert.equal(login.status, 200); const session = await login.json(); assert.ok(session.access_token);
-    const caller = { apikey: anonymous.apikey, authorization: `Bearer ${session.access_token}` };
+    const caller = Object.freeze({ apikey: anonymous.apikey, authorization: `Bearer ${session.access_token}` });
     const verified = await request('/auth/v1/user', caller, undefined, 'GET');
     assert.equal(verified.status, 200); assert.equal((await verified.json()).id, user);
     sql(`BEGIN; SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
@@ -28,6 +28,20 @@ test('real GoTrue/PostgREST enforce prepare/dispatch/result ACK, reload, generat
       INSERT INTO public.app_user_profile(id,role) VALUES('${user}','tourism_agent') ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role;
       INSERT INTO public.user_org_membership(user_id,org_object_id,is_active) VALUES('${user}','${org}',true);
       INSERT INTO public.object_list(id,org_object_id,created_by,kind,name) VALUES('${list}','${org}','${user}','static','Synthetic list'); COMMIT;`);
+    // ACC-09: ordinary list RPCs must observe current membership with the same Auth token.
+    const listTarget = { p_list_id: list };
+    const readOwnList = await rpc(caller, 'get_list', listTarget);
+    assert.equal(readOwnList.status, 200);
+    const detail = await readOwnList.json();
+    assert.deepEqual([detail.id, detail.name, detail.can_edit], [list, 'Synthetic list', true]);
+    const retainedName = 'Synthetic list saved before revocation';
+    const updateOwnList = await rpc(caller, 'update_list', { ...listTarget, p_patch: { name: retainedName } });
+    assert.equal(updateOwnList.status, 200);
+    assert.equal((await updateOwnList.json()).name, retainedName);
+    const listState = () => JSON.parse(sql(`SELECT jsonb_build_array(name,last_activity_at,updated_at)
+      FROM public.object_list WHERE id='${list}'`));
+    assert.equal(listState()[0], retainedName);
+
     const scope = { p_user_id: user, p_list_id: list };
     const args = { ...scope, p_operation_id: operation, p_fingerprint: 'a'.repeat(64), p_recipient_fingerprint: 'b'.repeat(64), p_expected_generation: '0' };
     for (const identity of [anonymous, caller]) for (const [name, body] of [
@@ -74,7 +88,17 @@ test('real GoTrue/PostgREST enforce prepare/dispatch/result ACK, reload, generat
     assert.equal(next.status, 200); const pending = await next.json(); assert.equal(pending.state, 'reserved');
     sql(`BEGIN; UPDATE public.user_org_membership SET is_active=false WHERE user_id='${user}' AND org_object_id='${org}'; COMMIT;`);
     // Same verified JWT remains cryptographically valid; fresh backend rights revoke its scope.
-    const sameJwt = await request('/auth/v1/user', caller, undefined, 'GET'); assert.equal(sameJwt.status, 200);
+    const sameJwt = await request('/auth/v1/user', caller, undefined, 'GET');
+    assert.equal(sameJwt.status, 200); assert.equal((await sameJwt.json()).id, user);
+    const saved = listState();
+    assert.equal(saved[0], retainedName);
+    for (const [name, body] of [['get_list', listTarget],
+      ['update_list', { ...listTarget, p_patch: { name: 'Forbidden edit after revocation' } }]]) {
+      const rejected = await rpc(caller, name, body);
+      assert.equal(rejected.status, 403, `${name} must reject the still-valid JWT after departure`);
+      assert.equal((await rejected.json()).code, '42501');
+    }
+    assert.deepEqual(listState(), saved, 'the refused RPCs changed neither content nor list clocks');
     const deniedContext = await rpc(service, 'get_list_email_context', scope); assert.equal(deniedContext.status, 200); assert.equal((await deniedContext.json()).state, 'forbidden');
     const deniedBegin = await rpc(service, 'begin_list_email', { ...exact, p_operation_id: pendingId, p_attempt_token: pending.attempt_token });
     assert.equal(deniedBegin.status, 200); assert.equal((await deniedBegin.json()).state, 'forbidden');

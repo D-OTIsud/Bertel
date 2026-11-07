@@ -7,7 +7,9 @@ import { ArrowUpRight, Menu, Search } from 'lucide-react';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useCrmSearchStore } from '../../store/crm-search-store';
+import { useSessionStore } from '../../store/session-store';
 import { useUiStore } from '../../store/ui-store';
+import { realtimeScopeKey } from '../../lib/realtime-scope';
 import { Input } from '@/components/ui/input';
 import { LivePresenceIndicator } from './LivePresenceIndicator';
 import { CreateObjectButton } from '../../features/object-editor/create/CreateObjectButton';
@@ -105,6 +107,7 @@ export function TopBar() {
   const closeDrawer = useUiStore((state) => state.closeDrawer);
   const setCommandPaletteOpen = useUiStore((state) => state.setCommandPaletteOpen);
   const setMobileNavOpen = useUiStore((state) => state.setMobileNavOpen);
+  const showLivePresence = useSessionStore((state) => state.demoMode || realtimeScopeKey(state) !== null);
   const drawerDirty = useObjectDrawerStore((state) =>
     drawerObjectId ? Boolean(state.dirtyObjects[drawerObjectId]) : false,
   );
@@ -264,7 +267,7 @@ export function TopBar() {
 
         <div className="flex items-center gap-2">
           <CreateObjectButton />
-          <LivePresenceIndicator />
+          {showLivePresence && <LivePresenceIndicator />}
           <TopBarClock />
         </div>
       </header>

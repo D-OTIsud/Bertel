@@ -98,7 +98,7 @@ describe('_document-auth — callerClient', () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_KEY;
     callerClient('the.jwt.value');
     expect(mockedCreate).toHaveBeenCalledWith(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: 'Bearer the.jwt.value' } },
+      global: { headers: { Authorization: 'Bearer the.jwt.value' }, fetch: expect.any(Function) },
       auth: { persistSession: false, autoRefreshToken: false },
     });
     const [, key] = mockedCreate.mock.calls[0];

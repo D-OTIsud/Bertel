@@ -153,6 +153,26 @@ test('range inspects merged branch commits even if the merge tree is clean', (t)
   assert.deepEqual(checkPublicationRange(base, root), [path]);
 });
 
+for (const { name, path, forbidden, fingerprint } of [
+  { name: 'clean', path: 'calibration.txt' },
+  { name: 'forbidden path', path: 'docs/research/berta-deletes-backup-2099-01-01.json', forbidden: true },
+  { name: 'renamed private fingerprint', path: 'calibration.txt', forbidden: true, fingerprint: true },
+]) {
+  test(`range inspects an unrelated root merged with ours: ${name}`, (t) => {
+    const { root, git, stage, commit } = fixture(t);
+    stage('readme.txt');
+    const base = commit();
+    const blob = stage(path, 'synthetic calibration bytes');
+    const unrelated = git('commit-tree', git('write-tree'), '-m', 'Synthetic root');
+    git('restore', '--staged', '--', path);
+    git('merge', '--quiet', '--no-ff', '--allow-unrelated-histories', '-s', 'ours', unrelated, '-m', 'Synthetic merge');
+    assert.equal(git('rev-parse', 'HEAD^{tree}'), git('rev-parse', `${base}^{tree}`));
+    assert.deepEqual(checkPublication(root), []);
+    const privateBlobs = fingerprint ? new Set([blob]) : undefined;
+    assert.deepEqual(checkPublicationRange(base, root, privateBlobs), forbidden ? [path] : []);
+  });
+}
+
 test('range refuses a base that is not an ancestor of HEAD', (t) => {
   const { root, git, stage, commit } = fixture(t);
   stage('readme.txt');

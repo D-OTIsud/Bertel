@@ -10,8 +10,14 @@ VALUES (
   'legal-documents',
   'legal-documents',
   false,
-  10485760,
-  ARRAY['application/pdf', 'image/jpeg']
+  42305170,
+  ARRAY[
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/heif'
+  ]
 )
 ON CONFLICT (id) DO UPDATE
 SET public = EXCLUDED.public,

@@ -32,6 +32,8 @@ export interface ResilientChannelOptions {
   topic: string;
   /** Second argument de `client.channel(topic, …)`. */
   config?: Parameters<SupabaseClient['channel']>[1];
+  /** A disposed or superseded identity must never reopen its channel. */
+  canOpen?: () => boolean;
   /** Installe les handlers `.on(...)`. Rappelée à CHAQUE reconstruction. */
   bind: (channel: RealtimeChannel) => void;
   /** Appelée quand le canal est effectivement SUBSCRIBED (ex. `track` de présence). */
@@ -44,6 +46,22 @@ export interface ResilientChannelHandle {
   /** Reconstruit tout de suite, sans attendre le backoff (bouton « Reconnecter »). */
   retryNow: () => void;
   dispose: () => void;
+}
+
+const retiredChannels = new WeakSet<RealtimeChannel>();
+
+export function resetPresenceAfterJoin(channel: RealtimeChannel): boolean {
+  const presence = channel.presence;
+  if (!presence || !Array.isArray(presence.pendingDiffs) || !presence.state
+    || typeof presence.state !== 'object' || Array.isArray(presence.state)
+    || (presence.joinRef !== null && typeof presence.joinRef !== 'string')) return false;
+
+  // Realtime JS 2.99.1 can route frames by topic before the join ACK. Discard
+  // that Presence state and await a snapshot from the newly authorized join.
+  presence.state = {};
+  presence.pendingDiffs = [];
+  presence.joinRef = null;
+  return true;
 }
 
 export function createResilientChannel(
@@ -73,6 +91,10 @@ export function createResilientChannel(
 
   function open() {
     if (disposed) return;
+    if (options.canOpen?.() === false) {
+      scheduleReopen();
+      return;
+    }
     clearTimer();
     subscribed = false;
 
@@ -81,18 +103,27 @@ export function createResilientChannel(
     if (previous) {
       // Indispensable : `client.channel(topic)` RÉUTILISE un canal existant de même
       // topic. Sans ce retrait, on récupérerait le cadavre au lieu d'un canal neuf.
+      retiredChannels.add(previous);
       void client.removeChannel(previous);
     }
 
     options.onState?.('connecting');
     const channel = client.channel(options.topic, options.config);
 
-    if (previous && channel === previous) {
+    if (options.config?.config?.private === true && channel.params.config.private !== true) {
+      // Realtime reuses by topic and can return a channel with the old configuration.
+      retiredChannels.add(channel);
+      void client.removeChannel(channel);
+      scheduleReopen();
+      return;
+    }
+
+    if (retiredChannels.has(channel)) {
       // Le canal précédent n'a pas encore fini de quitter le topic (phx_leave en vol) :
       // realtime-js nous rend le même objet, et `subscribe()` n'est un no-op silencieux
       // que hors état "closed". On retente au pas suivant plutôt que de s'abonner dans
       // le vide.
-      current = previous;
+      current = channel;
       scheduleReopen();
       return;
     }
@@ -102,9 +133,16 @@ export function createResilientChannel(
 
     channel.subscribe((status) => {
       // Réponse tardive d'un canal déjà remplacé : elle ne doit plus piloter l'état.
-      if (channel !== current || disposed) return;
+      if (channel !== current || disposed || options.canOpen?.() === false) return;
 
       if (status === 'SUBSCRIBED') {
+        if (options.config?.config?.private && options.config.config.presence && !resetPresenceAfterJoin(channel)) {
+          // A changed SDK shape must not make an unfiltered roster visible.
+          subscribed = false;
+          options.onState?.('error');
+          scheduleReopen();
+          return;
+        }
         subscribed = true;
         attempt = 0;
         clearTimer();
@@ -154,6 +192,7 @@ export function createResilientChannel(
       const channel = current;
       current = null;
       if (channel) {
+        retiredChannels.add(channel);
         void channel.untrack();
         void channel.unsubscribe();
         void client.removeChannel(channel);

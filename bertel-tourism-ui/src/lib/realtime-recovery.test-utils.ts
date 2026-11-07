@@ -10,12 +10,15 @@
 
 export interface FakeRealtimeChannel {
   topic: string;
+  params: { config: { private?: boolean } };
+  presence: { state: object; pendingDiffs: unknown[]; joinRef: string | null };
   /** Types d'événements passés à `.on(...)`, dans l'ordre d'installation. */
   bindings: string[];
   /** Déclenche le callback de `subscribe()` avec un statut realtime. */
   emit: (status: string) => void;
   /** Rejoue le handler `.on('presence', { event: 'sync' })`. */
   syncPresence: () => void;
+  broadcastEvent: (event: string, payload: unknown) => void;
   on: jest.Mock;
   subscribe: jest.Mock;
   track: jest.Mock;
@@ -31,25 +34,31 @@ export function makeFakeRealtimeClient() {
   const created: FakeRealtimeChannel[] = [];
 
   const client = {
-    channel: jest.fn((topic: string) => {
+    channel: jest.fn((topic: string, params = { config: {} }) => {
       const existing = live.get(topic);
       if (existing) return existing;
 
       let statusCallback: ((status: string) => void) | null = null;
       let presenceSync: (() => void) | null = null;
+      const broadcastHandlers = new Map<string, (message: { payload: unknown }) => void>();
 
       const chan: FakeRealtimeChannel = {
         topic,
+        params,
+        presence: { state: {}, pendingDiffs: [], joinRef: null },
         bindings: [],
         emit: (status) => statusCallback?.(status),
         syncPresence: () => presenceSync?.(),
-        on: jest.fn((type: string, filter: { event?: string }, handler: () => void) => {
+        broadcastEvent: (event, payload) => broadcastHandlers.get(event)?.({ payload }),
+        on: jest.fn((type: string, filter: { event?: string }, handler: (message: { payload: unknown }) => void) => {
           chan.bindings.push(type);
-          if (type === 'presence' && filter?.event === 'sync') presenceSync = handler;
+          if (type === 'presence' && filter?.event === 'sync') presenceSync = () => handler({ payload: undefined });
+          if (type === 'broadcast' && filter.event) broadcastHandlers.set(filter.event, handler);
           return chan;
         }),
         subscribe: jest.fn((cb: (status: string) => void) => {
-          statusCallback = cb;
+          // A second subscribe on this SDK Channel doesn't register a new owner.
+          statusCallback ??= cb;
           return chan;
         }),
         track: jest.fn().mockResolvedValue('ok'),
@@ -69,6 +78,8 @@ export function makeFakeRealtimeClient() {
     }),
     /** Simule un canal qui n'a pas fini de quitter le topic (phx_leave en vol). */
     keepTopicBusy: (chan: FakeRealtimeChannel) => live.set(chan.topic, chan),
+    routeBroadcast: (topic: string, event: string, payload: unknown) => live.get(topic)?.broadcastEvent(event, payload),
+    routePresence: (topic: string) => live.get(topic)?.syncPresence(),
   };
 
   return { client, created };

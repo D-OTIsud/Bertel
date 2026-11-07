@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { routeFailure } from '../../_route-failure';
 // Reuse the media image pipeline for scanned-certificate images (resize ≤ 2000 px +
 // EXIF/IPTC/XMP strip). PDFs are validated and stored as-is (validateDocument).
 import { processImage, MediaProcessingError, MAX_INPUT_BYTES } from '../../media/upload/process-image';
@@ -147,7 +148,7 @@ async function handlePostAuthenticated(
       upsert: false,
     });
     if (uploadErr) {
-      return NextResponse.json({ error: 'upload_failed', detail: uploadErr.message }, { status: 500 });
+      return routeFailure('document/upload.POST', 'upload_failed');
     }
     const { data: pub } = server.storage.from(BUCKET).getPublicUrl(path);
     const publicUrl = pub.publicUrl;
@@ -162,7 +163,7 @@ async function handlePostAuthenticated(
       .select('id')
       .single();
     if (docErr || !doc) {
-      return NextResponse.json({ error: 'document_create_failed', detail: docErr?.message ?? 'no row' }, { status: 500 });
+      return routeFailure('document/upload.POST', 'document_create_failed');
     }
 
     return NextResponse.json({ documentId: (doc as { id: string }).id, url: publicUrl, title }, { status: 201 });
@@ -171,9 +172,6 @@ async function handlePostAuthenticated(
       const status = err.code === 'mime' || err.code === 'size' ? 415 : 400;
       return NextResponse.json({ error: err.code, detail: err.message }, { status });
     }
-    return NextResponse.json(
-      { error: 'upload_failed', detail: err instanceof Error ? err.message : 'unknown' },
-      { status: 500 },
-    );
+    return routeFailure('document/upload.POST', 'upload_failed');
   }
 }

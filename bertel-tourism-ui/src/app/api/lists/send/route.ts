@@ -7,6 +7,8 @@ import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { isSandboxDiscoveryUser, SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { prepareListEmail, MailDeliveryError, MailNotConfiguredError } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
+import { manualListEmailAdmissionEnabled } from '@/lib/list-email-admission.server';
+import { listEmailMailbox } from '@/lib/list-email-mailbox';
 import { renderListEmailHtml, listEmailSubject, type ListEmailItem } from '@/emails/ListEmail';
 import { ACCENT_INK, typeLabel } from '@/features/lists/type-meta';
 
@@ -18,7 +20,6 @@ import { ACCENT_INK, typeLabel } from '@/features/lists/type-meta';
 // service_role peut l'appeler). SMTP absent ⇒ 503 sans casser lien/PDF.
 export const runtime = 'nodejs';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_ITEMS = 4; // n'embarquer que les premières fiches ; le reste via « sélection complète »
 
@@ -80,8 +81,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 200, headers: { 'Cache-Control': 'no-store' } });
     } catch { return protectionUnavailable(); }
   }
-  const toEmail = str(body.toEmail).trim();
-  if (!EMAIL_RE.test(toEmail)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
+  const toEmail = listEmailMailbox(str(body.toEmail));
+  if (!toEmail) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
   const previous = body.confirmedPreviousOperationId;
   const previousIds = body.confirmedPreviousOperationIds;
   if ((previous !== undefined && (typeof previous !== 'string' || !UUID_RE.test(previous)))
@@ -101,6 +102,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     || (body.confirmResend !== undefined && typeof body.confirmResend !== 'boolean')
     || (confirmedPreviousOperationIds.length > 0 && !confirmResend))) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   if (phase === 'dispatch' && !UUID_RE.test(dispatchToken)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+
+  // Context and technical ACK above never admit a transmission. Closing admission
+  // does not cancel workers that have already passed this guard; retire them at cutover.
+  if (!manualListEmailAdmissionEnabled()) return protectionUnavailable();
 
   // Resolve before creating a share link or reading any mutable list side effect. A disabled
   // database setting intentionally wins over environment fallback in resolveSmtpConfig.

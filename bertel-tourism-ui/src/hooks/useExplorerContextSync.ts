@@ -47,7 +47,9 @@ export function useExplorerContextSync() {
         params.delete(DRAWER_URL_PARAM);
       }
       const query = params.toString();
-      window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+      // Next recopie ses données internes. Lui repasser history.state
+      // court-circuiterait la mise à jour de useSearchParams.
+      window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
     });
     return unsubscribe;
   }, []);

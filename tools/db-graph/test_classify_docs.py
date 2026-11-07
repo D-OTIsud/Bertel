@@ -10,7 +10,8 @@ def test_classify_object_core_and_facets():
     assert classify({"schema": "audit", "label": "audit_log", "kind": "table"}) == "audit"
 
 def test_attach_sql_docs_grabs_preceding_comment_block(tmp_path):
-    sql = tmp_path / "x.sql"
+    sql = tmp_path / "supabase" / "migrations" / "x.sql"
+    sql.parent.mkdir(parents=True)
     sql.write_text(
         "-- assert_facet_applicable() validates the type->facet rule.\n"
         "-- Fail-closed: an enrolled table must have a registry row.\n"
@@ -21,7 +22,7 @@ def test_attach_sql_docs_grabs_preceding_comment_block(tmp_path):
     attach_sql_docs(nodes, [str(sql)])
     assert "validates the type->facet rule" in nodes[0]["doc"]
     assert nodes[0]["props"]["source"]["line"] == 3
-    assert nodes[0]["props"]["source"]["path"].endswith("x.sql")
+    assert nodes[0]["props"]["source"]["path"] == "supabase/migrations/x.sql"
 
 def test_attach_sql_docs_does_not_override_existing_doc(tmp_path):
     sql = tmp_path / "y.sql"
@@ -29,7 +30,7 @@ def test_attach_sql_docs_does_not_override_existing_doc(tmp_path):
     nodes = [{"id": "api.f()", "kind": "function", "schema": "api", "label": "f", "doc": "catalog comment wins", "props": {}}]
     attach_sql_docs(nodes, [str(sql)])
     assert nodes[0]["doc"] == "catalog comment wins"
-    assert nodes[0]["props"]["source"]["line"] == 2
+    assert nodes[0]["props"]["source"] == {"path": "y.sql", "line": 2}
 
 def test_attach_sql_docs_keeps_multiple_sources_for_overloads(tmp_path):
     sql = tmp_path / "overloads.sql"

@@ -61,7 +61,12 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
         ? `Le rôle de premier administrateur a été attribué à ${recipient}.`
         : `Invitation envoyée à ${recipient} — premier admin de l’organisation.`);
       onDone(); close();
-    } catch (e) { toast.error(friendlyRbacError(e as { message?: string })); }
+    } catch (e) {
+      if (resend && e instanceof Error && 'code' in e && e.code === 'already_active') {
+        setInvitation((current) => current === previous ? null : current);
+      }
+      toast.error(friendlyRbacError(e as { message?: string }));
+    }
     finally { setBusy(false); }
   }
 
@@ -118,7 +123,7 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
             </label>
             <label className="field-block" htmlFor="org-admin-role">
               <span>Rôle métier</span>
-              <select id="org-admin-role" className="select" value={roleCode} onChange={(e) => setRoleCode(e.target.value)} disabled={busy}>
+              <select id="org-admin-role" className="select" value={roleCode} onChange={(e) => setRoleCode(e.target.value)} disabled={busy || invitation !== null}>
                 {BUSINESS_ROLE_CODES.map((code) => <option key={code} value={code}>{businessRoleLabel(code)}</option>)}
               </select>
               <span className="muted">Le rôle d’administration « org_admin » (gestion d’équipe) est ajouté automatiquement.</span>

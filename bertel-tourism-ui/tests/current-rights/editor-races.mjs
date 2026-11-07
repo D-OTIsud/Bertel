@@ -216,8 +216,6 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
             activity.writes += 1;
             kind = 'activity-write';
           }
-        } else if (activityReload && request.method() === 'GET' && url.pathname === '/auth/v1/user') {
-          kind = 'activity-auth';
         } else if (activityReload && request.method() === 'POST' && editorRpcKinds.get(url.pathname) === 'reread'
           && request.postDataJSON()?.p_object_id === activity.objectId) {
           kind = 'activity-workspace';
@@ -229,8 +227,6 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
             && body.p_status.includes('draft') && body.p_status.includes('published')) {
             kind = 'realm-catalogue';
           }
-        } else if (reload && request.method() === 'GET' && url.pathname === '/auth/v1/user') {
-          kind = 'reload-auth';
         } else if (draftScope && request.method() === 'POST' && url.pathname === '/auth/v1/logout') {
           kind = 'draft-logout';
         } else if (request.method() === 'PATCH' && url.pathname === '/rest/v1/object' && url.searchParams.get('id') === 'eq.' + objectId) {
@@ -259,6 +255,14 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
             && claims.role === 'authenticated'
             && claims.sub === (activity?.account.id ?? realm?.account.userId ?? draftScope?.userId ?? writerId),
           'browser must use the exact synthetic user JWT and anonymous API key');
+          // PostgREST checks the JWT on each protected request. A separate
+          // browser GET to GoTrue is not a prerequisite for this readback.
+          const legalWitness = scene.legalMode && (kind.startsWith('legal-') || (kind === 'reread' && reload));
+          const rereadScope = kind.startsWith('activity-') ? activity : legalWitness && scene;
+          if (rereadScope) {
+            rereadScope.authorization ??= headers.authorization;
+            assert.ok(headers.authorization === rereadScope.authorization, 'protected editor requests must reuse the same Bearer');
+          }
           if (kind === 'realm-bootstrap' || kind === 'realm-catalogue') {
             if (realmPhase === realm.before) realm.authorization ??= headers.authorization;
             assert.ok(headers.authorization === realm.authorization, 'realm transition must reuse the exact original JWT');
@@ -272,17 +276,14 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
             assert.ok(body.object_id === activity.objectId && body.equipment_provided === true
               && !Object.hasOwn(body, 'equipment_provided_details'));
           } else if (kind === 'legal-write') assert.equal(headers['content-profile'], 'public');
-          else if (kind !== 'patch' && kind !== 'reload-auth' && kind !== 'draft-logout' && kind !== 'activity-auth') {
+          else if (kind !== 'patch' && kind !== 'draft-logout') {
             assert.equal(headers['content-profile'], 'api');
           }
         }
         failureStage = 'response';
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
         assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
-        if (kind === 'activity-auth') {
-          activityReload.authStatus = response.status();
-          if (response.ok()) activityReload.authenticatedUser ||= (await response.json())?.id === activity.account.id;
-        } else if (kind === 'activity-workspace') {
+        if (kind === 'activity-workspace') {
           activityReload.workspaceStatus = response.status();
           if (response.ok()) {
             const body = await response.json();
@@ -335,11 +336,6 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           assert.equal((await response.json())?.legal, true);
           scene.legalPermissions += 1;
           if (reload) reload.legalPermission = true;
-        } else if (kind === 'reload-auth') {
-          assert.ok(response.ok());
-          failureStage = 'reload-authenticated-user';
-          assert.equal((await response.json())?.id, writerId);
-          reload.authenticatedUser = true;
         } else if (kind === 'legal-write') {
           assert.ok(response.ok());
           scene.legalWrites += 1;
@@ -533,7 +529,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
 
     // Only change the document lifecycle. Keep the same context, identity and summary fault.
     await assertion(degraded.page.getByText('Brouillon enregistré', { exact: true })).toBeVisible();
-    const reload = { nativeDocument: false, authenticatedUser: false, workspace: false,
+    assert.ok(degraded.scene.authorization, 'the legal requests must record the Bearer before reload');
+    const reload = { nativeDocument: false, workspace: false,
       legalPermission: false, legalRecord: false, summary503: false };
     degraded.scene.reload = reload;
     let pageErrors = 0;
@@ -546,7 +543,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       assert.equal(navigationType, 'reload');
       await assertion(degraded.page).toHaveURL(editorUrl);
       await assertion.poll(() => ({ ...reload })).toEqual({
-        nativeDocument: true, authenticatedUser: true, workspace: true,
+        nativeDocument: true, workspace: true,
         legalPermission: true, legalRecord: true, summary503: true,
       });
     } catch (error) {
@@ -783,8 +780,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           const saved = persisted();
           assert.deepEqual(JSON.parse(saved).slice(0, 2), [true, fixture.duration]);
 
-          const reload = { nativeDocument: false, authStatus: null, workspaceStatus: null,
-            authenticatedUser: false, workspace: false, persistedActivityRead: false };
+          assert.ok(activity.authorization, 'the activity requests must record the Bearer before reload');
+          const reload = { nativeDocument: false, workspaceStatus: null, workspace: false, persistedActivityRead: false };
           activity.reload = reload;
           let pageErrors = 0;
           page.on('pageerror', () => { pageErrors += 1; });
@@ -794,8 +791,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
               && document.request().redirectedFrom() === null, 'the editor must reload its exact native document');
             assert.equal(await page.evaluate(() => performance.getEntriesByType('navigation')[0]?.type), 'reload');
             await assertion.poll(() => ({
-              authenticatedUser: reload.authenticatedUser, workspace: reload.workspace, activity: reload.persistedActivityRead,
-            })).toEqual({ authenticatedUser: true, workspace: true, activity: true });
+              workspace: reload.workspace, activity: reload.persistedActivityRead,
+            })).toEqual({ workspace: true, activity: true });
             await assertion(equipment).toBeEnabled();
           } catch (error) {
             const phases = { ...reload, pageErrors,

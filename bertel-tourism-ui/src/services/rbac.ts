@@ -142,16 +142,16 @@ export const setRolePermission = (orgObjectId: string, roleCode: string, permiss
 export async function inviteUser(input: { email: string; orgObjectId: string; businessRoleCode: string; resend?: boolean }): Promise<InviteResult> {
   const client = getSupabaseClient();
   const token = (await client?.auth.getSession())?.data.session?.access_token;
-  const res = await fetch('/api/admin/invite', {
+  const res = await fetch('/api/admin/invite/v2', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: token ? `Bearer ${token}` : '' },
     body: JSON.stringify({ email: input.email, orgObjectId: input.orgObjectId, businessRoleCode: input.businessRoleCode, resend: input.resend === true }),
   });
-  const body = await res.json();
+  const body = await res.json().catch(() => null);
   if (res.status === 409 && body?.userId && body?.membershipId) {
     return { userId: body.userId, membershipId: body.membershipId, alreadyExisted: true, neverSignedIn: body.neverSignedIn === true };
   }
-  if (!res.ok) throw rbacRouteError(body, res.status);
+  if (!res.ok) throw rbacRouteError(res.status === 404 ? { error: 'bad_request' } : body, res.status);
   if (!body?.userId || !body?.membershipId) throw rbacRouteError({ error: 'create_failed' }, 500);
   return { userId: body.userId, membershipId: body.membershipId, alreadyExisted: false };
 }

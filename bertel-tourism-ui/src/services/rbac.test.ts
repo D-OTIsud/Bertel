@@ -98,10 +98,25 @@ describe('rbac service', () => {
     }), { status: 409 }));
     try {
       await expect(inviteUser(input)).resolves.toEqual({ userId: 'u1', membershipId: 'm1', alreadyExisted: true, neverSignedIn: false });
-      expect(fetchMock).toHaveBeenCalledWith('/api/admin/invite', expect.objectContaining({
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/invite/v2', expect.objectContaining({
         headers: { 'content-type': 'application/json', authorization: 'Bearer synthetic' },
         body: JSON.stringify({ ...input, resend: false }),
       }));
+    } finally {
+      fetchMock.mockRestore();
+      jest.mocked(getSupabaseClient).mockReset();
+    }
+  });
+
+  it('asks to reload if the server does not offer invite v2 and never falls back to the legacy POST', async () => {
+    const input = { email: 'a@b.c', orgObjectId: 'ORG1', businessRoleCode: 'editor' };
+    const auth = { getSession: jest.fn().mockResolvedValue({ data: { session: { access_token: 'synthetic' } } }) };
+    jest.mocked(getSupabaseClient).mockReturnValue({ auth } as never);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('<html>Not Found</html>', { status: 404 }));
+    try {
+      await expect(inviteUser(input)).rejects.toThrow('Requête invalide. Rechargez la page et réessayez.');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/invite/v2', expect.objectContaining({ method: 'POST' }));
     } finally {
       fetchMock.mockRestore();
       jest.mocked(getSupabaseClient).mockReset();

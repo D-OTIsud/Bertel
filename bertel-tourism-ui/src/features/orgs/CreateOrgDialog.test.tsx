@@ -36,8 +36,11 @@ test('crée l’ORG puis invite le premier admin dans l’ordre', async () => {
   await waitFor(() => expect(createOrg).toHaveBeenCalledWith({ name: 'OTI Ouest', regionCode: 'RUN', accessScope: 'own_objects_only' }));
   // étape 2
   fireEvent.change(await screen.findByLabelText(/adresse e.mail/i), { target: { value: 'chef@oti.re' } });
+  fireEvent.change(screen.getByLabelText(/^Rôle métier/), { target: { value: 'editor' } });
   fireEvent.click(screen.getByRole('button', { name: /inviter comme premier admin/i }));
-  await waitFor(() => expect(inviteUser).toHaveBeenCalled());
+  await waitFor(() => expect(inviteUser).toHaveBeenCalledWith({
+    email: 'chef@oti.re', orgObjectId: 'ORGNEW', businessRoleCode: 'editor',
+  }));
   await waitFor(() => expect(setAdminRole).toHaveBeenCalledWith('m9', 'org_admin'));
   expect(upsertMembership).not.toHaveBeenCalled();
 });

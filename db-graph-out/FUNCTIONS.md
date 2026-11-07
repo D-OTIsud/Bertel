@@ -4016,6 +4016,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Historical pending proposals become visible immediately after deployment.
 > The unique index makes this safe to rerun and avoids duplicate alerts.
 
+## `internal.bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
+
 ## `internal.build_list_detail_json(p_list_id uuid)`
 - returns: `json` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_

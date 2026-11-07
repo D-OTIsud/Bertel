@@ -378,6 +378,14 @@ Fresh-install migrations and post-seed fixups use idempotent DDL/data patterns a
 
 18d. `migration_test_org_seed.sql` — Corpus et remise a zero du bac a sable, apres 18c et 18d0 ; suivi de `tests/test_test_org_seed.sql`.
 
+### CL-SEC-03 — Autorisation des canaux Realtime privés
+
+Le manifeste exécutable inclut `supabase/migrations/20261107123311_realtime_channel_acl.sql` après le registre DB07 et avant le rafraîchissement des vues. Le test `tests/test_realtime_channel_acl.sql` exerce les politiques sous les rôles réels de la pile jetable puis annule les données synthétiques.
+
+Le roster global sépare production et test tout en restant inter-ORG dans le même realm. Le salon CRM reprend le droit d’entrée de la page. Realtime v2.78.10 exige le droit de lecture Broadcast pour rejoindre ces deux salons privés. Seule l’émission Presence est autorisée aux clients. Le salon d’une fiche exige une lecture courante dans le realm et réserve l’émission Broadcast à l’autorité d’écriture canonique.
+
+La migration prépare les politiques de jointure. Les clients doivent utiliser les salons privés avant la désactivation du réglage Realtime « Allow public access ». Qualifier la coexistence, la reconnexion et l’arrêt des anciens salons sur une pile jetable avant la bascule du réglage.
+
 ### CI enforcement (deploy integrity)
 A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest step for step **hormis les étapes foldées — no-op sur base fraîche — et `migration_gdpr_erasure.sql` (14j), dont l'entrée est activement INTERDITE par le step CI *RGPD mirror alignment***, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
 

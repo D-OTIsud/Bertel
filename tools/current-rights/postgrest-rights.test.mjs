@@ -52,8 +52,13 @@ async function testInitialPublication() {
     `committed writer role: ${code}`,
   );
   const permission = () => rpc(headers('writer'), 'user_has_permission', { p_permission_code: 'publish_object' });
-  const create = (body) => local.request('/rest/v1/object?select=id,status', headers('writer'), body, 'POST',
-    { prefer: 'return=representation' });
+  // A separate GET observes the publisher link created by the AFTER INSERT trigger.
+  const create = (body) => local.request('/rest/v1/object', headers('writer'), body, 'POST',
+    { prefer: 'return=minimal' });
+  async function verifyCreated(id, status) {
+    const inserted = await rows(headers('writer'), id);
+    assert.deepEqual(inserted.map((row) => ({ id: row.id, status: row.status })), [{ id, status }]);
+  }
   const body = {
     id: INITIAL_DRAFT, object_type: 'HOT', name: 'Synthetic initial publication', created_by: ids.writer, status: 'published',
   };
@@ -61,7 +66,7 @@ async function testInitialPublication() {
   assert.equal(await json(await permission(), 'editor publication permission'), true);
   const editor = await create({ ...body, id: INITIAL_PUBLISHED });
   assert.equal(editor.status, 201, 'current editor/publisher must create an initially published object');
-  assert.deepEqual(await editor.json(), [{ id: INITIAL_PUBLISHED, status: 'published' }]);
+  await verifyCreated(INITIAL_PUBLISHED, 'published');
 
   writerRole('contributor');
   try {
@@ -78,7 +83,13 @@ async function testInitialPublication() {
     assert.equal(noEffects, 't');
     const control = await create({ ...body, status: 'draft' });
     assert.equal(control.status, 201, 'the same contributor payload must create a draft');
-    assert.deepEqual(await control.json(), [{ id: INITIAL_DRAFT, status: 'draft' }]);
+    await verifyCreated(INITIAL_DRAFT, 'draft');
+    const publisherLinks = local.sql(`SELECT count(DISTINCT l.object_id)
+      FROM public.object_org_link l JOIN public.ref_org_role r ON r.id=l.role_id
+      WHERE l.org_object_id='ORGRUN999999AR01' AND r.code='publisher'
+        AND l.object_id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}')`,
+      'publisher links after each authorized insert');
+    assert.equal(publisherLinks, '2');
   } finally {
     writerRole('editor');
   }

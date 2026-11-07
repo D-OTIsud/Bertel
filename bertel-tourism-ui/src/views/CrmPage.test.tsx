@@ -1,10 +1,11 @@
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { IsRestoringProvider, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CrmPage from './CrmPage';
 import * as crm from '../services/crm';
 import type { ActorCrmSnapshot } from '../services/crm';
 import { mockCrmDirectory, mockCrmTasks, mockCrmTimeline } from '../data/mock';
 import { useCrmSearchStore } from '../store/crm-search-store';
+import { crmQueryKeys } from '../lib/crm-query-keys';
 
 jest.mock('../services/crm');
 jest.mock('../hooks/usePresenceRoom', () => ({
@@ -133,6 +134,34 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
     await screen.findByText('Rappeler le directeur');
     fireEvent.click(screen.getByRole('button', { name: 'Avancer « Rappeler le directeur »' }));
     expect(await screen.findByText(/refus RLS/)).toBeInTheDocument();
+  });
+
+  it.each([true, false])('attend la permission pendant la restauration du cache (écriture=%s)', async (canWrite) => {
+    crmMock.userCanWriteCrmNotes.mockResolvedValue(canWrite);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (isRestoring: boolean) => (
+      <QueryClientProvider client={client}>
+        <IsRestoringProvider value={isRestoring}><CrmPage /></IsRestoringProvider>
+      </QueryClientProvider>
+    );
+    const { container, rerender } = render(view(true));
+    expect(client.getQueryState(crmQueryKeys.canWrite)).toMatchObject({ status: 'pending', fetchStatus: 'idle' });
+    expect(crmMock.userCanWriteCrmNotes).not.toHaveBeenCalled();
+    expect(container.querySelector('.crm-readonly-pill')).toBeNull();
+
+    rerender(view(false));
+    fireEvent.click(screen.getByRole('button', { name: /tâches & relances/i }));
+    const create = await screen.findByRole('button', { name: 'Nouvelle tâche', exact: true });
+    await waitFor(() => {
+      expect(client.getQueryData(crmQueryKeys.canWrite)).toBe(canWrite);
+      if (canWrite) {
+        expect(container.querySelector('.crm-readonly-pill')).toBeNull();
+        expect(create).toBeEnabled();
+      } else {
+        expect(container.querySelector('.crm-readonly-pill')).toHaveTextContent(/lecture seule/i);
+        expect(create).toBeDisabled();
+      }
+    });
   });
 
   it('désactive l écriture avec raison sans write_crm_notes (no-write-trap)', async () => {

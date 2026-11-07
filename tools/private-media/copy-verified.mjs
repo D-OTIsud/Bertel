@@ -175,7 +175,7 @@ export function storageTransport({ projectRef, serviceKey, testOrigin, timeoutMs
         body: JSON.stringify({ bucketId: r.source_bucket, sourceKey: r.source_path,
           destinationBucket: r.destination_bucket, destinationKey: r.destination_path }) }, signal);
     },
-    async hashObject(bucket, key, expected, signal) {
+    async hashObject(bucket, key, expected, signal, onChunk) {
       requireThat(['old_legal_media', 'legal-documents'].includes(bucket) && safePath(key), 'request_scope');
       const response = await request(`/storage/v1/object/authenticated/${bucket}/${encoded(key)}`, { headers: { 'accept-encoding': 'identity' } }, signal);
       if (!response.ok) { await cancelBody(response); fail('storage_http'); }
@@ -195,9 +195,12 @@ export function storageTransport({ projectRef, serviceKey, testOrigin, timeoutMs
         for await (const chunk of response.body) {
           requireThat(!signal?.aborted, 'interrupted');
           size += chunk.length; requireThat(size <= expected.size, 'content_size'); digest.update(chunk);
+          if (onChunk) {
+            try { await onChunk(chunk); } catch { fail('content_sink'); }
+          }
         }
       } catch (error) {
-        if (['interrupted', 'content_size', 'content_body'].includes(error.message)) throw error;
+        if (['interrupted', 'content_size', 'content_body', 'content_sink'].includes(error.message)) throw error;
         fail(signal?.aborted ? 'interrupted' : 'content_network');
       }
       requireThat(size === expected.size, 'content_size');
@@ -206,7 +209,7 @@ export function storageTransport({ projectRef, serviceKey, testOrigin, timeoutMs
   };
 }
 
-function assertSource(info, r) {
+export function assertSource(info, r) {
   requireThat(info && info.id === r.source_metadata.id && info.name === r.source_path
     && info.bucket_id === r.source_bucket && etag(info.etag) === etag(r.source_metadata.etag)
     && Number(info.size) === r.source_metadata.size && info.content_type === r.source_metadata.content_type

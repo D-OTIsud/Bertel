@@ -33,12 +33,20 @@ SET search_path = pg_catalog, pg_temp
 AS $function$
 DECLARE
   caller_id uuid := auth.uid();
+  caller_role text;
   in_test_realm boolean;
   realm_suffix text;
   object_id text;
 BEGIN
   IF caller_id IS NULL OR p_topic IS NULL OR p_write IS NULL
     OR p_extension IS NULL OR p_extension NOT IN ('presence', 'broadcast') THEN
+    RETURN false;
+  END IF;
+
+  -- All three consumers live in the authenticated back-office. Published
+  -- object access alone does not entitle a partner to the staff roster.
+  SELECT p.role INTO caller_role FROM public.app_user_profile p WHERE p.id = caller_id;
+  IF caller_role IS NULL OR caller_role NOT IN ('owner', 'super_admin', 'tourism_agent') THEN
     RETURN false;
   END IF;
 
@@ -49,17 +57,12 @@ BEGIN
   -- Realtime v2.78.10 requires broadcast read authorization to join even a
   -- presence-only private channel. Clients still cannot send broadcasts here.
   IF p_topic = 'presence:global:' || realm_suffix THEN
-    RETURN (p_extension = 'presence' OR NOT p_write) AND EXISTS (
-      SELECT 1 FROM public.app_user_profile p
-      WHERE p.id = caller_id AND p.role IN ('owner', 'super_admin', 'tourism_agent')
-    );
+    RETURN p_extension = 'presence' OR NOT p_write;
   END IF;
 
   IF p_topic = 'crm:tasks:' || realm_suffix THEN
-    RETURN (p_extension = 'presence' OR NOT p_write) AND EXISTS (
-      SELECT 1 FROM public.app_user_profile p
-      WHERE p.id = caller_id AND p.role IN ('super_admin', 'tourism_agent')
-    ) AND COALESCE(api.current_user_can_edit_objects(), false);
+    RETURN (p_extension = 'presence' OR NOT p_write) AND caller_role <> 'owner'
+      AND COALESCE(api.current_user_can_edit_objects(), false);
   END IF;
 
   IF p_topic COLLATE pg_catalog."C" !~ '^room:[A-Z]{3}[A-Z0-9]{13}$' THEN

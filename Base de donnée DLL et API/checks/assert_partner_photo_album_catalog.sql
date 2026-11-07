@@ -8,9 +8,15 @@ SET LOCAL search_path=pg_catalog,public,api,internal;
 \set album_post_acc08 off
 \endif
 SELECT set_config('bertel.album_post_acc08', :'album_post_acc08', true) AS album_catalog_phase \gset
+\if :{?album_post_photo_claim}
+\else
+\set album_post_photo_claim off
+\endif
+SELECT set_config('bertel.album_post_photo_claim', :'album_post_photo_claim', true) AS album_photo_claim_phase \gset
 DO $catalog_contract$
 DECLARE v record; v_json jsonb; v_expected jsonb; v_active boolean;
  v_post_acc08 boolean := current_setting('bertel.album_post_acc08')::boolean;
+ v_post_photo_claim boolean := current_setting('bertel.album_post_photo_claim')::boolean;
  v_portal_module_helper regprocedure := to_regprocedure('internal.portal_submission_module(text,text,jsonb)');
  v_contract constant jsonb := $contract$
 {
@@ -577,6 +583,7 @@ DECLARE v record; v_json jsonb; v_expected jsonb; v_active boolean;
       "signature": "api.prepare_portal_photo_approval(uuid,boolean,uuid)",
       "source_md5": "34b7086ba27afbf3e3b4249c8204cadd",
       "active_source_md5": "34b7086ba27afbf3e3b4249c8204cadd",
+      "post_photo_claim_source_md5": "3ebeb980fd8bd9731fda08ea0b5ad6dd",
       "catalog": {
         "acl": [
           [
@@ -709,6 +716,7 @@ DECLARE v record; v_json jsonb; v_expected jsonb; v_active boolean;
       "signature": "api.portal_photo_failed_approval(uuid)",
       "source_md5": "d6c59366cebc471b31e8cee046dfced8",
       "active_source_md5": "d6c59366cebc471b31e8cee046dfced8",
+      "post_photo_claim_source_md5": "aef9770d0b96b920796dc98a3c44b1af",
       "catalog": {
         "acl": [
           [
@@ -3245,7 +3253,7 @@ BEGIN
  END IF;
  IF jsonb_array_length(v_contract->'functions')<>57 THEN RAISE EXCEPTION 'Incomplete photo catalog oracle'; END IF;
  FOR v IN SELECT * FROM jsonb_to_recordset(v_contract->'functions')
-  AS x(signature text,source_md5 text,active_source_md5 text,post_acc08_source_md5 text,catalog jsonb,active_acl jsonb) LOOP
+  AS x(signature text,source_md5 text,active_source_md5 text,post_acc08_source_md5 text,post_photo_claim_source_md5 text,catalog jsonb,active_acl jsonb) LOOP
   SELECT jsonb_build_object('owner',pg_get_userbyid(p.proowner),'language',l.lanname,'returns',pg_get_function_result(p.oid),'arguments',pg_get_function_arguments(p.oid),'definer',p.prosecdef,'volatility',p.provolatile,'strict',p.proisstrict,'leakproof',p.proleakproof,'parallel',p.proparallel,'kind',p.prokind,'config',COALESCE((SELECT jsonb_agg(regexp_replace(x,'[[:space:]]','','g') ORDER BY regexp_replace(x,'[[:space:]]','','g')) FROM unnest(p.proconfig) x),'[]'::jsonb),'acl',(SELECT jsonb_agg(jsonb_build_array(CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END,pg_get_userbyid(a.grantor),a.privilege_type,a.is_grantable) ORDER BY a.grantee=0,pg_get_userbyid(a.grantee),a.privilege_type,a.is_grantable) FROM aclexplode(COALESCE(p.proacl,acldefault('f',p.proowner))) a)) INTO v_json FROM pg_proc p JOIN pg_language l ON l.oid=p.prolang WHERE p.oid=to_regprocedure(v.signature);
   v_expected:=v.catalog;
   IF v_active THEN v_expected:=jsonb_set(v_expected,'{acl}',v.active_acl); END IF;
@@ -3253,7 +3261,8 @@ BEGIN
    RAISE EXCEPTION 'Photo function attributes/required ACL differ (%)',v.signature;
   END IF;
   IF (SELECT md5(replace(prosrc,E'\r\n',E'\n')) FROM pg_proc WHERE oid=to_regprocedure(v.signature))
-    IS DISTINCT FROM (CASE WHEN v_post_acc08 AND v.post_acc08_source_md5 IS NOT NULL THEN v.post_acc08_source_md5
+    IS DISTINCT FROM (CASE WHEN v_post_photo_claim AND v.post_photo_claim_source_md5 IS NOT NULL THEN v.post_photo_claim_source_md5
+                           WHEN v_post_acc08 AND v.post_acc08_source_md5 IS NOT NULL THEN v.post_acc08_source_md5
                            WHEN v_active THEN v.active_source_md5 ELSE v.source_md5 END) THEN
    RAISE EXCEPTION 'Photo function source differs (%)',v.signature;
   END IF;

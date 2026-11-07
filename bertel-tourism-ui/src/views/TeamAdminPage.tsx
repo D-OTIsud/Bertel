@@ -24,7 +24,7 @@ import { listOrgs, type OrgSummary } from '@/services/orgs';
 import { MembersTable } from '@/features/team/MembersTable';
 import { RoleSelect } from '@/features/team/RoleSelect';
 import { InviteMemberDialog } from '@/features/team/InviteMemberDialog';
-import { MemberPermissionsDrawer } from '@/features/team/MemberPermissionsDrawer';
+import { isVisibleTeamPermission, MemberPermissionsDrawer } from '@/features/team/MemberPermissionsDrawer';
 import { OrgRolePermissionsModal } from '@/features/team/OrgRolePermissionsModal';
 import { MemberProfileModal } from '@/features/team/MemberProfileModal';
 import { businessRoleLabel, reviewRoleChange } from '@/features/team/permission-presets';
@@ -139,13 +139,14 @@ export default function TeamAdminPage() {
     const who = m.displayName ?? m.email ?? 'Ce membre';
 
     if (residualExceptions.length > 0) {
+      const visibleExceptions = residualExceptions.filter(isVisibleTeamPermission);
       toast.warning(
         `${who} conserve ${residualExceptions.length} droit${residualExceptions.length > 1 ? 's' : ''} au-delà du rôle ${roleLabel}.`,
         {
           duration: Infinity,
           description:
-            'Accordés en exception individuelle, ils ne sont PAS retirés par le changement de rôle. '
-            + `À révoquer dans « Permissions » : ${residualExceptions.join(', ')}.`,
+            'Accordés en exception individuelle, ils ne sont PAS retirés par le changement de rôle.'
+            + (visibleExceptions.length > 0 ? ` À révoquer dans « Permissions » : ${visibleExceptions.join(', ')}.` : ''),
         },
       );
       return;

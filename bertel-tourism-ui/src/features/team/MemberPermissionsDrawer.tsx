@@ -38,8 +38,12 @@ export const CATEGORY_LABELS: Record<string, string> = {
 
 const HIDDEN_TEAM_PERMISSION_CODES = new Set(['edit_hours', 'edit_pricing', 'edit_gallery', 'attach_documents']);
 
+export function isVisibleTeamPermission(code: string): boolean {
+  return !HIDDEN_TEAM_PERMISSION_CODES.has(code);
+}
+
 export function visibleTeamPermissions(catalog: RefPermission[]): RefPermission[] {
-  return catalog.filter((permission) => !HIDDEN_TEAM_PERMISSION_CODES.has(permission.code));
+  return catalog.filter((permission) => isVisibleTeamPermission(permission.code));
 }
 
 export function groupByCategory(

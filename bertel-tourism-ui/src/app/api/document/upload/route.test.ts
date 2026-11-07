@@ -48,16 +48,17 @@ function req(headers: Record<string, string>, form: FormData): never {
   return { headers: new Headers(headers), formData: async () => form } as never;
 }
 
-/** Server: getUser OK + storage upload OK + getPublicUrl + ref_document insert OK. */
-function serverOk(insertId = 'doc-1') {
-  const single = jest.fn().mockResolvedValue({ data: { id: insertId }, error: null });
+function serverOk(insertId = 'doc-1', errors: { upload?: string; insert?: string } = {}) {
+  const single = jest.fn().mockResolvedValue(errors.insert
+    ? { data: null, error: { message: errors.insert } }
+    : { data: { id: insertId }, error: null });
   const select = jest.fn(() => ({ single }));
   const insert = jest.fn(() => ({ select }));
   return {
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }) },
     storage: {
       from: jest.fn(() => ({
-        upload: jest.fn().mockResolvedValue({ error: null }),
+        upload: jest.fn().mockResolvedValue({ error: errors.upload ? { message: errors.upload } : null }),
         getPublicUrl: jest.fn(() => ({ data: { publicUrl: 'https://cdn/documents/HOTRUN0000000001/x.pdf' } })),
       })),
     },
@@ -118,5 +119,24 @@ describe('POST /api/document/upload', () => {
     expect((server as unknown as { __insert: jest.Mock }).__insert).toHaveBeenCalledWith(
       expect.objectContaining({ url: expect.any(String), title: 'attestation.pdf' }),
     );
+  });
+
+  it.each([
+    ['upload', 'upload_failed'],
+    ['insert', 'document_create_failed'],
+  ] as const)('500 correlates the %s failure without exposing engine details', async (step, code) => {
+    mockedServer.mockReturnValue(serverOk('doc-1', { [step]: 'synthetic engine detail DOC_SENTINEL' }));
+    authorize(true);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const res = await POST(req({ authorization: 'Bearer t' }, pdfForm()));
+      expect(res.status).toBe(500);
+      await expect(res.json()).resolves.toEqual({ error: code });
+      const requestId = res.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+      expect(warn.mock.calls).toEqual([['[route-error]', { route: 'document/upload.POST', code, requestId }]]);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

@@ -210,7 +210,8 @@ export async function testCreatePublishBrowser({ local, commit, writerId, email,
       && url.pathname === '/objects/' + objectId + '/edit', { timeout: 60_000 });
 
     const name = page.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
-    const publish = page.locator('.edit-top__right').getByRole('button', { name: 'Publier', exact: true });
+    const actions = page.locator('.edit-top__right');
+    const publish = actions.getByRole('button', { name: 'Publier', exact: true });
     await expectUI(name).toHaveValue(initialName);
     assert.deepEqual(state(), [initialName, 'draft', false]);
 
@@ -221,10 +222,13 @@ export async function testCreatePublishBrowser({ local, commit, writerId, email,
     assert.deepEqual(publications, ['synthetic-503']);
     assert.deepEqual(state(), draftAfterSave);
     await failure.locator('button.btn.primary').click();
+    await expectUI(failure).toBeHidden();
     await expectUI(name).toHaveValue(savedName);
 
+    const retry = actions.getByRole('button', { name: 'Échec — réessayer', exact: true });
+    await expectUI(retry).toBeEnabled();
     retryRequested = true;
-    await publish.click();
+    await retry.click();
     await Promise.all([
       expectUI.poll(state).toEqual([savedName, 'published', true]),
       expectUI(page.getByText('Fiche enregistrée et publiée', { exact: true })).toBeVisible(),

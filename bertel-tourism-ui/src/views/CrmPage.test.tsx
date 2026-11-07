@@ -136,6 +136,22 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
     expect(await screen.findByText(/refus RLS/)).toBeInTheDocument();
   });
 
+  it.each([
+    [/^Acteurs/, /chargement de l.annuaire/i],
+    [/^Tâches & relances/, /chargement des tâches/i],
+    [/^Timeline$/, /chargement de la timeline/i],
+  ])('conserve le squelette pendant la restauration du cache (%s)', (tab, loadingLabel) => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <IsRestoringProvider value><CrmPage /></IsRestoringProvider>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: tab }));
+    expect(screen.getByRole('status', { name: loadingLabel })).toHaveAttribute('aria-busy', 'true');
+  });
+
   it.each([true, false])('attend la permission pendant la restauration du cache (écriture=%s)', async (canWrite) => {
     crmMock.userCanWriteCrmNotes.mockResolvedValue(canWrite);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -151,7 +167,7 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
 
     rerender(view(false));
     fireEvent.click(screen.getByRole('button', { name: /tâches & relances/i }));
-    const create = await screen.findByRole('button', { name: 'Nouvelle tâche', exact: true });
+    const create = await screen.findByRole('button', { name: 'Nouvelle tâche' });
     await waitFor(() => {
       expect(client.getQueryData(crmQueryKeys.canWrite)).toBe(canWrite);
       if (canWrite) {

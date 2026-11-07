@@ -44,6 +44,7 @@ function fixture(options: {
   nextPage?: number;
   attachError?: boolean;
   attachUnknown?: boolean;
+  attachAlreadyActive?: boolean;
   providerError?: boolean;
   returnedUserId?: string;
   profileRole?: string | null;
@@ -60,9 +61,12 @@ function fixture(options: {
     if (name === 'is_platform_superuser') return { data: options.platform === true, error: null };
     if (name === 'current_user_admin_rank') return { data: options.rank ?? 30, error: null };
     if (name === 'current_user_org_id') return { data: options.callerOrg ?? 'ORG1', error: null };
-    if (name === 'rpc_upsert_membership') {
-      if (options.attachError) return { data: null, error: { message: 'synthetic private membership failure' } };
-      return { data: options.attachUnknown ? null : 'membership-1', error: null };
+    if (name === 'rpc_attach_invite_membership') {
+      if (options.attachError) return { data: null, error: { code: '40P01', message: 'synthetic deadlock failure' } };
+      return {
+        data: options.attachUnknown ? null : { membership_id: 'membership-1', already_active: options.attachAlreadyActive === true },
+        error: null,
+      };
     }
     throw new Error(`Unexpected RPC ${name}`);
   });
@@ -188,7 +192,7 @@ describe('POST /api/admin/invite/v2', () => {
     }
     expect(listUsers).not.toHaveBeenCalled();
     expect(inviteUserByEmail).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
   });
 
   it('resends in another administered organisation after an exact service-side membership check', async () => {
@@ -213,7 +217,7 @@ describe('POST /api/admin/invite/v2', () => {
     expect(response.status).toBe(403);
     expect(listUsers).toHaveBeenCalledTimes(1);
     expect(inviteUserByEmail).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
   });
 
   it.each([
@@ -226,7 +230,7 @@ describe('POST /api/admin/invite/v2', () => {
     if (roleCode === 'owner') expect(businessRole.eq).toHaveBeenCalledWith('code', 'owner');
     expect(listUsers).not.toHaveBeenCalled();
     expect(inviteUserByEmail).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
     expect(update).not.toHaveBeenCalled();
   });
 
@@ -237,7 +241,7 @@ describe('POST /api/admin/invite/v2', () => {
     await expect(res.json()).resolves.toEqual({ userId: 'new-user', membershipId: 'membership-1', alreadyExisted: false });
     expect(listUsers).toHaveBeenCalledWith({ page: 1, perPage: 1000 });
     expect(inviteUserByEmail).toHaveBeenCalledWith('x@y.z', { redirectTo: 'https://bertel.otisud.re/set-password' });
-    expect(rpc).toHaveBeenCalledWith('rpc_upsert_membership', {
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
       p_target_user_id: 'new-user', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
     });
     expect(update).toHaveBeenCalledWith({ role: 'tourism_agent' });
@@ -266,7 +270,7 @@ describe('POST /api/admin/invite/v2', () => {
       expect(res.status).toBe(403);
       await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
     }
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
     expect(inviteUserByEmail).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
@@ -290,7 +294,7 @@ describe('POST /api/admin/invite/v2', () => {
     const res = await POST(req(target));
     expect(res.status).toBe(409);
     await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: true });
-    expect(rpc).toHaveBeenCalledWith('rpc_upsert_membership', {
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
       p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
     });
     expect(inviteUserByEmail).not.toHaveBeenCalled();
@@ -306,7 +310,7 @@ describe('POST /api/admin/invite/v2', () => {
     const res = await POST(req(target));
     expect(res.status).toBe(403);
     await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
     expect(inviteUserByEmail).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
@@ -318,7 +322,7 @@ describe('POST /api/admin/invite/v2', () => {
       activeOrgs: profileRole === 'owner' ? ['ORG2', 'ORG1'] : ['ORG1'], profileRole,
     });
     const res = await POST(req({ ...target, resend: false }));
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
     expect(inviteUserByEmail).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
@@ -333,7 +337,7 @@ describe('POST /api/admin/invite/v2', () => {
     });
     const response = await POST(req({ ...target, resend: false }));
     expect(inviteUserByEmail).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({
       userId: 'target', membershipId: 'active-membership-ORG1', alreadyExisted: true, neverSignedIn: true,
@@ -345,7 +349,7 @@ describe('POST /api/admin/invite/v2', () => {
       userId: 'target', membershipId: 'active-membership-ORG1', alreadyExisted: false,
     });
     expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
     expect(deleteUser).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
   });
@@ -357,16 +361,43 @@ describe('POST /api/admin/invite/v2', () => {
     const response = await POST(req({ ...target, resend: false }));
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({ error: 'out_of_scope' });
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
     expect(inviteUserByEmail).not.toHaveBeenCalled();
   });
 
-  it.each([{ attachError: true }, { attachUnknown: true }])('no disclosure or email without an acknowledged attachment (%j)', async (outcome) => {
+  it('uses the concurrent active result without implicitly sending to the existing account', async () => {
+    const { rpc, inviteUserByEmail, update } = fixture({
+      users: [candidate], attachAlreadyActive: true, returnedUserId: 'target',
+    });
+    const response = await POST(req({ ...target, resend: false }));
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
+      p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
+    });
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      userId: 'target', membershipId: 'membership-1', alreadyExisted: true, neverSignedIn: true,
+    });
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('preserves the acknowledged fresh invitation if a concurrent call attached it first', async () => {
+    const { inviteUserByEmail, update } = fixture({ attachAlreadyActive: true });
+    const response = await POST(req(target));
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({
+      userId: 'new-user', membershipId: 'membership-1', alreadyExisted: false,
+    });
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it.each([{ attachError: true }, { attachUnknown: true }])('no disclosure or email after an attachment deadlock or unknown ACK (%j)', async (outcome) => {
     const { inviteUserByEmail, rpc, deleteUser, update } = fixture({ users: [candidate], platform: true, ...outcome });
     const res = await POST(req(target));
     expect(res.status).toBe(403);
     await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
-    expect(rpc).toHaveBeenCalledWith('rpc_upsert_membership', {
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
       p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
     });
     expect(inviteUserByEmail).not.toHaveBeenCalled();
@@ -379,7 +410,7 @@ describe('POST /api/admin/invite/v2', () => {
     const res = await POST(req(target));
     expect(res.status).toBe(201);
     await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: false });
-    expect(rpc).toHaveBeenLastCalledWith('rpc_upsert_membership', {
+    expect(rpc).toHaveBeenLastCalledWith('rpc_attach_invite_membership', {
       p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
     });
     expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
@@ -396,7 +427,7 @@ describe('POST /api/admin/invite/v2', () => {
       expect(res.status).toBe(500);
       await expect(res.json()).resolves.toEqual({ error: 'resend_failed' });
       expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
-      expect(rpc.mock.calls.filter(([name]) => name === 'rpc_upsert_membership')).toHaveLength(1);
+      expect(rpc.mock.calls.filter(([name]) => name === 'rpc_attach_invite_membership')).toHaveLength(1);
       expect(inviteUserByEmail.mock.invocationCallOrder[0]).toBeGreaterThan(rpc.mock.invocationCallOrder.at(-1)!);
       expect(deleteUser).not.toHaveBeenCalled();
       expect(update).not.toHaveBeenCalled();
@@ -411,7 +442,7 @@ describe('POST /api/admin/invite/v2', () => {
     expect(res.status).toBe(403);
     await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
     expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
     expect(update).not.toHaveBeenCalled();
   });
 
@@ -426,7 +457,7 @@ describe('POST /api/admin/invite/v2', () => {
     expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
     expect(deleteUser).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
   });
 
   it.each([
@@ -478,7 +509,7 @@ describe('POST /api/admin/invite/v2', () => {
     expect(res.status).toBe(409);
     await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: true });
     expect(listUsers).toHaveBeenLastCalledWith({ page: 2, perPage: 1000 });
-    expect(rpc).toHaveBeenCalledWith('rpc_upsert_membership', {
+    expect(rpc).toHaveBeenCalledWith('rpc_attach_invite_membership', {
       p_target_user_id: 'target', p_org_object_id: 'ORG1', p_business_role_code: 'editor',
     });
     expect(inviteUserByEmail).not.toHaveBeenCalled();
@@ -500,7 +531,7 @@ describe('POST /api/admin/invite/v2', () => {
       expect(res.status).toBe(500);
       await expect(res.json()).resolves.toEqual({ error: 'create_failed' });
       expect(inviteUserByEmail).not.toHaveBeenCalled();
-      expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+      expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
     } finally {
       warn.mockRestore();
     }
@@ -517,7 +548,7 @@ describe('POST /api/admin/invite/v2', () => {
     expect(res.status).toBe(403);
     await expect(res.json()).resolves.toEqual({ error: 'out_of_scope' });
     expect(inviteUserByEmail).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('rpc_attach_invite_membership', expect.anything());
   });
 
   it('500 keeps the invitation fallback without exposing a GoTrue error or logging the email', async () => {

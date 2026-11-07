@@ -61,7 +61,7 @@ on:
         required: false
         default: false
       sandbox_discovery:
-        description: 'Run the public discovery HTTP witness on the disposable fresh stack (select alone)'
+        description: 'Run public discovery in Chromium on the disposable fresh stack (select alone)'
         type: boolean
         required: false
         default: false
@@ -688,20 +688,8 @@ jobs:
           cache: 'npm'
           cache-dependency-path: bertel-tourism-ui/package-lock.json
 
-      - name: Public discovery GoTrue sessions and external effects (disposable only)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery == true && steps.list_email_owned_stack.outcome == 'success' }}
-        timeout-minutes: 6
-        env:
-          CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-          CURRENT_RIGHTS_DISPOSABLE: 'true'
-          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
-          CURRENT_RIGHTS_SANDBOX_DISCOVERY: 'true'
-        run: |
-          npm --prefix bertel-tourism-ui ci --legacy-peer-deps
-          node --test tools/current-rights/postgrest-rights.test.mjs
-
-      - name: Install Chromium for the authenticated editor witness
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
+      - name: Install Chromium for the authenticated browser witnesses
+        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.sandbox_discovery == true) && steps.list_email_owned_stack.outcome == 'success' }}
         working-directory: bertel-tourism-ui
         timeout-minutes: 7
         env:
@@ -709,6 +697,17 @@ jobs:
         run: |
           npm ci --legacy-peer-deps
           node scripts/run-playwright.mjs install --with-deps chromium
+
+      - name: Public discovery in Chromium with GoTrue and external-effect guards (disposable only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery == true && steps.list_email_owned_stack.outcome == 'success' }}
+        timeout-minutes: 6
+        env:
+          CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+          CURRENT_RIGHTS_SANDBOX_DISCOVERY: 'true'
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
+        run: node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: Authenticated editor publication and restore races (disposable only)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}

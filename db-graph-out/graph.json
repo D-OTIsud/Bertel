@@ -2,7 +2,7 @@
  "meta": {
   "table_count": 424,
   "view_count": 15,
-  "function_count": 642,
+  "function_count": 643,
   "policy_count": 647,
   "trigger_count": 1438,
   "enum_count": 9,
@@ -62343,6 +62343,31 @@
    }
   },
   {
+   "id": "internal.portal_submission_module(p_target_table text, p_rpc text, p_payload jsonb)",
+   "kind": "function",
+   "label": "portal_submission_module",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "The browser sends an editor module as data. Only the module bound to the\ntarget and optional writer can pass the submission's floor and mask checks.",
+   "props": {
+    "signature": "portal_submission_module(p_target_table text, p_rpc text, p_payload jsonb)",
+    "returns": "text",
+    "security_definer": false,
+    "volatility": "i",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107154854_portal_submission_module_binding.sql",
+      "line": 5
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107154854_portal_submission_module_binding.sql",
+     "line": 5
+    }
+   }
+  },
+  {
    "id": "api.get_dashboard_lieu_dit_options()",
    "kind": "function",
    "label": "get_dashboard_lieu_dit_options",
@@ -63795,6 +63820,31 @@
    }
   },
   {
+   "id": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
+   "kind": "function",
+   "label": "approve_pending_change",
+   "schema": "api",
+   "domain": "api",
+   "doc": "P2.1 §120 + 18a/D9 — approuve : re-dispatch whitelisté (SEPT writers, miroir de submit_actor_fiche), OU approbation ATTESTÉE (p_applied_manually) d'un changement sans writer, qui pose status=approved (jamais applied) et estampille metadata.applied_manually/attested_by/attested_at. Le 3e paramètre a un DÉFAUT : l'appel historique à deux arguments est inchangé.",
+   "props": {
+    "signature": "approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": true,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
+      "line": 759
+     },
+     {
+      "path": "supabase/migrations/20261107154854_portal_submission_module_binding.sql",
+      "line": 246
+     }
+    ]
+   }
+  },
+  {
    "id": "api.get_my_actor_profile()",
    "kind": "function",
    "label": "get_my_actor_profile",
@@ -63846,31 +63896,6 @@
       "line": 80
      }
     ]
-   }
-  },
-  {
-   "id": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
-   "kind": "function",
-   "label": "approve_pending_change",
-   "schema": "api",
-   "domain": "api",
-   "doc": "P2.1 §120 + 18a/D9 — approuve : re-dispatch whitelisté (SEPT writers, miroir de submit_actor_fiche), OU approbation ATTESTÉE (p_applied_manually) d'un changement sans writer, qui pose status=approved (jamais applied) et estampille metadata.applied_manually/attested_by/attested_at. Le 3e paramètre a un DÉFAUT : l'appel historique à deux arguments est inchangé.",
-   "props": {
-    "signature": "approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": true,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
-      "line": 759
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
-     "line": 759
-    }
    }
   },
   {
@@ -72348,12 +72373,12 @@
      {
       "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
       "line": 553
+     },
+     {
+      "path": "supabase/migrations/20261107154854_portal_submission_module_binding.sql",
+      "line": 36
      }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
-     "line": 553
-    }
+    ]
    }
   },
   {
@@ -125547,6 +125572,42 @@
    }
   },
   {
+   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
+   "target": "public.fiche_submission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
+   "target": "public.pending_change",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE pending_change"
+    }
+   }
+  },
+  {
    "source": "api.get_my_actor_profile()",
    "target": "public.actor_channel",
    "kind": "reads",
@@ -125603,42 +125664,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN public.ref_org_role"
-    }
-   }
-  },
-  {
-   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
-   "target": "public.pending_change",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM pending_change"
-    }
-   }
-  },
-  {
-   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
-   "target": "public.fiche_submission",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM fiche_submission"
-    }
-   }
-  },
-  {
-   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
-   "target": "public.pending_change",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE pending_change"
     }
    }
   },

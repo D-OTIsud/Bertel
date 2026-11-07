@@ -158,6 +158,18 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       await testEditorRaces({ local, objectId: A, writerId: ids.writer, ...writerCredentials,
         secondAccount: { id: ids.other, ...otherCredentials } });
       t.diagnostic('Authenticated Chromium and PostgREST publication, restore, legal and account draft isolation passed.');
+      commit(`DO $fixture$ BEGIN
+        UPDATE public.user_org_membership SET org_object_id='ORGRUN999999AR02'
+        WHERE id='00000000-0000-4000-a000-00000000ab12' AND user_id='${ids.other}'
+          AND org_object_id='ORGRUN999999AR01' AND is_active;
+        IF NOT FOUND THEN RAISE EXCEPTION 'missing second browser membership'; END IF;
+      END; $fixture$`, 'restore the other organization before the document witness');
+      assert.equal(await canWrite('other', A), false);
+      assert.equal(await canWrite('other', B), true);
+      const { testDocumentLinks } = await import('../../bertel-tourism-ui/tests/current-rights/document-links.mjs');
+      await testDocumentLinks({ local, commit, objectId: A, documentId: DOC, writerId: ids.writer,
+        writerAuthorization: headers('writer').authorization, foreignAuthorization: headers('other').authorization });
+      t.diagnostic('Disposable document route verified canonical and legal-only signed bytes, foreign refusal and same-JWT revocation.');
       return;
     }
     const versionA = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${A}'`, 'private history witness'));

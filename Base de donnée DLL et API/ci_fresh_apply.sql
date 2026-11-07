@@ -758,6 +758,10 @@ COMMIT;
 \ir ../supabase/migrations/20261107171528_org_membership_platform_target_guard.sql
 \ir tests/test_sp4_membership_platform_target.sql
 
+\echo '== ACC13 private note author rank is internal to the management check =='
+\ir ../supabase/migrations/20261107192259_restrict_private_note_author_rank_execute.sql
+\ir tests/test_private_note_author_rank_execute.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -19,6 +19,7 @@ import {
   type AuthenticatedRequest,
 } from '../_document-auth';
 import { authorizeActor, authorizeObject } from './authorize';
+import { resolveActorDocument } from './resolve-document';
 
 // Documents privés d'un ACTEUR CRM. Le socle d'authentification (Bearer → getUser, client
 // « en tant qu'appelant », bucket privé, forme UUID) est partagé avec /api/task-document
@@ -174,24 +175,12 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   }
   if (!await authorizeActor(auth.jwt, actorId)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-  const { data: link } = await auth.server
-    .from('actor_document')
-    .select('status')
-    .eq('actor_id', actorId)
-    .eq('document_id', documentId)
-    .maybeSingle();
-  if (!link) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-  if ((link as { status?: string }).status === 'promoted') {
-    return NextResponse.json({ error: 'promoted_document', detail: 'Un document transféré reste dans l’historique.' }, { status: 409 });
-  }
-  const { data: document } = await auth.server
-    .from('ref_document')
-    .select('storage_bucket, storage_path')
-    .eq('id', documentId)
-    .maybeSingle();
-  const bucket = String((document as { storage_bucket?: string } | null)?.storage_bucket ?? '');
-  const path = String((document as { storage_path?: string } | null)?.storage_path ?? '');
-  if (bucket && path) await auth.server.storage.from(bucket).remove([path]);
+  const resolved = await resolveActorDocument(auth.server, actorId, documentId, true);
+  if (!resolved.ok) return resolved.response;
+  if (resolved.path) await auth.server.storage.from(PRIVATE_BUCKET).remove([resolved.path]);
+  // A Storage wait must not carry an earlier namespace verdict into ref deletion.
+  const current = await resolveActorDocument(auth.server, actorId, documentId, true);
+  if (!current.ok) return current.response;
   const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
   if (error) {
     // `delete_failed` est dans `CODES_WITH_BUSINESS_DETAIL` (api-error.ts) : son `detail` est

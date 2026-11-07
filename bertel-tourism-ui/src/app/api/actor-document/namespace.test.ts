@@ -1,6 +1,6 @@
 /** @jest-environment node */
 import { POST as open } from './url/route';
-import { DELETE } from './route';
+import { DELETE, PATCH } from './route';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -16,16 +16,17 @@ const PATH = `objects/${OBJECT}/archive expired #1?.pdf`;
 const request = (documentId = DOC) => ({ headers: new Headers({ authorization: 'Bearer caller-jwt' }), json: async () => ({ actorId: ACTOR, documentId }) }) as never;
 type Row = Record<string, unknown>;
 
-function harness(options: { bucket?: string; scope?: string; status?: string; path?: string; mapping?: string | null; canonical?: boolean; legal?: boolean; pair?: boolean } = {}) {
+function harness(options: { bucket?: string; scope?: string; status?: string; path?: string; mapping?: string | null; canonical?: boolean; legal?: boolean; pair?: boolean; documentId?: string } = {}) {
+  const documentId = options.documentId ?? DOC;
   const document: Row = { storage_bucket: options.bucket ?? 'actor-documents', storage_path: options.path ?? PATH,
     access_scope: options.scope ?? 'crm_private', extra: { bertel_pj_import: { mapped_object_id: options.mapping === undefined ? OBJECT : options.mapping } } };
-  const link: Row = { actor_id: ACTOR, document_id: DOC, status: options.status ?? 'active', promoted_to_object_id: OBJECT, promoted_document_id: DOC, valid_to: '2000-01-01' };
+  const link: Row = { actor_id: ACTOR, document_id: documentId, status: options.status ?? 'active', promoted_to_object_id: OBJECT, promoted_document_id: documentId, valid_to: '2000-01-01' };
   const state = { document, link, metadataError: false, linkError: false, crm: true, canonical: options.canonical ?? false, legal: options.legal ?? false, rpcError: false, missingMappedFile: false };
   const rpc = jest.fn(async (name: string, args: Record<string, unknown>) => {
     if (name.startsWith('user_can_')) return { data: state.crm, error: null };
     if (state.rpcError) return { data: null, error: { message: 'private authority unavailable' } };
     const authorized = name === 'get_object_document_file' ? state.canonical : state.legal;
-    const exact = args.p_object_id === OBJECT && args.p_document_id === DOC && !state.missingMappedFile;
+    const exact = args.p_object_id === OBJECT && args.p_document_id === documentId && !state.missingMappedFile;
     return { data: { authorized, file: authorized && exact ? { bucket: document.storage_bucket, path: document.storage_path } : null }, error: null };
   });
   jest.mocked(createClient).mockReturnValue({ schema: () => ({ rpc }) } as never);
@@ -146,5 +147,42 @@ it('public promoted history retains CRM-read with no canonical/legal reader depe
   expect((await open(request())).status).toBe(200);
   expect(h.rpc.mock.calls.map((c) => c[0])).toEqual(['user_can_read_crm_actor']);
   expect((await DELETE(request())).status).toBe(409);
+});
+
+it('the actual PATCH-produced public reference/history still opens after its object link is gone and cannot delete', async () => {
+  const targetId = 'bbbbbbbb-1111-4222-a333-cccccccccccc';
+  const written: { document?: Row; history?: Row } = {};
+  const chain = (data: unknown) => { const q = { eq: () => q, maybeSingle: async () => ({ data, error: null }) }; return q; };
+  const source = { storage_bucket: 'actor-documents', storage_path: `actors/${ACTOR}/upload.pdf`, title: 'Uploaded', extra: {} };
+  const rpc = jest.fn(async () => ({ data: true, error: null }));
+  jest.mocked(createClient).mockReturnValue({ schema: () => ({ rpc }) } as never);
+  const remove = jest.fn(async () => ({ error: null }));
+  const storageFrom = jest.fn(() => ({
+    download: async () => ({ data: new Blob(['synthetic PDF']), error: null }),
+    upload: async () => ({ error: null }), remove,
+    getPublicUrl: (path: string) => ({ data: { publicUrl: `https://storage.example.invalid/storage/v1/object/public/documents/${path}` } }),
+  }));
+  const from = jest.fn((table: string) => {
+    if (table === 'actor' || table === 'object') return { select: () => chain({ is_test: false }) };
+    if (table === 'actor_document') return { select: () => chain({ status: 'active', title: 'Uploaded', valid_from: null, valid_to: '2000-01-01' }), update: (value: Row) => {
+      written.history = value; return { eq: () => ({ eq: async () => ({ error: null }) }) };
+    } };
+    if (table === 'ref_code') return { select: () => chain({ id: 'synthetic-role' }) };
+    if (table === 'object_document') return { insert: async () => ({ error: null }) };
+    return { select: () => chain(source), insert: (value: Row) => {
+      written.document = value; return { select: () => ({ single: async () => ({ data: { id: targetId }, error: null }) }) };
+    }, delete: () => ({ eq: async () => ({ error: null }) }) };
+  });
+  jest.mocked(getServerSupabaseClient).mockReturnValue({ auth: { getUser: async () => ({ data: { user: { id: 'synthetic-user' } }, error: null }) }, from, storage: { from: storageFrom } } as never);
+  const promoted = await PATCH({ headers: new Headers({ authorization: 'Bearer caller-jwt' }), json: async () => ({ actorId: ACTOR, documentId: DOC, objectId: OBJECT, roleCode: 'kbis' }) } as never);
+  expect(promoted.status).toBe(200); expect(await promoted.json()).toEqual({ documentId: targetId });
+  expect(written.document).toMatchObject({ storage_bucket: 'documents', access_scope: 'public' });
+  expect(written.history).toMatchObject({ document_id: targetId, promoted_document_id: targetId, status: 'promoted' });
+  const h = harness({ bucket: written.document!.storage_bucket as string, scope: written.document!.access_scope as string,
+    path: written.document!.storage_path as string, status: written.history!.status as string, documentId: targetId });
+  expect((await open(request(targetId))).status).toBe(200);
+  expect(h.rpc.mock.calls.map((c) => c[0])).toEqual(['user_can_read_crm_actor']);
+  expect((await DELETE(request(targetId))).status).toBe(409);
+  expect(h.remove).not.toHaveBeenCalled(); expect(h.deleteEq).not.toHaveBeenCalled();
 });
 

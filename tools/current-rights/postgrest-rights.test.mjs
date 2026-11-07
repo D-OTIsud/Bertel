@@ -333,13 +333,13 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     // ACC-07: the export RPC itself must recheck the caller's current scope.
     const actorA = '00000000-0000-4000-a000-00000000aa01';
     const exportRun = randomUUID();
-    const exportContacts = (objectIds) => rpc(headers('writer'), 'export_actor_contacts', {
-      p_object_ids: objectIds, p_reason: 'Synthetic current-rights export', p_format: 'csv', p_export_run_id: exportRun,
+    const exportContacts = (objectIds, runId) => rpc(headers('writer'), 'export_actor_contacts', {
+      p_object_ids: objectIds, p_reason: 'Synthetic current-rights export', p_format: 'csv', p_export_run_id: runId,
     });
     assert.equal(local.sql(`SELECT count(DISTINCT r.object_id) FROM public.actor_object_role r
       JOIN public.actor_channel c ON c.actor_id=r.actor_id
       WHERE r.object_id IN ('${B}','${TEST}')`, 'foreign ORG and realm both have synthetic contacts'), '2');
-    const exported = await json(await exportContacts([A, B, TEST]), 'mixed contact export');
+    const exported = await json(await exportContacts([A, B, TEST], exportRun), 'mixed contact export');
     assert.equal(exported.export_run_id, exportRun);
     assert.deepEqual(exported.authorized_object_ids, [A]);
     assert.deepEqual(exported.denied_object_ids.sort(), [B, TEST].sort());
@@ -348,9 +348,9 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       ['email', 'current-rights-email@example.invalid'], ['email', 'current-rights-writer@example.invalid'],
     ]]]);
     assert.equal(exported.emitted_contact_count, 2);
-    const exportLogCount = () => local.sql(`SELECT count(*) FROM public.actor_contact_export_log
-      WHERE export_run_id='${exportRun}'`, 'count exact synthetic export logs');
-    assert.equal(exportLogCount(), '1');
+    const exportLogCount = (runId) => local.sql(`SELECT count(*) FROM public.actor_contact_export_log
+      WHERE export_run_id='${runId}'`, 'count exact synthetic export logs');
+    assert.equal(exportLogCount(exportRun), '1');
     assert.equal(local.sql(`SELECT count(*) FROM public.actor_contact_export_log
       WHERE export_run_id='${exportRun}' AND performed_by='${ids.writer}' AND object_ids=ARRAY['${A}']
         AND denied_object_ids @> ARRAY['${B}','${TEST}'] AND cardinality(denied_object_ids)=2
@@ -404,8 +404,10 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       UPDATE public.user_org_membership SET is_active=false WHERE id='00000000-0000-4000-a000-00000000ab11'`, 'committed departure');
     assert.ok((await rows(headers('writer'), A)).length === 0 && await canWrite('writer', A) === false,
       'a former creator with a still-active individual permission must not invent publisher scope');
-    await denied(await exportContacts([A]), 'contact export after committed departure');
-    assert.equal(exportLogCount(), '1', 'the wholly refused export must add no audit entry');
+    const refusedExportRun = randomUUID();
+    await denied(await exportContacts([A], refusedExportRun), 'contact export after committed departure');
+    assert.equal(exportLogCount(refusedExportRun), '0', 'the wholly refused export must add no audit entry');
+    assert.equal(exportLogCount(exportRun), '1', 'the original scoped export must retain its audit entry');
     t.diagnostic('ACC-07: mixed export returned only authorized synthetic contacts and refused the same JWT after departure.');
     await denied(await rpc(headers('writer'), 'get_object_versions', { p_object_id: A, p_limit: 50, p_offset: 0 }), 'private history after departure');
     await denied(await rpc(headers('writer'), 'get_object_version_snapshot', { p_object_id: A, p_version_number: versionA }), 'private snapshot after departure');

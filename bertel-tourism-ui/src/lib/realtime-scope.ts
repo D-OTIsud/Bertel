@@ -5,7 +5,8 @@ type Session = ReturnType<typeof useSessionStore.getState>;
 
 export function realtimeScopeKey(session: Session): string | null {
   const authority = session.authAuthority;
-  if (session.demoMode || session.status !== 'ready' || !session.userId || !session.role || session.role === 'actor'
+  if (session.demoMode || session.isSandboxDiscovery || session.status !== 'ready' || !session.userId
+    || !session.role || session.role === 'actor' || (session.role === 'tourism_agent' && !session.orgId)
     || !authority?.hydrated || authority.userId !== session.userId) return null;
   return JSON.stringify([authority.epoch, session.userId, session.role, session.orgId,
     session.isTestRealm, session.canEditObjects, session.adminRank]);

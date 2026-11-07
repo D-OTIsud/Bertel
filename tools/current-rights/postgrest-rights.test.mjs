@@ -4,9 +4,11 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { loadDisposable } from './disposable.mjs';
 
-const local = loadDisposable();
 const browserWitness = process.env.CURRENT_RIGHTS_EDITOR_BROWSER === 'true';
 const realtimeWitness = process.env.CURRENT_RIGHTS_REALTIME_SECURITY === 'true';
+const sandboxWitness = process.env.CURRENT_RIGHTS_SANDBOX_DISCOVERY === 'true';
+assert.ok(!sandboxWitness || (!browserWitness && !realtimeWitness), 'public discovery must run as a standalone witness');
+const local = loadDisposable();
 const ids = {
   writer: '00000000-0000-4000-a000-00000000ae11', other: '00000000-0000-4000-a000-00000000ae12',
   portal: '00000000-0000-4000-a000-00000000ae13', foreignPortal: '00000000-0000-4000-a000-00000000ae14',
@@ -161,14 +163,110 @@ async function testOrgEnrichment() {
   assert.deepEqual(descriptions(), saved, 'the revoked grant changed no description');
 }
 
+async function testPublicDiscoveryEffects(app, ordinary) {
+  assert.ok(/^http:\/\/127\.0\.0\.1:[0-9]+$/.test(app.origin), 'owned Next loopback required');
+  assert.equal(local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.app_ai_provider_config WHERE is_active)
+    AND NOT EXISTS (SELECT 1 FROM public.app_smtp_config WHERE enabled)`, 'check disposable external effect configuration'),
+  't', 'the disposable stack must have no active AI or business SMTP provider');
+  const registry = async () => json(await rpc(local.service, 'get_sandbox_discovery_user'), 'owned discovery registry');
+  assert.ok(await registry() === null, 'the disposable discovery identity must be absent before provisioning');
+  const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+
+  function assertDedicatedIdentity(id) {
+    assert.ok(typeof id === 'string' && uuid.test(id) && !Object.values(ids).includes(id),
+      'the registry must identify a separate disposable discovery user');
+  }
+  function request(path, options) {
+    return fetch(app.origin + path, { ...options, redirect: 'error', signal: AbortSignal.timeout(30_000) });
+  }
+  async function open() {
+    const response = await request('/api/sandbox/session', { method: 'POST' });
+    assert.match(response.headers.get('cache-control') ?? '', /(?:^|,\s*)no-store(?:,|$)/);
+    const tokens = await json(response, 'public discovery session');
+    assert.ok(typeof tokens.access_token === 'string' && tokens.access_token.length > 0
+      && typeof tokens.refresh_token === 'string' && tokens.refresh_token.length > 0
+      && Object.keys(tokens).length === 2, 'only the restricted session tokens may be returned');
+    return { ...local.anonymous, authorization: `Bearer ${tokens.access_token}` };
+  }
+  async function verify(auth, id) {
+    const user = await json(await local.request('/auth/v1/user', auth, undefined, 'GET'), 'independent discovery Auth verification');
+    assert.ok(user.id === id && user.email?.endsWith('@sandbox.bertel.invalid')
+      && user.app_metadata?.sandbox_discovery === true, 'GoTrue must verify the same restricted discovery identity');
+    assert.equal(await json(await rpc(auth, 'current_user_test_realm'), 'discovery PostgREST realm'), true);
+    let claims;
+    try {
+      claims = JSON.parse(Buffer.from(auth.authorization.split('.')[1], 'base64url').toString('utf8'));
+    } catch {
+      throw new Error('the verified discovery JWT must have decodable claims');
+    }
+    assert.ok(claims?.sub === id && typeof claims.session_id === 'string' && uuid.test(claims.session_id),
+      'the verified discovery JWT must identify a GoTrue session for the dedicated user');
+    return claims.session_id;
+  }
+  async function probe(path, { authorization }, status, code) {
+    // Malformed input can never reach a sender. Discovery must refuse before parsing it.
+    const response = await request(path, { method: 'POST', headers: { authorization, 'content-type': 'application/json' }, body: '{' });
+    assert.equal(response.status, status, `${path} must reject at the expected stage`);
+    assert.ok((await response.json()).error === code, `${path} must return the expected refusal code`);
+  }
+
+  let id;
+  try {
+    const first = await open();
+    id = await registry();
+    assertDedicatedIdentity(id);
+    const firstSession = await verify(first, id);
+    const second = await open();
+    const secondSession = await verify(second, id);
+    assert.ok(firstSession !== secondSession, 'the second visitor must receive a distinct GoTrue session ID');
+    assert.ok(await verify(first, id) === firstSession, 'the first session must remain valid after the second opening');
+
+    const published = await rows(ordinary, PUBLIC);
+    assert.ok(published.length === 1 && published[0].id === PUBLIC
+      && published[0].status === 'published' && published[0].is_test === false,
+      'the ordinary account must see the published fixture outside the test realm');
+
+    const admissions = () => local.sql(`SELECT count(*) FROM internal.ai_request_rate_state WHERE user_id='${id}'`,
+      'count discovery AI admissions');
+    assert.equal(admissions(), '0');
+    const availability = await request('/api/service-availability', { headers: { authorization: first.authorization } });
+    assert.deepEqual(await json(availability, 'discovery availability'), { translation: false, imageAnalysis: false, email: false });
+    for (const auth of [first, second]) {
+      const test = await rows(auth, TEST);
+      assert.ok(test.length === 1 && test[0].id === TEST && test[0].status === 'published' && test[0].is_test === true,
+        'each discovery session must see the published test fixture');
+      assert.deepEqual(await rows(auth, PUBLIC), [], 'each discovery session must be isolated from the published fixture outside its realm');
+      await probe('/api/lists/send', auth, 403, 'sandbox_external_effects_disabled');
+      await probe('/api/ai/translate', auth, 403, 'sandbox_external_effects_disabled');
+    }
+    assert.equal(admissions(), '0', 'discovery must not reach AI admission');
+    await probe('/api/lists/send', ordinary, 400, 'bad_json');
+  } finally {
+    const registered = await registry();
+    assert.ok(id == null || id === registered, 'cleanup must find the original registered identity');
+    // If provisioning never reached the registry, the disposable stack teardown owns cleanup.
+    if (registered !== null) {
+      assertDedicatedIdentity(registered);
+      assert.equal(local.sql(`SELECT EXISTS (SELECT 1 FROM auth.users WHERE id='${registered}'
+        AND email LIKE 'discovery-%@sandbox.bertel.invalid' AND raw_app_meta_data @> '{"sandbox_discovery":true}')`,
+        'confirm the registered disposable discovery account'), 't');
+      const removed = await local.request(`/auth/v1/admin/users/${registered}`, local.service,
+        { should_soft_delete: false }, 'DELETE');
+      assert.ok(removed.ok, 'only the disposable discovery identity must be cleaned up');
+      assert.ok(await registry() === null, 'the discovery registry must be empty after cleanup');
+    }
+  }
+}
+
 const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
   metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
 
-const testName = browserWitness
-  ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
+const testName = sandboxWitness
+  ? 'real public discovery separates GoTrue sessions and test data and blocks external effects'
+  : browserWitness ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
   : realtimeWitness ? 'real Realtime SDK enforces fixture roster and broadcast boundaries'
   : 'real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation';
-test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
+test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 180000 : 90000 }, async (t) => {
   const createdIds = [];
   let fixtureCreated = false;
   let writerCredentials;
@@ -208,6 +306,18 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     'exactly six identities and five distinct real JWTs are required; the fixture-only admin never authenticates');
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
+    if (sandboxWitness) {
+      const { startApp, waitForApp, stopApp } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
+      const app = await startApp(local, { signDocuments: true });
+      try {
+        await waitForApp(app);
+        await testPublicDiscoveryEffects(app, headers('other'));
+        t.diagnostic('Public discovery provisioned two real GoTrue sessions and refused business mail and AI before admission.');
+      } finally {
+        await stopApp(app);
+      }
+      return;
+    }
     if (realtimeWitness) {
       assert.equal(await canWrite('writer', A), true);
       assert.equal(await canWrite('other', B), true);

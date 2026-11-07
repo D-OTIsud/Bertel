@@ -14,7 +14,7 @@ export interface ListOperationScope {
 }
 type Session = ReturnType<typeof useSessionStore.getState>;
 const signature = (state: Session) => JSON.stringify([state.userId, state.orgId, state.status, state.role,
-  state.canEditObjects, state.adminRank, state.isTestRealm, state.demoMode]);
+  state.canEditObjects, state.adminRank, state.isTestRealm, state.demoMode, state.authAuthority]);
 export const obsoleteListOperation = () => new DOMException('Obsolete list operation', 'AbortError');
 
 /** A route change can finish an earlier write into its own cache. An identity
@@ -44,7 +44,8 @@ export function useListOperationScope(listId: string, userId: string | null, org
   const isSessionCurrent = (scope: ListOperationScope) => {
     const current = useSessionStore.getState();
     return active.current && !scope.signal.aborted && scope.actorEpoch === actorEpoch.current && scope.userId === current.userId
-      && scope.orgId === current.orgId && scope.actorSignature === signature(current);
+      && scope.orgId === current.orgId && scope.actorSignature === signature(current)
+      && (current.demoMode || (current.authAuthority?.hydrated === true && current.authAuthority.userId === scope.userId));
   };
   const isViewCurrent = (scope: ListOperationScope) => isSessionCurrent(scope)
     && scope.viewEpoch === view.current.epoch && scope.identity === view.current.identity;

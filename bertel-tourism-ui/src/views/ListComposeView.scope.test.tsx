@@ -52,7 +52,7 @@ async function resume(client: QueryClient) {
 beforeEach(() => {
   jest.clearAllMocks();
   onlineManager.setOnline(true);
-  useSessionStore.setState({ userId: 'user-A', orgId: 'ORG1', status: 'ready', role: 'tourism_agent', demoMode: false,
+  useSessionStore.setState({ authAuthority: { userId: 'user-A', epoch: 1, hydrated: true }, userId: 'user-A', orgId: 'ORG1', status: 'ready', role: 'tourism_agent', demoMode: false,
     canEditObjects: true, isTestRealm: false, adminRank: null });
   jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
   jest.mocked(getList).mockImplementation(async (id) => detail(id));
@@ -101,7 +101,7 @@ it('a paused mutation retains target A after navigation B, rather than taking cu
 
 it.each(['other user', 'account ABA'] as const)('a paused mutation cannot dispatch after %s', async (mode) => {
   const view = page(); await pauseMetadata(view);
-  act(() => { useSessionStore.setState({ userId: 'user-B' }); if (mode === 'account ABA') useSessionStore.setState({ userId: 'user-A' }); });
+  act(() => { useSessionStore.setState({ authAuthority: { userId: 'user-B', epoch: 1, hydrated: true }, userId: 'user-B' }); if (mode === 'account ABA') useSessionStore.setState({ authAuthority: { userId: 'user-A', epoch: 1, hydrated: true }, userId: 'user-A' }); });
   await resume(view.client); expect(updateList).not.toHaveBeenCalled();
 });
 
@@ -111,7 +111,7 @@ it('queued edits capture the original account epoch before a preceding write set
   fireEvent.change(name, { target: { value: 'Sent A one' } }); fireEvent.blur(name);
   await waitFor(() => expect(updateList).toHaveBeenCalledTimes(1));
   fireEvent.change(name, { target: { value: 'Queued A two' } }); fireEvent.blur(name);
-  act(() => { useSessionStore.setState({ userId: 'user-B' }); useSessionStore.setState({ userId: 'user-A' }); });
+  act(() => { useSessionStore.setState({ authAuthority: { userId: 'user-B', epoch: 1, hydrated: true }, userId: 'user-B' }); useSessionStore.setState({ authAuthority: { userId: 'user-A', epoch: 1, hydrated: true }, userId: 'user-A' }); });
   await act(async () => { ack.resolve(detail(A, { name: 'Sent A one' })); });
   expect(updateList).toHaveBeenCalledTimes(1);
   expect(screen.getByLabelText('Nom de la liste')).toHaveValue('Queued A two');

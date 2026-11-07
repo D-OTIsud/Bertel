@@ -34,7 +34,7 @@ const calls = (phase: string) => (global.fetch as jest.Mock).mock.calls.filter((
 beforeEach(() => {
   jest.clearAllMocks();
   Object.defineProperty(global.crypto,'subtle',{configurable:true,value:require('node:crypto').webcrypto.subtle}); global.TextEncoder=require('node:util').TextEncoder;
-  useSessionStore.setState({ status:'ready',userId:'user-A',orgId:'ORG1',role:'tourism_agent',demoMode:false });
+  useSessionStore.setState({ authAuthority: { userId: 'user-A', epoch: 1, hydrated: true }, status:'ready',userId:'user-A',orgId:'ORG1',role:'tourism_agent',demoMode:false });
   jest.mocked(getListEmailContext).mockResolvedValue({generations:{}});
   jest.mocked(getList).mockResolvedValue(parseListDetail({id:'list-A',kind:'static',name:'Synthetic',lang:'fr',created_by:'user-A',org_object_id:'ORG1',can_edit:true,can_manage_sharing:true,items:[]}));
   jest.spyOn(window,'prompt').mockReturnValue('recipient@example.invalid'); jest.spyOn(window,'confirm').mockReturnValue(false);

@@ -218,6 +218,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
     // identity/authority change, rather than comparing only the final rendered IDs.
     const unsubscribe = useSessionStore.subscribe((state, previous) => {
       if (state.userId === previous.userId && state.orgId === previous.orgId && state.status === previous.status
+        && state.authAuthority === previous.authAuthority
         && state.role === previous.role && state.isTestRealm === previous.isTestRealm && state.demoMode === previous.demoMode
         && state.canEditObjects === previous.canEditObjects && state.adminRank === previous.adminRank) return;
       sendScopeRef.current.generation += 1;
@@ -726,7 +727,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
     const controller = new AbortController();
     scope.controller = controller;
     const isCurrent = () => sendScopeRef.current.generation === generation
-      && sendScopeRef.current.identity === currentIdentityKey && !controller.signal.aborted;
+      && sendScopeRef.current.identity === currentIdentityKey && !controller.signal.aborted && operations.isSessionCurrent(operationScope);
     const operationId = crypto.randomUUID();
     setSending(true);
     setErrorMessage(null);

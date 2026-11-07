@@ -125,6 +125,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     const destination = '/objects/' + objectId + '/edit';
     const editorUrl = app.origin + destination;
     const loginUrl = app.origin + '/login?from=' + encodeURIComponent(destination);
+    function isRealmDocument(request, realm) {
+      if (request.method() !== 'GET' || request.resourceType() !== 'document' || !request.isNavigationRequest()) return false;
+      const url = new URL(request.url());
+      return url.origin === app.origin && url.pathname === '/explorer' && url.searchParams.get('search') === realm.search;
+    }
     async function routeEditorRequest(route, scene) {
       const request = route.request();
       const url = new URL(request.url());
@@ -144,12 +149,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         return route.continue();
       }
       const realm = scene.realm;
-      if (realm?.reloadUrl && !realm.nativeDocument && url.href === realm.reloadUrl
-        && request.resourceType() === 'document' && request.isNavigationRequest() && request.method() === 'GET') {
+      if (realm?.reloadStarted && !realm.nativeDocument && isRealmDocument(request, realm)) {
         realm.nativeDocument = true;
         return route.continue();
       }
-      const realmPhase = realm && (realm.nativeDocument ? realm.after : !realm.reloadUrl ? realm.before : null);
+      const realmPhase = realm && (realm.nativeDocument ? realm.after : !realm.reloadStarted ? realm.before : null);
       const reload = scene.reload?.nativeDocument ? scene.reload : null;
       const draftScope = scene.draftScope;
       let kind;
@@ -566,10 +570,17 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         RETURNING id
       ) SELECT count(*) FROM changed`, 'commit tester realm move');
       assert.equal(moved, '1');
-      realm.reloadUrl = page.url();
-      const document = await page.reload();
-      assert.ok(realm.nativeDocument && document?.status() === 200 && document.url() === realm.reloadUrl
-        && document.request().redirectedFrom() === null, 'realm witness must use a native document reload');
+      // Explorer can normalize query parameters with a history replacement. Observe
+      // the reloaded document by its route and search value, independent of serialization.
+      realm.reloadStarted = true;
+      const [document] = await Promise.all([
+        page.waitForResponse((response) => isRealmDocument(response.request(), realm)
+          && response.request().frame() === page.mainFrame(), { timeout: 20_000 }),
+        page.reload({ waitUntil: 'domcontentloaded' }),
+      ]);
+      assert.equal(realm.nativeDocument, true, 'realm witness must request a native Explorer document');
+      assert.equal(document.status(), 200, 'native Explorer reload must succeed');
+      assert.equal(document.request().redirectedFrom(), null, 'native Explorer reload must not follow a redirect');
       assert.equal(await page.evaluate(() => performance.getEntriesByType('navigation')[0]?.type), 'reload');
       await assertion(realCard).toBeVisible();
       await assertion(testCard).toHaveCount(0);

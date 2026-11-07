@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 import { mockPresence } from '../data/mock';
 import { getSupabaseClient } from '../lib/supabase';
-import { createResilientChannel } from '../lib/realtime-recovery';
+import { joinRealtimeRoom } from '../lib/realtime-room';
 import {
-  readRealtimePresence, realtimeField, realtimeRealm, realtimeRecord, realtimeScopeKey, realtimeText, realtimeUserId,
+  realtimeField, realtimeRealm, realtimeRecord, realtimeScopeKey, realtimeText, realtimeUserId,
 } from '../lib/realtime-scope';
 import { useSessionStore } from '../store/session-store';
 import type { FieldLock, PresenceMember } from '../types/domain';
@@ -47,13 +46,13 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
   const realm = useSessionStore(realtimeRealm);
   const crmAllowed = useSessionStore((state) => state.canEditObjects && state.role !== 'owner');
   const crmRoom = roomKey === 'crm:tasks';
+  const editor = trackExtra !== undefined;
   const contextKey = demoMode ? 'demo:' + roomKey : scopeKey === null ? null : scopeKey + ':' + roomKey;
   const [activeContext, setActiveContext] = useState<string | null>(null);
   const [peers, setPeers] = useState<(PresenceMember & Partial<TExtra>)[]>([]);
   const [lockedFieldEntries, setLockedFieldEntries] = useState<Record<string, LockEntry>>({});
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const subscribedRef = useRef(false);
+  const roomRef = useRef<{ context: string; handle: ReturnType<typeof joinRealtimeRoom> } | null>(null);
   const typingTimers = useRef<Map<string, number>>(new Map());
   // Captured once when the editor mounts: when the current user opened this room.
   const sessionStartRef = useRef(Date.now());
@@ -121,21 +120,14 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
     }
 
     const client = getSupabaseClient();
-    if (!client || !userId || scopeKey === null || (crmRoom ? !crmAllowed : !objectRoomShape.test(roomKey))) return;
+    if (!client || !userId || scopeKey === null || contextKey === null
+      || (crmRoom ? !crmAllowed : !objectRoomShape.test(roomKey))) return;
 
-    let disposed = false;
-    const isCurrent = () => !disposed && realtimeScopeKey(useSessionStore.getState()) === scopeKey;
-    // Canal auto-réparant : un canal realtime mort (CLOSED) n'est jamais ranimé par
-    // realtime-js, il faut en reconstruire un neuf — sinon la présence, les verrous de
-    // champ et l'indicateur de frappe s'éteignent silencieusement au milieu d'une
-    // session d'édition. Voir `lib/realtime-recovery.ts`.
-    const bindRoom = (channel: RealtimeChannel) => {
-      channelRef.current = channel;
-      const acceptsEvents = () => isCurrent() && channelRef.current === channel;
-
-      channel.on('presence', { event: 'sync' }, () => {
-        if (!acceptsEvents()) return;
-        const nextPeers = Object.values(readRealtimePresence(channel.presenceState()))
+    const handle = joinRealtimeRoom(client, crmRoom ? `crm:tasks:${realm}` : roomKey, scopeKey, userId, {
+      editor,
+      payload: () => mePayloadRef.current,
+      onPresence: (state) => {
+        const nextPeers = Object.values(state)
           .flat()
           .map((item, index) => ({
             ...item,
@@ -147,98 +139,61 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
           const liveUserIds = new Set(nextPeers.map((peer) => peer.userId));
           return Object.fromEntries(Object.entries(current).filter(([, entry]) => liveUserIds.has(entry.userId)));
         });
-      });
-
-      // CRM presence has no application broadcast sender or permission.
-      if (crmRoom) return;
-
-      channel.on('broadcast', { event: 'field:lock' }, ({ payload }) => {
-        if (!acceptsEvents()) return;
+      },
+      onBroadcast: (event, payload) => {
+        if (event === 'object:saved') {
+          if (subscribeEventsRef.current?.includes(event)) onEventRef.current?.(event, payload);
+          return;
+        }
         const claimed = realtimeRecord(payload);
-        const field = realtimeField(claimed?.field);
-        const userId = realtimeUserId(claimed?.userId);
-        const name = realtimeText(claimed?.name, 120);
-        if (!field || !userId || !name) return;
-        setLockedFieldEntries((current) => {
-          const existing = current[field];
-          if (existing && existing.expiresAt > Date.now() && existing.userId !== userId) return current;
-          if (!existing && Object.keys(current).length >= 32) return current;
-          return {
-            ...current,
-            [field]: { field, userId, name, expiresAt: Date.now() + PRESENCE_LOCK_TTL_MS },
-          };
-        });
-      });
-
-      channel.on('broadcast', { event: 'field:unlock' }, ({ payload }) => {
-        if (!acceptsEvents()) return;
-        const claimed = realtimeRecord(payload);
+        if (event === 'typing') {
+          const nextUser = realtimeText(claimed?.name, 120);
+          if (!nextUser || (!typingTimers.current.has(nextUser) && typingTimers.current.size >= 32)) return;
+          setTypingUsers((current) => Array.from(new Set([...current, nextUser])));
+          window.clearTimeout(typingTimers.current.get(nextUser));
+          typingTimers.current.set(nextUser, window.setTimeout(() => {
+            typingTimers.current.delete(nextUser);
+            setTypingUsers((current) => current.filter((item) => item !== nextUser));
+          }, 1600));
+          return;
+        }
         const field = realtimeField(claimed?.field);
         const userId = realtimeUserId(claimed?.userId);
         if (!field || !userId) return;
+        if (event === 'field:unlock') {
+          setLockedFieldEntries((current) => {
+            if (!Object.hasOwn(current, field) || current[field].userId !== userId) return current;
+            const copy = { ...current };
+            delete copy[field];
+            return copy;
+          });
+          return;
+        }
+        const name = realtimeText(claimed?.name, 120);
+        if (!name) return;
         setLockedFieldEntries((current) => {
-          if (current[field]?.userId !== userId) return current;
-          const copy = { ...current };
-          delete copy[field];
-          return copy;
+          const existing = Object.hasOwn(current, field) ? current[field] : undefined;
+          if (existing && existing.expiresAt > Date.now() && existing.userId !== userId) return current;
+          if (!existing && Object.keys(current).length >= 32) return current;
+          return { ...current, [field]: { field, userId, name, expiresAt: Date.now() + PRESENCE_LOCK_TTL_MS } };
         });
-      });
-
-      channel.on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (!acceptsEvents()) return;
-        const nextUser = realtimeText(realtimeRecord(payload)?.name, 120);
-        if (!nextUser || (!typingTimers.current.has(nextUser) && typingTimers.current.size >= 32)) return;
-        setTypingUsers((current) => Array.from(new Set([...current, nextUser])));
-        window.clearTimeout(typingTimers.current.get(nextUser));
-        typingTimers.current.set(nextUser, window.setTimeout(() => {
-          typingTimers.current.delete(nextUser);
-          setTypingUsers((current) => current.filter((item) => item !== nextUser));
-        }, 1600));
-      });
-
-      // Caller-registered custom broadcast events (e.g. 'object:saved'). The handler is read
-      // from a ref so a changing onEvent identity never resubscribes the channel.
-      (subscribeEventsRef.current ?? []).forEach((eventName) => {
-        channel.on('broadcast', { event: eventName }, ({ payload }) => {
-          if (acceptsEvents()) onEventRef.current?.(eventName, payload);
-        });
-      });
-    };
-
-    const handle = createResilientChannel(client, {
-      topic: crmRoom ? `crm:tasks:${realm}` : roomKey,
-      config: { config: { private: true, presence: { key: userId }, broadcast: { self: false } } },
-      canOpen: isCurrent,
-      bind: bindRoom,
-      onSubscribed: async (channel) => {
-        subscribedRef.current = true;
-        await channel.track(mePayloadRef.current);
-      },
-      // Un canal reconstruit repart sans abonné : les envois (verrou, frappe) sont
-      // suspendus jusqu'au prochain SUBSCRIBED, qui re-track la présence.
-      onState: (state) => {
-        if (state !== 'subscribed') subscribedRef.current = false;
       },
     });
+    roomRef.current = { context: contextKey, handle };
 
     return () => {
-      disposed = true;
       clearTyping();
-      subscribedRef.current = false;
       handle.dispose();
-      channelRef.current = null;
+      roomRef.current = null;
     };
-  }, [demoMode, enabled, meIdentity, roomKey, userId, scopeKey, realm, crmRoom, crmAllowed, contextKey]);
+  }, [demoMode, enabled, editor, meIdentity, roomKey, userId, scopeKey, realm, crmRoom, crmAllowed, contextKey]);
 
-  const currentChannel = () => enabled && !demoMode && subscribedRef.current && scopeKey !== null
-    && realtimeScopeKey(useSessionStore.getState()) === scopeKey ? channelRef.current : null;
   // Push presence-payload updates (active section / editing flag) without resubscribing.
   useEffect(() => {
-    if (enabled && !demoMode && subscribedRef.current && scopeKey !== null
-      && realtimeScopeKey(useSessionStore.getState()) === scopeKey) {
-      void channelRef.current?.track(mePayloadRef.current);
-    }
-  }, [me, demoMode, enabled, scopeKey]);
+    roomRef.current?.handle.updatePresence();
+  }, [me]);
+
+  const currentRoom = () => enabled && roomRef.current?.context === contextKey ? roomRef.current.handle : null;
 
   async function lockField(field: string) {
     if (!enabled || !realtimeField(field)) {
@@ -254,11 +209,7 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
     }
 
     if (crmRoom) return;
-    await currentChannel()?.send({
-      type: 'broadcast',
-      event: 'field:lock',
-      payload: { field, userId: me.userId, name: me.name },
-    });
+    await currentRoom()?.send('field:lock', { field, userId: me.userId, name: me.name });
   }
 
   async function unlockField(field: string) {
@@ -276,11 +227,7 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
     }
 
     if (crmRoom) return;
-    await currentChannel()?.send({
-      type: 'broadcast',
-      event: 'field:unlock',
-      payload: { field, userId: me.userId },
-    });
+    await currentRoom()?.send('field:unlock', { field, userId: me.userId });
   }
 
   async function announceTyping() {
@@ -296,11 +243,7 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
     }
 
     if (crmRoom) return;
-    await currentChannel()?.send({
-      type: 'broadcast',
-      event: 'typing',
-      payload: { name: me.name },
-    });
+    await currentRoom()?.send('typing', { name: me.name });
   }
 
   /** Send a custom broadcast event to the room (no-op in demo / when disabled). */
@@ -308,7 +251,7 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
     if (crmRoom || event !== 'object:saved') {
       return;
     }
-    await currentChannel()?.send({ type: 'broadcast', event, payload });
+    await currentRoom()?.send(event, payload);
   }
 
   const showRoom = enabled && contextKey !== null && activeContext === contextKey;
@@ -317,6 +260,7 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
   ) : {};
 
   return {
+    contextKey: showRoom ? contextKey : null,
     peers: showRoom ? peers : [],
     me,
     lockedFields,

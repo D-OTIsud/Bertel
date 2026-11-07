@@ -10,6 +10,7 @@
 
 export interface FakeRealtimeChannel {
   topic: string;
+  params: { config: { private?: boolean } };
   /** Types d'événements passés à `.on(...)`, dans l'ordre d'installation. */
   bindings: string[];
   /** Déclenche le callback de `subscribe()` avec un statut realtime. */
@@ -32,7 +33,7 @@ export function makeFakeRealtimeClient() {
   const created: FakeRealtimeChannel[] = [];
 
   const client = {
-    channel: jest.fn((topic: string) => {
+    channel: jest.fn((topic: string, params = { config: {} }) => {
       const existing = live.get(topic);
       if (existing) return existing;
 
@@ -42,6 +43,7 @@ export function makeFakeRealtimeClient() {
 
       const chan: FakeRealtimeChannel = {
         topic,
+        params,
         bindings: [],
         emit: (status) => statusCallback?.(status),
         syncPresence: () => presenceSync?.(),
@@ -53,7 +55,8 @@ export function makeFakeRealtimeClient() {
           return chan;
         }),
         subscribe: jest.fn((cb: (status: string) => void) => {
-          statusCallback = cb;
+          // A second subscribe on this SDK Channel doesn't register a new owner.
+          statusCallback ??= cb;
           return chan;
         }),
         track: jest.fn().mockResolvedValue('ok'),

@@ -76,7 +76,11 @@ export function createResilientChannel(
   };
 
   function open() {
-    if (disposed || options.canOpen?.() === false) return;
+    if (disposed) return;
+    if (options.canOpen?.() === false) {
+      scheduleReopen();
+      return;
+    }
     clearTimer();
     subscribed = false;
 
@@ -91,6 +95,14 @@ export function createResilientChannel(
 
     options.onState?.('connecting');
     const channel = client.channel(options.topic, options.config);
+
+    if (options.config?.config?.private === true && channel.params.config.private !== true) {
+      // Realtime reuses by topic and can return a channel with the old configuration.
+      retiredChannels.add(channel);
+      void client.removeChannel(channel);
+      scheduleReopen();
+      return;
+    }
 
     if (retiredChannels.has(channel)) {
       // Le canal précédent n'a pas encore fini de quitter le topic (phx_leave en vol) :

@@ -55,11 +55,17 @@ test('refuses another project, demo fallback and new map destinations', () => {
   }
 });
 
-test('source identity must be exactly the manual master workflow snapshot', () => {
-  const context = { expected: sha, actual: sha, workflowSha: sha, event: 'workflow_dispatch', ref: 'refs/heads/master' };
-  assert.equal(releaseContext(context), sha);
-  for (const patch of [{ expected: 'main; echo bad' }, { actual: 'b'.repeat(40) }, { workflowSha: 'b'.repeat(40) },
-    { event: 'pull_request' }, { ref: 'refs/heads/another' }]) assert.throws(() => releaseContext({ ...context, ...patch }));
+test('source identity must match the exact manual master or designated return snapshot', () => {
+  const fallback = 'refs/heads/codex/release-n2-loopback-fallback-20261107';
+  for (const ref of ['refs/heads/master', fallback]) {
+    const context = { expected: sha, actual: sha, workflowSha: sha, event: 'workflow_dispatch', ref };
+    assert.equal(releaseContext(context), sha);
+    for (const patch of [{ expected: 'main; echo bad' }, { actual: 'b'.repeat(40) }, { workflowSha: 'b'.repeat(40) },
+      { event: 'pull_request' }, { event: 'push' }, { ref: 'refs/heads/another' },
+      { ref: fallback + '-other' }, { ref: fallback.replace('/heads/', '/tags/') }]) {
+      assert.throws(() => releaseContext({ ...context, ...patch }), /release_source/);
+    }
+  }
 });
 
 test('Docker gets only six public build parameters and the exact source/platform, with no shell', () => {

@@ -13,7 +13,8 @@ const assertion = expect.configure({ timeout: 20_000 });
 const editorRpcKinds = new Map([
   ['/rest/v1/rpc/rpc_publish_object', 'publish'],
   ['/rest/v1/rpc/rpc_restore_object_version', 'restore'],
-  ['/rest/v1/rpc/get_object_workspace_permissions', 'reread'],
+  ['/rest/v1/rpc/get_object_with_deep_data', 'reread'],
+  ['/rest/v1/rpc/get_object_resource', 'reread'],
 ]);
 
 async function startApp(local) {
@@ -141,7 +142,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           if (kind === 'restore') restoreCalls += 1;
         }
       }
-      const gate = holds.get(kind);
+      let gate = kind === 'reread' ? undefined : holds.get(kind);
       if (gate) holds.delete(kind);
       let failureStage = 'response';
       try {
@@ -158,6 +159,16 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         failureStage = 'response';
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
         assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
+        const reread = kind === 'reread' ? holds.get(kind) : undefined;
+        if (reread && response.ok()) {
+          // Save and publish also refetch the workspace. Hold only the restored resource.
+          const body = await response.json();
+          const detail = body?.object ?? body;
+          if (holds.get(kind) === reread && detail?.id === objectId && detail?.name === historic[1]) {
+            gate = reread;
+            holds.delete(kind);
+          }
+        }
         if (gate) {
           assert.ok(response.ok(), kind + ' backend request failed');
           gate.observed.resolve();
@@ -216,7 +227,9 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     assert.deepEqual(patches, ['Synthetic publication saved first', 'Synthetic publication latest']);
     assert.equal(publishCalls, 1);
 
+    assert.notEqual(canonical()[0], historic[1]);
     const restore = hold('restore');
+    const reread = hold('reread');
     await page.getByRole('button', { name: /Versions \/ historique/ }).click();
     const history = page.getByRole('dialog', { name: 'Versions / historique' });
     await history.getByRole('button', { name: 'Restaurer la version ' + historic[0], exact: true }).click();
@@ -226,7 +239,6 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await name.fill('Synthetic edit during restore');
     await assertion(save).toBeDisabled();
     await assertion(publish).toBeDisabled();
-    const reread = hold('reread');
     restore.release.resolve();
     await waitForHeldResponse('reread', reread);
     await assertion(name).toHaveValue('Synthetic edit during restore');

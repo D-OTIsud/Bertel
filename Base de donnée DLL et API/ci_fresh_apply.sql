@@ -704,6 +704,8 @@ SELECT pg_get_functiondef('api.submit_actor_fiche(text,jsonb,text)'::regprocedur
 \ir ../supabase/migrations/20261107154854_portal_submission_module_binding.sql
 \ir tests/test_partner_photo_album_catalog_acc08.sql
 \ir tests/test_portal_submission_module_binding.sql
+\ir ../supabase/migrations/20261107170341_portal_photo_approval_claim_path.sql
+\ir tests/test_portal_photo_failed_approval.sql
 \ir tests/test_partner_photo_album_public.sql
 \ir tests/test_object_current_rights.sql
 \ir tests/test_object_canonical_write_sources.sql

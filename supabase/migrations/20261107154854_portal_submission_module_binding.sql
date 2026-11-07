@@ -243,4 +243,133 @@ BEGIN
 END;
 $function$;
 
+CREATE OR REPLACE FUNCTION api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'api', 'auth', 'pg_temp'
+ SET lock_timeout TO '5s'
+AS $function$
+DECLARE
+  v_row pending_change%ROWTYPE;
+  v_rpc text;
+  v_portal_module text;
+  v_uid uuid := auth.uid();
+  -- SEPT entrées — cf. l'avertissement ci-dessus. Miroir exact de api.submit_actor_fiche.
+  v_allowed text[] := ARRAY[
+    'publish_portal_photo_additions',
+    'save_object_commercial',
+    'save_object_workspace_sustainability',
+    'save_object_workspace_tags',
+    'save_object_itinerary_nested',
+    'save_object_openings',
+    'save_object_places',
+    'save_object_relations'
+  ];
+  v_now timestamptz := now();
+  v_sub_id uuid;
+BEGIN
+  -- /* album-photo-lock-order */ Submission -> proposal -> object, same order as the batch.
+  SELECT submission_id INTO v_sub_id FROM pending_change WHERE id=p_id;
+  IF v_sub_id IS NOT NULL THEN PERFORM 1 FROM fiche_submission WHERE id=v_sub_id FOR UPDATE; END IF;
+  SELECT * INTO v_row FROM pending_change WHERE id = p_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Suggestion introuvable: %', p_id USING ERRCODE = 'no_data_found';
+  END IF;
+  IF v_row.status <> 'pending' THEN
+    RAISE EXCEPTION 'Suggestion déjà résolue (statut=%)', v_row.status USING ERRCODE = '22023';
+  END IF;
+  -- La garde d'autorisation reste AVANT toute branche : l'attestation est un geste de
+  -- modération de plus, pas un chemin parallèle. Elle s'évalue sur auth.uid() — SECURITY
+  -- DEFINER change le propriétaire des droits Postgres, jamais l'identité applicative.
+  -- Le bras `object_id IS NULL` est EXPLICITE, et il est indispensable :
+  -- user_can_moderate_object rend NULL (et non FALSE) sur un object_id NULL, parce que
+  -- `NULL IN (<ensemble non vide>)` vaut NULL — `IF NOT NULL THEN` n'est alors pas pris, et
+  -- la garde laisse passer. pending_change.object_id EST nullable, et api.submit_pending_change
+  -- (exécutable par tout `authenticated`) accepte p_object_id NULL en sautant son propre
+  -- contrôle de lisibilité : une ligne orpheline est donc fabricable. Tant que rpc NULL était
+  -- refusé avant toute écriture, ce trou était inerte ; la branche attestée est la PREMIÈRE
+  -- écriture atteignable derrière cette garde — un agent sans aucun droit sur la ligne y
+  -- signerait une attestation nominative. La fonction sœur list_pending_changes filtre déjà
+  -- `pc.object_id IS NOT NULL` : l'asymétrie était un oubli. Les gardes jumelles de §7.2
+  -- n'en ont pas besoin — elles portent sur fiche_submission.object_id, déclaré NOT NULL.
+  IF v_row.object_id IS NULL OR NOT api.user_can_moderate_object(v_row.object_id) THEN
+    RAISE EXCEPTION 'Droits de modération insuffisants sur cet objet' USING ERRCODE = '42501';
+  END IF;
+
+  v_rpc := v_row.metadata->>'rpc';
+
+  -- Validate stored portal proposals, including envelopes queued before this
+  -- migration. Internal proposals have no server-set submission link.
+  IF v_sub_id IS NOT NULL OR v_row.submission_id IS NOT NULL THEN
+    v_portal_module := internal.portal_submission_module(v_row.target_table, v_rpc, v_row.payload);
+    IF v_portal_module IS NULL OR v_portal_module IS DISTINCT FROM v_row.metadata->>'section' THEN
+      RAISE EXCEPTION 'Les données proposées ne correspondent pas à la rubrique déclarée' USING ERRCODE = '22023';
+    END IF;
+  END IF;
+
+  IF v_rpc IS NULL THEN
+    -- 18a/D9 : un changement manual_apply devient APPROUVABLE — à la seule condition que le
+    -- modérateur ATTESTE l'avoir reporté à la main dans l'éditeur. Aucun SQL ne peut vérifier
+    -- ce report ; ce que la base peut faire, et fait ici, c'est le rendre ATTESTABLE.
+    IF NOT COALESCE(p_applied_manually, FALSE) THEN
+      -- Message ADRESSÉ au conseiller, pas au développeur : c'est le refus le plus courant du
+      -- nouveau flux (5 rubriques sur 7 sont manual_apply), et il doit dire le REMÈDE. Le
+      -- jargon précédent (« RPC de re-dispatch absent… ») n'indiquait rien : le conseiller
+      -- appelait le support, ou refusait la soumission par dépit — et le prestataire recevait
+      -- un refus injustifié. Il doit surtout être DISTINCT de celui du writer non autorisé
+      -- ci-dessous, qui demande l'action INVERSE (ne surtout pas valider).
+      RAISE EXCEPTION 'Cette rubrique n''a pas de report automatique : reportez la modification dans l''éditeur, puis cochez « j''ai reporté ces modifications » pour la valider'
+        USING ERRCODE = '22023';
+    END IF;
+    UPDATE pending_change
+       SET status      = 'approved',   -- approved ≠ applied : attesté par un humain, pas écrit par la machine
+           reviewed_by = v_uid,
+           reviewed_at = v_now,
+           review_note = p_review_note,
+           -- Trace EXPLICITE, et non dérivée. « status='approved' AND applied_at IS NULL »
+           -- dit la même chose aujourd'hui, mais c'est une inférence : le premier remaniement
+           -- des statuts l'efface sans bruit. reviewed_by seul ne suffit pas non plus — un
+           -- REJET en pose un aussi. On écrit donc le fait lui-même, avec son auteur et sa
+           -- date. Clé distincte de metadata.manual_apply, qui est la DÉCLARATION du
+           -- soumetteur (« cette rubrique n'a pas de writer ») : ici c'est l'ATTESTATION du
+           -- modérateur (« je l'ai reportée »). Deux faits, deux clés, deux responsables.
+           metadata    = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(
+                           'applied_manually', TRUE,
+                           'attested_by', v_uid,
+                           'attested_at', v_now),
+           updated_at  = v_now
+     WHERE id = p_id;
+    RETURN jsonb_build_object('success', true, 'id', p_id, 'status', 'approved', 'reviewed_at', v_now);
+  END IF;
+
+  -- Un writer PRÉSENT mais hors whitelist reste refusé, attestation ou pas : l'attestation
+  -- ne couvre que l'ABSENCE de route automatique. Sans cette branche distincte du bras
+  -- « v_rpc IS NULL », p_applied_manually deviendrait un interrupteur d'approbation
+  -- universel, capable d'ouvrir n'importe quelle enveloppe déposée par un autre chemin.
+  IF NOT (v_rpc = ANY(v_allowed)) THEN
+    -- Ici l'enveloppe porte un writer RÉEL hors whitelist : ce n'est pas une rubrique à
+    -- reporter, c'est une anomalie. Le conseiller ne doit surtout pas « valider quand même ».
+    RAISE EXCEPTION 'Anomalie sur cette suggestion (writer « % » non autorisé) : ne la validez pas, signalez-la à l''administrateur', v_rpc
+      USING ERRCODE = '22023';
+  END IF;
+
+  -- Re-dispatch vers le writer structuré (signature uniforme (p_object_id, p_payload)).
+  -- %I quote l'identifiant ; le nom est en outre whitelisté ci-dessus. AS THE CALLER : le
+  -- writer re-vérifie ses propres gates d'écriture canonique contre auth.uid().
+  EXECUTE format('SELECT api.%I($1, $2)', v_rpc) USING v_row.object_id, v_row.payload;
+
+  UPDATE pending_change
+     SET status      = 'applied',
+         reviewed_by = v_uid,
+         reviewed_at = v_now,
+         applied_at  = v_now,
+         review_note = p_review_note,
+         updated_at  = v_now
+   WHERE id = p_id;
+
+  RETURN jsonb_build_object('success', true, 'id', p_id, 'status', 'applied', 'applied_at', v_now);
+END;
+$function$;
+
 COMMIT;

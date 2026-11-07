@@ -2045,6 +2045,18 @@
 - **ALL** `media_service_role_write` — roles ['service_role']
   - `(bucket_id = 'media'::text) | (bucket_id = 'media'::text)`
 
+## `storage_reservation_private.admission`
+- **ALL** `owner_only` — roles ['postgres']
+  - `true | true`
+
+## `storage_reservation_private.namespace`
+- **ALL** `owner_only` — roles ['postgres']
+  - `true | true`
+
+## `storage_reservation_private.reservation`
+- **ALL** `owner_only` — roles ['postgres']
+  - `true | true`
+
 ## `thesaurus.assignment_retention`
 - **ALL** `publisher_only` — roles ['bertel_thesaurus_publisher']
   - `true | true`

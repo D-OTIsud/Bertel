@@ -4771,6 +4771,37 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger`
 - reads `public.object` _(high)_
 
+## `storage_reservation_api.claim(receipt uuid, b jsonb, owner_secret text, attempt uuid)`
+- returns: `jsonb`
+- reads `storage_reservation_private.reservation` _(high)_
+- writes `storage_reservation_private.reservation` _(high)_
+
+## `storage_reservation_api.inspect(receipt uuid, b jsonb, owner_secret text)`
+- returns: `jsonb`
+- reads `storage_reservation_private.reservation` _(high)_
+
+## `storage_reservation_api.reserve(b jsonb, owner_hash text)`
+- returns: `jsonb`
+- reads `storage_reservation_private.reservation` _(high)_
+- writes `storage_reservation_private.reservation` _(high)_
+
+## `storage_reservation_private.deny_erasure()`
+- returns: `trigger`
+
+## `storage_reservation_private.guard_namespace()`
+- returns: `trigger`
+
+## `storage_reservation_private.guard_reservation()`
+- returns: `trigger`
+
+## `storage_reservation_private.require_admission(b jsonb, require_active boolean)`
+- returns: `void`
+- reads `storage_reservation_private.admission` _(high)_
+- reads `storage_reservation_private.namespace` _(high)_
+
+## `storage_reservation_private.valid_binding(b jsonb)`
+- returns: `boolean`
+
 ## `thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT '{}'::jsonb)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_

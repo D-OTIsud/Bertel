@@ -62003,6 +62003,11 @@
     "source": {
      "path": "Base de donnée DLL et API/rls_policies.sql",
      "line": 428
+    },
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "internal_caller": "api.can_manage_object_private_note(uuid)"
     }
    }
   },

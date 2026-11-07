@@ -31,7 +31,7 @@ const runFixture = (local, sql) => local.sql(`BEGIN;
   ${sql}
   COMMIT;`);
 
-async function signIn(page, email, password, target) {
+async function signIn(page, email, password, target, authOrigin) {
   const recover = page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
   const back = page.getByRole('button', { name: 'Retour à la connexion', exact: true });
   const submit = page.getByRole('button', { name: 'Se connecter', exact: true });
@@ -46,8 +46,42 @@ async function signIn(page, email, password, target) {
   }).toPass({ timeout: 20_000 });
   await page.getByLabel('Adresse e-mail').fill(email);
   await page.getByLabel('Mot de passe', { exact: true }).fill(password);
-  await submit.click();
-  await page.waitForURL(target, { timeout: 60_000 });
+  const authPaths = new Map([
+    ['/auth/v1/user', 'user'],
+    ['/rest/v1/app_user_profile', 'profile'],
+    ['/rest/v1/rpc/current_user_test_realm', 'realm'],
+  ]);
+  const observed = {};
+  const record = (response) => {
+    const url = new URL(response.url());
+    const phase = url.origin === authOrigin && authPaths.get(url.pathname);
+    if (phase) observed[phase] = response.status();
+  };
+  page.on('response', record);
+  try {
+    const tokenResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.origin === authOrigin && url.pathname === '/auth/v1/token'
+        && url.searchParams.get('grant_type') === 'password' && response.request().method() === 'POST';
+    }, { timeout: 20_000 });
+    const [token] = await Promise.all([tokenResponse, submit.click()]).catch(() => {
+      throw new Error('The hydrated form did not reach the owned GoTrue password endpoint');
+    });
+    assert.equal(token.status(), 200, 'GoTrue must accept the browser password submission');
+    try {
+      await page.waitForURL(target, { timeout: 60_000, waitUntil: 'domcontentloaded' });
+    } catch {
+      const expected = new URL(target);
+      const current = new URL(page.url());
+      const paths = new Map([['/login', 'login'], ['/espace', 'portal-home'], [expected.pathname, 'fixture-fiche']]);
+      const stage = current.href === expected.href ? 'expected-url'
+        : current.origin === expected.origin ? paths.get(current.pathname) ?? 'other-local' : 'off-origin';
+      throw new Error('GoTrue accepted the password but the photo rubric did not open (' +
+        stage + '; bootstrap statuses ' + JSON.stringify(observed) + ')');
+    }
+  } finally {
+    page.off('response', record);
+  }
 }
 
 async function uploadFromBrowser(local, { userId, email, password, png }) {
@@ -72,7 +106,10 @@ async function uploadFromBrowser(local, { userId, email, password, png }) {
       '--proxy-server=http://127.0.0.1:' + rejectProxy.address().port,
       '--proxy-bypass-list=<-loopback>;' + exactHosts.join(';'),
     ] });
-    const context = await browser.newContext({ serviceWorkers: 'block' });
+    // The shipped CSP names hosted Supabase, while this witness uses a second
+    // attested loopback origin. As in the editor witness, retain the rejecting
+    // proxy and the exact origin allowlist for every browser request.
+    const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
     await context.routeWebSocket('**/*', (route) => {
       const url = new URL(route.url());
       url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
@@ -88,7 +125,7 @@ async function uploadFromBrowser(local, { userId, email, password, png }) {
     const page = await context.newPage();
     const destination = '/espace/fiches/' + objectId + '?rubrique=photos';
     await page.goto(app.origin + '/login?from=' + encodeURIComponent(destination));
-    await signIn(page, email, password, app.origin + destination);
+    await signIn(page, email, password, app.origin + destination, local.origin);
     const add = page.getByRole('button', { name: 'Ajouter', exact: true });
     await expectUI(add).toBeEnabled();
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), add.click()]);

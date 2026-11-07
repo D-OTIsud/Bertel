@@ -42,6 +42,14 @@ jobs:
       # Keep the same explicit lockfile installation option as the Dockerfile.
       - run: npm ci --legacy-peer-deps
 
+      - name: Gate high and critical production dependency advisories
+        run: |
+          node --test scripts/production-advisories.test.mjs
+          audit_status=0
+          audit_report="$RUNNER_TEMP/bertel-production-audit.json"
+          npm audit --omit=dev --audit-level=low --json --fetch-retries=1 --fetch-timeout=20000 > "$audit_report" || audit_status=$?
+          node scripts/check-production-advisories.mjs "$audit_report" "$audit_status"
+
       - name: Attest and reproduce the MapLibre security backport
         run: |
           npm run verify:maplibre

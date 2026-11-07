@@ -19,8 +19,9 @@ SELECT :'album_error_state' = 'P0001'
    AS album_expected_failure \gset
 \if :album_expected_failure
 \else
-  \echo 'ERROR: post-ACC08 checker did not reject the predecessor of api.submit_actor_fiche(text,jsonb,text)'
-  \quit 1
+  DO $$ BEGIN
+    RAISE EXCEPTION 'post-ACC08 checker did not reject the predecessor of api.submit_actor_fiche(text,jsonb,text)';
+  END $$;
 \endif
 
 SAVEPOINT old_body;
@@ -37,8 +38,9 @@ SELECT :'album_error_state' = 'P0001'
    AS album_expected_failure \gset
 \if :album_expected_failure
 \else
-  \echo 'ERROR: post-ACC08 checker did not reject the predecessor of api.approve_pending_change(uuid,text,boolean)'
-  \quit 1
+  DO $$ BEGIN
+    RAISE EXCEPTION 'post-ACC08 checker did not reject the predecessor of api.approve_pending_change(uuid,text,boolean)';
+  END $$;
 \endif
 
 ROLLBACK;

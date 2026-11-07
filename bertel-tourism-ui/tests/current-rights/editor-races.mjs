@@ -66,6 +66,49 @@ export async function stopApp({ server }) {
   assert.ok(await Promise.race([exited, sleep(10_000, false, { ref: false })]), 'owned Next editor did not stop');
 }
 
+export async function launchOwnedBrowser(app, local) {
+  const permitted = new Set([app.origin, local.origin]);
+  const exactPorts = Array.from(permitted, (origin) => {
+    const url = new URL(origin);
+    assert.ok(url.hostname === loopback && url.port, 'browser origins must use explicit owned loopback ports');
+    return url.host;
+  });
+  assert.equal(exactPorts.length, 2, 'two distinct owned browser origins required');
+  // Chromium can follow redirects without reentering the Playwright route handler.
+  const rejectProxy = createHttpServer((_request, response) => response.writeHead(403, { Connection: 'close' }).end());
+  rejectProxy.on('connect', (_request, socket) => socket.destroy());
+  rejectProxy.on('upgrade', (_request, socket) => socket.destroy());
+  try {
+    rejectProxy.listen(0, loopback);
+    await once(rejectProxy, 'listening');
+    const browser = await chromium.launch({ env: app.safeEnv, args: [
+      '--disable-background-networking',
+      '--proxy-server=http://' + loopback + ':' + rejectProxy.address().port,
+      '--proxy-bypass-list=<-loopback>;' + exactPorts.join(';'),
+    ] });
+    return {
+      permitted,
+      async newContext() {
+        const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
+        await context.routeWebSocket('**/*', (route) => {
+          const url = new URL(route.url());
+          url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+          if (permitted.has(url.origin)) route.connectToServer();
+          else route.close();
+        });
+        return context;
+      },
+      async close() {
+        try { await browser.close(); }
+        finally { rejectProxy.close(); }
+      },
+    };
+  } catch (error) {
+    rejectProxy.close();
+    throw error;
+  }
+}
+
 export async function testEditorRaces({ local, objectId, writerId, email, password, secondAccount, realmAccount }) {
   assert.ok(process.platform === 'linux' && objectId === 'HOTRUN999999AR01', 'exact disposable Linux editor fixture required');
   local.sql("BEGIN; SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',true);" +
@@ -80,11 +123,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
   assert.ok(Number.isInteger(historic[0]) && historic[0] > 0 && typeof historic[1] === 'string' && historic[1] !== canonical()[0]);
 
   const app = await startApp(local);
-  // Chromium can follow redirects without reentering the Playwright route handler.
-  const rejectProxy = createHttpServer((_request, response) => response.writeHead(403, { Connection: 'close' }).end());
-  rejectProxy.on('connect', (_request, socket) => socket.destroy());
-  rejectProxy.on('upgrade', (_request, socket) => socket.destroy());
-  let browser;
+  let ownedBrowser;
   let closing = false;
   let routeFailure;
   const holds = new Map();
@@ -108,20 +147,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
   }
   try {
     await waitForApp(app);
-    const permitted = new Set([app.origin, local.origin]);
-    const exactPorts = Array.from(permitted, (origin) => {
-      const url = new URL(origin);
-      assert.ok(url.hostname === loopback && url.port, 'browser origins must use explicit owned loopback ports');
-      return url.host;
-    });
-    assert.equal(exactPorts.length, 2, 'two distinct owned browser origins required');
-    rejectProxy.listen(0, loopback);
-    await once(rejectProxy, 'listening');
-    browser = await chromium.launch({ env: app.safeEnv, args: [
-      '--disable-background-networking',
-      '--proxy-server=http://' + loopback + ':' + rejectProxy.address().port,
-      '--proxy-bypass-list=<-loopback>;' + exactPorts.join(';'),
-    ] });
+    ownedBrowser = await launchOwnedBrowser(app, local);
+    const { permitted } = ownedBrowser;
     const destination = '/objects/' + objectId + '/edit';
     const editorUrl = app.origin + destination;
     const loginUrl = app.origin + '/login?from=' + encodeURIComponent(destination);
@@ -306,18 +333,12 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     }
 
     async function openAuthenticatedEditor(legalMode, draftScope, realm) {
-      const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
+      const context = await ownedBrowser.newContext();
       const target = realm?.url ?? editorUrl;
       const requestedLogin = realm ? app.origin + '/login?from=' + encodeURIComponent(realm.destination) : loginUrl;
       const scene = { legalMode, draftScope, realm, loginUrl: requestedLogin,
         closed: false, nativeLoginRequested: false, pageErrors: 0,
         legalReads: 0, legalPermissions: 0, summaryReads: 0, summaryFailures: 0, legalWrites: 0 };
-      await context.routeWebSocket('**/*', (route) => {
-        const url = new URL(route.url());
-        url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
-        if (permitted.has(url.origin)) route.connectToServer();
-        else route.close();
-      });
       await context.route('**/*', (route) => routeEditorRequest(route, scene));
       const page = await context.newPage();
       if (draftScope) page.on('pageerror', () => { scene.pageErrors += 1; });
@@ -597,9 +618,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     closing = true;
     for (const release of releases) release();
     try {
-      await browser?.close();
+      await ownedBrowser?.close();
     } finally {
-      rejectProxy.close();
       await stopApp(app);
     }
   }

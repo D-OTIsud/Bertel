@@ -50,6 +50,20 @@ export interface ResilientChannelHandle {
 
 const retiredChannels = new WeakSet<RealtimeChannel>();
 
+export function resetPresenceAfterJoin(channel: RealtimeChannel): boolean {
+  const presence = channel.presence;
+  if (!presence || !Array.isArray(presence.pendingDiffs) || !presence.state
+    || typeof presence.state !== 'object' || Array.isArray(presence.state)
+    || (presence.joinRef !== null && typeof presence.joinRef !== 'string')) return false;
+
+  // Realtime JS 2.99.1 can route frames by topic before the join ACK. Discard
+  // that Presence state and await a snapshot from the newly authorized join.
+  presence.state = {};
+  presence.pendingDiffs = [];
+  presence.joinRef = null;
+  return true;
+}
+
 export function createResilientChannel(
   client: SupabaseClient,
   options: ResilientChannelOptions,
@@ -122,23 +136,12 @@ export function createResilientChannel(
       if (channel !== current || disposed || options.canOpen?.() === false) return;
 
       if (status === 'SUBSCRIBED') {
-        if (options.config?.config?.private && options.config.config.presence) {
-          const presence = channel.presence;
-          if (!presence || !Array.isArray(presence.pendingDiffs) || !presence.state
-            || typeof presence.state !== 'object' || Array.isArray(presence.state)
-            || (presence.joinRef !== null && typeof presence.joinRef !== 'string')) {
-            // A changed SDK shape must not make an unfiltered roster visible.
-            subscribed = false;
-            options.onState?.('error');
-            scheduleReopen();
-            return;
-          }
-          // Realtime JS 2.99.1 routes by topic before the join ACK. Its public
-          // Presence state can already hold a snapshot or queued diffs from the
-          // previous channel. Start again at this ACK and await the new snapshot.
-          presence.state = {};
-          presence.pendingDiffs = [];
-          presence.joinRef = null;
+        if (options.config?.config?.private && options.config.config.presence && !resetPresenceAfterJoin(channel)) {
+          // A changed SDK shape must not make an unfiltered roster visible.
+          subscribed = false;
+          options.onState?.('error');
+          scheduleReopen();
+          return;
         }
         subscribed = true;
         attempt = 0;

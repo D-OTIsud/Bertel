@@ -483,7 +483,7 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90
     // ACC-07: the export RPC itself must recheck the caller's current scope.
     const actorA = '00000000-0000-4000-a000-00000000aa01';
     const exportRun = randomUUID();
-    const exportContacts = (objectIds, runId) => rpc(headers('writer'), 'export_actor_contacts', {
+    const exportContacts = (objectIds, runId, caller = 'writer') => rpc(headers(caller), 'export_actor_contacts', {
       p_object_ids: objectIds, p_reason: 'Synthetic current-rights export', p_format: 'csv', p_export_run_id: runId,
     });
     assert.equal(local.sql(`SELECT count(DISTINCT r.object_id) FROM public.actor_object_role r
@@ -505,6 +505,47 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90
       WHERE export_run_id='${exportRun}' AND performed_by='${ids.writer}' AND object_ids=ARRAY['${A}']
         AND denied_object_ids @> ARRAY['${B}','${TEST}'] AND cardinality(denied_object_ids)=2
         AND actor_ids=ARRAY['${actorA}'::uuid] AND emitted_contact_count=2`, 'exact scoped contact export audit'), '1');
+
+    // Both objects have a publisher link to the tester's ORG. The secondary
+    // link leaves A in its real corpus because its primary ORG still defines it.
+    const testOrg = 'ORGRUN999999AR03';
+    const testActor = '00000000-0000-4000-a000-00000000aa03';
+    const realmExportRun = randomUUID();
+    commit(`INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)
+      SELECT '${A}','${testOrg}',id,false FROM public.ref_org_role WHERE code='publisher'`,
+    'attach the real-corpus witness to the same publisher ORG as the test-corpus witness');
+    try {
+      assert.deepEqual(JSON.parse(local.sql(`SELECT jsonb_object_agg(o.id,jsonb_build_array(o.is_test,l.is_primary))
+        FROM public.user_org_membership m
+        JOIN public.object_org_link l ON l.org_object_id=m.org_object_id
+        JOIN public.ref_org_role r ON r.id=l.role_id AND r.code='publisher'
+        JOIN public.object o ON o.id=l.object_id
+        WHERE m.user_id='${ids.tester}' AND m.is_active AND m.org_object_id='${testOrg}'
+          AND o.id IN ('${A}','${TEST}')`, 'same publisher ORG and opposite persisted corpora')),
+      { [A]: [false, false], [TEST]: [true, true] });
+      assert.equal(await json(await rpc(headers('tester'), 'current_user_test_realm'), 'export caller test corpus'), true);
+      assert.equal(await json(await rpc(headers('tester'), 'user_has_permission', {
+        p_permission_code: 'edit_canonical_when_publisher',
+      }), 'export caller still has general editor permission'), true);
+      const scoped = await json(await exportContacts([TEST, A], realmExportRun, 'tester'), 'same-ORG mixed-corpus contact export');
+      assert.equal(scoped.export_run_id, realmExportRun);
+      assert.deepEqual(scoped.authorized_object_ids, [TEST]);
+      assert.deepEqual(scoped.denied_object_ids, [A]);
+      assert.deepEqual(scoped.rows.map((row) => [row.object_id, row.actor_id,
+        row.contacts.map((contact) => [contact.kind_code, contact.value])]), [[TEST, testActor, [
+        ['email', 'current-rights-writer@example.invalid'],
+      ]]]);
+      assert.equal(scoped.emitted_contact_count, 1);
+      assert.equal(exportLogCount(realmExportRun), '1');
+      assert.equal(local.sql(`SELECT count(*) FROM public.actor_contact_export_log
+        WHERE export_run_id='${realmExportRun}' AND performed_by='${ids.tester}' AND object_ids=ARRAY['${TEST}']
+          AND denied_object_ids=ARRAY['${A}'] AND actor_ids=ARRAY['${testActor}'::uuid] AND emitted_contact_count=1`,
+      'exact same-ORG corpus-filtered contact export audit'), '1');
+    } finally {
+      commit(`DELETE FROM public.object_org_link WHERE object_id='${A}' AND org_object_id='${testOrg}'
+        AND NOT is_primary AND role_id=(SELECT id FROM public.ref_org_role WHERE code='publisher')`,
+      'remove the synthetic secondary publisher link');
+    }
 
     let changed = await json(await local.request(`/rest/v1/object?id=eq.${A}`, headers('writer'),
       { name: 'Real JWT current writer positive' }, 'PATCH', { prefer: 'return=representation' }), 'positive canonical DML');

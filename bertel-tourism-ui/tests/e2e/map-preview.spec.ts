@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { dispatchNativeMousePair } from './helpers/native-mouse-pair';
 
 test.use({ launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } });
 test.describe.configure({ retries: 0 });
@@ -162,25 +163,40 @@ test('an unfinished hover of B preserves the displayed A preview focus owner', a
     element.addEventListener('pointerenter', event => {
       element.setAttribute('data-ui06-enter', String(event.timeStamp));
       element.setAttribute('data-ui06-enter-trusted', String(event.isTrusted));
+      element.setAttribute('data-ui06-order', 'enter');
+      element.setAttribute('data-ui06-enter-handled', String(performance.now()));
     }, { once: true });
     element.addEventListener('pointerleave', event => {
       element.setAttribute('data-ui06-leave', String(event.timeStamp));
       element.setAttribute('data-ui06-leave-trusted', String(event.isTrusted));
+      element.setAttribute('data-ui06-order', `${element.getAttribute('data-ui06-order') ?? ''},leave`);
+      element.setAttribute('data-ui06-leave-handled', String(performance.now()));
     }, { once: true });
   });
-  // One input command crosses the pin centre and exits on its right, avoiding
-  // a runner round-trip between the trusted enter and leave events.
-  await page.mouse.move(boxB.x + boxB.width + 8, yB, { steps: 2 });
+  // Bypass Mouse.move's per-step acknowledgement: queue centre B and outside B
+  // before awaiting either native CDP response. Observe order/trust below;
+  // missing/coalesced transitions or a slow browser still fail the precondition.
+  const input = await page.context().newCDPSession(page);
+  try {
+    await dispatchNativeMousePair(input, { x: boxB.x + boxB.width / 2, y: yB }, { x: boxB.x + boxB.width + 8, y: yB });
+  } finally {
+    await input.detach();
+  }
   await page.mouse.move(1, 1);
   const marks = await b.evaluate(element => ({ enter: element.getAttribute('data-ui06-enter'), leave: element.getAttribute('data-ui06-leave'),
-    enterTrusted: element.getAttribute('data-ui06-enter-trusted'), leaveTrusted: element.getAttribute('data-ui06-leave-trusted') }));
+    enterTrusted: element.getAttribute('data-ui06-enter-trusted'), leaveTrusted: element.getAttribute('data-ui06-leave-trusted'),
+    order: element.getAttribute('data-ui06-order'), enterHandled: element.getAttribute('data-ui06-enter-handled'), leaveHandled: element.getAttribute('data-ui06-leave-handled') }));
   expect(marks.enter).not.toBeNull();
   expect(marks.leave).not.toBeNull();
   expect(marks.enterTrusted).toBe('true');
   expect(marks.leaveTrusted).toBe('true');
+  expect(marks.order).toBe('enter,leave');
   const dwell = Number(marks.leave) - Number(marks.enter);
   expect(dwell).toBeGreaterThanOrEqual(0);
   expect(dwell).toBeLessThan(250);
+  const handledDwell = Number(marks.leaveHandled) - Number(marks.enterHandled);
+  expect(handledDwell).toBeGreaterThanOrEqual(0);
+  expect(handledDwell).toBeLessThan(250);
   // Cross the existing hover-intent threshold: B must never become displayed.
   await page.waitForTimeout(300);
   await expect(actionA).toBeFocused();
@@ -188,7 +204,7 @@ test('an unfinished hover of B preserves the displayed A preview focus owner', a
   await page.keyboard.press('Escape');
   await expect(previewA).toHaveCount(0);
   const returned = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
-  console.log(JSON.stringify({ mapPreviewTriggerProof: { nameA, nameB, dwell, returned } }));
+  console.log(JSON.stringify({ mapPreviewTriggerProof: { nameA, nameB, dwell, handledDwell, inputOrder: marks.order, returned } }));
   await expect(a).toBeFocused();
   expect(unexpected).toEqual([]);
   expect(errors).toEqual([]);

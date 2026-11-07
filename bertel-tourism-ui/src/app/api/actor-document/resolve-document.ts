@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PRIVATE_BUCKET, type ServerClient } from '../_document-auth';
+import { routeFailure } from '../_route-failure';
 
 type ActorDocumentLink = { status?: string; promoted_to_object_id?: string; promoted_document_id?: string };
 type ActorDocumentMetadata = { storage_bucket?: string; storage_path?: string; access_scope?: string; extra?: unknown };
@@ -12,7 +13,7 @@ export async function resolveActorDocument(server: ServerClient, actorId: string
   const linked = await server.from('actor_document')
     .select('status, promoted_to_object_id, promoted_document_id')
     .eq('actor_id', actorId).eq('document_id', documentId).maybeSingle();
-  if (linked.error) return { ok: false, response: NextResponse.json({ error: 'link_lookup_failed' }, { status: 500 }) };
+  if (linked.error) return { ok: false, response: routeFailure('actor-document.resolve', 'link_lookup_failed') };
   if (!linked.data) return { ok: false, response: NextResponse.json({ error: 'not_found' }, { status: 404 }) };
   const link = linked.data as ActorDocumentLink;
   if (deleting && link.status === 'promoted') {
@@ -20,7 +21,7 @@ export async function resolveActorDocument(server: ServerClient, actorId: string
   }
   const metadata = await server.from('ref_document').select('storage_bucket, storage_path, access_scope, extra')
     .eq('id', documentId).maybeSingle();
-  if (metadata.error) return { ok: false, response: NextResponse.json({ error: 'document_lookup_failed' }, { status: 500 }) };
+  if (metadata.error) return { ok: false, response: routeFailure('actor-document.resolve', 'document_lookup_failed') };
   if (!metadata.data) return { ok: false, response: NextResponse.json({ error: 'file_missing' }, { status: 404 }) };
   const document = metadata.data as ActorDocumentMetadata;
   const bucket = typeof document.storage_bucket === 'string' ? document.storage_bucket : '';

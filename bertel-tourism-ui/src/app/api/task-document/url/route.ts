@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { routeFailure } from '../../_route-failure';
 import { PRIVATE_BUCKET, UUID_SHAPE, authenticated } from '../../_document-auth';
 import { authorizeTask, resolveLinkedDocument } from '../authorize';
 
@@ -43,6 +44,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data, error } = await auth.server.storage
     .from(PRIVATE_BUCKET)
     .createSignedUrl(resolved.file.path, SIGNED_URL_TTL_SECONDS);
-  if (error || !data?.signedUrl) return NextResponse.json({ error: 'signed_url_failed', detail: error?.message }, { status: 500 });
+  if (error || !data?.signedUrl) return routeFailure('task-document.url.POST', 'signed_url_failed');
   return NextResponse.json({ url: data.signedUrl });
 }

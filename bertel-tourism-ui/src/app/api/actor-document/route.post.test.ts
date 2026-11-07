@@ -47,10 +47,10 @@ function req(headers: Record<string, string>, form: FormData): never {
   return { headers: new Headers(headers), formData: async () => form } as never;
 }
 
-function serverWithUser() {
+function serverWithUser(upload = jest.fn().mockResolvedValue({ error: null })) {
   return {
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }) },
-    storage: { from: jest.fn(() => ({ upload: jest.fn().mockResolvedValue({ error: null }) })) },
+    storage: { from: jest.fn(() => ({ upload })) },
     from: jest.fn(() => ({
       insert: jest.fn(() => ({ select: jest.fn(() => ({ single: jest.fn().mockResolvedValue({ data: { id: 'doc-1' }, error: null }) })) })),
     })),
@@ -84,6 +84,24 @@ describe('POST /api/actor-document', () => {
     mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
     const res = await POST(req({ authorization: 'Bearer t' }, makeForm()));
     expect(res.status).toBe(201);
+  });
+
+  it('500 returns only the upload code and a correlation ID when Storage rejects the write', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const upload = jest.fn().mockResolvedValue({ error: { message: 'fictional storage path SECRET_ACTOR' } });
+      mockedServer.mockReturnValue(serverWithUser(upload));
+      const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
+      mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+      const res = await POST(req({ authorization: 'Bearer t' }, makeForm()));
+      expect(res.status).toBe(500);
+      await expect(res.json()).resolves.toEqual({ error: 'upload_failed' });
+      const requestId = res.headers.get('x-request-id');
+      expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+      expect(warn.mock.calls).toEqual([['[route-error]', { route: 'actor-document.POST', code: 'upload_failed', requestId }]]);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it.each([undefined, '1'])('413s an oversized stream with Content-Length %s before any permission probe', async (contentLength) => {

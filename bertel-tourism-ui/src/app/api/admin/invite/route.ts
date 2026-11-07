@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { authorizeAdminRoute, sharesActiveOrg } from '../_authorize';
+import { routeFailure } from '../../_route-failure';
 import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: 'out_of_scope' }, { status: 403 });
       }
       const { error: delErr } = await server.auth.admin.deleteUser(existing.id);
-      if (delErr) return NextResponse.json({ error: 'resend_failed', detail: delErr.message }, { status: 500 });
+      if (delErr) return routeFailure('admin/invite.POST', 'resend_failed');
     }
     // Absent (ou vient d'être supprimé) → l'invitation fraîche ci-dessous fait foi.
   }
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 409 },
       );
     }
-    return NextResponse.json({ error: 'create_failed', detail: createErr.message }, { status: 500 });
+    return routeFailure('admin/invite.POST', 'create_failed');
   }
   const userId = created.user!.id;
   await server.from('app_user_profile').upsert({ id: userId, role: 'tourism_agent' }, { onConflict: 'id' });

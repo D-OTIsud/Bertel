@@ -104,6 +104,62 @@ async function testInitialPublication() {
   }
 }
 
+async function testOrgEnrichment() {
+  const orgA = 'ORGRUN999999AR01';
+  const orgB = 'ORGRUN999999AR02';
+  const permission = 'edit_org_enrichment';
+  const write = (description) => rpc(headers('other'), 'rpc_write_org_description', {
+    p_object_id: PUBLIC, p_payload: { description },
+  });
+  const permissions = () => rpc(headers('other'), 'get_object_workspace_permissions', { p_object_id: PUBLIC });
+  const descriptions = () => JSON.parse(local.sql(
+    `SELECT jsonb_object_agg(COALESCE(org_object_id,'canonical'), to_jsonb(d))
+      FROM public.object_description d WHERE object_id='${PUBLIC}'`,
+    'disposable canonical and organization descriptions',
+  ));
+  async function assertWorkspace(expected) {
+    const actual = await json(await permissions(), 'current workspace permissions for enrichment');
+    assert.equal(actual.enrichment, expected);
+    assert.equal(actual.canonical, false, 'the target remains outside canonical scope');
+  }
+
+  // The existing fixture owns both ORGs, the user and the published object; its
+  // cleanup removes the link, descriptions and ORG permission rows by those IDs.
+  const [published] = await rows(headers('other'), PUBLIC);
+  assert.equal(published?.status, 'published');
+  assert.equal(published.is_test, false, 'the object must belong to the production-shaped synthetic corpus');
+  assert.equal(await json(await rpc(headers('other'), 'current_user_test_realm'), 'same realm'), false);
+  assert.equal(await canWrite('other', PUBLIC), false, 'ORG B is not the publisher');
+  commit(`INSERT INTO public.object_description(object_id,org_object_id,visibility,description) VALUES
+      ('${PUBLIC}',NULL,'public','Synthetic canonical description'),
+      ('${PUBLIC}','${orgA}','public','Synthetic publisher overlay'),
+      ('${PUBLIC}','${orgB}','public','Synthetic contributor overlay');
+    INSERT INTO public.object_org_link(object_id,org_object_id,role_id,is_primary)
+      SELECT '${PUBLIC}','${orgB}',id,false FROM public.ref_org_role WHERE code='contributor'`,
+  'seed nonempty canonical and ORG controls and an explicit contributor link');
+  const before = descriptions();
+  assert.deepEqual(Object.keys(before).sort(), [orgA, orgB, 'canonical'].sort());
+
+  assert.equal(await json(await rpc(headers('other'), 'user_has_permission', { p_permission_code: permission }),
+    'the fixture business role has the seeded enrichment permission'), true);
+  await assertWorkspace(true);
+  const updated = await json(await write('Synthetic permitted contributor edit'), 'independent contributor enrichment');
+  const saved = descriptions();
+  assert.deepEqual(updated, { id: before[orgB].id, org_object_id: orgB });
+  assert.deepEqual(Object.keys(saved).sort(), Object.keys(before).sort());
+  assert.equal(saved[orgB].description, 'Synthetic permitted contributor edit');
+  assert.deepEqual(saved.canonical, before.canonical);
+  assert.deepEqual(saved[orgA], before[orgA]);
+
+  commit(`UPDATE public.org_role_permission SET is_active=false
+    WHERE org_object_id='${orgB}' AND role_id=(SELECT id FROM public.ref_org_business_role WHERE code='editor')
+      AND permission_id=(SELECT id FROM public.ref_permission WHERE code='${permission}')`,
+  'revoke the ORG business-role permission while retaining the contributor link');
+  await assertWorkspace(false);
+  await denied(await write('Revoked grant must not change its overlay'), 'enrichment after committed revocation');
+  assert.deepEqual(descriptions(), saved, 'the revoked grant changed no description');
+}
+
 const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
   metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
 
@@ -216,6 +272,8 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     const foreignFile = await json(await rpc(headers('other'), 'get_object_document_file', { p_object_id: A, p_document_id: DOC }), 'foreign private pair');
     assert.ok(foreignFile.authorized === false && foreignFile.file === null);
 
+    await testOrgEnrichment();
+    t.diagnostic('Same-realm ORG enrichment and committed permission revocation passed with the same JWT.');
     await testInitialPublication();
 
     commit("UPDATE public.user_org_business_role SET is_active=false WHERE membership_id='00000000-0000-4000-a000-00000000ab11'", 'committed demotion');

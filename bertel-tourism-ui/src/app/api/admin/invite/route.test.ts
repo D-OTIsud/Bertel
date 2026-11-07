@@ -1,6 +1,7 @@
 /** @jest-environment node */
 jest.mock('server-only', () => ({}));
-import { POST } from './route';
+import { POST as legacyPOST } from './route';
+import { POST } from './v2/route';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
@@ -100,7 +101,21 @@ function fixture(options: {
   return { rpc, listUsers, inviteUserByEmail, deleteUser, membership, businessRole, update, is };
 }
 
-describe('POST /api/admin/invite', () => {
+describe('POST /api/admin/invite (legacy)', () => {
+  it('asks old clients to reload before any authentication or invite work', async () => {
+    mockedServer.mockClear();
+    mockedCreate.mockClear();
+    const res = legacyPOST();
+    expect(res.status).toBe(426);
+    const payload = await res.json();
+    expect(payload).toEqual({ error: 'bad_request' });
+    expect(readApiErrorMessage(payload, res.status)).toBe('Requête invalide. Rechargez la page et réessayez.');
+    expect(mockedServer).not.toHaveBeenCalled();
+    expect(mockedCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/admin/invite/v2', () => {
   beforeEach(() => {
     mockedServer.mockReset();
     mockedCreate.mockReset();

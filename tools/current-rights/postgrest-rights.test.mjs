@@ -150,14 +150,23 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       assert.equal(await canWrite('tester', TEST), true);
       assert.deepEqual(await Promise.all([rows(headers('other'), A), rows(headers('tester'), A), rows(local.anonymous, A)]),
         [[], [], []], 'foreign, test realm and anonymous clients must lack access to the draft fixture');
-      const publicReader = await rows(headers('portal'), PUBLIC);
-      assert.equal(publicReader.length, 1, 'the read-only persona must see the published fixture');
-      assert.equal(publicReader[0].status, 'published');
-      assert.equal(await canWrite('portal', PUBLIC), false);
+      commit(`DO $fixture$ BEGIN
+        DELETE FROM public.app_user_profile WHERE id='${ids.foreignPortal}' AND role='actor';
+        IF NOT FOUND THEN RAISE EXCEPTION 'missing profileless Realtime control fixture'; END IF;
+      END; $fixture$`, 'remove only the synthetic second portal profile');
+      for (const key of ['other', 'portal', 'foreignPortal']) {
+        const published = await rows(headers(key), PUBLIC);
+        assert.equal(published.length, 1, key + ' must see the published fixture');
+        assert.equal(published[0].status, 'published');
+        assert.equal(await json(await rpc(headers(key), 'can_read_object', { p_object_id: PUBLIC }),
+          key + ' published read authority'), true);
+        assert.equal(await canWrite(key, PUBLIC), false, key + ' must lack canonical write authority');
+      }
       const identity = (key) => ({ id: ids[key], headers: headers(key) });
       const { testRealtimeSecurity } = await import('../../bertel-tourism-ui/tests/current-rights/realtime-security.mjs');
       await testRealtimeSecurity({ local, objectId: A, publishedId: PUBLIC, writer: identity('writer'),
-        foreign: identity('other'), testRealm: identity('tester'), reader: identity('portal'),
+        foreign: identity('other'), testRealm: identity('tester'), portal: identity('portal'),
+        profileless: identity('foreignPortal'),
         revokeWriter: async () => {
           commit(`DO $fixture$ BEGIN
             UPDATE public.user_org_membership SET is_active=false

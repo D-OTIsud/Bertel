@@ -13,7 +13,8 @@ const writer = '00000000-0000-4000-a000-00000000ae11';
 const other = '00000000-0000-4000-a000-00000000ae12';
 function liveSession() {
   useSessionStore.setState({ demoMode: false, userId: writer, userName: 'Solo', avatar: 'SO',
-    canEditObjects: true, isTestRealm: false, authAuthority: { userId: writer, epoch: 1, hydrated: true } });
+    canEditObjects: true, isTestRealm: false, orgId: 'ORGRUN999999AR01', isSandboxDiscovery: false,
+    authAuthority: { userId: writer, epoch: 1, hydrated: true } });
 }
 
 describe('usePresenceRoom', () => {
@@ -188,9 +189,27 @@ describe('usePresenceRoom', () => {
       authAuthority: { userId: other, epoch: 2, hydrated: true } }));
     expect(created).toHaveLength(2);
     const next = created[1];
+    const staleEvent = { objectId, userId: writer, name: 'Avant le nouveau join', at: Date.now() };
+    act(() => {
+      next.presenceState.mockReturnValue({ [writer]: [{ userId: writer, name: 'Ancien salon' }] });
+      client.routePresence(objectRoom);
+      client.routeBroadcast(objectRoom, 'object:saved', staleEvent);
+    });
+    expect(preview.result.current.peers).toEqual([]);
+    expect(editor.result.current.savedNotice).toBeNull();
     act(() => next.emit('SUBSCRIBED'));
     expect(next.subscribe).toHaveBeenCalledTimes(1);
     expect(next.track).toHaveBeenLastCalledWith(expect.objectContaining({ userId: other, activeSection: '06' }));
+    const latePreview = renderHook(() => usePresenceRoom(objectRoom));
+    expect(latePreview.result.current.peers).toEqual([]);
+    latePreview.unmount();
+    act(() => {
+      next.presenceState.mockReturnValue({ [writer]: [{ userId: writer, name: 'Présence confirmée' }] });
+      client.routePresence(objectRoom);
+      client.routeBroadcast(objectRoom, 'object:saved', { ...staleEvent, name: 'Après le nouveau join' });
+    });
+    expect(preview.result.current.peers.map((member) => member.name)).toEqual(['Présence confirmée']);
+    expect(editor.result.current.savedNotice?.name).toBe('Après le nouveau join');
     act(previousSend);
     expect(next.send).not.toHaveBeenCalled();
     act(editor.result.current.broadcastSaved);

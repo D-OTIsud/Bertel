@@ -87,6 +87,8 @@ interface SessionState {
    * est indiscernable de la production, ce qui est exactement ce qu'on a fabrique.
    */
   isTestRealm: boolean;
+  /** Provenance of the shared public discovery identity, verified by Auth.getUser. */
+  isSandboxDiscovery: boolean;
   setDemoRole: (role: UserRole) => void;
   setLangPrefs: (langPrefs: string[]) => void;
   /**
@@ -109,6 +111,7 @@ interface SessionState {
     adminRank: number | null;
     adminRoleCode: string | null;
     isTestRealm: boolean;
+    isSandboxDiscovery: boolean;
   }) => void;
   setBooting: () => void;
   setGuest: (message?: string | null) => void;
@@ -139,6 +142,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   adminRank: null,
   adminRoleCode: null,
   isTestRealm: false,
+  isSandboxDiscovery: false,
   setDemoRole: (role) => {
     const state = useSessionStore.getState();
     if (!state.demoMode) {
@@ -159,7 +163,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       avatar: userName ? initialsFromName(userName) : state.avatar,
       avatarUrl: avatarUrl === undefined ? state.avatarUrl : avatarUrl,
     })),
-  hydrateFromAuth: ({ role, userId, email, userName, avatar, avatarUrl, langPrefs, canEditObjects, canCreateObjects, orgId, orgName, adminRank, adminRoleCode, isTestRealm }) =>
+  hydrateFromAuth: ({ role, userId, email, userName, avatar, avatarUrl, langPrefs, canEditObjects, canCreateObjects, orgId, orgName, adminRank, adminRoleCode, isTestRealm, isSandboxDiscovery }) =>
     set((state) => ({
       status: 'ready',
       role,
@@ -177,6 +181,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       adminRank,
       adminRoleCode,
       isTestRealm,
+      isSandboxDiscovery,
       errorMessage: null,
     })),
   setBooting: () => set((state) => ({ status: state.status === 'ready' ? 'ready' : 'booting', errorMessage: null })),
@@ -199,6 +204,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       adminRank: null,
       adminRoleCode: null,
       isTestRealm: false,
+      isSandboxDiscovery: false,
     }));
   },
   setSessionError: (message) => {
@@ -220,6 +226,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       adminRank: null,
       adminRoleCode: null,
       isTestRealm: false,
+      isSandboxDiscovery: false,
     }));
   },
 }));

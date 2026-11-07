@@ -19,6 +19,7 @@ interface Room {
   subscribers: Set<RoomSubscriber>;
   channel: RealtimeChannel | null;
   subscribed: boolean;
+  presence: ReturnType<typeof readRealtimePresence> | null;
   handle?: ResilientChannelHandle;
 }
 
@@ -45,13 +46,13 @@ export function joinRealtimeRoom(client: SupabaseClient, topic: string, scope: s
     rooms.delete(topic);
   }
   const current = rooms.get(topic);
-  const room: Room = current ?? { scope, subscribers: new Set(), channel: null, subscribed: false };
+  const room: Room = current ?? { scope, subscribers: new Set(), channel: null, subscribed: false, presence: null };
   const isCurrent = () => rooms.get(topic) === room && realtimeScopeKey(useSessionStore.getState()) === scope;
   room.subscribers.add(subscriber);
 
   if (current) {
-    if (room.channel && room.subscribed && isCurrent()) {
-      subscriber.onPresence(readRealtimePresence(room.channel.presenceState()));
+    if (room.subscribed && isCurrent()) {
+      if (room.presence) subscriber.onPresence(room.presence);
       if (tracker(room) === subscriber) track(room);
     }
   } else {
@@ -62,10 +63,11 @@ export function joinRealtimeRoom(client: SupabaseClient, topic: string, scope: s
       canOpen: isCurrent,
       bind: (channel) => {
         room.channel = channel;
-        const acceptsEvents = () => isCurrent() && room.channel === channel;
+        const acceptsEvents = () => isCurrent() && room.channel === channel && room.subscribed;
         channel.on('presence', { event: 'sync' }, () => {
           if (!acceptsEvents()) return;
           const state = readRealtimePresence(channel.presenceState());
+          room.presence = state;
           for (const view of room.subscribers) view.onPresence(state);
         });
         // CRM has no application broadcast sender or handler.
@@ -78,7 +80,10 @@ export function joinRealtimeRoom(client: SupabaseClient, topic: string, scope: s
         }
       },
       onSubscribed: () => track(room),
-      onState: (state) => { room.subscribed = state === 'subscribed'; },
+      onState: (state) => {
+        room.subscribed = state === 'subscribed';
+        if (!room.subscribed) room.presence = null;
+      },
     });
   }
 

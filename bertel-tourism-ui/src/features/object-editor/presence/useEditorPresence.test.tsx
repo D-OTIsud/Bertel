@@ -40,7 +40,8 @@ describe('useEditorPresence', () => {
     broadcastSpy.mockClear();
     lastOptions = undefined;
     useSessionStore.setState({ userId: selfId, userName: 'Moi', demoMode: false, status: 'ready',
-      role: 'tourism_agent', isTestRealm: false, authAuthority: { userId: selfId, epoch: 1, hydrated: true } });
+      role: 'tourism_agent', isTestRealm: false, orgId: 'ORGRUN999999AR01', isSandboxDiscovery: false,
+      authAuthority: { userId: selfId, epoch: 1, hydrated: true } });
     setRoom([]);
   });
 

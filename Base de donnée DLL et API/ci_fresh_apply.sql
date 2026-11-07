@@ -731,7 +731,7 @@ ROLLBACK;
 \ir tests/test_thesaurus_prepared_publication.sql
 
 \echo '== SEC05 manual list mail: durable intentions and user/ORG measurement (no limit) =='
-\ir ../supabase/migrations/20261106194635_distributed_list_email_intents.sql
+\ir distributed_list_email_intents.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

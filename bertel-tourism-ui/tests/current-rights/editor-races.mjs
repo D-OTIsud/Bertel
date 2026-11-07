@@ -58,7 +58,7 @@ async function waitForApp({ origin, server }) {
   throw new Error('Owned Next editor did not start on loopback');
 }
 
-export async function testEditorRaces({ local, objectId, writerId, email, password }) {
+export async function testEditorRaces({ local, objectId, writerId, email, password, secondAccount }) {
   assert.ok(process.platform === 'linux' && objectId === 'HOTRUN999999AR01', 'exact disposable Linux editor fixture required');
   local.sql("BEGIN; SELECT set_config('request.jwt.claims','{\"role\":\"service_role\"}',true);" +
     "INSERT INTO public.object_location(object_id, city, is_main_location) VALUES ('HOTRUN999999AR01','Saint-Denis',true);" +
@@ -136,10 +136,13 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         return route.continue();
       }
       const reload = scene.reload?.nativeDocument ? scene.reload : null;
+      const draftScope = scene.draftScope;
       let kind;
       if (url.origin === local.origin) {
         if (reload && request.method() === 'GET' && url.pathname === '/auth/v1/user') {
           kind = 'reload-auth';
+        } else if (draftScope && request.method() === 'POST' && url.pathname === '/auth/v1/logout') {
+          kind = 'draft-logout';
         } else if (request.method() === 'PATCH' && url.pathname === '/rest/v1/object' && url.searchParams.get('id') === 'eq.' + objectId) {
           kind = 'patch';
           patches.push(request.postDataJSON().name);
@@ -163,10 +166,13 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           const bearer = headers.authorization?.split(' ');
           const claims = JSON.parse(Buffer.from(bearer?.[1]?.split('.')[1] ?? '', 'base64url'));
           assert.ok(headers.apikey === local.anonymous.apikey && bearer?.[0] === 'Bearer'
-            && claims.role === 'authenticated' && claims.sub === writerId, 'browser must use the exact synthetic user JWT and anonymous API key');
+            && claims.role === 'authenticated' && claims.sub === (draftScope?.userId ?? writerId),
+          'browser must use the exact synthetic user JWT and anonymous API key');
           failureStage = 'content-profile';
           if (kind === 'legal-write') assert.equal(headers['content-profile'], 'public');
-          else if (kind !== 'patch' && kind !== 'reload-auth') assert.equal(headers['content-profile'], 'api');
+          else if (kind !== 'patch' && kind !== 'reload-auth' && kind !== 'draft-logout') {
+            assert.equal(headers['content-profile'], 'api');
+          }
         }
         failureStage = 'response';
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
@@ -207,13 +213,17 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         } else if (kind === 'legal-write') {
           assert.ok(response.ok());
           scene.legalWrites += 1;
+        } else if (kind === 'draft-logout') {
+          assert.ok(response.ok(), 'GoTrue must accept sign-out for the current account');
+          draftScope.loggedOut = true;
         }
         const reread = kind === 'reread' ? holds.get(kind) : undefined;
-        if (kind === 'reread' && (reread || reload) && response.ok()) {
+        if (kind === 'reread' && (reread || reload || draftScope) && response.ok()) {
           // Save and publish also refetch the workspace. Hold only the restored resource.
           const body = await response.json();
           const detail = body?.object ?? body;
           if (reload && detail?.id === objectId) reload.workspace = true;
+          if (draftScope && detail?.id === objectId) draftScope.workspace = true;
           if (reread && holds.get(kind) === reread && detail?.id === objectId && detail?.name === historic[1]) {
             gate = reread;
             holds.delete(kind);
@@ -235,9 +245,29 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       }
     }
 
-    async function openAuthenticatedEditor(legalMode) {
+    async function signInEditor(page, credentials) {
+      // The prerendered form can be visible before its client handlers are attached.
+      const forgotPassword = page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
+      const returnToLogin = page.getByRole('button', { name: 'Retour à la connexion', exact: true });
+      const submitLogin = page.getByRole('button', { name: 'Se connecter', exact: true });
+      await assertion(async () => {
+        if (await returnToLogin.isVisible()) return;
+        await forgotPassword.click({ timeout: 1000 });
+        await assertion(returnToLogin).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 20_000 });
+      await assertion(async () => {
+        if (!(await submitLogin.isVisible())) await returnToLogin.click({ timeout: 1000 });
+        await assertion(submitLogin).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 20_000 });
+      await page.getByLabel('Adresse e-mail').fill(credentials.email);
+      await page.getByLabel('Mot de passe', { exact: true }).fill(credentials.password);
+      await submitLogin.click();
+      await page.waitForURL(editorUrl, { timeout: 60_000 });
+    }
+
+    async function openAuthenticatedEditor(legalMode, draftScope) {
       const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
-      const scene = { legalMode, closed: false, nativeLoginRequested: false,
+      const scene = { legalMode, draftScope, closed: false, nativeLoginRequested: false, pageErrors: 0,
         legalReads: 0, legalPermissions: 0, summaryReads: 0, summaryFailures: 0, legalWrites: 0 };
       await context.routeWebSocket('**/*', (route) => {
         const url = new URL(route.url());
@@ -247,22 +277,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       });
       await context.route('**/*', (route) => routeEditorRequest(route, scene));
       const page = await context.newPage();
+      if (draftScope) page.on('pageerror', () => { scene.pageErrors += 1; });
       const login = await page.goto(loginUrl);
       assert.ok(scene.nativeLoginRequested && login?.status() === 200 && login.url() === loginUrl
         && login.request().redirectedFrom() === null, 'exact native login document must return HTTP 200 without redirects');
-      // The prerendered form can be visible before its client handlers are attached.
-      const forgotPassword = page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
-      const returnToLogin = page.getByRole('button', { name: 'Retour à la connexion', exact: true });
-      await assertion(async () => {
-        if (await returnToLogin.isVisible()) return;
-        await forgotPassword.click({ timeout: 1000 });
-        await assertion(returnToLogin).toBeVisible({ timeout: 1000 });
-      }).toPass({ timeout: 20_000 });
-      await returnToLogin.click();
-      await page.getByLabel('Adresse e-mail').fill(email);
-      await page.getByLabel('Mot de passe', { exact: true }).fill(password);
-      await page.getByRole('button', { name: 'Se connecter' }).click();
-      await page.waitForURL(editorUrl, { timeout: 60_000 });
+      await signInEditor(page, { email, password });
       return { page, scene, close: async () => {
         scene.closed = true;
         await context.close();
@@ -414,6 +433,66 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await assertion.poll(() => degraded.scene.legalWrites).toBe(2);
     await assertion.poll(legalValue).toBe('Synthetic legal company saved after reload');
     assert.equal(patches.length, 2);
+    await degraded.close();
+
+    assert.ok(secondAccount?.id && secondAccount.id !== writerId, 'two distinct browser accounts are required');
+    const canonicalBeforeDrafts = canonical();
+    const mutationsBeforeDrafts = [patches.length, publishCalls, restoreCalls];
+    const draftScene = await openAuthenticatedEditor(undefined, { userId: writerId });
+    const draftPage = draftScene.page;
+    const draftName = draftPage.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
+    const storedDraft = (userId) => draftPage.evaluate((key) => localStorage.getItem(key),
+      `object-editor-draft:${encodeURIComponent(userId)}:${encodeURIComponent(objectId)}`);
+    const originalDraftName = 'Synthetic local name for first account only';
+    async function signOutDraftEditor() {
+      const scope = draftScene.scene.draftScope;
+      assert.equal(draftScene.scene.pageErrors, 0);
+      // The Next dev indicator occupies the same corner as the sidebar profile.
+      const profile = draftPage.getByRole('button', { name: /^Profil / });
+      await profile.focus();
+      await assertion(profile).toBeFocused();
+      await draftPage.keyboard.press('Enter');
+      await draftPage.getByRole('button', { name: 'Se déconnecter', exact: true }).click();
+      await assertion(draftPage).toHaveURL(loginUrl);
+      await assertion.poll(() => scope.loggedOut).toBe(true);
+      await assertion(draftName).toHaveCount(0);
+    }
+    async function signInDraftEditor(userId, credentials) {
+      const scope = { userId };
+      draftScene.scene.draftScope = scope;
+      await signInEditor(draftPage, credentials);
+      await assertion.poll(() => scope.workspace).toBe(true);
+    }
+
+    await assertion.poll(() => draftScene.scene.draftScope.workspace).toBe(true);
+    await assertion(draftName).toHaveValue(canonicalBeforeDrafts[0]);
+    assert.equal(await storedDraft(writerId), null);
+    await draftName.fill(originalDraftName);
+    await assertion.poll(async () => JSON.parse((await storedDraft(writerId)) ?? '{}').draft?.generalInfo?.name)
+      .toBe(originalDraftName);
+    const firstDraft = await storedDraft(writerId);
+    await signOutDraftEditor();
+    assert.equal(await storedDraft(writerId), firstDraft);
+
+    await signInDraftEditor(secondAccount.id, secondAccount);
+    await assertion(draftName).toHaveValue(canonicalBeforeDrafts[0]);
+    await assertion(draftName).toBeEditable();
+    await assertion(draftPage.getByText(originalDraftName, { exact: true })).toHaveCount(0);
+    assert.equal(await storedDraft(secondAccount.id), null);
+    const otherDraftName = 'Synthetic local name for second account only';
+    await draftName.fill(otherDraftName);
+    await assertion.poll(async () => JSON.parse((await storedDraft(secondAccount.id)) ?? '{}').draft?.generalInfo?.name)
+      .toBe(otherDraftName);
+    assert.equal(await storedDraft(writerId), firstDraft);
+    await signOutDraftEditor();
+    assert.equal(await storedDraft(writerId), firstDraft);
+
+    await signInDraftEditor(writerId, { email, password });
+    await assertion(draftName).toHaveValue(originalDraftName);
+    assert.deepEqual(canonical(), canonicalBeforeDrafts);
+    assert.deepEqual([patches.length, publishCalls, restoreCalls], mutationsBeforeDrafts);
+    assert.equal(draftScene.scene.pageErrors, 0);
+    await draftScene.close();
   } catch (error) {
     throw routeFailure ?? error;
   } finally {

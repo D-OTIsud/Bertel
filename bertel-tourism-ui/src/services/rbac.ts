@@ -38,8 +38,9 @@ export interface RefRole { code: string; name: string; rank: number | null; posi
 export interface RefPermission { code: string; name: string; category: string; }
 export interface InviteResult {
   userId: string;
+  membershipId: string;
   alreadyExisted: boolean;
-  /** Set on the 409 arm only: true when the existing account never signed in (resend possible). */
+  /** Available for an account that was already active in the requested organization. */
   neverSignedIn?: boolean;
 }
 
@@ -137,22 +138,22 @@ export const setRolePermission = (orgObjectId: string, roleCode: string, permiss
     p_granted: granted,
   });
 
-/** Invite via the server route (service-role) — envoie l'e-mail d'invitation Supabase.
- *  `resend: true` = renvoyer l'invitation à un compte jamais connecté (delete + re-invite serveur). */
+/** Invite or attach an account through the server route. Resends keep the same account. */
 export async function inviteUser(input: { email: string; orgObjectId: string; businessRoleCode: string; resend?: boolean }): Promise<InviteResult> {
   const client = getSupabaseClient();
   const token = (await client?.auth.getSession())?.data.session?.access_token;
-  const res = await fetch('/api/admin/invite', {
+  const res = await fetch('/api/admin/invite/v2', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: token ? `Bearer ${token}` : '' },
-    body: JSON.stringify({ email: input.email, orgObjectId: input.orgObjectId, resend: input.resend === true }),
+    body: JSON.stringify({ email: input.email, orgObjectId: input.orgObjectId, businessRoleCode: input.businessRoleCode, resend: input.resend === true }),
   });
-  const body = await res.json();
-  if (res.status === 409 && body?.userId) {
-    return { userId: body.userId, alreadyExisted: true, neverSignedIn: body.neverSignedIn === true };
+  const body = await res.json().catch(() => null);
+  if (res.status === 409 && body?.userId && body?.membershipId) {
+    return { userId: body.userId, membershipId: body.membershipId, alreadyExisted: true, neverSignedIn: body.neverSignedIn === true };
   }
-  if (!res.ok) throw rbacRouteError(body, res.status);
-  return { userId: body.userId, alreadyExisted: false };
+  if (!res.ok) throw rbacRouteError(res.status === 404 ? { error: 'bad_request' } : body, res.status);
+  if (!body?.userId || !body?.membershipId) throw rbacRouteError({ error: 'create_failed' }, 500);
+  return { userId: body.userId, membershipId: body.membershipId, alreadyExisted: false };
 }
 
 /** Suppression DÉFINITIVE du compte (auth + cascade profil/membership/permissions).

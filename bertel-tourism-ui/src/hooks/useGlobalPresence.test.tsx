@@ -7,6 +7,13 @@ import { useUiStore } from '../store/ui-store';
 
 jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn() }));
 
+const selfId = '00000000-0000-4000-a000-00000000ae11';
+const otherId = '00000000-0000-4000-a000-00000000ae12';
+function liveSession() {
+  useSessionStore.setState({ demoMode: false, role: 'tourism_agent', status: 'ready', isTestRealm: false,
+    userId: selfId, userName: 'Solo', avatar: 'SO', authAuthority: { userId: selfId, epoch: 1, hydrated: true } });
+}
+
 describe('useGlobalPresence', () => {
   beforeEach(() => {
     useUiStore.setState({ liveMembers: [], networkStatus: 'connected', realtimeRetry: null });
@@ -23,11 +30,11 @@ describe('useGlobalPresence', () => {
 
   it('with no Supabase client, shows only yourself and offline', () => {
     (getSupabaseClient as jest.Mock).mockReturnValue(null);
-    useSessionStore.setState({ demoMode: false, userId: 'u1', userName: 'Solo', avatar: 'SO' });
+    liveSession();
     renderHook(() => useGlobalPresence());
     const state = useUiStore.getState();
     expect(state.liveMembers).toHaveLength(1);
-    expect(state.liveMembers[0].userId).toBe('u1');
+    expect(state.liveMembers[0].userId).toBe(selfId);
     expect(state.networkStatus).toBe('offline');
   });
 
@@ -43,7 +50,7 @@ describe('useGlobalPresence', () => {
   describe('with a live realtime channel', () => {
     beforeEach(() => {
       jest.useFakeTimers();
-      useSessionStore.setState({ demoMode: false, userId: 'u1', userName: 'Solo', avatar: 'SO' });
+      liveSession();
     });
 
     afterEach(() => {
@@ -55,9 +62,13 @@ describe('useGlobalPresence', () => {
       (getSupabaseClient as jest.Mock).mockReturnValue(client);
 
       renderHook(() => useGlobalPresence());
+      expect(client.channel).toHaveBeenCalledWith('presence:global:prod', {
+        config: { private: true, presence: { key: selfId } },
+      });
       act(() => {
         created[0].presenceState.mockReturnValue({
-          u1: [{ userId: 'u1', name: 'Solo', avatar: 'SO', color: '#000', onlineSince: 1 }],
+          [selfId]: [{ userId: selfId, name: 'Solo', avatar: 'SO', color: '#000000', onlineSince: 1 }],
+          [otherId]: [{ userId: selfId, name: 123 }],
         });
         created[0].emit('SUBSCRIBED');
         created[0].syncPresence();
@@ -66,6 +77,29 @@ describe('useGlobalPresence', () => {
       expect(created[0].track).toHaveBeenCalled();
       expect(useUiStore.getState().networkStatus).toBe('connected');
       expect(useUiStore.getState().liveMembers).toHaveLength(1);
+    });
+
+    it('clears the old roster during Auth hydration and rejoins only the current realm and persona', () => {
+      const { client, created } = makeFakeRealtimeClient();
+      (getSupabaseClient as jest.Mock).mockReturnValue(client);
+      renderHook(() => useGlobalPresence());
+      act(() => {
+        created[0].emit('SUBSCRIBED');
+        useSessionStore.getState().observeAuthUser(otherId);
+        expect(useSessionStore.getState().userId).toBe(selfId);
+        expect(useUiStore.getState().liveMembers).toEqual([]);
+        created[0].presenceState.mockReturnValue({ [selfId]: [{ userId: selfId, name: 'Old roster' }] });
+        created[0].syncPresence();
+      });
+      expect(useUiStore.getState().liveMembers).toEqual([]);
+      expect(created).toHaveLength(1);
+      act(() => useSessionStore.setState({ userId: otherId, isTestRealm: true,
+        authAuthority: { userId: otherId, epoch: 2, hydrated: true } }));
+      expect(created.map((channel) => channel.topic)).toEqual(['presence:global:prod', 'presence:global:test']);
+      act(() => useSessionStore.setState({ role: 'actor' }));
+      expect(useUiStore.getState().liveMembers).toEqual([]);
+      expect(client.removeChannel).toHaveBeenCalledWith(created[1]);
+      expect(created).toHaveLength(2);
     });
 
     // Le bug d'origine : un canal CLOSED est mort pour realtime-js, la pastille restait

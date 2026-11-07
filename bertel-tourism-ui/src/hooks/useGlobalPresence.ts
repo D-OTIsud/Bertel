@@ -1,18 +1,18 @@
 import { useEffect, useRef } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { mockPresence } from '../data/mock';
 import { getSupabaseClient } from '../lib/supabase';
 import {
   dedupePresenceMembers,
   deriveNetworkStatus,
-  type PresenceTrackPayload,
   type RealtimeConnState,
 } from '../lib/presence';
 import { createResilientChannel } from '../lib/realtime-recovery';
+import { readRealtimePresence, realtimeRealm, realtimeScopeKey } from '../lib/realtime-scope';
 import { useSessionStore } from '../store/session-store';
 import { useUiStore } from '../store/ui-store';
 import type { PresenceMember } from '../types/domain';
 
-const GLOBAL_PRESENCE_ROOM = 'presence:global';
 const SELF_COLOR = '#ff7b54';
 const DEMO_STAGGER_MS = 7 * 60_000;
 
@@ -30,6 +30,8 @@ export function useGlobalPresence(): void {
   const userName = useSessionStore((state) => state.userName);
   const avatar = useSessionStore((state) => state.avatar);
   const demoMode = useSessionStore((state) => state.demoMode);
+  const scopeKey = useSessionStore(realtimeScopeKey);
+  const realm = useSessionStore(realtimeRealm);
   const setLivePresence = useUiStore((state) => state.setLivePresence);
   const setNetworkStatus = useUiStore((state) => state.setNetworkStatus);
   const setRealtimeRetry = useUiStore((state) => state.setRealtimeRetry);
@@ -58,25 +60,32 @@ export function useGlobalPresence(): void {
 
     const client = getSupabaseClient();
 
-    // No backend configured or not authenticated yet: show just yourself, offline.
-    if (!client || !userId) {
-      setLivePresence(userId ? [me] : []);
+    // Local identity is enough to show yourself if only the backend is missing.
+    if (!client || !userId || scopeKey === null) {
+      setLivePresence(scopeKey !== null ? [me] : []);
       setNetworkStatus('offline');
       return undefined;
     }
 
+    let disposed = false;
+    let activeChannel: RealtimeChannel | null = null;
+    const isCurrent = () => !disposed && realtimeScopeKey(useSessionStore.getState()) === scopeKey;
+    setLivePresence([me]);
     let realtimeStatus: RealtimeConnState = 'connecting';
     const applyNetworkStatus = () => {
+      if (!isCurrent()) return;
       setNetworkStatus(deriveNetworkStatus(navigator.onLine, realtimeStatus));
     };
 
     const handle = createResilientChannel(client, {
-      topic: GLOBAL_PRESENCE_ROOM,
-      config: { config: { presence: { key: userId }, broadcast: { self: false } } },
+      topic: `presence:global:${realm}`,
+      config: { config: { private: true, presence: { key: userId } } },
+      canOpen: isCurrent,
       bind: (channel) => {
+        activeChannel = channel;
         channel.on('presence', { event: 'sync' }, () => {
-          const state = channel.presenceState<PresenceTrackPayload>();
-          setLivePresence(dedupePresenceMembers(state as Record<string, PresenceTrackPayload[]>, userId));
+          if (!isCurrent() || channel !== activeChannel) return;
+          setLivePresence(dedupePresenceMembers(readRealtimePresence(channel.presenceState()), userId));
         });
       },
       onSubscribed: async (channel) => {
@@ -88,6 +97,11 @@ export function useGlobalPresence(): void {
       },
     });
 
+    const unsubscribeAuthority = useSessionStore.subscribe(() => {
+      if (isCurrent()) return;
+      setLivePresence([]);
+      setRealtimeRetry(null);
+    });
     // Le bouton « Reconnecter » de la pastille réseau appelle cette reprise-ci.
     setRealtimeRetry(handle.retryNow);
 
@@ -97,10 +111,12 @@ export function useGlobalPresence(): void {
     applyNetworkStatus();
 
     return () => {
+      disposed = true;
+      unsubscribeAuthority();
       window.removeEventListener('online', handleBrowserChange);
       window.removeEventListener('offline', handleBrowserChange);
       setRealtimeRetry(null);
       handle.dispose();
     };
-  }, [demoMode, userId, userName, avatar, setLivePresence, setNetworkStatus, setRealtimeRetry]);
+  }, [demoMode, userId, userName, avatar, scopeKey, realm, setLivePresence, setNetworkStatus, setRealtimeRetry]);
 }

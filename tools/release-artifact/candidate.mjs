@@ -22,9 +22,13 @@ const releaseRefs = new Set(['refs/heads/master', 'refs/heads/codex/release-n2-l
 const requireThat = (value, code) => { if (!value) throw new Error(code); };
 export const digest = (value) => createHash('sha256').update(value).digest('hex');
 
+export function isReleaseDispatch(event, ref) {
+  return event === 'workflow_dispatch' && releaseRefs.has(ref);
+}
+
 export function releaseContext({ expected, actual, workflowSha, event, ref }) {
   requireThat(SHA.test(expected) && expected === actual && expected === workflowSha
-    && event === 'workflow_dispatch' && releaseRefs.has(ref), 'release_source');
+    && isReleaseDispatch(event, ref), 'release_source');
   return expected;
 }
 

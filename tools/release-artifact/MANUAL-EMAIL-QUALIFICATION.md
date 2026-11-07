@@ -50,9 +50,10 @@ Le host public réel attendu est reconnu explicitement par le preload, qui n'y
 accède jamais au réseau. Seuls clé service/Bearer sont synthétiques. Les variations
 entre les quatre conteneurs sont le mode et leurs identités/chemins éphémères.
 
-Les opérations Docker sont refusées hors CI Linux manuel master, avec les
-surcharges d'endpoint refusées et le contexte default explicite, dont le socket
-local est attesté. Un conteneur n'est retiré qu'après contrôle de son ID physique,
+Les opérations Docker exigent un déclenchement manuel dans la CI GitHub Linux,
+sur master ou sur le ref exact `refs/heads/codex/release-n2-loopback-fallback-20261107`.
+Le contexte default et son socket local sont vérifiés. Les surcharges d’endpoint
+sont refusées. Un conteneur n'est retiré qu'après contrôle de son ID physique,
 image, nonce, mode, mounts et bornes. ACK create inconnu ou identité douteuse ne
 permet pas une suppression par nom : job en échec/quarantaine sur cette VM éphémère.
 
@@ -69,11 +70,12 @@ Avant docker save, `candidate.mjs export` relit une preuve complète et bornée 
 distincts et à cette calibration. Omettre la qualification ou sélectionner un
 autre profil échoue. La preuve est un SECOND artefact GitHub, séparé du ZIP
 historique à deux fichiers. Aucun ajout au manifeste schema1, smoke historique,
-receiver ou importeur S0/S1/S2. Les contrôles master/workflowSHA restent intacts.
+receiver ou importeur S0/S1/S2. Le validateur partagé exige un ref de release
+admis et l’égalité du SHA attendu, du checkout et de GITHUB_SHA.
 
 Les push/PR exécutent les gardes purs et le contrat natif Compose habituel. La
-vraie matrice Docker est exécutée uniquement par la préparation manuelle d'archive
-sur master, avant export. Il faut donc distinguer ces statuts dans toute revue.
+vraie matrice Docker est exécutée uniquement par la préparation manuelle
+d’archive sur l’un des deux refs admis, avant export. Il faut donc distinguer ces statuts dans toute revue.
 Une branche source B et une branche source N restent des sources distinctes ;
 ces outils ne les composent pas et n'autorisent aucun déploiement.
 

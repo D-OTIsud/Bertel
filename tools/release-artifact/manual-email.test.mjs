@@ -98,6 +98,16 @@ test('CI and Docker endpoint overrides refuse before any local/remote Docker ope
   for (const patch of [{ CI: '' }, { RUNNER_OS: 'Windows' }, { GITHUB_EVENT_NAME: 'push' }, { GITHUB_REF: 'refs/heads/test' }, { GITHUB_RUN_ID: '' },
     ...['DOCKER_HOST', 'DOCKER_CONTEXT', 'DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH', 'NODE_OPTIONS'].map((k) => ({ [k]: 'override' }))]) assert.throws(() => assertRuntimeCI({ ...env, ...patch }));
 });
+test('manual email runtime CI admits the exact SEC04 return ref', () => {
+  const fallback = 'refs/heads/codex/release-n2-loopback-fallback-20261107';
+  const env = { CI: 'true', GITHUB_ACTIONS: 'true', RUNNER_OS: 'Linux', GITHUB_EVENT_NAME: 'workflow_dispatch',
+    GITHUB_REF: fallback, GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '1' };
+  assert.doesNotThrow(() => assertRuntimeCI(env));
+  for (const patch of [{ GITHUB_REF: fallback + '-other' }, { GITHUB_REF: fallback.replace('/heads/', '/tags/') },
+    { GITHUB_EVENT_NAME: 'push' }, { GITHUB_EVENT_NAME: 'pull_request' }]) {
+    assert.throws(() => assertRuntimeCI({ ...env, ...patch }), /manual_email_ci/);
+  }
+});
 test('container keeps entrypoint/CMD, one immutable image, network none, only generated config writable', () => {
   for (const mode of MODES) {
     const args = containerArguments({ imageId: context().image_id, source: context().source_sha, run: '123', attempt: '1',

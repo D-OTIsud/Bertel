@@ -5,7 +5,7 @@ import { readFile, writeFile, lstat } from 'node:fs/promises';
 import { mkdirSync, writeFileSync, lstatSync, realpathSync, unlinkSync, rmdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildArguments, validateImageMetadata, validatePublicConfig, releaseContext, digest } from './candidate.mjs';
+import { buildArguments, validateImageMetadata, validatePublicConfig, releaseContext, isReleaseDispatch, digest } from './candidate.mjs';
 import { PROOF_VERSION, MODES, CALIBRATION_SOURCE, CALIBRATION_TREE, caseNames, manualEmailProfile,
   assertObservation, assertCalibration, validateManualEmailProof, manualEmailToolsHash } from './manual-email-contract.mjs';
 
@@ -13,7 +13,7 @@ const requireThat = (value, code) => { if (!value) throw new Error(code); };
 const root = realpathSync(process.cwd());
 export function assertRuntimeCI(env) {
   requireThat(env.CI === 'true' && env.GITHUB_ACTIONS === 'true' && env.RUNNER_OS === 'Linux'
-    && env.GITHUB_EVENT_NAME === 'workflow_dispatch' && env.GITHUB_REF === 'refs/heads/master'
+    && isReleaseDispatch(env.GITHUB_EVENT_NAME, env.GITHUB_REF)
     && /^[1-9][0-9]{0,18}$/.test(env.GITHUB_RUN_ID ?? '') && /^[1-9][0-9]{0,18}$/.test(env.GITHUB_RUN_ATTEMPT ?? ''), 'manual_email_ci');
   requireThat(['DOCKER_HOST', 'DOCKER_CONTEXT', 'DOCKER_TLS_VERIFY', 'DOCKER_CERT_PATH', 'NODE_OPTIONS'].every((key) => !env[key]), 'manual_email_endpoint_override');
 }

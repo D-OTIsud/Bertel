@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 
 type RouteFailureOptions = {
-  status?: 500 | 503;
+  status?: 500 | 502 | 503;
   headers?: HeadersInit;
   /** Existing safe business copy, such as a translated SQLSTATE. */
   detail?: string;

@@ -1,12 +1,12 @@
 {
  "meta": {
-  "table_count": 421,
+  "table_count": 424,
   "view_count": 15,
-  "function_count": 633,
-  "policy_count": 642,
-  "trigger_count": 1432,
+  "function_count": 641,
+  "policy_count": 645,
+  "trigger_count": 1438,
   "enum_count": 9,
-  "edge_count": 6287
+  "edge_count": 6311
  },
  "nodes": [
   {
@@ -58027,6 +58027,246 @@
    }
   },
   {
+   "id": "storage_reservation_private.namespace",
+   "kind": "table",
+   "label": "namespace",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "columns": [
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "project_ref",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "storage_origin_sha256",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "epoch",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "manifest_sha256",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "bucket",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "prefix",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "active",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true,
+    "rls_forced": true
+   }
+  },
+  {
+   "id": "trigger:storage_reservation_private.namespace:namespace_no_erasure",
+   "kind": "trigger",
+   "label": "namespace_no_erasure",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "storage_reservation_private.namespace",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "trigger:storage_reservation_private.namespace:namespace_immutable",
+   "kind": "trigger",
+   "label": "namespace_immutable",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "storage_reservation_private.namespace",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "storage_reservation_private.admission",
+   "kind": "table",
+   "label": "admission",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "columns": [
+     {
+      "name": "bucket",
+      "type": "text",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "object_key",
+      "type": "text",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "namespace_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "binding",
+      "type": "jsonb",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true,
+    "rls_forced": true
+   }
+  },
+  {
+   "id": "trigger:storage_reservation_private.admission:admission_no_erasure",
+   "kind": "trigger",
+   "label": "admission_no_erasure",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "storage_reservation_private.admission",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "trigger:storage_reservation_private.admission:admission_no_rewrite",
+   "kind": "trigger",
+   "label": "admission_no_rewrite",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "storage_reservation_private.admission",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "storage_reservation_private.reservation",
+   "kind": "table",
+   "label": "reservation",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "columns": [
+     {
+      "name": "bucket",
+      "type": "text",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "object_key",
+      "type": "text",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "receipt_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "binding",
+      "type": "jsonb",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "owner_sha256",
+      "type": "bytea",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "dispatch_started_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "dispatch_attempt",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true,
+    "rls_forced": true
+   }
+  },
+  {
+   "id": "trigger:storage_reservation_private.reservation:reservation_no_erasure",
+   "kind": "trigger",
+   "label": "reservation_no_erasure",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "storage_reservation_private.reservation",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "trigger:storage_reservation_private.reservation:reservation_immutable",
+   "kind": "trigger",
+   "label": "reservation_immutable",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "storage_reservation_private.reservation",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
    "id": "thesaurus.object_ids_for_row(p_table oid, p_row jsonb, p_visited oid[] DEFAULT '{}'::oid[], p_depth integer DEFAULT 0)",
    "kind": "function",
    "label": "object_ids_for_row",
@@ -61242,6 +61482,31 @@
    }
   },
   {
+   "id": "storage_reservation_private.valid_binding(b jsonb)",
+   "kind": "function",
+   "label": "valid_binding",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "signature": "valid_binding(b jsonb)",
+    "returns": "boolean",
+    "security_definer": false,
+    "volatility": "i",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+      "line": 4
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+     "line": 4
+    }
+   }
+  },
+  {
    "id": "api.resource_block_descriptions(p_payload jsonb)",
    "kind": "function",
    "label": "resource_block_descriptions",
@@ -61267,6 +61532,56 @@
    }
   },
   {
+   "id": "storage_reservation_private.deny_erasure()",
+   "kind": "function",
+   "label": "deny_erasure",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "signature": "deny_erasure()",
+    "returns": "trigger",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+      "line": 71
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+     "line": 71
+    }
+   }
+  },
+  {
+   "id": "storage_reservation_private.guard_namespace()",
+   "kind": "function",
+   "label": "guard_namespace",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "signature": "guard_namespace()",
+    "returns": "trigger",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+      "line": 74
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+     "line": 74
+    }
+   }
+  },
+  {
    "id": "api.upsert_app_branding(p_brand_name text DEFAULT NULL::text, p_logo_storage_path text DEFAULT NULL::text, p_logo_public_url text DEFAULT NULL::text, p_logo_mime_type text DEFAULT NULL::text, p_primary_color text DEFAULT NULL::text, p_accent_color text DEFAULT NULL::text, p_text_color text DEFAULT NULL::text, p_background_color text DEFAULT NULL::text, p_surface_color text DEFAULT NULL::text, p_marker_styles jsonb DEFAULT NULL::jsonb, p_extra jsonb DEFAULT NULL::jsonb, p_clear_logo boolean DEFAULT false)",
    "kind": "function",
    "label": "upsert_app_branding",
@@ -61288,6 +61603,31 @@
     "source": {
      "path": "Base de donnée DLL et API/ui_whitelabel_branding.sql",
      "line": 221
+    }
+   }
+  },
+  {
+   "id": "storage_reservation_private.guard_reservation()",
+   "kind": "function",
+   "label": "guard_reservation",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "signature": "guard_reservation()",
+    "returns": "trigger",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+      "line": 83
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+     "line": 83
     }
    }
   },
@@ -61392,6 +61732,81 @@
    }
   },
   {
+   "id": "storage_reservation_private.require_admission(b jsonb, require_active boolean)",
+   "kind": "function",
+   "label": "require_admission",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "signature": "require_admission(b jsonb, require_active boolean)",
+    "returns": "void",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+      "line": 117
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+     "line": 117
+    }
+   }
+  },
+  {
+   "id": "storage_reservation_api.reserve(b jsonb, owner_hash text)",
+   "kind": "function",
+   "label": "reserve",
+   "schema": "storage_reservation_api",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "signature": "reserve(b jsonb, owner_hash text)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+      "line": 133
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+     "line": 133
+    }
+   }
+  },
+  {
+   "id": "storage_reservation_api.claim(receipt uuid, b jsonb, owner_secret text, attempt uuid)",
+   "kind": "function",
+   "label": "claim",
+   "schema": "storage_reservation_api",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "signature": "claim(receipt uuid, b jsonb, owner_secret text, attempt uuid)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+      "line": 157
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+     "line": 157
+    }
+   }
+  },
+  {
    "id": "api.is_platform_admin()",
    "kind": "function",
    "label": "is_platform_admin",
@@ -61418,6 +61833,31 @@
       "line": 8
      }
     ]
+   }
+  },
+  {
+   "id": "storage_reservation_api.inspect(receipt uuid, b jsonb, owner_secret text)",
+   "kind": "function",
+   "label": "inspect",
+   "schema": "storage_reservation_api",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "signature": "inspect(receipt uuid, b jsonb, owner_secret text)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+      "line": 180
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107041336_private_storage_copy_reservations.sql",
+     "line": 180
+    }
    }
   },
   {
@@ -84181,6 +84621,54 @@
    }
   },
   {
+   "id": "policy:storage_reservation_private.admission:owner_only",
+   "kind": "policy",
+   "label": "owner_only",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "storage_reservation_private.admission",
+    "cmd": "ALL",
+    "roles": [
+     "postgres"
+    ],
+    "predicate": "true | true"
+   }
+  },
+  {
+   "id": "policy:storage_reservation_private.reservation:owner_only",
+   "kind": "policy",
+   "label": "owner_only",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "storage_reservation_private.reservation",
+    "cmd": "ALL",
+    "roles": [
+     "postgres"
+    ],
+    "predicate": "true | true"
+   }
+  },
+  {
+   "id": "policy:storage_reservation_private.namespace:owner_only",
+   "kind": "policy",
+   "label": "owner_only",
+   "schema": "storage_reservation_private",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "storage_reservation_private.namespace",
+    "cmd": "ALL",
+    "roles": [
+     "postgres"
+    ],
+    "predicate": "true | true"
+   }
+  },
+  {
    "id": "public.object_type",
    "kind": "enum",
    "label": "object_type",
@@ -101226,6 +101714,78 @@
    "props": {}
   },
   {
+   "source": "trigger:storage_reservation_private.namespace:namespace_no_erasure",
+   "target": "storage_reservation_private.namespace",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.namespace:namespace_no_erasure",
+   "target": "storage_reservation_private.deny_erasure()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.namespace:namespace_immutable",
+   "target": "storage_reservation_private.namespace",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.namespace:namespace_immutable",
+   "target": "storage_reservation_private.guard_namespace()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.admission:admission_no_erasure",
+   "target": "storage_reservation_private.admission",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.admission:admission_no_erasure",
+   "target": "storage_reservation_private.deny_erasure()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.admission:admission_no_rewrite",
+   "target": "storage_reservation_private.admission",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.admission:admission_no_rewrite",
+   "target": "storage_reservation_private.deny_erasure()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.reservation:reservation_no_erasure",
+   "target": "storage_reservation_private.reservation",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.reservation:reservation_no_erasure",
+   "target": "storage_reservation_private.deny_erasure()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.reservation:reservation_immutable",
+   "target": "storage_reservation_private.reservation",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:storage_reservation_private.reservation:reservation_immutable",
+   "target": "storage_reservation_private.guard_reservation()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "auth.identities",
    "target": "auth.users",
    "kind": "fk",
@@ -114284,6 +114844,36 @@
    }
   },
   {
+   "source": "storage_reservation_private.admission",
+   "target": "storage_reservation_private.namespace",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "namespace_id",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "storage_reservation_private.reservation",
+   "target": "storage_reservation_private.admission",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "bucket",
+      "bucket"
+     ],
+     [
+      "object_key",
+      "object_key"
+     ]
+    ]
+   }
+  },
+  {
    "source": "policy:public.ref_code_mood:admin_ref_code_write",
    "target": "public.ref_code",
    "kind": "gates",
@@ -118434,6 +119024,24 @@
   {
    "source": "policy:thesaurus.mutation_journal:publisher_read",
    "target": "thesaurus.mutation_journal",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:storage_reservation_private.admission:owner_only",
+   "target": "storage_reservation_private.admission",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:storage_reservation_private.reservation:owner_only",
+   "target": "storage_reservation_private.reservation",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:storage_reservation_private.namespace:owner_only",
+   "target": "storage_reservation_private.namespace",
    "kind": "gates",
    "props": {}
   },
@@ -123262,6 +123870,78 @@
    }
   },
   {
+   "source": "storage_reservation_private.require_admission(b jsonb, require_active boolean)",
+   "target": "storage_reservation_private.admission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "from storage_reservation_private.admission"
+    }
+   }
+  },
+  {
+   "source": "storage_reservation_private.require_admission(b jsonb, require_active boolean)",
+   "target": "storage_reservation_private.namespace",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "join storage_reservation_private.namespace"
+    }
+   }
+  },
+  {
+   "source": "storage_reservation_api.reserve(b jsonb, owner_hash text)",
+   "target": "storage_reservation_private.reservation",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "from storage_reservation_private.reservation"
+    }
+   }
+  },
+  {
+   "source": "storage_reservation_api.reserve(b jsonb, owner_hash text)",
+   "target": "storage_reservation_private.reservation",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "insert into storage_reservation_private.reservation"
+    }
+   }
+  },
+  {
+   "source": "storage_reservation_api.claim(receipt uuid, b jsonb, owner_secret text, attempt uuid)",
+   "target": "storage_reservation_private.reservation",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "from storage_reservation_private.reservation"
+    }
+   }
+  },
+  {
+   "source": "storage_reservation_api.claim(receipt uuid, b jsonb, owner_secret text, attempt uuid)",
+   "target": "storage_reservation_private.reservation",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "update storage_reservation_private.reservation"
+    }
+   }
+  },
+  {
    "source": "api.is_platform_admin()",
    "target": "public.app_user_profile",
    "kind": "reads",
@@ -123270,6 +123950,18 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "storage_reservation_api.inspect(receipt uuid, b jsonb, owner_secret text)",
+   "target": "storage_reservation_private.reservation",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "from storage_reservation_private.reservation"
     }
    }
   },

@@ -56,6 +56,59 @@ async function denied(response, label) {
 function commit(sql, stage) {
   return local.sql(`BEGIN; SELECT set_config('request.jwt.claims','{"role":"service_role"}',true); ${sql}; COMMIT;`, stage);
 }
+async function testInviteMembershipRpc() {
+  const org = 'ORGRUN999999AR01';
+  const otherOrg = 'ORGRUN999999AR02';
+  const writerMembership = '00000000-0000-4000-a000-00000000ab11';
+  const targetMembership = '00000000-0000-4000-a000-00000000ab12';
+  const assignment = randomUUID();
+  const rankRole = (rank) => `(SELECT id FROM public.ref_org_admin_role WHERE rank=${rank})`;
+  commit(`DO $fixture$ BEGIN
+    INSERT INTO public.user_org_admin_role(id,membership_id,role_id)
+    SELECT '${assignment}',m.id,${rankRole(20)}
+    FROM public.user_org_membership m
+    WHERE m.id='${writerMembership}' AND m.user_id='${ids.writer}' AND m.org_object_id='${org}' AND m.is_active;
+    IF NOT FOUND THEN RAISE EXCEPTION 'missing synthetic caller membership'; END IF;
+    UPDATE public.user_org_membership SET org_object_id='${org}'
+    WHERE id='${targetMembership}' AND user_id='${ids.other}' AND org_object_id='${otherOrg}' AND is_active;
+    IF NOT FOUND THEN RAISE EXCEPTION 'missing synthetic invite target'; END IF;
+  END $fixture$`, 'set the synthetic invitation caller to rank 20 and share the target organization');
+
+  try {
+    const targetState = () => JSON.parse(local.sql(`SELECT jsonb_build_object(
+      'membership',to_jsonb(m),
+      'roles',(SELECT jsonb_agg(to_jsonb(b) ORDER BY b.id) FROM public.user_org_business_role b WHERE b.membership_id=m.id),
+      'active_role',(SELECT r.code FROM public.user_org_business_role b JOIN public.ref_org_business_role r ON r.id=b.role_id
+        WHERE b.membership_id=m.id AND b.is_active)
+    ) FROM public.user_org_membership m WHERE m.id='${targetMembership}'`, 'read the exact synthetic membership and roles'));
+    const before = targetState();
+    assert.equal(before.membership.org_object_id, org);
+    assert.equal(before.membership.is_active, true);
+    assert.equal(before.active_role, 'editor', 'the requested contributor role differs from the existing editor role');
+    const attach = () => rpc(headers('writer'), 'rpc_attach_invite_membership', {
+      p_target_user_id: ids.other, p_org_object_id: org, p_business_role_code: 'contributor',
+    });
+
+    const deniedAt20 = await attach();
+    assert.equal(deniedAt20.status, 403, 'the new RPC must resolve and deny rank 20');
+    const error = await deniedAt20.json();
+    assert.equal(error.code, '42501');
+    assert.equal(error.message, 'INSUFFICIENT_RANK: rang minimum requis 30 pour une invitation');
+    assert.deepEqual(targetState(), before);
+
+    commit(`UPDATE public.user_org_admin_role SET role_id=${rankRole(30)} WHERE id='${assignment}'`,
+      'promote only the synthetic invitation caller to rank 30');
+    assert.deepEqual(await json(await attach(), 'rank 30 attachment with the same JWT'), {
+      membership_id: targetMembership, already_active: true,
+    });
+    assert.deepEqual(targetState(), before, 'the already-active receipt must preserve membership and role rows');
+  } finally {
+    commit(`DELETE FROM public.user_org_admin_role WHERE id='${assignment}' AND membership_id='${writerMembership}';
+      UPDATE public.user_org_membership SET org_object_id='${otherOrg}'
+      WHERE id='${targetMembership}' AND user_id='${ids.other}' AND org_object_id='${org}'`,
+    'restore the original synthetic invitation fixture scope');
+  }
+}
 async function testInitialPublication() {
   const writerRole = (code) => commit(
     `UPDATE public.user_org_business_role
@@ -479,6 +532,8 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90
     assert.ok(await canWrite('other', B) === true && await canWrite('other', A) === false);
     assert.ok(await json(await rpc(headers('writer'), 'is_platform_superuser'), 'current platform authority') === false,
       'a signed but stale app_metadata super_admin value must not become current platform authority');
+    await testInviteMembershipRpc();
+    t.diagnostic('Invitation RPC resolved with a GoTrue JWT: rank 20 refused by the SQL body, rank 30 received already_active without role rotation.');
 
     // ACC-07: the export RPC itself must recheck the caller's current scope.
     const actorA = '00000000-0000-4000-a000-00000000aa01';

@@ -143,10 +143,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const { data: activeMemberships, error: membershipError } = await server.from('user_org_membership')
-    .select('org_object_id').eq('user_id', userId).eq('is_active', true);
+    .select('id, org_object_id').eq('user_id', userId).eq('is_active', true);
   if (membershipError || !activeMemberships) return routeFailure('admin/invite.POST', 'authorization_check_failed', { status: 503 });
-  const alreadyInOrg = activeMemberships.some((membership) => membership.org_object_id === orgId);
-  if (!auth.isSuper && !alreadyInOrg) {
+  const membershipInOrg = activeMemberships.find((membership) => membership.org_object_id === orgId);
+  if (existing && membershipInOrg) {
+    const existingScopeFailure = await checkInviteScope(auth, orgId);
+    if (existingScopeFailure) return existingScopeFailure;
+    return NextResponse.json({
+      userId, membershipId: membershipInOrg.id, alreadyExisted: true,
+      ...(canSendExistingInvite(existing) ? { neverSignedIn: true } : {}),
+    }, { status: 409 });
+  }
+
+  if (!auth.isSuper && !membershipInOrg) {
     if (activeMemberships.length > 0) return outOfScope();
     // Granting a shared membership also opens scoped profile and avatar operations.
     const { data: profile, error } = await server.from('app_user_profile').select('role').eq('id', userId).maybeSingle();

@@ -40,6 +40,7 @@ function fixture(options: {
   roleExists?: boolean;
   activeOrgs?: string[];
   membershipInOrg?: boolean;
+  activeMembershipId?: string;
   nextPage?: number;
   attachError?: boolean;
   attachUnknown?: boolean;
@@ -71,7 +72,7 @@ function fixture(options: {
     eq.mockReturnValue(chain);
     return { select: jest.fn(() => chain), eq };
   }
-  const membership = single(options.membershipInOrg ? { id: 'membership-1' } : null);
+  const membership = single(options.membershipInOrg ? { id: options.activeMembershipId ?? 'membership-1' } : null);
   const callerRanks = options.callerOrgRanks ?? { [options.callerOrg ?? 'ORG1']: options.rank ?? 30 };
   const callerFilters = new Map<string, unknown>();
   let callerRankRead = 0;
@@ -112,7 +113,12 @@ function fixture(options: {
       return {
         select: (columns: string) => columns === 'id' ? membership.select() : ({
           eq: () => ({
-            eq: () => Promise.resolve({ data: (options.activeOrgs ?? []).map((org_object_id) => ({ org_object_id })), error: null }),
+            eq: () => Promise.resolve({
+              data: (options.activeOrgs ?? []).map((org_object_id) => ({
+                id: options.activeMembershipId ?? `active-membership-${org_object_id}`, org_object_id,
+              })),
+              error: null,
+            }),
           }),
         }),
       };
@@ -306,11 +312,53 @@ describe('POST /api/admin/invite/v2', () => {
     expect(deleteUser).not.toHaveBeenCalled();
   });
 
-  it('does not offer resend for a confirmed scoped account that has never signed in', async () => {
-    fixture({ users: [{ ...candidate, email_confirmed_at: '2026-07-01T00:00:00Z' }], activeOrgs: ['ORG1'] });
-    const res = await POST(req(target));
+  it.each(['tourism_agent', 'owner'])('returns the active confirmed %s membership without writing the selected role', async (profileRole) => {
+    const { rpc, inviteUserByEmail, deleteUser, update } = fixture({
+      users: [{ ...candidate, email_confirmed_at: '2026-07-01T00:00:00Z' }],
+      activeOrgs: profileRole === 'owner' ? ['ORG2', 'ORG1'] : ['ORG1'], profileRole,
+    });
+    const res = await POST(req({ ...target, resend: false }));
+    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
     expect(res.status).toBe(409);
-    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: true });
+    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'active-membership-ORG1', alreadyExisted: true });
+  });
+
+  it('returns the existing invitation as pending and sends only on explicit resend', async () => {
+    const { rpc, inviteUserByEmail, deleteUser, update } = fixture({
+      users: [candidate], activeOrgs: ['ORG1'], membershipInOrg: true,
+      activeMembershipId: 'active-membership-ORG1', returnedUserId: 'target',
+    });
+    const response = await POST(req({ ...target, resend: false }));
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      userId: 'target', membershipId: 'active-membership-ORG1', alreadyExisted: true, neverSignedIn: true,
+    });
+
+    const resent = await POST(req({ ...target, resend: true }));
+    expect(resent.status).toBe(201);
+    await expect(resent.json()).resolves.toEqual({
+      userId: 'target', membershipId: 'active-membership-ORG1', alreadyExisted: false,
+    });
+    expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('withholds the exact active membership after the caller loses its ORG rank', async () => {
+    const { rpc, inviteUserByEmail } = fixture({
+      users: [candidate], activeOrgs: ['ORG1'], callerRankReads: [30, 20],
+    });
+    const response = await POST(req({ ...target, resend: false }));
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: 'out_of_scope' });
+    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
   });
 
   it.each([{ attachError: true }, { attachUnknown: true }])('no disclosure or email without an acknowledged attachment (%j)', async (outcome) => {

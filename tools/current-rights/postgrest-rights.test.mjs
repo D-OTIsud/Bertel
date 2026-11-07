@@ -428,6 +428,10 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90
     }
     if (browserWitness) {
       assert.equal(await canWrite('other', A), false, 'the second account starts outside the publisher organization');
+      await t.test('Chromium creates a HOT draft and retries its first publication', async () => {
+        const { testCreatePublishBrowser } = await import('../../bertel-tourism-ui/tests/current-rights/create-publish-browser.mjs');
+        await testCreatePublishBrowser({ local, commit, writerId: ids.writer, ...writerCredentials });
+      });
       const { testTaskMultipartHttp } = await import('../../bertel-tourism-ui/tests/current-rights/task-multipart-http.mjs');
       await testTaskMultipartHttp({ local, commit, objectId: A, writerId: ids.writer,
         writerAuthorization: headers('writer').authorization, foreignAuthorization: headers('other').authorization });

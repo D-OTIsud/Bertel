@@ -22,6 +22,16 @@ const legalRpcKinds = new Map([
   ['/rest/v1/rpc/get_object_workspace_permissions', 'legal-permission'],
 ]);
 
+async function waitForRealmCatalogue(phase, expectedId, forbiddenId, corpus) {
+  // A card may still be placeholder data while the exact search RPC is pending.
+  await assertion.poll(() => {
+    assert.ok(phase.catalogues.every((ids) => !ids.includes(forbiddenId)),
+      `${corpus} catalogue exposed the opposite corpus in ${phase.catalogues.length} eligible responses`);
+    return { eligibleResponses: phase.catalogues.length,
+      expectedWitness: phase.catalogues.some((ids) => ids.includes(expectedId)) };
+  }, { message: `${corpus} catalogue did not return its expected witness` }).toMatchObject({ expectedWitness: true });
+}
+
 export async function startApp(local, { signDocuments = false } = {}) {
   const socket = createServer();
   socket.listen(0, loopback);
@@ -581,8 +591,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await assertion(realCard).toHaveCount(0);
       await assertion(sandbox).toBeVisible();
       assert.ok(realm.before.realms.length > 0 && realm.before.realms.every((value) => value === true));
-      assert.ok(realm.before.catalogues.some((ids) => ids.includes(testId))
-        && realm.before.catalogues.every((ids) => !ids.includes(realId)), 'test catalogue must have no real witness');
+      await waitForRealmCatalogue(realm.before, testId, realId, 'test');
 
       const moved = local.sql(`WITH changed AS (
         UPDATE public.user_org_membership SET org_object_id='ORGRUN999999AR02'
@@ -607,8 +616,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await assertion(testCard).toHaveCount(0);
       await assertion(sandbox).toHaveCount(0);
       assert.ok(realm.after.realms.length > 0 && realm.after.realms.every((value) => value === false));
-      assert.ok(realm.after.catalogues.some((ids) => ids.includes(realId))
-        && realm.after.catalogues.every((ids) => !ids.includes(testId)), 'real catalogue must have no test witness');
+      await waitForRealmCatalogue(realm.after, realId, testId, 'real');
     } finally {
       await realmScene.close();
     }

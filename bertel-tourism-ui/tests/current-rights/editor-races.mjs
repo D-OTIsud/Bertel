@@ -538,16 +538,22 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         passiveResponses.workspaceStatus = response.status();
       }
     });
-    function waitForDraftWorkspace(tab) {
+    async function waitForDraftWorkspace(tab) {
       const observed = () => draftScene.scene.draftScope.workspacePages.has(tab);
       if (tab !== passivePage) return assertion.poll(observed).toBe(true);
-      return assertion.poll(() => ({
+      const snapshot = () => ({
         observed: observed(),
         documentStatus: passiveStartup.documentStatus,
         location: tab.url() === editorUrl ? 'editor' : tab.url() === loginUrl ? 'login' : 'other',
         pageErrors: draftScene.scene.pageErrors,
         ...passiveResponses,
-      }), { message: 'Passive editor workspace must respond under the current account' }).toMatchObject({ observed: true });
+      });
+      try {
+        await assertion.poll(observed).toBe(true);
+      } catch (error) {
+        throw new Error('Passive editor workspace did not respond under the current account: '
+          + JSON.stringify(snapshot()), { cause: error });
+      }
     }
     const storedDraft = (userId) => draftPage.evaluate((key) => localStorage.getItem(key),
       `object-editor-draft:${encodeURIComponent(userId)}:${encodeURIComponent(objectId)}`);
@@ -599,8 +605,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await assertion(draftPage.getByText(originalDraftName, { exact: true })).toHaveCount(0);
     // The passive tab switches through native Auth propagation. Only a real workspace
     // response with the current account's JWT can satisfy its own per-tab probe.
-    await assertion(passivePage).toHaveURL(editorUrl);
     await waitForDraftWorkspace(passivePage);
+    await assertion(passivePage).toHaveURL(editorUrl);
     await assertion(passiveName).toHaveValue(canonicalBeforeDrafts[0]);
     await assertion(passiveName).toBeEditable();
     await assertion(passivePage.getByText(originalDraftName, { exact: true })).toHaveCount(0);

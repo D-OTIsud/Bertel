@@ -1636,6 +1636,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/prepare_portal_photo_approval`
 - **object types served:** **all object types**
+- _Each claim owns a distinct public Storage key. Existing media URLs are untouched._
 
 ### `api.prevent_duplicate_actor_email()`
 - **returns:** `trigger`

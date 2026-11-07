@@ -6,7 +6,7 @@
   "policy_count": 647,
   "trigger_count": 1438,
   "enum_count": 9,
-  "edge_count": 6316
+  "edge_count": 6315
  },
  "nodes": [
   {
@@ -70152,6 +70152,31 @@
    }
   },
   {
+   "id": "api.portal_photo_failed_approval(p_claim_id uuid)",
+   "kind": "function",
+   "label": "portal_photo_failed_approval",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "portal_photo_failed_approval(p_claim_id uuid)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
+      "line": 529
+     },
+     {
+      "path": "supabase/migrations/20261107170341_portal_photo_approval_claim_path.sql",
+      "line": 47
+     }
+    ]
+   }
+  },
+  {
    "id": "api.portal_photo_upload_context(p_object_id text)",
    "kind": "function",
    "label": "portal_photo_upload_context",
@@ -70173,31 +70198,6 @@
     "source": {
      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
      "line": 253
-    }
-   }
-  },
-  {
-   "id": "api.portal_photo_failed_approval(p_claim_id uuid)",
-   "kind": "function",
-   "label": "portal_photo_failed_approval",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "portal_photo_failed_approval(p_claim_id uuid)",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
-      "line": 529
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
-     "line": 529
     }
    }
   },
@@ -72432,6 +72432,31 @@
    }
   },
   {
+   "id": "api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)",
+   "kind": "function",
+   "label": "prepare_portal_photo_approval",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Each claim owns a distinct public Storage key. Existing media URLs are untouched.",
+   "props": {
+    "signature": "prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
+      "line": 428
+     },
+     {
+      "path": "supabase/migrations/20261107170341_portal_photo_approval_claim_path.sql",
+      "line": 4
+     }
+    ]
+   }
+  },
+  {
    "id": "api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)",
    "kind": "function",
    "label": "approve_fiche_submission",
@@ -72453,31 +72478,6 @@
     "source": {
      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
      "line": 1171
-    }
-   }
-  },
-  {
-   "id": "api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)",
-   "kind": "function",
-   "label": "prepare_portal_photo_approval",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
-      "line": 428
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
-     "line": 428
     }
    }
   },
@@ -73191,6 +73191,31 @@
    }
   },
   {
+   "id": "internal.portal_photo_actor_writes_enabled()",
+   "kind": "function",
+   "label": "portal_photo_actor_writes_enabled",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "portal_photo_actor_writes_enabled()",
+    "returns": "boolean",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
+      "line": 1565
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
+     "line": 1565
+    }
+   }
+  },
+  {
    "id": "internal.portal_photo_assert_writes_open()",
    "kind": "function",
    "label": "portal_photo_assert_writes_open",
@@ -73362,31 +73387,6 @@
     "source": {
      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
      "line": 1776
-    }
-   }
-  },
-  {
-   "id": "internal.portal_photo_actor_writes_enabled()",
-   "kind": "function",
-   "label": "portal_photo_actor_writes_enabled",
-   "schema": "internal",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "portal_photo_actor_writes_enabled()",
-    "returns": "boolean",
-    "security_definer": false,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
-      "line": 1565
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/partner_photo_album_fresh_install.sql",
-     "line": 1565
     }
    }
   },
@@ -135652,42 +135652,6 @@
    }
   },
   {
-   "source": "api.portal_photo_upload_context(p_object_id text)",
-   "target": "public.actor_document",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.actor_document"
-    }
-   }
-  },
-  {
-   "source": "api.portal_photo_upload_context(p_object_id text)",
-   "target": "public.ref_document",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN public.ref_document"
-    }
-   }
-  },
-  {
-   "source": "api.portal_photo_failed_approval(p_claim_id uuid)",
-   "target": "public.ref_document",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.ref_document"
-    }
-   }
-  },
-  {
    "source": "api.portal_photo_failed_approval(p_claim_id uuid)",
    "target": "public.media",
    "kind": "reads",
@@ -135708,6 +135672,30 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "UPDATE public.ref_document"
+    }
+   }
+  },
+  {
+   "source": "api.portal_photo_upload_context(p_object_id text)",
+   "target": "public.actor_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor_document"
+    }
+   }
+  },
+  {
+   "source": "api.portal_photo_upload_context(p_object_id text)",
+   "target": "public.ref_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.ref_document"
     }
    }
   },
@@ -139960,30 +139948,6 @@
    }
   },
   {
-   "source": "api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)",
-   "target": "public.fiche_submission",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM fiche_submission"
-    }
-   }
-  },
-  {
-   "source": "api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)",
-   "target": "public.pending_change",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM pending_change"
-    }
-   }
-  },
-  {
    "source": "api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)",
    "target": "public.fiche_submission",
    "kind": "reads",
@@ -140040,6 +140004,30 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "UPDATE public.ref_document"
+    }
+   }
+  },
+  {
+   "source": "api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)",
+   "target": "public.fiche_submission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
     }
    }
   },

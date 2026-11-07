@@ -66,6 +66,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
 
   const app = await startApp(local);
   let browser;
+  let closing = false;
+  let routeFailure;
   const holds = new Map();
   const releases = [];
   const patches = [];
@@ -98,7 +100,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await context.route('**/*', async (route) => {
       const request = route.request();
       const url = new URL(request.url());
-      if (!permitted.has(url.origin)) return route.abort();
+      if (!permitted.has(url.origin)) return route.abort().catch(() => {});
       let kind;
       if (url.origin === local.origin) {
         if (request.method() === 'PATCH' && url.pathname === '/rest/v1/object' && url.searchParams.get('id') === 'eq.' + objectId) {
@@ -112,15 +114,19 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       }
       const gate = holds.get(kind);
       if (gate) holds.delete(kind);
+      let failureStage = 'response';
       try {
         if (kind) {
+          failureStage = 'jwt';
           const headers = await request.allHeaders();
           const bearer = headers.authorization?.split(' ');
           const claims = JSON.parse(Buffer.from(bearer?.[1]?.split('.')[1] ?? '', 'base64url'));
           assert.ok(headers.apikey === local.anonymous.apikey && bearer?.[0] === 'Bearer'
             && claims.role === 'authenticated' && claims.sub === writerId, 'browser must use the exact synthetic user JWT and anonymous API key');
+          failureStage = 'content-profile';
           if (kind !== 'patch') assert.equal(headers['content-profile'], 'api');
         }
+        failureStage = 'response';
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
         assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
         if (gate) {
@@ -130,8 +136,12 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         }
         await route.fulfill({ response });
       } catch {
-        gate?.observed.resolve(new Error(kind + ' did not return a usable authenticated response'));
-        await route.abort();
+        if (!closing && kind) {
+          const failure = new Error('Editor browser route failed: ' + kind + ' (' + failureStage + ')');
+          routeFailure ??= failure;
+          gate?.observed.resolve(failure);
+        }
+        await route.abort().catch(() => {});
       }
     });
 
@@ -195,7 +205,10 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     assert.equal(restoreCalls, 1);
     assert.equal(patches.length, 2);
     assert.equal(publishCalls, 1);
+  } catch (error) {
+    throw routeFailure ?? error;
   } finally {
+    closing = true;
     for (const release of releases) release();
     try {
       await browser?.close();
@@ -205,4 +218,5 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       }
     }
   }
+  if (routeFailure) throw routeFailure;
 }

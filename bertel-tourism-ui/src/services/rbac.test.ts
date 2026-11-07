@@ -1,5 +1,6 @@
-import { getApiClient } from '../lib/supabase';
-import { listOrgMembers, setBusinessRole, upsertMembership, friendlyRbacError } from './rbac';
+/** @jest-environment node */
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
+import { inviteUser, listOrgMembers, setBusinessRole, upsertMembership, friendlyRbacError } from './rbac';
 
 jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn(), getSupabaseClient: jest.fn() }));
 const mockedGetApiClient = jest.mocked(getApiClient);
@@ -86,6 +87,57 @@ describe('rbac service', () => {
     const rpc = jest.fn().mockResolvedValue({ data: null, error: { message: 'boom' } });
     mockedGetApiClient.mockReturnValue(clientWithRpc(rpc));
     await expect(upsertMembership('user-1', 'org-1', 'contributor')).rejects.toMatchObject({ message: 'boom' });
+  });
+
+  it('inviteUser sends the chosen role and uses the committed membership from a scoped 409', async () => {
+    const input = { email: 'a@b.c', orgObjectId: 'ORG1', businessRoleCode: 'editor' };
+    const auth = { getSession: jest.fn().mockResolvedValue({ data: { session: { access_token: 'synthetic' } } }) };
+    jest.mocked(getSupabaseClient).mockReturnValue({ auth } as never);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      userId: 'u1', membershipId: 'm1', alreadyExisted: true,
+    }), { status: 409 }));
+    try {
+      await expect(inviteUser(input)).resolves.toEqual({ userId: 'u1', membershipId: 'm1', alreadyExisted: true, neverSignedIn: false });
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/invite/v2', expect.objectContaining({
+        headers: { 'content-type': 'application/json', authorization: 'Bearer synthetic' },
+        body: JSON.stringify({ ...input, resend: false }),
+      }));
+    } finally {
+      fetchMock.mockRestore();
+      jest.mocked(getSupabaseClient).mockReset();
+    }
+  });
+
+  it('preserves the scoped already-active outcome without treating it as a sent invite', async () => {
+    const auth = { getSession: jest.fn().mockResolvedValue({ data: { session: { access_token: 'synthetic' } } }) };
+    jest.mocked(getSupabaseClient).mockReturnValue({ auth } as never);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: 'already_active' }), { status: 409 }),
+    );
+    try {
+      await expect(inviteUser({
+        email: 'a@b.c', orgObjectId: 'ORG1', businessRoleCode: 'editor', resend: true,
+      })).rejects.toMatchObject({ code: 'already_active', message: 'Ce compte est déjà actif.' });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      fetchMock.mockRestore();
+      jest.mocked(getSupabaseClient).mockReset();
+    }
+  });
+
+  it('asks to reload if the server does not offer invite v2 and never falls back to the legacy POST', async () => {
+    const input = { email: 'a@b.c', orgObjectId: 'ORG1', businessRoleCode: 'editor' };
+    const auth = { getSession: jest.fn().mockResolvedValue({ data: { session: { access_token: 'synthetic' } } }) };
+    jest.mocked(getSupabaseClient).mockReturnValue({ auth } as never);
+    const fetchMock = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('<html>Not Found</html>', { status: 404 }));
+    try {
+      await expect(inviteUser(input)).rejects.toThrow('Requête invalide. Rechargez la page et réessayez.');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith('/api/admin/invite/v2', expect.objectContaining({ method: 'POST' }));
+    } finally {
+      fetchMock.mockRestore();
+      jest.mocked(getSupabaseClient).mockReset();
+    }
   });
 
   it('friendlyRbacError maps known SQLSTATE messages', () => {

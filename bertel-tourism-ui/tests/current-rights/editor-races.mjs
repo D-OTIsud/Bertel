@@ -249,15 +249,19 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       // The prerendered form can be visible before its client handlers are attached.
       const forgotPassword = page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
       const returnToLogin = page.getByRole('button', { name: 'Retour à la connexion', exact: true });
+      const submitLogin = page.getByRole('button', { name: 'Se connecter', exact: true });
       await assertion(async () => {
         if (await returnToLogin.isVisible()) return;
         await forgotPassword.click({ timeout: 1000 });
         await assertion(returnToLogin).toBeVisible({ timeout: 1000 });
       }).toPass({ timeout: 20_000 });
-      await returnToLogin.click();
+      await assertion(async () => {
+        if (!(await submitLogin.isVisible())) await returnToLogin.click({ timeout: 1000 });
+        await assertion(submitLogin).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 20_000 });
       await page.getByLabel('Adresse e-mail').fill(credentials.email);
       await page.getByLabel('Mot de passe', { exact: true }).fill(credentials.password);
-      await page.getByRole('button', { name: 'Se connecter' }).click();
+      await submitLogin.click();
       await page.waitForURL(editorUrl, { timeout: 60_000 });
     }
 

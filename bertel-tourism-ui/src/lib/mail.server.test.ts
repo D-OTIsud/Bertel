@@ -224,3 +224,35 @@ describe('mail.server — transport réutilisé', () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 });
+
+
+describe('prepared list mail — snapshot and fresh live SMTP gate', () => {
+  it('uses the exact prepared sender while allowing a current transport rotation', async () => {
+    const made = transportFactory();
+    readSmtpConfig.mockResolvedValueOnce(cfg()).mockResolvedValueOnce(cfg({ host: 'rotated.example.invalid' }));
+    const { prepareListEmail } = await loadModule();
+    const prepared = await prepareListEmail({ to: 'recipient@example.invalid', subject: 'Synthetic', html: '<p>Synthetic</p>' });
+    await prepared.send();
+    expect(prepared.sender).toEqual({ name: 'Bertel', address: 'no-reply@bertel.re' });
+    expect(createTransport).toHaveBeenCalledWith(expect.objectContaining({ host: 'rotated.example.invalid' }));
+    expect(made[0].sendMail).toHaveBeenCalledWith(expect.objectContaining({ from: prepared.sender }));
+  });
+  it('does not send a reserved message after SMTP is disabled during admission', async () => {
+    transportFactory();
+    readSmtpConfig.mockResolvedValueOnce(cfg()).mockResolvedValueOnce(null);
+    const { prepareListEmail, MailNotConfiguredError } = await loadModule();
+    const prepared = await prepareListEmail({ to: 'recipient@example.invalid', subject: 'Synthetic', html: '<p>Synthetic</p>' });
+    await expect(prepared.send()).rejects.toBeInstanceOf(MailNotConfiguredError);
+    expect(createTransport).not.toHaveBeenCalled();
+  });
+  it('sender drift or settings read failure is a certain pre-submit rejection, not an unknown SMTP result', async () => {
+    transportFactory();
+    readSmtpConfig.mockResolvedValueOnce(cfg()).mockResolvedValueOnce(cfg({ fromName: 'Changed' }));
+    const { prepareListEmail } = await loadModule();
+    const prepared = await prepareListEmail({ to: 'recipient@example.invalid', subject: 'Synthetic', html: '<p>Synthetic</p>' });
+    await expect(prepared.send()).rejects.toMatchObject({ name: 'MailDeliveryError', rejectionCode: 'CONFIG_CHANGED' });
+    readSmtpConfig.mockRejectedValueOnce(new Error('synthetic settings failure'));
+    await expect(prepared.send()).rejects.toMatchObject({ rejectionCode: 'CONFIG_UNAVAILABLE' });
+    expect(createTransport).not.toHaveBeenCalled();
+  });
+});

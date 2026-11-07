@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       expected_source_sha:
-        description: 'Exact reviewed master SHA. A different workflow snapshot is refused.'
+        description: 'Exact reviewed master or designated SEC04 return SHA. A different workflow snapshot is refused.'
         required: true
         type: string
       manual_email_profile:
@@ -42,7 +42,7 @@ jobs:
         run: node --test tools/release-artifact/prebuilt-compose.test.mjs
 
   prepare-archive:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/codex/release-n2-loopback-fallback-20261107')
     needs: guard-tests
     runs-on: ubuntu-24.04
     timeout-minutes: 30

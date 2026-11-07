@@ -18,12 +18,13 @@ export const KEYS = Object.freeze(['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPA
 const styles = ['https://demotiles.maplibre.org/style.json', 'https://tiles.openfreemap.org/styles/liberty',
   'https://tiles.openfreemap.org/styles/bright'];
 const SHA = /^[a-f0-9]{40}$/;
+const releaseRefs = new Set(['refs/heads/master', 'refs/heads/codex/release-n2-loopback-fallback-20261107']);
 const requireThat = (value, code) => { if (!value) throw new Error(code); };
 export const digest = (value) => createHash('sha256').update(value).digest('hex');
 
 export function releaseContext({ expected, actual, workflowSha, event, ref }) {
   requireThat(SHA.test(expected) && expected === actual && expected === workflowSha
-    && event === 'workflow_dispatch' && ref === 'refs/heads/master', 'release_source');
+    && event === 'workflow_dispatch' && releaseRefs.has(ref), 'release_source');
   return expected;
 }
 

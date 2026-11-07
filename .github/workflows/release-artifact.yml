@@ -74,7 +74,7 @@ jobs:
       - name: Check out the real ungated calibration source separately
         uses: actions/checkout@v4
         with:
-          ref: '50805933d9489974690f9bb208b633cfb5440070'
+          ref: '686b5815199b8a78484a23126c93c745c0ec3ff1'
           path: '.release-work/calibration-source'
           fetch-depth: 1
           persist-credentials: false

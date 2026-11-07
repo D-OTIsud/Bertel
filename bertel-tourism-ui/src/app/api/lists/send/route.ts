@@ -7,6 +7,7 @@ import { getCanonicalAppOrigin } from '@/lib/canonical-app-origin.server';
 import { isSandboxDiscoveryUser, SANDBOX_EMAIL_DETAIL, SANDBOX_EXTERNAL_EFFECTS_ERROR } from '@/lib/sandbox-effects';
 import { prepareListEmail, MailDeliveryError, MailNotConfiguredError } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
+import { manualListEmailAdmissionEnabled } from '@/lib/list-email-admission.server';
 import { renderListEmailHtml, listEmailSubject, type ListEmailItem } from '@/emails/ListEmail';
 import { ACCENT_INK, typeLabel } from '@/features/lists/type-meta';
 
@@ -101,6 +102,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     || (body.confirmResend !== undefined && typeof body.confirmResend !== 'boolean')
     || (confirmedPreviousOperationIds.length > 0 && !confirmResend))) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   if (phase === 'dispatch' && !UUID_RE.test(dispatchToken)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+
+  // Context and technical ACK above never admit a transmission. Closing admission
+  // does not cancel workers that have already passed this guard; retire them at cutover.
+  if (!manualListEmailAdmissionEnabled()) return protectionUnavailable();
 
   // Resolve before creating a share link or reading any mutable list side effect. A disabled
   // database setting intentionally wins over environment fallback in resolveSmtpConfig.

@@ -9,6 +9,11 @@ type Receipt = { state: string; fingerprint: unknown; recipient: unknown; token:
 const mockReceipts = new Map<string, Receipt>();
 const mockGenerations = new Map<string, number>();
 const mockCounts = { preparations: 0, attempts: 0 };
+const originalListEmailMode = process.env.LIST_EMAIL_MODE;
+afterAll(() => {
+  if (originalListEmailMode === undefined) delete process.env.LIST_EMAIL_MODE;
+  else process.env.LIST_EMAIL_MODE = originalListEmailMode;
+});
 const mockProfileRead = jest.fn();
 jest.mock('server-only', () => ({}));
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: () => ({
@@ -109,6 +114,7 @@ function barrier() {
   return { entered, release: () => release({ data: null, error: null }), read: () => { enter(); return pending; } };
 }
 beforeEach(() => {
+  process.env.LIST_EMAIL_MODE = 'protocol-v1';
   mockMail.mockReset().mockResolvedValue(undefined); mockReceipts.clear(); mockGenerations.clear();
   mockProfileRead.mockReset().mockResolvedValue({ data: null, error: null });
   mockListAllowed = true; mockTrackingError = false; mockProtectionUnavailable = false; mockCompleteUnavailable = false; mockClientAckUnavailable = false;

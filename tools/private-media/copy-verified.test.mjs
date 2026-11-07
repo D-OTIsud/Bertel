@@ -388,10 +388,21 @@ test('default CLI preview succeeds on a complete synthetic1710 manifest without 
       '--python', pythonPath, '--execute'];
     const executeOptions = { encoding: 'utf8', timeout: 10000,
       env: { ...process.env, DB07_STORAGE_SERVICE_KEY: 'invalid-key-must-not-be-read' } };
+    const stdinEnv = { ...process.env };
+    for (const name of Object.keys(stdinEnv)) {
+      if (name.toUpperCase() === 'DB07_STORAGE_SERVICE_KEY') delete stdinEnv[name];
+    }
+    const stdinArgs = [...execute, '--receipt', receiptFile, '--storage-key-stdin'];
+    const runWithInput = (input, overrides = {}) => spawnSync(process.execPath, stdinArgs,
+      { ...executeOptions, env: stdinEnv, input, ...overrides });
+    const previewInput = spawnSync(process.execPath, [...args, '--storage-key-stdin'],
+      { ...executeOptions, input: 'fixture-key' });
+    assert.equal(previewInput.stderr.trim(), 'DB07 copy refused: arguments');
     await writeFile(`${receiptFile}.next`, 'unreviewed checkpoint');
     await writeFile(`${receiptFile}.lock`, 'synthetic existing lock');
     const locked = spawnSync(process.execPath, [...execute, '--receipt', receiptFile], executeOptions);
     assert.equal(locked.status, 1); assert.equal(locked.stderr.trim(), 'DB07 copy refused: operator_locked');
+    assert.equal(runWithInput('invalid stdin!').stderr.trim(), 'DB07 copy refused: operator_locked');
     await unlink(`${receiptFile}.lock`);
     const beforeKey = spawnSync(process.execPath, [...execute, '--receipt', receiptFile], executeOptions);
     assert.equal(beforeKey.status, 1); assert.equal(beforeKey.stderr.trim(), 'DB07 copy refused: receipt_write_failed');
@@ -404,6 +415,48 @@ test('default CLI preview succeeds on a complete synthetic1710 manifest without 
     const unignored = spawnSync(process.execPath, [...execute, '--receipt',
       resolve('tools/private-media/synthetic-unignored-receipt.json')], executeOptions);
     assert.equal(unignored.status, 1); assert.match(unignored.stderr, /receipt_must_be_private/);
+    assert.equal(runWithInput('invalid stdin!').stderr.trim(), 'DB07 copy refused: receipt_scope');
+    await unlink(receiptFile);
+    for (const input of ['', 'a'.repeat(4097), 'sb_secret_one\nsb_secret_two\n', 'sb_secret_one\n\n']) {
+      const rejected = runWithInput(input);
+      assert.equal(rejected.status, 1);
+      assert.equal(rejected.stderr.trim(), 'DB07 copy refused: service_key_stdin');
+    }
+    assert.equal(runWithInput('sb_secret_fixture', { env: executeOptions.env }).stderr.trim(),
+      'DB07 copy refused: service_key_source');
+    await assert.rejects(readFile(receiptFile), { code: 'ENOENT' });
+
+    const preload = `
+      import assert from 'node:assert/strict';
+      import childProcess from 'node:child_process';
+      import { syncBuiltinESMExports } from 'node:module';
+      const { spawnSync } = childProcess;
+      childProcess.spawnSync = (command, args, options) => {
+        assert.equal(command, 'git');
+        assert.ok(options.env);
+        assert.equal(Object.keys(options.env).some((key) => key.toUpperCase() === 'DB07_STORAGE_SERVICE_KEY'), false);
+        return spawnSync(command, args, options);
+      };
+      syncBuiltinESMExports();
+      globalThis.fetch = (target, options) => {
+        assert.equal(target.href, 'https://aaaaaaaaaaaaaaaaaaaa.supabase.co/storage/v1/bucket/legal-documents');
+        assert.equal(options.headers.apikey, 'sb_secret_fixture');
+        assert.equal(process.env.DB07_STORAGE_SERVICE_KEY, process.argv.includes('--storage-key-stdin')
+          ? undefined : 'sb_secret_fixture');
+        return new Response('', { status: 418 });
+      };
+    `;
+    const preloaded = [`--import=data:text/javascript,${encodeURIComponent(preload)}`];
+    const stdinKey = spawnSync(process.execPath, [...preloaded, ...stdinArgs],
+      { ...executeOptions, env: stdinEnv, input: 'sb_secret_fixture\r\n' });
+    const envKey = spawnSync(process.execPath, [...preloaded, ...execute, '--receipt', receiptFile],
+      { ...executeOptions, env: { ...stdinEnv, DB07_STORAGE_SERVICE_KEY: 'sb_secret_fixture' } });
+    for (const run of [stdinKey, envKey]) {
+      assert.equal(run.status, 1);
+      assert.equal(run.stdout, '');
+      assert.equal(run.stderr.trim(), 'DB07 copy refused: storage_http');
+    }
+    assert.doesNotMatch(await readFile(receiptFile, 'utf8'), /sb_secret_fixture/);
   } finally {
     assert.equal(dirname(resolve(dir)), resolve(tmpdir())); assert.match(basename(dir), /^db07-copy-/);
     await rm(dir, { recursive: true, force: true });

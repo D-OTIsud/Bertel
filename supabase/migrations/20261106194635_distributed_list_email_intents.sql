@@ -135,7 +135,9 @@ BEGIN
    OR v_current.fingerprint IS DISTINCT FROM p_fingerprint OR v_current.recipient_fingerprint IS DISTINCT FROM p_recipient_fingerprint
    OR (v_current.generation-1) IS DISTINCT FROM p_expected_generation
    OR (cardinality(v_confirmed)>0 AND NOT v_current.confirmed_previous_operation_ids @> v_confirmed)
-  THEN RETURN jsonb_build_object('state','conflict'); END IF;
+  THEN
+   PERFORM internal.measure_list_email(p_user_id,v_org,'conflicts');
+   RETURN jsonb_build_object('state','conflict'); END IF;
   IF v_current.state='reserved' AND v_current.generation<>v_generation THEN RETURN jsonb_build_object('state','stale'); END IF;
   RETURN jsonb_build_object('state',CASE WHEN v_current.state='started' THEN 'unknown' ELSE v_current.state END,
    'operation_id',p_operation_id,'operation_ids',ARRAY[p_operation_id],
@@ -170,7 +172,9 @@ BEGIN
  FOREACH v_parent IN ARRAY v_confirmed LOOP
   SELECT * INTO r FROM internal.list_email_intent WHERE user_id=p_user_id AND operation_id=v_parent FOR UPDATE;
   IF FOUND AND (r.list_id<>p_list_id OR (r.recipient_fingerprint IS NOT NULL AND r.recipient_fingerprint<>p_recipient_fingerprint))
-  THEN RETURN jsonb_build_object('state','conflict'); END IF;
+  THEN
+   PERFORM internal.measure_list_email(p_user_id,v_org,'conflicts');
+   RETURN jsonb_build_object('state','conflict'); END IF;
  END LOOP;
  FOREACH v_parent IN ARRAY v_confirmed LOOP
   UPDATE internal.list_email_intent SET state=CASE WHEN state='reserved' THEN 'superseded' ELSE state END,
@@ -189,6 +193,7 @@ BEGIN
  RETURN jsonb_build_object('state','reserved','operation_id',p_operation_id,'attempt_token',v_current.attempt_token);
 EXCEPTION WHEN unique_violation THEN
  -- An absent global user/key raced from another list: roll back the entire block.
+ PERFORM internal.measure_list_email(p_user_id,v_org,'conflicts');
  RETURN jsonb_build_object('state','conflict');
 END;
 $fn$;
@@ -206,7 +211,9 @@ BEGIN
  SELECT * INTO r FROM internal.list_email_intent WHERE user_id=p_user_id AND list_id=p_list_id AND operation_id=p_operation_id FOR UPDATE;
  IF NOT FOUND OR p_attempt_token IS NULL OR r.attempt_token<>p_attempt_token OR r.org_object_id<>v_org OR r.state='superseded'
   OR r.fingerprint IS DISTINCT FROM p_fingerprint OR r.recipient_fingerprint IS DISTINCT FROM p_recipient_fingerprint
- THEN RETURN jsonb_build_object('started',false,'state','conflict'); END IF;
+ THEN
+  PERFORM internal.measure_list_email(p_user_id,v_org,'conflicts');
+  RETURN jsonb_build_object('started',false,'state','conflict'); END IF;
  IF r.state<>'reserved' THEN RETURN jsonb_build_object('started',false,'state',CASE WHEN r.state='started' THEN 'unknown' ELSE r.state END,
   'operation_id',p_operation_id,'operation_ids',ARRAY[p_operation_id],'result_token',r.result_token,'tracking_updated',r.tracking_updated,'rejection_code',r.rejection_code); END IF;
  SELECT generation INTO v_generation FROM internal.list_email_scope

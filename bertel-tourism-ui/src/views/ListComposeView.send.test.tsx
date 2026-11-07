@@ -414,7 +414,7 @@ describe('ListComposeView — durable uncertainty and current scope', () => {
     jest.mocked(getList).mockResolvedValue(baseDetail());
     jest.spyOn(window, 'prompt').mockReturnValue('recipient@example.invalid');
   });
-  it('never resends an unknown result automatically; cancel preserves it and confirmation creates a new intention', async () => {
+  it('asks before resending an unknown result when only the domain case changes', async () => {
     const previous = 'd2000000-0000-4000-8000-000000000001';
     jest.mocked(sendListByEmail).mockRejectedValueOnce(new ListEmailUnknownError(previous)).mockResolvedValue({ trackingUpdated: true });
     const confirm = jest.spyOn(window, 'confirm').mockReturnValue(false);
@@ -423,6 +423,7 @@ describe('ListComposeView — durable uncertainty and current scope', () => {
     expect(await screen.findByText(LIST_EMAIL_UNKNOWN_MESSAGE)).toBeInTheDocument();
     expect(sendListByEmail).toHaveBeenCalledTimes(1); expect(confirm).not.toHaveBeenCalled();
     const original = jest.mocked(sendListByEmail).mock.calls[0][2]!.operationId;
+    jest.mocked(window.prompt).mockReturnValue('recipient@EXAMPLE.INVALID');
     fireEvent.click(screen.getByRole('button', { name: /^envoyer$/i }));
     expect(confirm).toHaveBeenCalledWith(LIST_EMAIL_RESEND_CONFIRMATION);
     expect(sendListByEmail).toHaveBeenCalledTimes(1);
@@ -431,7 +432,7 @@ describe('ListComposeView — durable uncertainty and current scope', () => {
     await waitFor(() => expect(sendListByEmail).toHaveBeenCalledTimes(2));
     const next = jest.mocked(sendListByEmail).mock.calls[1][2]!;
     expect(next.operationId).not.toBe(original); expect(next.confirmedPreviousOperationId).toBe(previous);
-    expect(await screen.findByRole('status')).toHaveTextContent('E-mail envoyé');
+    expect(await screen.findByRole('status')).toHaveTextContent('E-mail envoyé à recipient@EXAMPLE.INVALID.');
   });
   it('A→B→A without intermediate render cancels a deferred flush before any SMTP request, then allows a fresh gesture', async () => {
     let resolve!: (detail: ObjectListDetail) => void;

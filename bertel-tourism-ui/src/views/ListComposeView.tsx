@@ -50,6 +50,8 @@ import { useObjectSearch, type ObjectSearchResult } from '@/features/object-edit
 import { useUnsavedDraftGuard } from '@/features/object-editor/useUnsavedDraftGuard';
 import { useSessionStore } from '@/store/session-store';
 import { useServiceAvailability } from '@/hooks/useServiceAvailability';
+import { listEmailMailbox } from '@/lib/list-email-mailbox';
+import { API_ERROR_LABELS } from '@/services/api-error';
 import {
   deleteList,
   duplicateList,
@@ -715,7 +717,13 @@ export default function ListComposeView({ listId }: { listId: string }) {
     if (!context) { setErrorMessage(LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE); return; }
     const email = window.prompt('Adresse e-mail du destinataire :', '')?.trim();
     if (!email) return;
-    const previous = uncertainSendRef.current.get(email);
+    const recipient = listEmailMailbox(email);
+    if (!recipient) {
+      setSendNotice(null);
+      setErrorMessage(API_ERROR_LABELS.invalid_email);
+      return;
+    }
+    const previous = uncertainSendRef.current.get(recipient);
     const confirmedPreviousOperationIds = previous?.identity === currentIdentityKey ? [...previous.operationIds] : [];
     const confirmedPreviousOperationId = confirmedPreviousOperationIds.at(-1);
     const confirmResend = previous?.identity === currentIdentityKey;
@@ -735,9 +743,9 @@ export default function ListComposeView({ listId }: { listId: string }) {
     try {
       const abandonedLocalEdits = await flushPendingEdits(operationScope);
       if (!isCurrent()) return;
-      const result = await sendListByEmail(listId, email, { operationId, context, confirmResend, confirmedPreviousOperationId, confirmedPreviousOperationIds, isCurrent, expectedUserId: userId, signal: controller.signal });
+      const result = await sendListByEmail(listId, recipient, { operationId, context, confirmResend, confirmedPreviousOperationId, confirmedPreviousOperationIds, isCurrent, expectedUserId: userId, signal: controller.signal });
       if (!isCurrent()) return;
-      uncertainSendRef.current.delete(email);
+      uncertainSendRef.current.delete(recipient);
       invalidate();
       const sentTo = `E-mail envoyé à ${email}.`;
       // L'e-mail est parti dès que sendListByEmail résout (le relais SMTP l'a accepté) : on ne
@@ -762,8 +770,8 @@ export default function ListComposeView({ listId }: { listId: string }) {
     } catch (e) {
       if (!isCurrent()) return;
       if (e instanceof ListEmailUnknownError) {
-        const pending = uncertainSendRef.current.get(email);
-        uncertainSendRef.current.set(email, { identity: currentIdentityKey,
+        const pending = uncertainSendRef.current.get(recipient);
+        uncertainSendRef.current.set(recipient, { identity: currentIdentityKey,
           operationIds: [...new Set([...(pending?.identity === currentIdentityKey ? pending.operationIds : []), ...e.operationIds])] });
       }
       // A certain refusal of B does not close an earlier A. Keep its chain until

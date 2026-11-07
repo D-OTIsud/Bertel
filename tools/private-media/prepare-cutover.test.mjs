@@ -3,31 +3,55 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { prepareCutover, sha256, validateManifest } from './prepare-cutover.mjs';
 
-export function fixture() {
-  const documentId = '00000000-0000-4000-a000-000000007801';
+export function fixture(count = 1) {
+  const records = [];
+  const copies = [];
+  const id = (suffix) => '00000000-0000-4000-a000-' + String(suffix).padStart(12, '0');
   const objectId = 'HOTRUN9970070001';
-  const destination = `objects/${objectId}/${documentId}`;
-  const manifest = { schema_version: 1, classification: 'legal_private', expected_count: 1, records: [{
-    document_id: documentId, object_id: objectId, source_bucket: 'old_legal_media', source_path: "synthetic/'file.pdf",
-    source_url: "https://example.invalid/synthetic/'file.pdf", destination_bucket: 'legal-documents', destination_path: destination,
-    destination_url: `storage://legal-documents/${destination}`,
-    source_metadata: { id: '00000000-0000-4000-a000-000000007802', name: "synthetic/'file.pdf", etag: 'source-tag', size: 7 },
-  }] };
-  const receipt = { manifest_sha256: sha256(JSON.stringify(manifest)), destination_bucket_private: true, records: [{
-    document_id: documentId, source_etag: 'source-tag', destination_path: destination, source_bytes: 7, destination_bytes: 7,
-    source_sha256: sha256('fixture'), destination_sha256: sha256('fixture'), destination_etag: 'destination-tag',
-  }] };
+  for (let index = 0; index < count; index += 1) {
+    const documentId = id(7801 + index);
+    const sourcePath = "synthetic/'file" + (index || '') + '.pdf';
+    const destination = `objects/${objectId}/${documentId}`;
+    records.push({
+      document_id: documentId, object_id: objectId, source_bucket: 'old_legal_media', source_path: sourcePath,
+      source_url: 'https://example.invalid/' + sourcePath, destination_bucket: 'legal-documents', destination_path: destination,
+      destination_url: `storage://legal-documents/${destination}`,
+      source_metadata: { id: id(8801 + index), name: sourcePath, etag: 'source-tag', size: 7 },
+    });
+    copies.push({
+      document_id: documentId, source_etag: 'source-tag', destination_id: id(9801 + index), destination_path: destination,
+      source_bytes: 7, destination_bytes: 7, source_sha256: sha256('fixture'), destination_sha256: sha256('fixture'),
+      destination_etag: 'destination-tag',
+    });
+  }
+  const manifest = { schema_version: 1, classification: 'legal_private', expected_count: count, records };
+  const receipt = { manifest_sha256: sha256(JSON.stringify(manifest)), destination_bucket_private: true, records: copies };
   return { manifest, receipt };
 }
 
 test('prepares only the reviewed object/document namespace and a quoted, reference-only batch', () => {
   const { manifest, receipt } = fixture();
   const sql = prepareCutover(manifest, receipt, receipt.manifest_sha256, 1);
-  assert.match(sql, /UPDATE public\.ref_document SET storage_bucket/);
+  assert.match(sql, /UPDATE public\.ref_document SET storage_bucket = 'legal-documents', storage_path = r->>'destination_path', url = r->>'destination_url'\s+WHERE id = d\.id;/);
   assert.match(sql, /synthetic\/''file\.pdf/);
   assert.doesNotMatch(sql, /(?:UPDATE|DELETE FROM|INSERT INTO) storage\./);
   assert.match(sql, /FOR UPDATE/);
-  assert.match(sql, /CONTINUE; -- Safe resume/);
+  assert.equal([...sql.matchAll(/FOR SHARE;/g)].length, 3);
+  assert.ok(sql.includes(receipt.records[0].destination_id));
+  const destinationGuard = "storage_id IS DISTINCT FROM (r->>'destination_id')::uuid";
+  assert.ok(sql.includes(destinationGuard) && sql.indexOf(destinationGuard) < sql.indexOf('CONTINUE; -- Safe resume'));
+  assert.match(sql, /storage_id IS DISTINCT FROM \(r#>>'\{source_metadata,id\}'\)::uuid/);
+});
+
+test('100-record statements share one transaction and one final commit', () => {
+  const { manifest, receipt } = fixture(101);
+  const sql = prepareCutover(manifest, receipt, receipt.manifest_sha256, 101);
+  assert.equal([...sql.matchAll(/^BEGIN;$/gm)].length, 1);
+  assert.equal([...sql.matchAll(/^COMMIT;$/gm)].length, 1);
+  const groups = [...sql.matchAll(/jsonb_array_elements\('(.*)'::jsonb\)/g)];
+  assert.deepEqual(groups.map(([, payload]) => JSON.parse(payload.replaceAll("''", "'")).length), [100, 1]);
+  assert.match(sql, /ON_ERROR_STOP=1/);
+  assert.match(sql, /COMMIT;\s*$/);
 });
 
 for (const [label, mutate] of [
@@ -45,6 +69,8 @@ for (const [label, mutate] of [
   ['changed inventory', (r) => { r.manifest_sha256 = sha256('other'); }],
   ['public destination', (r) => { r.destination_bucket_private = false; }],
   ['metadata-only receipt', (r) => { delete r.records[0].source_sha256; }],
+  ['missing destination identity', (r) => { delete r.records[0].destination_id; }],
+  ['invalid destination identity', (r) => { r.records[0].destination_id = 'invalid'; }],
   ['different content', (r) => { r.records[0].destination_sha256 = sha256('other'); }],
   ['short copy', (r) => { r.records[0].destination_bytes = 6; }],
   ['changed source', (r) => { r.records[0].source_etag = 'new'; }],

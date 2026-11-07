@@ -739,6 +739,10 @@ SET LOCAL search_path=pg_catalog,pg_temp;
 \ir ../supabase/migrations/20261107041336_private_storage_copy_reservations.sql
 COMMIT;
 
+\echo '== CL-SEC-03 private Realtime roster and editor channel authorization =='
+\ir ../supabase/migrations/20261107123311_realtime_channel_acl.sql
+\ir tests/test_realtime_channel_acl.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

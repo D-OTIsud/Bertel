@@ -10,8 +10,9 @@
 import { getApiClient } from '../lib/supabase';
 import { readNullableString, readStrictString as readString } from '../lib/json-read';
 import { getServiceAvailability } from './service-availability';
-import { mapDatabaseError, readApiErrorMessage } from './api-error';
+import { API_ERROR_LABELS, mapDatabaseError, readApiErrorMessage } from './api-error';
 import { readErrorMessage } from '../lib/db-error-message';
+import { listEmailMailbox } from '../lib/list-email-mailbox';
 import type { ExplorerFilters, ObjectCard } from '../types/domain';
 import { buildBucketRpcFilters, getEffectiveBackendTypesForBucket, getEffectiveSelectedBuckets } from '../utils/facets';
 
@@ -714,7 +715,8 @@ export async function getListEmailContext(listId: string, scope?: MailScope): Pr
  * permit, dispatch can only consume it, ACK proves receipt of an accepted result. */
 export async function sendListByEmail(listId: string, toEmail: string, intent?: SendListEmailIntent): Promise<SendListEmailResult> {
   const context = generationSnapshot(intent?.context); // clone BEFORE the first await
-  const recipient = toEmail.trim();
+  const recipient = listEmailMailbox(toEmail);
+  if (!recipient) throw new Error(API_ERROR_LABELS.invalid_email);
   const operationId = intent?.operationId ?? crypto.randomUUID();
   const parents = [...new Set([...(intent?.confirmedPreviousOperationIds ?? []),
     ...(intent?.confirmedPreviousOperationId ? [intent.confirmedPreviousOperationId] : [])])];

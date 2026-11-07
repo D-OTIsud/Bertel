@@ -159,6 +159,46 @@ it('unknown relay outcome never reuses an intention', async () => {
   mockMail.mockRejectedValueOnce(new Error('synthetic final reply lost')); const handler = instance();
   expect((await send(handler)).status).toBe(409); expect((await send(handler)).status).toBe(409); expect(mockMail).toHaveBeenCalledTimes(1);
 });
+it('shares the unknown outcome across domain case aliases while preserving local-part case', async () => {
+  mockMail.mockRejectedValueOnce(new Error('synthetic final reply lost'));
+  expect((await send(instance(), A, '0')).status).toBe(409);
+  const alias = { toEmail: 'recipient@EXAMPLE.INVALID' };
+  const stale = await instance()(request('prepare', B, { ...alias, expectedGeneration: '0' }));
+  expect(await stale.json()).toMatchObject({ error: 'email_context_stale' });
+  const discovery = await instance()(request('prepare', B, { ...alias, expectedGeneration: '1' }));
+  expect(await discovery.json()).toMatchObject({ error: 'email_delivery_unknown', operationIds: [A] });
+  expect(mockReceipts.has(B)).toBe(false);
+  expect(mockMail).toHaveBeenCalledTimes(1);
+  const otherLocalPart = await instance()(request('prepare', C, { toEmail: 'Recipient@EXAMPLE.INVALID', expectedGeneration: '0' }));
+  expect(await otherLocalPart.json()).toMatchObject({ phase: 'prepared' });
+  const resend = await send(instance(), B, '1', { ...alias, confirmResend: true, confirmedPreviousOperationIds: [A] });
+  expect(resend.status).toBe(200);
+  expect(mockMail).toHaveBeenLastCalledWith(expect.objectContaining({ to: 'recipient@example.invalid' }));
+});
+it('rejects decorated and ambiguous envelopes before reserving an operation', async () => {
+  const handler = instance();
+  for (const toEmail of ['<a@example.test>', 'Nom<a@example.test>', 'a@example.test(foo)', '"a"@example.test',
+    'foo,a@example.test', 'a@example.test.', 'a@example.test/path', 'a@127.0.0.1']) {
+    const response = await handler(request('prepare', A, { toEmail, expectedGeneration: '0' }));
+    expect(await response.json()).toMatchObject({ error: 'invalid_email' });
+  }
+  expect(mockReceipts.size).toBe(0);
+  expect(mockMail).not.toHaveBeenCalled();
+});
+it('uses the same receipt and SMTP envelope for Unicode and ASCII IDNA aliases', async () => {
+  const handler = instance();
+  const unicode = { toEmail: 'Guest+test@bücher.test' };
+  const ascii = { toEmail: 'Guest+test@xn--bcher-kva.test' };
+  const prepared = await handler(request('prepare', A, { ...unicode, expectedGeneration: '0' }));
+  const permit = await prepared.json();
+  expect(permit).toMatchObject({ phase: 'prepared' });
+  const accepted = await handler(request('dispatch', A, { ...ascii, dispatchToken: permit.dispatchToken }));
+  expect(await accepted.json()).toMatchObject({ phase: 'accepted', sentTo: ascii.toEmail });
+  expect(mockMail).toHaveBeenCalledTimes(1);
+  expect(mockMail).toHaveBeenCalledWith(expect.objectContaining({ to: ascii.toEmail }));
+  const discovery = await handler(request('prepare', B, { ...unicode, expectedGeneration: '1' }));
+  expect(await discovery.json()).toMatchObject({ error: 'email_delivery_unknown', operationIds: [A] });
+});
 it('lost durable outcome receipt preserves known success and prevents duplicate SMTP', async () => {
   mockCompleteUnavailable = true; const handler = instance();
   expect((await send(handler)).status).toBe(200); expect((await send(handler)).status).toBe(409); expect(mockMail).toHaveBeenCalledTimes(1);

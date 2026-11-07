@@ -2,6 +2,7 @@ import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { routeFailure } from '../../../_route-failure';
 import { processImage, MediaProcessingError, MAX_INPUT_BYTES } from '../../../media/upload/process-image';
 import {
   readBoundedFormData,
@@ -133,10 +134,7 @@ async function handlePostAuthenticated(
       const status = err.code === 'mime' || err.code === 'size' ? 415 : 400;
       return NextResponse.json({ error: err.code, detail: err.message }, { status });
     }
-    return NextResponse.json(
-      { error: 'process_failed', detail: err instanceof Error ? err.message : 'unknown' },
-      { status: 500 },
-    );
+    return routeFailure('branding/logo/upload.POST', 'process_failed');
   }
 
   // Chemin horodaté : chaque logo est une nouvelle URL (cache-bust CDN gratuit).
@@ -150,7 +148,7 @@ async function handlePostAuthenticated(
     upsert: true,
   });
   if (upErr) {
-    return NextResponse.json({ error: 'upload_failed', detail: upErr.message }, { status: 502 });
+    return routeFailure('branding/logo/upload.POST', 'upload_failed', { status: 502 });
   }
   const { data: pub } = server.storage.from(BUCKET).getPublicUrl(path);
 

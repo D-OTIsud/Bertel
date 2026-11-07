@@ -39,6 +39,12 @@ test('navigates Dashboard -> Explorer -> CRM without a blank workspace', async (
 });
 
 test('opens and closes a centered ConfirmDialog modal with a visible exiting motion phase', async ({ page }) => {
+  const hydrationErrors: string[] = [];
+  page.on('pageerror', (error) => {
+    if (/Hydration failed|Minified React error #418\b/i.test(error.message)) {
+      hydrationErrors.push(error.message);
+    }
+  });
   await page.goto('/moderation');
 
   const approveButton = page.getByRole('button', { name: 'Approuver' }).first();
@@ -54,6 +60,7 @@ test('opens and closes a centered ConfirmDialog modal with a visible exiting mot
   // Modal.tsx's usePresence keeps both overlay and card mounted through the exit transition.
   await expect(dialog).toHaveAttribute('data-motion-phase', 'exiting');
   await expect(dialog).toHaveCount(0, { timeout: 1000 });
+  expect(hydrationErrors).toEqual([]);
 });
 
 test('opens and closes the MobileNavDrawer (drawer-variant Modal) on a narrow viewport', async ({ page }) => {

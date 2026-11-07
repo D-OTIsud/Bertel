@@ -66,6 +66,16 @@ livraison destinataire ; l’échec de son enregistrement DB peut sous-compter
 limitées à cette route/flotte ; ni historique complet ni volume du drain ne sont
 reconstruits. Aucun seuil ni collecte de quota réelle ne découle de ces tests.
 
+## Provenance de migration
+
+Le manifeste fresh inclut `Base de donnée DLL et API/distributed_list_email_intents.sql`.
+Le contrôle de provenance épingle ses 23 369 octets et le corps à intégrer dans
+le garde d’upgrade après retrait des deux seules lignes externes `BEGIN` et
+`COMMIT`. Le miroir de préparation `20261106194635` est retiré des migrations actives.
+Le [record de production](../../docs/releases/2026-11-07-distributed-list-email-production.md) décrit
+le reçu observé `20261107031344`. Le contrôle de provenance épingle le DO exact
+et son corps canonique. Le manifeste fresh garde son seul chemin canonique.
+
 ## Validation jetable
 
 La recette complète appartient au job `sql-fresh-apply`, sur une nouvelle pile
@@ -109,6 +119,30 @@ un pair SMTP synthétique loopback. Le transport factice vérifie `requireTLS:tr
 puis remplace TLS pour son seul témoin ; il ne qualifie pas TLS déployé.
 
 ## Bascule et retour arrière à préparer séparément
+
+`LIST_EMAIL_MODE` est une configuration serveur runtime du seul envoi manuel.
+Sans valeur, avec `closed` ou avec une valeur inconnue, `prepare` et `dispatch`
+renvoient503 `email_protection_unavailable` avant réglage SMTP, lien partagé,
+réservation ou transport. Seule la valeur exacte `protocol-v1` ouvre l'admission.
+Ce mode ne change ni la disponibilité SMTP commune ni le drain des notifications.
+Le contexte autorisé et l'ACK technique d'un reçu déjà accepté restent accessibles
+en mode fermé ; avant installation des RPC, leurs erreurs sont converties en ce
+même503 métier. Aucun SQL n'est exécuté à l'import de la route.
+
+Changer une configuration de déploiement ne modifie pas instantanément les
+processus existants. Une requête déjà passée au-delà du garde peut encore terminer.
+Avant installation, il faut un artefact de transition dérivé de l'ancienne app
+dont la route est toujours fermée, puis le retrait vérifié de tous les anciens
+processus/voies de relance de cette app. Installer/vérifier SQL, déployer ensuite
+la nouvelle flotte homogène en `closed`, puis seulement ouvrir explicitement.
+Une seule réponse derrière un répartiteur ne prouve pas l'état de chaque instance.
+
+Le retour doit cibler cet artefact dérivé toujours fermé, qui ignore même un mode
+ouvert résiduel ; une image legacy exacte ignorant le garde ne convient pas.
+Conserver SQL, reçus et générations. Aucun retrait de processus ne révoque une
+acceptation déjà faite par le relais ni ne prouve une livraison/déduplication
+rétrospective. Cette source et ses tests ne constituent pas une autorisation de
+bascule ou une qualification de l'artefact de retour.
 
 Aucune application live n’est autorisée par ces tests. Installer/vérifier l’upgrade autonome avant de rendre la nouvelle route disponible. Ne pas lancer `db push` depuis la racine historique, ni repair/renumbering. Le CREATE TABLE refuse un nom préexistant plutôt que masquer une dérive. Les nouvelles fonctions exigent le vrai rôle service avec BYPASSRLS ; anon/authenticated ne gagnent aucun accès. Les grants SELECT/UPDATE sur object_list et SELECT sur l’identité découverte sont limités à service_role pour les invokers et leurs verrous/checks.
 

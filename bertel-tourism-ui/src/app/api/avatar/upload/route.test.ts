@@ -24,6 +24,7 @@ jest.mock('@/lib/request-body.server', () => {
 });
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
+import { MediaProcessingError, processImage } from '../../media/upload/process-image';
 
 const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedCreate = jest.mocked(createClient);
@@ -245,4 +246,44 @@ it('targetUserId égal à son propre id en MAJUSCULES (non-admin) : reste le bra
   expect(asCallerEq).toHaveBeenCalledWith('id', CALLER);
   expect(server.__update).not.toHaveBeenCalled();
   expect(server.__upsert).not.toHaveBeenCalled();
+});
+
+it.each([
+  ['processing', 'process_failed', 500],
+  ['storage', 'upload_failed', 502],
+  ['profile', 'profile_update_failed', 500],
+] as const)('correlates the %s failure without returning its internal message', async (kind, code, status) => {
+  const cause = 'synthetic internal detail AVATAR_SENTINEL';
+  const server = serverMock({});
+  mockedServer.mockReturnValue(server as never);
+  const asCallerEq = jest.fn().mockResolvedValue({ error: { message: cause } });
+  const asCallerUpdate = jest.fn().mockReturnValue({ eq: asCallerEq });
+  mockedCreate.mockReturnValue({ from: () => ({ update: asCallerUpdate }) } as never);
+  if (kind === 'processing') jest.mocked(processImage).mockRejectedValueOnce(new Error(cause));
+  if (kind === 'storage') server.__upload.mockResolvedValueOnce({ error: { message: cause } });
+
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+  try {
+    const res = await POST(req());
+    expect(res.status).toBe(status);
+    expect(server.__upload).toHaveBeenCalledTimes(kind === 'processing' ? 0 : 1);
+    expect(asCallerEq).toHaveBeenCalledTimes(kind === 'profile' ? 1 : 0);
+    expect(await res.json()).toEqual({ error: code });
+    const requestId = res.headers.get('x-request-id');
+    expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+    expect(warn.mock.calls).toEqual([['[route-error]', { route: 'avatar/upload.POST', code, requestId }]]);
+  } finally {
+    warn.mockRestore();
+  }
+});
+
+it('keeps the public decode message on a rejected image', async () => {
+  const server = serverMock({});
+  mockedServer.mockReturnValue(server as never);
+  jest.mocked(processImage).mockRejectedValueOnce(new MediaProcessingError('decode', 'Image illisible.'));
+  const res = await POST(req());
+  expect(res.status).toBe(400);
+  expect(await res.json()).toEqual({ error: 'decode', detail: 'Image illisible.' });
+  expect(res.headers.has('x-request-id')).toBe(false);
+  expect(server.__upload).not.toHaveBeenCalled();
 });

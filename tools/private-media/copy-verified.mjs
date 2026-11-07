@@ -6,6 +6,7 @@ import { resolve, dirname, basename, join, relative, isAbsolute } from 'node:pat
 import { tmpdir, hostname } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { addAbortSignal } from 'node:stream';
 import { validateManifest, sha256 } from './prepare-cutover.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -175,7 +176,7 @@ export function storageTransport({ projectRef, serviceKey, testOrigin, timeoutMs
         body: JSON.stringify({ bucketId: r.source_bucket, sourceKey: r.source_path,
           destinationBucket: r.destination_bucket, destinationKey: r.destination_path }) }, signal);
     },
-    async hashObject(bucket, key, expected, signal) {
+    async hashObject(bucket, key, expected, signal, onChunk) {
       requireThat(['old_legal_media', 'legal-documents'].includes(bucket) && safePath(key), 'request_scope');
       const response = await request(`/storage/v1/object/authenticated/${bucket}/${encoded(key)}`, { headers: { 'accept-encoding': 'identity' } }, signal);
       if (!response.ok) { await cancelBody(response); fail('storage_http'); }
@@ -195,9 +196,12 @@ export function storageTransport({ projectRef, serviceKey, testOrigin, timeoutMs
         for await (const chunk of response.body) {
           requireThat(!signal?.aborted, 'interrupted');
           size += chunk.length; requireThat(size <= expected.size, 'content_size'); digest.update(chunk);
+          if (onChunk) {
+            try { await onChunk(chunk); } catch { fail('content_sink'); }
+          }
         }
       } catch (error) {
-        if (['interrupted', 'content_size', 'content_body'].includes(error.message)) throw error;
+        if (['interrupted', 'content_size', 'content_body', 'content_sink'].includes(error.message)) throw error;
         fail(signal?.aborted ? 'interrupted' : 'content_network');
       }
       requireThat(size === expected.size, 'content_size');
@@ -206,7 +210,7 @@ export function storageTransport({ projectRef, serviceKey, testOrigin, timeoutMs
   };
 }
 
-function assertSource(info, r) {
+export function assertSource(info, r) {
   requireThat(info && info.id === r.source_metadata.id && info.name === r.source_path
     && info.bucket_id === r.source_bucket && etag(info.etag) === etag(r.source_metadata.etag)
     && Number(info.size) === r.source_metadata.size && info.content_type === r.source_metadata.content_type
@@ -218,7 +222,7 @@ function assertDestination(info, r, acknowledged) {
     && info.content_type === r.source_metadata.content_type && info.cache_control === r.source_metadata.cache_control
     && typeof info.etag === 'string' && info.etag.length > 0, 'destination_changed');
 }
-function initialReceipt(inventory, receipt) {
+export function initialReceipt(inventory, receipt) {
   const state = receipt === undefined ? { schema_version: 1, manifest_sha256: inventory.digest,
     project_ref: inventory.projectRef, destination_bucket_private: true, attempts: [], copies: [], records: [] } : receipt;
   requireThat(state && typeof state === 'object' && !Array.isArray(state), 'receipt_scope');
@@ -317,32 +321,62 @@ export async function copyVerified(inventory, { transport, receipt, checkpoint, 
   return state;
 }
 
+async function readStorageKey(signal) {
+  requireThat(!process.stdin.isTTY, 'service_key_stdin');
+  const chunks = [];
+  let size = 0;
+  try {
+    const input = addAbortSignal(AbortSignal.any([signal, AbortSignal.timeout(10_000)]), process.stdin);
+    for await (const chunk of input) {
+      size += chunk.length;
+      requireThat(size <= 4096, 'service_key_stdin');
+      chunks.push(chunk);
+    }
+  } catch {
+    fail(signal.aborted ? 'interrupted' : 'service_key_stdin');
+  }
+  const key = Buffer.concat(chunks).toString('utf8').replace(/\r?\n$/, '');
+  requireThat(key.length > 0 && !/[^A-Za-z0-9_.-]/.test(key), 'service_key_stdin');
+  return key;
+}
+
 async function run() {
   const options = {};
+  const flags = ['--execute', '--storage-key-stdin'];
   for (let i = 2; i < process.argv.length; i++) {
     const key = process.argv[i];
-    requireThat(['--manifest', '--project-ref', '--source-bucket', '--destination-bucket', '--expect-sha256', '--receipt', '--execute'].includes(key)
+    requireThat(['--manifest', '--project-ref', '--source-bucket', '--destination-bucket', '--expect-sha256', '--receipt',
+      '--reservation-config', '--python', ...flags].includes(key)
       && !Object.hasOwn(options, key), 'arguments');
-    options[key] = key === '--execute' ? true : process.argv[++i];
+    options[key] = flags.includes(key) ? true : process.argv[++i];
     requireThat(options[key] && (options[key] === true || !options[key].startsWith('--')), 'arguments');
   }
   requireThat(options['--manifest'] && options['--project-ref'] && options['--source-bucket'] === 'old_legal_media'
-    && options['--destination-bucket'] === 'legal-documents', 'arguments');
+    && options['--destination-bucket'] === 'legal-documents' && (!options['--storage-key-stdin'] || options['--execute']), 'arguments');
   const manifestPath = await realpath(resolve(options['--manifest']));
-  const repository = spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' });
+  const gitEnv = { ...process.env };
+  for (const name of Object.keys(gitEnv)) {
+    if (name.toUpperCase() === 'DB07_STORAGE_SERVICE_KEY') delete gitEnv[name];
+  }
+  const repository = spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8', env: gitEnv });
   requireThat(repository.status === 0, 'repository');
   const repositoryRoot = await realpath(repository.stdout.trim());
   const privateArtifact = (path, code) => {
     const local = relative(repositoryRoot, path);
     if (!local.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`) && !isAbsolute(local)) {
-      requireThat(spawnSync('git', ['check-ignore', '--quiet', '--', path]).status === 0, code);
+      requireThat(spawnSync('git', ['check-ignore', '--quiet', '--', path], { env: gitEnv }).status === 0, code);
     }
   };
   privateArtifact(manifestPath, 'manifest_must_be_private');
   const inventory = inspectManifest(await readFile(manifestPath), options['--project-ref']);
   if (options['--expect-sha256']) requireThat(inventory.digest === options['--expect-sha256'], 'manifest_digest');
   if (!options['--execute']) { console.log(JSON.stringify(previewInventory(inventory))); return; }
-  requireThat(options['--receipt'] && HASH.test(options['--expect-sha256'] || ''), 'execution_arguments');
+  requireThat(options['--receipt'] && HASH.test(options['--expect-sha256'] || '')
+    && options['--reservation-config'] && options['--python'] && isAbsolute(options['--python']), 'execution_arguments');
+  const configPath = await realpath(resolve(options['--reservation-config']));
+  privateArtifact(configPath, 'reservation_config_must_be_private');
+  const reservationConfig = JSON.parse(await readFile(configPath));
+  const { copyReserved } = await import('./copy-reserved.mjs');
   const requestedFilename = resolve(options['--receipt']);
   const filename = join(await realpath(dirname(requestedFilename)), basename(requestedFilename));
   for (const path of [filename, `${filename}.next`, `${filename}.lock`]) {
@@ -354,13 +388,20 @@ async function run() {
   for (const signal of signals) process.on(signal, stop);
   try {
     const state = await withOperatorLocks(filename, inventory, async (canonicalFilename) => {
+      const staged = await lstat(`${canonicalFilename}.next`).catch((error) => {
+        if (error.code !== 'ENOENT') fail('receipt_write_failed');
+      });
+      requireThat(!staged, 'receipt_write_failed');
       let receipt;
       try { const stat = await lstat(canonicalFilename); requireThat(!stat.isSymbolicLink() && stat.isFile(), 'receipt_file'); receipt = JSON.parse(await readFile(canonicalFilename)); }
       catch (error) { if (error.code !== 'ENOENT') fail('receipt_read_failed'); }
-      receipt = initialReceipt(inventory, receipt);
-      await saveReceipt(canonicalFilename, receipt); // Verify local persistence before any network request.
-      const transport = storageTransport({ projectRef: inventory.projectRef, serviceKey: process.env.DB07_STORAGE_SERVICE_KEY });
-      return copyVerified(inventory, { transport, receipt, signal: controller.signal,
+      if (receipt !== undefined) initialReceipt(inventory, receipt);
+      const envKey = process.env.DB07_STORAGE_SERVICE_KEY;
+      requireThat(!options['--storage-key-stdin'] || envKey === undefined, 'service_key_source');
+      const serviceKey = options['--storage-key-stdin'] ? await readStorageKey(controller.signal) : envKey;
+      const transport = storageTransport({ projectRef: inventory.projectRef, serviceKey });
+      return copyReserved(inventory, { transport, receipt, signal: controller.signal,
+        reservationConfig, python: options['--python'],
         checkpoint: (next) => saveReceipt(canonicalFilename, next) });
     });
     console.log(JSON.stringify({ mode: 'executed', records: state.records.length, manifest_sha256: inventory.digest, verified: true }));

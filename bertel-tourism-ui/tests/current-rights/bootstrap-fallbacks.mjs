@@ -44,6 +44,8 @@ export async function testBootstrapFallbacks({ local, writer, partner, objectId 
     ]) {
       const context = await owned.newContext();
       const trace = [];
+      const dispatched = [];
+      const delivered = [];
       let authorization;
       let failure;
       try {
@@ -55,6 +57,7 @@ export async function testBootstrapFallbacks({ local, writer, partner, objectId 
           const token = localPost && url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'password';
           const rpc = localPost && url.pathname.startsWith('/rest/v1/rpc/') ? url.pathname.split('/').at(-1) : null;
           if (!token && !probes.includes(rpc) && rpc !== portalFiches) return route.continue();
+          if (!token) dispatched.push(rpc);
           try {
             if (!token) {
               const headers = await request.allHeaders();
@@ -82,7 +85,11 @@ export async function testBootstrapFallbacks({ local, writer, partner, objectId 
             const status = mode === 'partial' && rpc === createProbe ? 503 : 200;
             trace.push({ rpc, status, started, received: performance.now() });
             if (status === 503) {
-              return await route.fulfill({ response, status, json: { code: 'SYNTHETIC_UNAVAILABLE', message: 'Disposable fault' } });
+              const headers = response.headers();
+              delete headers['content-length'];
+              delete headers['content-encoding'];
+              delete headers['transfer-encoding'];
+              return await route.fulfill({ status, headers, json: { code: 'SYNTHETIC_UNAVAILABLE', message: 'Disposable fault' } });
             }
             return await route.fulfill({ response });
           } catch {
@@ -91,6 +98,13 @@ export async function testBootstrapFallbacks({ local, writer, partner, objectId 
           }
         });
         const page = await context.newPage();
+        page.on('response', (response) => {
+          const url = new URL(response.url());
+          if (url.origin !== local.origin || response.request().method() !== 'POST'
+            || !url.pathname.startsWith('/rest/v1/rpc/')) return;
+          const rpc = url.pathname.split('/').at(-1);
+          if (probes.includes(rpc) || rpc === portalFiches) delivered.push({ rpc, status: response.status() });
+        });
         const target = app.origin + path;
         await page.goto(app.origin + '/login?from=' + encodeURIComponent(path));
         await signIn(page, account);
@@ -105,10 +119,10 @@ export async function testBootstrapFallbacks({ local, writer, partner, objectId 
         }
         assert.ok(!failure, failure);
         const expected = mode === 'partner' ? [realmProbe, portalFiches] : probes;
-        assert.deepEqual(trace.map(({ rpc }) => rpc).sort(), [...expected].sort(),
-          'all expected calls must be observed once, including the successful portal resource');
-        assert.deepEqual(trace.filter(({ status }) => status === 503).map(({ rpc }) => rpc),
-          mode === 'partial' ? [createProbe] : []);
+        assert.deepEqual(dispatched.sort(), [...expected].sort(), 'only the expected bootstrap requests may start');
+        assert.deepEqual(delivered.map(({ rpc, status }) => rpc + ':' + status).sort(),
+          expected.map((rpc) => rpc + ':' + (mode === 'partial' && rpc === createProbe ? 503 : 200)).sort(),
+          'Chromium must observe the expected RPC responses and the exact injected status');
         const first = Math.min(...trace.map(({ started }) => started));
         console.log(JSON.stringify({ witness: 'FQ03', mode, trace: trace.map(({ rpc, status, started, received }) =>
           ({ rpc, status, startMs: Math.round(started - first), responseMs: Math.round(received - first) })) }));

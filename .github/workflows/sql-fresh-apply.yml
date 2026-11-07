@@ -220,7 +220,7 @@ jobs:
         # The manifest already runs the before/after public-reader differential
         # in one session. This independently repeats the rolled-back behavior
         # suite after the complete fresh installation; no opt-in flag is needed.
-        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -v album_post_acc08=on -f "Base de donnée DLL et API/tests/test_partner_photo_album_fresh.sql"
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -v album_post_acc08=on -v album_post_photo_claim=on -f "Base de donnée DLL et API/tests/test_partner_photo_album_fresh.sql"
 
       # Current-rights core/surfaces and the eight adapted legacy probes run
       # exactly once, together after the final overlay inside the manifest.

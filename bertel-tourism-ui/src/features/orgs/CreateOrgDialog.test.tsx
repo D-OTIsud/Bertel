@@ -163,6 +163,22 @@ test.each(['address', 'organization'])('discards a pending receipt when the %s c
   await waitFor(() => expect(toast.success).toHaveBeenCalledWith(sentMessage));
 });
 
+test('ignores a late pending receipt from a different organization when enabling the role', async () => {
+  let resolvePending!: (result: typeof pending) => void;
+  jest.mocked(inviteUser).mockImplementationOnce(() => new Promise((resolve) => { resolvePending = resolve; }));
+  render(<CreateOrgDialog onDone={jest.fn()} />);
+  await fillAdminForm();
+  submitInvite();
+  fireEvent.click(screen.getByRole('button', { name: 'Fermer', exact: true }));
+  resolvePending(pending);
+  await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('invitation est en attente')));
+
+  jest.mocked(createOrg).mockResolvedValueOnce('ORGOTHER');
+  await fillAdminForm();
+  expect(screen.getByLabelText(/^Rôle métier/)).toBeEnabled();
+  expect(inviteUser).toHaveBeenCalledTimes(1);
+});
+
 test('assigns the admin role to an existing active member without announcing an email', async () => {
   jest.mocked(inviteUser).mockResolvedValueOnce({ ...pending, neverSignedIn: false });
   render(<CreateOrgDialog onDone={jest.fn()} />);

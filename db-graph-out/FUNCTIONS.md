@@ -2743,6 +2743,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `staging.batch_commit_ledger` _(high)_
 - writes `staging.import_batches` _(high)_
 
+## `api.rpc_attach_invite_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)`
+- returns: `jsonb` — SECURITY DEFINER
+
 ## `api.rpc_create_object(p_object_type text, p_name text, p_region_code text DEFAULT NULL::text)`
 - returns: `text` — SECURITY DEFINER
 - writes `public.object` _(high)_
@@ -3067,12 +3070,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)`
 - returns: `uuid` — SECURITY DEFINER
-- reads `public.ref_org_admin_role` _(high)_
-- reads `public.ref_org_business_role` _(high)_
-- reads `public.user_org_admin_role` _(high)_
-- reads `public.user_org_membership` _(high)_
-- writes `public.user_org_business_role` _(high)_
-- writes `public.user_org_membership` _(high)_
 
 > -------------------------------------------------------
 > rpc_upsert_membership
@@ -4198,6 +4195,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > A SHARE lock on the organization row also makes a stale REPEATABLE READ source
 > transition fail with 40001 instead of accepting a pre-flip snapshot.
 
+## `internal.lock_profile_insert_for_membership()`
+- returns: `trigger`
+
+> A missing profile has no row for the membership writer to lock. Use its
+> user lock before INSERT, including the insert arm of an upsert.
+
 ## `internal.measure_list_email(p_user_id uuid, p_org_object_id text, p_event text)`
 - returns: `void`
 - writes `internal.list_email_metric` _(high)_
@@ -4619,6 +4622,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.actor_document` _(high)_
 - writes `public.media` _(high)_
 - writes `public.ref_document` _(high)_
+
+## `internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)`
+- returns: `jsonb`
+- reads `public.app_user_profile` _(high)_
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.user_org_business_role` _(high)_
+- writes `public.user_org_membership` _(high)_
 
 ## `internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER

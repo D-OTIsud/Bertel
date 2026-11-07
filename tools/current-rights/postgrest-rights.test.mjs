@@ -161,6 +161,67 @@ async function testOrgEnrichment() {
   assert.deepEqual(descriptions(), saved, 'the revoked grant changed no description');
 }
 
+async function testPublicDiscoveryEffects(app, ordinary) {
+  assert.ok(/^http:\/\/127\.0\.0\.1:[0-9]+$/.test(app.origin), 'owned Next loopback required');
+  assert.equal(local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.app_ai_provider_config WHERE is_active)
+    AND NOT EXISTS (SELECT 1 FROM public.app_smtp_config WHERE enabled)`, 'check disposable external effect configuration'),
+  't', 'the disposable stack must have no active AI or business SMTP provider');
+  const registry = async () => json(await rpc(local.service, 'get_sandbox_discovery_user'), 'owned discovery registry');
+  assert.ok(await registry() === null, 'the disposable discovery identity must be absent before provisioning');
+
+  function request(path, options) {
+    return fetch(app.origin + path, { ...options, redirect: 'error', signal: AbortSignal.timeout(30_000) });
+  }
+  async function open() {
+    const response = await request('/api/sandbox/session', { method: 'POST' });
+    assert.match(response.headers.get('cache-control') ?? '', /(?:^|,\s*)no-store(?:,|$)/);
+    const tokens = await json(response, 'public discovery session');
+    assert.ok(typeof tokens.access_token === 'string' && tokens.access_token.length > 0
+      && typeof tokens.refresh_token === 'string' && tokens.refresh_token.length > 0
+      && Object.keys(tokens).length === 2, 'only the restricted session tokens may be returned');
+    return { ...local.anonymous, authorization: `Bearer ${tokens.access_token}` };
+  }
+  async function verify(auth, id) {
+    const user = await json(await local.request('/auth/v1/user', auth, undefined, 'GET'), 'independent discovery Auth verification');
+    assert.ok(user.id === id && user.email?.endsWith('@sandbox.bertel.invalid')
+      && user.app_metadata?.sandbox_discovery === true, 'GoTrue must verify the same restricted discovery identity');
+    assert.equal(await json(await rpc(auth, 'current_user_test_realm'), 'discovery PostgREST realm'), true);
+  }
+  async function probe(path, { authorization }, status, code) {
+    // Malformed input can never reach a sender. Discovery must refuse before parsing it.
+    const response = await request(path, { method: 'POST', headers: { authorization, 'content-type': 'application/json' }, body: '{' });
+    assert.equal(response.status, status, `${path} must reject at the expected stage`);
+    assert.ok((await response.json()).error === code, `${path} must return the expected refusal code`);
+  }
+
+  const first = await open();
+  const id = await registry();
+  assert.ok(typeof id === 'string' && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)
+    && !Object.values(ids).includes(id), 'the public entry must provision a separate disposable identity');
+  try {
+    await verify(first, id);
+    const second = await open();
+    assert.ok(second.authorization !== first.authorization, 'the second visitor must receive a distinct GoTrue session');
+    await verify(second, id);
+    await verify(first, id);
+
+    const admissions = () => local.sql(`SELECT count(*) FROM internal.ai_request_rate_state WHERE user_id='${id}'`,
+      'count discovery AI admissions');
+    assert.equal(admissions(), '0');
+    const availability = await request('/api/service-availability', { headers: { authorization: first.authorization } });
+    assert.deepEqual(await json(availability, 'discovery availability'), { translation: false, imageAnalysis: false, email: false });
+    for (const auth of [first, second]) {
+      await probe('/api/lists/send', auth, 403, 'sandbox_external_effects_disabled');
+      await probe('/api/ai/translate', auth, 403, 'sandbox_external_effects_disabled');
+    }
+    assert.equal(admissions(), '0', 'discovery must not reach AI admission');
+    await probe('/api/lists/send', ordinary, 400, 'bad_json');
+  } finally {
+    const removed = await local.request(`/auth/v1/admin/users/${id}`, local.service, undefined, 'DELETE');
+    assert.ok(removed.ok, 'only the disposable discovery identity must be cleaned up');
+  }
+}
+
 const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
   metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
 
@@ -292,7 +353,7 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       END; $fixture$`, 'give both browser accounts current rights on the same synthetic object');
       assert.equal(await canWrite('writer', A), true);
       assert.equal(await canWrite('other', A), true);
-      const { testEditorRaces } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
+      const { testEditorRaces, startApp, waitForApp, stopApp } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
       await testEditorRaces({ local, objectId: A, writerId: ids.writer, ...writerCredentials,
         realmAccount: { userId: ids.tester, ...testerCredentials },
         secondAccount: { id: ids.other, ...otherCredentials } });
@@ -313,8 +374,17 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
           'fresh foreign canonical authority'), expected);
       }
       const { testDocumentLinks } = await import('../../bertel-tourism-ui/tests/current-rights/document-links.mjs');
-      await testDocumentLinks({ local, commit, objectId: A, documentId: DOC, writerId: ids.writer,
-        writerAuthorization: writer.authorization, foreignAuthorization: other.authorization });
+      // The local service key belongs only to the Next process serving both HTTP witnesses.
+      const app = await startApp(local, { signDocuments: true });
+      try {
+        await waitForApp(app);
+        await testPublicDiscoveryEffects(app, other);
+        t.diagnostic('Public discovery provisioned two real GoTrue sessions and refused business mail and AI before admission.');
+        await testDocumentLinks({ app, local, commit, objectId: A, documentId: DOC, writerId: ids.writer,
+          writerAuthorization: writer.authorization, foreignAuthorization: other.authorization });
+      } finally {
+        await stopApp(app);
+      }
       t.diagnostic('Disposable document route verified canonical and legal-only signed bytes, foreign refusal and same-JWT revocation.');
       return;
     }

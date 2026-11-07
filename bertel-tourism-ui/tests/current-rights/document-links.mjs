@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { startApp, stopApp, waitForApp } from './editor-races.mjs';
 
 const bucket = 'legal-documents';
 const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n');
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
-export async function testDocumentLinks({ local, commit, objectId, documentId, writerId,
+export async function testDocumentLinks({ app, local, commit, objectId, documentId, writerId,
   writerAuthorization, foreignAuthorization }) {
   assert.ok(process.platform === 'linux' && process.env.CURRENT_RIGHTS_DISPOSABLE === 'true'
     && /^http:\/\/127\.0\.0\.1:[0-9]+$/.test(local.origin) && objectId === 'HOTRUN999999AR01'
@@ -21,7 +20,6 @@ export async function testDocumentLinks({ local, commit, objectId, documentId, w
     { 'content-type': 'application/pdf', 'x-upsert': 'false' });
   assert.ok(uploaded.ok, 'synthetic private PDF upload must succeed');
 
-  let app;
   try {
     commit(`DO $fixture$ BEGIN
       UPDATE public.ref_document SET storage_bucket='${bucket}', storage_path='${key}', url='storage://${bucket}/${key}'
@@ -34,10 +32,6 @@ export async function testDocumentLinks({ local, commit, objectId, documentId, w
       IF NOT FOUND THEN RAISE EXCEPTION 'missing legal type fixture'; END IF;
     END; $fixture$`, 'map the synthetic attachment to the post-cutover key');
 
-    // The generated local service key is passed only to this server process.
-    // This HTTP witness has no Chromium context.
-    app = await startApp(local, { signDocuments: true });
-    await waitForApp(app);
     async function sign(authorization, accessContext) {
       const response = await fetch(app.origin + '/api/object-document/url', {
         method: 'POST', headers: { authorization, 'content-type': 'application/json' },
@@ -96,10 +90,7 @@ export async function testDocumentLinks({ local, commit, objectId, documentId, w
     'revoke the fixture legal right while retaining the same JWT');
     await verifyDenied(writerAuthorization, 'legal');
   } finally {
-    try { if (app) await stopApp(app); }
-    finally {
-      const removed = await local.request(`/storage/v1/object/${bucket}`, local.service, { prefixes: [key] }, 'DELETE');
-      assert.ok(removed.ok, 'only the synthetic test object must be cleaned up');
-    }
+    const removed = await local.request(`/storage/v1/object/${bucket}`, local.service, { prefixes: [key] }, 'DELETE');
+    assert.ok(removed.ok, 'only the synthetic test object must be cleaned up');
   }
 }

@@ -17,12 +17,12 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <section id="coverage"><h2>0) Couverture et sources</h2>
 <div class="grid cards">
 <article class="mini-card"><div class="metric">424</div><b>tables</b><p class="muted">15 vues · 9 enums</p></article>
-<article class="mini-card"><div class="metric">641</div><b>fonctions/RPC</b><p class="muted">645 policies · 1438 triggers</p></article>
+<article class="mini-card"><div class="metric">642</div><b>fonctions/RPC</b><p class="muted">647 policies · 1438 triggers</p></article>
 <article class="mini-card"><div class="metric">3174</div><b>valeurs référentielles</b><p class="muted">instantané public attesté</p></article>
-<article class="mini-card"><div class="metric">6311</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
+<article class="mini-card"><div class="metric">6316</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les 3 174 valeurs proviennent de l’instantané public du 6 novembre 2026, entre 20:23 et 20:32 UTC, conservé octet pour octet. Il couvre 28 tables autorisées et 246 documents de scope explicite public. Aucune valeur de seed n’a complété cet instantané.</p>
-<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T05:18:46.993860+00:00, ledger 194, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
+<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T14:25:36.133866+00:00, ledger 196, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
 <p class="muted">Lecture live MCP effectuée sur 28 tables publiques de référence. 0 lignes seed SQL restent disponibles comme filet de secours.</p>
 <details><summary>Écarts de couverture à surveiller</summary>
 <table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>
@@ -7214,18 +7214,18 @@ Conçu pour être appelé par les RPC d&#x27;écriture canonique (Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/rls_policies.sql:3134</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/rls_policies.sql:3134</code><br><code>supabase/migrations/20261107131728_object_enrichment_realm_guard.sql:29</code></p>
 </div>
 <blockquote>-------------------------------------------------------
 E4. api.user_can_write_enrichment(p_object_id text)
-Permission Niveau 2 : edit_org_enrichment
-ET l&#x27;ORG active du user dispose d&#x27;un lien object_org_link explicite
-avec rôle &#x27;publisher&#x27; ou &#x27;contributor&#x27; (pas &#x27;reader&#x27;).
-Règle métier (§2.2) : une ORG ne peut enrichir un objet que si elle a
-un lien explicite avec un rôle au moins contributeur.
-Non branché en RLS : aucune table d&#x27;enrichissement ORG distincte n&#x27;existe
-encore dans le schéma — surface d&#x27;écriture non matérialisée.
-Conçu pour être appelé par les RPC d&#x27;enrichissement ORG (Phase 6).
+Garde du RPC api.rpc_write_org_description pour la surcouche de l&#x27;ORG active.
+Exige edit_org_enrichment et un lien object_org_link explicite de l&#x27;ORG active
+avec le rôle &#x27;publisher&#x27; ou &#x27;contributor&#x27;.
+La migration 20261107131728 exige aussi que la fiche appartienne au corpus
+courant de l&#x27;utilisateur, en production comme dans le corpus de test.
+
+Le corps ci-dessous est la définition initiale du fresh apply.
+Le manifeste applique ensuite la garde de corpus par migration.
 -------------------------------------------------------</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object_org_link"><code>public.object_org_link</code></a></td><td>high</td></tr>
@@ -7501,7 +7501,7 @@ object_version rows are product data (version restore §98/14r), never dropped h
 <tr><td>écriture</td><td><a href="#table-audit-audit_log"><code>audit.audit_log</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<h3>Schéma <code>internal</code> (81)</h3>
+<h3>Schéma <code>internal</code> (82)</h3>
 <details class="rpc" data-search="internal.actor_in_current_realm(p_actor_id uuid) public.actor">
 <summary><code>internal.actor_in_current_realm(p_actor_id uuid)</code></summary>
 <div class="detail-grid">
@@ -7526,6 +7526,20 @@ object_version rows are product data (version restore §98/14r), never dropped h
 The unique index makes this safe to rerun and avoids duplicate alerts.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object_list"><code>public.object_list</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<details class="rpc" data-search="internal.bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean) auth.users public.app_user_profile public.object">
+<summary><code>internal.bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>boolean</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107123311_realtime_channel_acl.sql:28</code></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-app_user_profile"><code>public.app_user_profile</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
 <details class="rpc" data-search="internal.build_list_detail_json(p_list_id uuid) public.app_user_profile public.object_list">
@@ -9988,7 +10002,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr id="table-staging-media_galerie_lot1_temp"><td><code>staging.media_galerie_lot1_temp</code></td><td>table</td><td>media</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-media_tag_temp"><td><code>staging.media_tag_temp</code></td><td>table</td><td>media</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-media_temp"><td><code>staging.media_temp</code></td><td>table</td><td>media</td><td>non</td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.get_ingestor_metrics()</code>, <code>api.retry_failed_media_downloads(p_limit integer DEFAULT 200)</code></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.retry_failed_media_downloads(p_limit integer DEFAULT 200)</code></td><td>0 policies · 1 triggers · FK → 1 · FK ← 0</td></tr>
-<tr id="table-public-object"><td><code>public.object</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)</code>, <code>api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)</code>, <code>api.assert_facet_applicable()</code>, <code>api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)</code> <span class="muted">+131</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.handle_membership_status_transition()</code>, <code>api.refresh_object_filter_caches(p_object_id text)</code>, <code>api.refresh_object_taxonomy_cache_for_domain(p_domain text)</code> <span class="muted">+21</span></td><td>8 policies · 19 triggers · FK → 2 · FK ← 93</td></tr>
+<tr id="table-public-object"><td><code>public.object</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.appeal_portal_photo_analysis(p_request_id uuid, p_body text, p_client_id uuid)</code>, <code>api.appeal_portal_photo_review(p_object_id text, p_document_id uuid, p_change_id uuid, p_body text, p_client_id uuid)</code>, <code>api.assert_facet_applicable()</code>, <code>api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)</code> <span class="muted">+132</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.handle_membership_status_transition()</code>, <code>api.refresh_object_filter_caches(p_object_id text)</code>, <code>api.refresh_object_taxonomy_cache_for_domain(p_domain text)</code> <span class="muted">+21</span></td><td>8 policies · 19 triggers · FK → 2 · FK ← 93</td></tr>
 <tr id="table-public-object_accommodation_unit_type"><td><code>public.object_accommodation_unit_type</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)</code></td><td><span class="muted">-</span></td><td>4 policies · 6 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-object_amenity"><td><code>public.object_amenity</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)</code>, <code>api.get_object_badges_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code>, <code>api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code> <span class="muted">+8</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.save_object_commercial(p_object_id text, p_payload jsonb)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>5 policies · 8 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-object_classification"><td><code>public.object_classification</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.get_active_object_documents(p_object_id text)</code>, <code>api.get_dashboard_distinction_overview(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY[&#x27;published&#x27;::public.object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)</code>, <code>api.get_dashboard_scorecards(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY[&#x27;published&#x27;::public.object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)</code> <span class="muted">+17</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.sync_classification_from_audit_session()</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>5 policies · 11 triggers · FK → 4 · FK ← 1</td></tr>
@@ -10126,7 +10140,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr id="table-auth-sessions"><td><code>auth.sessions</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.rpc_list_org_members(p_org_object_id text)</code></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 2 · FK ← 2</td></tr>
 <tr id="table-auth-sso_domains"><td><code>auth.sso_domains</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-auth-sso_providers"><td><code>auth.sso_providers</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 5</td></tr>
-<tr id="table-auth-users"><td><code>auth.users</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_sandbox_discovery_user()</code> <span class="muted">+5</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 87</td></tr>
+<tr id="table-auth-users"><td><code>auth.users</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_sandbox_discovery_user()</code> <span class="muted">+6</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 87</td></tr>
 <tr id="table-auth-webauthn_challenges"><td><code>auth.webauthn_challenges</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-auth-webauthn_credentials"><td><code>auth.webauthn_credentials</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-cron-job"><td><code>cron.job</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.get_ingestor_scheduler_health()</code></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 0</td></tr>
@@ -10192,14 +10206,14 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr id="table-public-v_expiring_legal_records"><td><code>public.v_expiring_legal_records</code></td><td>view</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-v_object_classification_coverage"><td><code>public.v_object_classification_coverage</code></td><td>view</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-v_object_classification_or_equivalent_scheme"><td><code>public.v_object_classification_or_equivalent_scheme</code></td><td>view</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
-<tr id="table-realtime-messages"><td><code>realtime.messages</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
-<tr id="table-realtime-messages_2026_11_03"><td><code>realtime.messages_2026_11_03</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
+<tr id="table-realtime-messages"><td><code>realtime.messages</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>2 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-realtime-messages_2026_11_04"><td><code>realtime.messages_2026_11_04</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-realtime-messages_2026_11_05"><td><code>realtime.messages_2026_11_05</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-realtime-messages_2026_11_06"><td><code>realtime.messages_2026_11_06</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-realtime-messages_2026_11_07"><td><code>realtime.messages_2026_11_07</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-realtime-messages_2026_11_08"><td><code>realtime.messages_2026_11_08</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-realtime-messages_2026_11_09"><td><code>realtime.messages_2026_11_09</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
+<tr id="table-realtime-messages_2026_11_10"><td><code>realtime.messages_2026_11_10</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-realtime-schema_migrations"><td><code>realtime.schema_migrations</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-realtime-subscription"><td><code>realtime.subscription</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-staging-audit_audit_log_temp"><td><code>staging.audit_audit_log_temp</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
@@ -10273,7 +10287,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr id="table-staging-object_discount_temp"><td><code>staging.object_discount_temp</code></td><td>table</td><td>pricing</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-object_price_period_temp"><td><code>staging.object_price_period_temp</code></td><td>table</td><td>pricing</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-object_price_temp"><td><code>staging.object_price_temp</code></td><td>table</td><td>pricing</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 1 · FK ← 0</td></tr>
-<tr id="table-public-app_user_profile"><td><code>public.app_user_profile</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.can_manage_object_private_note(p_note_id uuid)</code>, <code>api.can_read_actor_contacts(p_object_id text)</code>, <code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)</code> <span class="muted">+39</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.set_provider_only_preference(p_enabled boolean)</code>, <code>api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_raw_app_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code></td><td>4 policies · 8 triggers · FK → 2 · FK ← 0</td></tr>
+<tr id="table-public-app_user_profile"><td><code>public.app_user_profile</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.can_manage_object_private_note(p_note_id uuid)</code>, <code>api.can_read_actor_contacts(p_object_id text)</code>, <code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)</code> <span class="muted">+40</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.set_provider_only_preference(p_enabled boolean)</code>, <code>api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_raw_app_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code></td><td>4 policies · 8 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-user_org_admin_role"><td><code>public.user_org_admin_role</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.current_user_admin_rank()</code>, <code>api.current_user_admin_role_code()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.object_private_note_author_admin_rank(p_note_id uuid)</code> <span class="muted">+14</span></td><td><code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_revoke_admin_role(p_membership_id uuid)</code>, <code>api.rpc_set_admin_role(p_membership_id uuid, p_role_code text)</code></td><td>2 policies · 7 triggers · FK → 3 · FK ← 0</td></tr>
 <tr id="table-public-user_org_business_role"><td><code>public.user_org_business_role</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.current_user_business_role_code()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.list_object_verifier_ids(p_object_id text)</code>, <code>api.rpc_list_org_members(p_org_object_id text)</code> <span class="muted">+4</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_set_business_role(p_membership_id uuid, p_role_code text)</code>, <code>api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)</code> <span class="muted">+1</span></td><td>2 policies · 7 triggers · FK → 3 · FK ← 0</td></tr>
 <tr id="table-public-user_org_membership"><td><code>public.user_org_membership</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.auto_attach_object_to_creator_org()</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.current_user_active_org()</code>, <code>api.current_user_admin_rank()</code> <span class="muted">+37</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)</code></td><td>2 policies · 9 triggers · FK → 3 · FK ← 2</td></tr>
@@ -12014,6 +12028,11 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
    FROM public.user_org_membership m_target
   WHERE ((m_target.user_id = user_permission.user_id) AND (m_target.is_active = true) AND (m_target.org_object_id = api.current_user_org_id())))) AND (EXISTS ( SELECT 1
    FROM (public.user_org_membership m_caller …[truncated — full text in catalog_extra.json or live pg_policies]</code></td></tr>
+</tbody></table></details>
+<details><summary><code>realtime.messages</code> (2 policies)</summary>
+<table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>INSERT</code></td><td><code>bertel_realtime_channel_write</code></td><td>authenticated</td><td>PERMISSIVE</td><td><code>((topic = ( SELECT realtime.topic() AS topic)) AND internal.bertel_realtime_channel_allowed(topic, extension, true))</code></td></tr>
+<tr><td><code>SELECT</code></td><td><code>bertel_realtime_channel_read</code></td><td>authenticated</td><td>PERMISSIVE</td><td><code>((topic = ( SELECT realtime.topic() AS topic)) AND internal.bertel_realtime_channel_allowed(topic, extension, false))</code></td></tr>
 </tbody></table></details>
 <details><summary><code>storage.objects</code> (13 policies)</summary>
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>

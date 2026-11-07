@@ -16,6 +16,7 @@ DECLARE
   v_candidate_doc_ids uuid[];
   v_doc_ids uuid[];
   v_docs    text[];
+  v_storage_cleanup_deferred boolean;
 BEGIN
   -- 0. Contexte d'auth requis.
   IF v_caller IS NULL THEN
@@ -113,6 +114,8 @@ BEGIN
     INTO v_doc_ids, v_docs
     FROM orphan;
 
+  v_storage_cleanup_deferred := cardinality(v_media) > 0 OR cardinality(v_docs) > 0;
+
   -- 8. Journaliser (même transaction que le DELETE).
   INSERT INTO public.object_deletion_log(
     object_id, object_name, object_type, status_at_deletion,
@@ -120,7 +123,8 @@ BEGIN
   VALUES (
     p_object_id, v_name, v_type, v_status,
     coalesce(array_length(v_media,1),0), coalesce(array_length(v_docs,1),0), v_caller,
-    jsonb_build_object('media', to_jsonb(v_media), 'documents', to_jsonb(v_docs)));
+    jsonb_build_object('media', to_jsonb(v_media), 'documents', to_jsonb(v_docs),
+      'storage_cleanup_deferred', v_storage_cleanup_deferred));
 
   -- 9. Supprimer les ref_document orphelinés (CASCADE retire aussi leur lien object_document).
   IF array_length(v_doc_ids,1) IS NOT NULL THEN
@@ -130,12 +134,14 @@ BEGIN
   -- 10. Supprimer l'objet — CASCADE nettoie tous les enfants object-keyed.
   DELETE FROM public.object WHERE id = p_object_id;
 
-  -- 11. Retour : URLs Storage à supprimer côté serveur (route, service-role).
+  -- The journal retains candidates, but a URL alone cannot authorize physical
+  -- deletion. Empty lists also stop older callers from sweeping these keys.
   RETURN jsonb_build_object(
     'object_id', p_object_id,
     'object_name', v_name,
-    'media_to_delete', to_jsonb(v_media),
-    'documents_to_delete', to_jsonb(v_docs),
+    'media_to_delete', '[]'::jsonb,
+    'documents_to_delete', '[]'::jsonb,
+    'storage_cleanup_deferred', v_storage_cleanup_deferred,
     'deleted', true);
 END;
 $$;

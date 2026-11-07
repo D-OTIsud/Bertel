@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { loadDisposable } from './disposable.mjs';
+import { storageErrorIdentity } from './storage-refusals.mjs';
 
 const local = loadDisposable();
 const bytes = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n');
@@ -21,11 +22,18 @@ async function verifyBytes(response, stage) {
 
 async function verifyRefusal(response, stage, allowed) {
   const body = await response.json().catch(() => null);
-  const code = body?.code === undefined ? body?.error : body.code;
+  const wireCode = body?.code === undefined ? body?.error : body.code;
+  // The v1.41.8 public GET schema strips code, while the handler wraps NoSuchBucket as HTTP 400.
+  const legacyBucketRefusal = response.status === 400 && body?.code === undefined && body?.statusCode === '404'
+    && body.error === 'Bucket not found' && body.message === 'Bucket not found';
+  const code = legacyBucketRefusal ? 'NoSuchBucket' : wireCode;
   const logicalStatus = body?.statusCode === undefined ? response.status : Number(body.statusCode);
   const expectedStatus = allowed.get(code);
+  const diagnostic = ['NoSuchBucket', 'Bucket not found'].includes(wireCode) ? wireCode : storageErrorIdentity({ code: wireCode });
+  const represented = Number.isInteger(logicalStatus) && logicalStatus >= 100 && logicalStatus <= 599 ? logicalStatus : 'unknown';
   assert.ok(expectedStatus && logicalStatus === expectedStatus
-    && (response.status === expectedStatus || response.status === 400), stage + ' did not return an explicit refusal (' + response.status + ')');
+    && (response.status === expectedStatus || response.status === 400),
+  stage + ' did not return an explicit refusal (HTTP ' + response.status + ', reported ' + represented + ', ' + diagnostic + ')');
 }
 
 test('real disposable Storage refuses old public GETs after making an existing bucket private', { timeout: 60_000 }, async (t) => {

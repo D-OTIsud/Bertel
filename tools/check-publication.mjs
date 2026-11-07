@@ -48,11 +48,11 @@ export function checkPublicationRange(base, cwd = process.cwd(), privateBlobs = 
   const failures = new Set();
   for (const line of commits) {
     const [commit, parent] = line.split(' ');
-    // Compare each reachable commit with its first parent, including merged
-    // branch commits. Never read blob contents or rescan unchanged base history.
+    // Compare with the first parent, or treat every entry of a newly reachable
+    // root as an addition. Never read blobs or rescan unchanged base history.
     const changes = git(cwd, [
       'diff-tree', '--no-commit-id', '--raw', '-r', '-z', '--no-abbrev', '--no-renames',
-      parent, commit,
+      ...(parent ? [parent, commit] : ['--root', commit]),
     ]).split('\0');
     for (let i = 0; i + 1 < changes.length; i += 2) {
       const [, newMode, , blob] = changes[i].split(' ');

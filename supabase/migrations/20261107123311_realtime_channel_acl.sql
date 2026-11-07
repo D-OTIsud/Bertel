@@ -43,10 +43,22 @@ BEGIN
     RETURN false;
   END IF;
 
+  -- Use the durable Auth provenance shared by the discovery entry point and
+  -- the notification guard. A previous JWT or editable metadata can be stale.
+  IF EXISTS (
+    SELECT 1 FROM auth.users u
+    WHERE u.id = caller_id AND u.raw_app_meta_data @> '{"sandbox_discovery":true}'::jsonb
+  ) THEN
+    RETURN false;
+  END IF;
+
   -- All three consumers live in the authenticated back-office. Published
   -- object access alone does not entitle a partner to the staff roster.
   SELECT p.role INTO caller_role FROM public.app_user_profile p WHERE p.id = caller_id;
   IF caller_role IS NULL OR caller_role NOT IN ('owner', 'super_admin', 'tourism_agent') THEN
+    RETURN false;
+  END IF;
+  IF caller_role = 'tourism_agent' AND api.current_user_org_id() IS NULL THEN
     RETURN false;
   END IF;
 

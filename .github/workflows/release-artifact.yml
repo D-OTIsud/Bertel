@@ -29,6 +29,8 @@ jobs:
           python-version: '3.12'
       - name: Receiver guards (isolated Linux, synthetic fixtures only)
         run: sudo -n "$(command -v python)" -I -m unittest discover -s tools/release-artifact -p 'test_receiver*.py' -v
+      - name: Import and isolated smoke guards (synthetic Docker, real Node and Linux filesystem)
+        run: sudo -n env NODE_BINARY="$(command -v node)" "$(command -v python)" -I -m unittest discover -s tools/release-artifact -p 'test_import_smoke.py' -v
       - run: node --test tools/release-artifact/candidate.test.mjs
       - name: Prebuilt Compose contract (config only, synthetic parameters)
         run: node --test tools/release-artifact/prebuilt-compose.test.mjs

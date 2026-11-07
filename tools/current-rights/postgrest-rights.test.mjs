@@ -105,6 +105,7 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
   const createdIds = [];
   let fixtureCreated = false;
   let writerCredentials;
+  let otherCredentials;
   try {
     const publicationFixtures = local.sql(`SELECT count(*) FROM public.object WHERE id IN ('${INITIAL_PUBLISHED}','${INITIAL_DRAFT}')`,
       'initial publication fixtures are absent');
@@ -126,6 +127,7 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       if (typeof created.id === 'string' && /^[0-9a-f-]{36}$/i.test(created.id)) createdIds.push(created.id);
       assert.ok(created.id === id && created.email === email && created.email_confirmed_at, 'GoTrue must create the exact confirmed synthetic identity');
       if (browserWitness && key === 'writer') writerCredentials = { email, password };
+      if (browserWitness && key === 'other') otherCredentials = { email, password };
       if (key === 'admin') continue; // Only a fixture FK; never used to bypass HTTP assertions.
       const signedIn = await json(await local.request('/auth/v1/token?grant_type=password', local.anonymous,
         { email, password }), 'real synthetic password login');
@@ -141,9 +143,21 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
     if (browserWitness) {
+      assert.equal(await canWrite('other', A), false, 'the second account starts outside the publisher organization');
+      // Move the existing fixture membership only in this disposable browser run.
+      // Its editor role and cleanup both follow the same membership ID.
+      commit(`DO $fixture$ BEGIN
+        UPDATE public.user_org_membership SET org_object_id='ORGRUN999999AR01'
+        WHERE id='00000000-0000-4000-a000-00000000ab12' AND user_id='${ids.other}'
+          AND org_object_id='ORGRUN999999AR02' AND is_active;
+        IF NOT FOUND THEN RAISE EXCEPTION 'missing second browser membership'; END IF;
+      END; $fixture$`, 'give both browser accounts current rights on the same synthetic object');
+      assert.equal(await canWrite('writer', A), true);
+      assert.equal(await canWrite('other', A), true);
       const { testEditorRaces } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
-      await testEditorRaces({ local, objectId: A, writerId: ids.writer, ...writerCredentials });
-      t.diagnostic('Authenticated Chromium and PostgREST publication and restore races passed.');
+      await testEditorRaces({ local, objectId: A, writerId: ids.writer, ...writerCredentials,
+        secondAccount: { id: ids.other, ...otherCredentials } });
+      t.diagnostic('Authenticated Chromium and PostgREST publication, restore, legal and account draft isolation passed.');
       return;
     }
     const versionA = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${A}'`, 'private history witness'));

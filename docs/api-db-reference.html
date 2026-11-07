@@ -17,17 +17,17 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <section id="coverage"><h2>0) Couverture et sources</h2>
 <div class="grid cards">
 <article class="mini-card"><div class="metric">424</div><b>tables</b><p class="muted">15 vues · 9 enums</p></article>
-<article class="mini-card"><div class="metric">642</div><b>fonctions/RPC</b><p class="muted">647 policies · 1438 triggers</p></article>
+<article class="mini-card"><div class="metric">643</div><b>fonctions/RPC</b><p class="muted">647 policies · 1438 triggers</p></article>
 <article class="mini-card"><div class="metric">3174</div><b>valeurs référentielles</b><p class="muted">instantané public attesté</p></article>
 <article class="mini-card"><div class="metric">6316</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les 3 174 valeurs proviennent de l’instantané public du 6 novembre 2026, entre 20:23 et 20:32 UTC, conservé octet pour octet. Il couvre 28 tables autorisées et 246 documents de scope explicite public. Aucune valeur de seed n’a complété cet instantané.</p>
-<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T14:25:36.133866+00:00, ledger 196, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
+<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T16:46:39.869410+00:00, ledger 197, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
 <p class="muted">Lecture live MCP effectuée sur 28 tables publiques de référence. 0 lignes seed SQL restent disponibles comme filet de secours.</p>
 <details><summary>Écarts de couverture à surveiller</summary>
 <table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>
 <tr><td>Fonctions sans source SQL retrouvée</td><td>44</td><td><code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.check_org_smtp_org_type()</code>, <code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.delete_org_smtp(p_org_object_id text)</code>, <code>api.get_ingestor_metrics()</code>, <code>api.get_ingestor_scheduler_health()</code>, <code>api.get_org_smtp(p_org_object_id text)</code>, <code>api.get_org_smtp_secret(p_org_object_id text)</code>, <code>api.list_org_smtp_status()</code>, <code>api.notification_relay_org(p_task_id uuid, p_recipient_id uuid)</code>, <code>api.purge_expired_staging_batches(p_limit integer DEFAULT 500)</code>, <code>api.purge_staging_batch(p_batch_id text, p_force boolean DEFAULT false)</code> <span class="muted">+32</span></td></tr>
-<tr><td>Fonctions sans lecture/écriture inférée</td><td>162</td><td><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code>, <code>api.actor_portal_floor_modules()</code>, <code>api.assert_no_period_overlap(p_periods jsonb)</code>, <code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.b64url_decode(p text)</code>, <code>api.b64url_encode(p bytea)</code>, <code>api.before_insert_object_generate_id()</code>, <code>api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date)</code>, <code>api.can_read_extended(p_object_id text)</code>, <code>api.can_read_object_private_notes(p_object_id text)</code>, <code>api.can_write_object_private_notes(p_object_id text)</code>, <code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code> <span class="muted">+150</span></td></tr>
+<tr><td>Fonctions sans lecture/écriture inférée</td><td>163</td><td><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code>, <code>api.actor_portal_floor_modules()</code>, <code>api.assert_no_period_overlap(p_periods jsonb)</code>, <code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.b64url_decode(p text)</code>, <code>api.b64url_encode(p bytea)</code>, <code>api.before_insert_object_generate_id()</code>, <code>api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date)</code>, <code>api.can_read_extended(p_object_id text)</code>, <code>api.can_read_object_private_notes(p_object_id text)</code>, <code>api.can_write_object_private_notes(p_object_id text)</code>, <code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code> <span class="muted">+151</span></td></tr>
 <tr><td>Fonctions avec SQL dynamique</td><td>17</td><td><code>api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)</code>, <code>api.assert_object_type_change_consistent()</code>, <code>api.facet_applicability_violations()</code>, <code>api.get_ref_catalog(p_catalog_key text)</code>, <code>api.ref_code_usage_counts(p_domain text)</code>, <code>api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)</code>, <code>api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)</code>, <code>api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb)</code>, <code>api.thesaurus_reference_snapshot(p_domains text[] DEFAULT NULL::text[])</code>, <code>audit.attach_missing_triggers()</code>, <code>audit.create_monthly_partition(partition_date timestamp with time zone)</code>, <code>audit.drop_old_partitions(months_to_keep integer DEFAULT 12)</code> <span class="muted">+5</span></td></tr>
 <tr><td>Tables publiques de référence sans ligne directe extraite</td><td>6</td><td><code>public.ref_catalog_registry</code>, <code>public.ref_classification_scheme_applicability</code>, <code>public.ref_interop_crosswalk</code>, <code>public.ref_tag</code>, <code>public.ref_trail_manager</code>, <code>public.ref_trail_source</code></td></tr>
 </tbody></table>
@@ -167,7 +167,7 @@ Function to add a legal record
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER, dynamic SQL</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/partner_photo_album_fresh_install.sql:759</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/partner_photo_album_fresh_install.sql:759</code><br><code>supabase/migrations/20261107154854_portal_submission_module_binding.sql:246</code></p>
 </div>
 <blockquote>P2.1 §120 + 18a/D9 — approuve : re-dispatch whitelisté (SEPT writers, miroir de submit_actor_fiche), OU approbation ATTESTÉE (p_applied_manually) d&#x27;un changement sans writer, qui pose status=approved (jamais applied) et estampille metadata.applied_manually/attested_by/attested_at. Le 3e paramètre a un DÉFAUT : l&#x27;appel historique à deux arguments est inchangé.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -6385,7 +6385,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/partner_photo_album_fresh_install.sql:553</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/partner_photo_album_fresh_install.sql:553</code><br><code>supabase/migrations/20261107154854_portal_submission_module_binding.sql:36</code></p>
 </div>
 <blockquote>18a — « Soumettre pour vérification » du portail : soumission + N pending_change + tâche multi-assignée + notifications, en UNE transaction. Whitelist writers = DEUX entrées (save_object_commercial, save_object_openings), les SEULES que le portail émet — sous-ensemble STRICT d&#x27;approve_pending_change (§120), jamais un sur-ensemble sous peine de fiche bloquée à vie. Les cinq autres writers ont été retirés le 2026-09-04 : le plancher dur se contrôle sur metadata.section, le ré-dispatch se décide sur metadata.rpc, et rien ne couplait les deux clés.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -7501,7 +7501,7 @@ object_version rows are product data (version restore §98/14r), never dropped h
 <tr><td>écriture</td><td><a href="#table-audit-audit_log"><code>audit.audit_log</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<h3>Schéma <code>internal</code> (82)</h3>
+<h3>Schéma <code>internal</code> (83)</h3>
 <details class="rpc" data-search="internal.actor_in_current_realm(p_actor_id uuid) public.actor">
 <summary><code>internal.actor_in_current_realm(p_actor_id uuid)</code></summary>
 <div class="detail-grid">
@@ -8184,6 +8184,18 @@ un seul test.</blockquote>
 <tr><td>lecture</td><td><a href="#table-public-media"><code>public.media</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-ref_code_media_type"><code>public.ref_code_media_type</code></a></td><td>high</td></tr>
 </tbody></table>
+</details>
+<details class="rpc" data-search="internal.portal_submission_module(p_target_table text, p_rpc text, p_payload jsonb) ">
+<summary><code>internal.portal_submission_module(p_target_table text, p_rpc text, p_payload jsonb)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>text</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107154854_portal_submission_module_binding.sql:5</code></p>
+</div>
+<blockquote>The browser sends an editor module as data. Only the module bound to the
+target and optional writer can pass the submission&#x27;s floor and mask checks.</blockquote>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
 <details class="rpc" data-search="internal.provider_crm_interactions() public.actor_object_role storage.objects">
 <summary><code>internal.provider_crm_interactions()</code></summary>

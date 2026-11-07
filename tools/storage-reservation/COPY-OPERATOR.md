@@ -113,9 +113,10 @@ readiness or permission to apply/copy/change a bucket.
 
 ## Isolated operator image
 
-The manual [DB07 copy operator image workflow](../../.github/workflows/db07-copy-operator-image.yml)
+The [DB07 copy operator image workflow](../../.github/workflows/db07-copy-operator-image.yml)
 builds [the operator Dockerfile](Dockerfile.copy-operator) for Linux amd64 on a
-disposable runner. The build context is the Dockerfile and eight operator
+disposable runner. Run it manually or on a pull request that changes the
+Dockerfile or workflow. The build context is the Dockerfile and eight operator
 source files from the exact workflow commit. It leaves the image in the
 runner's local Docker store. The base manifest and four direct APK versions
 are pinned. Alpine resolves their transitive dependencies during the build.

@@ -2,6 +2,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { usePresenceRoom } from '../../../hooks/usePresenceRoom';
 import { useSessionStore } from '../../../store/session-store';
 import {
+  realtimeRecord, realtimeScopeKey, realtimeText, realtimeTimestamp, realtimeUserId,
+} from '../../../lib/realtime-scope';
+import {
   computeRoster,
   derivePeerSavedNotice,
   groupPeersBySection,
@@ -16,6 +19,7 @@ import {
 const SAVED_EVENT = 'object:saved';
 // Module constant ⇒ referentially stable, so usePresenceRoom never resubscribes on it.
 const SUBSCRIBE_EVENTS = [SAVED_EVENT] as const;
+const SAVED_EVENT_MAX_AGE_MS = 5 * 60_000;
 // Demo-only: sections the mock editors are scattered onto so the showcase shows badges.
 const DEMO_SHOWCASE_SECTIONS = ['06', '13', '03'];
 
@@ -58,7 +62,7 @@ export interface UseEditorPresenceResult {
   savedNotice: PeerSavedNotice | null;
   dismissSavedNotice: () => void;
   /** Announce a successful save to the other editors of this fiche. */
-  broadcastSaved: (modules: string[]) => void;
+  broadcastSaved: () => void;
 }
 
 /**
@@ -73,7 +77,8 @@ export function useEditorPresence({
   const selfId = useSessionStore((state) => state.userId) ?? 'anonymous';
   const userName = useSessionStore((state) => state.userName);
   const demoMode = useSessionStore((state) => state.demoMode);
-  const [savedEvent, setSavedEvent] = useState<PeerSavedEvent | null>(null);
+  const scope = useSessionStore(realtimeScopeKey);
+  const [savedEvent, setSavedEvent] = useState<{ scope: string; objectId: string; event: PeerSavedEvent } | null>(null);
 
   const editing = hasUnsavedEdits(dirtySections);
   const trackExtra = useMemo<EditorPresenceExtra>(
@@ -82,18 +87,16 @@ export function useEditorPresence({
   );
 
   const handleEvent = useCallback((event: string, payload: unknown) => {
-    if (event !== SAVED_EVENT || !payload || typeof payload !== 'object') {
-      return;
-    }
-    const candidate = payload as Partial<PeerSavedEvent>;
-    if (
-      typeof candidate.userId === 'string' &&
-      typeof candidate.name === 'string' &&
-      typeof candidate.at === 'number'
-    ) {
-      setSavedEvent({ userId: candidate.userId, name: candidate.name, at: candidate.at });
-    }
-  }, []);
+    if (event !== SAVED_EVENT || scope === null || realtimeScopeKey(useSessionStore.getState()) !== scope) return;
+    const candidate = realtimeRecord(payload);
+    if (candidate?.objectId !== objectId || Object.keys(candidate).length !== 4) return;
+    const userId = realtimeUserId(candidate.userId);
+    const name = realtimeText(candidate.name, 120);
+    const at = realtimeTimestamp(candidate.at);
+    if (!userId || userId === selfId || !name || !at || Date.now() - at > SAVED_EVENT_MAX_AGE_MS) return;
+    // A client broadcast is a hint. Only the existing guarded reload reads the committed state.
+    setSavedEvent({ scope, objectId, event: { userId, name, at } });
+  }, [objectId, scope, selfId]);
 
   const { peers, broadcast } = usePresenceRoom<EditorPresenceExtra>(`room:${objectId}`, {
     trackExtra,
@@ -110,20 +113,21 @@ export function useEditorPresence({
     () => groupPeersBySection(displayPeers, selfId),
     [displayPeers, selfId],
   );
-  const savedNotice = useMemo(() => derivePeerSavedNotice(savedEvent, selfId), [savedEvent, selfId]);
+  const savedNotice = savedEvent?.scope === scope && savedEvent.objectId === objectId
+    ? derivePeerSavedNotice(savedEvent.event, selfId) : null;
 
   const dismissSavedNotice = useCallback(() => setSavedEvent(null), []);
 
   const broadcastSaved = useCallback(
-    (modules: string[]) => {
+    () => {
       void broadcast(SAVED_EVENT, {
+        objectId,
         userId: selfId,
         name: userName || 'Un collègue',
         at: Date.now(),
-        modules,
       });
     },
-    [broadcast, selfId, userName],
+    [broadcast, objectId, selfId, userName],
   );
 
   return { roster, peersBySection, savedNotice, dismissSavedNotice, broadcastSaved };

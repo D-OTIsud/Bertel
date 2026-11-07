@@ -16,6 +16,7 @@ export interface FakeRealtimeChannel {
   emit: (status: string) => void;
   /** Rejoue le handler `.on('presence', { event: 'sync' })`. */
   syncPresence: () => void;
+  broadcastEvent: (event: string, payload: unknown) => void;
   on: jest.Mock;
   subscribe: jest.Mock;
   track: jest.Mock;
@@ -37,15 +38,18 @@ export function makeFakeRealtimeClient() {
 
       let statusCallback: ((status: string) => void) | null = null;
       let presenceSync: (() => void) | null = null;
+      const broadcastHandlers = new Map<string, (message: { payload: unknown }) => void>();
 
       const chan: FakeRealtimeChannel = {
         topic,
         bindings: [],
         emit: (status) => statusCallback?.(status),
         syncPresence: () => presenceSync?.(),
-        on: jest.fn((type: string, filter: { event?: string }, handler: () => void) => {
+        broadcastEvent: (event, payload) => broadcastHandlers.get(event)?.({ payload }),
+        on: jest.fn((type: string, filter: { event?: string }, handler: (message: { payload: unknown }) => void) => {
           chan.bindings.push(type);
-          if (type === 'presence' && filter?.event === 'sync') presenceSync = handler;
+          if (type === 'presence' && filter?.event === 'sync') presenceSync = () => handler({ payload: undefined });
+          if (type === 'broadcast' && filter.event) broadcastHandlers.set(filter.event, handler);
           return chan;
         }),
         subscribe: jest.fn((cb: (status: string) => void) => {

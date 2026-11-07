@@ -1527,6 +1527,71 @@ BEGIN
            WHERE submission_id = v_subid AND status = 'pending') = 2,
          'F2: les refus d''autorisation ne laissent AUCUNE écriture derrière eux';
 
+  -- Historical rows can predate submission validation. Put a valid writer
+  -- first in the batch, then verify that a later invalid row rolls it back.
+  DECLARE
+    v_bad_auto uuid;
+    v_bad_manual uuid;
+    v_bad_unclassified uuid;
+    v_preserved_period uuid;
+    v_preserved_price uuid;
+  BEGIN
+    PERFORM set_config('request.jwt.claims', NULL, true);
+    INSERT INTO opening_period(object_id,name) VALUES (v_objA,'Horaires avant approbation')
+      RETURNING id INTO v_preserved_period;
+    INSERT INTO object_price(object_id,kind_id,amount)
+      VALUES (v_objA,(SELECT id FROM ref_code_price_kind ORDER BY code LIMIT 1),42)
+      RETURNING id INTO v_preserved_price;
+
+    INSERT INTO pending_change(object_id,target_table,action,payload,submitted_by,submission_id,metadata,submitted_at)
+      VALUES (v_objA,'object_amenity','update','{"amenities":[],"prices":[]}',v_user,v_subid,
+        '{"rpc":"save_object_commercial","section":"characteristics"}',now()+interval '1 second')
+      RETURNING id INTO v_bad_auto;
+    INSERT INTO pending_change(object_id,target_table,action,payload,submitted_by,submission_id,metadata,submitted_at)
+      VALUES (v_objA,'object_description','update','{"chapo":"Historique"}',v_user,v_subid,
+        '{"section":"contacts","manual_apply":true}',now()+interval '2 seconds')
+      RETURNING id INTO v_bad_manual;
+    INSERT INTO pending_change(object_id,target_table,action,payload,submitted_by,submission_id,metadata,submitted_at)
+      VALUES (v_objA,'object_amenity','update','{"prices":[]}',v_user,v_subid,
+        '{"rpc":"save_object_commercial"}',now()+interval '3 seconds')
+      RETURNING id INTO v_bad_unclassified;
+
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      FOREACH v_persona IN ARRAY ARRAY[v_bad_auto,v_bad_manual,v_bad_unclassified] LOOP
+        v_msg := '';
+        BEGIN PERFORM api.approve_pending_change(v_persona, 'Fixture historique', TRUE);
+        EXCEPTION WHEN SQLSTATE '22023' THEN v_msg := SQLERRM; END;
+        ASSERT v_msg = 'Les données proposées ne correspondent pas à la rubrique déclarée',
+          'F2: la rubrique du portail est vérifiée avant application ou attestation historique';
+      END LOOP;
+      v_msg := '';
+      BEGIN PERFORM api.approve_fiche_submission(v_subid, 'Fixture historique', FALSE);
+      EXCEPTION WHEN SQLSTATE '22023' THEN v_msg := SQLERRM; END;
+      ASSERT v_msg = 'Les données proposées ne correspondent pas à la rubrique déclarée',
+        'F2: le lot refuse une ancienne ligne auto hors périmètre';
+    RESET ROLE;
+    ASSERT EXISTS (SELECT 1 FROM opening_period WHERE id=v_preserved_period)
+       AND EXISTS (SELECT 1 FROM object_price WHERE id=v_preserved_price AND amount=42),
+      'F2: le lot annule les horaires appliqués en tête et préserve les tarifs';
+    ASSERT (SELECT count(*) FROM pending_change WHERE submission_id=v_subid AND status='pending'
+      AND reviewed_at IS NULL AND applied_at IS NULL)=5,
+      'F2: aucun changement du lot n’a été approuvé ou attesté';
+
+    SET LOCAL ROLE authenticated;
+      PERFORM api.reject_pending_change(v_bad_auto, 'Rubrique incompatible');
+      PERFORM api.reject_pending_change(v_bad_manual, 'Rubrique incompatible');
+      PERFORM api.reject_pending_change(v_bad_unclassified, 'Rubrique incompatible');
+    RESET ROLE;
+    ASSERT (SELECT count(*) FROM pending_change
+      WHERE id IN (v_bad_auto,v_bad_manual,v_bad_unclassified) AND status='rejected')=3,
+      'F2: les anciennes propositions invalides restent rejetables';
+    DELETE FROM pending_change WHERE id IN (v_bad_auto,v_bad_manual,v_bad_unclassified);
+    DELETE FROM opening_period WHERE id=v_preserved_period;
+    DELETE FROM object_price WHERE id=v_preserved_price;
+  END;
+
   -- (F2.2) L'attestation n'ouvre PAS la whitelist. Ligne PIÈGE portant un writer RÉEL mais non
   -- whitelisté : une implémentation écrite « IF v_rpc IS NULL OR p_applied_manually THEN
   -- <branche attestée> » passerait TOUS les autres tests de ce bloc et transformerait
@@ -1597,9 +1662,9 @@ BEGIN
   PERFORM set_config('request.jwt.claims', NULL, true);
   INSERT INTO pending_change (object_id, target_table, target_pk, action, payload,
                               submitted_by, status, metadata)
-  VALUES (v_objA, 'opening_period', NULL, 'update', jsonb_build_object('periods', '[]'::jsonb),
+  VALUES (v_objA, 'object_price', NULL, 'update', '{"prices":[]}'::jsonb,
           v_user, 'pending',
-          jsonb_build_object('rpc', 'save_object_openings', 'section', 'openings', 'field', 'Horaires'))
+          jsonb_build_object('rpc', 'save_object_commercial', 'section', 'pricing', 'field', 'Tarifs'))
   RETURNING id INTO v_pc_legacy;
 
   PERFORM set_config('request.jwt.claims',

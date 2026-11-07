@@ -699,7 +699,10 @@ ROLLBACK;
 -- Separate privileged authority-source hardening; preserve the malformed DB03 shadow witness.
 \ir object_canonical_write_sources.sql
 \ir ../supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql
+SELECT pg_get_functiondef('api.submit_actor_fiche(text,jsonb,text)'::regprocedure) AS album_pre_acc08_submit,
+       pg_get_functiondef('api.approve_pending_change(uuid,text,boolean)'::regprocedure) AS album_pre_acc08_approve \gset
 \ir ../supabase/migrations/20261107154854_portal_submission_module_binding.sql
+\ir tests/test_partner_photo_album_catalog_acc08.sql
 \ir tests/test_portal_submission_module_binding.sql
 \ir tests/test_partner_photo_album_public.sql
 \ir tests/test_object_current_rights.sql

@@ -261,7 +261,7 @@ async function testPublicDiscoveryEffects(app, ordinary, ownedBrowser) {
   }
 }
 
-const proposal = [{ target_table: 'object_description', target_pk: null, action: 'update', payload: { chapo: 'Synthetic HTTP proposal' },
+const proposal = [{ target_table: 'contact_channel', target_pk: null, action: 'update', payload: { objectItems: [] },
   metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
 
 const testName = sandboxWitness

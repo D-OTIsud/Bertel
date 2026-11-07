@@ -163,7 +163,7 @@ async function testOrgEnrichment() {
   assert.deepEqual(descriptions(), saved, 'the revoked grant changed no description');
 }
 
-async function testPublicDiscoveryEffects(app, ordinary) {
+async function testPublicDiscoveryEffects(app, ordinary, ownedBrowser) {
   assert.ok(/^http:\/\/127\.0\.0\.1:[0-9]+$/.test(app.origin), 'owned Next loopback required');
   assert.equal(local.sql(`SELECT NOT EXISTS (SELECT 1 FROM public.app_ai_provider_config WHERE is_active)
     AND NOT EXISTS (SELECT 1 FROM public.app_smtp_config WHERE enabled)`, 'check disposable external effect configuration'),
@@ -171,6 +171,14 @@ async function testPublicDiscoveryEffects(app, ordinary) {
   const registry = async () => json(await rpc(local.service, 'get_sandbox_discovery_user'), 'owned discovery registry');
   assert.ok(await registry() === null, 'the disposable discovery identity must be absent before provisioning');
   const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+  const search = 'SandboxDiscoveryCorpusWitness';
+  const fixture = { search, testId: TEST, testTitle: `${search} test`, publicId: PUBLIC, publicTitle: `${search} real` };
+  assert.equal(local.sql(`WITH witness(id,is_test,name) AS (VALUES
+      ('${TEST}',true,'${fixture.testTitle}'), ('${PUBLIC}',false,'${fixture.publicTitle}')),
+    renamed AS (UPDATE public.object o SET name=w.name FROM witness w
+      WHERE o.id=w.id AND o.is_test=w.is_test AND o.status='published' RETURNING o.id)
+    SELECT count(*) FROM renamed`, 'name both published discovery catalogue fixtures'), '2');
+  const { openDiscoveryVisitor } = await import('../../bertel-tourism-ui/tests/current-rights/sandbox-discovery.mjs');
 
   function assertDedicatedIdentity(id) {
     assert.ok(typeof id === 'string' && uuid.test(id) && !Object.values(ids).includes(id),
@@ -180,13 +188,8 @@ async function testPublicDiscoveryEffects(app, ordinary) {
     return fetch(app.origin + path, { ...options, redirect: 'error', signal: AbortSignal.timeout(30_000) });
   }
   async function open() {
-    const response = await request('/api/sandbox/session', { method: 'POST' });
-    assert.match(response.headers.get('cache-control') ?? '', /(?:^|,\s*)no-store(?:,|$)/);
-    const tokens = await json(response, 'public discovery session');
-    assert.ok(typeof tokens.access_token === 'string' && tokens.access_token.length > 0
-      && typeof tokens.refresh_token === 'string' && tokens.refresh_token.length > 0
-      && Object.keys(tokens).length === 2, 'only the restricted session tokens may be returned');
-    return { ...local.anonymous, authorization: `Bearer ${tokens.access_token}` };
+    const token = await openDiscoveryVisitor(app, local, ownedBrowser, fixture);
+    return { ...local.anonymous, authorization: `Bearer ${token}` };
   }
   async function verify(auth, id) {
     const user = await json(await local.request('/auth/v1/user', auth, undefined, 'GET'), 'independent discovery Auth verification');
@@ -262,11 +265,11 @@ const proposal = [{ target_table: 'object_description', target_pk: null, action:
   metadata: { rpc: null, section: 'contacts', manual_apply: true, field: 'Contacts', before: 'a', after: 'b' } }];
 
 const testName = sandboxWitness
-  ? 'real public discovery separates GoTrue sessions and test data and blocks external effects'
+  ? 'Chromium opens public discovery and separates GoTrue sessions and test data without external effects'
   : browserWitness ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
   : realtimeWitness ? 'real Realtime SDK enforces fixture roster and broadcast boundaries'
   : 'real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation';
-test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 180000 : 90000 }, async (t) => {
+test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90000 }, async (t) => {
   const createdIds = [];
   let fixtureCreated = false;
   let writerCredentials;
@@ -307,14 +310,17 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 180000 : 90
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
     if (sandboxWitness) {
-      const { startApp, waitForApp, stopApp } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
+      const { startApp, waitForApp, stopApp, launchOwnedBrowser } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
       const app = await startApp(local, { signDocuments: true });
+      let ownedBrowser;
       try {
         await waitForApp(app);
-        await testPublicDiscoveryEffects(app, headers('other'));
-        t.diagnostic('Public discovery provisioned two real GoTrue sessions and refused business mail and AI before admission.');
+        ownedBrowser = await launchOwnedBrowser(app, local);
+        await testPublicDiscoveryEffects(app, headers('other'), ownedBrowser);
+        t.diagnostic('Both visitors opened /test and saw the test corpus in Explorer. Their GoTrue sessions refused business mail and AI before admission.');
       } finally {
-        await stopApp(app);
+        try { await ownedBrowser?.close(); }
+        finally { await stopApp(app); }
       }
       return;
     }

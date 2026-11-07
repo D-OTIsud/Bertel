@@ -1,8 +1,10 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, render, renderHook } from '@testing-library/react';
 import { PRESENCE_LOCK_TTL_MS, usePresenceRoom } from './usePresenceRoom';
 import { getSupabaseClient } from '../lib/supabase';
 import { makeFakeRealtimeClient } from '../lib/realtime-recovery.test-utils';
 import { useSessionStore } from '../store/session-store';
+import { useEditorPresence } from '../features/object-editor/presence/useEditorPresence';
+import { PresenceRail } from '../features/object-editor/widgets/PresenceRail';
 
 jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn() }));
 
@@ -140,5 +142,68 @@ describe('usePresenceRoom', () => {
     act(() => useSessionStore.setState({ role: 'owner' }));
     expect(client.removeChannel).toHaveBeenCalledWith(created[0]);
     expect(created).toHaveLength(1);
+  });
+
+  it('shares the editor and drawer channel through independent unmounts and an Auth replacement', () => {
+    const { client, created } = makeFakeRealtimeClient();
+    (getSupabaseClient as jest.Mock).mockReturnValue(client);
+    liveSession();
+    // Rail/preview use the plain room hook. In React their effects can run before the editor's.
+    const objectId = objectRoom.slice('room:'.length);
+    const rail = render(<PresenceRail objectId={objectId} />);
+    const editor = renderHook(() => useEditorPresence({ objectId, activeSection: '06', dirtySections: { pricing: true } }));
+    const [first] = created;
+    expect(created).toHaveLength(1);
+    expect(first.subscribe).toHaveBeenCalledTimes(1);
+    expect(first.bindings.filter((type) => type === 'presence')).toHaveLength(1);
+    const previousSend = editor.result.current.broadcastSaved;
+
+    act(() => {
+      first.emit('SUBSCRIBED');
+      first.presenceState.mockReturnValue({ [other]: [{ userId: other, name: 'Collègue', activeSection: '07' }] });
+      first.syncPresence();
+    });
+    expect(first.track).toHaveBeenLastCalledWith(expect.objectContaining({ activeSection: '06', editing: true }));
+    expect(rail.getByText('Collègue')).toBeInTheDocument();
+    expect(editor.result.current.peersBySection['07'][0].userId).toBe(other);
+    act(previousSend);
+    expect(first.send).toHaveBeenCalledWith(expect.objectContaining({ event: 'object:saved' }));
+
+    rail.unmount();
+    expect(client.removeChannel).not.toHaveBeenCalled();
+    const preview = renderHook(() => usePresenceRoom(objectRoom));
+    expect(first.subscribe).toHaveBeenCalledTimes(1);
+    expect(first.bindings.filter((type) => type === 'presence')).toHaveLength(1);
+    expect(preview.result.current.peers.map((member) => member.userId)).toEqual([other]);
+    act(() => {
+      first.broadcastEvent('object:saved', { objectId, userId: other, name: 'Collègue', at: Date.now() });
+    });
+    expect(editor.result.current.savedNotice?.name).toBe('Collègue');
+
+    act(() => useSessionStore.getState().observeAuthUser(other));
+    expect(editor.result.current.savedNotice).toBeNull();
+    expect(preview.result.current.peers).toEqual([]);
+    expect(client.removeChannel).toHaveBeenCalledTimes(1);
+    act(() => useSessionStore.setState({ userId: other, userName: 'Autre',
+      authAuthority: { userId: other, epoch: 2, hydrated: true } }));
+    expect(created).toHaveLength(2);
+    const next = created[1];
+    act(() => next.emit('SUBSCRIBED'));
+    expect(next.subscribe).toHaveBeenCalledTimes(1);
+    expect(next.track).toHaveBeenLastCalledWith(expect.objectContaining({ userId: other, activeSection: '06' }));
+    act(previousSend);
+    expect(next.send).not.toHaveBeenCalled();
+    act(editor.result.current.broadcastSaved);
+    expect(next.send).toHaveBeenCalledWith(expect.objectContaining({ payload: expect.objectContaining({ userId: other }) }));
+
+    editor.unmount();
+    expect(client.removeChannel).toHaveBeenCalledTimes(1);
+    act(() => {
+      next.presenceState.mockReturnValue({ [writer]: [{ userId: writer, name: 'Premier' }] });
+      next.syncPresence();
+    });
+    expect(preview.result.current.peers.map((member) => member.userId)).toEqual([writer]);
+    preview.unmount();
+    expect(client.removeChannel).toHaveBeenCalledTimes(2);
   });
 });

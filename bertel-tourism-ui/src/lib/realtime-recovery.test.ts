@@ -78,6 +78,33 @@ describe('createResilientChannel', () => {
     }
   });
 
+  it('removes a reused public channel and waits through a temporary loss of authority', () => {
+    const { client, created } = makeFakeRealtimeClient();
+    const topic = 'presence:global:prod';
+    const publicChannel = client.channel(topic, { config: { private: false } });
+    const bind = jest.fn();
+    let allowed = true;
+    const handle = createResilientChannel(client as unknown as SupabaseClient, {
+      topic, config: { config: { private: true } }, bind, canOpen: () => allowed,
+    });
+    try {
+      expect(client.removeChannel).toHaveBeenCalledWith(publicChannel);
+      expect(publicChannel.subscribe).not.toHaveBeenCalled();
+      expect(bind).not.toHaveBeenCalled();
+      allowed = false;
+      jest.advanceTimersByTime(1_000);
+      expect(created).toHaveLength(1);
+      allowed = true;
+      jest.advanceTimersByTime(2_000);
+      expect(created).toHaveLength(2);
+      expect(created[1].params.config.private).toBe(true);
+      expect(bind).toHaveBeenCalledTimes(1);
+      expect(bind).toHaveBeenCalledWith(created[1]);
+    } finally {
+      handle.dispose();
+    }
+  });
+
   it('leaves the library its own rejoin window on CHANNEL_ERROR, then takes over', () => {
     const { created, onState } = setup();
     created[0].emit('SUBSCRIBED');

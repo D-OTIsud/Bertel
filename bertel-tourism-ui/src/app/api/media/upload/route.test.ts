@@ -1,5 +1,6 @@
 /** @jest-environment node */
 import { POST } from './route';
+import { handleMediaUpload } from './handle-upload';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
@@ -29,10 +30,10 @@ import { createClient } from '@supabase/supabase-js';
 const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedCreate = jest.mocked(createClient);
 
-function makeForm(objectId = 'HOTRUN9999990711'): FormData {
+function makeForm(file = new File([new Uint8Array([1, 2, 3])], 'photo.jpg', { type: 'image/jpeg' })): FormData {
   const form = new FormData();
-  form.append('file', new File([new Uint8Array([1, 2, 3])], 'photo.jpg', { type: 'image/jpeg' }));
-  form.append('object_id', objectId);
+  form.append('file', file);
+  form.append('object_id', 'HOTRUN9999990711');
   return form;
 }
 
@@ -40,10 +41,10 @@ function req(headers: Record<string, string>, form: FormData): never {
   return { headers: new Headers(headers), formData: async () => form } as never;
 }
 
-function serverWithUser() {
+function serverWithUser(upload?: jest.Mock) {
   return {
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }) },
-    storage: { from: jest.fn() },
+    storage: { from: jest.fn(() => ({ upload })) },
   } as never;
 }
 
@@ -81,6 +82,35 @@ describe('POST /api/media/upload — per-object permission gate', () => {
 
     const res = await POST(req({ authorization: 'Bearer t' }, makeForm()));
     expect(res.status).toBe(201);
+  });
+
+  it.each(['storage', 'unexpected'])('500 correlates the %s failure without exposing engine details', async (kind) => {
+    const cause = 'synthetic engine detail MEDIA_SENTINEL';
+    const upload = jest.fn().mockResolvedValue({ error: { message: cause } });
+    mockedServer.mockReturnValue(serverWithUser(upload));
+    const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+    if (kind === 'storage') {
+      const actual: typeof import('./handle-upload') = jest.requireActual('./handle-upload');
+      jest.mocked(handleMediaUpload).mockImplementationOnce(actual.handleMediaUpload);
+    } else {
+      jest.mocked(handleMediaUpload).mockRejectedValueOnce(new Error(cause));
+    }
+    const form = makeForm(new File([new Uint8Array([1, 2, 3])], 'clip.mp4', { type: 'video/mp4' }));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const res = await POST(req({ authorization: 'Bearer t' }, form));
+      expect(res.status).toBe(500);
+      expect(upload).toHaveBeenCalledTimes(kind === 'storage' ? 1 : 0);
+      const payload = await res.json();
+      expect(JSON.stringify([payload, warn.mock.calls])).not.toContain(cause);
+      const requestId = res.headers.get('x-request-id');
+      expect(warn.mock.calls).toEqual([['[route-error]', { route: 'media/upload.POST', code: 'upload_failed', requestId }]]);
+      expect(requestId).toMatch(/^[a-f0-9-]{36}$/);
+      expect(payload).toEqual({ error: 'upload_failed' });
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 

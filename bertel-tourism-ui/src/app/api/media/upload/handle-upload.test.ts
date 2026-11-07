@@ -82,19 +82,12 @@ describe('handleMediaUpload', () => {
     expect(uploader.upload).not.toHaveBeenCalled();
   });
 
-  // Chantier 2026-08-28 n°4 — assertion RETOURNÉE : elle épinglait le relais de la cause
-  // technique Storage (« bucket missing ») jusqu'à l'écran, via `detail`.
-  //
-  // Et surtout : le message existait en DOUBLON textuel exact sur les branches IMAGE et VIDÉO,
-  // avec une indentation différente. Une correction naïve n'en touchait qu'une, et AUCUN test ne
-  // rougissait — la première passe de ce chantier est effectivement tombée dans le piège. Les
-  // DEUX branches sont donc éprouvées ici, séparément.
   it.each([
     ['image', 'image/jpeg', 'photo.jpg'],
     ['vidéo', 'video/mp4', 'clip.mp4'],
-  ])('branche %s : un échec Storage rend un message FR, jamais la cause technique', async (_label, mimeType, filename) => {
+  ])('branche %s : un échec Storage interrompt le téléversement', async (_label, mimeType, filename) => {
     const uploader: StorageUploader = {
-      upload: jest.fn(async (): Promise<StorageUploadResult> => ({ ok: false, error: 'bucket missing' })),
+      upload: jest.fn(async (): Promise<StorageUploadResult> => ({ ok: false })),
     };
     const promise = handleMediaUpload({
       fileBuffer: await jpg(),
@@ -104,6 +97,5 @@ describe('handleMediaUpload', () => {
       uploader,
     });
     await expect(promise).rejects.toThrow(/n'a pas pu être enregistré/);
-    await expect(promise).rejects.not.toThrow(/bucket missing/);
   });
 });

@@ -6,6 +6,7 @@ import { loadDisposable } from './disposable.mjs';
 
 const local = loadDisposable();
 const browserWitness = process.env.CURRENT_RIGHTS_EDITOR_BROWSER === 'true';
+const realtimeWitness = process.env.CURRENT_RIGHTS_REALTIME_SECURITY === 'true';
 const ids = {
   writer: '00000000-0000-4000-a000-00000000ae11', other: '00000000-0000-4000-a000-00000000ae12',
   portal: '00000000-0000-4000-a000-00000000ae13', foreignPortal: '00000000-0000-4000-a000-00000000ae14',
@@ -109,6 +110,7 @@ const proposal = [{ target_table: 'object_description', target_pk: null, action:
 
 const testName = browserWitness
   ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
+  : realtimeWitness ? 'real Realtime SDK enforces fixture roster and broadcast boundaries'
   : 'real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation';
 test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
   const createdIds = [];
@@ -146,6 +148,45 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
     'exactly six identities and five distinct real JWTs are required; the fixture-only admin never authenticates');
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
+    if (realtimeWitness) {
+      assert.equal(await canWrite('writer', A), true);
+      assert.equal(await canWrite('other', B), true);
+      assert.equal(await canWrite('tester', TEST), true);
+      assert.deepEqual(await Promise.all([rows(headers('other'), A), rows(headers('tester'), A), rows(local.anonymous, A)]),
+        [[], [], []], 'foreign, test realm and anonymous clients must lack access to the draft fixture');
+      commit(`DO $fixture$ BEGIN
+        DELETE FROM public.app_user_profile WHERE id='${ids.foreignPortal}' AND role='actor';
+        IF NOT FOUND THEN RAISE EXCEPTION 'missing profileless Realtime control fixture'; END IF;
+      END; $fixture$`, 'remove only the synthetic second portal profile');
+      for (const key of ['other', 'portal', 'foreignPortal']) {
+        const published = await rows(headers(key), PUBLIC);
+        assert.equal(published.length, 1, key + ' must see the published fixture');
+        assert.equal(published[0].status, 'published');
+        assert.equal(await json(await rpc(headers(key), 'can_read_object', { p_object_id: PUBLIC }),
+          key + ' published read authority'), true);
+        assert.equal(await canWrite(key, PUBLIC), false, key + ' must lack canonical write authority');
+      }
+      const identity = (key) => ({ id: ids[key], headers: headers(key) });
+      const { testRealtimeSecurity } = await import('../../bertel-tourism-ui/tests/current-rights/realtime-security.mjs');
+      await testRealtimeSecurity({ local, objectId: A, publishedId: PUBLIC, writer: identity('writer'),
+        foreign: identity('other'), testRealm: identity('tester'), portal: identity('portal'),
+        profileless: identity('foreignPortal'),
+        revokeWriter: async () => {
+          commit(`DO $fixture$ BEGIN
+            UPDATE public.user_org_membership SET is_active=false
+            WHERE id='00000000-0000-4000-a000-00000000ab11' AND user_id='${ids.writer}' AND is_active;
+            IF NOT FOUND THEN RAISE EXCEPTION 'missing realtime writer membership'; END IF;
+          END; $fixture$`, 'commit Realtime writer departure');
+          assert.deepEqual(await rows(headers('writer'), A), []);
+          assert.equal(await canWrite('writer', A), false);
+          const stillAuthenticated = await json(await local.request('/auth/v1/user', headers('writer'), undefined, 'GET'),
+            'the original GoTrue JWT still authenticates after the business-rights revocation');
+          assert.equal(stillAuthenticated.id, ids.writer);
+        },
+        diagnostic: (message) => t.diagnostic(message),
+      });
+      return;
+    }
     if (browserWitness) {
       assert.equal(await canWrite('other', A), false, 'the second account starts outside the publisher organization');
       // Move the existing fixture membership only in this disposable browser run.

@@ -55,6 +55,11 @@ on:
         type: boolean
         required: false
         default: false
+      realtime_security:
+        description: 'Also probe the actual SDK Realtime boundaries on the disposable fresh stack'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   fresh-apply:
@@ -664,8 +669,8 @@ jobs:
           node --test tools/current-rights/storage-refusals.test.mjs
           node --test tools/current-rights/postgrest-rights.test.mjs
 
-      - name: Set up Node 22 for the authenticated editor witness
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
+      - name: Set up Node 22 for opt-in authenticated witnesses
+        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.realtime_security == true) && steps.list_email_owned_stack.outcome == 'success' }}
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -691,6 +696,22 @@ jobs:
           CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
           CURRENT_RIGHTS_EDITOR_BROWSER: 'true'
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
+        run: node --test tools/current-rights/postgrest-rights.test.mjs
+
+      - name: Install the locked SDK for the Realtime witness
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.realtime_security == true && inputs.editor_browser != true && steps.list_email_owned_stack.outcome == 'success' }}
+        working-directory: bertel-tourism-ui
+        timeout-minutes: 5
+        run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+
+      - name: Private Realtime joins, rosters and broadcast authority (disposable only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.realtime_security == true && steps.list_email_owned_stack.outcome == 'success' }}
+        timeout-minutes: 3
+        env:
+          CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+          CURRENT_RIGHTS_REALTIME_SECURITY: 'true'
         run: node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: PostgreSQL diagnostics on failure

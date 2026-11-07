@@ -16,18 +16,18 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <main><nav class="toc"><b>Navigation</b><a href="#coverage">Couverture</a><a href="#rpcs">RPC / fonctions</a><a href="#tables">Connexions tables</a><a href="#rls">RLS policies</a><a href="#enums">Enums & types</a><a href="#refs">CID, tags, refcodes</a><a href="#ref-tables">Tables de référence</a><a href="index.html">Retour doc API</a></nav><div>
 <section id="coverage"><h2>0) Couverture et sources</h2>
 <div class="grid cards">
-<article class="mini-card"><div class="metric">421</div><b>tables</b><p class="muted">15 vues · 9 enums</p></article>
-<article class="mini-card"><div class="metric">633</div><b>fonctions/RPC</b><p class="muted">642 policies · 1432 triggers</p></article>
+<article class="mini-card"><div class="metric">424</div><b>tables</b><p class="muted">15 vues · 9 enums</p></article>
+<article class="mini-card"><div class="metric">641</div><b>fonctions/RPC</b><p class="muted">645 policies · 1438 triggers</p></article>
 <article class="mini-card"><div class="metric">3174</div><b>valeurs référentielles</b><p class="muted">instantané public attesté</p></article>
-<article class="mini-card"><div class="metric">6287</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
+<article class="mini-card"><div class="metric">6311</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les 3 174 valeurs proviennent de l’instantané public du 6 novembre 2026, entre 20:23 et 20:32 UTC, conservé octet pour octet. Il couvre 28 tables autorisées et 246 documents de scope explicite public. Aucune valeur de seed n’a complété cet instantané.</p>
-<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T04:03:36.611951+00:00, ledger 193, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
+<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T05:18:46.993860+00:00, ledger 194, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
 <p class="muted">Lecture live MCP effectuée sur 28 tables publiques de référence. 0 lignes seed SQL restent disponibles comme filet de secours.</p>
 <details><summary>Écarts de couverture à surveiller</summary>
 <table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>
 <tr><td>Fonctions sans source SQL retrouvée</td><td>44</td><td><code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.check_org_smtp_org_type()</code>, <code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.delete_org_smtp(p_org_object_id text)</code>, <code>api.get_ingestor_metrics()</code>, <code>api.get_ingestor_scheduler_health()</code>, <code>api.get_org_smtp(p_org_object_id text)</code>, <code>api.get_org_smtp_secret(p_org_object_id text)</code>, <code>api.list_org_smtp_status()</code>, <code>api.notification_relay_org(p_task_id uuid, p_recipient_id uuid)</code>, <code>api.purge_expired_staging_batches(p_limit integer DEFAULT 500)</code>, <code>api.purge_staging_batch(p_batch_id text, p_force boolean DEFAULT false)</code> <span class="muted">+32</span></td></tr>
-<tr><td>Fonctions sans lecture/écriture inférée</td><td>158</td><td><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code>, <code>api.actor_portal_floor_modules()</code>, <code>api.assert_no_period_overlap(p_periods jsonb)</code>, <code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.b64url_decode(p text)</code>, <code>api.b64url_encode(p bytea)</code>, <code>api.before_insert_object_generate_id()</code>, <code>api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date)</code>, <code>api.can_read_extended(p_object_id text)</code>, <code>api.can_read_object_private_notes(p_object_id text)</code>, <code>api.can_write_object_private_notes(p_object_id text)</code>, <code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code> <span class="muted">+146</span></td></tr>
+<tr><td>Fonctions sans lecture/écriture inférée</td><td>162</td><td><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code>, <code>api.actor_portal_floor_modules()</code>, <code>api.assert_no_period_overlap(p_periods jsonb)</code>, <code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.b64url_decode(p text)</code>, <code>api.b64url_encode(p bytea)</code>, <code>api.before_insert_object_generate_id()</code>, <code>api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date)</code>, <code>api.can_read_extended(p_object_id text)</code>, <code>api.can_read_object_private_notes(p_object_id text)</code>, <code>api.can_write_object_private_notes(p_object_id text)</code>, <code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code> <span class="muted">+150</span></td></tr>
 <tr><td>Fonctions avec SQL dynamique</td><td>17</td><td><code>api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)</code>, <code>api.assert_object_type_change_consistent()</code>, <code>api.facet_applicability_violations()</code>, <code>api.get_ref_catalog(p_catalog_key text)</code>, <code>api.ref_code_usage_counts(p_domain text)</code>, <code>api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)</code>, <code>api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)</code>, <code>api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb)</code>, <code>api.thesaurus_reference_snapshot(p_domains text[] DEFAULT NULL::text[])</code>, <code>audit.attach_missing_triggers()</code>, <code>audit.create_monthly_partition(partition_date timestamp with time zone)</code>, <code>audit.drop_old_partitions(months_to_keep integer DEFAULT 12)</code> <span class="muted">+5</span></td></tr>
 <tr><td>Tables publiques de référence sans ligne directe extraite</td><td>6</td><td><code>public.ref_catalog_registry</code>, <code>public.ref_classification_scheme_applicability</code>, <code>public.ref_interop_crosswalk</code>, <code>public.ref_tag</code>, <code>public.ref_trail_manager</code>, <code>public.ref_trail_source</code></td></tr>
 </tbody></table>
@@ -9069,6 +9069,102 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 </tbody></table>
 <p><b>Déclenchée par</b><br><code>trigger:public.object_description:trg_validate_org_object_type_object_description</code>, <code>trigger:public.object_external_id:trg_validate_org_object_type_object_external_id</code>, <code>trigger:public.object_membership:trg_validate_org_object_type_object_membership</code>, <code>trigger:public.object_org_link:trg_validate_org_object_type_object_org_link</code></p>
 </details>
+<h3>Schéma <code>storage_reservation_api</code> (3)</h3>
+<details class="rpc" data-search="storage_reservation_api.claim(receipt uuid, b jsonb, owner_secret text, attempt uuid) storage_reservation_private.reservation storage_reservation_private.reservation">
+<summary><code>storage_reservation_api.claim(receipt uuid, b jsonb, owner_secret text, attempt uuid)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>jsonb</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107041336_private_storage_copy_reservations.sql:157</code></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-storage_reservation_private-reservation"><code>storage_reservation_private.reservation</code></a></td><td>high</td></tr>
+<tr><td>écriture</td><td><a href="#table-storage_reservation_private-reservation"><code>storage_reservation_private.reservation</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<details class="rpc" data-search="storage_reservation_api.inspect(receipt uuid, b jsonb, owner_secret text) storage_reservation_private.reservation">
+<summary><code>storage_reservation_api.inspect(receipt uuid, b jsonb, owner_secret text)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>jsonb</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107041336_private_storage_copy_reservations.sql:180</code></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-storage_reservation_private-reservation"><code>storage_reservation_private.reservation</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<details class="rpc" data-search="storage_reservation_api.reserve(b jsonb, owner_hash text) storage_reservation_private.reservation storage_reservation_private.reservation">
+<summary><code>storage_reservation_api.reserve(b jsonb, owner_hash text)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>jsonb</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107041336_private_storage_copy_reservations.sql:133</code></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-storage_reservation_private-reservation"><code>storage_reservation_private.reservation</code></a></td><td>high</td></tr>
+<tr><td>écriture</td><td><a href="#table-storage_reservation_private-reservation"><code>storage_reservation_private.reservation</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<h3>Schéma <code>storage_reservation_private</code> (5)</h3>
+<details class="rpc" data-search="storage_reservation_private.deny_erasure() ">
+<summary><code>storage_reservation_private.deny_erasure()</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>trigger</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107041336_private_storage_copy_reservations.sql:71</code></p>
+</div>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
+<p><b>Déclenchée par</b><br><code>trigger:storage_reservation_private.admission:admission_no_erasure</code>, <code>trigger:storage_reservation_private.admission:admission_no_rewrite</code>, <code>trigger:storage_reservation_private.namespace:namespace_no_erasure</code>, <code>trigger:storage_reservation_private.reservation:reservation_no_erasure</code></p>
+</details>
+<details class="rpc" data-search="storage_reservation_private.guard_namespace() ">
+<summary><code>storage_reservation_private.guard_namespace()</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>trigger</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107041336_private_storage_copy_reservations.sql:74</code></p>
+</div>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
+<p><b>Déclenchée par</b><br><code>trigger:storage_reservation_private.namespace:namespace_immutable</code></p>
+</details>
+<details class="rpc" data-search="storage_reservation_private.guard_reservation() ">
+<summary><code>storage_reservation_private.guard_reservation()</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>trigger</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107041336_private_storage_copy_reservations.sql:83</code></p>
+</div>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
+<p><b>Déclenchée par</b><br><code>trigger:storage_reservation_private.reservation:reservation_immutable</code></p>
+</details>
+<details class="rpc" data-search="storage_reservation_private.require_admission(b jsonb, require_active boolean) storage_reservation_private.admission storage_reservation_private.namespace">
+<summary><code>storage_reservation_private.require_admission(b jsonb, require_active boolean)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>void</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107041336_private_storage_copy_reservations.sql:117</code></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-storage_reservation_private-admission"><code>storage_reservation_private.admission</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-storage_reservation_private-namespace"><code>storage_reservation_private.namespace</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<details class="rpc" data-search="storage_reservation_private.valid_binding(b jsonb) ">
+<summary><code>storage_reservation_private.valid_binding(b jsonb)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>boolean</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107041336_private_storage_copy_reservations.sql:4</code></p>
+</div>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
+</details>
 <h3>Schéma <code>thesaurus</code> (50)</h3>
 <details class="rpc" data-search="thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint default null::bigint, p_versions jsonb default &#x27;{}&#x27;::jsonb) public.object public.ref_code_domain_registry thesaurus.assignment_retention thesaurus.concept thesaurus.instance thesaurus.label thesaurus.localized_field thesaurus.mapping thesaurus.mutation_journal thesaurus.note thesaurus.ownership_retention thesaurus.relation thesaurus.release thesaurus.release_change thesaurus.release_concept thesaurus.revision thesaurus.source_link thesaurus.source_rows thesaurus.vocabulary thesaurus.assignment_retention thesaurus.concept thesaurus.instance thesaurus.label thesaurus.localized_field thesaurus.mapping thesaurus.mutation_journal thesaurus.note thesaurus.outbox thesaurus.ownership_retention thesaurus.relation thesaurus.release thesaurus.release_change thesaurus.release_concept thesaurus.revision thesaurus.vocabulary">
 <summary><code>thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code></summary>
@@ -10145,6 +10241,9 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr id="table-storage-s3_multipart_uploads"><td><code>storage.s3_multipart_uploads</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 1</td></tr>
 <tr id="table-storage-s3_multipart_uploads_parts"><td><code>storage.s3_multipart_uploads_parts</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-storage-vector_indexes"><td><code>storage.vector_indexes</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
+<tr id="table-storage_reservation_private-admission"><td><code>storage_reservation_private.admission</code></td><td>table</td><td>other</td><td>oui</td><td><code>storage_reservation_private.require_admission(b jsonb, require_active boolean)</code></td><td><span class="muted">-</span></td><td>1 policies · 2 triggers · FK → 1 · FK ← 1</td></tr>
+<tr id="table-storage_reservation_private-namespace"><td><code>storage_reservation_private.namespace</code></td><td>table</td><td>other</td><td>oui</td><td><code>storage_reservation_private.require_admission(b jsonb, require_active boolean)</code></td><td><span class="muted">-</span></td><td>1 policies · 2 triggers · FK → 0 · FK ← 1</td></tr>
+<tr id="table-storage_reservation_private-reservation"><td><code>storage_reservation_private.reservation</code></td><td>table</td><td>other</td><td>oui</td><td><code>storage_reservation_api.claim(receipt uuid, b jsonb, owner_secret text, attempt uuid)</code>, <code>storage_reservation_api.inspect(receipt uuid, b jsonb, owner_secret text)</code>, <code>storage_reservation_api.reserve(b jsonb, owner_hash text)</code></td><td><code>storage_reservation_api.claim(receipt uuid, b jsonb, owner_secret text, attempt uuid)</code>, <code>storage_reservation_api.reserve(b jsonb, owner_hash text)</code></td><td>1 policies · 2 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-supabase_migrations-schema_migrations"><td><code>supabase_migrations.schema_migrations</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-thesaurus-assignment_retention"><td><code>thesaurus.assignment_retention</code></td><td>table</td><td>other</td><td>oui</td><td><code>thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>thesaurus.guard_assignment()</code>, <code>thesaurus.guard_classification_subvalues()</code></td><td><code>thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>thesaurus.guard_assignment()</code>, <code>thesaurus.guard_classification_subvalues()</code></td><td>1 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-thesaurus-concept"><td><code>thesaurus.concept</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.thesaurus_reference_statuses()</code>, <code>thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>thesaurus.admin_dispatch(p_action text, p_payload jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>thesaurus.apply_source(p_id uuid, p_doc jsonb)</code> <span class="muted">+13</span></td><td><code>thesaurus.activate(p_revision_ids uuid[], p_bootstrap_domains text[], p_key text, p_expected bigint DEFAULT NULL::bigint, p_versions jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>thesaurus.admin_dispatch(p_action text, p_payload jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>thesaurus.sync_sources(p_domains text[] DEFAULT NULL::text[])</code></td><td>1 policies · 2 triggers · FK → 1 · FK ← 11</td></tr>
@@ -11931,6 +12030,18 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr><td><code>ALL</code></td><td><code>legal_documents_service_role_all</code></td><td>service_role</td><td>PERMISSIVE</td><td><code>(bucket_id = &#x27;legal-documents&#x27;::text) | (bucket_id = &#x27;legal-documents&#x27;::text)</code></td></tr>
 <tr><td><code>ALL</code></td><td><code>media_no_anon_write</code></td><td>anon, authenticated</td><td>RESTRICTIVE</td><td><code>(bucket_id &lt;&gt; &#x27;media&#x27;::text) | (bucket_id &lt;&gt; &#x27;media&#x27;::text)</code></td></tr>
 <tr><td><code>ALL</code></td><td><code>media_service_role_write</code></td><td>service_role</td><td>PERMISSIVE</td><td><code>(bucket_id = &#x27;media&#x27;::text) | (bucket_id = &#x27;media&#x27;::text)</code></td></tr>
+</tbody></table></details>
+<details><summary><code>storage_reservation_private.admission</code> (1 policies)</summary>
+<table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>owner_only</code></td><td>postgres</td><td>PERMISSIVE</td><td><code>true | true</code></td></tr>
+</tbody></table></details>
+<details><summary><code>storage_reservation_private.namespace</code> (1 policies)</summary>
+<table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>owner_only</code></td><td>postgres</td><td>PERMISSIVE</td><td><code>true | true</code></td></tr>
+</tbody></table></details>
+<details><summary><code>storage_reservation_private.reservation</code> (1 policies)</summary>
+<table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>owner_only</code></td><td>postgres</td><td>PERMISSIVE</td><td><code>true | true</code></td></tr>
 </tbody></table></details>
 <details><summary><code>thesaurus.assignment_retention</code> (1 policies)</summary>
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>

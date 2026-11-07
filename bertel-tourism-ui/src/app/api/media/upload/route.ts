@@ -2,6 +2,7 @@ import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { routeFailure } from '../../_route-failure';
 import { handleMediaUpload, type StorageUploader } from './handle-upload';
 import { MediaProcessingError, MAX_INPUT_BYTES } from './process-image';
 import { MAX_VIDEO_INPUT_BYTES } from './process-video';
@@ -109,7 +110,7 @@ async function handleAuthenticatedUpload(
         cacheControl: '31536000', // 1 year — paths are uuid'd so safe to cache
         upsert: false,
       });
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false };
       const { data } = server.storage.from(BUCKET).getPublicUrl(path);
       return { ok: true, publicUrl: data.publicUrl };
     },
@@ -145,9 +146,6 @@ async function handleAuthenticatedUpload(
       const status = err.code === 'mime' || err.code === 'size' ? 415 : 400;
       return NextResponse.json({ error: err.code, detail: err.message }, { status });
     }
-    return NextResponse.json(
-      { error: 'upload_failed', detail: err instanceof Error ? err.message : 'unknown' },
-      { status: 500 },
-    );
+    return routeFailure('media/upload.POST', 'upload_failed');
   }
 }

@@ -103,6 +103,10 @@ BEGIN
   PERFORM pg_temp.expect_realtime_acl(writer_id,room_a,write_all);
   PERFORM pg_temp.expect_realtime_acl(other_id,room_a,denied);
   PERFORM pg_temp.expect_realtime_acl(other_id,published_room,receive);
+  PERFORM pg_temp.expect_realtime_acl(partner_id,published_room,denied);
+  SET LOCAL ROLE authenticated;
+  ASSERT EXISTS (SELECT 1 FROM public.object WHERE id='HOTRUN999999AR03'), 'partner still reads the published fixture';
+  RESET ROLE;
   PERFORM pg_temp.expect_realtime_acl(tester_id,test_room,write_all);
   PERFORM pg_temp.expect_realtime_acl(tester_id,room_a,denied);
   PERFORM pg_temp.expect_realtime_acl(writer_id,test_room,denied);
@@ -126,6 +130,19 @@ BEGIN
   PERFORM pg_temp.expect_realtime_acl(other_id,room_a,receive);
   ASSERT api.user_can_manage_object_legal('HOTRUN999999AR01') IS TRUE;
   ASSERT api.user_can_write_object_canonical('HOTRUN999999AR01') IS FALSE;
+
+  -- Simulate profile removal while the previous authenticated claims still
+  -- exist. Published data remains readable and private Realtime is refused.
+  PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
+  PERFORM set_config('request.jwt.claim.role','service_role',true);
+  PERFORM set_config('request.jwt.claim.sub','',true);
+  DELETE FROM public.app_user_profile WHERE id=other_id;
+  ASSERT FOUND, 'fixture profile must have been removed';
+  PERFORM pg_temp.expect_realtime_acl(other_id,published_room,denied);
+  PERFORM pg_temp.expect_realtime_acl(other_id,'presence:global:prod',denied);
+  SET LOCAL ROLE authenticated;
+  ASSERT EXISTS (SELECT 1 FROM public.object WHERE id='HOTRUN999999AR03'), 'published data remains readable after profile removal';
+  RESET ROLE;
 END;
 $matrix$;
 

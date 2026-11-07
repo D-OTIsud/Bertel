@@ -2502,3 +2502,23 @@ jamais appliqué ne rejouent aucun SQL ni ne modifient l’historique distant.
 Ne pas exécuter à nouveau cette garde, ni lancer un `db push` global. Un rollback
 applicatif conserve ce schéma additif ; la protection distribuée exige encore
 le déploiement du nouveau serveur sur toutes les répliques.
+
+### Autorité de lecture de l’Explorer
+
+La migration `20261107193944_explorer_filtered_read_authority.sql` est appliquée
+à la fin du manifeste frais. Elle filtre les candidats de
+`api.get_filtered_object_ids` avant le classement et le repli flou. Le chemin
+sur table vive exige le corpus courant et une publication, un droit étendu
+actuel ou une identité technique reconnue par la policy objet. Le chemin sur
+vue matérialisée exige que la fiche réelle soit encore publiée au moment de la
+requête. Le wrapper invoker et ses appels restent identiques.
+
+Pour un upgrade, comparer les empreintes du corps et de la définition sous
+`search_path = pg_catalog, pg_temp`, avec les retours chariot retirés. La
+migration accepte les prédécesseurs frais et live épinglés, vérifie ses trois
+ancres et contrôle les empreintes finales, l’OID, le propriétaire et l’ACL.
+Une empreinte inconnue arrête la transaction. Contrôler les mêmes métadonnées
+après application, sans appel métier. Le test SQL frais couvre les brouillons
+des deux ORG, la recherche floue, l’identité absente, le service technique et
+la publication devenue obsolète dans la vue. La matrice HTTP utilise les JWT
+synthétiques de la pile jetable et appelle directement la RPC.

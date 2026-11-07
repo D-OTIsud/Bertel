@@ -163,6 +163,26 @@ $$;
 REVOKE EXECUTE ON FUNCTION api.rpc_attach_invite_membership(uuid,text,text) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION api.rpc_attach_invite_membership(uuid,text,text) TO authenticated;
 
+-- A missing profile has no row for the membership writer to lock. Use its
+-- user lock before INSERT, including the insert arm of an upsert.
+CREATE FUNCTION internal.lock_profile_insert_for_membership()
+RETURNS pg_catalog.trigger
+LANGUAGE plpgsql SECURITY INVOKER
+SET search_path = pg_catalog, pg_temp
+AS $$
+BEGIN
+  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext(NEW.id::pg_catalog.text));
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION internal.lock_profile_insert_for_membership()
+  FROM PUBLIC, anon, authenticated, service_role;
+
+CREATE TRIGGER lock_profile_insert_for_membership
+  BEFORE INSERT ON public.app_user_profile
+  FOR EACH ROW EXECUTE FUNCTION internal.lock_profile_insert_for_membership();
+
 NOTIFY pgrst, 'reload schema';
 
 COMMIT;

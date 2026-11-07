@@ -173,7 +173,7 @@ export function ConfirmDialog({
     >
       {appearance === 'editor'
         ? <DialogDescription asChild><p className="confirm-dialog__message">{message}</p></DialogDescription>
-        : <p className="confirm-message">{message}</p>}
+        : <div className="confirm-message">{message}</div>}
       {attestation && (
         <div className="confirm-attestation">
           <label htmlFor={attestationInputId} className="confirm-attestation__label">

@@ -699,6 +699,13 @@ ROLLBACK;
 -- Separate privileged authority-source hardening; preserve the malformed DB03 shadow witness.
 \ir object_canonical_write_sources.sql
 \ir ../supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql
+SELECT pg_get_functiondef('api.submit_actor_fiche(text,jsonb,text)'::regprocedure) AS album_pre_acc08_submit,
+       pg_get_functiondef('api.approve_pending_change(uuid,text,boolean)'::regprocedure) AS album_pre_acc08_approve \gset
+\ir ../supabase/migrations/20261107154854_portal_submission_module_binding.sql
+\ir tests/test_partner_photo_album_catalog_acc08.sql
+\ir tests/test_portal_submission_module_binding.sql
+\ir ../supabase/migrations/20261107170341_portal_photo_approval_claim_path.sql
+\ir tests/test_portal_photo_failed_approval.sql
 \ir tests/test_partner_photo_album_public.sql
 \ir tests/test_object_current_rights.sql
 \ir tests/test_object_canonical_write_sources.sql
@@ -731,7 +738,33 @@ ROLLBACK;
 \ir tests/test_thesaurus_prepared_publication.sql
 
 \echo '== SEC05 manual list mail: durable intentions and user/ORG measurement (no limit) =='
-\ir ../supabase/migrations/20261106194635_distributed_list_email_intents.sql
+\ir distributed_list_email_intents.sql
+
+\echo '== DB07 private Storage reservation registry =='
+BEGIN;
+SET LOCAL search_path=pg_catalog,pg_temp;
+\ir ../supabase/migrations/20261107041336_private_storage_copy_reservations.sql
+COMMIT;
+
+\echo '== CL-SEC-03 private Realtime roster and editor channel authorization =='
+\ir ../supabase/migrations/20261107123311_realtime_channel_acl.sql
+\ir tests/test_realtime_channel_acl.sql
+
+\echo '== DB04 organization enrichment within the current corpus =='
+\ir ../supabase/migrations/20261107131728_object_enrichment_realm_guard.sql
+\ir tests/test_object_enrichment_realm_guard.sql
+
+\echo '== SP4 organization membership cannot expand scope over a platform account =='
+\ir ../supabase/migrations/20261107171528_org_membership_platform_target_guard.sql
+\ir tests/test_sp4_membership_platform_target.sql
+
+\echo '== ACC13 private note author rank is internal to the management check =='
+\ir ../supabase/migrations/20261107192259_restrict_private_note_author_rank_execute.sql
+\ir tests/test_private_note_author_rank_execute.sql
+
+\echo '== Explorer direct reader authority before filtering and ranking =='
+\ir ../supabase/migrations/20261107193944_explorer_filtered_read_authority.sql
+\ir tests/test_explorer_filtered_read_authority.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

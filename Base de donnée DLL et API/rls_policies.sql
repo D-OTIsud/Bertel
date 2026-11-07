@@ -3122,14 +3122,14 @@ $$;
 
 -- -------------------------------------------------------
 -- E4. api.user_can_write_enrichment(p_object_id text)
--- Permission Niveau 2 : edit_org_enrichment
--- ET l'ORG active du user dispose d'un lien object_org_link explicite
---   avec rôle 'publisher' ou 'contributor' (pas 'reader').
--- Règle métier (§2.2) : une ORG ne peut enrichir un objet que si elle a
---   un lien explicite avec un rôle au moins contributeur.
--- Non branché en RLS : aucune table d'enrichissement ORG distincte n'existe
---   encore dans le schéma — surface d'écriture non matérialisée.
--- Conçu pour être appelé par les RPC d'enrichissement ORG (Phase 6).
+-- Garde du RPC api.rpc_write_org_description pour la surcouche de l'ORG active.
+-- Exige edit_org_enrichment et un lien object_org_link explicite de l'ORG active
+-- avec le rôle 'publisher' ou 'contributor'.
+-- La migration 20261107131728 exige aussi que la fiche appartienne au corpus
+-- courant de l'utilisateur, en production comme dans le corpus de test.
+--
+-- Le corps ci-dessous est la définition initiale du fresh apply.
+-- Le manifeste applique ensuite la garde de corpus par migration.
 -- -------------------------------------------------------
 CREATE OR REPLACE FUNCTION api.user_can_write_enrichment(p_object_id text)
 RETURNS boolean

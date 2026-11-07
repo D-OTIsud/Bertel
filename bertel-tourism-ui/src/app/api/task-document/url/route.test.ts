@@ -130,13 +130,14 @@ describe('/api/task-document/url', () => {
     // Une erreur de lecture n'est pas une absence : l'avaler ferait signer sur un chemin
     // vide ou répondre « fichier manquant » sur un incident transitoire.
     const { server, createSignedUrl } = urlServer({
-      document: { data: null, error: { message: 'statement timeout' } },
+      document: { data: null, error: { message: 'fictional PostgREST details SECRET_TASK' } },
     });
     mockedServer.mockReturnValue(server);
     callerCan(true);
     const res = await POST(urlReq({ taskId: TASK_ID, documentId: DOC_ID }));
     expect(res.status).toBe(500);
-    await expect(res.json()).resolves.toMatchObject({ error: 'document_lookup_failed' });
+    await expect(res.json()).resolves.toEqual({ error: 'document_lookup_failed' });
+    expect(res.headers.get('x-request-id')).toMatch(/^[a-f0-9-]{36}$/);
     expect(createSignedUrl).not.toHaveBeenCalled();
   });
 

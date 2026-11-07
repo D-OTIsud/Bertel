@@ -219,7 +219,7 @@ export function CrmTaches({
     return [...byId.values()].sort((a, b) => a.objectName.localeCompare(b.objectName));
   }, [directoryQuery.data]);
 
-  if (tasksQuery.isLoading) {
+  if (tasksQuery.isPending) {
     return (
       <div role="status" aria-busy="true" aria-label="Chargement des tâches" className="crm-loading-skeleton crm-loading-skeleton--kanban">
         {['A faire', 'En cours', 'Fait'].map((column) => (

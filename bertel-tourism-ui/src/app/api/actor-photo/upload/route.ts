@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { randomUUID } from 'node:crypto';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { routeFailure } from '../../_route-failure';
 // Single source of truth for image processing (resize-down + EXIF/IPTC/XMP strip via sharp's
 // default re-encode — process-image.test.ts is the regression guard). We deliberately reuse
 // the media pipeline's helper rather than re-implementing the strip: ONE place opts out of
@@ -132,7 +133,7 @@ async function handlePostAuthenticated(
       upsert: false,
     });
     if (uploadErr) {
-      return NextResponse.json({ error: 'upload_failed', detail: uploadErr.message }, { status: 500 });
+      return routeFailure('actor-photo/upload.POST', 'upload_failed');
     }
     const { data: pub } = server.storage.from(BUCKET).getPublicUrl(path);
     const publicUrl = pub.publicUrl;
@@ -141,7 +142,7 @@ async function handlePostAuthenticated(
     // authorized above; this write runs service-role like every storage write in the route).
     const { error: updateErr } = await server.from('actor').update({ photo_url: publicUrl, updated_at: new Date().toISOString() }).eq('id', actorId);
     if (updateErr) {
-      return NextResponse.json({ error: 'update_failed', detail: updateErr.message }, { status: 500 });
+      return routeFailure('actor-photo/upload.POST', 'update_failed');
     }
 
     return NextResponse.json({ url: publicUrl }, { status: 201 });
@@ -150,9 +151,6 @@ async function handlePostAuthenticated(
       const status = err.code === 'mime' || err.code === 'size' ? 415 : 400;
       return NextResponse.json({ error: err.code, detail: err.message }, { status });
     }
-    return NextResponse.json(
-      { error: 'upload_failed', detail: err instanceof Error ? err.message : 'unknown' },
-      { status: 500 },
-    );
+    return routeFailure('actor-photo/upload.POST', 'upload_failed');
   }
 }

@@ -61,6 +61,8 @@ const DELETE_SQLSTATE_LABELS: Record<string, string> = {
 export interface EngineErrorOptions {
   /** `'delete'` bascule sur les libellés dont le sens s'inverse pour une suppression. */
   operation?: 'delete' | 'write';
+  /** Désactive le journal moteur si la route journalise déjà un identifiant de suivi. */
+  logUnknown?: boolean;
 }
 
 export function readErrorMessage(error: unknown): string {
@@ -116,6 +118,6 @@ export function engineErrorDetail(error: unknown, options: EngineErrorOptions = 
       ?? SQLSTATE_LABELS[code];
     if (label) return label;
   }
-  warnRawDatabaseError('db-error', error);
+  if (options.logUnknown !== false) warnRawDatabaseError('db-error', error);
   return undefined;
 }

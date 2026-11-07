@@ -40,7 +40,10 @@ def test_render_html_embeds_graph_json_and_d3():
 def test_render_api_db_reference_html_lists_rpcs_tables_and_refs():
     graph = _g()
     fn = next(n for n in graph["nodes"] if n["kind"] == "function")
-    fn["props"]["source"] = {"path": "C:/repo/Base de donnée DLL et API/api_views_functions.sql", "line": 42}
+    fn["props"]["sources"] = [
+        {"path": "C:/repo/Base de donnée DLL et API/api_views_functions.sql", "line": 42},
+        {"path": r"C:\repo\supabase\migrations\20261107031344_list_email.sql", "line": 268},
+    ]
     html = render_api_db_reference_html(graph, {
         "rows": [{
             "table": "public.ref_code",
@@ -55,7 +58,9 @@ def test_render_api_db_reference_html_lists_rpcs_tables_and_refs():
     assert "Référence API" in html
     assert "RPC / fonctions" in html
     assert "RLS policies" in html
-    assert "api_views_functions.sql:42" in html
+    assert "Base de donnée DLL et API/api_views_functions.sql:42" in html
+    assert "supabase/migrations/20261107031344_list_email.sql:268" in html
+    assert "C:/repo" not in html and r"C:\repo" not in html
     assert "payment_method:cash" in html
     assert "Supabase MCP JSON=missing" in html
     assert "Écarts de couverture" in html

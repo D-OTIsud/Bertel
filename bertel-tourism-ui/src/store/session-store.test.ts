@@ -5,7 +5,7 @@ describe('session active org', () => {
     useSessionStore.getState().hydrateFromAuth({
       role: 'tourism_agent', userId: 'u1', email: 'a@b.c', userName: 'A', avatar: 'A', avatarUrl: null,
       langPrefs: ['fr'], canEditObjects: true, canCreateObjects: false, orgId: 'ORG-OTI', orgName: 'OTI du Sud',
-      adminRank: null, adminRoleCode: null, isTestRealm: false,
+      adminRank: null, adminRoleCode: null, isTestRealm: false, isSandboxDiscovery: false,
     });
     expect(useSessionStore.getState().orgId).toBe('ORG-OTI');
     expect(useSessionStore.getState().orgName).toBe('OTI du Sud');
@@ -20,12 +20,14 @@ describe('session active org', () => {
       role: 'tourism_agent', userId: 'u2', email: 't@b.c', userName: 'T', avatar: 'T', avatarUrl: null,
       langPrefs: ['fr'], canEditObjects: true, canCreateObjects: true,
       orgId: 'ORGTST0000000001', orgName: 'Bac a sable', adminRank: null, adminRoleCode: null,
-      isTestRealm: true,
+      isTestRealm: true, isSandboxDiscovery: true,
     });
     expect(useSessionStore.getState().isTestRealm).toBe(true);
+    expect(useSessionStore.getState().isSandboxDiscovery).toBe(true);
 
     useSessionStore.getState().setGuest();
     expect(useSessionStore.getState().isTestRealm).toBe(false);
+    expect(useSessionStore.getState().isSandboxDiscovery).toBe(false);
   });
 
   it('applyProfile updates name + recomputes initials + sets avatarUrl', () => {

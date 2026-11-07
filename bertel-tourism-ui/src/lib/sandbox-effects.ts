@@ -1,4 +1,4 @@
-/** Use only with the user returned by server-side Auth.getUser, never a decoded client payload. */
+/** Use only with the user verified by Auth.getUser, never a decoded client payload. */
 export function isSandboxDiscoveryUser(user: { app_metadata?: Record<string, unknown> }): boolean {
   return user.app_metadata?.sandbox_discovery === true;
 }

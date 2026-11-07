@@ -1,26 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { UUID_SHAPE, authenticated, callerClient } from '../../_document-auth';
 import { BodyTooLargeError, readBoundedJson } from '@/lib/request-body.server';
+import { isExactDocumentPath, signExactDocumentUrl } from '@/lib/document-signing.server';
 
 const OBJECT_ID_SHAPE = /^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$/;
 const PRIVATE_BUCKETS = new Set(['old_legal_media', 'legal-documents']);
-const SIGNED_URL_TTL_SECONDS = 60;
 const NO_STORE = { 'Cache-Control': 'private, no-store' };
 export const runtime = 'nodejs';
-
-function exactSignedUrl(sdkUrl: string, bucket: string, path: string): string | null {
-  // storage-js encodeURI leaves reserved key characters intact. Keep only the
-  // trusted signer endpoint/token, and encode the authorized key once per segment.
-  const marker = sdkUrl.indexOf('/object/sign/');
-  const token = /[?&]token=([^?&#]+)$/.exec(sdkUrl)?.[1];
-  if (marker < 0 || !token) return null;
-  try {
-    const url = new URL(`${sdkUrl.slice(0, marker)}/object/sign/${encodeURIComponent(bucket)}/${path.split('/').map(encodeURIComponent).join('/')}`);
-    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) return null;
-    url.searchParams.set('token', decodeURIComponent(token));
-    return url.toString();
-  } catch { return null; }
-}
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const auth = await authenticated(req);
@@ -45,16 +31,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!data || typeof data !== 'object' || data.authorized !== true) return NextResponse.json({ error: 'forbidden' }, { status: 403, headers: NO_STORE });
   const file = data.file;
   if (!file || typeof file !== 'object') return NextResponse.json({ error: 'not_found' }, { status: 404, headers: NO_STORE });
-  if (typeof file.bucket !== 'string' || !PRIVATE_BUCKETS.has(file.bucket) || typeof file.path !== 'string'
-    || !file.path || file.path.startsWith('/') || file.path.includes('\\') || file.path.split('/').some((part: string) => part === '.' || part === '..')) {
+  if (typeof file.bucket !== 'string' || !PRIVATE_BUCKETS.has(file.bucket) || !isExactDocumentPath(file.path)) {
     return NextResponse.json({ error: 'file_missing' }, { status: 409, headers: NO_STORE });
   }
   // The batch endpoint carries keys in JSON. createSignedUrl interpolates its
   // key in the request URL, where ?/# and encoded dot segments change the target.
-  const signed = await auth.server.storage.from(file.bucket).createSignedUrls([file.path], SIGNED_URL_TTL_SECONDS);
-  const item = signed.data?.length === 1 ? signed.data[0] : null;
-  const url = !signed.error && item && !item.error && item.path === file.path && item.signedUrl
-    ? exactSignedUrl(item.signedUrl, file.bucket, file.path) : null;
+  const url = await signExactDocumentUrl(auth.server, file);
   if (!url) return NextResponse.json({ error: 'signed_url_failed' }, { status: 503, headers: NO_STORE });
   return NextResponse.json({ url }, { headers: NO_STORE });
 }

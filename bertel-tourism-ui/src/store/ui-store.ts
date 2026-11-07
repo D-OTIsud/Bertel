@@ -5,6 +5,7 @@ import type { MapLayerMode, NetworkStatus, ObjectTypeCode, PresenceMember } from
 
 interface UiState {
   drawerObjectId: string | null;
+  drawerRestoreFocus: (() => boolean) | null;
   mapLayer: MapLayerMode;
   networkStatus: NetworkStatus;
   liveMembers: PresenceMember[];
@@ -20,7 +21,7 @@ interface UiState {
   commandPaletteOpen: boolean;
   /** D12 : tiroir de navigation mobile (bouton Menu de la TopBar). */
   mobileNavOpen: boolean;
-  openDrawer: (objectId: string) => void;
+  openDrawer: (objectId: string, restoreFocus?: () => boolean) => void;
   closeDrawer: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setMobileNavOpen: (open: boolean) => void;
@@ -41,6 +42,7 @@ export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       drawerObjectId: null,
+      drawerRestoreFocus: null,
       mapLayer: 'satellite',
       networkStatus: 'connected',
       liveMembers: [],
@@ -48,8 +50,8 @@ export const useUiStore = create<UiState>()(
       markerStyles: defaultMarkerStyles,
       commandPaletteOpen: false,
       mobileNavOpen: false,
-      openDrawer: (objectId) => set({ drawerObjectId: objectId }),
-      closeDrawer: () => set({ drawerObjectId: null }),
+      openDrawer: (objectId, restoreFocus) => set({ drawerObjectId: objectId, drawerRestoreFocus: restoreFocus ?? null }),
+      closeDrawer: () => set({ drawerObjectId: null, drawerRestoreFocus: null }),
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
       setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
       setMapLayer: (layer) => set({ mapLayer: layer }),
@@ -130,6 +132,7 @@ export const useUiStore = create<UiState>()(
         return {
           ...current,
           ...persistedState,
+          drawerRestoreFocus: current.drawerRestoreFocus,
           markerStyles: coerceMarkerStyles(persistedState.markerStyles),
         };
       },

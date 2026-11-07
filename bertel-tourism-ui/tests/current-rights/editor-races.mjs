@@ -16,6 +16,11 @@ const editorRpcKinds = new Map([
   ['/rest/v1/rpc/get_object_with_deep_data', 'reread'],
   ['/rest/v1/rpc/get_object_resource', 'reread'],
 ]);
+const legalRpcKinds = new Map([
+  ['/rest/v1/rpc/get_object_legal_data', 'legal-read'],
+  ['/rest/v1/rpc/get_object_legal_compliance', 'legal-summary'],
+  ['/rest/v1/rpc/get_object_workspace_permissions', 'legal-permission'],
+]);
 
 async function startApp(local) {
   const socket = createServer();
@@ -79,6 +84,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
   const patches = [];
   let publishCalls = 0;
   let restoreCalls = 0;
+  const legalRecordId = '00000000-0000-4000-a000-00000000ae43';
   function hold(kind) {
     const gate = { observed: Promise.withResolvers(), release: Promise.withResolvers() };
     holds.set(kind, gate);
@@ -108,27 +114,19 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       '--proxy-server=http://' + loopback + ':' + rejectProxy.address().port,
       '--proxy-bypass-list=<-loopback>;' + exactPorts.join(';'),
     ] });
-    const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
     const destination = '/objects/' + objectId + '/edit';
     const loginUrl = app.origin + '/login?from=' + encodeURIComponent(destination);
-    let nativeLoginRequested = false;
-    await context.routeWebSocket('**/*', (route) => {
-      const url = new URL(route.url());
-      url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
-      if (permitted.has(url.origin)) route.connectToServer();
-      else route.close();
-    });
-    await context.route('**/*', async (route) => {
+    async function routeEditorRequest(route, scene) {
       const request = route.request();
       const url = new URL(request.url());
       if (!permitted.has(url.origin)) return route.abort().catch(() => {});
       if (url.origin === app.origin && request.method() === 'GET' && url.pathname === '/login'
         && (url.searchParams.has('email') || url.searchParams.has('password'))) {
-        if (!closing) routeFailure ??= new Error('Editor login attempted a native GET form submission');
+        if (!closing && !scene.closed) routeFailure ??= new Error('Editor login attempted a native GET form submission');
         return route.abort().catch(() => {});
       }
-      if (!nativeLoginRequested && url.href === loginUrl && request.isNavigationRequest() && request.method() === 'GET') {
-        nativeLoginRequested = true;
+      if (!scene.nativeLoginRequested && url.href === loginUrl && request.isNavigationRequest() && request.method() === 'GET') {
+        scene.nativeLoginRequested = true;
         return route.continue();
       }
       let kind;
@@ -136,8 +134,12 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         if (request.method() === 'PATCH' && url.pathname === '/rest/v1/object' && url.searchParams.get('id') === 'eq.' + objectId) {
           kind = 'patch';
           patches.push(request.postDataJSON().name);
+        } else if (scene.legalMode && request.method() === 'PATCH' && url.pathname === '/rest/v1/object_legal'
+          && url.searchParams.get('id') === 'eq.' + legalRecordId && request.postDataJSON()?.object_id === objectId) {
+          kind = 'legal-write';
         } else if (request.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
-          if (editorRpcKinds.has(url.pathname) && request.postDataJSON()?.p_object_id === objectId) kind = editorRpcKinds.get(url.pathname);
+          const rpcKind = editorRpcKinds.get(url.pathname) ?? (scene.legalMode ? legalRpcKinds.get(url.pathname) : undefined);
+          if (rpcKind && request.postDataJSON()?.p_object_id === objectId) kind = rpcKind;
           if (kind === 'publish') publishCalls += 1;
           if (kind === 'restore') restoreCalls += 1;
         }
@@ -154,11 +156,41 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           assert.ok(headers.apikey === local.anonymous.apikey && bearer?.[0] === 'Bearer'
             && claims.role === 'authenticated' && claims.sub === writerId, 'browser must use the exact synthetic user JWT and anonymous API key');
           failureStage = 'content-profile';
-          if (kind !== 'patch') assert.equal(headers['content-profile'], 'api');
+          if (kind === 'legal-write') assert.equal(headers['content-profile'], 'public');
+          else if (kind !== 'patch') assert.equal(headers['content-profile'], 'api');
         }
         failureStage = 'response';
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
         assert.ok(response.status() < 300 || response.status() >= 400, 'unexpected HTTP redirect in browser fixture');
+        if (kind === 'legal-summary') {
+          assert.ok(response.ok(), 'authorized legal summary must work before fault injection');
+          if (scene.legalMode === 'degraded') {
+            failureStage = 'deliver-synthetic-summary-failure';
+            await route.fulfill({ status: 503, headers: { 'access-control-allow-origin': app.origin },
+              json: { code: 'FQ08', message: 'Synthetic compliance summary unavailable' } });
+            scene.summaryFailures += 1;
+          } else {
+            await route.fulfill({ response });
+            scene.summaryReads += 1;
+          }
+          return;
+        }
+        if (kind === 'legal-read') {
+          assert.ok(response.ok());
+          failureStage = 'fixture-legal-record';
+          const records = await response.json();
+          assert.ok(Array.isArray(records) && records.some((record) =>
+            record.id === legalRecordId && record.type?.code === 'raison_sociale'));
+          scene.legalReads += 1;
+        } else if (kind === 'legal-permission') {
+          assert.ok(response.ok());
+          failureStage = 'fixture-legal-permission';
+          assert.equal((await response.json())?.legal, true);
+          scene.legalPermissions += 1;
+        } else if (kind === 'legal-write') {
+          assert.ok(response.ok());
+          scene.legalWrites += 1;
+        }
         const reread = kind === 'reread' ? holds.get(kind) : undefined;
         if (reread && response.ok()) {
           // Save and publish also refetch the workspace. Hold only the restored resource.
@@ -176,32 +208,64 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         }
         await route.fulfill({ response });
       } catch {
-        if (!closing && kind) {
+        if (!closing && !scene.closed && kind) {
           const failure = new Error('Editor browser route failed: ' + kind + ' (' + failureStage + ')');
           routeFailure ??= failure;
           gate?.observed.resolve(failure);
         }
         await route.abort().catch(() => {});
       }
-    });
+    }
 
-    const page = await context.newPage();
-    const login = await page.goto(loginUrl);
-    assert.ok(nativeLoginRequested && login?.status() === 200 && login.url() === loginUrl
-      && login.request().redirectedFrom() === null, 'exact native login document must return HTTP 200 without redirects');
-    // The prerendered form can be visible before its client handlers are attached.
-    const forgotPassword = page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
-    const returnToLogin = page.getByRole('button', { name: 'Retour à la connexion', exact: true });
-    await assertion(async () => {
-      if (await returnToLogin.isVisible()) return;
-      await forgotPassword.click({ timeout: 1000 });
-      await assertion(returnToLogin).toBeVisible({ timeout: 1000 });
-    }).toPass({ timeout: 20_000 });
-    await returnToLogin.click();
-    await page.getByLabel('Adresse e-mail').fill(email);
-    await page.getByLabel('Mot de passe', { exact: true }).fill(password);
-    await page.getByRole('button', { name: 'Se connecter' }).click();
-    await page.waitForURL(app.origin + destination, { timeout: 60_000 });
+    async function openAuthenticatedEditor(legalMode) {
+      const context = await browser.newContext({ bypassCSP: true, serviceWorkers: 'block' });
+      const scene = { legalMode, closed: false, nativeLoginRequested: false,
+        legalReads: 0, legalPermissions: 0, summaryReads: 0, summaryFailures: 0, legalWrites: 0 };
+      await context.routeWebSocket('**/*', (route) => {
+        const url = new URL(route.url());
+        url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+        if (permitted.has(url.origin)) route.connectToServer();
+        else route.close();
+      });
+      await context.route('**/*', (route) => routeEditorRequest(route, scene));
+      const page = await context.newPage();
+      const login = await page.goto(loginUrl);
+      assert.ok(scene.nativeLoginRequested && login?.status() === 200 && login.url() === loginUrl
+        && login.request().redirectedFrom() === null, 'exact native login document must return HTTP 200 without redirects');
+      // The prerendered form can be visible before its client handlers are attached.
+      const forgotPassword = page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
+      const returnToLogin = page.getByRole('button', { name: 'Retour à la connexion', exact: true });
+      await assertion(async () => {
+        if (await returnToLogin.isVisible()) return;
+        await forgotPassword.click({ timeout: 1000 });
+        await assertion(returnToLogin).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 20_000 });
+      await returnToLogin.click();
+      await page.getByLabel('Adresse e-mail').fill(email);
+      await page.getByLabel('Mot de passe', { exact: true }).fill(password);
+      await page.getByRole('button', { name: 'Se connecter' }).click();
+      await page.waitForURL(app.origin + destination, { timeout: 60_000 });
+      return { page, scene, close: async () => {
+        scene.closed = true;
+        await context.close();
+      } };
+    }
+
+    async function openLegalSection(page) {
+      const fullMode = page.getByRole('button', { name: 'Complet', exact: true });
+      await fullMode.click();
+      await assertion(fullMode).toHaveAttribute('aria-pressed', 'true');
+      await page.locator('.edit-nav').getByRole('button', { name: /Juridique/ }).click();
+      const legal = page.locator('#section-18');
+      await assertion(legal.getByRole('heading', { name: /Juridique/ })).toBeVisible();
+      return {
+        company: legal.getByLabel('Raison sociale', { exact: true }),
+        banner: legal.getByText('Résumé de conformité indisponible. Les données juridiques restent modifiables.', { exact: true }),
+      };
+    }
+
+    const races = await openAuthenticatedEditor();
+    const { page } = races;
     const name = page.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
     const editorActions = page.locator('.edit-top__right');
     const publish = editorActions.getByRole('button', { name: 'Publier', exact: true });
@@ -257,6 +321,50 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     assert.equal(restoreCalls, 1);
     assert.equal(patches.length, 2);
     assert.equal(publishCalls, 1);
+    await races.close();
+
+    // Seed after the restore assertions so the original version remains unchanged.
+    local.sql(`BEGIN;
+      SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
+      INSERT INTO public.org_role_permission(org_object_id,role_id,permission_id,is_active,granted_by)
+        SELECT 'ORGRUN999999AR01',role_def.id,permission.id,true,'00000000-0000-4000-a000-00000000ae15'
+        FROM public.ref_org_business_role role_def CROSS JOIN public.ref_permission permission
+        WHERE role_def.code='editor' AND permission.code='manage_legal_compliance'
+        ON CONFLICT ON CONSTRAINT org_role_permission_uniq DO UPDATE SET is_active=true;
+      INSERT INTO public.object_legal(id,object_id,type_id,value,validity_mode)
+        SELECT '${legalRecordId}','${objectId}',id,'{"value":"Synthetic legal company before"}'::jsonb,'forever'
+        FROM public.ref_legal_type WHERE code='raison_sociale';
+      COMMIT;`, 'seed the synthetic legal record and its current organization right');
+    const legalValue = () => local.sql(`SELECT value->>'value' FROM public.object_legal
+      WHERE id='${legalRecordId}' AND object_id='${objectId}'`, 'read the exact synthetic legal record');
+    assert.equal(legalValue(), 'Synthetic legal company before');
+    const healthy = await openAuthenticatedEditor('healthy');
+    const healthyLegal = await openLegalSection(healthy.page);
+    await assertion(healthyLegal.company).toHaveValue('Synthetic legal company before');
+    await assertion(healthyLegal.banner).toHaveCount(0);
+    await assertion.poll(() => ({
+      realLegalPermission: healthy.scene.legalPermissions > 0,
+      realLegalRecord: healthy.scene.legalReads > 0,
+      realSummary: healthy.scene.summaryReads > 0,
+    })).toEqual({ realLegalPermission: true, realLegalRecord: true, realSummary: true });
+    await healthy.close();
+
+    const degraded = await openAuthenticatedEditor('degraded');
+    const { company, banner } = await openLegalSection(degraded.page);
+    await assertion.poll(() => ({
+      realLegalPermission: degraded.scene.legalPermissions > 0,
+      realLegalRecord: degraded.scene.legalReads > 0,
+      syntheticSummaryFailure: degraded.scene.summaryFailures > 0,
+    })).toEqual({ realLegalPermission: true, realLegalRecord: true, syntheticSummaryFailure: true });
+    await assertion(banner).toBeVisible();
+    await assertion(company).toHaveValue('Synthetic legal company before');
+    await company.fill('Synthetic legal company saved');
+    const saveLegal = degraded.page.locator('.edit-top__right').getByRole('button', { name: 'Enregistrer', exact: true });
+    await assertion(saveLegal).toBeEnabled();
+    await saveLegal.click();
+    await assertion.poll(() => degraded.scene.legalWrites).toBe(1);
+    await assertion.poll(legalValue).toBe('Synthetic legal company saved');
+    assert.equal(patches.length, 2);
   } catch (error) {
     throw routeFailure ?? error;
   } finally {

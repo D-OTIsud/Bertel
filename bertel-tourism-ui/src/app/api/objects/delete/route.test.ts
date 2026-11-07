@@ -58,7 +58,10 @@ describe('POST /api/objects/delete', () => {
     rpcMock.mockResolvedValue({
       data: {
         object_id: 'HOTRUN0000000001', object_name: 'Hôtel X', deleted: true,
-        media_to_delete: ['http://supabase.test/storage/v1/object/public/media/HOTRUN0000000001/photos/a%20b.jpg?download=1'],
+        media_to_delete: [
+          'http://supabase.test/storage/v1/object/public/media/HOTRUN0000000001/photos/a%20b.jpg?download=1',
+          'http://supabase.test/storage/v1/object/public/media/HOTRUN0000000001/photos/photo%2520.png',
+        ],
         documents_to_delete: ['http://supabase.test/storage/v1/object/public/documents/HOTRUN0000000001/d.pdf'],
       },
       error: null,
@@ -68,7 +71,7 @@ describe('POST /api/objects/delete', () => {
     const json = await res.json();
     expect(json.ok).toBe(true);
     expect(json.storageSkipped).toBe(false);
-    expect(json.mediaDeleted).toEqual(['HOTRUN0000000001/photos/a b.jpg']);
+    expect(json.mediaDeleted).toEqual(['HOTRUN0000000001/photos/a b.jpg', 'HOTRUN0000000001/photos/photo%20.png']);
     expect(json.documentsDeleted).toEqual(['HOTRUN0000000001/d.pdf']);
     expect(fromMock.mock.calls).toEqual([['media'], ['documents']]);
     expect(removeMock.mock.calls).toEqual([[json.mediaDeleted], [json.documentsDeleted]]);
@@ -91,7 +94,9 @@ describe('POST /api/objects/delete', () => {
       base + 'folder/../' + key,
       base + 'folder/%2e%2E/' + key,
       base + 'folder/%252e%252e/' + key,
+      base + 'folder/%25252e%25252e/' + key,
       base + 'folder%2F' + key,
+      base + 'folder%252F' + key,
       base + 'folder%5C' + key,
       base + 'folder\\' + key,
       base + 'broken%ZZ.jpg',
@@ -122,6 +127,23 @@ describe('POST /api/objects/delete', () => {
     } finally {
       process.env.NEXT_PUBLIC_SUPABASE_URL = initial;
     }
+  });
+
+  it('reports a stable Storage cleanup failure while preserving the committed deletion and successful bucket', async () => {
+    const report = {
+      deleted: true,
+      media_to_delete: ['http://supabase.test/storage/v1/object/public/media/o1/a.jpg'],
+      documents_to_delete: ['http://supabase.test/storage/v1/object/public/documents/o1/d.pdf'],
+    };
+    rpcMock.mockResolvedValue({ data: report, error: null });
+    removeMock.mockResolvedValueOnce({ error: { message: 'SYNTHETIC_RAW_STORAGE_CAUSE' } });
+
+    const res = await POST(req({ objectId: 'o1', confirmName: 'X' }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      ok: true, report, mediaDeleted: [], documentsDeleted: ['o1/d.pdf'],
+      storageError: 'storage_cleanup_failed', storageSkipped: false,
+    });
   });
 
   it('still deletes the object but skips the sweep when the service key is missing (auth ≠ service key)', async () => {

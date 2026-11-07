@@ -115,6 +115,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       '--proxy-bypass-list=<-loopback>;' + exactPorts.join(';'),
     ] });
     const destination = '/objects/' + objectId + '/edit';
+    const editorUrl = app.origin + destination;
     const loginUrl = app.origin + '/login?from=' + encodeURIComponent(destination);
     async function routeEditorRequest(route, scene) {
       const request = route.request();
@@ -129,9 +130,17 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         scene.nativeLoginRequested = true;
         return route.continue();
       }
+      if (scene.reload && !scene.reload.nativeDocument && url.href === editorUrl
+        && request.resourceType() === 'document' && request.isNavigationRequest() && request.method() === 'GET') {
+        scene.reload.nativeDocument = true;
+        return route.continue();
+      }
+      const reload = scene.reload?.nativeDocument ? scene.reload : null;
       let kind;
       if (url.origin === local.origin) {
-        if (request.method() === 'PATCH' && url.pathname === '/rest/v1/object' && url.searchParams.get('id') === 'eq.' + objectId) {
+        if (reload && request.method() === 'GET' && url.pathname === '/auth/v1/user') {
+          kind = 'reload-auth';
+        } else if (request.method() === 'PATCH' && url.pathname === '/rest/v1/object' && url.searchParams.get('id') === 'eq.' + objectId) {
           kind = 'patch';
           patches.push(request.postDataJSON().name);
         } else if (scene.legalMode && request.method() === 'PATCH' && url.pathname === '/rest/v1/object_legal'
@@ -157,7 +166,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
             && claims.role === 'authenticated' && claims.sub === writerId, 'browser must use the exact synthetic user JWT and anonymous API key');
           failureStage = 'content-profile';
           if (kind === 'legal-write') assert.equal(headers['content-profile'], 'public');
-          else if (kind !== 'patch') assert.equal(headers['content-profile'], 'api');
+          else if (kind !== 'patch' && kind !== 'reload-auth') assert.equal(headers['content-profile'], 'api');
         }
         failureStage = 'response';
         const response = await route.fetch({ maxRedirects: 0, maxRetries: 0, timeout: 30_000 });
@@ -169,6 +178,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
             await route.fulfill({ status: 503, headers: { 'access-control-allow-origin': app.origin },
               json: { code: 'FQ08', message: 'Synthetic compliance summary unavailable' } });
             scene.summaryFailures += 1;
+            if (reload) reload.summary503 = true;
           } else {
             await route.fulfill({ response });
             scene.summaryReads += 1;
@@ -182,21 +192,29 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           assert.ok(Array.isArray(records) && records.some((record) =>
             record.id === legalRecordId && record.type?.code === 'raison_sociale'));
           scene.legalReads += 1;
+          if (reload) reload.legalRecord = true;
         } else if (kind === 'legal-permission') {
           assert.ok(response.ok());
           failureStage = 'fixture-legal-permission';
           assert.equal((await response.json())?.legal, true);
           scene.legalPermissions += 1;
+          if (reload) reload.legalPermission = true;
+        } else if (kind === 'reload-auth') {
+          assert.ok(response.ok());
+          failureStage = 'reload-authenticated-user';
+          assert.equal((await response.json())?.id, writerId);
+          reload.authenticatedUser = true;
         } else if (kind === 'legal-write') {
           assert.ok(response.ok());
           scene.legalWrites += 1;
         }
         const reread = kind === 'reread' ? holds.get(kind) : undefined;
-        if (reread && response.ok()) {
+        if (kind === 'reread' && (reread || reload) && response.ok()) {
           // Save and publish also refetch the workspace. Hold only the restored resource.
           const body = await response.json();
           const detail = body?.object ?? body;
-          if (holds.get(kind) === reread && detail?.id === objectId && detail?.name === historic[1]) {
+          if (reload && detail?.id === objectId) reload.workspace = true;
+          if (reread && holds.get(kind) === reread && detail?.id === objectId && detail?.name === historic[1]) {
             gate = reread;
             holds.delete(kind);
           }
@@ -244,7 +262,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await page.getByLabel('Adresse e-mail').fill(email);
       await page.getByLabel('Mot de passe', { exact: true }).fill(password);
       await page.getByRole('button', { name: 'Se connecter' }).click();
-      await page.waitForURL(app.origin + destination, { timeout: 60_000 });
+      await page.waitForURL(editorUrl, { timeout: 60_000 });
       return { page, scene, close: async () => {
         scene.closed = true;
         await context.close();
@@ -364,6 +382,37 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     await saveLegal.click();
     await assertion.poll(() => degraded.scene.legalWrites).toBe(1);
     await assertion.poll(legalValue).toBe('Synthetic legal company saved');
+    assert.equal(patches.length, 2);
+
+    // Only change the document lifecycle. Keep the same context, identity and summary fault.
+    await assertion(degraded.page.getByText('Brouillon enregistré', { exact: true })).toBeVisible();
+    const reload = { nativeDocument: false, authenticatedUser: false, workspace: false,
+      legalPermission: false, legalRecord: false, summary503: false };
+    degraded.scene.reload = reload;
+    let pageErrors = 0;
+    degraded.page.on('pageerror', () => { pageErrors += 1; });
+    try {
+      const documentResponse = await degraded.page.reload();
+      assert.ok(reload.nativeDocument && documentResponse?.status() === 200 && documentResponse.url() === editorUrl
+        && documentResponse.request().redirectedFrom() === null, 'native editor reload must return HTTP 200 without redirects');
+      const navigationType = await degraded.page.evaluate(() => performance.getEntriesByType('navigation')[0]?.type);
+      assert.equal(navigationType, 'reload');
+      await assertion(degraded.page).toHaveURL(editorUrl);
+      await assertion.poll(() => ({ ...reload })).toEqual({
+        nativeDocument: true, authenticatedUser: true, workspace: true,
+        legalPermission: true, legalRecord: true, summary503: true,
+      });
+    } catch (error) {
+      throw new Error(`${error.message}\nReload phases: ${JSON.stringify(reload)}; uncaught page errors: ${pageErrors}`, { cause: error });
+    }
+    const reloadedLegal = await openLegalSection(degraded.page);
+    await assertion(reloadedLegal.banner).toBeVisible();
+    await assertion(reloadedLegal.company).toHaveValue('Synthetic legal company saved');
+    await reloadedLegal.company.fill('Synthetic legal company saved after reload');
+    await assertion(saveLegal).toBeEnabled();
+    await saveLegal.click();
+    await assertion.poll(() => degraded.scene.legalWrites).toBe(2);
+    await assertion.poll(legalValue).toBe('Synthetic legal company saved after reload');
     assert.equal(patches.length, 2);
   } catch (error) {
     throw routeFailure ?? error;

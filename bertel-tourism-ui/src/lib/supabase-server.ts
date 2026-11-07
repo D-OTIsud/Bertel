@@ -1,28 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { readServerEnv } from './env.server';
+import { supabaseServerFetch } from './supabase-fetch.server';
 
 let serverClient: SupabaseClient | null = null;
-
-const fetchForServerSupabase: typeof fetch = async (input, init) => {
-  try {
-    return await fetch(input, init);
-  } catch (error) {
-    // Auth logs rejected fetches directly. Preserve cancellation without
-    // passing the underlying message, stack or cause into the SDK.
-    let interruption: 'AbortError' | 'TimeoutError' | undefined;
-    if (error instanceof Error || error instanceof DOMException) {
-      const { name, code } = error as Error & { code?: string | number };
-      if (name === 'TimeoutError') interruption = 'TimeoutError';
-      else if (name === 'AbortError' || code === 'ABORT_ERR') {
-        interruption = 'AbortError';
-      }
-    }
-    const message = 'Supabase transport request failed';
-    const safeError = interruption ? new DOMException(message, interruption) : new TypeError(message);
-    safeError.stack = undefined;
-    throw safeError;
-  }
-};
 
 /**
  * Server-only Supabase client keyed with the service-role secret.
@@ -37,7 +17,7 @@ export function getServerSupabaseClient(): SupabaseClient | null {
   if (!url || !supabaseServiceRoleKey) return null;
   serverClient = createClient(url, supabaseServiceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: { fetch: fetchForServerSupabase },
+    global: { fetch: supabaseServerFetch },
   });
   return serverClient;
 }

@@ -72,6 +72,7 @@ describe('server Supabase transport', () => {
   it.each([
     ['native abort', 'AbortError', new DOMException('raw abort', 'AbortError')],
     ['Node ABORT_ERR', 'AbortError', Object.assign(new Error('raw node abort'), { code: 'ABORT_ERR' })],
+    ['a custom signal reason', 'AbortError', { message: 'raw custom abort reason' }],
     ['native timeout', 'TimeoutError', new DOMException('raw timeout', 'TimeoutError')],
   ])('redacts %s without losing %s classification', async (_case, name, reason) => {
     const controller = new AbortController();

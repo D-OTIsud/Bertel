@@ -704,7 +704,7 @@ jobs:
         timeout-minutes: 5
         run: npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
 
-      - name: Real Realtime role, realm and payload witness (disposable only)
+      - name: Private Realtime joins, rosters and broadcast authority (disposable only)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.realtime_security == true && steps.list_email_owned_stack.outcome == 'success' }}
         timeout-minutes: 3
         env:

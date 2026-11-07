@@ -150,9 +150,28 @@ test(testName, { timeout: browserWitness ? 300000 : 90000 }, async (t) => {
       assert.equal(await canWrite('tester', TEST), true);
       assert.deepEqual(await Promise.all([rows(headers('other'), A), rows(headers('tester'), A), rows(local.anonymous, A)]),
         [[], [], []], 'foreign, test realm and anonymous clients must lack access to the draft fixture');
+      const publicReader = await rows(headers('portal'), PUBLIC);
+      assert.equal(publicReader.length, 1, 'the read-only persona must see the published fixture');
+      assert.equal(publicReader[0].status, 'published');
+      assert.equal(await canWrite('portal', PUBLIC), false);
+      const identity = (key) => ({ id: ids[key], headers: headers(key) });
       const { testRealtimeSecurity } = await import('../../bertel-tourism-ui/tests/current-rights/realtime-security.mjs');
-      await testRealtimeSecurity({ local, objectId: A, writerId: ids.writer, writer: headers('writer'),
-        foreign: headers('other'), testRealm: headers('tester'), diagnostic: (message) => t.diagnostic(message) });
+      await testRealtimeSecurity({ local, objectId: A, publishedId: PUBLIC, writer: identity('writer'),
+        foreign: identity('other'), testRealm: identity('tester'), reader: identity('portal'),
+        revokeWriter: async () => {
+          commit(`DO $fixture$ BEGIN
+            UPDATE public.user_org_membership SET is_active=false
+            WHERE id='00000000-0000-4000-a000-00000000ab11' AND user_id='${ids.writer}' AND is_active;
+            IF NOT FOUND THEN RAISE EXCEPTION 'missing realtime writer membership'; END IF;
+          END; $fixture$`, 'commit Realtime writer departure');
+          assert.deepEqual(await rows(headers('writer'), A), []);
+          assert.equal(await canWrite('writer', A), false);
+          const stillAuthenticated = await json(await local.request('/auth/v1/user', headers('writer'), undefined, 'GET'),
+            'the original GoTrue JWT still authenticates after the business-rights revocation');
+          assert.equal(stillAuthenticated.id, ids.writer);
+        },
+        diagnostic: (message) => t.diagnostic(message),
+      });
       return;
     }
     if (browserWitness) {

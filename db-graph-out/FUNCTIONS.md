@@ -3876,14 +3876,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > -------------------------------------------------------
 > E4. api.user_can_write_enrichment(p_object_id text)
-> Permission Niveau 2 : edit_org_enrichment
-> ET l'ORG active du user dispose d'un lien object_org_link explicite
-> avec rôle 'publisher' ou 'contributor' (pas 'reader').
-> Règle métier (§2.2) : une ORG ne peut enrichir un objet que si elle a
-> un lien explicite avec un rôle au moins contributeur.
-> Non branché en RLS : aucune table d'enrichissement ORG distincte n'existe
-> encore dans le schéma — surface d'écriture non matérialisée.
-> Conçu pour être appelé par les RPC d'enrichissement ORG (Phase 6).
+> Garde du RPC api.rpc_write_org_description pour la surcouche de l'ORG active.
+> Exige edit_org_enrichment et un lien object_org_link explicite de l'ORG active
+> avec le rôle 'publisher' ou 'contributor'.
+> La migration 20261107131728 exige aussi que la fiche appartienne au corpus
+> courant de l'utilisateur, en production comme dans le corpus de test.
+>
+> Le corps ci-dessous est la définition initiale du fresh apply.
+> Le manifeste applique ensuite la garde de corpus par migration.
 > -------------------------------------------------------
 
 ## `api.user_can_write_list(p_list_id uuid)`
@@ -4015,6 +4015,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Historical pending proposals become visible immediately after deployment.
 > The unique index makes this safe to rerun and avoids duplicate alerts.
+
+## `internal.bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
 
 ## `internal.build_list_detail_json(p_list_id uuid)`
 - returns: `json` — SECURITY DEFINER

@@ -2,11 +2,11 @@
  "meta": {
   "table_count": 424,
   "view_count": 15,
-  "function_count": 641,
-  "policy_count": 645,
+  "function_count": 642,
+  "policy_count": 647,
   "trigger_count": 1438,
   "enum_count": 9,
-  "edge_count": 6311
+  "edge_count": 6316
  },
  "nodes": [
   {
@@ -55402,80 +55402,6 @@
    }
   },
   {
-   "id": "realtime.messages_2026_11_03",
-   "kind": "table",
-   "label": "messages_2026_11_03",
-   "schema": "realtime",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "columns": [
-     {
-      "name": "topic",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "extension",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "payload",
-      "type": "jsonb",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "event",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "private",
-      "type": "boolean",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "updated_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "inserted_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "id",
-      "type": "uuid",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "binary_payload",
-      "type": "bytea",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "skip_broadcast",
-      "type": "boolean",
-      "nullable": false,
-      "pk": false
-     }
-    ],
-    "rls_enabled": false,
-    "rls_forced": false
-   }
-  },
-  {
    "id": "audit.audit_log_2027_01",
    "kind": "table",
    "label": "audit_log_2027_01",
@@ -58264,6 +58190,80 @@
     "table": "storage_reservation_private.reservation",
     "timing": null,
     "events": []
+   }
+  },
+  {
+   "id": "realtime.messages_2026_11_10",
+   "kind": "table",
+   "label": "messages_2026_11_10",
+   "schema": "realtime",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "columns": [
+     {
+      "name": "topic",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "extension",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "payload",
+      "type": "jsonb",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "event",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "private",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp without time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "inserted_at",
+      "type": "timestamp without time zone",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "binary_payload",
+      "type": "bytea",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "skip_broadcast",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": false,
+    "rls_forced": false
    }
   },
   {
@@ -62089,6 +62089,31 @@
    }
   },
   {
+   "id": "internal.bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean)",
+   "kind": "function",
+   "label": "bertel_realtime_channel_allowed",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107123311_realtime_channel_acl.sql",
+      "line": 28
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107123311_realtime_channel_acl.sql",
+     "line": 28
+    }
+   }
+  },
+  {
    "id": "api.get_dashboard_type_breakdown(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)",
    "kind": "function",
    "label": "get_dashboard_type_breakdown",
@@ -65756,7 +65781,7 @@
    "label": "user_can_write_enrichment",
    "schema": "api",
    "domain": "api",
-   "doc": "-------------------------------------------------------\nE4. api.user_can_write_enrichment(p_object_id text)\nPermission Niveau 2 : edit_org_enrichment\nET l'ORG active du user dispose d'un lien object_org_link explicite\navec rôle 'publisher' ou 'contributor' (pas 'reader').\nRègle métier (§2.2) : une ORG ne peut enrichir un objet que si elle a\nun lien explicite avec un rôle au moins contributeur.\nNon branché en RLS : aucune table d'enrichissement ORG distincte n'existe\nencore dans le schéma — surface d'écriture non matérialisée.\nConçu pour être appelé par les RPC d'enrichissement ORG (Phase 6).\n-------------------------------------------------------",
+   "doc": "-------------------------------------------------------\nE4. api.user_can_write_enrichment(p_object_id text)\nGarde du RPC api.rpc_write_org_description pour la surcouche de l'ORG active.\nExige edit_org_enrichment et un lien object_org_link explicite de l'ORG active\navec le rôle 'publisher' ou 'contributor'.\nLa migration 20261107131728 exige aussi que la fiche appartienne au corpus\ncourant de l'utilisateur, en production comme dans le corpus de test.\n\nLe corps ci-dessous est la définition initiale du fresh apply.\nLe manifeste applique ensuite la garde de corpus par migration.\n-------------------------------------------------------",
    "props": {
     "signature": "user_can_write_enrichment(p_object_id text)",
     "returns": "boolean",
@@ -65767,12 +65792,12 @@
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
       "line": 3134
+     },
+     {
+      "path": "supabase/migrations/20261107131728_object_enrichment_realm_guard.sql",
+      "line": 29
      }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 3134
-    }
+    ]
    }
   },
   {
@@ -74276,6 +74301,38 @@
      "authenticated"
     ],
     "predicate": "(is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))"
+   }
+  },
+  {
+   "id": "policy:realtime.messages:bertel_realtime_channel_read",
+   "kind": "policy",
+   "label": "bertel_realtime_channel_read",
+   "schema": "realtime",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "realtime.messages",
+    "cmd": "SELECT",
+    "roles": [
+     "authenticated"
+    ],
+    "predicate": "((topic = ( SELECT realtime.topic() AS topic)) AND internal.bertel_realtime_channel_allowed(topic, extension, false))"
+   }
+  },
+  {
+   "id": "policy:realtime.messages:bertel_realtime_channel_write",
+   "kind": "policy",
+   "label": "bertel_realtime_channel_write",
+   "schema": "realtime",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "realtime.messages",
+    "cmd": "INSERT",
+    "roles": [
+     "authenticated"
+    ],
+    "predicate": "((topic = ( SELECT realtime.topic() AS topic)) AND internal.bertel_realtime_channel_allowed(topic, extension, true))"
    }
   },
   {
@@ -114936,6 +114993,18 @@
    "props": {}
   },
   {
+   "source": "policy:realtime.messages:bertel_realtime_channel_read",
+   "target": "realtime.messages",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:realtime.messages:bertel_realtime_channel_write",
+   "target": "realtime.messages",
+   "kind": "gates",
+   "props": {}
+  },
+  {
    "source": "policy:public.object_stay_policy:canonical_del_object_stay_policy",
    "target": "public.object_stay_policy",
    "kind": "gates",
@@ -124146,6 +124215,42 @@
    }
   },
   {
+   "source": "internal.bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "internal.bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "internal.bertel_realtime_channel_allowed(p_topic text, p_extension text, p_write boolean)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
    "source": "api.get_dashboard_type_breakdown(p_types public.object_type[] DEFAULT NULL::public.object_type[], p_status public.object_status[] DEFAULT ARRAY['published'::public.object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)",
    "target": "public.object",
    "kind": "reads",
@@ -128305,7 +128410,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM object_org_link"
+     "evidence": "FROM public.object_org_link"
     }
    }
   },
@@ -128317,7 +128422,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "JOIN ref_org_role"
+     "evidence": "JOIN public.ref_org_role"
     }
    }
   },

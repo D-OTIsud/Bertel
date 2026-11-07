@@ -59,6 +59,7 @@ function deleteObjectDetail(rpcErr: unknown, raw: string): string | undefined {
 interface DeleteReport {
   media_to_delete?: string[];
   documents_to_delete?: string[];
+  storage_cleanup_deferred?: boolean;
   [key: string]: unknown;
 }
 
@@ -153,10 +154,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const report = (rpcData ?? {}) as DeleteReport;
 
-  // 2. Nettoyage des fichiers Storage — BEST-EFFORT (service-role). Si la clé manque, l'objet est
-  //    déjà supprimé en base ; on saute le balayage et on le signale (storageSkipped). Les fichiers
-  //    orphelins sont rattrapables par le GC (URLs conservées dans object_deletion_log.report).
-  const server = getServerSupabaseClient();
+  // Le RPC peut différer le nettoyage physique tant que les références partagées
+  // ne sont pas protégées. Les candidats restent dans object_deletion_log.report.
+  const server = report.storage_cleanup_deferred === true ? null : getServerSupabaseClient();
   let mediaDeleted: string[] = [];
   let documentsDeleted: string[] = [];
   let storageError: string | null = null;

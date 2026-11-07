@@ -146,6 +146,24 @@ describe('POST /api/objects/delete', () => {
     });
   });
 
+  it('skips both buckets when the purge report defers physical cleanup, even if URLs remain', async () => {
+    const report = {
+      deleted: true,
+      storage_cleanup_deferred: true,
+      media_to_delete: ['http://supabase.test/storage/v1/object/public/media/o1/a.jpg'],
+      documents_to_delete: ['http://supabase.test/storage/v1/object/public/documents/o1/d.pdf'],
+    };
+    rpcMock.mockResolvedValue({ data: report, error: null });
+
+    const res = await POST(req({ objectId: 'o1', confirmName: 'X' }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      ok: true, report, mediaDeleted: [], documentsDeleted: [], storageError: null, storageSkipped: true,
+    });
+    expect(getServerSupabaseClientMock).not.toHaveBeenCalled();
+    expect(removeMock).not.toHaveBeenCalled();
+  });
+
   it('still deletes the object but skips the sweep when the service key is missing (auth ≠ service key)', async () => {
     getServerSupabaseClientMock.mockReturnValue(null); // SUPABASE_SERVICE_ROLE_KEY unset
     rpcMock.mockResolvedValue({

@@ -4333,6 +4333,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.media` _(high)_
 - reads `public.ref_code_media_type` _(high)_
 
+## `internal.portal_submission_module(p_target_table text, p_rpc text, p_payload jsonb)`
+- returns: `text`
+
+> The browser sends an editor module as data. Only the module bound to the
+> target and optional writer can pass the submission's floor and mask checks.
+
 ## `internal.provider_crm_interactions()`
 - returns: `SETOF public.crm_interaction`
 - reads `public.actor_object_role` _(high)_

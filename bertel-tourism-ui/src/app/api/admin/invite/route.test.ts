@@ -31,6 +31,7 @@ function fixture(options: {
   platform?: boolean;
   rank?: number;
   callerOrg?: string;
+  callerOrgRanks?: Record<string, number | null>;
   users?: SyntheticUser[];
   pages?: DirectoryPage[];
   orgExists?: boolean;
@@ -69,9 +70,31 @@ function fixture(options: {
     return { select: jest.fn(() => chain), eq };
   }
   const membership = single(options.membershipInOrg ? { id: 'membership-1' } : null);
+  const callerRanks = options.callerOrgRanks ?? { [options.callerOrg ?? 'ORG1']: options.rank ?? 30 };
+  const callerFilters = new Map<string, unknown>();
+  const callerMembership = {
+    eq(column: string, value: unknown) {
+      callerFilters.set(column, value);
+      return callerMembership;
+    },
+    async maybeSingle() {
+      const orgId = callerFilters.get('org_object_id');
+      const visible = callerFilters.get('user_id') === 'admin' && callerFilters.get('is_active') === true
+        && typeof orgId === 'string' && Object.hasOwn(callerRanks, orgId);
+      const rank = typeof orgId === 'string' ? callerRanks[orgId] : null;
+      return {
+        data: visible ? {
+          user_org_admin_role: rank == null ? [] : [{ is_active: true, ref_org_admin_role: { rank } }],
+        } : null,
+        error: null,
+      };
+    },
+  };
   const businessRole = single(options.roleExists === false ? null : { code: 'editor' });
   const callerFrom = jest.fn((table: string) => {
-    if (table === 'user_org_membership') return membership;
+    if (table === 'user_org_membership') return {
+      select: (columns: string) => columns === 'id' ? membership.select() : callerMembership,
+    };
     if (table === 'ref_org_business_role') return businessRole;
     throw new Error(`Unexpected caller table ${table}`);
   });
@@ -135,6 +158,21 @@ describe('POST /api/admin/invite/v2', () => {
     expect((await POST(req(target))).status).toBe(403);
     expect(listUsers).not.toHaveBeenCalled();
     expect(inviteUserByEmail).not.toHaveBeenCalled();
+  });
+
+  it.each([null, 20])('403 before lookup when rank 30 is held only in another organisation (local rank %s)', async (localRank) => {
+    const { listUsers, inviteUserByEmail, rpc } = fixture({
+      rank: 30, callerOrg: 'ORG1', callerOrgRanks: { ORG1: localRank, ORG2: 30 },
+      users: [candidate], membershipInOrg: true, returnedUserId: 'target',
+    });
+    for (const resend of [false, true]) {
+      const response = await POST(req({ ...target, resend }));
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({ error: 'out_of_scope' });
+    }
+    expect(listUsers).not.toHaveBeenCalled();
+    expect(inviteUserByEmail).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalledWith('rpc_upsert_membership', expect.anything());
   });
 
   it.each([
@@ -233,11 +271,11 @@ describe('POST /api/admin/invite/v2', () => {
     expect(deleteUser).not.toHaveBeenCalled();
   });
 
-  it('only reports sign-in status for an already-scoped confirmed account', async () => {
+  it('does not offer resend for a confirmed scoped account that has never signed in', async () => {
     fixture({ users: [{ ...candidate, email_confirmed_at: '2026-07-01T00:00:00Z' }], activeOrgs: ['ORG1'] });
     const res = await POST(req(target));
     expect(res.status).toBe(409);
-    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: true, neverSignedIn: true });
+    await expect(res.json()).resolves.toEqual({ userId: 'target', membershipId: 'membership-1', alreadyExisted: true });
   });
 
   it.each([{ attachError: true }, { attachUnknown: true }])('no disclosure or email without an acknowledged attachment (%j)', async (outcome) => {

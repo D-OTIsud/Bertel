@@ -125,9 +125,6 @@ export async function processImage({ buffer, mimeType, maxDimension = MAX_DIMENS
     };
   } catch (err) {
     if (err instanceof MediaProcessingError) throw err;
-    // Le message brut de sharp est anglais et technique : il part au journal serveur, pas à
-    // l'écran (il atteignait l'utilisateur via `detail`).
-    console.warn('[process-image] échec sharp non mappé', err);
     throw new MediaProcessingError('decode', "Cette image n'a pas pu être traitée. Réessayez avec un autre fichier.");
   }
 }

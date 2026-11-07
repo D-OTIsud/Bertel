@@ -115,11 +115,11 @@ readiness or permission to apply/copy/change a bucket.
 
 The [DB07 copy operator image workflow](../../.github/workflows/db07-copy-operator-image.yml)
 builds [the operator Dockerfile](Dockerfile.copy-operator) for Linux amd64 on a
-disposable runner. Run it manually or on a pull request that changes the
-Dockerfile or workflow. The build context is the Dockerfile and eight operator
-source files from the exact workflow commit. It leaves the image in the
-runner's local Docker store. The base manifest and four direct APK versions
-are pinned. Alpine resolves their transitive dependencies during the build.
+disposable runner. It runs on pull requests that change the image recipe,
+workflow or TLS smoke script, and supports a manual export on `master`.
+The build context is the Dockerfile and eight operator source files from the
+exact workflow commit. The base manifest and four direct APK versions are
+pinned. Alpine resolves their transitive dependencies during the build.
 
 The network-disabled smoke verifies UID/GID 1000, Node 22, native Python and
 `psql` 17, Git with an empty repository, and the existing synthetic CLI
@@ -133,13 +133,15 @@ must refuse a wrong CA and a wrong DNS name for the expected libpq reasons.
 This qualifies the client transport on the fixture. The hosted direct channel
 and the private CA, passfile, journal and receipt mounts need their own check.
 
-For a reviewed transfer to Coolify, prefer a short-lived private GitHub Actions
-artifact over a registry publication. In the same successful build and smoke
-job, save the exact tested image with `docker image save`. Record its image
-ID, platform, source commit, workflow run and attempt, and the archive size and
-SHA-256 in a manifest. Fetch the artifact from that run by its immutable
-artifact ID, verify the published artifact digest and the archive manifest,
-then compare the local image ID and platform after `docker image load`.
-The archive contains the operator image only. The current workflow keeps it
-in the disposable runner. Loading a future verified archive can leave the
-app container and its configuration in place.
+For a reviewed transfer to Coolify, dispatch the workflow on `master` with
+`expected_source_sha` set to the reviewed commit. After both smoke checks
+pass on the same image ID, the job exports that image with `docker image save`
+and retains the compressed archive and manifest for one day. The manifest
+records the image ID, platform, runtime user, revision, source commit and
+tree, workflow run and attempt, and archive size and SHA-256.
+
+Fetch the artifact from that run by its immutable artifact ID. Verify the
+published artifact digest and the archive manifest, then check the image ID,
+platform, runtime user and revision after `docker image load`. The archive
+contains the operator image built from public source. The workflow does not
+publish to a registry or change the app container.

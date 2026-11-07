@@ -105,6 +105,25 @@ describe('createResilientChannel', () => {
     }
   });
 
+  it('keeps a private presence join unusable if SDK presence state cannot be reset', () => {
+    const { client, created } = makeFakeRealtimeClient();
+    const onState = jest.fn();
+    const onSubscribed = jest.fn();
+    const handle = createResilientChannel(client as unknown as SupabaseClient, {
+      topic: 'presence:global:prod',
+      config: { config: { private: true, presence: { key: 'u1' } } },
+      bind: jest.fn(), onState, onSubscribed,
+    });
+    try {
+      Object.assign(created[0].presence, { pendingDiffs: null });
+      created[0].emit('SUBSCRIBED');
+      expect(onState).toHaveBeenLastCalledWith('error');
+      expect(onSubscribed).not.toHaveBeenCalled();
+    } finally {
+      handle.dispose();
+    }
+  });
+
   it('leaves the library its own rejoin window on CHANNEL_ERROR, then takes over', () => {
     const { created, onState } = setup();
     created[0].emit('SUBSCRIBED');

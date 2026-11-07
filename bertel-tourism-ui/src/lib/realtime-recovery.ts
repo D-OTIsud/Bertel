@@ -122,6 +122,24 @@ export function createResilientChannel(
       if (channel !== current || disposed || options.canOpen?.() === false) return;
 
       if (status === 'SUBSCRIBED') {
+        if (options.config?.config?.private && options.config.config.presence) {
+          const presence = channel.presence;
+          if (!presence || !Array.isArray(presence.pendingDiffs) || !presence.state
+            || typeof presence.state !== 'object' || Array.isArray(presence.state)
+            || (presence.joinRef !== null && typeof presence.joinRef !== 'string')) {
+            // A changed SDK shape must not make an unfiltered roster visible.
+            subscribed = false;
+            options.onState?.('error');
+            scheduleReopen();
+            return;
+          }
+          // Realtime JS 2.99.1 routes by topic before the join ACK. Its public
+          // Presence state can already hold a snapshot or queued diffs from the
+          // previous channel. Start again at this ACK and await the new snapshot.
+          presence.state = {};
+          presence.pendingDiffs = [];
+          presence.joinRef = null;
+        }
         subscribed = true;
         attempt = 0;
         clearTimer();

@@ -1,0 +1,58 @@
+name: DB07 copy operator image
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      OPERATOR_IMAGE: db07-copy-operator:smoke
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build the exact commit with an allowlisted context
+        shell: bash
+        run: |
+          dockerfile=tools/storage-reservation/Dockerfile.copy-operator
+          git archive "$GITHUB_SHA" -- "$dockerfile" \
+            tools/private-media/copy-verified.mjs \
+            tools/private-media/copy-reserved.mjs \
+            tools/private-media/prepare-cutover.mjs \
+            tools/storage-reservation/copy_claim.py \
+            tools/storage-reservation/copy_profile.py \
+            tools/storage-reservation/driver.py \
+            tools/storage-reservation/native_fixture.py \
+            tools/storage-reservation/protocol.py \
+          | docker build --platform linux/amd64 --file "$dockerfile" --tag "$OPERATOR_IMAGE" \
+              --label "org.opencontainers.image.revision=$GITHUB_SHA" -
+          docker image inspect --format '{{.Id}} {{.Os}}/{{.Architecture}} {{.Config.User}}' "$OPERATOR_IMAGE"
+      - name: Verify the native tools and run the synthetic CLI checks offline
+        shell: bash
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --tmpfs /tmp:rw,nosuid,nodev,noexec,mode=0700,uid=1000,gid=1000 \
+            --mount "type=bind,source=$PWD/tools/private-media/copy-verified.test.mjs,target=/operator/tools/private-media/copy-verified.test.mjs,readonly" \
+            --mount "type=bind,source=$PWD/tools/private-media/copy-reserved-resume.test.mjs,target=/operator/tools/private-media/copy-reserved-resume.test.mjs,readonly" \
+            --entrypoint /usr/bin/env "$OPERATOR_IMAGE" \
+            -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/node TMPDIR=/tmp \
+            GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+            DB07_TEST_PYTHON=/usr/bin/python3 /bin/sh -eu -c '
+              test "$(id -u):$(id -g)" = 1000:1000
+              test "$(node --version)" = v22.23.4
+              test "$(python3 --version)" = "Python 3.14.10"
+              test "$(/usr/libexec/postgresql17/psql --version)" = "psql (PostgreSQL) 17.11"
+              test "$(git --version)" = "git version 2.54.0"
+              test "$(git rev-parse --show-toplevel)" = /operator
+              test "$(git rev-list --all --count)" = 0
+              test -z "$(git remote)"
+              python3 -B -c "import sys; sys.path.insert(0, \"tools/storage-reservation\"); import copy_claim, ssl"
+              node --test --test-name-pattern="default CLI preview|the Python child" \
+                tools/private-media/copy-verified.test.mjs tools/private-media/copy-reserved-resume.test.mjs
+            '

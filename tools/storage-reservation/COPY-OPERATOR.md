@@ -110,3 +110,21 @@ emitters before any restore/epoch break. Local fsync tests do not qualify power
 loss on NTFS/Linux or hosted Storage gateway behavior. The Storage primitive's
 concurrent200/200 probes remain RED. This integration alone is not production
 readiness or permission to apply/copy/change a bucket.
+
+## Isolated operator image
+
+The manual [DB07 copy operator image workflow](../../.github/workflows/db07-copy-operator-image.yml)
+builds [the operator Dockerfile](Dockerfile.copy-operator) for Linux amd64 on a
+disposable runner. The build context is the Dockerfile and eight operator
+source files from the exact workflow commit. It leaves the image in the
+runner's local Docker store. The base manifest and four direct APK versions
+are pinned. Alpine resolves their transitive dependencies during the build.
+
+The network-disabled smoke verifies UID/GID 1000, Node 22, native Python and
+`psql` 17, Git with an empty repository, and the existing synthetic CLI
+preview, stdin and Python child checks. It uses two read-only test mounts.
+
+Qualification of a deployable image remains a separate step. It must seal
+the exact image, exercise its native `psql` over TLS with a disposable
+PostgreSQL 17 server and validate the hosted direct channel and the private
+CA, passfile, journal and receipt mounts before any hosted copy.

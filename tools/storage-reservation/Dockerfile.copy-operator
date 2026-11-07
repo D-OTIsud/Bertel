@@ -1,0 +1,20 @@
+FROM docker.io/library/node:22.23.4-alpine3.24@sha256:947e5454e08bfe0b8ddda604915ad76275276c774f47da90d0137252c793a778
+
+RUN apk --no-cache --repositories-file /dev/null \
+      --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/main add \
+      ca-certificates=20261020-r0 \
+      git=2.54.0-r0 \
+      postgresql17-client=17.11-r0 \
+      python3=3.14.10-r1 \
+    && mkdir -p /operator && chown 1000:1000 /operator
+
+ENV HOME=/home/node GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
+WORKDIR /operator
+COPY tools/private-media/copy-verified.mjs tools/private-media/copy-reserved.mjs \
+     tools/private-media/prepare-cutover.mjs tools/private-media/
+COPY tools/storage-reservation/copy_claim.py tools/storage-reservation/copy_profile.py \
+     tools/storage-reservation/driver.py tools/storage-reservation/native_fixture.py \
+     tools/storage-reservation/protocol.py tools/storage-reservation/
+USER 1000:1000
+RUN git init -q --template=
+ENTRYPOINT ["/usr/local/bin/node", "/operator/tools/private-media/copy-verified.mjs"]

@@ -34,6 +34,11 @@ const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedCreate = jest.mocked(createClient);
 const mockedSend = jest.mocked(sendListEmail);
 const mockedSmtp = jest.mocked(resolveSmtpConfig);
+const originalListEmailMode = process.env.LIST_EMAIL_MODE;
+afterAll(() => {
+  if (originalListEmailMode === undefined) delete process.env.LIST_EMAIL_MODE;
+  else process.env.LIST_EMAIL_MODE = originalListEmailMode;
+});
 
 function req(body: Record<string, unknown>): NextRequest {
   return new NextRequest('https://app.test/api/lists/send', {
@@ -103,6 +108,7 @@ function setup(opts: { markError?: { message: string } | null; markThrows?: bool
 
 describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
   beforeEach(() => {
+    process.env.LIST_EMAIL_MODE = 'protocol-v1';
     process.env.NEXT_PUBLIC_APP_URL = 'https://app.test';
     jest.clearAllMocks();
     mockedSend.mockResolvedValue(undefined);

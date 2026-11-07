@@ -64,6 +64,8 @@ interface DeleteReport {
 
 // eslint-disable-next-line no-control-regex -- reject URL parser normalization of controls
 const UNSAFE_STORAGE_URL_CHAR = /[\x00-\x1f\x7f\\]/;
+const ENCODED_STORAGE_SEPARATOR_OR_CONTROL = /%(?:25)*(?:2f|5c|[01][0-9a-f]|7f)/i;
+const STORAGE_DOT_SEGMENT = /^(?:\.|%(?:25)*2e){1,2}$/i;
 
 /** Resolve only canonical public URLs on the configured Storage endpoint. */
 function storagePathFromPublicUrl(url: string, storageUrl: URL, bucket: string): string | null {
@@ -76,8 +78,9 @@ function storagePathFromPublicUrl(url: string, storageUrl: URL, bucket: string):
     if (parsed.origin !== storageUrl.origin || !parsed.pathname.startsWith(prefix)) return null;
     // Check raw segments because URL normalizes both literal and percent-encoded dot segments.
     const segments = raw[2].slice(prefix.length).split('/').map(decodeURIComponent);
-    if (segments.some((part) => !part || part === '.' || part === '..' || part.includes('/')
-      || UNSAFE_STORAGE_URL_CHAR.test(part) || /%[0-9a-f]{2}/i.test(part))) return null;
+    // Storage receives these as literal JSON keys. Reject structural escapes, not benign literal %XX.
+    if (segments.some((part) => !part || part.includes('/') || UNSAFE_STORAGE_URL_CHAR.test(part)
+      || ENCODED_STORAGE_SEPARATOR_OR_CONTROL.test(part) || STORAGE_DOT_SEGMENT.test(part))) return null;
     return segments.join('/');
   } catch {
     return null;
@@ -95,7 +98,7 @@ async function sweepBucket(
     .filter((p): p is string => p !== null);
   if (paths.length === 0) return { deleted: [], error: null };
   const { error } = await server.storage.from(bucket).remove(paths);
-  return error ? { deleted: [], error: error.message } : { deleted: paths, error: null };
+  return error ? { deleted: [], error: 'storage_cleanup_failed' } : { deleted: paths, error: null };
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {

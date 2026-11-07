@@ -40,8 +40,8 @@ async function tenantMode(local, requested) {
   return data.private_only;
 }
 
-export async function testRealtimeSecurity({ local, objectId, publishedId, writer, foreign, testRealm, reader,
-  revokeWriter, diagnostic }) {
+export async function testRealtimeSecurity({ local, objectId, publishedId, writer, foreign, testRealm, portal,
+  profileless, revokeWriter, diagnostic }) {
   const origin = new URL(local.origin);
   assert.ok(process.env.CURRENT_RIGHTS_DISPOSABLE === 'true' && process.env.GITHUB_ACTIONS === 'true'
     && origin.protocol === 'http:' && origin.hostname === '127.0.0.1' && origin.port
@@ -133,7 +133,7 @@ export async function testRealtimeSecurity({ local, objectId, publishedId, write
       [room.toLowerCase(), writer, 'noncanonical object topic'],
     ]);
 
-    const [publishedWriter, publishedReader] = await positivePair(published, writer, reader);
+    const [publishedWriter, publishedReader] = await positivePair(published, writer, foreign);
     assert.equal(await send(publishedWriter, 'writer-published'), 'ok');
     await waitFor(() => publishedReader.seen.has('writer-published'), 'published reader must receive the canonical writer');
     const [globalWriter, globalForeign] = await positivePair(globalTopics.prod, writer, foreign);
@@ -150,10 +150,12 @@ export async function testRealtimeSecurity({ local, objectId, publishedId, write
       assert.equal(peer.channel.presenceState()[testRealm.id], undefined, 'no test identity on the production roster');
     }
     await deniedJoins([
+      [published, portal, 'portal persona published room despite HTTP read'],
+      [published, profileless, 'profileless persona published room despite HTTP read'],
       [globalTopics.prod, testRealm, 'test to production global roster'], [globalTopics.test, foreign, 'production to test global roster'],
-      [globalTopics.prod, anon, 'anonymous global roster'], [globalTopics.prod, reader, 'portal persona global roster'],
+      [globalTopics.prod, anon, 'anonymous global roster'], [globalTopics.prod, portal, 'portal persona global roster'],
       [crm.prod, testRealm, 'test to production CRM roster'], [crm.test, foreign, 'production to test CRM roster'],
-      [crm.prod, anon, 'anonymous CRM roster'], [crm.prod, reader, 'portal persona CRM roster'],
+      [crm.prod, anon, 'anonymous CRM roster'], [crm.prod, portal, 'portal persona CRM roster'],
     ]);
     await Promise.all([
       refusedBroadcast(publishedReader, publishedWriter, 'published-reader-broadcast'),

@@ -127,8 +127,8 @@ export default function CrmPage() {
   const { typingUsers } = usePresenceRoom('crm:tasks');
 
   const canWrite = canWriteQuery.data === true;
-  // Tant que la sonde de permission charge, ne pas afficher « Lecture seule » (flash pour les éditeurs).
-  const canWriteKnown = !canWriteQuery.isLoading;
+  // La permission reste inconnue pendant la restauration du cache, même sans requête en cours.
+  const canWriteKnown = !canWriteQuery.isPending;
 
   const actorCount = directoryQuery.data?.length ?? null;
   const activeTasks = (tasksQuery.data ?? []).filter((task) => task.status === 'todo' || task.status === 'in_progress').length;

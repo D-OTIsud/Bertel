@@ -123,7 +123,7 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   const globalActorCount = baseDirectoryQuery.data?.length ?? entries.length;
   const followedActorsValue = hasServerFilters ? `${entries.length} / ${globalActorCount}` : String(globalActorCount);
 
-  if (directoryQuery.isLoading) {
+  if (directoryQuery.isPending) {
     return (
       <div role="status" aria-busy="true" aria-label="Chargement de l'annuaire" className="crm-loading-skeleton">
         <div className="crm-loading-skeleton__row" aria-hidden="true">

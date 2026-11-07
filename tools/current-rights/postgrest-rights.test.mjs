@@ -479,6 +479,18 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90
     // Independent positive scopes; creator provenance and e-mail links are not grants.
     assert.ok((await rows(headers('writer'), A)).length === 1 && (await rows(headers('writer'), B)).length === 0);
     assert.ok((await rows(headers('other'), B)).length === 1 && (await rows(headers('other'), A)).length === 0);
+    const filtered = async (key, statuses) => {
+      const result = await json(await rpc(headers(key), 'get_filtered_object_ids', {
+        p_filters: {}, p_types: ['HOT'], p_status: statuses, p_search: null,
+      }), 'direct Explorer filter authority');
+      return result.map(({ object_id }) => object_id)
+        .filter((id) => [A, B, PUBLIC, TEST].includes(id)).sort();
+    };
+    assert.deepEqual(await filtered('writer', ['draft']), [A], 'direct RPC excludes the foreign draft');
+    assert.deepEqual(await filtered('other', ['draft', 'published']), [B, PUBLIC],
+      'direct RPC retains current own draft and real publication');
+    assert.deepEqual(await filtered('tester', ['draft', 'published']), [TEST],
+      'test JWT can only list the test corpus through the direct RPC');
     assert.ok(await canWrite('writer', A) === true && await canWrite('writer', B) === false);
     assert.ok(await canWrite('other', B) === true && await canWrite('other', A) === false);
     assert.ok(await json(await rpc(headers('writer'), 'is_platform_superuser'), 'current platform authority') === false,

@@ -1873,6 +1873,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rollback_staging_batch_compensate`
 - **object types served:** **all object types**
 
+### `api.rpc_attach_invite_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_attach_invite_membership`
+- **object types served:** —
+
 ### `api.rpc_create_object(p_object_type text, p_name text, p_region_code text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `text`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_create_object`
@@ -2035,7 +2040,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)` _(DEFINER)_
 - **returns:** `uuid`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_upsert_membership`
-- **object types served:** **all object types**
+- **object types served:** —
 - _rpc_upsert_membership_
 
 ### `api.rpc_upsert_object_external_id(p_object_id text, p_source_system text, p_external_id text, p_last_synced_at timestamp with time zone DEFAULT NULL::timestamp with time zone)` _(DEFINER)_
@@ -2826,6 +2831,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Source transitions serialize by organization before touching derived object_
 
+### `internal.lock_profile_insert_for_membership()`
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
+- _A missing profile has no row for the membership writer to lock. Use its_
+
 ### `internal.measure_list_email(p_user_id uuid, p_org_object_id text, p_event text)`
 - **returns:** `void`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
@@ -3103,6 +3114,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 
 ### `internal.update_portal_photo_texts(p_object_id text, p_id uuid, p_private boolean, p_expected jsonb, p_title text, p_description text)`
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)`
 - **returns:** `jsonb`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**

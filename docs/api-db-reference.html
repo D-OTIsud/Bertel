@@ -17,24 +17,24 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <section id="coverage"><h2>0) Couverture et sources</h2>
 <div class="grid cards">
 <article class="mini-card"><div class="metric">424</div><b>tables</b><p class="muted">15 vues · 9 enums</p></article>
-<article class="mini-card"><div class="metric">643</div><b>fonctions/RPC</b><p class="muted">647 policies · 1438 triggers</p></article>
+<article class="mini-card"><div class="metric">646</div><b>fonctions/RPC</b><p class="muted">647 policies · 1439 triggers</p></article>
 <article class="mini-card"><div class="metric">3174</div><b>valeurs référentielles</b><p class="muted">instantané public attesté</p></article>
-<article class="mini-card"><div class="metric">6315</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
+<article class="mini-card"><div class="metric">6318</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les 3 174 valeurs proviennent de l’instantané public du 6 novembre 2026, entre 20:23 et 20:32 UTC, conservé octet pour octet. Il couvre 28 tables autorisées et 246 documents de scope explicite public. Aucune valeur de seed n’a complété cet instantané.</p>
-<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T18:17:36.553496+00:00, ledger 198, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
+<p class="muted">Catalogue et RLS physiques capturés le 2026-11-07T19:07:25.792691+00:00, ledger 199, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
 <p class="muted">Lecture live MCP effectuée sur 28 tables publiques de référence. 0 lignes seed SQL restent disponibles comme filet de secours.</p>
 <details><summary>Écarts de couverture à surveiller</summary>
 <table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>
 <tr><td>Fonctions sans source SQL retrouvée</td><td>44</td><td><code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.check_org_smtp_org_type()</code>, <code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.delete_org_smtp(p_org_object_id text)</code>, <code>api.get_ingestor_metrics()</code>, <code>api.get_ingestor_scheduler_health()</code>, <code>api.get_org_smtp(p_org_object_id text)</code>, <code>api.get_org_smtp_secret(p_org_object_id text)</code>, <code>api.list_org_smtp_status()</code>, <code>api.notification_relay_org(p_task_id uuid, p_recipient_id uuid)</code>, <code>api.purge_expired_staging_batches(p_limit integer DEFAULT 500)</code>, <code>api.purge_staging_batch(p_batch_id text, p_force boolean DEFAULT false)</code> <span class="muted">+32</span></td></tr>
-<tr><td>Fonctions sans lecture/écriture inférée</td><td>163</td><td><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code>, <code>api.actor_portal_floor_modules()</code>, <code>api.assert_no_period_overlap(p_periods jsonb)</code>, <code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.b64url_decode(p text)</code>, <code>api.b64url_encode(p bytea)</code>, <code>api.before_insert_object_generate_id()</code>, <code>api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date)</code>, <code>api.can_read_extended(p_object_id text)</code>, <code>api.can_read_object_private_notes(p_object_id text)</code>, <code>api.can_write_object_private_notes(p_object_id text)</code>, <code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code> <span class="muted">+151</span></td></tr>
+<tr><td>Fonctions sans lecture/écriture inférée</td><td>166</td><td><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code>, <code>api.actor_portal_floor_modules()</code>, <code>api.assert_no_period_overlap(p_periods jsonb)</code>, <code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.b64url_decode(p text)</code>, <code>api.b64url_encode(p bytea)</code>, <code>api.before_insert_object_generate_id()</code>, <code>api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date)</code>, <code>api.can_read_extended(p_object_id text)</code>, <code>api.can_read_object_private_notes(p_object_id text)</code>, <code>api.can_write_object_private_notes(p_object_id text)</code>, <code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code> <span class="muted">+154</span></td></tr>
 <tr><td>Fonctions avec SQL dynamique</td><td>17</td><td><code>api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)</code>, <code>api.assert_object_type_change_consistent()</code>, <code>api.facet_applicability_violations()</code>, <code>api.get_ref_catalog(p_catalog_key text)</code>, <code>api.ref_code_usage_counts(p_domain text)</code>, <code>api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)</code>, <code>api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)</code>, <code>api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb)</code>, <code>api.thesaurus_reference_snapshot(p_domains text[] DEFAULT NULL::text[])</code>, <code>audit.attach_missing_triggers()</code>, <code>audit.create_monthly_partition(partition_date timestamp with time zone)</code>, <code>audit.drop_old_partitions(months_to_keep integer DEFAULT 12)</code> <span class="muted">+5</span></td></tr>
 <tr><td>Tables publiques de référence sans ligne directe extraite</td><td>6</td><td><code>public.ref_catalog_registry</code>, <code>public.ref_classification_scheme_applicability</code>, <code>public.ref_interop_crosswalk</code>, <code>public.ref_tag</code>, <code>public.ref_trail_manager</code>, <code>public.ref_trail_source</code></td></tr>
 </tbody></table>
 </details>
 </section>
 <section id="rpcs"><h2>1) RPC / fonctions et connexions base</h2><p>Chaque bloc liste le retour, les propriétés de sécurité, le commentaire SQL disponible, puis les tables lues ou écrites.</p>
-<h3>Schéma <code>api</code> (470)</h3>
+<h3>Schéma <code>api</code> (471)</h3>
 <details class="rpc" data-search="api._covered_days(p_all_years boolean, p_s date, p_e date) ">
 <summary><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code></summary>
 <div class="detail-grid">
@@ -5170,6 +5170,16 @@ last_activity_at.</blockquote>
 <tr><td>écriture</td><td><a href="#table-staging-import_batches"><code>staging.import_batches</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
+<details class="rpc" data-search="api.rpc_attach_invite_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text) ">
+<summary><code>api.rpc_attach_invite_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>jsonb</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107171528_org_membership_platform_target_guard.sql:153</code></p>
+</div>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
+</details>
 <details class="rpc" data-search="api.rpc_create_object(p_object_type text, p_name text, p_region_code text default null::text) public.object">
 <summary><code>api.rpc_create_object(p_object_type text, p_name text, p_region_code text DEFAULT NULL::text)</code></summary>
 <div class="detail-grid">
@@ -5683,13 +5693,13 @@ le guard porte sur le rang admin de l&#x27;appelant uniquement.
 <tr><td>écriture</td><td><a href="#table-public-org_role_permission"><code>public.org_role_permission</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<details class="rpc" data-search="api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text) public.ref_org_admin_role public.ref_org_business_role public.user_org_admin_role public.user_org_membership public.user_org_business_role public.user_org_membership">
+<details class="rpc" data-search="api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text) ">
 <summary><code>api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>uuid</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/rls_policies.sql:2112</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/rls_policies.sql:2112</code><br><code>supabase/migrations/20261107171528_org_membership_platform_target_guard.sql:141</code></p>
 </div>
 <blockquote>-------------------------------------------------------
 rpc_upsert_membership
@@ -5698,14 +5708,7 @@ Autorisation : org_manager (rank ≥ 20) de l&#x27;ORG cible, ou super_admin.
 Anti-self : un admin ne peut pas s&#x27;ajouter lui-même.
 Invariant §2.5 : le rôle métier est obligatoire — toujours fourni à la création.
 -------------------------------------------------------</blockquote>
-<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
-<tr><td>lecture</td><td><a href="#table-public-ref_org_admin_role"><code>public.ref_org_admin_role</code></a></td><td>high</td></tr>
-<tr><td>lecture</td><td><a href="#table-public-ref_org_business_role"><code>public.ref_org_business_role</code></a></td><td>high</td></tr>
-<tr><td>lecture</td><td><a href="#table-public-user_org_admin_role"><code>public.user_org_admin_role</code></a></td><td>high</td></tr>
-<tr><td>lecture</td><td><a href="#table-public-user_org_membership"><code>public.user_org_membership</code></a></td><td>high</td></tr>
-<tr><td>écriture</td><td><a href="#table-public-user_org_business_role"><code>public.user_org_business_role</code></a></td><td>high</td></tr>
-<tr><td>écriture</td><td><a href="#table-public-user_org_membership"><code>public.user_org_membership</code></a></td><td>high</td></tr>
-</tbody></table>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
 <details class="rpc" data-search="api.rpc_upsert_object_external_id(p_object_id text, p_source_system text, p_external_id text, p_last_synced_at timestamp with time zone default null::timestamp with time zone) public.object public.object_external_id">
 <summary><code>api.rpc_upsert_object_external_id(p_object_id text, p_source_system text, p_external_id text, p_last_synced_at timestamp with time zone DEFAULT NULL::timestamp with time zone)</code></summary>
@@ -7501,7 +7504,7 @@ object_version rows are product data (version restore §98/14r), never dropped h
 <tr><td>écriture</td><td><a href="#table-audit-audit_log"><code>audit.audit_log</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<h3>Schéma <code>internal</code> (83)</h3>
+<h3>Schéma <code>internal</code> (85)</h3>
 <details class="rpc" data-search="internal.actor_in_current_realm(p_actor_id uuid) public.actor">
 <summary><code>internal.actor_in_current_realm(p_actor_id uuid)</code></summary>
 <div class="detail-grid">
@@ -7876,6 +7879,19 @@ transition fail with 40001 instead of accepting a pre-flip snapshot.</blockquote
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
 </tbody></table>
+</details>
+<details class="rpc" data-search="internal.lock_profile_insert_for_membership() ">
+<summary><code>internal.lock_profile_insert_for_membership()</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>trigger</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107171528_org_membership_platform_target_guard.sql:168</code></p>
+</div>
+<blockquote>A missing profile has no row for the membership writer to lock. Use its
+user lock before INSERT, including the insert arm of an upsert.</blockquote>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
+<p><b>Déclenchée par</b><br><code>trigger:public.app_user_profile:lock_profile_insert_for_membership</code></p>
 </details>
 <details class="rpc" data-search="internal.measure_list_email(p_user_id uuid, p_org_object_id text, p_event text) internal.list_email_metric">
 <summary><code>internal.measure_list_email(p_user_id uuid, p_org_object_id text, p_event text)</code></summary>
@@ -8679,6 +8695,24 @@ DELETE trigger: the payload has no FK by design and must not invent one.</blockq
 <tr><td>écriture</td><td><a href="#table-public-actor_document"><code>public.actor_document</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-public-media"><code>public.media</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-public-ref_document"><code>public.ref_document</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<details class="rpc" data-search="internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean) public.app_user_profile public.ref_org_admin_role public.ref_org_business_role public.user_org_admin_role public.user_org_membership public.user_org_business_role public.user_org_membership">
+<summary><code>internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>jsonb</code></p>
+<p><b>Propriétés</b><br><span class="muted">standard</span></p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261107171528_org_membership_platform_target_guard.sql:3</code></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-app_user_profile"><code>public.app_user_profile</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-ref_org_admin_role"><code>public.ref_org_admin_role</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-ref_org_business_role"><code>public.ref_org_business_role</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-user_org_admin_role"><code>public.user_org_admin_role</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-user_org_membership"><code>public.user_org_membership</code></a></td><td>high</td></tr>
+<tr><td>écriture</td><td><a href="#table-public-user_org_business_role"><code>public.user_org_business_role</code></a></td><td>high</td></tr>
+<tr><td>écriture</td><td><a href="#table-public-user_org_membership"><code>public.user_org_membership</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
 <details class="rpc" data-search="internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text) auth.users public.actor public.app_user_profile public.object public.object_org_link public.org_config public.org_role_permission public.ref_org_role public.ref_permission public.user_org_business_role public.user_org_membership public.user_permission">
@@ -10299,10 +10333,10 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr id="table-staging-object_discount_temp"><td><code>staging.object_discount_temp</code></td><td>table</td><td>pricing</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-object_price_period_temp"><td><code>staging.object_price_period_temp</code></td><td>table</td><td>pricing</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-object_price_temp"><td><code>staging.object_price_temp</code></td><td>table</td><td>pricing</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 1 · FK ← 0</td></tr>
-<tr id="table-public-app_user_profile"><td><code>public.app_user_profile</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.can_manage_object_private_note(p_note_id uuid)</code>, <code>api.can_read_actor_contacts(p_object_id text)</code>, <code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)</code> <span class="muted">+40</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.set_provider_only_preference(p_enabled boolean)</code>, <code>api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_raw_app_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code></td><td>4 policies · 8 triggers · FK → 2 · FK ← 0</td></tr>
+<tr id="table-public-app_user_profile"><td><code>public.app_user_profile</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.can_manage_object_private_note(p_note_id uuid)</code>, <code>api.can_read_actor_contacts(p_object_id text)</code>, <code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.complete_portal_photo_upload(p_user_id uuid, p_document_id uuid, p_sha256 text, p_title text, p_width integer, p_height integer)</code> <span class="muted">+41</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.set_provider_only_preference(p_enabled boolean)</code>, <code>api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_raw_app_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code></td><td>4 policies · 9 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-user_org_admin_role"><td><code>public.user_org_admin_role</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.current_user_admin_rank()</code>, <code>api.current_user_admin_role_code()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.object_private_note_author_admin_rank(p_note_id uuid)</code> <span class="muted">+14</span></td><td><code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_revoke_admin_role(p_membership_id uuid)</code>, <code>api.rpc_set_admin_role(p_membership_id uuid, p_role_code text)</code></td><td>2 policies · 7 triggers · FK → 3 · FK ← 0</td></tr>
-<tr id="table-public-user_org_business_role"><td><code>public.user_org_business_role</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.current_user_business_role_code()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.list_object_verifier_ids(p_object_id text)</code>, <code>api.rpc_list_org_members(p_org_object_id text)</code> <span class="muted">+4</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_set_business_role(p_membership_id uuid, p_role_code text)</code>, <code>api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)</code> <span class="muted">+1</span></td><td>2 policies · 7 triggers · FK → 3 · FK ← 0</td></tr>
-<tr id="table-public-user_org_membership"><td><code>public.user_org_membership</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.auto_attach_object_to_creator_org()</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.current_user_active_org()</code>, <code>api.current_user_admin_rank()</code> <span class="muted">+37</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)</code></td><td>2 policies · 9 triggers · FK → 3 · FK ← 2</td></tr>
+<tr id="table-public-user_org_business_role"><td><code>public.user_org_business_role</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.current_user_business_role_code()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.list_object_verifier_ids(p_object_id text)</code>, <code>api.rpc_list_org_members(p_org_object_id text)</code> <span class="muted">+4</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_set_business_role(p_membership_id uuid, p_role_code text)</code>, <code>internal.grant_test_org_permissions()</code> <span class="muted">+1</span></td><td>2 policies · 7 triggers · FK → 3 · FK ← 0</td></tr>
+<tr id="table-public-user_org_membership"><td><code>public.user_org_membership</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.auto_attach_object_to_creator_org()</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.current_user_active_org()</code>, <code>api.current_user_admin_rank()</code> <span class="muted">+37</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)</code></td><td>2 policies · 9 triggers · FK → 3 · FK ← 2</td></tr>
 <tr id="table-public-user_permission"><td><code>public.user_permission</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.list_object_verifier_ids(p_object_id text)</code>, <code>api.rpc_list_org_members(p_org_object_id text)</code> <span class="muted">+2</span></td><td><code>api.rpc_grant_user_permission(p_target_user_id uuid, p_permission_code text)</code>, <code>api.rpc_revoke_user_permission(p_target_user_id uuid, p_permission_code text)</code></td><td>2 policies · 2 triggers · FK → 3 · FK ← 0</td></tr>
 <tr id="table-public-ref_actor_role"><td><code>public.ref_actor_role</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT &#x27;xlsx&#x27;::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)</code>, <code>api.get_actor_data(p_object_id text)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.link_actor_to_object(p_payload jsonb)</code> <span class="muted">+8</span></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 0 · FK ← 2</td></tr>
 <tr id="table-public-ref_amenity"><td><code>public.ref_amenity</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)</code>, <code>api.get_object_badges_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code>, <code>api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code> <span class="muted">+13</span></td><td><span class="muted">-</span></td><td>4 policies · 6 triggers · FK → 1 · FK ← 3</td></tr>

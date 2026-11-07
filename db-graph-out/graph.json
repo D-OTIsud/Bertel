@@ -2,11 +2,11 @@
  "meta": {
   "table_count": 424,
   "view_count": 15,
-  "function_count": 643,
+  "function_count": 646,
   "policy_count": 647,
-  "trigger_count": 1438,
+  "trigger_count": 1439,
   "enum_count": 9,
-  "edge_count": 6315
+  "edge_count": 6318
  },
  "nodes": [
   {
@@ -43511,6 +43511,19 @@
    }
   },
   {
+   "id": "trigger:public.app_user_profile:lock_profile_insert_for_membership",
+   "kind": "trigger",
+   "label": "lock_profile_insert_for_membership",
+   "schema": "public",
+   "domain": "rbac",
+   "doc": null,
+   "props": {
+    "table": "public.app_user_profile",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
    "id": "auth.webauthn_credentials",
    "kind": "table",
    "label": "webauthn_credentials",
@@ -62433,6 +62446,31 @@
    }
   },
   {
+   "id": "internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)",
+   "kind": "function",
+   "label": "upsert_org_membership",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107171528_org_membership_platform_target_guard.sql",
+      "line": 3
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107171528_org_membership_platform_target_guard.sql",
+     "line": 3
+    }
+   }
+  },
+  {
    "id": "api.current_user_email()",
    "kind": "function",
    "label": "current_user_email",
@@ -62480,6 +62518,81 @@
       "line": 6
      }
     ]
+   }
+  },
+  {
+   "id": "api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
+   "kind": "function",
+   "label": "rpc_upsert_membership",
+   "schema": "api",
+   "domain": "api",
+   "doc": "-------------------------------------------------------\nrpc_upsert_membership\nCrée un membership (+ rôle métier initial) ou réactive un membership inactif.\nAutorisation : org_manager (rank ≥ 20) de l'ORG cible, ou super_admin.\nAnti-self : un admin ne peut pas s'ajouter lui-même.\nInvariant §2.5 : le rôle métier est obligatoire — toujours fourni à la création.\n-------------------------------------------------------",
+   "props": {
+    "signature": "rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
+    "returns": "uuid",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 2112
+     },
+     {
+      "path": "supabase/migrations/20261107171528_org_membership_platform_target_guard.sql",
+      "line": 141
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.rpc_attach_invite_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
+   "kind": "function",
+   "label": "rpc_attach_invite_membership",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "rpc_attach_invite_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107171528_org_membership_platform_target_guard.sql",
+      "line": 153
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107171528_org_membership_platform_target_guard.sql",
+     "line": 153
+    }
+   }
+  },
+  {
+   "id": "internal.lock_profile_insert_for_membership()",
+   "kind": "function",
+   "label": "lock_profile_insert_for_membership",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "A missing profile has no row for the membership writer to lock. Use its\nuser lock before INSERT, including the insert arm of an upsert.",
+   "props": {
+    "signature": "lock_profile_insert_for_membership()",
+    "returns": "trigger",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261107171528_org_membership_platform_target_guard.sql",
+      "line": 168
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261107171528_org_membership_platform_target_guard.sql",
+     "line": 168
+    }
    }
   },
   {
@@ -67155,31 +67268,6 @@
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
      "line": 9026
-    }
-   }
-  },
-  {
-   "id": "api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
-   "kind": "function",
-   "label": "rpc_upsert_membership",
-   "schema": "api",
-   "domain": "api",
-   "doc": "-------------------------------------------------------\nrpc_upsert_membership\nCrée un membership (+ rôle métier initial) ou réactive un membership inactif.\nAutorisation : org_manager (rank ≥ 20) de l'ORG cible, ou super_admin.\nAnti-self : un admin ne peut pas s'ajouter lui-même.\nInvariant §2.5 : le rôle métier est obligatoire — toujours fourni à la création.\n-------------------------------------------------------",
-   "props": {
-    "signature": "rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
-    "returns": "uuid",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 2112
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/rls_policies.sql",
-     "line": 2112
     }
    }
   },
@@ -97380,6 +97468,18 @@
    "props": {}
   },
   {
+   "source": "trigger:public.app_user_profile:lock_profile_insert_for_membership",
+   "target": "public.app_user_profile",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.app_user_profile:lock_profile_insert_for_membership",
+   "target": "internal.lock_profile_insert_for_membership()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "trigger:public.object_act:trg_audit_object_act",
    "target": "public.object_act",
    "kind": "trigger_on",
@@ -124504,6 +124604,90 @@
    }
   },
   {
+   "source": "internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)",
+   "target": "public.user_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN user_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)",
+   "target": "public.ref_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)",
+   "target": "public.ref_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)",
+   "target": "public.user_org_membership",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "internal.upsert_org_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text, p_invitation boolean)",
+   "target": "public.user_org_business_role",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE user_org_business_role"
+    }
+   }
+  },
+  {
    "source": "api.get_object_local_now(p_object_id text)",
    "target": "public.object",
    "kind": "reads",
@@ -130920,78 +131104,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN object_legal"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
-   "target": "public.user_org_membership",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM user_org_membership"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
-   "target": "public.user_org_admin_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN user_org_admin_role"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
-   "target": "public.ref_org_admin_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_org_admin_role"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
-   "target": "public.ref_org_business_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM ref_org_business_role"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
-   "target": "public.user_org_membership",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE user_org_membership"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)",
-   "target": "public.user_org_business_role",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE user_org_business_role"
     }
    }
   },

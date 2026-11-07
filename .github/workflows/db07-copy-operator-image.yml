@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/db07-copy-operator-image.yml'
       - 'tools/storage-reservation/Dockerfile.copy-operator'
+      - 'tools/storage-reservation/smoke-copy-operator-tls.sh'
 
 permissions:
   contents: read
@@ -60,3 +61,5 @@ jobs:
               node --test --test-name-pattern="default CLI preview|the Python child" \
                 tools/private-media/copy-verified.test.mjs tools/private-media/copy-reserved-resume.test.mjs
             '
+      - name: Verify PostgreSQL TLS with the image's native client
+        run: bash tools/storage-reservation/smoke-copy-operator-tls.sh "$OPERATOR_IMAGE"

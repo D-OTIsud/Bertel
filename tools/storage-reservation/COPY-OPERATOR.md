@@ -125,7 +125,21 @@ The network-disabled smoke verifies UID/GID 1000, Node 22, native Python and
 `psql` 17, Git with an empty repository, and the existing synthetic CLI
 preview, stdin and Python child checks. It uses two read-only test mounts.
 
-Qualification of a deployable image remains a separate step. It must seal
-the exact image, exercise its native `psql` over TLS with a disposable
-PostgreSQL 17 server and validate the hosted direct channel and the private
-CA, passfile, journal and receipt mounts before any hosted copy.
+The [TLS smoke](smoke-copy-operator-tls.sh) runs on the image ID built by the
+workflow. It uses PostgreSQL 17.11 on a Docker internal network and a generated
+CA, server certificate and passfile. The existing Python adapter must see TLS
+and the exact COMMIT acknowledgement on the valid connection. The same server
+must refuse a wrong CA and a wrong DNS name for the expected libpq reasons.
+This qualifies the client transport on the fixture. The hosted direct channel
+and the private CA, passfile, journal and receipt mounts need their own check.
+
+For a reviewed transfer to Coolify, prefer a short-lived private GitHub Actions
+artifact over a registry publication. In the same successful build and smoke
+job, save the exact tested image with `docker image save`. Record its image
+ID, platform, source commit, workflow run and attempt, and the archive size and
+SHA-256 in a manifest. Fetch the artifact from that run by its immutable
+artifact ID, verify the published artifact digest and the archive manifest,
+then compare the local image ID and platform after `docker image load`.
+The archive contains the operator image only. The current workflow keeps it
+in the disposable runner. Loading a future verified archive can leave the
+app container and its configuration in place.

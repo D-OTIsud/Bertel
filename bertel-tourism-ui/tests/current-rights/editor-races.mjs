@@ -101,6 +101,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       const request = route.request();
       const url = new URL(request.url());
       if (!permitted.has(url.origin)) return route.abort().catch(() => {});
+      if (url.origin === app.origin && request.method() === 'GET' && url.pathname === '/login'
+        && (url.searchParams.has('email') || url.searchParams.has('password'))) {
+        if (!closing) routeFailure ??= new Error('Editor login attempted a native GET form submission');
+        return route.abort().catch(() => {});
+      }
       let kind;
       if (url.origin === local.origin) {
         if (request.method() === 'PATCH' && url.pathname === '/rest/v1/object' && url.searchParams.get('id') === 'eq.' + objectId) {
@@ -148,6 +153,15 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     const page = await context.newPage();
     const destination = '/objects/' + objectId + '/edit';
     await page.goto(app.origin + '/login?from=' + encodeURIComponent(destination));
+    // The prerendered form can be visible before its client handlers are attached.
+    const forgotPassword = page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
+    const returnToLogin = page.getByRole('button', { name: 'Retour à la connexion', exact: true });
+    await assertion(async () => {
+      if (await returnToLogin.isVisible()) return;
+      await forgotPassword.click({ timeout: 1000 });
+      assert.ok(await returnToLogin.isVisible(), 'client login controls are not ready');
+    }).toPass({ timeout: 20_000 });
+    await returnToLogin.click();
     await page.getByLabel('Adresse e-mail').fill(email);
     await page.getByLabel('Mot de passe', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Se connecter' }).click();

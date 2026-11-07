@@ -18,6 +18,7 @@ const expectUI = expect.configure({ timeout: 20_000 });
 const writes = 'internal.portal_photo_actor_writes_enabled()';
 const reservation = 'api.reserve_portal_photo_upload(text,uuid,uuid)';
 const texts = 'api.update_portal_photo_proposal_texts(text,uuid,jsonb,text,text)';
+const completion = 'api.complete_portal_photo_upload(uuid,uuid,text,text,integer,integer)';
 const changeGate = (open) => `
   CREATE OR REPLACE FUNCTION ${writes} RETURNS boolean
   LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog AS $fn$
@@ -25,6 +26,8 @@ const changeGate = (open) => `
 $fn$;
   ${open ? 'GRANT' : 'REVOKE'} EXECUTE ON FUNCTION ${reservation}, ${texts}
   ${open ? 'TO' : 'FROM'} authenticated;
+  ${open ? 'GRANT' : 'REVOKE'} EXECUTE ON FUNCTION ${completion}
+  ${open ? 'TO' : 'FROM'} service_role;
   NOTIFY pgrst, 'reload schema';`;
 const runFixture = (local, sql) => local.sql(`BEGIN;
   SELECT set_config('request.jwt.claims','{"role":"service_role"}',true);
@@ -84,7 +87,7 @@ async function signIn(page, email, password, target, authOrigin) {
   }
 }
 
-async function uploadFromBrowser(local, { userId, email, password, png }) {
+async function uploadFromBrowser(local, { userId, actorId, email, password, png }) {
   const app = await startApp(local, { signDocuments: true });
   const rejectProxy = createServer((_request, response) => response.writeHead(403, { Connection: 'close' }).end());
   rejectProxy.on('connect', (_request, socket) => socket.destroy());
@@ -137,7 +140,19 @@ async function uploadFromBrowser(local, { userId, email, password, png }) {
       page.waitForResponse((value) => value.url() === app.origin + uploadRoute && value.request().method() === 'POST'),
       dialog.getByRole('button', { name: 'Valider les ajouts', exact: true }).click(),
     ]);
-    assert.equal(response.status(), 201, 'the fresh photo must be persisted by the real Next route');
+    if (response.status() !== 201) {
+      const error = await response.json().catch(() => null);
+      let checkpoint = 'unavailable';
+      try {
+        checkpoint = local.sql(`SELECT jsonb_build_object(
+          'reserved',(SELECT count(*) FROM public.actor_document a JOIN public.ref_document d ON d.id=a.document_id
+            WHERE a.actor_id='${actorId}' AND a.created_by='${userId}'
+              AND d.extra @> '{"source":"portal_photo","object_id":"${objectId}"}'::jsonb),
+          'stored',(SELECT count(*) FROM storage.objects WHERE bucket_id='${bucket}'
+            AND starts_with(name,'portal-photos/${actorId}/')))`);
+      } catch { /* The HTTP refusal is still the primary failure. */ }
+      assert.fail(`The fresh photo returned HTTP ${response.status()} (${error?.error === 'forbidden' ? 'forbidden' : 'other'}); fixture checkpoint ${checkpoint}`);
+    }
     const contentType = await response.request().headerValue('content-type');
     assert.ok(contentType?.startsWith('multipart/form-data; boundary='), 'the browser sent a real multipart upload');
     const authorization = await response.request().headerValue('authorization');
@@ -171,7 +186,9 @@ test('real prestataire browser deposits photo bytes in private Storage', { timeo
     WHERE bucket_id='${bucket}' AND starts_with(name,'${prefix}')`));
   const closed = () => local.sql(`SELECT NOT ${writes}
     AND NOT has_function_privilege('authenticated','${reservation}','EXECUTE')
-    AND NOT has_function_privilege('authenticated','${texts}','EXECUTE')`);
+    AND NOT has_function_privilege('authenticated','${texts}','EXECUTE')
+    AND NOT has_function_privilege('authenticated','${completion}','EXECUTE')
+    AND NOT has_function_privilege('service_role','${completion}','EXECUTE')`);
   assert.equal(closed(), 't', 'photo writes must start closed on the fresh stack');
   assert.equal(local.sql(`SELECT EXISTS(SELECT 1 FROM storage.buckets WHERE id='${bucket}' AND public IS FALSE)
     AND EXISTS(SELECT 1 FROM internal.portal_photo_analysis_settings WHERE singleton AND enabled IS FALSE)
@@ -201,7 +218,7 @@ test('real prestataire browser deposits photo bytes in private Storage', { timeo
       ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role,actor_id=EXCLUDED.actor_id;
       ${changeGate(true)}`);
     writesOpened = true;
-    const id = await uploadFromBrowser(local, { userId, email, password, png });
+    const id = await uploadFromBrowser(local, { userId, actorId, email, password, png });
     const key = prefix + id + '.jpg';
     assert.deepEqual(keys(), [key], 'one new Storage object must exist under the actor namespace');
     const sha = local.sql(`SELECT d.extra->>'upload_sha256' FROM public.ref_document d

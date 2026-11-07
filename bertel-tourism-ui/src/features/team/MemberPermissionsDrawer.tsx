@@ -36,6 +36,12 @@ export const CATEGORY_LABELS: Record<string, string> = {
   legal: 'Juridique',
 };
 
+const HIDDEN_TEAM_PERMISSION_CODES = new Set(['edit_hours', 'edit_pricing', 'edit_gallery', 'attach_documents']);
+
+export function visibleTeamPermissions(catalog: RefPermission[]): RefPermission[] {
+  return catalog.filter((permission) => !HIDDEN_TEAM_PERMISSION_CODES.has(permission.code));
+}
+
 export function groupByCategory(
   permissions: RefPermission[],
 ): Array<{ category: string; label: string; perms: RefPermission[] }> {
@@ -69,13 +75,14 @@ export function MemberPermissionsDrawer({
   onClose,
   onChanged,
 }: MemberPermissionsDrawerProps) {
-  const groups = groupByCategory(catalog);
+  const visibleCatalog = visibleTeamPermissions(catalog);
+  const groups = groupByCategory(visibleCatalog);
   // `member` peut être null pendant que la Modal s'anime en fermeture (open=false mais encore
   // montée) — toute lecture dépendant du membre reste gardée.
   const displayName = member?.displayName ?? member?.email ?? member?.userId ?? '';
   const roleLabel = businessRoleLabel(member?.businessRoleCode);
   const roleCodes = member?.businessRoleCode ? (roleMatrix[member.businessRoleCode] ?? []) : [];
-  const roleNames = catalog.filter((p) => roleCodes.includes(p.code)).map((p) => p.name);
+  const roleNames = visibleCatalog.filter((p) => roleCodes.includes(p.code)).map((p) => p.name);
 
   async function toggleUserPermission(code: string, currentlyGranted: boolean) {
     if (!member) return;

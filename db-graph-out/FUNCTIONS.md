@@ -2432,7 +2432,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.portal_photo_failed_approval(p_claim_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.media` _(high)_
-- reads `public.ref_document` _(high)_
 - writes `public.ref_document` _(high)_
 
 ## `api.portal_photo_preview(p_document_id uuid)`
@@ -2464,6 +2463,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.pending_change` _(high)_
 - reads `public.ref_document` _(high)_
 - writes `public.ref_document` _(high)_
+
+> Each claim owns a distinct public Storage key. Existing media URLs are untouched.
 
 ## `api.prevent_duplicate_actor_email()`
 - returns: `trigger`

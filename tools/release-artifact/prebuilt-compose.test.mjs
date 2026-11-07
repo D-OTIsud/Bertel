@@ -82,7 +82,12 @@ test('native rendering changes only build -> image and pull_policy, preserving t
   assert.deepEqual(Object.keys(current.services), [serviceName], 'positive service witness');
   assert.deepEqual(Object.keys(current.services[serviceName].environment).sort(), [...runtimeKeys].sort());
   assert.ok(current.services[serviceName].build, 'source build must exist before the comparison');
-  assert.ok(current.services[serviceName].ports.length > 0, 'published-port witness must be nonempty');
+  const ports = current.services[serviceName].ports;
+  assert.equal(ports.length, 2, 'only the two loopback probes may be published');
+  assert.deepEqual(new Set(ports.map(({ host_ip }) => host_ip)), new Set(['127.0.0.1', '::1']));
+  for (const { published, target, protocol } of ports) {
+    assert.deepEqual([published, target, protocol], ['8081', 3000, 'tcp']);
+  }
   assert.equal(current.services[serviceName].environment.THESAURUS_CURSOR_SECRET, fixture.THESAURUS_CURSOR_SECRET);
   assert.equal(current.services[serviceName].environment.LIST_EMAIL_MODE, 'closed');
   const expected = structuredClone(current);

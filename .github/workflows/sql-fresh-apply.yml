@@ -60,16 +60,27 @@ on:
         type: boolean
         required: false
         default: false
+      sandbox_discovery:
+        description: 'Run the public discovery HTTP witness on the disposable fresh stack (select alone)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   fresh-apply:
     # Push/PR always run the mandatory application/rights gate. The explicit
     # manual selector below starts a separate upstream capability probe only.
-    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.storage_contract != true && inputs.storage_db07_profile != true) }}
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && 'ubuntu-24.04' || 'ubuntu-latest' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.sandbox_discovery == true || (inputs.storage_contract != true && inputs.storage_db07_profile != true) }}
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.sandbox_discovery == true) && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+
+      - name: Require the standalone public discovery selector
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery == true && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
+        run: |
+          echo "::error::Select sandbox_discovery alone."
+          exit 1
 
       - name: Validate Tourinsoft Reunion contract inventory
         run: |
@@ -670,12 +681,24 @@ jobs:
           node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: Set up Node 22 for opt-in authenticated witnesses
-        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.realtime_security == true) && steps.list_email_owned_stack.outcome == 'success' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.sandbox_discovery == true) && steps.list_email_owned_stack.outcome == 'success' }}
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: bertel-tourism-ui/package-lock.json
+
+      - name: Public discovery GoTrue sessions and external effects (disposable only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery == true && steps.list_email_owned_stack.outcome == 'success' }}
+        timeout-minutes: 6
+        env:
+          CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+          CURRENT_RIGHTS_SANDBOX_DISCOVERY: 'true'
+        run: |
+          npm --prefix bertel-tourism-ui ci --legacy-peer-deps
+          node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: Install Chromium for the authenticated editor witness
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.editor_browser == true && steps.list_email_owned_stack.outcome == 'success' }}
@@ -724,7 +747,7 @@ jobs:
 
   storage-contract:
     name: ${{ inputs.storage_contract == true && 'Strict Storage capability (manual, synthetic only)' || 'DB07 Storage copy profile (manual, synthetic only)' }}
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery != true && (inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

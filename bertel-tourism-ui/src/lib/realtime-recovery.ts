@@ -32,6 +32,8 @@ export interface ResilientChannelOptions {
   topic: string;
   /** Second argument de `client.channel(topic, …)`. */
   config?: Parameters<SupabaseClient['channel']>[1];
+  /** A disposed or superseded identity must never reopen its channel. */
+  canOpen?: () => boolean;
   /** Installe les handlers `.on(...)`. Rappelée à CHAQUE reconstruction. */
   bind: (channel: RealtimeChannel) => void;
   /** Appelée quand le canal est effectivement SUBSCRIBED (ex. `track` de présence). */
@@ -45,6 +47,8 @@ export interface ResilientChannelHandle {
   retryNow: () => void;
   dispose: () => void;
 }
+
+const retiredChannels = new WeakSet<RealtimeChannel>();
 
 export function createResilientChannel(
   client: SupabaseClient,
@@ -72,7 +76,7 @@ export function createResilientChannel(
   };
 
   function open() {
-    if (disposed) return;
+    if (disposed || options.canOpen?.() === false) return;
     clearTimer();
     subscribed = false;
 
@@ -81,18 +85,19 @@ export function createResilientChannel(
     if (previous) {
       // Indispensable : `client.channel(topic)` RÉUTILISE un canal existant de même
       // topic. Sans ce retrait, on récupérerait le cadavre au lieu d'un canal neuf.
+      retiredChannels.add(previous);
       void client.removeChannel(previous);
     }
 
     options.onState?.('connecting');
     const channel = client.channel(options.topic, options.config);
 
-    if (previous && channel === previous) {
+    if (retiredChannels.has(channel)) {
       // Le canal précédent n'a pas encore fini de quitter le topic (phx_leave en vol) :
       // realtime-js nous rend le même objet, et `subscribe()` n'est un no-op silencieux
       // que hors état "closed". On retente au pas suivant plutôt que de s'abonner dans
       // le vide.
-      current = previous;
+      current = channel;
       scheduleReopen();
       return;
     }
@@ -102,7 +107,7 @@ export function createResilientChannel(
 
     channel.subscribe((status) => {
       // Réponse tardive d'un canal déjà remplacé : elle ne doit plus piloter l'état.
-      if (channel !== current || disposed) return;
+      if (channel !== current || disposed || options.canOpen?.() === false) return;
 
       if (status === 'SUBSCRIBED') {
         subscribed = true;
@@ -154,6 +159,7 @@ export function createResilientChannel(
       const channel = current;
       current = null;
       if (channel) {
+        retiredChannels.add(channel);
         void channel.untrack();
         void channel.unsubscribe();
         void client.removeChannel(channel);

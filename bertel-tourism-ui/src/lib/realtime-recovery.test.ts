@@ -56,6 +56,28 @@ describe('createResilientChannel', () => {
     expect(client.removeChannel).toHaveBeenCalledWith(created[0]);
   });
 
+  it('waits for a retired channel before binding a new authority on the same topic', () => {
+    const { client, created, handle } = setup();
+    const bind = jest.fn();
+    const old = created[0];
+    handle.dispose();
+    client.keepTopicBusy(old);
+    const replacement = createResilientChannel(client as unknown as SupabaseClient, {
+      topic: old.topic,
+      config: { config: { private: true, presence: { key: 'u2' } } },
+      bind,
+    });
+    try {
+      expect(bind).not.toHaveBeenCalled();
+      expect(old.subscribe).toHaveBeenCalledTimes(1);
+      jest.advanceTimersByTime(1_000);
+      expect(created).toHaveLength(2);
+      expect(bind).toHaveBeenCalledWith(created[1]);
+    } finally {
+      replacement.dispose();
+    }
+  });
+
   it('leaves the library its own rejoin window on CHANNEL_ERROR, then takes over', () => {
     const { created, onState } = setup();
     created[0].emit('SUBSCRIBED');

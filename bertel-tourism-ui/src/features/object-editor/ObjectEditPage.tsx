@@ -549,7 +549,7 @@ function EditorReady({ resource, objectId, meta, workspaceQueryKey, workspaceRea
     // Tell the other editors of this fiche so they can reload before clobbering. Only direct saves
     // changed the DB — submitted proposals are pending and must not signal a peer reload.
     if (result.saved.length > 0) {
-      presence.broadcastSaved(result.saved);
+      presence.broadcastSaved();
     }
 
     const issues = saveResultToIssues(result, meta.archetype);

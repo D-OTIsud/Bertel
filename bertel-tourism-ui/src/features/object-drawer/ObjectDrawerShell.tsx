@@ -89,7 +89,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const { data, isError, error, isLoading } = useObjectDetailQuery(objectId);
   const { peers, typingUsers } = usePresenceRoom(
     objectId ? `room:${objectId}` : 'room:empty',
-    { enabled: Boolean(objectId) },
+    { enabled: Boolean(objectId && data && !isError) },
   );
   // `canEditObjects` = api.current_user_can_edit_objects() : superuser plateforme,
   // admin d'ORG, ou l'une des permissions editables. Il remplace `role !== null`,

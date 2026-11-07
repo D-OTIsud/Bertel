@@ -281,8 +281,10 @@ test('bound DB07 backup verifies offline and refuses incomplete, tampered or rep
   assert.ok(payload);
   assert.deepEqual(JSON.parse(payload[1]), inventory.records.map((record, index) =>
     copyBinding(inventory, record, { sha256: sha256(sources[index]), bytes: sources[index].length }, config)));
-  assert.equal([...prepared.sql.matchAll(/^BEGIN;$/gm)].length, 1);
+  assert.equal([...prepared.sql.matchAll(/^BEGIN ISOLATION LEVEL READ COMMITTED READ WRITE;$/gm)].length, 1);
   assert.equal([...prepared.sql.matchAll(/^COMMIT;$/gm)].length, 1);
+  const lock = /LOCK TABLE storage_reservation_private\.namespace, storage_reservation_private\.admission,\s+storage_reservation_private\.reservation IN SHARE ROW EXCLUSIVE MODE;/.exec(prepared.sql);
+  assert.ok(lock && lock.index < prepared.sql.indexOf('DO $db07_seed$'));
   assert.match(prepared.sql, /INSERT INTO storage_reservation_private\.namespace/);
   assert.match(prepared.sql, /INSERT INTO storage_reservation_private\.admission/);
   assert.match(prepared.sql, /20261107041336/);

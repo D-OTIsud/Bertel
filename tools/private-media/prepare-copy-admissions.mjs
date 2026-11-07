@@ -26,11 +26,13 @@ function seedSql(bindings) {
   requireThat(!batch.includes('$db07_seed$'), 'seed_payload');
   return `-- PRIVATE: admits an entire batch in one transaction. Keep outside Git.
 -- Review the exact hosted TLS target and freeze before psql -X -v ON_ERROR_STOP=1.
-BEGIN;
+BEGIN ISOLATION LEVEL READ COMMITTED READ WRITE;
 SET LOCAL lock_timeout = '3s';
 SET LOCAL statement_timeout = '30s';
 SET LOCAL standard_conforming_strings = on;
 SET LOCAL search_path = pg_catalog, pg_temp;
+LOCK TABLE storage_reservation_private.namespace, storage_reservation_private.admission,
+  storage_reservation_private.reservation IN SHARE ROW EXCLUSIVE MODE;
 DO $db07_seed$
 DECLARE
   expected CONSTANT pg_catalog.jsonb := ${literal(batch)}::pg_catalog.jsonb;
@@ -52,8 +54,6 @@ BEGIN
     RAISE EXCEPTION 'DB07 exact installation receipt required';
   END IF;
 
-  LOCK TABLE storage_reservation_private.namespace, storage_reservation_private.admission,
-    storage_reservation_private.reservation IN SHARE ROW EXCLUSIVE MODE;
   IF EXISTS (SELECT 1 FROM storage_reservation_private.namespace)
      OR EXISTS (SELECT 1 FROM storage_reservation_private.admission)
      OR EXISTS (SELECT 1 FROM storage_reservation_private.reservation) THEN

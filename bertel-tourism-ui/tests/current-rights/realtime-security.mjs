@@ -40,12 +40,13 @@ async function tenantMode(local, requested) {
   return data.private_only;
 }
 
-export async function testRealtimeSecurity({ local, objectId, publishedId, writer, foreign, testRealm, portal,
-  profileless, revokeWriter, diagnostic }) {
+export async function testRealtimeSecurity({ local, objectId, publishedId, testObjectId, writer, foreign, testRealm, portal,
+  profileless, restoreUnaffiliatedProfile, markTesterAsDiscovery, revokeWriter, diagnostic }) {
   const origin = new URL(local.origin);
   assert.ok(process.env.CURRENT_RIGHTS_DISPOSABLE === 'true' && process.env.GITHUB_ACTIONS === 'true'
     && origin.protocol === 'http:' && origin.hostname === '127.0.0.1' && origin.port
-    && origin.origin === local.origin && objectId === 'HOTRUN999999AR01' && publishedId === 'HOTRUN999999AR03',
+    && origin.origin === local.origin && objectId === 'HOTRUN999999AR01' && publishedId === 'HOTRUN999999AR03'
+    && testObjectId === 'HOTRUN999999AR05',
   'only the owned disposable loopback stack and exact object fixtures are allowed');
   const socketOrigin = `ws://${origin.host}`;
   class LoopbackSocket extends WebSocket {
@@ -80,6 +81,7 @@ export async function testRealtimeSecurity({ local, objectId, publishedId, write
   };
   const room = `room:${objectId}`;
   const published = `room:${publishedId}`;
+  const testRoom = `room:${testObjectId}`;
   const globalTopics = { prod: 'presence:global:prod', test: 'presence:global:test' };
   const crm = { prod: 'crm:tasks:prod', test: 'crm:tasks:test' };
   const anon = { id: 'synthetic-anonymous', headers: local.anonymous };
@@ -140,8 +142,9 @@ export async function testRealtimeSecurity({ local, objectId, publishedId, write
     const [crmWriter, crmForeign] = await positivePair(crm.prod, writer, foreign);
     const testGlobal = await open(globalTopics.test, testRealm);
     const testCrm = await open(crm.test, testRealm);
-    for (const peer of [testGlobal, testCrm]) {
-      assert.equal(peer.status, 'joined', 'test editor joins their own realm roster');
+    const testRoomEditor = await open(testRoom, testRealm);
+    for (const peer of [testGlobal, testCrm, testRoomEditor]) {
+      assert.equal(peer.status, 'joined', 'test editor joins the roster or object in their own realm');
       assert.equal(await track(peer), 'ok');
       await waitFor(() => peer.channel.presenceState()[testRealm.id]?.length === 1, 'nonempty test roster');
       assert.equal(peer.channel.presenceState()[writer.id], undefined, 'no production identity on the test roster');
@@ -161,6 +164,19 @@ export async function testRealtimeSecurity({ local, objectId, publishedId, write
       refusedBroadcast(publishedReader, publishedWriter, 'published-reader-broadcast'),
       refusedBroadcast(globalWriter, globalForeign, 'global-client-broadcast'),
       refusedBroadcast(crmWriter, crmForeign, 'crm-client-broadcast'),
+    ]);
+
+    const unaffiliated = await restoreUnaffiliatedProfile();
+    await deniedJoins([
+      [published, unaffiliated, 'default staff profile without affiliation cannot join a published room'],
+      [globalTopics.prod, unaffiliated, 'default staff profile without affiliation cannot join the roster'],
+    ]);
+    const discovery = await markTesterAsDiscovery();
+    await deniedJoins([
+      [testRoom, testRealm, 'original tester JWT cannot rejoin after the account becomes public discovery'],
+      [testRoom, discovery, 'public discovery cannot join a test room even with fixture write authority'],
+      [globalTopics.test, discovery, 'public discovery cannot join the test roster'],
+      [crm.test, discovery, 'public discovery cannot join the test CRM roster'],
     ]);
 
     assert.equal(await a1.client.removeChannel(a1.channel), 'ok');

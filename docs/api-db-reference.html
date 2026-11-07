@@ -54,7 +54,7 @@ TS periodsPartialOverlap : intersection ensembliste des jours couverts.</blockqu
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:265</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql:268</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:265</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:268</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-list_email_intent"><code>internal.list_email_intent</code></a></td><td>high</td></tr>
@@ -102,7 +102,7 @@ Function to add a legal record
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/ai_request_admission.sql:22</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106200353_distributed_ai_request_admission.sql:56</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/ai_request_admission.sql:22</code><br><code>supabase/migrations/20261106200353_distributed_ai_request_admission.sql:56</code></p>
 </div>
 <blockquote>Service-only atomic 12/60s sliding AI request admission per verified user and route. No provider text/key stored. Local CPU leases remain separate.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -314,7 +314,7 @@ Function to audit legal compliance across all objects
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:201</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql:204</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:201</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:204</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-list_email_intent"><code>internal.list_email_intent</code></a></td><td>high</td></tr>
@@ -397,7 +397,7 @@ Utilisé pour modifier / archiver une note.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_contacts_org_gate.sql:74</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:264</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_contacts_org_gate.sql:74</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:264</code></p>
 </div>
 <blockquote>SOURCE AUTORITAIRE (§208) de la règle « qui voit les coordonnées complètes d&#x27;un acteur » : superuser plateforme (lu dans app_user_profile.role — délibérément PAS api.is_platform_superuser(), dont le premier bras dirait TRUE à une clé service_role) OU membre d&#x27;une ORG publisher de la fiche (api.current_user_crm_object_ids). FALSE hors contexte HTTP et en service-role (auth.uid() NULL) : un export de PII est imputable à une personne. Forme PAR FICHE, appelée par api.export_actor_capabilities et par l&#x27;éditeur. DEUX autres formulations existent (tâche 7, 2026-08-08, mise à jour depuis « UNE seule ») : la forme ensembliste du périmètre dans api.export_actor_contacts (duplication délibérée §204), et le bras superuser de la cascade prestataire→fiche de api.list_selection_emails (migration_selection_emails.sql, §211 plié au régime §208) — faire évoluer les TROIS ensemble.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -410,7 +410,7 @@ Utilisé pour modifier / archiver une note.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql:45</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106105258_private_object_document_access.sql:45</code></p>
 </div>
 <blockquote>A policy must not traverse ref_document as the caller: it would recurse into
 its own RLS. This boolean definer reveals no location and bypasses row policies
@@ -503,7 +503,7 @@ pour l&#x27;objet dans le périmètre de son organisation active.</blockquote>
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:10710</code><br><code>Base de donnée DLL et API/migration_crm_lifecycle.sql:340</code><br><code>Base de donnée DLL et API/migration_metric_snapshot.sql:34</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:511</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:10710</code><br><code>Base de donnée DLL et API/migration_crm_lifecycle.sql:340</code><br><code>Base de donnée DLL et API/migration_metric_snapshot.sql:34</code><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:511</code></p>
 </div>
 <blockquote>Capture current real and test KPI stocks independently. p_date labels a current capture, not a historical reconstruction.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -604,7 +604,7 @@ et check_org_config_org_type).</blockquote>
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:1534</code><br><code>Base de donnée DLL et API/migration_crm_task_email_documents.sql:112</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906034134_task_notification_creator_sender.sql:7</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql:289</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:1534</code><br><code>Base de donnée DLL et API/migration_crm_task_email_documents.sql:112</code><br><code>supabase/migrations/20260906034134_task_notification_creator_sender.sql:7</code><br><code>supabase/migrations/20260911152231_internal_pending_change_notifications.sql:289</code></p>
 </div>
 <blockquote>Outbox e-mail : crm_task_assigned et fiche_submission_reviewed (TTL 10 min, SKIP LOCKED, 5 tentatives). Contenu joint en DB, creator_email/creator_name issus de crm_task.created_by pour les assignations uniquement. Réservée au drain Next en service_role.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -678,7 +678,7 @@ et check_org_config_org_type).</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:236</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql:239</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:236</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:239</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-list_email_intent"><code>internal.list_email_intent</code></a></td><td>high</td></tr>
@@ -723,7 +723,7 @@ et check_org_config_org_type).</blockquote>
 <p><b>Retour</b><br><code>uuid</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_public_sandbox_entry.sql:51</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260904062635_public_sandbox_entry.sql:51</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_public_sandbox_entry.sql:51</code><br><code>supabase/migrations/20260904062635_public_sandbox_entry.sql:51</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
@@ -742,7 +742,7 @@ et check_org_config_org_type).</blockquote>
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql:407</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260911152231_internal_pending_change_notifications.sql:407</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-app_notification"><code>public.app_notification</code></a></td><td>high</td></tr>
@@ -777,7 +777,7 @@ et check_org_config_org_type).</blockquote>
 <p><b>Retour</b><br><code>uuid</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_list_create_superuser_only.sql:38</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:616</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_list_create_superuser_only.sql:38</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:616</code></p>
 </div>
 <blockquote>Création d&#x27;une liste : tout membre connecté d&#x27;une ORG (lecteurs compris). Items statiques admis published ET du bon corpus de test (§2/§4 revue architecte).</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -859,7 +859,7 @@ autoritaire ; le client n&#x27;utilise ce nom que pour l&#x27;affichage.</blockq
 <p><b>Retour</b><br><code>uuid</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:73</code><br><code>Base de donnée DLL et API/object_current_rights.sql:8</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:246</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql:60</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:73</code><br><code>Base de donnée DLL et API/object_current_rights.sql:8</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:246</code><br><code>supabase/migrations/20261106100603_object_current_authorization.sql:60</code></p>
 </div>
 <blockquote>Current authenticated actor profile binding; demotion or unlink removes portal identity immediately.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -950,7 +950,7 @@ user_permission sans dépendre des policies RLS de ces tables.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal_access_permission.sql:10</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260904060259_actor_portal_access_permission.sql:10</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal_access_permission.sql:10</code><br><code>supabase/migrations/20260904060259_actor_portal_access_permission.sql:10</code></p>
 </div>
 <blockquote>Permission dédiée au bloc CRM Accès portail. Superutilisateur plateforme ou permission explicite ; aucun rôle métier ne la reçoit par défaut. Les gardes CRM par acteur restent requises.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -972,7 +972,7 @@ user_permission sans dépendre des policies RLS de ces tables.</blockquote>
 <p><b>Retour</b><br><code>SETOF uuid</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:317</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql:145</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:202</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:317</code><br><code>supabase/migrations/20260807124408_actor_prospects_documents.sql:145</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:202</code></p>
 </div>
 <blockquote>Prospects without object links remain scoped to the active CRM organisation.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -987,7 +987,7 @@ user_permission sans dépendre des policies RLS de ces tables.</blockquote>
 <p><b>Retour</b><br><code>SETOF text</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:269</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:189</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:269</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:189</code></p>
 </div>
 <blockquote>---------- 7. Helpers d&#x27;autorisation (style current_user_extended_object_ids, §35) ----------
 Périmètre CRM = objets dont une ORG du user (membership actif) est PUBLISHER.
@@ -1017,7 +1017,7 @@ le CRM est le pilotage interne de l&#x27;ORG publicatrice, pas un droit d&#x27;�
 <p><b>Retour</b><br><code>SETOF text</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:252</code><br><code>Base de donnée DLL et API/migration_explorer_rls_setbased.sql:36</code><br><code>Base de donnée DLL et API/object_current_rights.sql:48</code><br><code>Base de donnée DLL et API/rls_policies.sql:149</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261019142132_partner_api_identity_initplan.sql:18</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql:100</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:252</code><br><code>Base de donnée DLL et API/migration_explorer_rls_setbased.sql:36</code><br><code>Base de donnée DLL et API/object_current_rights.sql:48</code><br><code>Base de donnée DLL et API/rls_policies.sql:149</code><br><code>supabase/migrations/20261019142132_partner_api_identity_initplan.sql:18</code><br><code>supabase/migrations/20261106100603_object_current_authorization.sql:100</code></p>
 </div>
 <blockquote>Set form of api.can_read_extended: the current user&#x27;s extended-readable object ids, computed once (RLS-bypassed). Used by the object SELECT policy as a hashed-set membership test to avoid per-row predicate evaluation. Keep byte-equivalent to can_read_extended&#x27;s 4 paths.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -1044,7 +1044,7 @@ le CRM est le pilotage interne de l&#x27;ORG publicatrice, pas un droit d&#x27;�
 <p><b>Retour</b><br><code>text</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/object_canonical_write_sources.sql:6</code><br><code>Base de donnée DLL et API/rls_policies.sql:287</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql:10</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/object_canonical_write_sources.sql:6</code><br><code>Base de donnée DLL et API/rls_policies.sql:287</code><br><code>supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql:10</code></p>
 </div>
 <blockquote>Retourne l&#x27;org_object_id actif du user courant (NULL si aucun membership actif).
 Pour un tourism_agent, au plus une ORG active existe (contrainte enforce_single_active_org_membership).
@@ -1088,7 +1088,7 @@ DEFINER so the published scan bypasses RLS; returns only object ids. Reuses §35
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:32</code><br><code>Base de donnée DLL et API/migration_public_sandbox_entry.sql:12</code><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:69</code><br><code>Base de donnée DLL et API/rls_policies.sql:139</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260904062635_public_sandbox_entry.sql:12</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:13</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:32</code><br><code>Base de donnée DLL et API/migration_public_sandbox_entry.sql:12</code><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:69</code><br><code>Base de donnée DLL et API/rls_policies.sql:139</code><br><code>supabase/migrations/20260904062635_public_sandbox_entry.sql:12</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:13</code></p>
 </div>
 <blockquote>Realm de lecture du user courant : true = bac a sable, false = production (jamais NULL). service_role et anon renvoient false — l&#x27;API partenaire ne voit donc jamais le corpus de test. Garde a double sens : o.is_test = (SELECT api.current_user_test_realm()).</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -1168,7 +1168,7 @@ acteur — object_id nullable ⇒ existence par FOUND, pas par IS NULL).</blockq
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:424</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:816</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:424</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:816</code></p>
 </div>
 <blockquote>=====================================================================
 12. Suppression — verrou AVANT décision (§5 revue architecte)
@@ -1227,7 +1227,7 @@ Function to mark a document as delivered
 <p><b>Retour</b><br><code>uuid</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1110</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1110</code></p>
 </div>
 <blockquote>Duplication indépendante dans l&#x27;ORG active de l&#x27;appelant : nouveau
 propriétaire, active, non proposée, non mise à la une, sans token ni
@@ -1328,7 +1328,7 @@ en BEFORE INSERT la ligne n&#x27;existe pas encore, l&#x27;exclusion est toujour
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1162</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1162</code></p>
 </div>
 <blockquote>=====================================================================
 16. Lien de partage — verrou AVANT décision, jamais un touch de l&#x27;horloge
@@ -1506,7 +1506,7 @@ Function to generate legal expiry notifications
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260908051913_active_object_documents.sql:70</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260908053837_attach_classification_evidence.sql:15</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql:63</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260908051913_active_object_documents.sql:70</code><br><code>supabase/migrations/20260908053837_attach_classification_evidence.sql:15</code><br><code>supabase/migrations/20261106105258_private_object_document_access.sql:63</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object_classification"><code>public.object_classification</code></a></td><td>high</td></tr>
@@ -1658,7 +1658,7 @@ moyen 0-100, % fiches complètes-visiteur, essentiel le plus manquant, liste des
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:10447</code><br><code>Base de donnée DLL et API/migration_dashboard_activity.sql:228</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:167</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:10447</code><br><code>Base de donnée DLL et API/migration_dashboard_activity.sql:228</code><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:167</code></p>
 </div>
 <blockquote>CRM age, topics, flow and net processing time in the caller real/test realm.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -1672,7 +1672,7 @@ moyen 0-100, % fiches complètes-visiteur, essentiel le plus manquant, liste des
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:10614</code><br><code>Base de donnée DLL et API/migration_crm_lifecycle.sql:452</code><br><code>Base de donnée DLL et API/migration_dashboard_activity.sql:395</code><br><code>Base de donnée DLL et API/migration_dashboard_crm_open.sql:19</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:303</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:10614</code><br><code>Base de donnée DLL et API/migration_crm_lifecycle.sql:452</code><br><code>Base de donnée DLL et API/migration_dashboard_activity.sql:395</code><br><code>Base de donnée DLL et API/migration_dashboard_crm_open.sql:19</code><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:303</code></p>
 </div>
 <blockquote>Open CRM counters in the caller real/test realm, independent of object facets. Provider RPC uses the same base realm.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -1739,7 +1739,7 @@ Represents the full corpus lieu-dit domain, not the current filtered slice.</blo
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql:201</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030123304_provider_scope_preference.sql:201</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-crm_interaction_status_event"><code>public.crm_interaction_status_event</code></a></td><td>high</td></tr>
@@ -1752,7 +1752,7 @@ Represents the full corpus lieu-dit domain, not the current filtered slice.</blo
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql:338</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:353</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030123304_provider_scope_preference.sql:338</code><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:353</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-crm_task"><code>public.crm_task</code></a></td><td>high</td></tr>
@@ -1764,7 +1764,7 @@ Represents the full corpus lieu-dit domain, not the current filtered slice.</blo
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql:98</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030123304_provider_scope_preference.sql:98</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-app_user_profile"><code>public.app_user_profile</code></a></td><td>high</td></tr>
@@ -1801,7 +1801,7 @@ ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.</block
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:10315</code><br><code>Base de donnée DLL et API/migration_dashboard_activity.sql:96</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:65</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:10315</code><br><code>Base de donnée DLL et API/migration_dashboard_activity.sql:96</code><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:65</code></p>
 </div>
 <blockquote>Twelve weeks of author activity on tourism objects in the caller real/test realm; unchanged editor-day formulas.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -1979,7 +1979,7 @@ Function to get expiring legal records in API format
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql:147</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106105258_private_object_document_access.sql:147</code></p>
 </div>
 <blockquote>Only SectionLegal and its legal-document modal request this existing legal
 context. The card and Classification keep the canonical RPC above.</blockquote>
@@ -1994,7 +1994,7 @@ context. The card and Classification keep the canonical RPC above.</blockquote>
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:260</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:593</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:260</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:593</code></p>
 </div>
 <blockquote>=====================================================================
 8. Détail public (authenticated) — inchangé en surface, corps factorisé
@@ -2007,7 +2007,7 @@ context. The card and Classification keep the canonical RPC above.</blockquote>
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:93</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql:96</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:93</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:96</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-list_email_scope"><code>internal.list_email_scope</code></a></td><td>high</td></tr>
@@ -2064,7 +2064,7 @@ Get filtered media for web display (excludes internal/sensitive)
 <p><b>Retour</b><br><code>TABLE(bucket date, value numeric, denominator integer)</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:524</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:524</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-metric_snapshot"><code>public.metric_snapshot</code></a></td><td>high</td></tr>
@@ -2076,7 +2076,7 @@ Get filtered media for web display (excludes internal/sensitive)
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030141523_restore_verified_completeness_history.sql:196</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030141523_restore_verified_completeness_history.sql:196</code></p>
 </div>
 <blockquote>Realm-scoped metric series plus exact first/last source snapshot dates. Weekly buckets never define history duration; legacy tabular reader stays compatible.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -2089,7 +2089,7 @@ Get filtered media for web display (excludes internal/sensitive)
 <p><b>Retour</b><br><code>TABLE(yr integer, mon integer, value numeric)</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:546</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:546</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-metric_snapshot"><code>public.metric_snapshot</code></a></td><td>high</td></tr>
@@ -2225,7 +2225,7 @@ bypasses (see the inline note there — the only field-level read gate among the
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql:111</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106105258_private_object_document_access.sql:111</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-ref_document"><code>public.ref_document</code></a></td><td>high</td></tr>
@@ -2730,7 +2730,7 @@ differs only on noise. Kept byte-identical to DIFF_IGNORE_KEYS in object-version
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_workspace_permissions_rpc.sql:32</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260731092819_fix_legal_workspace_permission.sql:4</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_workspace_permissions_rpc.sql:32</code><br><code>supabase/migrations/20260731092819_fix_legal_workspace_permission.sql:4</code></p>
 </div>
 <blockquote>Agrège en un appel les 9 sondes de permission de l&#x27;éditeur pour un objet, dont la permission juridique dédiée. SECURITY INVOKER volontairement ; chaque sonde échoue fermée et indépendamment.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -2911,7 +2911,7 @@ Helper: Get enriched parent object data
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql:181</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106113509_thesaurus_consumers.sql:181</code></p>
 </div>
 <blockquote>Published real object, optional pivot and vocabulary release from one statement snapshot; service_role only.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -3059,7 +3059,7 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <p><b>Retour</b><br><code>uuid</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_public_sandbox_entry.sql:24</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260904062635_public_sandbox_entry.sql:24</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_public_sandbox_entry.sql:24</code><br><code>supabase/migrations/20260904062635_public_sandbox_entry.sql:24</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
@@ -3079,7 +3079,7 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <p><b>Retour</b><br><code>TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906031607_smtp_settings.sql:27</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260906031607_smtp_settings.sql:27</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
@@ -3091,7 +3091,7 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <p><b>Retour</b><br><code>TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906031607_smtp_settings.sql:104</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260906031607_smtp_settings.sql:104</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
@@ -3125,7 +3125,7 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106092254_object_initial_publication_guard.sql:5</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106092254_object_initial_publication_guard.sql:5</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 <p><b>Déclenchée par</b><br><code>trigger:public.object:trg_guard_object_initial_publication</code></p>
@@ -3136,7 +3136,7 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:138</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:113</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:138</code><br><code>supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:113</code></p>
 </div>
 <blockquote>This is an invariant, not another authorization decision. Even privileged
 writers must change the source organization/config rather than forge its copy.
@@ -3280,7 +3280,7 @@ Returns NULL if both requested and fallback are missing/empty</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:35</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261026104513_open_status_priority.sql:136</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:35</code><br><code>supabase/migrations/20261026104513_open_status_priority.sql:136</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-opening_period"><code>public.opening_period</code></a></td><td>high</td></tr>
@@ -3297,7 +3297,7 @@ Returns NULL if both requested and fallback are missing/empty</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:332</code><br><code>Base de donnée DLL et API/object_current_rights.sql:30</code><br><code>Base de donnée DLL et API/rls_policies.sql:236</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql:82</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:332</code><br><code>Base de donnée DLL et API/object_current_rights.sql:30</code><br><code>Base de donnée DLL et API/rls_policies.sql:236</code><br><code>supabase/migrations/20261106100603_object_current_authorization.sql:82</code></p>
 </div>
 <blockquote>Legacy name retained for technical/platform authority only. Canonical staff writes use current explicit publisher permissions.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -3335,7 +3335,7 @@ A set-based rewrite of this function (sub-second) is a tracked follow-up (lot1_m
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/branding_admin_profile_role_patch.sql:15</code><br><code>Base de donnée DLL et API/ui_whitelabel_branding.sql:28</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106075113_branding_admin_authorization.sql:8</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/branding_admin_profile_role_patch.sql:15</code><br><code>Base de donnée DLL et API/ui_whitelabel_branding.sql:28</code><br><code>supabase/migrations/20261106075113_branding_admin_authorization.sql:8</code></p>
 </div>
 <blockquote>Platform branding authority: authenticated owner/super_admin from app_user_profile, or the existing service_role/admin technical identity. Auth metadata never grants authority; missing auth context returns false.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -3361,7 +3361,7 @@ A set-based rewrite of this function (sub-second) is a tracked follow-up (lot1_m
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:11009</code><br><code>Base de donnée DLL et API/object_canonical_write_sources.sql:58</code><br><code>Base de donnée DLL et API/rls_policies.sql:227</code><br><code>Base de donnée DLL et API/rls_policies.sql:1889</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql:64</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/api_views_functions.sql:11009</code><br><code>Base de donnée DLL et API/object_canonical_write_sources.sql:58</code><br><code>Base de donnée DLL et API/rls_policies.sql:227</code><br><code>Base de donnée DLL et API/rls_policies.sql:1889</code><br><code>supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql:64</code></p>
 </div>
 <blockquote>=====================================================
 Helper : autorité plateforme (owner OU super_admin)
@@ -3428,7 +3428,7 @@ JSON Helper: Prune empty top-level keys (arrays/objects)
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:1605</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql:337</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:1605</code><br><code>supabase/migrations/20260807124408_actor_prospects_documents.sql:337</code></p>
 </div>
 <blockquote>Missing role_code inherits the actor&#x27;s default role, then falls back to operator
 for legacy actors created before this migration.</blockquote>
@@ -3471,7 +3471,7 @@ Superuser : sans restriction de périmètre.</blockquote>
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql:395</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260807124408_actor_prospects_documents.sql:395</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
@@ -3499,7 +3499,7 @@ Superuser : sans restriction de périmètre.</blockquote>
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_reference_catalog_rpc.sql:65</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql:66</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_reference_catalog_rpc.sql:65</code><br><code>supabase/migrations/20261106113509_thesaurus_consumers.sql:66</code></p>
 </div>
 <blockquote>── Un référentiel, forme uniforme {code,name,icon_url,parent_code,domain} ───────</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -3528,7 +3528,7 @@ user_can_assign_crm reste possible — documenté). Trié par display_name.</blo
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_directory_search.sql:69</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1049</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql:181</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_directory_search.sql:69</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1049</code><br><code>supabase/migrations/20260807124408_actor_prospects_documents.sql:181</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
@@ -3637,7 +3637,7 @@ Ce qui change, c&#x27;est ce à quoi il se traduit : une VALEUR devient une FAMI
 <p><b>Retour</b><br><code>TABLE(object_id text, pos integer, note_fr text, note_en text)</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:168</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:417</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:168</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:417</code></p>
 </div>
 <blockquote>Ensemble effectif d&#x27;une liste (statique = items curatés ; dynamique = résolution vive des filtres). published_only=TRUE exige désormais status = published ET is_test = current_user_test_realm() (§2, 2e revue architecte) — published seul n&#x27;est pas lisibilité. Périmètre/signature/ACL et branche dynamique inchangés depuis migration_object_list.sql.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -3652,7 +3652,7 @@ Ce qui change, c&#x27;est ce à quoi il se traduit : une VALEUR devient une FAMI
 <p><b>Retour</b><br><code>TABLE(minute_start timestamp with time zone, user_id uuid, org_object_id text, admitted bigint, started bigint, accepted bigint, rejected bigint, uncertain bigint, conflicts bigint)</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:280</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql:283</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:280</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:283</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-list_email_metric"><code>internal.list_email_metric</code></a></td><td>high</td></tr>
@@ -3664,7 +3664,7 @@ Ce qui change, c&#x27;est ce à quoi il se traduit : une VALEUR devient une FAMI
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:910</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:375</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:910</code><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:375</code></p>
 </div>
 <blockquote>À la une de l&#x27;organisation active : visible à TOUT membre ACTIF de l&#x27;ORG.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -3678,7 +3678,7 @@ Ce qui change, c&#x27;est ce à quoi il se traduit : une VALEUR devient une FAMI
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:221</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:221</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -3707,7 +3707,7 @@ Helper interne : jamais exposé (les RPCs DEFINER l&#x27;exécutent en tant qu&#
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:942</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:408</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:942</code><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:408</code></p>
 </div>
 <blockquote>Propositions en attente de l&#x27;organisation active : réservé aux admins DE
 CETTE ORG PRÉCISE (rang scopé, jamais current_user_admin_rank() global —
@@ -3724,7 +3724,7 @@ tableau VIDE (le filtre WHERE porte la garde), jamais une exception.</blockquote
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:231</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:879</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:340</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:231</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:879</code><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:340</code></p>
 </div>
 <blockquote>`status = &#x27;shared&#x27;` records editorial history, not whether a live capability
 link still exists.  Emit the actual state on all list-card payloads.</blockquote>
@@ -3739,7 +3739,7 @@ link still exists.  Emit the actual state on all list-card payloads.</blockquote
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql:729</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:150</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql:196</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql:729</code><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:150</code><br><code>supabase/migrations/20260911152231_internal_pending_change_notifications.sql:196</code></p>
 </div>
 <blockquote>Boîte de réception de l&#x27;appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Les propositions de listes sont rendues seulement aux reviewers encore éligibles dans leur ORG active (ou superuser) et tant qu&#x27;elles sont pending/non archivées. Anon ⇒ boîte vide.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -4028,7 +4028,7 @@ non assignée, assignee_count=0 signalé au client).</blockquote>
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql:226</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106113509_thesaurus_consumers.sql:226</code></p>
 </div>
 <blockquote>Published real object page and vocabulary release from one snapshot; opt-in exact-equivalence taxonomy filters.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -4246,7 +4246,7 @@ un responsable ORG supérieur modifie le contenu d&#x27;une note.</blockquote>
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1258</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1258</code></p>
 </div>
 <blockquote>Suivi serveur après acceptation SMTP (route /api/lists/send), service_role UNIQUEMENT. Remplace api.mark_list_sent(uuid) (grantée à authenticated), révoquée : un client ne peut plus se déclarer « envoyé » sans preuve. p_sender_id est vérifié contre internal.list_sender_authorized — existence du profil ET adhésion active exigées AVANT tout bras propriétaire/featured.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -4271,7 +4271,7 @@ un responsable ORG supérieur modifie le contenu d&#x27;une note.</blockquote>
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:1625</code><br><code>Base de donnée DLL et API/migration_crm_task_email_documents.sql:204</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql:368</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:1625</code><br><code>Base de donnée DLL et API/migration_crm_task_email_documents.sql:204</code><br><code>supabase/migrations/20260911152231_internal_pending_change_notifications.sql:368</code></p>
 </div>
 <blockquote>Acquittement du drain e-mail (17m + 18a §8, les DEUX espèces). Succès = email_sent_at ; échec = email_error + email_attempts+1 + claim levé (re-réclamable jusqu&#x27;à 5 tentatives). Service_role only.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -4321,7 +4321,7 @@ un responsable ORG supérieur modifie le contenu d&#x27;une note.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:117</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:92</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:117</code><br><code>supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:92</code></p>
 </div>
 <blockquote>An ORG follows its own configuration. Other objects follow their primary
 organization. A new/orphan object has no source yet and starts in production;
@@ -4393,7 +4393,7 @@ Base / sans dates : 100000 (∞, la plus large).</blockquote>
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261019145445_partner_admission.sql:4</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261019145445_partner_admission.sql:4</code></p>
 </div>
 <blockquote>Service-role partner authentication and fixed-window quota in one RPC. Auth fails closed; quota errors alone fail open. No identity cache.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -4546,7 +4546,7 @@ ponytail: met à jour last_used_at à chaque appel (write par requête) — thro
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:107</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql:110</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:107</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:110</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-list_email_intent"><code>internal.list_email_intent</code></a></td><td>high</td></tr>
@@ -4579,7 +4579,7 @@ ponytail: met à jour last_used_at à chaque appel (write par requête) — thro
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:2185</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:275</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:2185</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:275</code></p>
 </div>
 <blockquote>Duplicate-email detection must not reveal or depend on the other realm&#x27;s actor identities.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -4595,7 +4595,7 @@ ponytail: met à jour last_used_at à chaque appel (write par requête) — thro
 <p><b>Retour</b><br><code>text[]</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_reference_catalog_rpc.sql:35</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:989</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_reference_catalog_rpc.sql:35</code><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:989</code></p>
 </div>
 <blockquote>Liste des domaines de référentiel exposés publiquement par api.list_catalog (whitelist default-deny). Audit API I1.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -4934,7 +4934,7 @@ Function to request a document for a legal record
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:983</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:234</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:983</code><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:234</code></p>
 </div>
 <blockquote>Proposal lifecycle: create recipients in the same transaction as the first
 request; clear all pending alerts as soon as a review resolves it.  The
@@ -5109,7 +5109,7 @@ p_buckets : soit un tableau [{types,filters,search}], soit {buckets:[...]}.</blo
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1085</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1085</code></p>
 </div>
 <blockquote>Réactivation explicite d&#x27;une liste personnelle ARCHIVÉE. NO-OP sur une
 liste déjà active, et ne s&#x27;applique jamais à une liste à la une
@@ -5138,7 +5138,7 @@ liste déjà active, et ne s&#x27;applique jamais à une liste à la une
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1008</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:265</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1008</code><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:265</code></p>
 </div>
 <blockquote>Admin DE CETTE ORG : accepte (met à la une) ou refuse (retire la
 proposition) une proposition. Verrou AVANT décision (§5). Ne touche jamais
@@ -5301,7 +5301,7 @@ Rang : la cible doit avoir un rang admin strictement inférieur à l&#x27;appela
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:1790</code><br><code>Base de donnée DLL et API/migration_gdpr_erasure.sql:101</code><br><code>Base de donnée DLL et API/schema_unified.sql:6785</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260905195257_gdpr_cleanup_operations.sql:101</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:1790</code><br><code>Base de donnée DLL et API/migration_gdpr_erasure.sql:101</code><br><code>Base de donnée DLL et API/schema_unified.sql:6785</code><br><code>supabase/migrations/20260905195257_gdpr_cleanup_operations.sql:101</code></p>
 </div>
 <blockquote>Effacement/anonymisation RGPD Art. 17 d&#x27;un sujet. Anonymise (défaut) ou supprime, rédige le journal d&#x27;audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -5801,7 +5801,7 @@ trg_actor_channel_email (forme d&#x27;e-mail), uq_actor_channel_primary (un prim
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql:447</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260807124408_actor_prospects_documents.sql:447</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-actor_document"><code>public.actor_document</code></a></td><td>high</td></tr>
@@ -5815,7 +5815,7 @@ trg_actor_channel_email (forme d&#x27;e-mail), uq_actor_channel_primary (un prim
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:1365</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260807124408_actor_prospects_documents.sql:242</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:1365</code><br><code>supabase/migrations/20260807124408_actor_prospects_documents.sql:242</code></p>
 </div>
 <blockquote>INSERT now accepts a missing object_id. default_role_id preserves the intended
 business role until the first establishment is created/linked.</blockquote>
@@ -5972,7 +5972,7 @@ moins un) ; autorisation par l&#x27;arme objet quand un contexte objet existe, s
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_save_object_places_reconcile.sql:9</code><br><code>Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql:1246</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261026102125_object_places_reconcile_v1.sql:34</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_save_object_places_reconcile.sql:9</code><br><code>Base de donnée DLL et API/object_workspace_safe_write_rpcs.sql:1246</code><br><code>supabase/migrations/20261026102125_object_places_reconcile_v1.sql:34</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -6020,7 +6020,7 @@ any re-apply of this file or of 8r, or the actors branch raises 42883 at the fir
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_save_object_rooms.sql:7</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261026102949_object_rooms_reconcile_v1.sql:26</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_save_object_rooms.sql:7</code><br><code>supabase/migrations/20261026102949_object_rooms_reconcile_v1.sql:26</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-media"><code>public.media</code></a></td><td>high</td></tr>
@@ -6231,7 +6231,7 @@ SECURITY INVOKER + workspace_assert_can_write_object gate, like every canonical 
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1048</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:304</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1048</code><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:304</code></p>
 </div>
 <blockquote>Admin DE CETTE ORG : met directement SA PROPRE liste à la une (AUCUNE
 exception superuser sur la propriété — 2e revue architecte §3), ou retire
@@ -6253,7 +6253,7 @@ la rétention).</blockquote>
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:389</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:727</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:389</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:727</code></p>
 </div>
 <blockquote>=====================================================================
 11. Items statiques — verrou, reconcile non-destructif, cible normalisée UNIQUE
@@ -6283,7 +6283,7 @@ stockage réel.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql:9</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030123304_provider_scope_preference.sql:9</code></p>
 </div>
 <blockquote>Fusion atomique d&#x27;UNE clé ; ne remplace jamais les autres préférences.
 INVOKER : la RLS du profil reste active, et aucun user_id n&#x27;est accepté.</blockquote>
@@ -6322,7 +6322,7 @@ INVOKER : la RLS du profil reste active, et aucun user_id n&#x27;est accepté.</
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:437</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:834</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:437</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:834</code></p>
 </div>
 <blockquote>=====================================================================
 13. Partage (réglages) — verrou AVANT décision (§5 revue architecte)
@@ -6416,7 +6416,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>uuid[]</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106101044_sandbox_external_effects_policy.sql:58</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106101044_sandbox_external_effects_policy.sql:58</code></p>
 </div>
 <blockquote>Service-only final check before SMTP: terminates discovery/test notification email, retaining in-app events and durable provenance.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -6456,7 +6456,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:160</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:135</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:160</code><br><code>supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:135</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>écriture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -6480,7 +6480,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:922</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:922</code></p>
 </div>
 <blockquote>Thesaurus editorial actions, gated platform superuser, optimistic revisions and atomic publisher-role release.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -6491,7 +6491,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>text[]</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:979</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:979</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-release_concept"><code>thesaurus.release_concept</code></a></td><td>high</td></tr>
@@ -6503,7 +6503,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>bigint</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:557</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:557</code></p>
 </div>
 <blockquote>These helpers deliberately expose only the generation, never private editorial data.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -6516,7 +6516,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>bigint</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:559</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:559</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -6526,7 +6526,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:974</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:974</code></p>
 </div>
 <blockquote>Partner-only immutable thesaurus release reader. No direct editorial table access.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -6537,7 +6537,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>dynamic SQL</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql:83</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106113509_thesaurus_consumers.sql:83</code></p>
 </div>
 <blockquote>Reference values and vocabulary generation from one statement snapshot; fixed reference allowlist, invoker RLS.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -6554,7 +6554,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql:6</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106113509_thesaurus_consumers.sql:6</code></p>
 </div>
 <blockquote>Public-reference status only: no editorial documents or native-to-concept IDs.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -6568,7 +6568,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql:146</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106113509_thesaurus_consumers.sql:146</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -6707,7 +6707,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:242</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:217</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:242</code><br><code>supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:217</code></p>
 </div>
 <blockquote>Le tombstone herite du realm de la fiche AU MOMENT de sa suppression.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -6721,7 +6721,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:171</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:146</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:171</code><br><code>supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:146</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -6734,7 +6734,7 @@ NULL / &#x27;{}&#x27; / all-empty -&gt; NULL (jsonb_strip_nulls-friendly). Reuse
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:208</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:183</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:208</code><br><code>supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:183</code></p>
 </div>
 <blockquote>A config insert, flag change, key move or deletion re-derives every affected
 organization and current primary child. An absent source uses the same false
@@ -6831,7 +6831,7 @@ Function to update a legal record
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:363</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:666</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:363</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:666</code></p>
 </div>
 <blockquote>=====================================================================
 10. Mise à jour des métadonnées — verrou + bump SEULEMENT sur diff réel
@@ -6926,7 +6926,7 @@ p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260906031607_smtp_settings.sql:43</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260906031607_smtp_settings.sql:43</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
@@ -6941,7 +6941,7 @@ p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
 <p><b>Retour</b><br><code>SETOF uuid</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/object_current_rights.sql:19</code><br><code>Base de donnée DLL et API/rls_policies.sql:111</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:254</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261019142132_partner_api_identity_initplan.sql:8</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql:71</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/object_current_rights.sql:19</code><br><code>Base de donnée DLL et API/rls_policies.sql:111</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:254</code><br><code>supabase/migrations/20261019142132_partner_api_identity_initplan.sql:8</code><br><code>supabase/migrations/20261106100603_object_current_authorization.sql:71</code></p>
 </div>
 <blockquote>Compatibility identity helper: current actor profile binding only; email never grants scope.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -7001,7 +7001,7 @@ exister au moment du CREATE POLICY.
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:372</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:372</code></p>
 </div>
 <blockquote>Capacité PRÉCISE affichée en carte : l&#x27;admin (ou superuser) peut-il faire
 QUELQUE CHOSE sur CETTE ligne via set_list_featured/review_list_feature —
@@ -7018,7 +7018,7 @@ ni un droit d&#x27;édition général (§3 revue architecte).</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_unblock_team_legal_access.sql:65</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql:28</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_unblock_team_legal_access.sql:65</code><br><code>supabase/migrations/20261106105258_private_object_document_access.sql:28</code></p>
 </div>
 <blockquote>Preserve the existing dedicated legal permission/publisher contract. Pin its
 two table sources before making it a dependency of the document reader.</blockquote>
@@ -7100,7 +7100,7 @@ Conçu pour être appelé par rpc_publish_object (à créer en Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:285</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:215</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:285</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:215</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -7110,7 +7110,7 @@ Conçu pour être appelé par rpc_publish_object (à créer en Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:332</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:230</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:332</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:230</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -7120,7 +7120,7 @@ Conçu pour être appelé par rpc_publish_object (à créer en Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:82</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:252</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_list.sql:82</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:252</code></p>
 </div>
 <blockquote>Lecture : propriétaire actif, membre actif pour une liste à la une, admin de
 l&#x27;ORG pour une proposition en attente (revue), reprise d&#x27;orpheline, ou
@@ -7136,7 +7136,7 @@ membre de l&#x27;ORG lit toute liste&quot; (règle 2 du cadrage).</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:289</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:289</code></p>
 </div>
 <blockquote>Utilisation (dupliquer, obtenir/générer le lien de partage) : propriétaire
 actif, membre actif pour une liste à la une, reprise d&#x27;orpheline, ou
@@ -7153,7 +7153,7 @@ droit d&#x27;usage tant qu&#x27;il ne l&#x27;a pas acceptée.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/object_canonical_write_sources.sql:73</code><br><code>Base de donnée DLL et API/rls_policies.sql:3107</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql:80</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/object_canonical_write_sources.sql:73</code><br><code>Base de donnée DLL et API/rls_policies.sql:3107</code><br><code>supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql:80</code></p>
 </div>
 <blockquote>-------------------------------------------------------
 E3. api.user_can_write_canonical(p_object_id text)
@@ -7175,7 +7175,7 @@ Conçu pour être appelé par les RPC d&#x27;écriture canonique (Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:296</code><br><code>Base de donnée DLL et API/migration_crm_write_requires_permission.sql:46</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:222</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:296</code><br><code>Base de donnée DLL et API/migration_crm_write_requires_permission.sql:46</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:222</code></p>
 </div>
 <blockquote>─────────────────────────────────────────────────────────────────────────────
 1. Écriture CRM sur un ÉTABLISSEMENT.
@@ -7188,7 +7188,7 @@ Conçu pour être appelé par les RPC d&#x27;écriture canonique (Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:343</code><br><code>Base de donnée DLL et API/migration_crm_write_requires_permission.sql:62</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:237</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:343</code><br><code>Base de donnée DLL et API/migration_crm_write_requires_permission.sql:62</code><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:237</code></p>
 </div>
 <blockquote>─────────────────────────────────────────────────────────────────────────────
 2. Écriture CRM sur un ACTEUR.
@@ -7238,7 +7238,7 @@ Conçu pour être appelé par les RPC d&#x27;enrichissement ORG (Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_list_write_creator_only.sql:40</code><br><code>Base de donnée DLL et API/migration_object_list.sql:91</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:320</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_list_write_creator_only.sql:40</code><br><code>Base de donnée DLL et API/migration_object_list.sql:91</code><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:320</code></p>
 </div>
 <blockquote>Écriture d&#x27;une liste : son créateur, ou un admin d&#x27;ORG (rang &gt;= 30) si le créateur n&#x27;est plus membre actif (reprise d&#x27;orpheline), ou le superuser plateforme. Le bras « n&#x27;importe quel rôle admin » a été retiré le 2026-08-31 (17k).</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -7251,7 +7251,7 @@ Conçu pour être appelé par les RPC d&#x27;enrichissement ORG (Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_permission_write_paths.sql:18</code><br><code>Base de donnée DLL et API/object_current_rights.sql:39</code><br><code>Base de donnée DLL et API/rls_policies.sql:232</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106100603_object_current_authorization.sql:91</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_permission_write_paths.sql:18</code><br><code>Base de donnée DLL et API/object_current_rights.sql:39</code><br><code>Base de donnée DLL et API/rls_policies.sql:232</code><br><code>supabase/migrations/20261106100603_object_current_authorization.sql:91</code></p>
 </div>
 <blockquote>user_can_write_object_canonical: defined in migration_permission_write_paths.sql (SP-1), \ir&#x27;d
 AFTER this file — but the per-command canonical_* write policies below reference it (WITH CHECK /
@@ -7264,7 +7264,7 @@ USING validate at CREATE). Stub here; SP-1 CREATE OR REPLACEs it with the real D
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_role_permission_matrix.sql:216</code><br><code>Base de donnée DLL et API/object_canonical_write_sources.sql:18</code><br><code>Base de donnée DLL et API/rls_policies.sql:228</code><br><code>Base de donnée DLL et API/rls_policies.sql:2619</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql:23</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_role_permission_matrix.sql:216</code><br><code>Base de donnée DLL et API/object_canonical_write_sources.sql:18</code><br><code>Base de donnée DLL et API/rls_policies.sql:228</code><br><code>Base de donnée DLL et API/rls_policies.sql:2619</code><br><code>supabase/migrations/20261106115711_object_canonical_write_source_hardening.sql:23</code></p>
 </div>
 <blockquote>Droits effectifs : exception individuelle OU rôle métier de l&#x27;ORG (§227). Le chemin org_permission a été retiré le 2026-08-31 — il accordait sans regarder le rôle.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -7281,7 +7281,7 @@ USING validate at CREATE). Stub here; SP-1 CREATE OR REPLACEs it with the real D
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:352</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:352</code></p>
 </div>
 <blockquote>« Est admin de l&#x27;ORG de cette liste » (rang &gt;= 30 DANS CETTE ORG, ou
 superuser). Indépendant de la propriété — c&#x27;est ce qui permet à un admin de
@@ -7320,7 +7320,7 @@ revoir la liste d&#x27;un collègue sans lui donner de droit d&#x27;édition gé
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260729114447_hotel_positioning_axis.sql:84</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260729114447_hotel_positioning_axis.sql:84</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -7492,7 +7492,7 @@ object_version rows are product data (version restore §98/14r), never dropped h
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6764</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260905195257_gdpr_cleanup_operations.sql:70</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6764</code><br><code>supabase/migrations/20260905195257_gdpr_cleanup_operations.sql:70</code></p>
 </div>
 <blockquote>---------------------------------------------------------------------
 2. audit.redact_subject — ajoute le matching after_data
@@ -7508,7 +7508,7 @@ object_version rows are product data (version restore §98/14r), never dropped h
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:39</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:39</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
@@ -7520,7 +7520,7 @@ object_version rows are product data (version restore §98/14r), never dropped h
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:94</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:94</code></p>
 </div>
 <blockquote>Historical pending proposals become visible immediately after deployment.
 The unique index makes this safe to rerun and avoids duplicate alerts.</blockquote>
@@ -7534,7 +7534,7 @@ The unique index makes this safe to rerun and avoids duplicate alerts.</blockquo
 <p><b>Retour</b><br><code>json</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:489</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:489</code></p>
 </div>
 <blockquote>=====================================================================
 7. Assemblage du détail (interne — jamais exposé à PostgREST)
@@ -7556,7 +7556,7 @@ sienne avant d&#x27;appeler cette fonction.</blockquote>
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:426</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:426</code></p>
 </div>
 <blockquote>Explicit realm argument for the scheduled writer: no JWT impersonation, no
 reliance on the current account, and the same completeness rounding as the live KPI.</blockquote>
@@ -7581,7 +7581,7 @@ reliance on the current account, and the same completeness rounding as the live 
 <p><b>Retour</b><br><code>TABLE(object_id text, is_open boolean)</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261026104513_open_status_priority.sql:46</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261026104513_open_status_priority.sql:46</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -7613,7 +7613,7 @@ reliance on the current account, and the same completeness rounding as the live 
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:59</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:59</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -7623,7 +7623,7 @@ reliance on the current account, and the same completeness rounding as the live 
 <p><b>Retour</b><br><code>SETOF public.crm_interaction</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:17</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:17</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
@@ -7637,7 +7637,7 @@ reliance on the current account, and the same completeness rounding as the live 
 <p><b>Retour</b><br><code>TABLE(object_id text)</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:7</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:7</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -7778,7 +7778,7 @@ reliance on the current account, and the same completeness rounding as the live 
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:104</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:104</code></p>
 </div>
 <blockquote>A caller allowed to edit a production object must not attach a sandbox actor by UUID.
 Table triggers cover every writer, including workspace RPCs and service-role routes.</blockquote>
@@ -7794,7 +7794,7 @@ Table triggers cover every writer, including workspace RPCs and service-role rou
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106101044_sandbox_external_effects_policy.sql:30</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106101044_sandbox_external_effects_policy.sql:30</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 <p><b>Déclenchée par</b><br><code>trigger:public.app_notification:trg_guard_notification_external_email</code></p>
@@ -7805,7 +7805,7 @@ Table triggers cover every writer, including workspace RPCs and service-role rou
 <p><b>Retour</b><br><code>TABLE(item_count integer, type_breakdown jsonb, cover_image text)</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:459</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:459</code></p>
 </div>
 <blockquote>=====================================================================
 6. Résumé de grille (compte/répartition/couverture) — résolu UNE FOIS
@@ -7829,7 +7829,7 @@ consommé uniquement par les grilles ci-dessous.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1229</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql:3</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql:4</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1229</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:3</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:4</code></p>
 </div>
 <blockquote>Vérifie que p_sender_id (fourni par la route serveur, PAS déduit d&#x27;un JWT —
 service_role n&#x27;en a pas) est autorisé à UTILISER cette liste. §1 revue
@@ -7852,7 +7852,7 @@ la clé service_role elle-même).</blockquote>
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:97</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:72</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_test_org_isolation.sql:97</code><br><code>supabase/migrations/20261106083901_object_realm_derived_write_guard.sql:72</code></p>
 </div>
 <blockquote>Source transitions serialize by organization before touching derived object
 rows. The object guard never takes these locks: it already owns an object row,
@@ -7869,7 +7869,7 @@ transition fail with 40001 instead of accepting a pre-flip snapshot.</blockquote
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:69</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261107031344_distributed_list_email_intents.sql:72</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:69</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:72</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>écriture</td><td><a href="#table-internal-list_email_metric"><code>internal.list_email_metric</code></a></td><td>high</td></tr>
@@ -7881,7 +7881,7 @@ transition fail with 40001 instead of accepting a pre-flip snapshot.</blockquote
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106101044_sandbox_external_effects_policy.sql:9</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106101044_sandbox_external_effects_policy.sql:9</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
@@ -7895,7 +7895,7 @@ transition fail with 40001 instead of accepting a pre-flip snapshot.</blockquote
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:29</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:29</code></p>
 </div>
 <blockquote>Deliver to the same population allowed to review a list: active rank-30+
 admins of its exact ORG, plus explicit platform superusers.  The helper is
@@ -7917,7 +7917,7 @@ inbox.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106105258_private_object_document_access.sql:5</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106105258_private_object_document_access.sql:5</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object_classification"><code>public.object_classification</code></a></td><td>high</td></tr>
@@ -7931,7 +7931,7 @@ inbox.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:49</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:49</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -7943,7 +7943,7 @@ inbox.</blockquote>
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:189</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:189</code></p>
 </div>
 <blockquote>Rang admin de p_user_id DANS CETTE ORG PRÉCISE (jamais agrégé toutes ORG
 confondues, à l&#x27;inverse de api.current_user_admin_rank()). NULL si aucune
@@ -7960,7 +7960,7 @@ adhésion active + rôle admin actif dans p_org_object_id.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:204</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:204</code></p>
 </div>
 <blockquote>p_user_id est-il admin (rang &gt;= 30) DE CETTE ORG PRÉCISE ? Implique déjà
 une adhésion active (la jointure d&#x27;internal.org_admin_rank l&#x27;exige) —
@@ -7973,7 +7973,7 @@ aucun appelant n&#x27;a besoin de revérifier org_membership_active en plus.</bl
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:177</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:177</code></p>
 </div>
 <blockquote>Le créateur (ou tout p_user_id) est-il ACTIVEMENT membre de cette ORG ?
 `user_org_membership.user_id` référence `users(id) ON DELETE CASCADE` : un
@@ -7991,7 +7991,7 @@ un seul test.</blockquote>
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql:79</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260911152231_internal_pending_change_notifications.sql:79</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-pending_change"><code>public.pending_change</code></a></td><td>high</td></tr>
@@ -8177,7 +8177,7 @@ un seul test.</blockquote>
 <p><b>Retour</b><br><code>SETOF public.crm_interaction</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql:77</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:47</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030123304_provider_scope_preference.sql:77</code><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:47</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-actor_object_role"><code>public.actor_object_role</code></a></td><td>high</td></tr>
@@ -8190,7 +8190,7 @@ un seul test.</blockquote>
 <p><b>Retour</b><br><code>TABLE(object_id text)</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030123304_provider_scope_preference.sql:61</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261030133440_dashboard_realm_consistency.sql:32</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261030123304_provider_scope_preference.sql:61</code><br><code>supabase/migrations/20261030133440_dashboard_realm_consistency.sql:32</code></p>
 </div>
 <blockquote>Helpers privés : accessibles uniquement depuis les RPC autorisées ci-dessous.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -8203,7 +8203,7 @@ un seul test.</blockquote>
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1297</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql:1297</code></p>
 </div>
 <blockquote>Purge annuelle des listes NON mises à la une, inactives depuis 1 an (last_activity_at). Cascade object_list_item (FK ON DELETE CASCADE) : les items disparaissent, jamais les fiches touristiques/media. Inaccessible à tout client (REVOKE ALL FROM PUBLIC, aucun GRANT posé) ; exécutée par le cron quotidien purge-expired-lists (voir docs/listes-cycle-vie.md).</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -8474,7 +8474,7 @@ Une fiche neuve reste false puis le lien primaire la classe atomiquement.</block
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907073235_actor_test_realm_isolation.sql:70</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907073235_actor_test_realm_isolation.sql:70</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-org_config"><code>public.org_config</code></a></td><td>high</td></tr>
@@ -8487,7 +8487,7 @@ Une fiche neuve reste false puis le lien primaire la classe atomiquement.</block
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql:95</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260911152231_internal_pending_change_notifications.sql:95</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
@@ -8555,7 +8555,7 @@ ne permet d&#x27;exercer ni le CRM, ni la recherche d&#x27;acteurs, ni les regro
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql:142</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260911152231_internal_pending_change_notifications.sql:142</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 <p><b>Déclenchée par</b><br><code>trigger:public.pending_change:trg_pending_change_notifications</code></p>
@@ -8566,7 +8566,7 @@ ne permet d&#x27;exercer ni le CRM, ni la recherche d&#x27;acteurs, ni les regro
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260907085838_list_feature_notifications.sql:124</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260907085838_list_feature_notifications.sql:124</code></p>
 </div>
 <blockquote>Deleting a list through its RPC, retention purge, or an administrative SQL
 path must not leave an orphaned inbox item.  This is intentionally an AFTER
@@ -8661,7 +8661,7 @@ DELETE trigger: the payload has no FK by design and must not invent one.</blockq
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20260911152231_internal_pending_change_notifications.sql:25</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260911152231_internal_pending_change_notifications.sql:25</code></p>
 </div>
 <blockquote>Recipient form of api.user_can_moderate_object. No JWT substitution: the
 caller remains the contributor throughout submission. This internal helper
@@ -9076,7 +9076,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:606</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:606</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -9122,7 +9122,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:783</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:783</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-concept"><code>thesaurus.concept</code></a></td><td>high</td></tr>
@@ -9146,7 +9146,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:366</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:366</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>écriture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -9158,7 +9158,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>dynamic SQL</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:516</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:516</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-concept"><code>thesaurus.concept</code></a></td><td>high</td></tr>
@@ -9171,7 +9171,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:390</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:390</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-app_user_profile"><code>public.app_user_profile</code></a></td><td>high</td></tr>
@@ -9183,7 +9183,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:264</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:264</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -9193,7 +9193,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:355</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:355</code></p>
 </div>
 <blockquote>Editorial callers retain their semantic conflict fingerprint. Immutable public
 snapshots discard that private field and avoid computing it for every concept.</blockquote>
@@ -9205,7 +9205,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:320</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:355</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:320</code><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:355</code></p>
 </div>
 <blockquote>Editorial callers retain their semantic conflict fingerprint. Immutable public
 snapshots discard that private field and avoid computing it for every concept.</blockquote>
@@ -9228,7 +9228,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>uuid</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:503</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:503</code></p>
 </div>
 <blockquote>Supabase owns auth; delegate the actor lookup without granting its schema to the publisher.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -9239,7 +9239,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:590</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:590</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-source_rows"><code>thesaurus.source_rows</code></a></td><td>high</td></tr>
@@ -9253,7 +9253,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106113509_thesaurus_consumers.sql:48</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106113509_thesaurus_consumers.sql:48</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-source_rows"><code>thesaurus.source_rows</code></a></td><td>high</td></tr>
@@ -9265,7 +9265,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:1094</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:1094</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-assignment_retention"><code>thesaurus.assignment_retention</code></a></td><td>high</td></tr>
@@ -9283,7 +9283,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:1069</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:1069</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-assignment_retention"><code>thesaurus.assignment_retention</code></a></td><td>high</td></tr>
@@ -9299,7 +9299,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:570</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:570</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-release"><code>thesaurus.release</code></a></td><td>high</td></tr>
@@ -9312,7 +9312,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:1036</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:1036</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
@@ -9327,7 +9327,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:124</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:124</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 <p><b>Déclenchée par</b><br><code>trigger:public.actor:thesaurus_prepared_truncate</code>, <code>trigger:public.actor_channel:thesaurus_prepared_truncate</code>, <code>trigger:public.actor_consent:thesaurus_prepared_truncate</code>, <code>trigger:public.actor_document:thesaurus_prepared_truncate</code>, <code>trigger:public.actor_object_role:thesaurus_prepared_truncate</code>, <code>trigger:public.app_notification:thesaurus_prepared_truncate</code>, <code>trigger:public.app_user_profile:thesaurus_prepared_truncate</code>, <code>trigger:public.audit_result:thesaurus_prepared_truncate</code>, <code>trigger:public.audit_session:thesaurus_prepared_truncate</code>, <code>trigger:public.contact_channel:thesaurus_prepared_truncate</code>, <code>trigger:public.crm_interaction:thesaurus_prepared_truncate</code>, <code>trigger:public.crm_interaction_status_event:thesaurus_prepared_truncate</code> <span class="muted">+176</span></p>
@@ -9338,7 +9338,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:168</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:168</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 <p><b>Déclenchée par</b><br><code>trigger:public.ref_amenity:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_classification_scheme:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_classification_value:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_code:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_code_accommodation_type:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_code_accommodation_unit_type:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_code_activity_type:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_code_allergen:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_code_amenity_family:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_code_amenity_type:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_code_assistance_type:zz_thesaurus_source_guard</code>, <code>trigger:public.ref_code_bed_type:zz_thesaurus_source_guard</code> <span class="muted">+50</span></p>
@@ -9349,7 +9349,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:439</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:439</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-concept"><code>thesaurus.concept</code></a></td><td>high</td></tr>
@@ -9362,7 +9362,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:162</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:162</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-vocabulary"><code>thesaurus.vocabulary</code></a></td><td>medium</td></tr>
@@ -9393,7 +9393,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:927</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:927</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -9403,7 +9403,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>text[]</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER, dynamic SQL</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:243</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:243</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-actor_object_role"><code>public.actor_object_role</code></a></td><td>high</td></tr>
@@ -9417,7 +9417,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:22</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:22</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -9427,7 +9427,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:260</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:260</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -9437,7 +9437,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>TABLE(table_oid oid)</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:155</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:155</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -9447,7 +9447,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>text[]</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:237</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:237</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -9457,7 +9457,7 @@ snapshots discard that private field and avoid computing it for every concept.</
 <p><b>Retour</b><br><code>TABLE(table_oid oid)</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:222</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:222</code></p>
 </div>
 <blockquote>The immutable registry is source-controlled SQL, not editable application data.
 A future function, view, partition or ownership shape change fails closed until
@@ -9470,7 +9470,7 @@ a migration reviews and reinstalls the preparation contract.</blockquote>
 <p><b>Retour</b><br><code>TABLE(table_oid oid)</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:139</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:139</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -9480,7 +9480,7 @@ a migration reviews and reinstalls the preparation contract.</blockquote>
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:362</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:362</code></p>
 </div>
 <blockquote>Both the MVCC snapshot and the nine-column objects are captured by this ONE
 SQL statement. No public.object read, UPDATE, temporary table or FK is used.</blockquote>
@@ -9518,7 +9518,7 @@ SQL statement. No public.object read, UPDATE, temporary table or FK is used.</bl
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:764</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:764</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-concept"><code>thesaurus.concept</code></a></td><td>high</td></tr>
@@ -9531,7 +9531,7 @@ SQL statement. No public.object read, UPDATE, temporary table or FK is used.</bl
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:545</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:545</code></p>
 </div>
 <blockquote>Private maintenance: nonblocking transaction shared K2, bounded deletion of snapshot-visible owner receipts; never locks the K1 editor fence.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -9545,7 +9545,7 @@ SQL statement. No public.object read, UPDATE, temporary table or FK is used.</bl
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:932</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:932</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-instance"><code>thesaurus.instance</code></a></td><td>high</td></tr>
@@ -9560,7 +9560,7 @@ SQL statement. No public.object read, UPDATE, temporary table or FK is used.</bl
 <p><b>Retour</b><br><code>TABLE(concept_id uuid, domain text, is_public boolean, document jsonb)</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:434</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:434</code></p>
 </div>
 <blockquote>Keep a full renderer as an independent oracle and for a first publication.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -9571,7 +9571,7 @@ SQL statement. No public.object read, UPDATE, temporary table or FK is used.</bl
 <p><b>Retour</b><br><code>TABLE(concept_id uuid, domain text, is_public boolean, document jsonb)</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:361</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:361</code></p>
 </div>
 <blockquote>Render a release in one relational pass. Native rows and semantic arrays are
 materialized once instead of re-running the eight-source union per concept.
@@ -9595,7 +9595,7 @@ Editorial reads keep concept_document(uuid) and its conflict fingerprint.</block
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:94</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:94</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>écriture</td><td><a href="#table-thesaurus-mutation_journal"><code>thesaurus.mutation_journal</code></a></td><td>high</td></tr>
@@ -9608,7 +9608,7 @@ Editorial reads keep concept_document(uuid) and its conflict fingerprint.</block
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:508</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:508</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>écriture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -9620,7 +9620,7 @@ Editorial reads keep concept_document(uuid) and its conflict fingerprint.</block
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:1190</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:1190</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object_amenity"><code>public.object_amenity</code></a></td><td>high</td></tr>
@@ -9657,7 +9657,7 @@ Editorial reads keep concept_document(uuid) and its conflict fingerprint.</block
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:1173</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:1173</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object_amenity"><code>public.object_amenity</code></a></td><td>high</td></tr>
@@ -9694,7 +9694,7 @@ Editorial reads keep concept_document(uuid) and its conflict fingerprint.</block
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:998</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:998</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>écriture</td><td><a href="#table-thesaurus-ownership_retention"><code>thesaurus.ownership_retention</code></a></td><td>high</td></tr>
@@ -9707,7 +9707,7 @@ Editorial reads keep concept_document(uuid) and its conflict fingerprint.</block
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:564</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:564</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
@@ -9720,7 +9720,7 @@ Editorial reads keep concept_document(uuid) and its conflict fingerprint.</block
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER, dynamic SQL</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:1013</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:1013</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-concept"><code>thesaurus.concept</code></a></td><td>high</td></tr>
@@ -9735,7 +9735,7 @@ Editorial reads keep concept_document(uuid) and its conflict fingerprint.</block
 <p><b>Retour</b><br><code>uuid[]</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:309</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:309</code></p>
 </div>
 <blockquote>Natural source parents include typed standalone structures as well as ref_code
 hierarchies (amenity family, classification scheme and sustainability category).
@@ -9751,7 +9751,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <p><b>Retour</b><br><code>text</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:231</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:231</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-concept"><code>thesaurus.concept</code></a></td><td>high</td></tr>
@@ -9771,7 +9771,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:64</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:64</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 <p><b>Déclenchée par</b><br><code>trigger:public.ref_amenity:thesaurus_source_gate</code>, <code>trigger:public.ref_catalog_registry:thesaurus_source_gate</code>, <code>trigger:public.ref_classification_scheme:thesaurus_source_gate</code>, <code>trigger:public.ref_classification_value:thesaurus_source_gate</code>, <code>trigger:public.ref_code:thesaurus_source_gate</code>, <code>trigger:public.ref_code_accommodation_type:thesaurus_source_gate</code>, <code>trigger:public.ref_code_accommodation_unit_type:thesaurus_source_gate</code>, <code>trigger:public.ref_code_activity_type:thesaurus_source_gate</code>, <code>trigger:public.ref_code_allergen:thesaurus_source_gate</code>, <code>trigger:public.ref_code_amenity_family:thesaurus_source_gate</code>, <code>trigger:public.ref_code_amenity_type:thesaurus_source_gate</code>, <code>trigger:public.ref_code_assistance_type:thesaurus_source_gate</code> <span class="muted">+62</span></p>
@@ -9782,7 +9782,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:202</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:202</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-concept"><code>thesaurus.concept</code></a></td><td>high</td></tr>
@@ -9798,7 +9798,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:29</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:29</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -9808,7 +9808,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:43</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:43</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -9818,7 +9818,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <p><b>Retour</b><br><code>TABLE(object_id text)</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:268</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:268</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object_classification"><code>public.object_classification</code></a></td><td>high</td></tr>
@@ -9831,7 +9831,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:446</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:446</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-thesaurus-concept"><code>thesaurus.concept</code></a></td><td>high</td></tr>
@@ -9845,7 +9845,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106112948_thesaurus_publication.sql:994</code><br><code>C:/Users/dphil/.codex/worktrees/bertel-audit-smtp-db-graph-20261107/supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:60</code></p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261106112948_thesaurus_publication.sql:994</code><br><code>supabase/migrations/20261106160017_thesaurus_prepared_publication.sql:60</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 <p><b>Déclenchée par</b><br><code>trigger:public.actor:thesaurus_write_fence</code>, <code>trigger:public.actor_channel:thesaurus_write_fence</code>, <code>trigger:public.actor_consent:thesaurus_write_fence</code>, <code>trigger:public.actor_document:thesaurus_write_fence</code>, <code>trigger:public.actor_object_role:thesaurus_write_fence</code>, <code>trigger:public.app_notification:thesaurus_write_fence</code>, <code>trigger:public.app_user_profile:thesaurus_write_fence</code>, <code>trigger:public.audit_result:thesaurus_write_fence</code>, <code>trigger:public.audit_session:thesaurus_write_fence</code>, <code>trigger:public.contact_channel:thesaurus_write_fence</code>, <code>trigger:public.crm_interaction:thesaurus_write_fence</code>, <code>trigger:public.crm_interaction_status_event:thesaurus_write_fence</code> <span class="muted">+102</span></p>

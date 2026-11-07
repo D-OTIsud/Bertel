@@ -15,7 +15,10 @@ DECLARE
   can_write boolean;
   observed boolean[] := ARRAY[]::boolean[];
 BEGIN
-  PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', p_uid, 'role', actor_role)::text, true);
+  -- Include editable metadata and leave out app metadata to simulate the same
+  -- already-issued claims before and after an authoritative Auth change.
+  PERFORM set_config('request.jwt.claims', jsonb_build_object('sub', p_uid, 'role', actor_role,
+    'user_metadata', COALESCE((SELECT raw_user_meta_data FROM auth.users WHERE id = p_uid), '{}'::jsonb))::text, true);
   PERFORM set_config('request.jwt.claim.sub', COALESCE(p_uid::text, ''), true);
   PERFORM set_config('request.jwt.claim.role', actor_role, true);
   PERFORM set_config('realtime.topic', COALESCE(p_context_topic, p_topic), true);
@@ -64,7 +67,8 @@ DECLARE
     'presence:global','crm:tasks','room:bad',room_a,published_room,test_room];
 BEGIN
   PERFORM pg_temp.setup_current_rights_fixture();
-  INSERT INTO auth.users(id,email) VALUES(tester_id,'current-rights-realtime-test@example.invalid');
+  INSERT INTO auth.users(id,email,raw_user_meta_data)
+    VALUES(tester_id,'current-rights-realtime-test@example.invalid','{"sandbox_discovery":true}');
   INSERT INTO public.app_user_profile(id,role) VALUES(tester_id,'tourism_agent')
     ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role;
   INSERT INTO public.user_org_membership(id,user_id,org_object_id,is_active) VALUES
@@ -116,6 +120,23 @@ BEGIN
   PERFORM pg_temp.expect_realtime_acl(writer_id,'presence:global',denied);
   PERFORM pg_temp.expect_realtime_acl(writer_id,'crm:tasks',denied);
 
+  -- The named tester above joined all three test topics even with an editable
+  -- discovery marker. Only the stored server marker changes here.
+  PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
+  PERFORM set_config('request.jwt.claim.role','service_role',true);
+  PERFORM set_config('request.jwt.claim.sub','',true);
+  UPDATE auth.users SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || '{"sandbox_discovery":true}'::jsonb
+    WHERE id=tester_id;
+  ASSERT FOUND, 'fixture Auth provenance must have been updated';
+  PERFORM pg_temp.expect_realtime_acl(tester_id,'presence:global:test',denied);
+  PERFORM pg_temp.expect_realtime_acl(tester_id,'crm:tasks:test',denied);
+  PERFORM pg_temp.expect_realtime_acl(tester_id,test_room,denied);
+  SET LOCAL ROLE authenticated;
+  ASSERT api.current_user_test_realm() IS TRUE AND api.current_user_can_edit_objects() IS TRUE;
+  ASSERT EXISTS (SELECT 1 FROM public.object WHERE id='HOTRUN999999AR05'), 'discovery fixture retains test-object read';
+  ASSERT api.user_can_write_object_canonical('HOTRUN999999AR05') IS TRUE;
+  RESET ROLE;
+
   -- A legal-only publisher member can read this draft and track Presence. Its
   -- specialist permission remains insufficient to send a room broadcast.
   PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
@@ -130,6 +151,23 @@ BEGIN
   PERFORM pg_temp.expect_realtime_acl(other_id,room_a,receive);
   ASSERT api.user_can_manage_object_legal('HOTRUN999999AR01') IS TRUE;
   ASSERT api.user_can_write_object_canonical('HOTRUN999999AR01') IS FALSE;
+
+  -- A tourism profile with an individual permission and an inactive membership
+  -- still passes the broad edit probe and can read a published object.
+  PERFORM set_config('request.jwt.claims','{"role":"service_role"}',true);
+  PERFORM set_config('request.jwt.claim.role','service_role',true);
+  PERFORM set_config('request.jwt.claim.sub','',true);
+  UPDATE public.user_org_membership SET is_active=false WHERE id=other_membership;
+  ASSERT FOUND, 'fixture membership must have been deactivated';
+  INSERT INTO public.user_permission(user_id,permission_id,is_active,granted_by)
+    SELECT other_id,id,true,admin_id FROM public.ref_permission WHERE code='create_object';
+  PERFORM pg_temp.expect_realtime_acl(other_id,'presence:global:prod',denied);
+  PERFORM pg_temp.expect_realtime_acl(other_id,'crm:tasks:prod',denied);
+  PERFORM pg_temp.expect_realtime_acl(other_id,published_room,denied);
+  SET LOCAL ROLE authenticated;
+  ASSERT api.current_user_org_id() IS NULL AND api.current_user_can_edit_objects() IS TRUE;
+  ASSERT EXISTS (SELECT 1 FROM public.object WHERE id='HOTRUN999999AR03'), 'unaffiliated account still reads published data';
+  RESET ROLE;
 
   -- Simulate profile removal while the previous authenticated claims still
   -- exist. Published data remains readable and private Realtime is refused.

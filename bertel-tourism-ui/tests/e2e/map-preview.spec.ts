@@ -1,6 +1,24 @@
-import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { expect, test as base, type Page, type TestInfo } from '@playwright/test';
 import { dispatchNativeHoverAfterEntry } from './helpers/native-mouse-pair';
 import { startFocusJournal } from './helpers/focus-journal';
+
+const test = base.extend<{
+  preparationClock: { started: number; testTimeout: number };
+}>({
+  // Browser launch has a worker budget and must finish before this clock starts.
+  preparationClock: [async ({ browser: _browser }, use, testInfo) => {
+    const clock = { started: performance.now(), testTimeout: testInfo.timeout };
+    testInfo.setTimeout(Math.max(testInfo.timeout, 60_000));
+    await use(clock);
+  }, { auto: true }],
+});
+
+// Native page/context setup gets its own bounded allowance. Restore the
+// original scenario budget after setup, keeping each assertion's timeout.
+test.beforeEach(async ({ page: _page, preparationClock }, testInfo) => {
+  const preparationTime = Math.ceil(performance.now() - preparationClock.started);
+  testInfo.setTimeout(preparationClock.testTimeout + preparationTime);
+});
 
 test.use({ launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } });
 test.describe.configure({ retries: 0 });

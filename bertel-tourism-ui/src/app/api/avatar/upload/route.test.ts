@@ -55,11 +55,22 @@ function req(fields: Record<string, string> = {}): never {
   } as never;
 }
 
+function avatarReceipt(params: Record<string, unknown>, state = 'engaged') {
+  return { uploadId: params.p_upload_id, userId: params.p_user_id, path: params.p_storage_path,
+    sha256: params.p_sha256, sizeBytes: params.p_size_bytes, state };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
 function serverMock(opts: {
   memberships?: Array<{ user_id: string; org_object_id: string }>;
   update?: jest.Mock;
   getUserById?: jest.Mock;
-  avatarCheck?: jest.Mock;
+  avatarRpc?: jest.Mock;
 }) {
   const memberships = opts.memberships ?? [
     { user_id: CALLER, org_object_id: 'ORG1' },
@@ -84,15 +95,17 @@ function serverMock(opts: {
   });
   const getUserById =
     opts.getUserById ?? jest.fn().mockResolvedValue({ data: { user: { id: TARGET_CANONICAL } }, error: null });
-  const avatarCheck = opts.avatarCheck ?? jest.fn().mockResolvedValue({ data: true, error: null });
+  const avatarRpc = opts.avatarRpc ?? jest.fn(async (name: string, params: Record<string, unknown>) => ({
+    data: avatarReceipt(params, name === 'begin_avatar_upload' ? 'engaged' : 'finished'), error: null,
+  }));
   return {
     __update: update,
     __upsert: upsert,
     __upload: upload,
     __remove: remove,
     __objects: objects,
-    __avatarCheck: avatarCheck,
-    schema: () => ({ rpc: avatarCheck }),
+    __avatarRpc: avatarRpc,
+    schema: () => ({ rpc: avatarRpc }),
     auth: {
       getUser: jest.fn().mockResolvedValue({ data: { user: { id: CALLER } }, error: null }),
       admin: { getUserById },
@@ -307,7 +320,7 @@ describe('generations: distinct keys, never overwritten or compensated', () => {
     ['malformed response', () => jest.fn().mockResolvedValue({ data: 'true', error: null })],
     ['transport rejection', () => jest.fn().mockRejectedValue(new Error('synthetic transport failure'))],
   ])('%s prevents every Storage/profile effect', async (_name, makeCheck) => {
-    const server = serverMock({ avatarCheck: makeCheck() });
+    const server = serverMock({ avatarRpc: makeCheck() });
     mockedServer.mockReturnValue(server as never);
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     try {
@@ -317,7 +330,7 @@ describe('generations: distinct keys, never overwritten or compensated', () => {
     } finally {
       warn.mockRestore();
     }
-    expect(server.__avatarCheck).toHaveBeenCalledWith('avatar_upload_allowed', { p_user_id: CALLER });
+    expect(server.__avatarRpc).toHaveBeenCalledWith('begin_avatar_upload', expect.objectContaining({ p_user_id: CALLER }));
     expect(server.__upload).not.toHaveBeenCalled();
     expect(server.__update).not.toHaveBeenCalled();
     expect(server.__upsert).not.toHaveBeenCalled();
@@ -329,7 +342,105 @@ describe('generations: distinct keys, never overwritten or compensated', () => {
     mockedServer.mockReturnValue(server as never);
     mockedCreate.mockReturnValue(adminProbeMock(true, 0));
     expect((await POST(req({ targetUserId: TARGET }))).status).toBe(201);
-    expect(server.__avatarCheck).toHaveBeenCalledWith('avatar_upload_allowed', { p_user_id: TARGET_CANONICAL });
+    expect(server.__avatarRpc).toHaveBeenCalledWith('begin_avatar_upload', expect.objectContaining({ p_user_id: TARGET_CANONICAL }));
+  });
+
+  it('does not touch Storage while the durable begin ACK is still pending', async () => {
+    const entered = deferred<undefined>();
+    const ack = deferred<unknown>();
+    let params!: Record<string, unknown>;
+    const server = serverMock({ avatarRpc: jest.fn((name: string, input: Record<string, unknown>) => {
+      if (name === 'begin_avatar_upload') { params = input; entered.resolve(undefined); return ack.promise; }
+      return Promise.resolve({ data: avatarReceipt(input, 'finished'), error: null });
+    }) });
+    mockedServer.mockReturnValue(server as never);
+    callerUpdating(jest.fn().mockResolvedValue({ error: null }));
+    const request = POST(req());
+    await entered.promise;
+    expect(server.__upload).not.toHaveBeenCalled();
+    ack.resolve({ data: avatarReceipt(params), error: null });
+    expect((await request).status).toBe(201);
+  });
+
+  it.each(['uploadId', 'userId', 'path', 'sha256', 'sizeBytes', 'state'])(
+    'refuses a begin ACK with a different %s before any effect', async (field) => {
+      const server = serverMock({ avatarRpc: jest.fn(async (_name: string, params: Record<string, unknown>) => ({
+        data: { ...avatarReceipt(params), [field]: 'different' }, error: null,
+      })) });
+      mockedServer.mockReturnValue(server as never);
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try { expect((await POST(req())).status).toBe(503); } finally { warn.mockRestore(); }
+      expect(server.__upload).not.toHaveBeenCalled();
+      expect(mockedCreate).not.toHaveBeenCalled();
+      expect(server.__avatarRpc).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('keeps the intent engaged until both Storage and profile ACKs have resolved', async () => {
+    const uploadEntered = deferred<undefined>();
+    const uploadAck = deferred<{ error: null }>();
+    const profileEntered = deferred<undefined>();
+    const profileAck = deferred<{ error: null }>();
+    const server = serverMock({});
+    server.__upload.mockImplementationOnce((path, body) => {
+      server.__objects.set(path, body); // bytes may already have been accepted before ACK
+      uploadEntered.resolve(undefined); return uploadAck.promise;
+    });
+    mockedServer.mockReturnValue(server as never);
+    callerUpdating(jest.fn(() => { profileEntered.resolve(undefined); return profileAck.promise; }));
+    const request = POST(req());
+    await uploadEntered.promise;
+    expect(server.__avatarRpc.mock.calls.map(([name]) => name)).toEqual(['begin_avatar_upload']);
+    uploadAck.resolve({ error: null });
+    await profileEntered.promise;
+    expect(server.__avatarRpc.mock.calls.map(([name]) => name)).toEqual(['begin_avatar_upload']);
+    profileAck.resolve({ error: null });
+    expect((await request).status).toBe(201);
+    expect(server.__avatarRpc.mock.calls.map(([name]) => name)).toEqual(['begin_avatar_upload', 'complete_avatar_upload']);
+    expect(server.__avatarRpc.mock.calls[1][1]).toEqual(server.__avatarRpc.mock.calls[0][1]);
+  });
+
+  it('orders begin, Storage, profile then the final receipt, without a later write', async () => {
+    const events: string[] = [];
+    const server = serverMock({ avatarRpc: jest.fn(async (name: string, params: Record<string, unknown>) => {
+      events.push(name); return { data: avatarReceipt(params, name === 'begin_avatar_upload' ? 'engaged' : 'finished'), error: null };
+    }) });
+    server.__upload.mockImplementationOnce(async () => { events.push('storage'); return { error: null }; });
+    mockedServer.mockReturnValue(server as never);
+    callerUpdating(jest.fn(async () => { events.push('profile'); return { error: null }; }));
+    expect((await POST(req())).status).toBe(201);
+    expect(events).toEqual(['begin_avatar_upload', 'storage', 'profile', 'complete_avatar_upload']);
+    expect(server.__remove).not.toHaveBeenCalled();
+  });
+
+  it.each(['returned error', 'transport rejection'])(
+    'Storage %s never completes or removes an uncertain intent', async (kind) => {
+      const server = serverMock({});
+      if (kind === 'returned error') server.__upload.mockResolvedValueOnce({ error: { message: 'synthetic failure' } });
+      else server.__upload.mockRejectedValueOnce(new Error('synthetic transport failure'));
+      mockedServer.mockReturnValue(server as never);
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try { expect((await POST(req())).status).toBe(502); } finally { warn.mockRestore(); }
+      expect(server.__avatarRpc.mock.calls.map(([name]) => name)).toEqual(['begin_avatar_upload']);
+      expect(server.__remove).not.toHaveBeenCalled();
+      expect(mockedCreate).not.toHaveBeenCalled();
+    },
+  );
+
+  it('a lost completion ACK never retries Storage, profile or receipt', async () => {
+    const server = serverMock({ avatarRpc: jest.fn(async (name: string, params: Record<string, unknown>) => {
+      if (name === 'complete_avatar_upload') throw new Error('synthetic lost ACK');
+      return { data: avatarReceipt(params), error: null };
+    }) });
+    mockedServer.mockReturnValue(server as never);
+    const eq = jest.fn().mockResolvedValue({ error: null });
+    callerUpdating(eq);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try { expect((await POST(req())).status).toBe(500); } finally { warn.mockRestore(); }
+    expect(server.__upload).toHaveBeenCalledTimes(1);
+    expect(eq).toHaveBeenCalledTimes(1);
+    expect(server.__avatarRpc.mock.calls.map(([name]) => name)).toEqual(['begin_avatar_upload', 'complete_avatar_upload']);
+    expect(server.__remove).not.toHaveBeenCalled();
   });
 
   it('two uploads create two distinct owner-prefixed keys with upsert:false and keep both files', async () => {
@@ -383,6 +494,7 @@ describe('generations: distinct keys, never overwritten or compensated', () => {
     const [uploadedPath] = server.__upload.mock.calls[0];
     expect(server.__objects.has(uploadedPath)).toBe(true);
     expect(server.__remove).not.toHaveBeenCalled();
+    expect(server.__avatarRpc.mock.calls.map(([name]) => name)).toEqual(['begin_avatar_upload']);
   });
 
   it('admin upsert transport rejection: 500 without removing the uploaded file', async () => {
@@ -402,6 +514,7 @@ describe('generations: distinct keys, never overwritten or compensated', () => {
     expect(uploadedPath).toMatch(generationPath(TARGET_CANONICAL));
     expect(server.__objects.has(uploadedPath)).toBe(true);
     expect(server.__remove).not.toHaveBeenCalled();
+    expect(server.__avatarRpc.mock.calls.map(([name]) => name)).toEqual(['begin_avatar_upload']);
   });
 });
 

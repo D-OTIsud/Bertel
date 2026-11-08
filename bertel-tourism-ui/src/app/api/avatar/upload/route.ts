@@ -1,4 +1,5 @@
 import { createCallerClient } from '@/lib/supabase-caller.server';
+import { createHash } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
@@ -27,6 +28,14 @@ export const runtime = 'nodejs'; // sharp requires Node, not Edge
 const BUCKET = 'avatars';
 // Raw multipart envelope: single accepted file (image, 20 MiB) + 1 MiB overhead.
 const MAX_MULTIPART_BYTES = MAX_INPUT_BYTES + 1024 * 1024;
+
+type AvatarBinding = { uploadId: string; userId: string; path: string; sha256: string; sizeBytes: number };
+
+function receiptMatches(value: unknown, binding: AvatarBinding, state: 'engaged' | 'finished'): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const receipt = value as Record<string, unknown>;
+  return receipt.state === state && Object.entries(binding).every(([key, expected]) => receipt[key] === expected);
+}
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const server = getServerSupabaseClient();
@@ -143,11 +152,23 @@ async function handlePostAuthenticated(
     return routeFailure('avatar/upload.POST', 'process_failed');
   }
 
-  // Contrôle de l'état durable juste avant le premier effet Storage. Un refus ou une réponse
-  // ambiguë bloque l'upload ; ce contrôle ne draine pas un upload déjà admis avant l'effacement.
+  // Intention durable AVANT Storage, jamais adoptée ou réarmée. Un ACK inconnu ne permet
+  // aucun upload ; une intention engagée demeure bloquante pour l'effacement du compte.
+  const path = newAvatarStoragePath(userId);
+  const binding: AvatarBinding = {
+    uploadId: path.slice(`${userId}/avatar-`.length, -'.jpg'.length),
+    userId, path, sha256: createHash('sha256').update(processed.buffer).digest('hex'),
+    sizeBytes: processed.buffer.byteLength,
+  };
+  const intentParams = {
+    p_upload_id: binding.uploadId, p_user_id: userId, p_storage_path: path,
+    p_sha256: binding.sha256, p_size_bytes: binding.sizeBytes,
+  };
   try {
-    const { data: allowed, error } = await server.schema('api').rpc('avatar_upload_allowed', { p_user_id: userId });
-    if (error || allowed !== true) return routeFailure('avatar/upload.POST', 'upload_failed', { status: 503 });
+    const { data: receipt, error } = await server.schema('api').rpc('begin_avatar_upload', intentParams);
+    if (error || !receiptMatches(receipt, binding, 'engaged')) {
+      return routeFailure('avatar/upload.POST', 'upload_failed', { status: 503 });
+    }
   } catch {
     return routeFailure('avatar/upload.POST', 'upload_failed', { status: 503 });
   }
@@ -156,13 +177,14 @@ async function handlePostAuthenticated(
   // tardif visant une génération ne peut pas effacer une génération plus récente.
   // L'inventaire SQL compagnon retrouve ces clés exactes dans storage.objects, même si l'ACK
   // profil s'est perdu. Son intégration et la fence des anciens writers précèdent l'activation.
-  const path = newAvatarStoragePath(userId);
-  const { error: upErr } = await server.storage.from(BUCKET).upload(path, processed.buffer, {
-    contentType: processed.mimeType,
-    cacheControl: '31536000', // 1 an — une clé n'est jamais réécrite
-    upsert: false,
-  });
-  if (upErr) {
+  try {
+    const { error: upErr } = await server.storage.from(BUCKET).upload(path, processed.buffer, {
+      contentType: processed.mimeType,
+      cacheControl: '31536000', // 1 an — une clé n'est jamais réécrite
+      upsert: false,
+    });
+    if (upErr) return routeFailure('avatar/upload.POST', 'upload_failed', { status: 502 });
+  } catch {
     return routeFailure('avatar/upload.POST', 'upload_failed', { status: 502 });
   }
   const { data: pub } = server.storage.from(BUCKET).getPublicUrl(path);
@@ -195,5 +217,15 @@ async function handlePostAuthenticated(
     return routeFailure('avatar/upload.POST', 'profile_update_failed');
   }
 
+  // Dernière écriture : après cet ACK il ne reste aucun effet Storage/profil à effectuer.
+  // En cas d'ACK perdu, l'intention peut rester engagée : aucun replay ni compensation.
+  try {
+    const { data: receipt, error } = await server.schema('api').rpc('complete_avatar_upload', intentParams);
+    if (error || !receiptMatches(receipt, binding, 'finished')) {
+      return routeFailure('avatar/upload.POST', 'profile_update_failed');
+    }
+  } catch {
+    return routeFailure('avatar/upload.POST', 'profile_update_failed');
+  }
   return NextResponse.json({ url }, { status: 201 });
 }

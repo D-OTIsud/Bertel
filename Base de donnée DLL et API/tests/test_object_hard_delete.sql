@@ -1,6 +1,6 @@
 -- test_object_hard_delete.sql
 -- Behavioral test for api.rpc_delete_object (§108). Transactionnel, ROLLBACK final.
--- Run APRÈS le manifest complet INCLUANT migration_object_hard_delete.sql.
+-- Run after the final purge migration and every ref_document FK.
 \set ON_ERROR_STOP on
 BEGIN;
 
@@ -11,6 +11,7 @@ DECLARE
   v_su_uid    uuid := '00000000-0000-4000-a000-0000000000c1';  -- super_admin
   v_plain_uid uuid := '00000000-0000-4000-a000-0000000000c2';  -- tourism_agent (PAS superuser)
   v_obj2      text := 'HOTRUN9999999982';  -- autre objet (référent survivant d'un doc partagé)
+  v_empty    text := 'HOTRUN9999999983';
   v_pub_role  uuid;
   v_media_type uuid;
   v_act       uuid;
@@ -18,7 +19,14 @@ DECLARE
   v_doc_id    uuid := gen_random_uuid();     -- via object_document seulement -> supprimé
   v_d_sust    uuid := gen_random_uuid();     -- via object_sustainability_action seulement -> supprimé (gap RGPD fermé)
   v_d_shared  uuid := gen_random_uuid();     -- v_obj object_document + v_obj2 sustainability -> CONSERVÉ
+  v_d_actor   uuid := gen_random_uuid();
+  v_d_promoted uuid := gen_random_uuid();
+  v_d_task    uuid := gen_random_uuid();
+  v_d_analysis uuid := gen_random_uuid();
+  v_actor     uuid := gen_random_uuid();
+  v_task      uuid := gen_random_uuid();
   v_result    jsonb;
+  v_log_report jsonb;
   v_obj_left  int;
   v_media_left int;
   v_link_left int;
@@ -27,6 +35,24 @@ DECLARE
   v_shared_left int;
   v_log_count int;
 BEGIN
+  -- A new incoming FK needs an explicit decision in the orphan scan.
+  ASSERT ARRAY(
+    SELECT format('%I.%I.%I', n.nspname, t.relname, a.attname)
+    FROM pg_constraint k
+    JOIN pg_class t ON t.oid = k.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(k.conkey)
+    WHERE k.contype='f' AND k.confrelid='public.ref_document'::regclass
+    ORDER BY format('%I.%I.%I', n.nspname, t.relname, a.attname) COLLATE "C"
+  ) = ARRAY[
+    'internal.portal_photo_analysis.document_id',
+    'public.actor_consent.document_id', 'public.actor_document.document_id',
+    'public.actor_document.promoted_document_id', 'public.crm_task_document.document_id',
+    'public.object_classification.document_id', 'public.object_document.document_id',
+    'public.object_iti.status_document_id', 'public.object_legal.document_id',
+    'public.object_sustainability_action.document_id'
+  ], 'Review the purge reference scan after changing the ref_document foreign keys';
+
   -- ---------- Users ----------
   INSERT INTO auth.users (id, email) VALUES
     (v_su_uid,    'hd_superadmin@test.local'),
@@ -44,7 +70,8 @@ BEGIN
   INSERT INTO object (id, object_type, name, status) VALUES
     (v_org,  'ORG', 'HardDelete Test Org',   'published'),
     (v_obj,  'HOT', 'HardDelete Test Hotel', 'archived'),
-    (v_obj2, 'HOT', 'Other Hotel',           'published');
+    (v_obj2, 'HOT', 'Other Hotel',           'published'),
+    (v_empty,'HOT', 'Empty archived hotel',  'archived');
   INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES (v_obj, v_org, v_pub_role);
   INSERT INTO media (object_id, media_type_id, url)
     VALUES (v_obj, v_media_type, 'https://x/storage/v1/object/public/media/'||v_obj||'/a.jpg');
@@ -63,6 +90,19 @@ BEGIN
   INSERT INTO object_document (object_id, document_id) VALUES (v_obj, v_doc_id), (v_obj, v_d_shared);
   INSERT INTO object_sustainability_action (object_id, action_id, document_id) VALUES (v_obj, v_act, v_d_sust);
   INSERT INTO object_sustainability_action (object_id, action_id, document_id) VALUES (v_obj2, v_act, v_d_shared);
+
+  -- Four later FK columns must retain the document and the surviving owner.
+  INSERT INTO ref_document(id, url)
+    SELECT id, 'https://example.invalid/document/' || id FROM unnest(ARRAY[v_d_actor,v_d_promoted,v_d_task,v_d_analysis]) id;
+  INSERT INTO object_document(object_id, document_id)
+    SELECT v_obj, id FROM unnest(ARRAY[v_d_actor,v_d_promoted,v_d_task,v_d_analysis]) id;
+  INSERT INTO actor(id,display_name) VALUES (v_actor,'Synthetic surviving actor');
+  INSERT INTO actor_document(actor_id,document_id,status,promoted_to_object_id,promoted_document_id,promoted_at)
+    VALUES (v_actor,v_d_actor,'promoted',v_obj2,v_d_promoted,now());
+  INSERT INTO crm_task(id,object_id,title) VALUES (v_task,v_obj2,'Synthetic surviving task');
+  INSERT INTO crm_task_document(task_id,document_id,title) VALUES (v_task,v_d_task,'Synthetic shared document');
+  INSERT INTO internal.portal_photo_analysis(id,object_id,document_id,actor_id,created_by,source_sha256,local_day,provider_revision)
+    VALUES (gen_random_uuid(),v_obj2,v_d_analysis,v_actor,v_su_uid,repeat('a',64),current_date,now());
 
   -- ========== 1. Non-superuser => FORBIDDEN ==========
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_plain_uid, 'role','authenticated')::text, true);
@@ -106,8 +146,9 @@ BEGIN
   -- ========== 5. happy path ==========
   v_result := api.rpc_delete_object(v_obj, 'HardDelete Test Hotel');
   ASSERT (v_result->>'deleted')::boolean,                          'expected deleted=true';
-  ASSERT jsonb_array_length(v_result->'media_to_delete') = 2,      'expected 2 media urls (object-keyed + place-keyed)';
-  ASSERT jsonb_array_length(v_result->'documents_to_delete') = 2,  'expected 2 doc urls (object_document + sustainability orphans), got: '||(v_result->>'documents_to_delete');
+  ASSERT v_result->'media_to_delete' = '[]'::jsonb AND v_result->'documents_to_delete' = '[]'::jsonb,
+    'Neither current nor older callers may sweep Storage during a purge';
+  ASSERT v_result->'storage_cleanup_deferred' = 'true'::jsonb;
 
   SELECT count(*) INTO v_obj_left   FROM object          WHERE id = v_obj;          ASSERT v_obj_left   = 0, 'object gone';
   SELECT count(*) INTO v_media_left FROM media           WHERE object_id = v_obj OR place_id = v_place_id; ASSERT v_media_left = 0, 'object+place media cascade-gone';
@@ -115,7 +156,26 @@ BEGIN
   SELECT count(*) INTO v_doc_left    FROM ref_document WHERE id = v_doc_id;   ASSERT v_doc_left    = 0, 'object_document-only doc deleted';
   SELECT count(*) INTO v_sust_left   FROM ref_document WHERE id = v_d_sust;   ASSERT v_sust_left   = 0, 'sustainability-only doc deleted (RGPD erasure gap closed)';
   SELECT count(*) INTO v_shared_left FROM ref_document WHERE id = v_d_shared; ASSERT v_shared_left = 1, 'shared doc (referenced by other object) NOT deleted';
+  ASSERT (SELECT count(*) FROM ref_document WHERE id=ANY(ARRAY[v_d_actor,v_d_promoted,v_d_task,v_d_analysis])) = 4;
+  ASSERT EXISTS (SELECT FROM actor_document WHERE actor_id=v_actor AND document_id=v_d_actor AND promoted_document_id=v_d_promoted);
+  ASSERT EXISTS (SELECT FROM crm_task_document WHERE task_id=v_task AND document_id=v_d_task);
+  ASSERT EXISTS (SELECT FROM internal.portal_photo_analysis WHERE object_id=v_obj2 AND document_id=v_d_analysis);
   SELECT count(*) INTO v_log_count  FROM object_deletion_log WHERE object_id = v_obj; ASSERT v_log_count = 1, 'one deletion log row';
+  SELECT report INTO v_log_report FROM object_deletion_log WHERE object_id=v_obj AND performed_by=v_su_uid
+    AND status_at_deletion='archived' AND media_deleted_count=2 AND document_deleted_count=2;
+  ASSERT v_log_report->'storage_cleanup_deferred' = 'true'::jsonb;
+  ASSERT jsonb_array_length(v_log_report->'media')=2 AND v_log_report->'media' @> jsonb_build_array(
+    'https://x/storage/v1/object/public/media/'||v_obj||'/a.jpg',
+    'https://x/storage/v1/object/public/media/'||v_obj||'/p.jpg');
+  ASSERT jsonb_array_length(v_log_report->'documents')=2 AND v_log_report->'documents' @> jsonb_build_array(
+    'https://x/storage/v1/object/public/documents/'||v_obj||'/d.pdf',
+    'https://x/storage/v1/object/public/documents/'||v_obj||'/sust.pdf');
+
+  v_result := api.rpc_delete_object(v_empty, 'Empty archived hotel');
+  ASSERT v_result->'storage_cleanup_deferred' = 'false'::jsonb;
+  ASSERT v_result->'media_to_delete' = '[]'::jsonb AND v_result->'documents_to_delete' = '[]'::jsonb;
+  ASSERT EXISTS (SELECT FROM object_deletion_log WHERE object_id=v_empty
+    AND report->'storage_cleanup_deferred'='false'::jsonb AND report->'media'='[]'::jsonb AND report->'documents'='[]'::jsonb);
 
   RAISE NOTICE 'Object hard-delete assertions passed.';
 END$$;

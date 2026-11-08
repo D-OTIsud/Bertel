@@ -788,6 +788,10 @@ COMMIT;
 \ir tests/test_avatar_upload_intents.sql
 \ir tests/test_gdpr_crm_document_provenance.sql
 
+\echo '== GDPR START request identity, owner-only and no destructive recovery =='
+\ir gdpr_start_request_identity.sql
+\ir tests/test_gdpr_start_request_identity.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

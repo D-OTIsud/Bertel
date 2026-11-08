@@ -200,7 +200,6 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       const realmPhase = realm && (realm.nativeDocument ? realm.after : !realm.reloadStarted ? realm.before : null);
       const reload = scene.reload?.nativeDocument ? scene.reload : null;
       const draftScope = scene.draftScope;
-      const markdown = scene.markdown;
       let kind;
       if (url.origin === local.origin) {
         if (realmPhase && request.method() === 'POST' && url.pathname === '/rest/v1/rpc/current_user_test_realm') {
@@ -223,7 +222,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           kind = 'legal-write';
         } else if (request.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
           const rpcKind = editorRpcKinds.get(url.pathname) ?? (scene.legalMode ? legalRpcKinds.get(url.pathname) : undefined)
-            ?? (markdown && url.pathname === '/rest/v1/rpc/get_object_workspace_permissions' ? 'markdown-permission' : undefined);
+            ?? (reload?.markdown && reload.committed && url.pathname === '/rest/v1/rpc/get_object_workspace_permissions'
+              ? 'markdown-permission' : undefined);
           if (rpcKind && request.postDataJSON()?.p_object_id === objectId) kind = rpcKind;
           if (kind === 'publish') publishCalls += 1;
           if (kind === 'restore') restoreCalls += 1;
@@ -296,13 +296,8 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
         } else if (kind === 'markdown-permission') {
           assert.ok(response.ok(), 'the real workspace permission RPC must return HTTP 2xx');
           const canonical = (await response.json())?.canonical;
-          assert.equal(canonical, !reload, 'the browser must observe the committed fixture authority');
-          if (reload) {
-            assert.ok(markdownAuthorization === markdown.authorization, 'Markdown authority reload must reuse the exact original JWT');
-            markdown.revoked = true;
-          } else {
-            markdown.authorization = markdownAuthorization;
-          }
+          assert.equal(typeof canonical, 'boolean');
+          reload.markdownPermission ??= { canonical, authorization: markdownAuthorization };
         } else if (kind === 'reload-auth') {
           assert.ok(response.ok());
           failureStage = 'reload-authenticated-user';
@@ -363,11 +358,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await page.waitForURL(target, { timeout: 60_000 });
     }
 
-    async function openAuthenticatedEditor(legalMode, draftScope, realm, markdown) {
+    async function openAuthenticatedEditor(legalMode, draftScope, realm) {
       const context = await ownedBrowser.newContext();
       const target = realm?.url ?? editorUrl;
       const requestedLogin = realm ? app.origin + '/login?from=' + encodeURIComponent(realm.destination) : loginUrl;
-      const scene = { legalMode, draftScope, realm, markdown, loginUrl: requestedLogin,
+      const scene = { legalMode, draftScope, realm, loginUrl: requestedLogin,
         closed: false, nativeLoginRequested: false, pageErrors: 0,
         legalReads: 0, legalPermissions: 0, summaryReads: 0, summaryFailures: 0, legalWrites: 0 };
       await context.route('**/*', (route) => routeEditorRequest(route, scene));
@@ -401,10 +396,29 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       assert.equal(writerId, '00000000-0000-4000-a000-00000000ae11');
       const storedDescriptions = () => local.sql(`SELECT jsonb_agg(to_jsonb(d) ORDER BY d.id)::text
         FROM public.object_description d WHERE d.object_id='HOTRUN999999AR01'`, 'read only synthetic descriptions');
-      const originalDescriptions = storedDescriptions();
       const section = page.locator('#section-04');
+      async function reloadWithMarkdownAuthority() {
+        const reload = { nativeDocument: false, markdown: true, committed: false };
+        const onNavigation = (frame) => {
+          if (frame === page.mainFrame() && frame.url() === editorUrl) reload.committed = true;
+        };
+        scene.reload = reload;
+        page.on('framenavigated', onNavigation);
+        try {
+          const document = await page.reload();
+          assert.ok(reload.nativeDocument && reload.committed && document?.status() === 200 && document.url() === editorUrl
+            && document.request().redirectedFrom() === null, 'Markdown witness must reload the real editor without redirects');
+          await assertion.poll(() => reload.authenticatedUser === true && Boolean(reload.markdownPermission)).toBe(true);
+          return reload.markdownPermission;
+        } finally {
+          page.off('framenavigated', onNavigation);
+          scene.reload = undefined;
+        }
+      }
       async function openMarkdownFields() {
         await section.getByRole('button', { name: 'Français', exact: true }).click();
+        const canonicalScope = section.getByRole('tab', { name: 'Par défaut', exact: true });
+        if (await canonicalScope.isVisible()) await canonicalScope.click();
         return ['Descriptif', 'Accroche'].map((name) => {
           const field = page.getByLabel(`${name} — Français`, { exact: true });
           return { field, toolbar: section.locator('.md-editor').filter({ has: field })
@@ -423,8 +437,9 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           COMMIT;`, 'toggle only the synthetic editor role'), '1');
       }
 
+      const writable = await reloadWithMarkdownAuthority();
+      assert.equal(writable.canonical, true, 'browser must observe the authorized fixture before revocation');
       const [description, introduction] = await openMarkdownFields();
-      await assertion.poll(() => Boolean(scene.markdown.authorization)).toBe(true);
       for (const { field, toolbar } of [description, introduction]) {
         await assertion(field).toBeEditable();
         await assertion(toolbar.getByRole('button', { name: 'Gras', exact: true })).toBeEnabled();
@@ -436,14 +451,13 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       await assertion(description.field.locator('strong')).toHaveText(originalText);
       await description.toolbar.getByRole('button', { name: 'Annuler', exact: true }).click();
       await assertion(description.field.locator('strong')).toHaveCount(0);
+      const originalDescriptions = storedDescriptions();
 
       setFixtureEditorRole(false);
-      scene.reload = { nativeDocument: false };
       try {
-        const document = await page.reload();
-        assert.ok(scene.reload.nativeDocument && document?.status() === 200 && document.url() === editorUrl
-          && document.request().redirectedFrom() === null, 'Markdown witness must reload the real editor without redirects');
-        await assertion.poll(() => [scene.markdown.revoked, scene.reload.authenticatedUser]).toEqual([true, true]);
+        const revoked = await reloadWithMarkdownAuthority();
+        assert.ok(revoked.authorization === writable.authorization, 'Markdown authority reload must reuse the exact original JWT');
+        assert.equal(revoked.canonical, false, 'browser must observe the committed fixture revocation');
         const [readOnly, readOnlyIntroduction] = await openMarkdownFields();
         for (const { field, toolbar } of [readOnly, readOnlyIntroduction]) {
           await assertion(field).toHaveAttribute('contenteditable', 'false');
@@ -472,7 +486,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       }
     }
 
-    const races = await openAuthenticatedEditor(undefined, undefined, undefined, {});
+    const races = await openAuthenticatedEditor();
     const { page } = races;
     const name = page.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
     const editorActions = page.locator('.edit-top__right');

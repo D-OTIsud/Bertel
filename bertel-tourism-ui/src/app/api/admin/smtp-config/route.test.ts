@@ -92,6 +92,61 @@ it('clears credentials explicitly in relay mode', async () => {
   expect(rpc).toHaveBeenCalledWith('upsert_smtp_config', expect.objectContaining({ p_auth_mode: 'relay', p_password: null, p_username: null }));
 });
 
+describe('manual list e-mail limits', () => {
+  const useSavedRow = (data: unknown[]) => rpc.mockImplementation((name: string) => Promise.resolve({ data: name === 'is_platform_superuser' ? true : name === 'get_smtp_config' ? data : null, error: null }));
+  const allArguments = { p_enabled: true, p_host: row.host, p_port: 587, p_secure: false, p_from_email: row.from_email, p_from_name: 'Bertel', p_auth_mode: 'password', p_username: 'user', p_password: null };
+
+  it('GET returns the defaults on an old row and never its database names or secret', async () => {
+    const response = await GET(req());
+    const text = await response.text();
+    expect(JSON.parse(text)).toMatchObject({ manualMaxPerMinute: 10, manualMaxPer24h: 1000 });
+    expect(text).not.toMatch(/manual_max|never-return-me/);
+  });
+
+  it('GET returns the defaults when no row exists and the stored limits when one does', async () => {
+    useSavedRow([]);
+    expect(await (await GET(req())).json()).toMatchObject({ source: 'none', manualMaxPerMinute: 10, manualMaxPer24h: 1000 });
+    useSavedRow([{ ...row, manual_max_per_minute: 25, manual_max_per_24h: 2000 }]);
+    expect(await (await GET(req())).json()).toMatchObject({ manualMaxPerMinute: 25, manualMaxPer24h: 2000 });
+  });
+
+  it('an old HTTP payload sends all 11 arguments with NULL limits, not the values it read', async () => {
+    useSavedRow([{ ...row, manual_max_per_minute: 25, manual_max_per_24h: 2000 }]);
+    expect((await PUT(req('PUT', input))).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('upsert_smtp_config', { ...allArguments, p_manual_max_per_minute: null, p_manual_max_per_24h: null });
+  });
+
+  it('passes explicit limits, and NULL only for the one left out', async () => {
+    await PUT(req('PUT', { ...input, manualMaxPerMinute: 25, manualMaxPer24h: 2000 }));
+    expect(rpc).toHaveBeenCalledWith('upsert_smtp_config', { ...allArguments, p_manual_max_per_minute: 25, p_manual_max_per_24h: 2000 });
+    await PUT(req('PUT', { ...input, manualMaxPer24h: 500 }));
+    expect(rpc).toHaveBeenCalledWith('upsert_smtp_config', { ...allArguments, p_manual_max_per_minute: null, p_manual_max_per_24h: 500 });
+  });
+
+  it.each(['manualMaxPerMinute', 'manualMaxPer24h'].flatMap((field) => (
+    [0, -1, 1.5, '10', null, 2147483648, 9007199254740992].map((value) => [field, value] as const)
+  )))('refuses %s=%j before any read or write of the settings', async (field, value) => {
+    const response = await PUT(req('PUT', { ...input, [field]: value }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ detail: 'Indiquez un nombre entier supérieur ou égal à 1.' });
+    expect(rpc).not.toHaveBeenCalledWith('upsert_smtp_config', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('get_smtp_config');
+  });
+
+  it('keeps a saved disable and the omitted saved password', async () => {
+    expect((await PUT(req('PUT', { ...input, enabled: false, manualMaxPerMinute: 3 }))).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('upsert_smtp_config', { ...allArguments, p_enabled: false, p_manual_max_per_minute: 3, p_manual_max_per_24h: null });
+  });
+
+  it('keeps requiring a password when no saved row holds one, whatever the limits', async () => {
+    useSavedRow([]);
+    expect((await PUT(req('PUT', { ...input, manualMaxPerMinute: 3 }))).status).toBe(400);
+    expect(rpc).not.toHaveBeenCalledWith('upsert_smtp_config', expect.anything());
+    expect((await PUT(req('PUT', { ...input, password: 'new-secret' }))).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('upsert_smtp_config', { ...allArguments, p_password: 'new-secret', p_manual_max_per_minute: null, p_manual_max_per_24h: null });
+  });
+});
+
 it('does not expose raw database errors', async () => {
   rpc.mockImplementation((name: string) => Promise.resolve({ data: name === 'is_platform_superuser' ? true : null, error: name === 'is_platform_superuser' ? null : { code: 'XX000', message: 'sensitive-server-error' } }));
   const response = await GET(req());

@@ -244,6 +244,64 @@ describe('list email client — captured generation, prepare/dispatch/result/ack
     expect(net.phases()).toEqual(['prepare']);
   });
 
+  describe('manual quota refusal', () => {
+    function quota(patch = {}, status = 429) {
+      return json({ error: 'email_quota_exceeded', outcome: 'not_sent', operationId: OP, retryAfterSeconds: 61, ...patch }, status);
+    }
+
+    it('reports a valid dispatch refusal as not sent, with no ACK, retry or timed resend', async () => {
+      const timers = jest.spyOn(global, 'setTimeout');
+      const net = network(request => request.body.phase === 'prepare' ? prepared() : quota());
+      const failure = await lists.sendListByEmail(LIST, EMAIL, intent()).catch(error => error as unknown);
+      expect(failure).toBeInstanceOf(lists.ListEmailQuotaError);
+      expect(failure).not.toBeInstanceOf(lists.ListEmailUnknownError);
+      expect(failure).toMatchObject({ name: 'ListEmailQuotaError', outcome: 'not_sent', retryAfterSeconds: 61,
+        message: 'Limite d’envoi atteinte. Réessayez dans 2 minutes' });
+      expect(net.phases()).toEqual(['prepare', 'dispatch']);
+      expect(timers.mock.calls.filter(([, delay]) => (delay ?? 0) >= 1000)).toEqual([]);
+      timers.mockRestore();
+    });
+
+    it.each([
+      [1, '1 seconde'], [59, '59 secondes'], [60, '1 minute'], [61, '2 minutes'], [120, '2 minutes'],
+      [3599, '60 minutes'], [3600, '1 heure'], [3601, '2 heures'], [86400, '24 heures'],
+    ])('rounds %i seconds up to the approved copy with "%s"', (seconds, delay) => {
+      expect(new lists.ListEmailQuotaError(seconds).message).toBe(`Limite d’envoi atteinte. Réessayez dans ${delay}`);
+    });
+
+    it.each([
+      () => quota({ operationId: PREVIOUS_A }),
+      () => quota({ operationId: undefined }),
+      () => quota({ outcome: 'sent' }),
+      () => quota({ outcome: undefined }),
+      () => quota({ error: 'rate_limited' }),
+      () => quota({ retryAfterSeconds: 0 }),
+      () => quota({ retryAfterSeconds: -1 }),
+      () => quota({ retryAfterSeconds: 1.5 }),
+      () => quota({ retryAfterSeconds: '61' }),
+      () => quota({ retryAfterSeconds: null }),
+      () => quota({ retryAfterSeconds: 9007199254740992 }),
+      () => quota({}, 503),
+      () => new Response('<html>proxy</html>', { status: 429 }),
+    ])('keeps a malformed or unbound dispatch refusal unknown (case %#)', async reply => {
+      const net = network(request => request.body.phase === 'prepare' ? prepared() : reply());
+      const failure = await lists.sendListByEmail(LIST, EMAIL, intent()).catch(error => error as unknown);
+      expect(failure).toBeInstanceOf(lists.ListEmailUnknownError);
+      expect(failure).toMatchObject({ operationId: OP, operationIds: [OP] });
+      expect(failure).not.toBeInstanceOf(lists.ListEmailQuotaError);
+      expect(net.phases()).toEqual(['prepare', 'dispatch']);
+    });
+
+    it('keeps a 429 on prepare fail-closed as protection unavailable, without dispatch', async () => {
+      const net = network(() => quota());
+      const failure = await lists.sendListByEmail(LIST, EMAIL, intent()).catch(error => error as unknown);
+      expect(failure).toBeInstanceOf(Error);
+      expect((failure as Error).message).toBe(lists.LIST_EMAIL_PROTECTION_UNAVAILABLE_MESSAGE);
+      expect(failure).not.toBeInstanceOf(lists.ListEmailQuotaError);
+      expect(net.phases()).toEqual(['prepare']);
+    });
+  });
+
   it('does not dispatch a prepared permit after the gesture scope becomes obsolete', async () => {
     const gate = deferred<Response>();
     const net = network(() => gate.promise);

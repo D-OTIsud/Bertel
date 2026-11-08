@@ -628,6 +628,22 @@ export class ListEmailUnknownError extends Error {
     this.operationId = this.operationIds[0] ?? '';
   }
 }
+function listEmailQuotaDelay(seconds: number): string {
+  const unit = seconds < 60 ? 1 : seconds < 3600 ? 60 : 3600;
+  const value = Math.ceil(seconds / unit);
+  const label = unit === 1 ? 'seconde' : unit === 60 ? 'minute' : 'heure';
+  return `${value} ${label}${value > 1 ? 's' : ''}`;
+}
+/** Certain refusal before SMTP. Only a new explicit gesture may try again. */
+export class ListEmailQuotaError extends Error {
+  readonly outcome = 'not_sent' as const;
+  readonly retryAfterSeconds: number;
+  constructor(retryAfterSeconds: number) {
+    super(`Limite d’envoi atteinte. Réessayez dans ${listEmailQuotaDelay(retryAfterSeconds)}`);
+    this.name = 'ListEmailQuotaError';
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
 export interface ListEmailGenerationContext {
   generations: Readonly<Record<string, string>>;
 }
@@ -672,6 +688,13 @@ async function mailSession(scope?: MailScope) {
 }
 async function mailJson(response: Response): Promise<GenericRecord | null> {
   return asRecord(await response.json().catch(() => null));
+}
+/** Only a complete refusal bound to this operation proves that nothing was sent. */
+function mailQuotaRefusal(response: Response, body: GenericRecord | null, operationId: string): ListEmailQuotaError | null {
+  const wait = body?.retryAfterSeconds;
+  return response.status === 429 && body?.error === 'email_quota_exceeded' && body.outcome === 'not_sent'
+    && body.operationId === operationId && typeof wait === 'number' && Number.isSafeInteger(wait) && wait >= 1
+    ? new ListEmailQuotaError(wait) : null;
 }
 function mailRefusal(response: Response, body: GenericRecord | null, operationId: string, mayHaveEffect: boolean): Error {
   const j = body ?? {};
@@ -751,7 +774,7 @@ export async function sendListByEmail(listId: string, toEmail: string, intent?: 
     try { dispatch = await post({ phase: 'dispatch', toEmail: recipient, dispatchToken: result.dispatchToken }); }
     catch { assertMailScope(intent); throw new ListEmailUnknownError(operationId); }
     result = await mailJson(dispatch); assertMailScope(intent);
-    if (!dispatch.ok) throw mailRefusal(dispatch, result, operationId, true);
+    if (!dispatch.ok) throw mailQuotaRefusal(dispatch, result, operationId) ?? mailRefusal(dispatch, result, operationId, true);
     if (!accepted(result)) throw new ListEmailUnknownError(operationId);
   }
   // A result proof has a different type/value from the prepare permit. A missing

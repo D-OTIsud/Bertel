@@ -31,6 +31,9 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       p_from_email: input.fromEmail, p_from_name: input.fromName, p_auth_mode: input.authMode,
       p_username: input.authMode === 'password' ? input.user : null,
       p_password: input.authMode === 'password' && input.password?.trim() ? input.password : null,
+      // NULL makes the database keep its stored value atomically; never derive it from `current`.
+      p_manual_max_per_minute: input.manualMaxPerMinute ?? null,
+      p_manual_max_per_24h: input.manualMaxPer24h ?? null,
     });
     if (error) {
       if (error.code === '22023') return smtpJson({ detail: 'Paramètres incomplets : vérifiez le serveur, l’expéditeur et les identifiants SMTP.' }, 400);

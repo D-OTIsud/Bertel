@@ -240,6 +240,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       p_fingerprint: fingerprint, p_recipient_fingerprint: recipientFingerprint });
     const verdict = asRec(result.data);
     if (result.error || !verdict) return unavailable();
+    // Checked before `started`: a malformed quota verdict must never reach SMTP, even if started is true.
+    if (verdict.state === 'quota_exceeded') {
+      const retryAfterSeconds = quotaRetryAfterSeconds(verdict);
+      return retryAfterSeconds === null ? unavailable() : emailQuotaExceeded(operationId, retryAfterSeconds);
+    }
     if (verdict.started !== true) return receiptResponse(verdict) ?? unavailable();
   } catch { return unavailable(); }
   const complete = async (outcome: 'accepted' | 'rejected' | 'unknown', trackingUpdated = false, rejectionCode: string | null = null, resultToken: string | null = null) => {
@@ -291,6 +296,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 function protectionUnavailable(): NextResponse {
   return NextResponse.json({ error: 'email_protection_unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+}
+
+/** Exact {started:false, state, retryAfterSeconds} refusal only; anything else is not proof of no send. */
+function quotaRetryAfterSeconds(verdict: Rec): number | null {
+  const wait = verdict.retryAfterSeconds;
+  return verdict.started === false && Object.keys(verdict).length === 3
+    && typeof wait === 'number' && Number.isSafeInteger(wait) && wait >= 1 ? wait : null;
+}
+
+function emailQuotaExceeded(operationId: string, retryAfterSeconds: number): NextResponse {
+  return NextResponse.json({ error: 'email_quota_exceeded', outcome: 'not_sent', operationId, retryAfterSeconds },
+    { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': String(retryAfterSeconds) } });
 }
 
 function success(toEmail: string, trackingUpdated: boolean, operationId: string, resultToken: string): NextResponse {

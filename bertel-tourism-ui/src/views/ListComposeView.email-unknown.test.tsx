@@ -72,6 +72,27 @@ it('known pre-prepare failure B does not discard uncertain A before C',async()=>
   expect(JSON.parse(calls('prepare')[2][1].body).confirmedPreviousOperationIds).toContain(first);
   expect(calls('dispatch')).toHaveLength(2); expect(screen.getByText(/E-mail envoyé à/)).toBeInTheDocument();
 });
+it('a certain quota refusal displays its delay and only a new click sends a new operation without resend confirmation',async()=>{
+  let dispatches=0;
+  installFlow(({phase,operation})=>phase==='dispatch'&&++dispatches===1
+    ? response(429,{error:'email_quota_exceeded',outcome:'not_sent',operationId:operation,retryAfterSeconds:61})
+    : undefined);
+  const {client}=await page();
+  const hash=require('node:crypto').createHash('sha256').update('recipient@example.invalid').digest('hex');
+  const nextContext={generations:{[hash]:'1'}};
+  jest.mocked(getListEmailContext).mockResolvedValue(nextContext);
+  await send(1);
+  expect(screen.getByText('Limite d’envoi atteinte. Réessayez dans 2 minutes')).toBeInTheDocument();
+  expect(screen.queryByText(LIST_EMAIL_UNKNOWN_MESSAGE)).not.toBeInTheDocument();
+  expect(calls('prepare')).toHaveLength(1);expect(calls('dispatch')).toHaveLength(1);expect(calls('ack')).toHaveLength(0);
+  await waitFor(()=>expect(client.getQueryData(['list-email-context','list-A','user-A','ORG1'])).toEqual(nextContext));
+  await send(2);
+  expect(window.confirm).not.toHaveBeenCalled();
+  expect(calls('prepare')[1][1].headers['Idempotency-Key']).not.toBe(calls('prepare')[0][1].headers['Idempotency-Key']);
+  expect(JSON.parse(calls('prepare')[1][1].body)).toMatchObject({expectedGeneration:'1',confirmResend:false,confirmedPreviousOperationIds:[]});
+  expect(calls('dispatch')).toHaveLength(2);expect(calls('ack')).toHaveLength(1);
+  expect(screen.getByText(/E-mail envoyé à/)).toBeInTheDocument();
+});
 it('multiple lost dispatch replies retain every potentially active predecessor until a structured positive result',async()=>{
   let dispatches=0;
   installFlow(({phase})=>{if(phase==='dispatch'&&++dispatches<=2)return Promise.reject(new TypeError('synthetic lost result'));});

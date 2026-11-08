@@ -12,6 +12,7 @@ const SAVED: SavedSettings = {
   fromEmail: 'contact@example.com', fromName: 'Bertel', authMode: 'password',
   user: 'contact@example.com', hasPassword: true, source: 'database', configured: true,
   editable: true, updatedAt: null,
+  manualMaxPerMinute: 10, manualMaxPer24h: 1000,
 };
 
 beforeEach(() => {
@@ -48,6 +49,25 @@ it('retire les identifiants en mode relais et efface la saisie du mot de passe a
   await waitFor(() => expect(saveSmtpSettings).toHaveBeenCalledWith('test-session', expect.objectContaining({ authMode: 'relay', user: '', password: undefined })));
 });
 
+it('enregistre les deux plafonds manuels modifiables sans relire le mot de passe', async () => {
+  render(<SmtpSettings />);
+  await screen.findByDisplayValue('smtp.example.com');
+  const perMinute = screen.getByRole('spinbutton', { name: /Maximum par minute/ });
+  const per24h = screen.getByRole('spinbutton', { name: /Maximum sur 24 h/ });
+  expect(perMinute).toHaveValue(10);
+  expect(per24h).toHaveValue(1000);
+  expect(screen.getByText(/Ces limites concernent uniquement les envois manuels de listes/)).toBeInTheDocument();
+  fireEvent.change(perMinute, { target: { value: '12' } });
+  fireEvent.change(per24h, { target: { value: '2000' } });
+  expect(screen.getByRole('button', { name: 'Tester la connexion' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Enregistrer les réglages' }));
+  await waitFor(() => expect(saveSmtpSettings).toHaveBeenCalledWith('test-session', expect.objectContaining({
+    manualMaxPerMinute: 12, manualMaxPer24h: 2000, password: undefined,
+  })));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Enregistrer les réglages' })).toBeDisabled());
+  expect(testSmtpConnection).not.toHaveBeenCalled();
+});
+
 it('affiche une erreur de chargement et bloque la sauvegarde jusqu’à une nouvelle lecture réussie', async () => {
   jest.mocked(getSmtpSettings).mockRejectedValueOnce(new Error('Configuration indisponible.'));
   render(<SmtpSettings />);
@@ -82,4 +102,6 @@ it('ne contacte pas le serveur en mode démonstration', () => {
   expect(screen.getByRole('status')).toHaveTextContent('Aperçu en mode démonstration');
   expect(getSmtpSettings).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: 'Enregistrer les réglages' })).toBeDisabled();
+  expect(screen.getByRole('spinbutton', { name: /Maximum par minute/ })).toBeDisabled();
+  expect(screen.getByRole('spinbutton', { name: /Maximum sur 24 h/ })).toBeDisabled();
 });

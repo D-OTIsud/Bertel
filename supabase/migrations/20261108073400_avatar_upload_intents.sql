@@ -70,6 +70,12 @@ BEGIN
  IF api.avatar_upload_allowed(p_user_id) IS DISTINCT FROM true THEN
    RAISE EXCEPTION 'avatar_cleanup_in_progress' USING ERRCODE='55000';
  END IF;
+ -- Auth may have succeeded before this request waited. Check the account AFTER
+ -- the task gate: an auth_delete ACK can only follow the Auth deletion commit.
+ -- An invited account need not have an application profile yet.
+ IF NOT EXISTS(SELECT 1 FROM auth.users u WHERE u.id=p_user_id AND u.deleted_at IS NULL) THEN
+   RAISE EXCEPTION 'avatar_subject_unavailable' USING ERRCODE='55000';
+ END IF;
  -- A repeated UUID is refused, even with identical arguments and even if engaged.
  -- Returning an old receipt here would admit a second producer for the same key.
  INSERT INTO internal.avatar_upload_intent(id,user_id,storage_path,sha256,size_bytes)

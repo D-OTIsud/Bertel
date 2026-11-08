@@ -11,7 +11,14 @@ DECLARE
  receipt jsonb;
  finished timestamptz;
  role_name text;
+ op uuid := gen_random_uuid();
+ late_id uuid := '00000000-0000-4000-8000-000000000602';
+ denied boolean;
 BEGIN
+ -- An invited Auth account can legitimately have no application profile.
+ INSERT INTO auth.users(id,email,invited_at) VALUES(u,'avatar-invite@example.invalid',now());
+ DELETE FROM public.app_user_profile WHERE id=u;
+ ASSERT NOT EXISTS(SELECT 1 FROM public.app_user_profile WHERE id=u);
  receipt:=api.begin_avatar_upload(v_id,u,path,h,3);
  ASSERT receipt->>'state'='engaged' AND receipt->>'path'=path;
  BEGIN
@@ -42,6 +49,30 @@ BEGIN
   RAISE EXCEPTION 'finished receipt was rearmed';
  EXCEPTION WHEN unique_violation THEN NULL;
  END;
+ -- Erasure is terminal and all tasks ACKed before an old HTTP request reaches begin.
+ INSERT INTO public.gdpr_erasure_log(id,subject_kind,subject_id,mode,performed_by,report)
+ VALUES(op,'user',u::text,'delete','synthetic',jsonb_build_object('operationId',op));
+ INSERT INTO internal.gdpr_cleanup_task(operation_id,action,metadata,status,attempts) VALUES
+  (op,'storage_remove',jsonb_build_object('bucket','avatars','path',path),'succeeded',1),
+  (op,'auth_delete',jsonb_build_object('user_id',u::text),'succeeded',1);
+ DELETE FROM auth.users WHERE id=u;
+ ASSERT api.avatar_upload_allowed(u), 'terminal tasks alone no longer block admission';
+ denied:=false;
+ BEGIN
+  PERFORM api.begin_avatar_upload(late_id,u,u::text||'/avatar-'||late_id::text||'.jpg',h,3);
+ EXCEPTION WHEN object_not_in_prerequisite_state THEN denied:=true;
+ END;
+ ASSERT denied, 'a delayed begin must not admit a subject already deleted by Auth';
+ ASSERT NOT EXISTS(SELECT 1 FROM internal.avatar_upload_intent WHERE id=late_id), 'no new intent';
+ ASSERT (SELECT count(*)=2 AND bool_and(status='succeeded') FROM internal.gdpr_cleanup_task WHERE operation_id=op);
+ -- Soft-deleted Auth rows are equally unavailable; neither condition needs a profile.
+ INSERT INTO auth.users(id,email,deleted_at) VALUES(u,'avatar-soft-deleted@example.invalid',now());
+ denied:=false;
+ BEGIN
+  PERFORM api.begin_avatar_upload(late_id,u,u::text||'/avatar-'||late_id::text||'.jpg',h,3);
+ EXCEPTION WHEN object_not_in_prerequisite_state THEN denied:=true;
+ END;
+ ASSERT denied AND NOT EXISTS(SELECT 1 FROM internal.avatar_upload_intent WHERE id=late_id), 'soft-deleted account refused';
  ASSERT (SELECT relrowsecurity FROM pg_class WHERE oid='internal.avatar_upload_intent'::regclass);
  ASSERT NOT EXISTS(SELECT 1 FROM pg_policy WHERE polrelid='internal.avatar_upload_intent'::regclass);
  ASSERT NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='internal.avatar_upload_intent'::regclass AND contype='f');

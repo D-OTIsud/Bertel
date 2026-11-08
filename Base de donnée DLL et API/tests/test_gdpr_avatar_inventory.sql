@@ -10,6 +10,8 @@ DECLARE
   g1 text := 'avatar-00000000-0000-4000-8000-000000000301.jpg';
   g2 text := 'avatar-00000000-0000-4000-8000-000000000302.jpg';
   n integer;
+  has_archive boolean;
+  has_marker boolean;
 BEGIN
   ASSERT api.avatar_upload_allowed(u);
   ASSERT NOT api.avatar_upload_allowed(NULL);
@@ -22,13 +24,33 @@ BEGIN
     ('avatars',u::text||'/avatar.jpg'),('avatars',u::text||'/'||g1),('avatars',u::text||'/'||g2),
     ('avatars',other_u::text||'/'||g1),('avatars',u::text||'/nested/'||g1),
     ('avatars',u::text||'/arbitrary.jpg'),('avatar-fixture-other',u::text||'/'||g1);
-  INSERT INTO storage.objects(bucket_id,name,archived_at) VALUES ('avatars',u::text||'/avatar-00000000-0000-4000-8000-000000000303.jpg',now());
-  INSERT INTO storage.objects(bucket_id,name,is_delete_marker) VALUES ('avatars',u::text||'/avatar-00000000-0000-4000-8000-000000000304.jpg',true);
+  -- The same test runs on classic Storage (neither field) and hosted Storage
+  -- (both fields). Never alter the Storage schema to make the fixture pass.
+  SELECT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid='storage.objects'::regclass
+    AND attname='archived_at' AND attnum>0 AND NOT attisdropped) INTO has_archive;
+  SELECT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid='storage.objects'::regclass
+    AND attname='is_delete_marker' AND attnum>0 AND NOT attisdropped) INTO has_marker;
+  IF has_archive THEN
+    EXECUTE 'INSERT INTO storage.objects(bucket_id,name,archived_at) VALUES($1,$2,now())'
+      USING 'avatars',u::text||'/avatar-00000000-0000-4000-8000-000000000303.jpg';
+    ASSERT EXISTS(SELECT 1 FROM storage.objects WHERE bucket_id='avatars'
+      AND name=u::text||'/avatar-00000000-0000-4000-8000-000000000303.jpg'), 'nonempty archive witness';
+  END IF;
+  IF has_marker THEN
+    EXECUTE 'INSERT INTO storage.objects(bucket_id,name,is_delete_marker) VALUES($1,$2,true)'
+      USING 'avatars',u::text||'/avatar-00000000-0000-4000-8000-000000000304.jpg';
+    ASSERT EXISTS(SELECT 1 FROM storage.objects WHERE bucket_id='avatars'
+      AND name=u::text||'/avatar-00000000-0000-4000-8000-000000000304.jpg'), 'nonempty marker witness';
+  END IF;
+  RAISE NOTICE 'Storage optional fields: archived=%, marker=%',has_archive,has_marker;
   -- Existing historical canonical task must not be duplicated.
   INSERT INTO internal.gdpr_cleanup_task(operation_id,action,metadata)
   VALUES(op,'storage_remove',jsonb_build_object('bucket','avatars','path',u::text||'/avatar.jpg'));
   n := internal.gdpr_enqueue_avatar_inventory(op,u);
   ASSERT n=2, 'only two unrecorded live generations are queued';
+  ASSERT NOT EXISTS(SELECT 1 FROM internal.gdpr_cleanup_task WHERE operation_id=op
+    AND metadata->>'path' IN(u::text||'/avatar-00000000-0000-4000-8000-000000000303.jpg',
+      u::text||'/avatar-00000000-0000-4000-8000-000000000304.jpg')), 'archived/marker rows never queued';
   ASSERT internal.gdpr_enqueue_avatar_inventory(op,u)=0, 'same operation is deduplicated';
   ASSERT (SELECT count(*)=3 FROM internal.gdpr_cleanup_task WHERE operation_id=op);
   ASSERT (SELECT count(*)=2 FROM internal.gdpr_cleanup_task WHERE operation_id=op AND metadata ? 'storage_object_id');

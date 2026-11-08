@@ -362,6 +362,32 @@ describe('generations: distinct keys, never overwritten or compensated', () => {
     expect((await request).status).toBe(201);
   });
 
+  it('a delayed begin refuses a deleted Auth subject before Storage or profile effects', async () => {
+    const entered = deferred<undefined>();
+    const ack = deferred<unknown>();
+    const server = serverMock({ avatarRpc: jest.fn((name: string) => {
+      if (name === 'begin_avatar_upload') { entered.resolve(undefined); return ack.promise; }
+      throw new Error('unexpected completion');
+    }) });
+    mockedServer.mockReturnValue(server as never);
+    const profileEq = jest.fn().mockResolvedValue({ error: null });
+    callerUpdating(profileEq);
+    const request = POST(req());
+    await entered.promise; // The earlier getUser ACK has already been consumed.
+    expect(server.auth.getUser).toHaveBeenCalledTimes(1);
+    expect(server.__upload).not.toHaveBeenCalled();
+    // SQL separately proves this denial after terminal cleanup + committed Auth deletion.
+    ack.resolve({ data: null, error: { code: '55000', message: 'avatar_subject_unavailable' } });
+    expect((await request).status).toBe(503);
+    expect(server.__avatarRpc.mock.calls.map(([name]) => name)).toEqual(['begin_avatar_upload']);
+    expect(server.__upload).not.toHaveBeenCalled();
+    expect(server.__remove).not.toHaveBeenCalled();
+    expect(server.__upsert).not.toHaveBeenCalled();
+    expect(profileEq).not.toHaveBeenCalled();
+    expect(mockedCreate).not.toHaveBeenCalled();
+    expect(server.__objects.size).toBe(0);
+  });
+
   it.each(['uploadId', 'userId', 'path', 'sha256', 'sizeBytes', 'state'])(
     'refuses a begin ACK with a different %s before any effect', async (field) => {
       const server = serverMock({ avatarRpc: jest.fn(async (_name: string, params: Record<string, unknown>) => ({

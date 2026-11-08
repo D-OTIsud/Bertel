@@ -446,18 +446,28 @@ describe('resume — initial lookup: not_found vs error, never leaks raw message
     expect((await res.json()).error).toBe('operation_not_found');
   });
 
-  it('500 operation_lookup_failed (never operation_not_found, never the raw message) when the RPC returns an error', async () => {
-    mockedServer.mockReturnValue(
-      serverClient({
-        handlers: { rpc_gdpr_get_cleanup_status: () => ({ data: null, error: { message: 'internal secret detail' } }) },
-      }) as never,
-    );
-    mockedCreate.mockReturnValue(superuserAsCaller() as never);
+  it.each(['XX000', '42501'])('500 operation_lookup_failed before any effect when the status RPC returns %s', async code => {
+    const remove = jest.fn();
+    const deleteUser = jest.fn();
+    const eraseRpc = jest.fn();
+    const server = serverClient({
+      removeMock: remove, deleteUserMock: deleteUser,
+      handlers: { rpc_gdpr_get_cleanup_status: () => ({ data: null, error: { code, message: 'internal secret detail' } }) },
+    });
+    const caller = superuserAsCaller({ rpc_gdpr_erase_subject: eraseRpc });
+    mockedServer.mockReturnValue(server as never);
+    mockedCreate.mockReturnValue(caller as never);
     const res = await POST(req({ authorization: 'Bearer t' }, { operationId: OPERATION_ID }));
     expect(res.status).toBe(500);
     const json = await res.json();
     expect(json.error).toBe('operation_lookup_failed');
     expect(JSON.stringify(json)).not.toMatch(/internal secret detail/);
+    expect(server.schema().rpc).toHaveBeenCalledTimes(1);
+    expect(server.schema().rpc).toHaveBeenCalledWith('rpc_gdpr_get_cleanup_status', { p_operation_id: OPERATION_ID });
+    expect(eraseRpc).not.toHaveBeenCalled();
+    expect(server.storage.from).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
   });
 
   it('500 operation_lookup_failed (never throws) when the RPC call itself rejects', async () => {

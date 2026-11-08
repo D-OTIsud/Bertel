@@ -775,6 +775,11 @@ COMMIT;
 \ir ../supabase/migrations/20261108013154_crm_document_unlink.sql
 \ir tests/test_crm_document_unlink.sql
 
+\echo '== CRM uploads retain provenance and attach atomically =='
+\ir tests/fixtures/capture_crm_upload_gdpr.sql
+\ir crm_document_upload_intents.sql
+\ir tests/test_crm_document_upload.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

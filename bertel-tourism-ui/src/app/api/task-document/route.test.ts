@@ -21,15 +21,30 @@ const TASK_ID = '11111111-2222-3333-4444-555555555555';
 const OTHER_TASK_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const DOC_ID = '66666666-7777-8888-9999-aaaaaaaaaaaa';
 
-function callerCan(can: boolean) {
-  mockedCreate.mockReturnValue({
-    schema: () => ({ rpc: jest.fn().mockResolvedValue({ data: can, error: null }) }),
-  } as never);
+function callerCan(can: boolean, attachError: { code?: string; message: string } | null = null) {
+  let prepared: Record<string, unknown> = {};
+  const rpc = jest.fn(async (name: string, args: Record<string, unknown> = {}) => {
+    if (name === 'prepare_crm_document_upload') {
+      prepared = args;
+      return { data: { uploadId: args.p_upload_id, documentId: args.p_upload_id, bucket: 'actor-documents',
+        path: `${args.p_parent_kind === 'actor' ? 'actors' : 'tasks'}/${String(args.p_parent_id).toLowerCase()}/${args.p_upload_id}.${args.p_extension}`,
+        state: 'prepared' }, error: null };
+    }
+    if (name === 'attach_crm_document_upload') {
+      return { data: attachError ? null : { documentId: args.p_upload_id, title: prepared.p_title }, error: attachError };
+    }
+    return { data: can, error: null };
+  });
+  mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+  return rpc;
 }
 
 function baseServer(overrides: Record<string, unknown> = {}) {
   return {
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u-1' } }, error: null }) },
+    schema: () => ({ rpc: jest.fn(async (_name: string, args: Record<string, unknown>) => ({
+      data: { uploadId: args.p_upload_id, state: 'uploaded' }, error: null,
+    })) }),
     ...overrides,
   } as never;
 }
@@ -150,7 +165,7 @@ describe('/api/task-document', () => {
   });
 
   it('partage le plafond upload, ne lit pas le corps refusé, puis libère sa place après interruption', async () => {
-    const upload = jest.fn().mockResolvedValue({ error: null });
+    const upload = jest.fn(async (path: string) => ({ data: { path }, error: null }));
     const insertDoc = jest.fn().mockReturnValue({
       select: () => ({ single: jest.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) }),
     });
@@ -214,67 +229,37 @@ describe('/api/task-document', () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it('upload heureux : storage + ref_document + crm_task_document → 201', async () => {
-    const upload = jest.fn().mockResolvedValue({ error: null });
-    const insertDoc = jest.fn().mockReturnValue({
-      select: () => ({ single: jest.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) }),
-    });
-    const insertLink = jest.fn().mockResolvedValue({ error: null });
-    mockedServer.mockReturnValue(baseServer({
-      storage: { from: () => ({ upload, remove: jest.fn() }) },
-      from: (table: string) => (table === 'ref_document' ? { insert: insertDoc } : { insert: insertLink }),
-    }));
-    callerCan(true);
+  it('upload heureux : intention privée puis attachement atomique → 201', async () => {
+    const upload = jest.fn(async (path: string) => ({ data: { path }, error: null }));
+    const remove = jest.fn();
+    const from = jest.fn();
+    mockedServer.mockReturnValue(baseServer({ storage: { from: () => ({ upload, remove }) }, from }));
+    const rpc = callerCan(true);
     const res = await POST(multipartReq(TASK_ID));
     expect(res.status).toBe(201);
-    await expect(res.json()).resolves.toEqual({ documentId: DOC_ID, title: 'Devis.pdf' });
-    expect(upload.mock.calls[0][0]).toMatch(new RegExp(`^tasks/${TASK_ID}/`));
-    expect(insertLink.mock.calls[0][0]).toMatchObject({ task_id: TASK_ID, document_id: DOC_ID, created_by: 'u-1' });
+    const body = await res.json();
+    expect(body).toEqual({ documentId: expect.any(String), title: 'Devis.pdf' });
+    expect(upload.mock.calls[0][0]).toBe(`tasks/${TASK_ID}/${body.documentId}.pdf`);
+    expect(rpc).toHaveBeenCalledWith('attach_crm_document_upload', { p_upload_id: body.documentId });
+    expect(from).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
   });
 
-  it('échec de l’insert ref_document ⇒ retrait du fichier déjà uploadé, 500', async () => {
-    // Sans ce retrait le fichier reste dans le bucket alors qu'aucune ligne ne le
-    // référence : orphelin muet, jamais purgé.
-    const removed = jest.fn().mockResolvedValue({ error: null });
-    const upload = jest.fn().mockResolvedValue({ error: null });
-    const insertLink = jest.fn();
-    mockedServer.mockReturnValue(baseServer({
-      storage: { from: () => ({ upload, remove: removed }) },
-      from: (table: string) => (table === 'ref_document'
-        ? {
-            insert: jest.fn().mockReturnValue({
-              select: () => ({ single: jest.fn().mockResolvedValue({ data: null, error: { message: 'insert refusé' } }) }),
-            }),
-          }
-        : { insert: insertLink }),
-    }));
-    callerCan(true);
+  it.each([
+    [{ code: 'PT500', message: 'document_create_failed' }, 'document_create_failed'],
+    [{ code: '', message: 'attachment acknowledgement lost' }, 'task_document_create_failed'],
+  ])('échec SQL ou ACK inconnu conserve le fichier et la provenance', async (error, expected) => {
+    const remove = jest.fn();
+    const from = jest.fn();
+    const upload = jest.fn(async (path: string) => ({ data: { path }, error: null }));
+    mockedServer.mockReturnValue(baseServer({ storage: { from: () => ({ upload, remove }) }, from }));
+    callerCan(true, error as { code: string; message: string });
     const res = await POST(multipartReq(TASK_ID));
     expect(res.status).toBe(500);
-    await expect(res.json()).resolves.toMatchObject({ error: 'document_create_failed' });
-    expect(removed).toHaveBeenCalledWith([upload.mock.calls[0][0]]);
-    expect(insertLink).not.toHaveBeenCalled();
-  });
-
-  it('échec du lien ⇒ rollback ref_document + storage, 500', async () => {
-    const removed = jest.fn();
-    const delDoc = jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
-    mockedServer.mockReturnValue(baseServer({
-      storage: { from: () => ({ upload: jest.fn().mockResolvedValue({ error: null }), remove: removed }) },
-      from: (table: string) => (table === 'ref_document'
-        ? {
-            insert: jest.fn().mockReturnValue({
-              select: () => ({ single: jest.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) }),
-            }),
-            delete: delDoc,
-          }
-        : { insert: jest.fn().mockResolvedValue({ error: { message: 'boom' } }) }),
-    }));
-    callerCan(true);
-    const res = await POST(multipartReq(TASK_ID));
-    expect(res.status).toBe(500);
-    expect(delDoc).toHaveBeenCalled();
-    expect(removed).toHaveBeenCalled();
+    await expect(res.json()).resolves.toMatchObject({ error: expected });
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(from).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
   });
 
   it('DELETE refuse une forme UUID invalide (400)', async () => {

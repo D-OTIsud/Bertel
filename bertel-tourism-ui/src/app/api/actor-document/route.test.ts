@@ -39,11 +39,20 @@ beforeAll(() => {
 });
 
 /** Faux client appelant : enregistre le nom du RPC de gate et sa réponse. */
-function callerCan(can: boolean | Record<string, boolean>) {
-  const rpc = jest.fn(async (name: string) => ({
-    data: typeof can === 'boolean' ? can : can[name] === true,
-    error: null,
-  }));
+function callerCan(can: boolean | Record<string, boolean>, attachError: { code?: string; message: string } | null = null) {
+  let prepared: Record<string, unknown> = {};
+  const rpc = jest.fn(async (name: string, args: Record<string, unknown> = {}) => {
+    if (name === 'prepare_crm_document_upload') {
+      prepared = args;
+      return { data: { uploadId: args.p_upload_id, documentId: args.p_upload_id, bucket: 'actor-documents',
+        path: `${args.p_parent_kind === 'actor' ? 'actors' : 'tasks'}/${String(args.p_parent_id).toLowerCase()}/${args.p_upload_id}.${args.p_extension}`,
+        state: 'prepared' }, error: null };
+    }
+    if (name === 'attach_crm_document_upload') {
+      return { data: attachError ? null : { documentId: args.p_upload_id, title: prepared.p_title }, error: attachError };
+    }
+    return { data: typeof can === 'boolean' ? can : can[name] === true, error: null };
+  });
   mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
   return rpc;
 }
@@ -51,6 +60,9 @@ function callerCan(can: boolean | Record<string, boolean>) {
 function baseServer(overrides: Record<string, unknown> = {}) {
   return {
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u-1' } }, error: null }) },
+    schema: () => ({ rpc: jest.fn(async (_name: string, args: Record<string, unknown>) => ({
+      data: { uploadId: args.p_upload_id, state: 'uploaded' }, error: null,
+    })) }),
     ...overrides,
   } as never;
 }
@@ -75,7 +87,7 @@ function jsonReq(body: unknown, withBearer = true) {
 
 /** Serveur espionné : storage et tables fournis, pour prouver qu'ils restent INTOUCHÉS. */
 function spiedServer() {
-  const upload = jest.fn().mockResolvedValue({ error: null });
+  const upload = jest.fn(async (path: string) => ({ data: { path }, error: null }));
   const remove = jest.fn().mockResolvedValue({ error: null });
   const from = jest.fn();
   const storageFrom = jest.fn().mockReturnValue({ upload, remove });
@@ -218,29 +230,23 @@ describe('/api/actor-document POST', () => {
     expect(from).not.toHaveBeenCalled();
   });
 
-  it('201 : bucket privé, chemin actors/{actorId}/…, ref_document puis actor_document', async () => {
-    const upload = jest.fn().mockResolvedValue({ error: null });
-    const storageFrom = jest.fn().mockReturnValue({ upload, remove: jest.fn() });
-    const insertDoc = jest.fn().mockReturnValue({
-      select: () => ({ single: jest.fn().mockResolvedValue({ data: { id: DOC_ID }, error: null }) }),
-    });
-    const insertLink = jest.fn().mockResolvedValue({ error: null });
-    mockedServer.mockReturnValue(baseServer({
-      storage: { from: storageFrom },
-      from: (table: string) => (table === 'ref_document' ? { insert: insertDoc } : { insert: insertLink }),
-    }));
-    callerCan(true);
+  it('201 : intention puis upload privé et attachement atomique', async () => {
+    const { server, upload, from, storageFrom, remove } = spiedServer();
+    mockedServer.mockReturnValue(server);
+    const rpc = callerCan(true);
     const res = await POST(multipartReq(ACTOR_ID));
     expect(res.status).toBe(201);
-    await expect(res.json()).resolves.toEqual({ documentId: DOC_ID, title: 'Kbis.pdf' });
+    const body = await res.json();
+    expect(body).toEqual({ documentId: expect.any(String), title: 'Kbis.pdf' });
     expect(storageFrom).toHaveBeenCalledWith('actor-documents');
-    expect(upload.mock.calls[0][0]).toMatch(new RegExp(`^actors/${ACTOR_ID}/`));
-    expect(insertDoc.mock.calls[0][0]).toMatchObject({
-      storage_bucket: 'actor-documents', access_scope: 'crm_private',
-    });
-    expect(insertLink.mock.calls[0][0]).toMatchObject({
-      actor_id: ACTOR_ID, document_id: DOC_ID, created_by: 'u-1',
-    });
+    expect(upload.mock.calls[0][0]).toBe(`actors/${ACTOR_ID}/${body.documentId}.pdf`);
+    expect(rpc).toHaveBeenCalledWith('prepare_crm_document_upload', expect.objectContaining({
+      p_upload_id: body.documentId, p_parent_kind: 'actor', p_parent_id: ACTOR_ID,
+      p_title: 'Kbis.pdf', p_mime_type: 'application/pdf', p_size_bytes: 3,
+    }));
+    expect(rpc).toHaveBeenCalledWith('attach_crm_document_upload', { p_upload_id: body.documentId });
+    expect(from).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
   });
 });
 

@@ -38,6 +38,7 @@ const TARGET = 'target-1';
 // test "casse différente" du bras "soi-même" plus bas, qui l'éprouve déjà pour l'autre branche).
 // Une casse DIFFÉRENTE du posté force le chemin storage/upsert à ne pouvoir provenir QUE du GoTrue.
 const TARGET_CANONICAL = TARGET.toUpperCase();
+const generationPath = (owner: string) => new RegExp(`^${owner}/avatar-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.jpg$`);
 
 function file(): File {
   return new File([new Uint8Array([1, 2, 3])], 'a.jpg', { type: 'image/jpeg' });
@@ -58,6 +59,7 @@ function serverMock(opts: {
   memberships?: Array<{ user_id: string; org_object_id: string }>;
   update?: jest.Mock;
   getUserById?: jest.Mock;
+  avatarCheck?: jest.Mock;
 }) {
   const memberships = opts.memberships ?? [
     { user_id: CALLER, org_object_id: 'ORG1' },
@@ -69,13 +71,28 @@ function serverMock(opts: {
   // l'espion n'est observable par AUCUN test — cf. constat de revue « aucun fichier écrit n'est
   // asserté nulle part ».
   const upsert = jest.fn().mockResolvedValue({ error: null });
-  const upload = jest.fn().mockResolvedValue({ error: null });
+  // Bucket en mémoire : l'absence d'écrasement et de suppression s'observe sur l'état final.
+  const objects = new Map<string, unknown>();
+  const upload = jest.fn(async (path: string, body: unknown, options: { upsert?: boolean }) => {
+    if (objects.has(path) && !options.upsert) return { error: { message: 'The resource already exists' } };
+    objects.set(path, body);
+    return { error: null };
+  });
+  const remove = jest.fn(async (paths: string[]) => {
+    paths.forEach((path) => objects.delete(path));
+    return { error: null };
+  });
   const getUserById =
     opts.getUserById ?? jest.fn().mockResolvedValue({ data: { user: { id: TARGET_CANONICAL } }, error: null });
+  const avatarCheck = opts.avatarCheck ?? jest.fn().mockResolvedValue({ data: true, error: null });
   return {
     __update: update,
     __upsert: upsert,
     __upload: upload,
+    __remove: remove,
+    __objects: objects,
+    __avatarCheck: avatarCheck,
+    schema: () => ({ rpc: avatarCheck }),
     auth: {
       getUser: jest.fn().mockResolvedValue({ data: { user: { id: CALLER } }, error: null }),
       admin: { getUserById },
@@ -88,6 +105,7 @@ function serverMock(opts: {
     storage: {
       from: () => ({
         upload,
+        remove,
         getPublicUrl: (p: string) => ({ data: { publicUrl: `https://cdn/${p}` } }),
       }),
     },
@@ -120,7 +138,7 @@ it('sans targetUserId : écrit son propre avatar, persisté en tant qu’appelan
 
   const res = await POST(req());
   expect(res.status).toBe(201);
-  expect((await res.json()).url).toContain(`${CALLER}/avatar.jpg`);
+  expect((await res.json()).url).toContain(`${CALLER}/avatar-`);
   expect(asCallerUpdate).toHaveBeenCalled();
   expect(server.__update).not.toHaveBeenCalled();
   expect(server.__upsert).not.toHaveBeenCalled();
@@ -136,7 +154,7 @@ it.each(['', '   '])(
 
     const res = await POST(req({ targetUserId: blank }));
     expect(res.status).toBe(201);
-    expect((await res.json()).url).toContain(`${CALLER}/avatar.jpg`);
+    expect((await res.json()).url).toContain(`${CALLER}/avatar-`);
     expect(asCallerUpdate).toHaveBeenCalled();
     // Le bras admin (authorizeAdminRoute, sonde rang/scope) ne doit pas être emprunté.
     expect(server.__upsert).not.toHaveBeenCalled();
@@ -154,9 +172,9 @@ it('targetUserId d’un admin d’ORG (rang 30, non superuser) sur un membre de 
   const res = await POST(req({ targetUserId: TARGET }));
   expect(res.status).toBe(201);
   // Valeur CANONIQUE (getUserById), jamais la chaîne cliente `TARGET` — cf. TARGET_CANONICAL.
-  expect((await res.json()).url).toContain(`${TARGET_CANONICAL}/avatar.jpg`);
+  expect((await res.json()).url).toContain(`${TARGET_CANONICAL}/avatar-`);
   expect(server.__upsert).toHaveBeenCalledWith(
-    { id: TARGET_CANONICAL, avatar_url: expect.stringContaining(`${TARGET_CANONICAL}/avatar.jpg`) },
+    { id: TARGET_CANONICAL, avatar_url: expect.stringContaining(`${TARGET_CANONICAL}/avatar-`) },
     { onConflict: 'id' },
   );
   expect(server.__update).not.toHaveBeenCalled();
@@ -170,9 +188,9 @@ it('targetUserId avec un superuser plateforme : chemin de la CIBLE, persisté en
   const res = await POST(req({ targetUserId: TARGET }));
   expect(res.status).toBe(201);
   // Valeur CANONIQUE (getUserById), jamais la chaîne cliente `TARGET` — cf. TARGET_CANONICAL.
-  expect((await res.json()).url).toContain(`${TARGET_CANONICAL}/avatar.jpg`);
+  expect((await res.json()).url).toContain(`${TARGET_CANONICAL}/avatar-`);
   expect(server.__upsert).toHaveBeenCalledWith(
-    { id: TARGET_CANONICAL, avatar_url: expect.stringContaining(`${TARGET_CANONICAL}/avatar.jpg`) },
+    { id: TARGET_CANONICAL, avatar_url: expect.stringContaining(`${TARGET_CANONICAL}/avatar-`) },
     { onConflict: 'id' },
   );
 });
@@ -237,10 +255,10 @@ it('targetUserId égal à son propre id en MAJUSCULES (non-admin) : reste le bra
   const res = await POST(req({ targetUserId: CALLER.toUpperCase() }));
   expect(res.status).toBe(201);
   const body = await res.json();
-  expect(body.url).toContain(`${CALLER}/avatar.jpg`);
+  expect(body.url).toContain(`${CALLER}/avatar-`);
   expect(body.url).not.toContain(CALLER.toUpperCase());
   // Chemin storage dérivé du JWT, jamais de la chaîne cliente en majuscules.
-  expect(server.__upload).toHaveBeenCalledWith(`${CALLER}/avatar.jpg`, expect.anything(), expect.anything());
+  expect(server.__upload).toHaveBeenCalledWith(expect.stringMatching(generationPath(CALLER)), expect.anything(), expect.anything());
   // Persistance EN TANT QU'APPELANT (policy self-update), pas le client service-role.
   expect(asCallerUpdate).toHaveBeenCalled();
   expect(asCallerEq).toHaveBeenCalledWith('id', CALLER);
@@ -275,6 +293,116 @@ it.each([
   } finally {
     warn.mockRestore();
   }
+});
+
+describe('generations: distinct keys, never overwritten or compensated', () => {
+  function callerUpdating(eq: jest.Mock) {
+    mockedCreate.mockReturnValue({ from: () => ({ update: () => ({ eq }) }) } as never);
+  }
+
+  it.each([
+    ['outstanding erasure', () => jest.fn().mockResolvedValue({ data: false, error: null })],
+    ['missing capability', () => jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST202' } })],
+    ['error alongside true', () => jest.fn().mockResolvedValue({ data: true, error: { code: 'XX000' } })],
+    ['malformed response', () => jest.fn().mockResolvedValue({ data: 'true', error: null })],
+    ['transport rejection', () => jest.fn().mockRejectedValue(new Error('synthetic transport failure'))],
+  ])('%s prevents every Storage/profile effect', async (_name, makeCheck) => {
+    const server = serverMock({ avatarCheck: makeCheck() });
+    mockedServer.mockReturnValue(server as never);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const res = await POST(req());
+      expect(res.status).toBe(503);
+      expect(await res.json()).toEqual({ error: 'upload_failed' });
+    } finally {
+      warn.mockRestore();
+    }
+    expect(server.__avatarCheck).toHaveBeenCalledWith('avatar_upload_allowed', { p_user_id: CALLER });
+    expect(server.__upload).not.toHaveBeenCalled();
+    expect(server.__update).not.toHaveBeenCalled();
+    expect(server.__upsert).not.toHaveBeenCalled();
+    expect(mockedCreate).not.toHaveBeenCalled();
+  });
+
+  it('checks the canonical Auth target after admin scope validation', async () => {
+    const server = serverMock({});
+    mockedServer.mockReturnValue(server as never);
+    mockedCreate.mockReturnValue(adminProbeMock(true, 0));
+    expect((await POST(req({ targetUserId: TARGET }))).status).toBe(201);
+    expect(server.__avatarCheck).toHaveBeenCalledWith('avatar_upload_allowed', { p_user_id: TARGET_CANONICAL });
+  });
+
+  it('two uploads create two distinct owner-prefixed keys with upsert:false and keep both files', async () => {
+    const server = serverMock({});
+    mockedServer.mockReturnValue(server as never);
+    callerUpdating(jest.fn().mockResolvedValue({ error: null }));
+
+    const first = await (await POST(req())).json();
+    const second = await (await POST(req())).json();
+
+    const paths = server.__upload.mock.calls.map(([path]) => path);
+    expect(paths[0]).toMatch(generationPath(CALLER));
+    expect(paths[1]).toMatch(generationPath(CALLER));
+    expect(paths[0]).not.toBe(paths[1]);
+    for (const [, , options] of server.__upload.mock.calls) expect(options.upsert).toBe(false);
+    expect(first.url).toContain(paths[0]);
+    expect(second.url).toContain(paths[1]);
+    expect([...server.__objects.keys()].sort()).toEqual([...paths].sort());
+    expect(server.__remove).not.toHaveBeenCalled();
+  });
+
+  it('a legacy object stays readable: a new upload neither rewrites nor removes it', async () => {
+    const server = serverMock({});
+    const legacyBytes = Buffer.from('legacy');
+    server.__objects.set(`${CALLER}/avatar.jpg`, legacyBytes);
+    mockedServer.mockReturnValue(server as never);
+    callerUpdating(jest.fn().mockResolvedValue({ error: null }));
+
+    const res = await POST(req());
+
+    expect(res.status).toBe(201);
+    expect(server.__objects.get(`${CALLER}/avatar.jpg`)).toBe(legacyBytes);
+    expect(server.__objects.size).toBe(2);
+  });
+
+  it.each([
+    ['transport rejection after a possible COMMIT', () => jest.fn().mockRejectedValue(new Error('socket hang up'))],
+    ['returned error after a possible COMMIT', () => jest.fn().mockResolvedValue({ error: { message: 'fetch failed' } })],
+  ])('self update, %s: 500 without removing the uploaded file', async (_name, makeEq) => {
+    const server = serverMock({});
+    mockedServer.mockReturnValue(server as never);
+    callerUpdating(makeEq());
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const res = await POST(req());
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'profile_update_failed' });
+    } finally {
+      warn.mockRestore();
+    }
+    const [uploadedPath] = server.__upload.mock.calls[0];
+    expect(server.__objects.has(uploadedPath)).toBe(true);
+    expect(server.__remove).not.toHaveBeenCalled();
+  });
+
+  it('admin upsert transport rejection: 500 without removing the uploaded file', async () => {
+    const server = serverMock({});
+    server.__upsert.mockRejectedValueOnce(new Error('socket hang up'));
+    mockedServer.mockReturnValue(server as never);
+    mockedCreate.mockReturnValue(adminProbeMock(true, 0));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const res = await POST(req({ targetUserId: TARGET }));
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ error: 'profile_update_failed' });
+    } finally {
+      warn.mockRestore();
+    }
+    const [uploadedPath] = server.__upload.mock.calls[0];
+    expect(uploadedPath).toMatch(generationPath(TARGET_CANONICAL));
+    expect(server.__objects.has(uploadedPath)).toBe(true);
+    expect(server.__remove).not.toHaveBeenCalled();
+  });
 });
 
 it('keeps the public decode message on a rejected image', async () => {

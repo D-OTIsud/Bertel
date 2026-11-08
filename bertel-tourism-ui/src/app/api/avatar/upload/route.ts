@@ -5,6 +5,7 @@ import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { routeFailure } from '../../_route-failure';
 import { processImage, MediaProcessingError, MAX_INPUT_BYTES } from '../../media/upload/process-image';
 import { authorizeAdminRoute, sharesActiveOrg } from '../../admin/_authorize';
+import { newAvatarStoragePath } from '../avatar-storage-key';
 import {
   readBoundedFormData,
   assertFormDataShape,
@@ -142,13 +143,24 @@ async function handlePostAuthenticated(
     return routeFailure('avatar/upload.POST', 'process_failed');
   }
 
-  // Chemin STABLE dérivé du user.id : un seul fichier par utilisateur (pas d'orphelins).
-  // Le cache est invalidé par un ?v= dans l'URL enregistrée (le chemin, lui, reste constant).
-  const path = `${userId}/avatar.jpg`;
+  // Contrôle de l'état durable juste avant le premier effet Storage. Un refus ou une réponse
+  // ambiguë bloque l'upload ; ce contrôle ne draine pas un upload déjà admis avant l'effacement.
+  try {
+    const { data: allowed, error } = await server.schema('api').rpc('avatar_upload_allowed', { p_user_id: userId });
+    if (error || allowed !== true) return routeFailure('avatar/upload.POST', 'upload_failed', { status: 503 });
+  } catch {
+    return routeFailure('avatar/upload.POST', 'upload_failed', { status: 503 });
+  }
+
+  // Une clé par téléversement sous le préfixe du propriétaire, jamais réécrite : un nettoyage
+  // tardif visant une génération ne peut pas effacer une génération plus récente.
+  // L'inventaire SQL compagnon retrouve ces clés exactes dans storage.objects, même si l'ACK
+  // profil s'est perdu. Son intégration et la fence des anciens writers précèdent l'activation.
+  const path = newAvatarStoragePath(userId);
   const { error: upErr } = await server.storage.from(BUCKET).upload(path, processed.buffer, {
     contentType: processed.mimeType,
-    cacheControl: '31536000', // 1 an — l'URL enregistrée porte un ?v= qui casse le cache au changement
-    upsert: true,
+    cacheControl: '31536000', // 1 an — une clé n'est jamais réécrite
+    upsert: false,
   });
   if (upErr) {
     return routeFailure('avatar/upload.POST', 'upload_failed', { status: 502 });
@@ -159,19 +171,25 @@ async function handlePostAuthenticated(
   // Persistance : EN TANT QU'APPELANT sur son propre profil (policy self-update id = auth.uid()),
   // en SERVICE-ROLE sur le bras admin (la policy n'autorise que soi-même ou un owner — l'admin
   // d'ORG n'y passerait pas, et sa légitimité a déjà été établie ci-dessus).
+  // Un échec ici ne prouve pas l'absence de COMMIT (l'ACK peut se perdre après) : le fichier
+  // téléversé peut déjà être l'avatar enregistré, il n'est donc jamais supprimé en compensation.
   let profErr: { message: string } | null = null;
-  if (isAdminBranch) {
-    // upsert (pas update) : une cible peut légitimement ne pas encore avoir de ligne
-    // `app_user_profile` (compte invité) — un update() y serait un no-op silencieux (0 ligne
-    // matchée, aucune erreur) et la route rendrait 201 sur une écriture qui n'a rien persisté.
-    ({ error: profErr } = await server
-      .from('app_user_profile')
-      .upsert({ id: userId, avatar_url: url }, { onConflict: 'id' }));
-  } else {
-    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
-    const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-    const asCaller = createCallerClient(supabaseUrl, anon, jwt);
-    ({ error: profErr } = await asCaller.from('app_user_profile').update({ avatar_url: url }).eq('id', userId));
+  try {
+    if (isAdminBranch) {
+      // upsert (pas update) : une cible peut légitimement ne pas encore avoir de ligne
+      // `app_user_profile` (compte invité) — un update() y serait un no-op silencieux (0 ligne
+      // matchée, aucune erreur) et la route rendrait 201 sur une écriture qui n'a rien persisté.
+      ({ error: profErr } = await server
+        .from('app_user_profile')
+        .upsert({ id: userId, avatar_url: url }, { onConflict: 'id' }));
+    } else {
+      const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
+      const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
+      const asCaller = createCallerClient(supabaseUrl, anon, jwt);
+      ({ error: profErr } = await asCaller.from('app_user_profile').update({ avatar_url: url }).eq('id', userId));
+    }
+  } catch {
+    return routeFailure('avatar/upload.POST', 'profile_update_failed');
   }
   if (profErr) {
     return routeFailure('avatar/upload.POST', 'profile_update_failed');

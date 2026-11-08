@@ -4,6 +4,7 @@ import { type SupabaseClient } from '@supabase/supabase-js';
 import { engineErrorDetail } from '@/lib/db-error-message';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { readBoundedJson, BodyTooLargeError } from '@/lib/request-body.server';
+import { isAvatarStoragePathOwnedBy } from '../../avatar/avatar-storage-key';
 
 // RGPD Art. 17 erasure endpoint. Orchestrates the durable SQL capability
 // (supabase/migrations/20260905195257_gdpr_cleanup_operations.sql):
@@ -259,6 +260,18 @@ function storageTargetFromMetadata(
   return typeof rawUrl === 'string' ? resolveStorageTarget(rawUrl, supabaseUrl) : null;
 }
 
+/**
+ * `avatar_url` est modifiable par son propriétaire : une URL enregistrée ne prouve pas la propriété
+ * de l'objet visé. Dans `avatars`, seul le sujet utilisateur de l'opération peut être ciblé, et
+ * seulement sur une forme de clé exacte (subject_id peut avoir conservé la casse saisie).
+ * Ce contrôle n'est PAS une fence : la clé historique `<user>/avatar.jpg` reste réutilisable par
+ * une instance non migrée, donc rejouer sa suppression peut encore viser un fichier plus récent.
+ */
+function storageTargetMatchesOperation(target: { bucket: string; path: string }, operation: OperationStatus): boolean {
+  if (target.bucket !== 'avatars') return true;
+  return operation.subjectKind === 'user' && isAvatarStoragePathOwnedBy(target.path, operation.subjectId.toLowerCase());
+}
+
 interface AuthDeleteCheck {
   allowed: boolean;
   /** Compte déjà absent côté Auth (404/user_not_found EXPLICITE) : traité comme un succès idempotent. */
@@ -363,7 +376,7 @@ async function processTasks(
     try {
       if (task.action === 'storage_remove') {
         const target = storageTargetFromMetadata(task.metadata, supabaseUrl);
-        if (!target) {
+        if (!target || !storageTargetMatchesOperation(target, operation)) {
           // Référence externe/invalide : jamais transformée en suppression locale. Marquée en
           // échec (pas un faux succès) — reste visible comme non résolue, revue manuelle requise.
           error = 'unresolved_external_or_invalid_reference';

@@ -130,9 +130,9 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
   const accentSoft = mixColors(accent, surface, 0.86);
   const accentStrong = mixColors(accent, text, 0.18);
   // audit S7 : muted (texte secondaire) doit passer AA. Un mix à 0.54 vers le
-  // fond donnait #8F9797 (~2.9:1). Rapproché du texte (0.34) pour ~AA sur surface
+  // fond donnait #8F9797 (~2.9:1). Rapproché du texte (0.26) pour ~AA sur surface
   // claire ; ce token injecté au runtime prime sur le :root statique.
-  const muted = mixColors(text, background, 0.34);
+  const muted = mixColors(text, background, 0.26);
   const primaryForeground = contrastText(primary);
   const shadowColor = rgbChannels(mixColors(text, '#000000', 0.12)).replace(/ /g, ', ');
 

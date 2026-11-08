@@ -59,29 +59,47 @@ function deleteObjectDetail(rpcErr: unknown, raw: string): string | undefined {
 interface DeleteReport {
   media_to_delete?: string[];
   documents_to_delete?: string[];
+  storage_cleanup_deferred?: boolean;
   [key: string]: unknown;
 }
 
-/** Extrait le chemin in-bucket d'une URL publique Supabase ; null si l'URL est externe. */
-function storagePathFromPublicUrl(url: string, bucket: string): string | null {
-  const marker = `/storage/v1/object/public/${bucket}/`;
-  const i = url.indexOf(marker);
-  if (i === -1) return null;
-  const path = url.slice(i + marker.length).split('?')[0];
-  try { return decodeURIComponent(path); } catch { return path; }
+// eslint-disable-next-line no-control-regex -- reject URL parser normalization of controls
+const UNSAFE_STORAGE_URL_CHAR = /[\x00-\x1f\x7f\\]/;
+const ENCODED_STORAGE_SEPARATOR_OR_CONTROL = /%(?:25)*(?:2f|5c|[01][0-9a-f]|7f)/i;
+const STORAGE_DOT_SEGMENT = /^(?:\.|%(?:25)*2e){1,2}$/i;
+
+/** Resolve only canonical public URLs on the configured Storage endpoint. */
+function storagePathFromPublicUrl(url: string, storageUrl: URL, bucket: string): string | null {
+  if (url !== url.trim() || UNSAFE_STORAGE_URL_CHAR.test(url) || url.includes('#')) return null;
+  const raw = /^https?:\/\/([^/?#]+)(\/[^?#]*)/i.exec(url);
+  const prefix = `${storageUrl.pathname}/object/public/${bucket}/`;
+  if (!raw || raw[1].includes('@') || !raw[2].startsWith(prefix)) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.origin !== storageUrl.origin || !parsed.pathname.startsWith(prefix)) return null;
+    // Check raw segments because URL normalizes both literal and percent-encoded dot segments.
+    const segments = raw[2].slice(prefix.length).split('/').map(decodeURIComponent);
+    // Storage receives these as literal JSON keys. Reject structural escapes, not benign literal %XX.
+    if (segments.some((part) => !part || part.includes('/') || UNSAFE_STORAGE_URL_CHAR.test(part)
+      || ENCODED_STORAGE_SEPARATOR_OR_CONTROL.test(part) || STORAGE_DOT_SEGMENT.test(part))) return null;
+    return segments.join('/');
+  } catch {
+    return null;
+  }
 }
 
 async function sweepBucket(
   server: SupabaseClient,
+  storageUrl: URL,
   bucket: string,
   urls: unknown,
 ): Promise<{ deleted: string[]; error: string | null }> {
   const paths = (Array.isArray(urls) ? urls : [])
-    .map((u) => (typeof u === 'string' ? storagePathFromPublicUrl(u, bucket) : null))
+    .map((u) => (typeof u === 'string' ? storagePathFromPublicUrl(u, storageUrl, bucket) : null))
     .filter((p): p is string => p !== null);
   if (paths.length === 0) return { deleted: [], error: null };
   const { error } = await server.storage.from(bucket).remove(paths);
-  return error ? { deleted: [], error: error.message } : { deleted: paths, error: null };
+  return error ? { deleted: [], error: 'storage_cleanup_failed' } : { deleted: paths, error: null };
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -136,17 +154,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const report = (rpcData ?? {}) as DeleteReport;
 
-  // 2. Nettoyage des fichiers Storage — BEST-EFFORT (service-role). Si la clé manque, l'objet est
-  //    déjà supprimé en base ; on saute le balayage et on le signale (storageSkipped). Les fichiers
-  //    orphelins sont rattrapables par le GC (URLs conservées dans object_deletion_log.report).
-  const server = getServerSupabaseClient();
+  // Le RPC peut différer le nettoyage physique tant que les références partagées
+  // ne sont pas protégées. Les candidats restent dans object_deletion_log.report.
+  const server = report.storage_cleanup_deferred === true ? null : getServerSupabaseClient();
   let mediaDeleted: string[] = [];
   let documentsDeleted: string[] = [];
   let storageError: string | null = null;
   let storageSkipped = false;
   if (server) {
-    const media = await sweepBucket(server, MEDIA_BUCKET, report.media_to_delete);
-    const docs = await sweepBucket(server, DOCUMENTS_BUCKET, report.documents_to_delete);
+    // Use the same base resolution as supabase-js, including a configured gateway path.
+    const storageUrl = new URL('storage/v1', url.endsWith('/') ? url : `${url}/`);
+    const media = await sweepBucket(server, storageUrl, MEDIA_BUCKET, report.media_to_delete);
+    const docs = await sweepBucket(server, storageUrl, DOCUMENTS_BUCKET, report.documents_to_delete);
     mediaDeleted = media.deleted;
     documentsDeleted = docs.deleted;
     storageError = media.error ?? docs.error;

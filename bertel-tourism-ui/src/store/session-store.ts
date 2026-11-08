@@ -5,6 +5,12 @@ import type { UserRole } from '../types/domain';
 import { sessionAvatarInitials as initialsFromName } from '../utils/avatar-initials';
 
 type SessionStatus = 'booting' | 'ready' | 'guest' | 'error';
+type AuthAuthority = { userId: string | null; epoch: number; hydrated: boolean };
+
+function hydratedAuthority(previous: AuthAuthority | null, userId: string | null, hydrated: boolean): AuthAuthority {
+  if (previous?.userId === userId && previous.hydrated === hydrated) return previous;
+  return { userId, epoch: (previous?.epoch ?? 0) + (previous?.userId !== userId ? 1 : 0), hydrated };
+}
 
 // Messages de l'état invité. Ils s'affichent à TOUT LE MONDE — dont un partenaire invité
 // par e-mail qui n'a jamais vu de bouton Google — d'où l'absence de toute mention d'un
@@ -18,6 +24,10 @@ interface SessionState {
   status: SessionStatus;
   role: UserRole | null;
   userId: string | null;
+  /** Auth's synchronous subject is separate from the profile still displayed
+   * while bootstrap awaits its reads. null means Auth has not been observed. */
+  authAuthority: AuthAuthority | null;
+  observeAuthUser: (userId: string | null) => void;
   email: string;
   userName: string;
   /** Initiales dérivées du nom (fallback quand aucune photo de profil). */
@@ -109,6 +119,9 @@ export const useSessionStore = create<SessionState>((set) => ({
   status: env.demoMode ? 'ready' : 'booting',
   role: env.demoMode ? 'tourism_agent' : null,
   userId: env.demoMode ? 'usr-local-marie' : null,
+  authAuthority: null,
+  observeAuthUser: (userId) => set((state) => state.authAuthority?.userId === userId
+    ? state : { authAuthority: hydratedAuthority(state.authAuthority, userId, false) }),
   email: env.demoMode ? 'marie@example.com' : '',
   userName: env.demoMode ? 'Marie D.' : '',
   avatar: env.demoMode ? 'MA' : '--',
@@ -147,10 +160,11 @@ export const useSessionStore = create<SessionState>((set) => ({
       avatarUrl: avatarUrl === undefined ? state.avatarUrl : avatarUrl,
     })),
   hydrateFromAuth: ({ role, userId, email, userName, avatar, avatarUrl, langPrefs, canEditObjects, canCreateObjects, orgId, orgName, adminRank, adminRoleCode, isTestRealm }) =>
-    set({
+    set((state) => ({
       status: 'ready',
       role,
       userId,
+      authAuthority: hydratedAuthority(state.authAuthority, userId, true),
       email,
       userName,
       avatar,
@@ -164,12 +178,13 @@ export const useSessionStore = create<SessionState>((set) => ({
       adminRoleCode,
       isTestRealm,
       errorMessage: null,
-    }),
+    })),
   setBooting: () => set((state) => ({ status: state.status === 'ready' ? 'ready' : 'booting', errorMessage: null })),
   setGuest: (message = null) => {
     useProviderScopeStore.getState().clear();
-    set({
+    set((state) => ({
       status: 'guest',
+      authAuthority: hydratedAuthority(state.authAuthority, null, false),
       errorMessage: message,
       role: null,
       userId: null,
@@ -184,12 +199,13 @@ export const useSessionStore = create<SessionState>((set) => ({
       adminRank: null,
       adminRoleCode: null,
       isTestRealm: false,
-    });
+    }));
   },
   setSessionError: (message) => {
     useProviderScopeStore.getState().clear();
-    set({
+    set((state) => ({
       status: 'error',
+      authAuthority: hydratedAuthority(state.authAuthority, null, false),
       errorMessage: message,
       role: null,
       userId: null,
@@ -204,6 +220,6 @@ export const useSessionStore = create<SessionState>((set) => ({
       adminRank: null,
       adminRoleCode: null,
       isTestRealm: false,
-    });
+    }));
   },
 }));

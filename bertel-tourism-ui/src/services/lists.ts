@@ -478,18 +478,29 @@ export async function createDynamicList(
   return data;
 }
 
+export interface ListWriteOptions { signal?: AbortSignal }
+async function withListWriteSignal<T>(request: PromiseLike<T> & { abortSignal(signal: AbortSignal): PromiseLike<T> }, options?: ListWriteOptions): Promise<T> {
+  // The SDK may await Auth before calling fetch. Carry the captured authority
+  // signal all the way to native fetch, where an already-aborted request cannot
+  // be admitted under the next identity's token.
+  if (options?.signal?.aborted) throw new DOMException('Obsolete list write scope', 'AbortError');
+  const response = await (options?.signal ? request.abortSignal(options.signal) : request);
+  if (options?.signal?.aborted) throw new DOMException('Obsolete list write scope', 'AbortError');
+  return response;
+}
+
 // ---------- mises à jour ----------
-export async function updateList(listId: string, patch: ListPatch): Promise<ObjectListDetail | null> {
+export async function updateList(listId: string, patch: ListPatch, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('update_list', { p_list_id: listId, p_patch: patch });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('update_list', { p_list_id: listId, p_patch: patch }), options);
   if (error) throw mapDatabaseError(error, 'Mise à jour impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
 }
 
-export async function setListItems(listId: string, items: ListItemInput[]): Promise<ObjectListDetail | null> {
+export async function setListItems(listId: string, items: ListItemInput[], options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('set_list_items', { p_list_id: listId, p_items: items });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('set_list_items', { p_list_id: listId, p_items: items }), options);
   if (error) throw mapDatabaseError(error, 'Enregistrement des lieux impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
@@ -497,9 +508,9 @@ export async function setListItems(listId: string, items: ListItemInput[]): Prom
 
 // ---------- cycle de vie / mise à la une ----------
 /** Le créateur propose sa liste personnelle à la une de son organisation ; idempotent si déjà en attente. */
-export async function requestListFeature(listId: string): Promise<ObjectListDetail | null> {
+export async function requestListFeature(listId: string, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('request_list_feature', { p_list_id: listId });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('request_list_feature', { p_list_id: listId }), options);
   if (error) throw mapDatabaseError(error, 'Proposition à la une impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
@@ -510,11 +521,11 @@ export async function requestListFeature(listId: string): Promise<ObjectListDeta
  * peut être `null` si l'appelant perd l'accès en lecture après un refus (normal — l'appelant
  * n'était lecteur que via la proposition) : l'écran doit alors revenir à la grille.
  */
-export async function reviewListFeature(listId: string, accept: boolean): Promise<ObjectListDetail | null> {
+export async function reviewListFeature(listId: string, accept: boolean, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client
+  const { data, error } = await withListWriteSignal(client
     .schema('api')
-    .rpc('review_list_feature', { p_list_id: listId, p_accept: accept });
+    .rpc('review_list_feature', { p_list_id: listId, p_accept: accept }), options);
   if (error) throw mapDatabaseError(error, 'Traitement de la proposition impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
@@ -525,20 +536,20 @@ export async function reviewListFeature(listId: string, accept: boolean): Promis
  * organisation. Peut rendre `null` si l'appelant perd l'accès (retrait d'une liste dont il
  * n'était ni créateur ni membre lecteur au sens personnel).
  */
-export async function setListFeatured(listId: string, featured: boolean): Promise<ObjectListDetail | null> {
+export async function setListFeatured(listId: string, featured: boolean, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client
+  const { data, error } = await withListWriteSignal(client
     .schema('api')
-    .rpc('set_list_featured', { p_list_id: listId, p_featured: featured });
+    .rpc('set_list_featured', { p_list_id: listId, p_featured: featured }), options);
   if (error) throw mapDatabaseError(error, 'Mise à la une impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
 }
 
 /** Propriétaire d'une personnelle archivée (ou reprise orpheline) : réactivation explicite, idempotente sur une active. */
-export async function restoreList(listId: string): Promise<ObjectListDetail | null> {
+export async function restoreList(listId: string, options?: ListWriteOptions): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('restore_list', { p_list_id: listId });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('restore_list', { p_list_id: listId }), options);
   if (error) throw mapDatabaseError(error, 'Restauration impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
@@ -549,9 +560,9 @@ export async function restoreList(listId: string): Promise<ObjectListDetail | nu
  * nouveau propriétaire, jamais à la une/proposée, sans token ni destinataire hérités. Renvoie le
  * nouvel id (même contrat que `create_list`).
  */
-export async function duplicateList(listId: string): Promise<string> {
+export async function duplicateList(listId: string, options?: ListWriteOptions): Promise<string> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('duplicate_list', { p_list_id: listId });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('duplicate_list', { p_list_id: listId }), options);
   if (error) throw mapDatabaseError(error, 'Duplication impossible.');
   if (typeof data !== 'string') throw new Error('Réponse RPC sans id.');
   return data;
@@ -586,9 +597,9 @@ export async function getPublicList(token: string): Promise<PublicList | null> {
   };
 }
 
-export async function deleteList(listId: string): Promise<void> {
+export async function deleteList(listId: string, options?: ListWriteOptions): Promise<void> {
   const client = requireApiClient();
-  const { error } = await client.schema('api').rpc('delete_list', { p_list_id: listId });
+  const { error } = await withListWriteSignal(client.schema('api').rpc('delete_list', { p_list_id: listId }), options);
   if (error) throw mapDatabaseError(error, 'Suppression impossible.');
 }
 
@@ -768,13 +779,14 @@ export async function shareList(
   listId: string,
   enable: boolean,
   expiresAt: string | null = null,
+  options?: ListWriteOptions,
 ): Promise<ShareInfo> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('share_list', {
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('share_list', {
     p_list_id: listId,
     p_enable: enable,
     p_expires_at: expiresAt,
-  });
+  }), options);
   if (error) throw mapDatabaseError(error, 'Partage impossible.');
   return parseShareInfo(asRecord(data) ?? {});
 }
@@ -804,9 +816,9 @@ function shareLinkFriendlyMessage(raw: string): string | null {
  * expiration. Un lecteur ne peut PAS réactiver un lien explicitement désactivé/expiré — l'éditeur
  * passe par `shareList` pour ça (api.ensure_list_share_link).
  */
-export async function ensureListShareLink(listId: string): Promise<ShareInfo> {
+export async function ensureListShareLink(listId: string, options?: ListWriteOptions): Promise<ShareInfo> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('ensure_list_share_link', { p_list_id: listId });
+  const { data, error } = await withListWriteSignal(client.schema('api').rpc('ensure_list_share_link', { p_list_id: listId }), options);
   if (error) {
     const friendly = shareLinkFriendlyMessage(readErrorMessage(error));
     if (friendly) throw new Error(friendly);

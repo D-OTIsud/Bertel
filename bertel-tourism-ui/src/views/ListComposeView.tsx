@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Camera,
@@ -41,6 +41,7 @@ import {
   listItemDraftSignature,
   listItemsDiffer as itemsDiffer,
 } from '@/features/lists/compose/list-draft';
+import { useListOperationScope, useScopedListMutation, obsoleteListOperation, type ListOperationScope } from '@/features/lists/compose/useListOperationScope';
 import { Modal } from '@/components/common/Modal';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { CopyEmailsModal } from '@/components/explorer/CopyEmailsModal';
@@ -142,9 +143,6 @@ export default function ListComposeView({ listId }: { listId: string }) {
   // cache le détail ou les capacités (`can_edit`…) résolus pour un AUTRE utilisateur/une AUTRE
   // organisation.
   const listKey = listsQueryKeys.detail(listId, userId, orgId);
-  const myListsKey = listsQueryKeys.myLists(orgId, userId);
-  const featuredListsKey = listsQueryKeys.featured(orgId, userId);
-  const listProposalsKey = listsQueryKeys.proposals(orgId, userId);
 
   const detailQuery = useQuery({ queryKey: listKey, queryFn: () => getList(listId) });
   const detail = detailQuery.data ?? null;
@@ -173,7 +171,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
   // modifiables pendant le flush lent et peuvent déclencher une autosave APRÈS le snapshot lu par
   // `flushPendingEdits` (revue finale — point 2).
   const [duplicating, setDuplicating] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; identity: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; identity: string; name: string; scope: ListOperationScope } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteOpenerRef = useRef<HTMLButtonElement | null>(null);
@@ -194,7 +192,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
   const currentIdentityKey = `${listId}:${userId ?? ''}:${orgId ?? ''}`;
   const identityRef = useRef(currentIdentityKey);
   identityRef.current = currentIdentityKey;
-  const saveFailuresRef = useRef(0);
+  const saveFailuresRef = useRef(new Map<string, number>());
   // File RÉELLE (pas un simple pointeur) : un thunk ne démarre — donc n'appelle le réseau —
   // qu'une fois le précédent réglé. Un pointeur écrasé par l'appel suivant (ancienne version)
   // laisse une sauvegarde lente répondre APRÈS une plus récente et écraser du contenu approuvé
@@ -203,7 +201,10 @@ export default function ListComposeView({ listId }: { listId: string }) {
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   // Verrou synchrone (pas un state) : bloque la ré-entrance même dans le même tick, avant que
   // React n'ait eu la chance de committer `sending`/`langSwitching`.
-  const actionLockRef = useRef(false);
+  const operations = useListOperationScope(listId, userId, orgId, () => {
+    setLangSwitching(false); setDuplicating(false); setDeleting(false); setCopied(false);
+    setDeleteTarget(null); setDeleteError(null);
+  });
   const sendScopeRef = useRef({ generation: 0, identity: currentIdentityKey, controller: null as AbortController | null });
   const uncertainSendRef = useRef(new Map<string, { identity: string; operationIds: string[] }>());
   if (sendScopeRef.current.identity !== currentIdentityKey) {
@@ -217,6 +218,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
     // identity/authority change, rather than comparing only the final rendered IDs.
     const unsubscribe = useSessionStore.subscribe((state, previous) => {
       if (state.userId === previous.userId && state.orgId === previous.orgId && state.status === previous.status
+        && state.authAuthority === previous.authAuthority
         && state.role === previous.role && state.isTestRealm === previous.isTestRealm && state.demoMode === previous.demoMode
         && state.canEditObjects === previous.canEditObjects && state.adminRank === previous.adminRank) return;
       sendScopeRef.current.generation += 1;
@@ -224,7 +226,6 @@ export default function ListComposeView({ listId }: { listId: string }) {
       if (controller) {
         controller.abort();
         sendScopeRef.current.controller = null;
-        actionLockRef.current = false;
         setSending(false);
       }
       uncertainSendRef.current.clear();
@@ -257,11 +258,11 @@ export default function ListComposeView({ listId }: { listId: string }) {
     const controller = sendScopeRef.current.controller;
     if (controller?.signal.aborted) {
       sendScopeRef.current.controller = null;
-      actionLockRef.current = false;
       setSending(false);
     }
     setErrorMessage(null);
     setSendNotice(null);
+    setLangSwitching(false); setDuplicating(false); setDeleting(false); setCopied(false);
     setDeleteTarget(null);
     setDeleteError(null);
   }, [currentIdentityKey]);
@@ -333,186 +334,138 @@ export default function ListComposeView({ listId }: { listId: string }) {
   /** Met un thunk en file : il ne s'exécute (donc n'appelle `mutateAsync`) qu'une fois TOUT ce
    *  qui précède réglé — succès ou échec. Renvoyé tel quel pour un appelant qui attend/attrape
    *  (envoi, changement de langue) ; `queueBackgroundSave` couvre l'autosave « tire et oublie ». */
-  function enqueueSave<T>(run: () => Promise<T>): Promise<T> {
-    const started = saveQueueRef.current.then(run);
+  function enqueueSave<T>(run: (scope: ListOperationScope) => Promise<T>, scope = operations.capture()): Promise<T> {
+    const started = saveQueueRef.current.then(() => {
+      if (!operations.isSessionCurrent(scope)) throw obsoleteListOperation();
+      return run(scope);
+    });
     saveQueueRef.current = started.then(
       () => undefined,
-      () => { saveFailuresRef.current += 1; },
+      () => {
+        if (operations.isSessionCurrent(scope)) saveFailuresRef.current.set(scope.identity, (saveFailuresRef.current.get(scope.identity) ?? 0) + 1);
+      },
     );
     return started;
   }
-  /** Autosave fond perdu (blur, ajout, modèle, bascules) : mise en file réelle, mais l'appelant
-   *  ne l'attend pas — l'erreur reste visible via le `onError` de la mutation (bannière), jamais
-   *  une rejection non gérée. `can_edit` est revalidé sur le cache À L'EXÉCUTION (pas à la mise en
-   *  file) : une frappe déposée pendant qu'une autre save est en vol peut arriver à son tour après
-   *  que les droits ont été perdus (mise à la une retirée par un admin pendant l'attente) — sans
-   *  cette revalidation, `updateList`/`setListItems` partirait quand même et la base refuserait
-   *  bruyamment une écriture que l'interface n'aurait jamais dû tenter. Le brouillon local n'est
-   *  jamais effacé ici (déjà signalé par la bannière `readOnly && isDirty`). */
-  function queueBackgroundSave<T>(run: () => Promise<T>): void {
+  function queueBackgroundSave<T>(run: (scope: ListOperationScope) => Promise<T>): void {
+    // Capture before joining the queue. Capturing inside its thunk would re-arm
+    // an old gesture after an account A→B→A transition while it was waiting.
+    const scope = operations.capture();
     enqueueSave(() => {
-      const base = queryClient.getQueryData<ObjectListDetail>(listKey) ?? detail;
-      if (!base?.canEdit) return Promise.resolve(undefined as T);
-      return run();
-    }).catch(() => {});
+      const base = queryClient.getQueryData<ObjectListDetail>(listsQueryKeys.detail(scope.listId, scope.userId, scope.orgId)) ?? detail;
+      if (!base?.canEdit || base.id !== scope.listId) return Promise.resolve(undefined as T);
+      return run(scope);
+    }, scope).catch(() => {});
   }
 
-  // Titre/couverture/statut édités ici peuvent être affichés par la grille « à la une » (si
-  // featured) ou « Propositions » (si en attente) : les trois grilles sont invalidées à chaque
-  // écriture, jamais seulement « mes listes ».
-  const invalidateGrids = () => {
-    void queryClient.invalidateQueries({ queryKey: myListsKey });
-    void queryClient.invalidateQueries({ queryKey: featuredListsKey });
-    void queryClient.invalidateQueries({ queryKey: listProposalsKey });
+  const invalidateGrids = (scope = operations.capture()) => {
+    void queryClient.invalidateQueries({ queryKey: listsQueryKeys.myLists(scope.orgId, scope.userId) });
+    void queryClient.invalidateQueries({ queryKey: listsQueryKeys.featured(scope.orgId, scope.userId) });
+    void queryClient.invalidateQueries({ queryKey: listsQueryKeys.proposals(scope.orgId, scope.userId) });
   };
-  const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: listKey });
-    invalidateGrids();
+  const invalidate = (scope = operations.capture()) => {
+    void queryClient.invalidateQueries({ queryKey: listsQueryKeys.detail(scope.listId, scope.userId, scope.orgId) });
+    invalidateGrids(scope);
   };
-  // Rafraîchit le cache depuis le détail renvoyé par la mutation (pas de refetch, pas de
-  // ré-hydratation des champs en cours d'édition).
-  const applyFresh = (fresh: ObjectListDetail | null) => {
-    if (fresh) queryClient.setQueryData(listKey, fresh);
-    else void queryClient.invalidateQueries({ queryKey: listKey });
-    invalidateGrids();
+  const applyFresh = (fresh: ObjectListDetail | null, scope: ListOperationScope) => {
+    const key = listsQueryKeys.detail(scope.listId, scope.userId, scope.orgId);
+    if (fresh?.id === scope.listId) queryClient.setQueryData(key, fresh);
+    else void queryClient.invalidateQueries({ queryKey: key });
+    invalidateGrids(scope);
+    return fresh?.id === scope.listId;
   };
-  const updateMeta = useMutation({
-    mutationFn: (patch: Parameters<typeof updateList>[1]) => updateList(listId, patch),
-    onSuccess: applyFresh,
-    // MET-03 — un refus réseau/autorisation doit rester visible : la valeur locale reste
-    // affichée (write-trap sinon), mais l'utilisateur doit savoir qu'elle n'est PAS enregistrée.
-    onError: (e) =>
-      setErrorMessage(strictErrorMessage(e, "Échec de l'enregistrement. Vos modifications sont conservées ici ; réessayez.")),
+  const updateMeta = useScopedListMutation(operations, {
+    mutationFn: (scope, patch: Parameters<typeof updateList>[1]) => updateList(scope.listId, patch, { signal: scope.signal }),
+    copy: (patch) => ({ ...patch }),
+    onSuccess: (fresh, _patch, scope) => { applyFresh(fresh, scope); },
+    onError: (e) => setErrorMessage(strictErrorMessage(e, "Échec de l'enregistrement. Vos modifications sont conservées ici ; réessayez.")),
   });
-  const saveItems = useMutation({
-    // La liste à persister est passée en argument (pas lue de la closure) : l'auto-save
-    // d'un ajout fireant juste après setItems ne doit pas envoyer l'état précédent.
-    mutationFn: (list: ObjectListItem[]) =>
-      setListItems(
-        listId,
-        list.map((it, i) => ({ object_id: it.objectId, position: i, note_fr: it.noteFr, note_en: it.noteEn })),
-      ),
-    onSuccess: (fresh, sentList) => {
-      applyFresh(fresh);
-      if (!fresh) return;
-      // Adopte l'enrichissement serveur (carte i18n + contacts publics) SANS écraser l'édition
-      // locale en vol. Un id ENVOYÉ (sentList) mais absent du résultat a été REJETÉ (ex. brouillon
-      // exclu côté SQL) et doit disparaître ; un id absent des deux mais ajouté APRÈS l'envoi doit
-      // rester (mergeEnrichedListItems distingue les deux via `sentList`).
-      const { items: merged, rejectedIds } = mergeEnrichedListItems(itemsRef.current, fresh.items, sentList);
+  const saveItems = useScopedListMutation(operations, {
+    mutationFn: (scope, sent: ObjectListItem[]) => setListItems(scope.listId,
+      sent.map((it, i) => ({ object_id: it.objectId, position: i, note_fr: it.noteFr, note_en: it.noteEn })), { signal: scope.signal }),
+    copy: (sent) => sent.map((item) => ({ ...item })),
+    onSuccess: (fresh, sent, scope) => {
+      if (!applyFresh(fresh, scope) || !fresh || !operations.isViewCurrent(scope)) return;
+      const { items: merged, rejectedIds } = mergeEnrichedListItems(itemsRef.current, fresh.items, sent);
       setItems(merged);
-      if (rejectedIds.length > 0) {
-        setErrorMessage(
-          rejectedIds.length === 1
-            ? "Un lieu n'a pas pu être enregistré (fiche non publiée) et a été retiré de la liste."
-            : `${rejectedIds.length} lieux n'ont pas pu être enregistrés (fiches non publiées) et ont été retirés de la liste.`,
-        );
-      }
+      if (rejectedIds.length > 0) setErrorMessage(rejectedIds.length === 1
+        ? "Un lieu n'a pas pu être enregistré (fiche non publiée) et a été retiré de la liste."
+        : `${rejectedIds.length} lieux n'ont pas pu être enregistrés (fiches non publiées) et ont été retirés de la liste.`);
     },
-    onError: (e) =>
-      setErrorMessage(strictErrorMessage(e, 'Enregistrement des lieux impossible. Réessayez.')),
+    onError: (e) => setErrorMessage(strictErrorMessage(e, 'Enregistrement des lieux impossible. Réessayez.')),
   });
-  // Active/désactive le lien public. La réponse porte déjà le token : patch synchrone du
-  // cache pour que le modal affiche le lien sans attendre un refetch.
-  const share = useMutation({
-    mutationFn: (enable: boolean) => shareList(listId, enable),
-    onSuccess: (info) => {
-      queryClient.setQueryData<ObjectListDetail>(listKey, (old) =>
-        old
-          ? { ...old, shareToken: info.shareToken, shareEnabled: info.shareEnabled, shareExpiresAt: info.shareExpiresAt }
-          : old,
-      );
-      invalidateGrids();
-    },
+  const applyShare = (info: Awaited<ReturnType<typeof shareList>>, scope: ListOperationScope) => {
+    queryClient.setQueryData<ObjectListDetail>(listsQueryKeys.detail(scope.listId, scope.userId, scope.orgId), (old) => old
+      ? { ...old, shareToken: info.shareToken, shareEnabled: info.shareEnabled, shareExpiresAt: info.shareExpiresAt } : old);
+    invalidateGrids(scope);
+  };
+  const share = useScopedListMutation(operations, {
+    mutationFn: (scope, enable: boolean) => shareList(scope.listId, enable, null, { signal: scope.signal }),
+    onSuccess: (info, _enable, scope) => { applyShare(info, scope); },
     onError: (e) => setErrorMessage(strictErrorMessage(e, 'Partage impossible. Réessayez.')),
   });
-  // Membre non-éditeur : génère/réutilise le lien SANS pouvoir forcer sa réactivation (contrat
-  // `ensure_list_share_link` — §listes 2026-09-07). Mêmes effets de cache que `share`.
-  const ensureShare = useMutation({
-    mutationFn: () => ensureListShareLink(listId),
-    onSuccess: (info) => {
-      queryClient.setQueryData<ObjectListDetail>(listKey, (old) =>
-        old
-          ? { ...old, shareToken: info.shareToken, shareEnabled: info.shareEnabled, shareExpiresAt: info.shareExpiresAt }
-          : old,
-      );
-      invalidateGrids();
-    },
+  const ensureShare = useScopedListMutation(operations, {
+    mutationFn: (scope, _input: void) => ensureListShareLink(scope.listId, { signal: scope.signal }),
+    onSuccess: (info, _input, scope) => { applyShare(info, scope); },
     onError: (e) => setErrorMessage(strictErrorMessage(e, 'Partage indisponible. Réessayez.')),
   });
-  // Une action de cycle de vie peut faire perdre l'accès en lecture à l'appelant (refus d'une
-  // proposition qu'il examinait, retrait d'une liste à la une qu'il ne possédait pas) : le RPC
-  // rend alors `null` — normal, pas une erreur — et l'écran doit revenir à la grille.
-  const applyLifecycleResult = (fresh: ObjectListDetail | null) => {
-    invalidateGrids();
-    if (fresh) {
-      queryClient.setQueryData(listKey, fresh);
-    } else {
-      void queryClient.invalidateQueries({ queryKey: listKey });
-      router.push('/listes');
-    }
+  const applyLifecycleResult = (fresh: ObjectListDetail | null, scope: ListOperationScope) => {
+    applyFresh(fresh, scope);
+    if (!fresh && operations.isViewCurrent(scope)) router.push('/listes');
   };
-  const proposeFeature = useMutation({
-    mutationFn: () => requestListFeature(listId),
-    onSuccess: (fresh) => {
-      if (fresh) queryClient.setQueryData(listKey, fresh);
-      invalidateGrids();
-    },
+  const proposeFeature = useScopedListMutation(operations, {
+    mutationFn: (scope, _input: void) => requestListFeature(scope.listId, { signal: scope.signal }),
+    onSuccess: (fresh, _input, scope) => { applyFresh(fresh, scope); },
     onError: (e) => setErrorMessage(strictErrorMessage(e, 'Proposition à la une impossible.')),
   });
-  const toggleFeatured = useMutation({
-    mutationFn: (featured: boolean) => setListFeatured(listId, featured),
-    onSuccess: applyLifecycleResult,
+  const toggleFeatured = useScopedListMutation(operations, {
+    mutationFn: (scope, featured: boolean) => setListFeatured(scope.listId, featured, { signal: scope.signal }),
+    onSuccess: (fresh, _featured, scope) => applyLifecycleResult(fresh, scope),
     onError: (e) => setErrorMessage(strictErrorMessage(e, 'Mise à la une impossible.')),
   });
-  // Proposition d'UN COLLÈGUE en attente : `set_list_featured(true)` est refusé par la base pour
-  // une liste qui n'appartient pas à l'admin (elle n'accepte que review_list_feature).
-  const review = useMutation({
-    mutationFn: (accept: boolean) => reviewListFeature(listId, accept),
-    onSuccess: applyLifecycleResult,
+  const review = useScopedListMutation(operations, {
+    mutationFn: (scope, accept: boolean) => reviewListFeature(scope.listId, accept, { signal: scope.signal }),
+    onSuccess: (fresh, _accept, scope) => applyLifecycleResult(fresh, scope),
     onError: (e) => setErrorMessage(strictErrorMessage(e, 'Traitement de la proposition impossible.')),
   });
-  const restore = useMutation({
-    mutationFn: () => restoreList(listId),
-    onSuccess: (fresh) => {
-      if (fresh) queryClient.setQueryData(listKey, fresh);
-      void queryClient.invalidateQueries({ queryKey: myListsKey });
-    },
+  const restore = useScopedListMutation(operations, {
+    mutationFn: (scope, _input: void) => restoreList(scope.listId, { signal: scope.signal }),
+    onSuccess: (fresh, _input, scope) => { applyFresh(fresh, scope); },
     onError: (e) => setErrorMessage(strictErrorMessage(e, 'Restauration impossible.')),
   });
-  const duplicate = useMutation({
-    mutationFn: () => duplicateList(listId),
-    onSuccess: (newId) => {
-      void queryClient.invalidateQueries({ queryKey: myListsKey });
-      router.push(`/listes/${newId}`);
+  const duplicate = useScopedListMutation(operations, {
+    mutationFn: (scope, _input: void) => duplicateList(scope.listId, { signal: scope.signal }),
+    onSuccess: (newId, _input, scope) => {
+      void queryClient.invalidateQueries({ queryKey: listsQueryKeys.myLists(scope.orgId, scope.userId) });
+      if (operations.isViewCurrent(scope)) router.push(`/listes/${newId}`);
     },
     onError: (e) => setErrorMessage(strictErrorMessage(e, 'Duplication impossible.')),
   });
-  const remove = useMutation({
-    mutationFn: (target: { id: string; identity: string }) => deleteList(target.id),
-    onSuccess: (_, target) => {
-      if (!isCurrentDeleteIdentity(target)) return;
-      invalidateGrids();
-      router.push('/listes');
+  const remove = useScopedListMutation(operations, {
+    mutationFn: (scope, target: { id: string; identity: string; scope: ListOperationScope }) => deleteList(target.id, { signal: scope.signal }),
+    onSuccess: (_, target, scope) => {
+      invalidateGrids(scope);
+      if (isCurrentDeleteIdentity(target)) router.push('/listes');
     },
     onError: (e, target) => {
       if (isCurrentDeleteIdentity(target)) setErrorMessage(strictErrorMessage(e, 'Suppression impossible. Réessayez.'));
     },
   });
 
-  function isCurrentDeleteIdentity(target: { id: string; identity: string }) {
+  function isCurrentDeleteIdentity(target: { id: string; identity: string; scope: ListOperationScope }) {
     const session = useSessionStore.getState();
-    return identityRef.current === target.identity &&
+    return operations.isViewCurrent(target.scope) && identityRef.current === target.identity &&
       `${target.id}:${session.userId ?? ''}:${session.orgId ?? ''}` === target.identity;
   }
 
   async function confirmDelete() {
     const target = deleteTarget;
-    if (!target || actionLockRef.current || !isCurrentDeleteIdentity(target)) return;
-    actionLockRef.current = true;
+    if (!target || operations.isActionLocked() || !isCurrentDeleteIdentity(target)) return;
+    const lease = operations.acquireAction(target.scope);
+    if (!lease) return;
     setDeleting(true);
     setDeleteError(null);
-    const failuresBeforeWait = saveFailuresRef.current;
+    const failuresBeforeWait = saveFailuresRef.current.get(target.identity) ?? 0;
     try {
       // Join the existing queue, without saving or discarding additional local drafts.
       await enqueueSave(async () => {
@@ -521,19 +474,19 @@ export default function ListComposeView({ listId }: { listId: string }) {
         if (fresh?.id !== target.id || !fresh.canEdit) {
           throw new Error('Cette liste ne peut plus être supprimée avec vos droits actuels.');
         }
-        if (saveFailuresRef.current !== failuresBeforeWait) {
+        if ((saveFailuresRef.current.get(target.identity) ?? 0) !== failuresBeforeWait) {
           throw new Error('Une sauvegarde a échoué. Vos modifications sont conservées ici. Réessayez pour confirmer la suppression.');
         }
-        await remove.mutateAsync(target);
+        await remove.mutateAsync(target, target.scope);
         if (isCurrentDeleteIdentity(target)) setDeleteTarget(null);
-      });
+      }, target.scope);
     } catch (error) {
       if (isCurrentDeleteIdentity(target)) {
         setDeleteError(strictErrorMessage(error, 'Suppression impossible. Réessayez.'));
       }
     } finally {
-      setDeleting(false);
-      actionLockRef.current = false;
+      if (operations.isViewCurrent(target.scope)) setDeleting(false);
+      operations.releaseAction(lease);
     }
   }
 
@@ -616,20 +569,23 @@ export default function ListComposeView({ listId }: { listId: string }) {
    */
   async function copyLink() {
     if (ensureShare.isPending) return;
+    const scope = operations.capture();
     let info: Awaited<ReturnType<typeof ensureListShareLink>>;
     try {
-      info = await ensureShare.mutateAsync();
+      info = await ensureShare.mutateAsync(undefined, scope);
     } catch {
       return;
     }
+    if (!operations.isViewCurrent(scope)) return;
     const freshUrl = info.shareToken && typeof window !== 'undefined' ? `${window.location.origin}/l/${info.shareToken}` : null;
     if (!freshUrl) return;
     try {
       await navigator.clipboard.writeText(freshUrl);
+      if (!operations.isViewCurrent(scope)) return;
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => { if (operations.isViewCurrent(scope)) setCopied(false); }, 2000);
     } catch {
-      setErrorMessage('La copie du lien a échoué. Réessayez.');
+      if (operations.isViewCurrent(scope)) setErrorMessage('La copie du lien a échoué. Réessayez.');
     }
   }
   function removeItem(objectId: string) {
@@ -650,7 +606,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
     // Explorer » ; le round-trip rapporte les contacts publics (phone/web, serveur-only).
     const next = [...items, listItemFromObjectCard(r.card, items.length)];
     setItems(next);
-    queueBackgroundSave(() => saveItems.mutateAsync(next));
+    queueBackgroundSave((scope) => saveItems.mutateAsync(next, scope));
   }
   function dropItem(to: number) {
     const from = drag.from;
@@ -672,8 +628,10 @@ export default function ListComposeView({ listId }: { listId: string }) {
     setItems((prev) => moveListItem(prev, from, to));
   }
   async function changeListLang(l: 'fr' | 'en') {
-    if (actionLockRef.current || !detail || detail.lang === l) return;
-    actionLockRef.current = true;
+    if (operations.isActionLocked() || !detail || detail.lang === l) return;
+    const scope = operations.capture();
+    const lease = operations.acquireAction(scope);
+    if (!lease) return;
     setLangSwitching(true);
     setErrorMessage(null);
     // Gèle la version à basculer MAINTENANT : les champs sont désactivés tant que
@@ -688,22 +646,20 @@ export default function ListComposeView({ listId }: { listId: string }) {
     try {
       // Un seul thunk en file : il n'agit qu'une fois TOUTE écriture précédente (blur, ajout…)
       // réglée, et lit alors l'état serveur à jour pour composer un patch cohérent.
-      const fresh = await enqueueSave(async () => {
-        if (!isDynamic && outgoingDirtyItems) {
-          await saveItems.mutateAsync(snapshotItems);
-        }
+      const fresh = await enqueueSave(async (captured) => {
+        if (!isDynamic && outgoingDirtyItems) await saveItems.mutateAsync(snapshotItems, captured);
         const patch = buildLanguageSwitchPatch(outgoing, l, snapshotName, snapshotIntro, snapshotRecipient);
-        return updateMeta.mutateAsync(patch);
-      });
-      if (!fresh) return;
+        return updateMeta.mutateAsync(patch, captured);
+      }, scope);
+      if (!fresh || !operations.isViewCurrent(scope)) return;
       setPreviewLang(fresh.lang);
       setName(currentListName(fresh));
       setIntro(currentListIntro(fresh));
     } catch (e) {
-      setErrorMessage(strictErrorMessage(e, 'Échec du changement de langue. Réessayez.'));
+      if (operations.isViewCurrent(scope)) setErrorMessage(strictErrorMessage(e, 'Échec du changement de langue. Réessayez.'));
     } finally {
-      setLangSwitching(false);
-      actionLockRef.current = false;
+      if (operations.isViewCurrent(scope)) setLangSwitching(false);
+      operations.releaseAction(lease);
     }
   }
   function chooseTemplate(k: ListTemplate) {
@@ -712,7 +668,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
     // comme le mock : passer en Itinéraire active la carte récap si elle ne l'était pas
     const patch: Parameters<typeof updateList>[1] =
       k === 'itineraire' && !detail.showMap ? { template: k, show_map: true } : { template: k };
-    queueBackgroundSave(() => updateMeta.mutateAsync(patch));
+    queueBackgroundSave((scope) => updateMeta.mutateAsync(patch, scope));
   }
   /**
    * Sauvegarde toute frappe en attente dans la MÊME file que l'autosave, en revalidant `can_edit`
@@ -721,15 +677,16 @@ export default function ListComposeView({ listId }: { listId: string }) {
    * route. Dans ce cas on n'écrit JAMAIS (la base refuserait) — on renvoie juste si un écart local
    * existe, pour prévenir plutôt que d'échouer l'envoi/la duplication entière.
    */
-  function flushPendingEdits(): Promise<boolean> {
+  function flushPendingEdits(scope = operations.capture()): Promise<boolean> {
     const snapshotName = name;
     const snapshotRecipient = recipient;
     const snapshotIntro = intro;
     const snapshotItems = items;
     const snapshotTemplate = template;
     const fallbackDetail = detail as ObjectListDetail;
-    return enqueueSave(async () => {
-      const base = queryClient.getQueryData<ObjectListDetail>(listKey) ?? fallbackDetail;
+    return enqueueSave(async (captured) => {
+      const targetKey = listsQueryKeys.detail(captured.listId, captured.userId, captured.orgId);
+      const base = queryClient.getQueryData<ObjectListDetail>(targetKey) ?? fallbackDetail;
       const baseName = currentListName(base);
       const baseIntro = currentListIntro(base);
       if (!base.canEdit) {
@@ -742,15 +699,16 @@ export default function ListComposeView({ listId }: { listId: string }) {
         );
       }
       const metaPatch = buildDraftMetaPatch(base, baseName, baseIntro, snapshotName, snapshotRecipient, snapshotIntro, snapshotTemplate);
-      if (Object.keys(metaPatch).length > 0) await updateMeta.mutateAsync(metaPatch);
-      const afterMeta = queryClient.getQueryData<ObjectListDetail>(listKey) ?? base;
-      if (!isDynamic && itemsDiffer(snapshotItems, afterMeta.items)) await saveItems.mutateAsync(snapshotItems);
+      if (Object.keys(metaPatch).length > 0) await updateMeta.mutateAsync(metaPatch, captured);
+      const afterMeta = queryClient.getQueryData<ObjectListDetail>(targetKey) ?? base;
+      if (!isDynamic && itemsDiffer(snapshotItems, afterMeta.items)) await saveItems.mutateAsync(snapshotItems, captured);
       return false;
-    });
+    }, scope);
   }
 
   async function handleSend() {
-    if (actionLockRef.current || !detail || !serviceAvailability.email) return;
+    if (operations.isActionLocked() || !detail || !serviceAvailability.email) return;
+    const operationScope = operations.capture();
     // Freeze the complete recipient counter map before the prompt or any await.
     // A gesture never obtains a newer generation automatically after waiting.
     const context = emailContext.data && { generations: { ...emailContext.data.generations } };
@@ -762,19 +720,20 @@ export default function ListComposeView({ listId }: { listId: string }) {
     const confirmedPreviousOperationId = confirmedPreviousOperationIds.at(-1);
     const confirmResend = previous?.identity === currentIdentityKey;
     if (confirmResend && !window.confirm(LIST_EMAIL_RESEND_CONFIRMATION)) return;
+    const lease = operations.acquireAction(operationScope);
+    if (!lease) return;
     const scope = sendScopeRef.current;
     const generation = scope.generation;
     const controller = new AbortController();
     scope.controller = controller;
     const isCurrent = () => sendScopeRef.current.generation === generation
-      && sendScopeRef.current.identity === currentIdentityKey && !controller.signal.aborted;
+      && sendScopeRef.current.identity === currentIdentityKey && !controller.signal.aborted && operations.isSessionCurrent(operationScope);
     const operationId = crypto.randomUUID();
-    actionLockRef.current = true;
     setSending(true);
     setErrorMessage(null);
     setSendNotice(null);
     try {
-      const abandonedLocalEdits = await flushPendingEdits();
+      const abandonedLocalEdits = await flushPendingEdits(operationScope);
       if (!isCurrent()) return;
       const result = await sendListByEmail(listId, email, { operationId, context, confirmResend, confirmedPreviousOperationId, confirmedPreviousOperationIds, isCurrent, expectedUserId: userId, signal: controller.signal });
       if (!isCurrent()) return;
@@ -813,10 +772,10 @@ export default function ListComposeView({ listId }: { listId: string }) {
         strictErrorMessage(e, "Échec de l'envoi. Vos modifications restent affichées ici ; réessayez."),
       );
     } finally {
+      operations.releaseAction(lease);
       if (sendScopeRef.current.controller === controller) {
         sendScopeRef.current.controller = null;
         setSending(false);
-        actionLockRef.current = false;
         // Read-only refresh belongs to future gestures; never retry this one.
         void queryClient.invalidateQueries({ queryKey: emailContextKey });
       }
@@ -831,13 +790,16 @@ export default function ListComposeView({ listId }: { listId: string }) {
    * après le snapshot lu par `flushPendingEdits` (point 2, revue finale).
    */
   async function handleDuplicate() {
-    if (actionLockRef.current || !detail || locked) return;
-    actionLockRef.current = true;
+    if (operations.isActionLocked() || !detail || locked) return;
+    const scope = operations.capture();
+    const lease = operations.acquireAction(scope);
+    if (!lease) return;
     setDuplicating(true);
     setErrorMessage(null);
     try {
-      const abandonedLocalEdits = await flushPendingEdits();
+      const abandonedLocalEdits = await flushPendingEdits(scope);
       if (abandonedLocalEdits) {
+        if (!operations.isViewCurrent(scope)) return;
         // Choix produit (point 3) : jamais de sauvegarde inventée sur l'original dont les droits
         // sont perdus, jamais de réhydratation aveugle du brouillon — la copie reprend la
         // dernière version ENREGISTRÉE. Le dire explicitement avant de partir : une navigation
@@ -847,12 +809,12 @@ export default function ListComposeView({ listId }: { listId: string }) {
         );
         if (!confirmed) return;
       }
-      await duplicate.mutateAsync();
+      await duplicate.mutateAsync(undefined, scope);
     } catch {
       // Message déjà posé par l'onError de la mutation en cause (updateMeta/saveItems/duplicate).
     } finally {
-      setDuplicating(false);
-      actionLockRef.current = false;
+      if (operations.isViewCurrent(scope)) setDuplicating(false);
+      operations.releaseAction(lease);
     }
   }
 
@@ -891,7 +853,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
               onChange={(e) => setName(e.target.value)}
               onBlur={() => {
                 if (name === currentListName(detail)) return;
-                queueBackgroundSave(() => updateMeta.mutateAsync(detail.lang === 'en' ? { name_en: name } : { name }));
+                queueBackgroundSave((scope) => updateMeta.mutateAsync(detail.lang === 'en' ? { name_en: name } : { name }, scope));
               }}
               disabled={locked || readOnly}
               className="w-full truncate rounded-md bg-transparent text-[16px] font-extrabold text-ink outline-none focus:bg-ink/5 disabled:opacity-60"
@@ -1087,11 +1049,11 @@ export default function ListComposeView({ listId }: { listId: string }) {
             type="button"
             disabled={locked || readOnly || remove.isPending}
             onClick={(event) => {
-              if (actionLockRef.current) return;
+              if (operations.isActionLocked()) return;
               deleteOpenerRef.current = event.currentTarget;
               restoreDeleteFocusRef.current = true;
               setDeleteError(null);
-              setDeleteTarget({ id: listId, identity: currentIdentityKey, name: name || detail.name });
+              setDeleteTarget({ scope: operations.capture(), id: listId, identity: currentIdentityKey, name: name || detail.name });
             }}
             className="grid h-9 w-9 place-items-center rounded-lg border text-red-500 hover:bg-red-50 disabled:opacity-40"
             aria-label="Supprimer la liste"
@@ -1172,7 +1134,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
                 onChange={(e) => setRecipient(e.target.value)}
                 onBlur={() => {
                   if (recipient === (detail.recipientLabel ?? '')) return;
-                  queueBackgroundSave(() => updateMeta.mutateAsync({ recipient_label: recipient }));
+                  queueBackgroundSave((scope) => updateMeta.mutateAsync({ recipient_label: recipient }, scope));
                 }}
                 disabled={locked || readOnly}
                 placeholder="ex. Camille & Yann"
@@ -1186,8 +1148,8 @@ export default function ListComposeView({ listId }: { listId: string }) {
                 onBlur={() => {
                   const cur = currentListIntro(detail);
                   if (intro === cur) return;
-                  queueBackgroundSave(() =>
-                    updateMeta.mutateAsync(detail.lang === 'en' ? { intro_en: intro } : { intro_fr: intro }),
+                  queueBackgroundSave((scope) =>
+                    updateMeta.mutateAsync(detail.lang === 'en' ? { intro_en: intro } : { intro_fr: intro }, scope),
                   );
                 }}
                 disabled={locked || readOnly}
@@ -1206,7 +1168,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
                   <button
                     type="button"
                     disabled={saveItems.isPending || locked || readOnly}
-                    onClick={() => queueBackgroundSave(() => saveItems.mutateAsync(items))}
+                    onClick={() => queueBackgroundSave((scope) => saveItems.mutateAsync(items, scope))}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-orange px-3 py-1.5 text-[12px] font-bold text-white hover:bg-orange/90 disabled:opacity-60"
                   >
                     {saveItems.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
@@ -1397,7 +1359,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
                     <button
                       type="button"
                       disabled={updateMeta.isPending || locked}
-                      onClick={() => queueBackgroundSave(() => updateMeta.mutateAsync({ cover_url: null }))}
+                      onClick={() => queueBackgroundSave((scope) => updateMeta.mutateAsync({ cover_url: null }, scope))}
                       className="text-[12px] font-semibold text-orange hover:underline disabled:opacity-60"
                     >
                       Automatique
@@ -1422,7 +1384,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
                           disabled={updateMeta.isPending || locked}
                           aria-label="Choisir cette photo comme couverture"
                           aria-pressed={detail.coverUrl === img}
-                          onClick={() => queueBackgroundSave(() => updateMeta.mutateAsync({ cover_url: img }))}
+                          onClick={() => queueBackgroundSave((scope) => updateMeta.mutateAsync({ cover_url: img }, scope))}
                           className={cn(
                             'relative h-12 w-16 shrink-0 overflow-hidden rounded-md ring-2 ring-offset-1 transition',
                             detail.coverUrl === img ? 'ring-orange' : 'ring-transparent hover:ring-ink/20',
@@ -1450,7 +1412,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
                   aria-checked={detail.showMap}
                   aria-label="Carte récap du parcours"
                   disabled={updateMeta.isPending || locked || readOnly}
-                  onClick={() => queueBackgroundSave(() => updateMeta.mutateAsync({ show_map: !detail.showMap }))}
+                  onClick={() => queueBackgroundSave((scope) => updateMeta.mutateAsync({ show_map: !detail.showMap }, scope))}
                   className={cn('relative h-6 w-11 shrink-0 rounded-full transition', detail.showMap ? 'bg-orange' : 'bg-ink/20')}
                 >
                   <span
@@ -1475,7 +1437,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
                       aria-label={`Accent ${a.label}`}
                       aria-pressed={detail.accent === a.k}
                       disabled={updateMeta.isPending || locked || readOnly}
-                      onClick={() => queueBackgroundSave(() => updateMeta.mutateAsync({ accent: a.k }))}
+                      onClick={() => queueBackgroundSave((scope) => updateMeta.mutateAsync({ accent: a.k }, scope))}
                       className={cn(
                         'h-6 w-6 rounded-full border-2 transition',
                         detail.accent === a.k ? 'scale-110 border-ink' : 'border-transparent hover:scale-105',
@@ -1558,7 +1520,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
         cancelLabel="Annuler"
         tone="danger"
         busy={deleting}
-        onCancel={() => { if (!actionLockRef.current) setDeleteTarget(null); }}
+        onCancel={() => { if (!operations.isActionLocked()) setDeleteTarget(null); }}
         onConfirm={() => void confirmDelete()}
       />
 

@@ -140,6 +140,7 @@ export function useBootstrapSession() {
   const hydrateFromAuth = useSessionStore((state) => state.hydrateFromAuth);
   const setSessionError = useSessionStore((state) => state.setSessionError);
   const setGuest = useSessionStore((state) => state.setGuest);
+  const observeAuthUser = useSessionStore((state) => state.observeAuthUser);
 
   useEffect(() => {
     if (demoMode) {
@@ -280,11 +281,15 @@ export function useBootstrapSession() {
       });
     }
 
-    function scheduleSync(event?: AuthChangeEvent) {
+    function scheduleSync(event?: AuthChangeEvent, authUserId: string | null = null) {
       if (cancelled) return;
       // Invalidate running work immediately, even while the auth callback holds
       // Supabase's lock. Only the newest generation may publish any state.
       const run = ++generation;
+      // An SDK token can already belong to B while the visible profile remains
+      // A. Revoke A's write authority synchronously, without changing its screen
+      // or calling another Auth API under the notification lock.
+      observeAuthUser(authUserId);
       if (pendingSync !== null) clearTimeout(pendingSync);
       pendingSync = null;
       // Do not leave a prior user's capability result visible while session bootstrap
@@ -314,7 +319,7 @@ export function useBootstrapSession() {
 
     const {
       data: { subscription },
-    } = authClient.auth.onAuthStateChange((event) => { scheduleSync(event); });
+    } = authClient.auth.onAuthStateChange((event, session) => { scheduleSync(event, session?.user.id ?? null); });
     // Some clients deliver INITIAL_SESSION synchronously while subscribing.
     // Do not supersede that event (especially SIGNED_OUT) with the fallback.
     if (generation === 0) scheduleSync();
@@ -325,5 +330,5 @@ export function useBootstrapSession() {
       if (pendingSync !== null) clearTimeout(pendingSync);
       subscription.unsubscribe();
     };
-  }, [demoMode, hydrateFromAuth, setBooting, setGuest, setSessionError]);
+  }, [demoMode, hydrateFromAuth, observeAuthUser, setBooting, setGuest, setSessionError]);
 }

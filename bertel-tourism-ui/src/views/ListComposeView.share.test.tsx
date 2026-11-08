@@ -109,7 +109,7 @@ describe('ListComposeView — modal « Partager par lien »', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /partager par lien/i }));
 
-    await waitFor(() => expect(shareList).toHaveBeenCalledWith('list-1', true));
+    await waitFor(() => expect(shareList).toHaveBeenCalledWith('list-1', true, null, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     const dialog = await screen.findByRole('dialog', { name: /partager par lien/i });
     expect(await within(dialog).findByText('http://localhost/l/tok123')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /copier/i })).toBeInTheDocument();
@@ -140,7 +140,7 @@ describe('ListComposeView — modal « Partager par lien »', () => {
     const dialog = await screen.findByRole('dialog', { name: /partager par lien/i });
     fireEvent.click(within(dialog).getByRole('button', { name: /désactiver le lien/i }));
 
-    await waitFor(() => expect(shareList).toHaveBeenCalledWith('list-1', false));
+    await waitFor(() => expect(shareList).toHaveBeenCalledWith('list-1', false, null, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });

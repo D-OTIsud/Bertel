@@ -231,7 +231,7 @@ describe('ListComposeView — Accepter/Refuser une proposition depuis le détail
 
     fireEvent.click(await screen.findByRole('button', { name: /Accepter/ }));
 
-    await waitFor(() => expect(reviewListFeature).toHaveBeenCalledWith('list-1', true));
+    await waitFor(() => expect(reviewListFeature).toHaveBeenCalledWith('list-1', true, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     expect(setListFeatured).not.toHaveBeenCalled();
   });
 
@@ -242,7 +242,7 @@ describe('ListComposeView — Accepter/Refuser une proposition depuis le détail
 
     fireEvent.click(await screen.findByRole('button', { name: /Refuser/ }));
 
-    await waitFor(() => expect(reviewListFeature).toHaveBeenCalledWith('list-1', false));
+    await waitFor(() => expect(reviewListFeature).toHaveBeenCalledWith('list-1', false, expect.objectContaining({ signal: expect.any(AbortSignal) })));
     expect(setListFeatured).not.toHaveBeenCalled();
   });
 });
@@ -390,7 +390,7 @@ describe('ListComposeView — duplication d’un brouillon (revue R2)', () => {
       resolveUpdate?.(baseDetail({ createdBy: 'user-A', canEdit: true, name: 'Nom modifié' }));
     });
 
-    await waitFor(() => expect(duplicateList).toHaveBeenCalledWith('list-1'));
+    await waitFor(() => expect(duplicateList).toHaveBeenCalledWith('list-1', expect.objectContaining({ signal: expect.any(AbortSignal) })));
     const updateOrder = jest.mocked(updateList).mock.invocationCallOrder[0];
     const duplicateOrder = jest.mocked(duplicateList).mock.invocationCallOrder[0];
     expect(updateOrder).toBeLessThan(duplicateOrder);
@@ -449,7 +449,7 @@ describe('ListComposeView — copier le lien revérifie AU CLIC, jamais depuis l
 
     fireEvent.click(within(dialog).getByRole('button', { name: /^Copier$/ }));
 
-    await waitFor(() => expect(ensureListShareLink).toHaveBeenCalledWith('list-1'));
+    await waitFor(() => expect(ensureListShareLink).toHaveBeenCalledWith('list-1', expect.objectContaining({ signal: expect.any(AbortSignal) })));
     expect(writeText).not.toHaveBeenCalled();
     expect(shareList).not.toHaveBeenCalled();
     expect(within(dialog).queryByText(/^Copié$/)).not.toBeInTheDocument();
@@ -542,7 +542,7 @@ describe('ListComposeView — confirmation avant duplication d’un brouillon ab
     jest.spyOn(window, 'confirm').mockReturnValue(true);
     fireEvent.click(screen.getByRole('button', { name: /Dupliquer/ }));
 
-    await waitFor(() => expect(duplicateList).toHaveBeenCalledWith('list-1'));
+    await waitFor(() => expect(duplicateList).toHaveBeenCalledWith('list-1', expect.objectContaining({ signal: expect.any(AbortSignal) })));
     expect(updateList).not.toHaveBeenCalled();
     expect(setListItems).not.toHaveBeenCalled();
   });
@@ -597,7 +597,7 @@ describe('ListComposeView — shared list deletion confirmation', () => {
     expect(dialog).toHaveTextContent('Nom saisi');
     await user.click(within(dialog).getByRole('button', { name: 'Annuler' }));
     await waitFor(() => expect(updateList).toHaveBeenCalledTimes(1));
-    expect(updateList).toHaveBeenCalledWith('list-1', { name: 'Nom saisi' });
+    expect(updateList).toHaveBeenCalledWith('list-1', { name: 'Nom saisi' }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(screen.getByLabelText('Nom de la liste')).toHaveValue('Nom saisi');
     expect(setListItems).not.toHaveBeenCalled();
     expect(deleteList).not.toHaveBeenCalled();
@@ -629,8 +629,8 @@ describe('ListComposeView — shared list deletion confirmation', () => {
     expect(deleteList).not.toHaveBeenCalled();
     await act(async () => resolveSave(baseDetail({ name: 'Nom saisi' })));
     await waitFor(() => expect(deleteList).toHaveBeenCalledTimes(1));
-    expect(updateList).toHaveBeenNthCalledWith(2, 'list-1', { recipient_label: 'Pour Camille' });
-    expect(deleteList).toHaveBeenCalledWith('list-1');
+    expect(updateList).toHaveBeenNthCalledWith(2, 'list-1', { recipient_label: 'Pour Camille' }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    expect(deleteList).toHaveBeenCalledWith('list-1', expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(jest.mocked(updateList).mock.invocationCallOrder[1]).toBeLessThan(jest.mocked(deleteList).mock.invocationCallOrder[0]);
     expect(mockPush).not.toHaveBeenCalled();
     await act(async () => resolveDelete());
@@ -665,7 +665,7 @@ describe('ListComposeView — shared list deletion confirmation', () => {
     expect(mockPush).not.toHaveBeenCalled();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
     await waitFor(() => expect(deleteList).toHaveBeenCalledTimes(2));
-    expect(deleteList).toHaveBeenNthCalledWith(2, 'list-1');
+    expect(deleteList).toHaveBeenNthCalledWith(2, 'list-1', expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
   it('rechecks cached rights after a save wait and returns focus safely when deletion is disabled', async () => {
@@ -724,7 +724,7 @@ describe('ListComposeView — shared list deletion confirmation', () => {
     const { client, rerender } = setup();
     const dialog = await openDelete();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
-    await waitFor(() => expect(deleteList).toHaveBeenCalledWith('list-1'));
+    await waitFor(() => expect(deleteList).toHaveBeenCalledWith('list-1', expect.objectContaining({ signal: expect.any(AbortSignal) })));
     act(() => {
       if (change === 'user') useSessionStore.setState({ userId: 'user-B' });
       else rerender(<QueryClientProvider client={client}><ListComposeView listId="list-2" /></QueryClientProvider>);

@@ -174,11 +174,16 @@ export async function testGdprRecoveryBrowser({ local, commit, writerId, email, 
       await scene.page.goto(loginUrl);
       const forgot = scene.page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
       const back = scene.page.getByRole('button', { name: 'Retour à la connexion', exact: true });
+      const submit = scene.page.getByRole('button', { name: 'Se connecter', exact: true });
+      // Use the same two hydration barriers as the existing authenticated browser witnesses.
       await check(async () => {
-        if (await back.isVisible()) return;
-        await forgot.click({ timeout: 1000 }); await check(back).toBeVisible({ timeout: 1000 });
+        if (!(await back.isVisible())) await forgot.click({ timeout: 1000 });
+        await check(back).toBeVisible({ timeout: 1000 });
       }).toPass({ timeout: 20_000 });
-      await back.click();
+      await check(async () => {
+        if (!(await submit.isVisible())) await back.click({ timeout: 1000 });
+        await check(submit).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 20_000 });
       await scene.page.getByLabel('Adresse e-mail').fill(credentials.email);
       await scene.page.getByLabel('Mot de passe', { exact: true }).fill(credentials.password);
       const signedIn = scene.page.waitForResponse((response) => {
@@ -187,7 +192,7 @@ export async function testGdprRecoveryBrowser({ local, commit, writerId, email, 
           && url.searchParams.get('grant_type') === 'password' && response.request().method() === 'POST';
       });
       void signedIn.catch(() => {});
-      await scene.page.getByRole('button', { name: 'Se connecter', exact: true }).click();
+      await submit.click();
       const accepted = await signedIn;
       assert.ok(accepted.ok(), 'the real fixture GoTrue login must succeed');
       const session = await accepted.json();

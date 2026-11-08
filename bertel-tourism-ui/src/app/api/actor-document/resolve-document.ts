@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PRIVATE_BUCKET, type ServerClient } from '../_document-auth';
+import type { ServerClient } from '../_document-auth';
 import { routeFailure } from '../_route-failure';
 
 type ActorDocumentLink = { status?: string; promoted_to_object_id?: string; promoted_document_id?: string };
@@ -8,17 +8,14 @@ export type ResolvedActorDocument =
   | { ok: false; response: NextResponse }
   | { ok: true; link: ActorDocumentLink; document: ActorDocumentMetadata; bucket: string; path: string };
 
-/** Exact pair and successful metadata reads precede each signer/destructive effect. */
-export async function resolveActorDocument(server: ServerClient, actorId: string, documentId: string, deleting = false): Promise<ResolvedActorDocument> {
+/** Exact pair and successful metadata reads precede signing. */
+export async function resolveActorDocument(server: ServerClient, actorId: string, documentId: string): Promise<ResolvedActorDocument> {
   const linked = await server.from('actor_document')
     .select('status, promoted_to_object_id, promoted_document_id')
     .eq('actor_id', actorId).eq('document_id', documentId).maybeSingle();
   if (linked.error) return { ok: false, response: routeFailure('actor-document.resolve', 'link_lookup_failed') };
   if (!linked.data) return { ok: false, response: NextResponse.json({ error: 'not_found' }, { status: 404 }) };
   const link = linked.data as ActorDocumentLink;
-  if (deleting && link.status === 'promoted') {
-    return { ok: false, response: NextResponse.json({ error: 'promoted_document', detail: 'Un document transféré reste dans l’historique.' }, { status: 409 }) };
-  }
   const metadata = await server.from('ref_document').select('storage_bucket, storage_path, access_scope, extra')
     .eq('id', documentId).maybeSingle();
   if (metadata.error) return { ok: false, response: routeFailure('actor-document.resolve', 'document_lookup_failed') };
@@ -26,8 +23,6 @@ export async function resolveActorDocument(server: ServerClient, actorId: string
   const document = metadata.data as ActorDocumentMetadata;
   const bucket = typeof document.storage_bucket === 'string' ? document.storage_bucket : '';
   const path = typeof document.storage_path === 'string' ? document.storage_path : '';
-  // Even an empty path cannot authorize deletion of a foreign reference.
-  if (deleting && bucket !== PRIVATE_BUCKET) return { ok: false, response: NextResponse.json({ error: 'unexpected_bucket' }, { status: 409 }) };
   return { ok: true, link, document, bucket, path };
 }
 

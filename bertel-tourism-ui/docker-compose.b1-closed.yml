@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  bertel-tourism-ui:
+    image: "bertel-candidate:a6be99c970e5a0cc5a30e26b39a38a461766b9b6"
+    pull_policy: never
+    ports:
+      - "127.0.0.1:8081:3000"
+      - "[::1]:8081:3000"
+    environment:
+      # Canonical origin used by server-generated notification links.
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_ENABLE_DEMO_MODE: ${NEXT_PUBLIC_ENABLE_DEMO_MODE:-false}
+      NEXT_PUBLIC_MAP_STYLE_CLASSIC: ${NEXT_PUBLIC_MAP_STYLE_CLASSIC:-https://demotiles.maplibre.org/style.json}
+      NEXT_PUBLIC_MAP_STYLE_SATELLITE: ${NEXT_PUBLIC_MAP_STYLE_SATELLITE:-https://tiles.openfreemap.org/styles/liberty}
+      NEXT_PUBLIC_MAP_STYLE_TOPO: ${NEXT_PUBLIC_MAP_STYLE_TOPO:-https://tiles.openfreemap.org/styles/bright}
+      # Server-only secret (service-role / sb_secret_*): runtime env ONLY — never a
+      # build ARG, which would bake the secret into the image layers.
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # Optional dedicated HMAC key for thesaurus cursors, runtime only.
+      THESAURUS_CURSOR_SECRET: ${THESAURUS_CURSOR_SECRET:-}
+      # Manual list sends only; absent/unknown modes never open SMTP admission.
+      SOURCE_COMMIT: "a6be99c970e5a0cc5a30e26b39a38a461766b9b6"
+      LIST_EMAIL_MODE: "closed"
+    # No persistent volumes - Next.js app is stateless, data lives in Supabase
+
+volumes: {}

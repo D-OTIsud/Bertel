@@ -41,7 +41,11 @@ BEGIN
     'bucket', 'avatars', 'path', o.name, 'storage_object_id', o.id)
     FROM storage.objects o
    WHERE o.bucket_id COLLATE pg_catalog."C" = 'avatars'
-     AND o.archived_at IS NULL AND NOT o.is_delete_marker
+     -- Classic Storage has neither optional field; hosted Storage can have both.
+     -- Project the actual row so absent columns never become lazy SQL references.
+     AND (pg_catalog.to_jsonb(o)->>'archived_at') IS NULL
+     AND (NOT (pg_catalog.to_jsonb(o) ? 'is_delete_marker')
+       OR pg_catalog.to_jsonb(o)->'is_delete_marker' = 'false'::jsonb)
      AND (o.name COLLATE pg_catalog."C" = (p_user_id::text || '/avatar.jpg') COLLATE pg_catalog."C"
        OR (pg_catalog.starts_with(o.name, p_user_id::text || '/')
          AND o.name COLLATE pg_catalog."C" ~

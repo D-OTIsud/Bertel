@@ -801,7 +801,7 @@ COMMIT;
 \ir tests/test_gdpr_historical_task_audit_review.sql
 
 \echo '== Global manual-list SMTP rolling quotas, no notification gate =='
-\ir ../supabase/migrations/20261108163254_manual_list_email_quotas.sql
+\ir ../supabase/migrations/20261108173157_manual_list_email_quotas.sql
 \ir tests/test_manual_list_email_quotas.sql
 
 \echo '== MV refresh (non-concurrent) =='

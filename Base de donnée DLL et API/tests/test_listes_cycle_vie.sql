@@ -799,6 +799,123 @@ BEGIN
 END$$;
 
 -- =====================================================================
+-- S13b. Lien public APRÈS 19d : un token désactivé ou expiré est refusé à
+-- anon, le MÊME token redevient lisible une fois réactivé (témoin positif
+-- précis à chaque retour, pour exclure une panne générale). Frontière exacte :
+-- now() est figé pour la transaction et le contrat est strict (> now()), donc
+-- share_expires_at = now() vaut expiré, sans sleep ni horloge simulée.
+-- Portée : rôles + claims synthétiques, pas de vrai JWT. Liste fraîche
+-- (last_activity_at = now()) laissée au ROLLBACK : hors périmètre de S14.
+-- =====================================================================
+DO $$
+DECLARE
+  v_owner uuid := '10000000-0000-4000-a000-000000000001';
+  v_name text := 'Liste témoin révocation lien S13b';
+  v_list uuid; v_tok text; v_exp timestamptz; j jsonb;
+BEGIN
+  -- (a) Premier partage avec TTL futur : témoin positif.
+  v_exp := now() + interval '10 days';
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_list := api.create_list('static', v_name, ARRAY['HOTLST0000000001'], NULL, NULL);
+    j := api.share_list(v_list, true, v_exp)::jsonb;
+    v_tok := j->>'share_token';
+    ASSERT v_tok IS NOT NULL AND length(v_tok) = 64,
+      format('S13b FAIL: token de 64 caractères attendu, longueur reçue %s', length(v_tok));
+    ASSERT (j->>'share_enabled')::boolean AND (j->>'share_expires_at')::timestamptz = v_exp,
+      format('S13b FAIL: retour du partage initial incohérent, share_enabled=%s share_expires_at=%s', j->>'share_enabled', j->>'share_expires_at');
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+  SET LOCAL ROLE anon;
+    j := api.get_public_list_by_token(v_tok)::jsonb;
+    ASSERT j IS NOT NULL AND (j->>'name') = v_name AND jsonb_array_length(j->'items') = 1
+       AND (j->'items'->0->>'object_id') = 'HOTLST0000000001',
+      format('S13b FAIL: témoin positif initial, payload reçu %s', j);
+  RESET ROLE;
+
+  -- (b) Désactivation : l'expiration stockée reste future, seul share_enabled
+  -- peut donc expliquer le refus.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    j := api.share_list(v_list, false, NULL)::jsonb;
+    ASSERT (j->>'share_token') = v_tok AND NOT (j->>'share_enabled')::boolean AND (j->>'share_url_path') IS NULL,
+      format('S13b FAIL: retour de désactivation incohérent, share_enabled=%s share_url_path=%s', j->>'share_enabled', j->>'share_url_path');
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+  SET LOCAL ROLE anon;
+    ASSERT api.get_public_list_by_token(v_tok) IS NULL,
+      'S13b FAIL: un lien désactivé reste lisible par anon avec son ancien token';
+  RESET ROLE;
+
+  -- (c) Réactivation du MÊME token avec un TTL futur : témoin positif.
+  v_exp := now() + interval '20 days';
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    j := api.share_list(v_list, true, v_exp)::jsonb;
+    ASSERT (j->>'share_token') = v_tok AND (j->>'share_enabled')::boolean AND (j->>'share_expires_at')::timestamptz = v_exp,
+      format('S13b FAIL: la réactivation doit conserver le token et poser le TTL, share_enabled=%s share_expires_at=%s', j->>'share_enabled', j->>'share_expires_at');
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+  SET LOCAL ROLE anon;
+    j := api.get_public_list_by_token(v_tok)::jsonb;
+    ASSERT j IS NOT NULL AND (j->>'name') = v_name AND jsonb_array_length(j->'items') = 1
+       AND (j->'items'->0->>'object_id') = 'HOTLST0000000001',
+      format('S13b FAIL: témoin positif après réactivation, payload reçu %s', j);
+  RESET ROLE;
+
+  -- (d) Frontière exacte : share_enabled reste TRUE, seule l'expiration refuse.
+  v_exp := now();
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    j := api.share_list(v_list, true, v_exp)::jsonb;
+    ASSERT (j->>'share_token') = v_tok AND (j->>'share_enabled')::boolean AND (j->>'share_expires_at')::timestamptz = v_exp,
+      format('S13b FAIL: retour incohérent à la frontière now(), share_enabled=%s share_expires_at=%s', j->>'share_enabled', j->>'share_expires_at');
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+  SET LOCAL ROLE anon;
+    ASSERT api.get_public_list_by_token(v_tok) IS NULL,
+      'S13b FAIL: share_expires_at = now() doit valoir expiré (contrat strict > now())';
+  RESET ROLE;
+
+  -- (e) Expiration passée d'une seconde.
+  v_exp := now() - interval '1 second';
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    j := api.share_list(v_list, true, v_exp)::jsonb;
+    ASSERT (j->>'share_token') = v_tok AND (j->>'share_enabled')::boolean AND (j->>'share_expires_at')::timestamptz = v_exp,
+      format('S13b FAIL: retour incohérent pour un TTL passé, share_enabled=%s share_expires_at=%s', j->>'share_enabled', j->>'share_expires_at');
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+  SET LOCAL ROLE anon;
+    ASSERT api.get_public_list_by_token(v_tok) IS NULL,
+      'S13b FAIL: un lien expiré depuis 1 seconde reste lisible par anon';
+  RESET ROLE;
+
+  -- (f) TTL futur restauré sur le MÊME token : témoin positif final.
+  v_exp := now() + interval '30 days';
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_owner, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    j := api.share_list(v_list, true, v_exp)::jsonb;
+    ASSERT (j->>'share_token') = v_tok AND (j->>'share_enabled')::boolean AND (j->>'share_expires_at')::timestamptz = v_exp,
+      format('S13b FAIL: la restauration du TTL doit conserver le token, share_enabled=%s share_expires_at=%s', j->>'share_enabled', j->>'share_expires_at');
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+  SET LOCAL ROLE anon;
+    j := api.get_public_list_by_token(v_tok)::jsonb;
+    ASSERT j IS NOT NULL AND (j->>'name') = v_name AND jsonb_array_length(j->'items') = 1
+       AND (j->'items'->0->>'object_id') = 'HOTLST0000000001',
+      format('S13b FAIL: témoin positif final, payload reçu %s', j);
+  RESET ROLE;
+  RAISE NOTICE 'S13b OK: token désactivé/expiré refusé à anon (frontière now() incluse), même token réactivable';
+END$$;
+
+-- =====================================================================
 -- S14. Rétention 21 jours / purge 1 an — FRONTIÈRES EXACTES (<=)
 -- =====================================================================
 DO $$

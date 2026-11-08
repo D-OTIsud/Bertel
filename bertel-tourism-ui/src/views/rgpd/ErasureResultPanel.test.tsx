@@ -162,6 +162,54 @@ describe('ErasureResultPanel', () => {
     expect(screen.getByText(/statut non confirmé/i)).toBeInTheDocument();
   });
 
+  it('sans résultat, affiche Statut non confirmé, la référence et la reprise, sans succès ni sujet', async () => {
+    const user = userEvent.setup();
+    const onResume = jest.fn();
+    render(<ErasureResultPanel reference="request-ref" onResume={onResume} />);
+
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('Statut non confirmé')).toBeInTheDocument();
+    expect(screen.getByText('Référence de reprise')).toBeInTheDocument();
+    expect(screen.queryByText('requestId')).not.toBeInTheDocument();
+    expect(screen.getByText('request-ref')).toBeInTheDocument();
+    expect(screen.queryByText('Sujet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mode')).not.toBeInTheDocument();
+    expect(screen.queryByText('operationId')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reprendre le nettoyage de cette opération' }));
+    expect(onResume).toHaveBeenCalledTimes(1);
+  });
+
+  it('un completed récupéré sans mode réutilise le titre de reprise, sans sujet inventé', () => {
+    render(<ErasureResultPanel result={completed} />);
+    expect(screen.getByText('Nettoyage repris et terminé.')).toBeInTheDocument();
+    expect(screen.queryByText('Sujet anonymisé')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sujet supprimé')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mode')).not.toBeInTheDocument();
+    expect(screen.queryByText('Identifiant')).not.toBeInTheDocument();
+  });
+
+  it('un partial récupéré sans mode garde le titre partiel et la reprise', () => {
+    render(<ErasureResultPanel result={{ ...completed, ok: false, status: 'partial' }} onResume={jest.fn()} />);
+    expect(screen.getByText(/nettoyage incomplet/i)).toBeInTheDocument();
+    expect(screen.queryByText('Nettoyage repris et terminé.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /reprendre/i })).toBeInTheDocument();
+  });
+
+  it('un completed marqué non rechargé ne rend aucun titre de succès et propose la reprise', () => {
+    render(
+      <ErasureResultPanel
+        result={{ ...completed, cleanupStatusUnavailable: true }}
+        mode="delete"
+        subjectLabel="A"
+        subjectId="id"
+        onResume={jest.fn()}
+      />,
+    );
+    expect(screen.queryByText('Sujet supprimé')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Statut non confirmé').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /reprendre/i })).toBeInTheDocument();
+  });
+
   it('conserve le JSON brut dans un details', () => {
     render(<ErasureResultPanel result={completed} mode="anonymize" subjectLabel="A" subjectId="id" />);
     expect(screen.getByText(/Détail technique/i)).toBeInTheDocument();

@@ -68,6 +68,30 @@ describe('theme helpers', () => {
     expect(rootStyle.getPropertyValue('--surface')).toBe('#FFFFFF');
   });
 
+  it('keeps secondary text AA on the inherited platform background and surface', () => {
+    const inheritedTheme = {
+      ...defaultThemeSettings,
+      primaryColor: '#0F6885',
+      accentColor: '#B34B3D',
+      textColor: '#333C4D',
+      backgroundColor: '#FFFEFB',
+      surfaceColor: '#FFFAF4',
+    };
+    applyThemeToDocument(inheritedTheme);
+
+    const rootStyle = document.documentElement.style;
+    const secondary = rootStyle.getPropertyValue('--text-muted');
+    expect(secondary).toBe('#686E7A');
+    expect(rootStyle.getPropertyValue('--muted-foreground')).toBe(secondary);
+    expect(contrastRatio(secondary, inheritedTheme.backgroundColor)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(secondary, inheritedTheme.surfaceColor)).toBeGreaterThanOrEqual(4.5);
+    expect(rootStyle.getPropertyValue('--theme-primary')).toBe(inheritedTheme.primaryColor);
+    expect(rootStyle.getPropertyValue('--theme-accent')).toBe(inheritedTheme.accentColor);
+    expect(rootStyle.getPropertyValue('--theme-text')).toBe(inheritedTheme.textColor);
+    expect(rootStyle.getPropertyValue('--theme-bg')).toBe(inheritedTheme.backgroundColor);
+    expect(rootStyle.getPropertyValue('--theme-surface')).toBe(inheritedTheme.surfaceColor);
+  });
+
   it('picks primary-foreground by real WCAG contrast, not luminance guesswork', () => {
     // #F28B54 (audit example): black ratio ~8.60, cream ratio ~2.40 → black wins.
     applyThemeToDocument({ ...defaultThemeSettings, primaryColor: '#F28B54' });

@@ -71,7 +71,7 @@ on:
         required: false
         default: false
       gdpr_cleanup:
-        description: 'Run the synthetic GDPR HTTP cleanup and lost-ACK witness on the disposable fresh stack (select alone)'
+        description: 'Run synthetic GDPR browser recovery on the disposable fresh stack (select alone; provider HTTP proof stays separate)'
         type: boolean
         required: false
         default: false
@@ -745,20 +745,26 @@ jobs:
           npm ci --legacy-peer-deps
           node scripts/run-playwright.mjs install --with-deps chromium
 
-      - name: Install the locked Next runtime for the GDPR HTTP witness
+      - name: Install the locked Next runtime and Chromium for the GDPR recovery witness
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.gdpr_cleanup == true && steps.list_email_owned_stack.outcome == 'success' }}
         working-directory: bertel-tourism-ui
-        timeout-minutes: 5
-        run: npm ci --legacy-peer-deps --no-audit --no-fund
+        timeout-minutes: 7
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
+        run: |
+          npm ci --legacy-peer-deps --no-audit --no-fund
+          node scripts/run-playwright.mjs install --with-deps chromium
 
-      - name: GDPR cleanup through GoTrue, Next, PostgREST and Storage (disposable only)
+      - name: GDPR client recovery through Chromium, GoTrue and Next (disposable only)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.gdpr_cleanup == true && steps.list_email_owned_stack.outcome == 'success' }}
-        timeout-minutes: 5
+        timeout-minutes: 6
         env:
           CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
           CURRENT_RIGHTS_DISPOSABLE: 'true'
           CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
           CURRENT_RIGHTS_GDPR_CLEANUP: 'true'
+          CURRENT_RIGHTS_GDPR_RECOVERY_BROWSER: 'true'
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bertel-editor-chromium
         run: node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: Public discovery in Chromium with GoTrue and external-effect guards (disposable only)

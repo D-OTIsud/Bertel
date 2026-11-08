@@ -5,6 +5,8 @@
 // nettoyage n'est pas acquittée ou qu'un document personnel reste retenu ailleurs), stats
 // chiffrées, alertes en chips Callout, bouton de reprise explicite, JSON brut replié.
 // `role="status"` + aria-live pour annoncer l'achèvement aux lecteurs d'écran.
+// Sans résultat (référence locale d'une issue inconnue) : « Statut non confirmé » et reprise
+// seulement. Sujet et mode ne sont rendus que s'ils sont connus, jamais déduits du formulaire.
 
 import { AlertTriangle, CheckCircle2, RotateCcw, ShieldAlert } from 'lucide-react';
 import { Callout } from '@/components/ui/Callout';
@@ -15,24 +17,60 @@ export function ErasureResultPanel({
   mode,
   subjectLabel,
   subjectId,
+  reference,
   onResume,
   resuming,
 }: {
-  result: ErasureResult;
-  mode: ErasureMode;
-  subjectLabel: string;
-  subjectId: string;
+  result?: ErasureResult | null;
+  mode?: ErasureMode;
+  subjectLabel?: string;
+  subjectId?: string;
+  /** requestId d'un START non résolu ; ce n'est jamais l'operationId. */
+  reference?: string;
   onResume?: () => void;
   resuming?: boolean;
 }) {
-  const isComplete = result.status === 'completed';
+  const referenceRow = reference ? (
+    <div className="flex justify-between gap-3">
+      <dt className="text-ink-2">Référence de reprise</dt>
+      <dd className="break-all text-right font-mono text-xs text-ink">{reference}</dd>
+    </div>
+  ) : null;
+  const resumeButton = onResume ? (
+    <button
+      type="button"
+      onClick={onResume}
+      disabled={resuming}
+      className="inline-flex min-h-[44px] items-center gap-2 rounded-shellLg border border-line bg-surface px-4 text-sm font-medium text-ink hover:bg-bgTint disabled:opacity-50"
+    >
+      <RotateCcw size={16} aria-hidden />
+      {resuming ? 'Reprise en cours…' : "Reprendre le nettoyage de cette opération"}
+    </button>
+  ) : null;
+
+  if (!result) {
+    return (
+      <div role="status" aria-live="polite" className="space-y-3 rounded-shellXl border border-line bg-surface p-4">
+        <div className="flex items-start gap-2">
+          <AlertTriangle size={20} className="mt-0.5 shrink-0 text-warn" aria-hidden />
+          <p className="text-sm font-semibold text-ink">Statut non confirmé</p>
+        </div>
+        {referenceRow && <dl className="space-y-1 text-sm">{referenceRow}</dl>}
+        {resumeButton}
+      </div>
+    );
+  }
+
+  const isComplete = result.status === 'completed' && !result.cleanupStatusUnavailable;
+  const completeTitle =
+    mode === 'delete' ? 'Sujet supprimé' : mode === 'anonymize' ? 'Sujet anonymisé' : 'Nettoyage repris et terminé.';
   const title = isComplete
-    ? mode === 'delete'
-      ? 'Sujet supprimé'
-      : 'Sujet anonymisé'
-    : result.status === 'partial'
-      ? 'Effacement partiel — nettoyage incomplet'
-      : "Échec du nettoyage — l'effacement en base a eu lieu, le nettoyage non";
+    ? completeTitle
+    : result.status === 'completed'
+      ? 'Statut non confirmé'
+      : result.status === 'partial'
+        ? 'Effacement partiel — nettoyage incomplet'
+        : "Échec du nettoyage — l'effacement en base a eu lieu, le nettoyage non";
   const manualReview = result.report.manualReviewRequired === true;
   const authRetained = result.report.authRetained === true;
   // Le statut auth ne se lit PLUS sur un champ posé à l'instant de l'appel (`authRetained` false
@@ -83,22 +121,29 @@ export function ErasureResultPanel({
       </dl>
 
       <dl className="space-y-1 text-sm">
-        <div className="flex justify-between gap-3">
-          <dt className="text-ink-2">Sujet</dt>
-          <dd className="text-right text-ink">{subjectLabel}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-ink-2">Identifiant</dt>
-          <dd className="break-all text-right font-mono text-xs text-ink">{subjectId}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-ink-2">Mode</dt>
-          <dd className="text-right text-ink">{mode === 'delete' ? 'Suppression dure' : 'Anonymisation'}</dd>
-        </div>
+        {subjectLabel !== undefined && (
+          <div className="flex justify-between gap-3">
+            <dt className="text-ink-2">Sujet</dt>
+            <dd className="text-right text-ink">{subjectLabel}</dd>
+          </div>
+        )}
+        {subjectId !== undefined && (
+          <div className="flex justify-between gap-3">
+            <dt className="text-ink-2">Identifiant</dt>
+            <dd className="break-all text-right font-mono text-xs text-ink">{subjectId}</dd>
+          </div>
+        )}
+        {mode !== undefined && (
+          <div className="flex justify-between gap-3">
+            <dt className="text-ink-2">Mode</dt>
+            <dd className="text-right text-ink">{mode === 'delete' ? 'Suppression dure' : 'Anonymisation'}</dd>
+          </div>
+        )}
         <div className="flex justify-between gap-3">
           <dt className="text-ink-2">operationId</dt>
           <dd className="break-all text-right font-mono text-xs text-ink">{result.operationId}</dd>
         </div>
+        {referenceRow}
         {authStatusLabel && (
           <div className="flex justify-between gap-3">
             <dt className="text-ink-2">Compte auth</dt>
@@ -130,17 +175,7 @@ export function ErasureResultPanel({
           ci-dessus.
         </Callout>
       )}
-      {!isComplete && onResume && (
-        <button
-          type="button"
-          onClick={onResume}
-          disabled={resuming}
-          className="inline-flex min-h-[44px] items-center gap-2 rounded-shellLg border border-line bg-surface px-4 text-sm font-medium text-ink hover:bg-bgTint disabled:opacity-50"
-        >
-          <RotateCcw size={16} aria-hidden />
-          {resuming ? 'Reprise en cours…' : "Reprendre le nettoyage de cette opération"}
-        </button>
-      )}
+      {(!isComplete || reference) && resumeButton}
 
       <details className="text-sm">
         <summary className="cursor-pointer text-ink-3">Détail technique (rapport JSON)</summary>

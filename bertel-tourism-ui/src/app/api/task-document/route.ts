@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
-import { engineErrorDetail } from '@/lib/db-error-message';
 import { routeFailure } from '../_route-failure';
+import { unlinkDocumentResponse } from '../_document-unlink';
 import {
   readBoundedFormData,
   assertFormDataShape,
@@ -17,10 +17,11 @@ import {
   UUID_SHAPE,
   MAX_UPLOAD_BODY_BYTES,
   authenticated,
+  callerClient,
   rejectOversizedBody,
   type AuthenticatedRequest,
 } from '../_document-auth';
-import { authorizeTask, resolveLinkedDocument } from './authorize';
+import { authorizeTask } from './authorize';
 
 // Pièces jointes de TÂCHE CRM (17i) — clone du modèle actor-document : Bearer → getUser,
 // autorisation par RPC DEFINER « en tant qu'appelant » (jamais la service key), fichier
@@ -35,14 +36,6 @@ export const runtime = 'nodejs';
 
 async function processFile(file: File) {
   return processActorDocumentBuffer(Buffer.from(await file.arrayBuffer()), file.type);
-}
-
-// Le storage renvoie parfois une erreur pour un objet DÉJÀ absent (suppression concurrente,
-// retry après un premier succès partiel) : un cas normal du point de vue de DELETE, qu'on
-// tolère pour poursuivre. Toute AUTRE erreur (droits, réseau, quota) est un échec RÉEL du
-// retrait qu'on ne doit pas avaler — voir le commentaire dans DELETE ci-dessous.
-function isMissingObjectError(error: { message: string }): boolean {
-  return /not found/i.test(error.message);
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -168,40 +161,8 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   if (!UUID_SHAPE.test(taskId) || !UUID_SHAPE.test(documentId)) {
     return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
   }
-  if (!await authorizeTask(auth.jwt, taskId)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-
-  // Le résolveur porte les trois invariants (paire task/document, erreur de lecture ≠
-  // absence, bucket épinglé). En particulier : si une lecture échoue il rend un 500 et
-  // on sort AVANT toute suppression — supprimer la métadonnée sur une lecture ratée
-  // laisserait le fichier dans le bucket sans plus aucune ligne pour le référencer.
-  const resolved = await resolveLinkedDocument(auth.server, taskId, documentId);
-  if (!resolved.ok) return resolved.response;
-
-  // Deux situations distinctes derrière ce test, à ne pas confondre :
-  //  - pas de fichier ⇒ la ligne ne désigne AUCUN fichier (purge manuelle, incident) : il
-  //    n'y a rien à retirer, la suppression de la ligne suit normalement ;
-  //  - fichier présent ⇒ on le retire D'ABORD. Une erreur « objet déjà absent » est
-  //    tolérée (cas normal : suppression concurrente, retry après succès partiel) et on
-  //    poursuit ; toute AUTRE erreur (droits, réseau, quota) est un échec RÉEL qu'on ne
-  //    doit pas avaler — l'avaler ferait supprimer la ligne quand même : même état final
-  //    que le constat qu'on vient de fermer sur les erreurs de LECTURE (ligne supprimée,
-  //    fichier orphelin dans le bucket, 200 {deleted:true} rendu à l'appelant). On sort
-  //    donc AVANT de toucher la ligne.
-  // L'ordre (fichier puis ligne) reste délibéré : l'ordre inverse laisserait un fichier
-  // orphelin si le retrait échouait après la suppression de la ligne.
-  if (resolved.file) {
-    const { error: removeError } = await auth.server.storage.from(PRIVATE_BUCKET).remove([resolved.file.path]);
-    if (removeError && !isMissingObjectError(removeError)) {
-      return routeFailure('task-document.DELETE', 'storage_remove_failed');
-    }
-  }
-  const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
-  if (error) {
-    return routeFailure('task-document.DELETE', 'delete_failed', {
-      detail: engineErrorDetail(error, { operation: 'delete', logUnknown: false }),
-    });
-  }
-  // crm_task_document.document_id référence ref_document en CASCADE FK : la ligne de lien
-  // tombe automatiquement, jamais supprimée à la main (source unique de vérité = la FK).
-  return NextResponse.json({ deleted: true });
+  const { data, error } = await callerClient(auth.jwt).schema('api').rpc(
+    'unlink_crm_task_document', { p_task_id: taskId, p_document_id: documentId },
+  );
+  return unlinkDocumentResponse('task-document.DELETE', data, error);
 }

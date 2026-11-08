@@ -95,7 +95,7 @@ test('native rendering adds only image, pull policy and reviewed prebuilt resour
   delete expected.services[serviceName].build;
   expected.services[serviceName].image = `bertel-candidate:${sourceSha}`;
   expected.services[serviceName].pull_policy = 'never';
-  Object.assign(expected.services[serviceName], { cpus: 2, mem_limit: 2 * 1024 ** 3, pids_limit: 512 });
+  Object.assign(expected.services[serviceName], { cpus: 2, mem_limit: String(2 * 1024 ** 3), pids_limit: 512 });
   assert.deepEqual(candidate, expected);
 });
 

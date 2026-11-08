@@ -393,9 +393,25 @@ l'identité Découverte et la migration de purge `20261107233351` dans le manife
 Elle crée les deux RPC `api.unlink_crm_actor_document(uuid, uuid)` et
 `api.unlink_crm_task_document(uuid, uuid)`. Seul le rôle `authenticated` reçoit
 `EXECUTE`. Chaque appel contrôle les droits actuels sur l'acteur ou la tâche
-et verrouille la ligne de catalogue avant de retirer le lien exact. Le catalogue
+et verrouille le parent, la ligne de catalogue puis le lien exact. Le catalogue
 et le fichier restent disponibles aux autres références. Les photos du portail
 conservent leur lien acteur, géré par leur propre parcours.
+
+Chaque lien effectivement retiré écrit atomiquement une ligne dans
+`internal.crm_document_detachment`. Elle conserve le type et l'UUID du parent,
+le document, l'acteur associé à la tâche au moment du retrait s'il existe,
+l'appelant et la date. Les colonnes de stockage sont recopiées seulement pour
+une paire connue et excluent les URL. Le reçu ne contient ni contenu du document
+ni lien signé. Une paire déjà absente ne crée aucune ligne. Un échec d'écriture
+du reçu annule le retrait. Une nouvelle association suivie d'un nouveau retrait
+produit son propre reçu.
+
+La table privée appartient à `postgres`, sous RLS sans policy ni octroi direct
+aux rôles API. Elle n'a aucune FK vers les entités ou les comptes pour préserver
+la provenance après leur suppression. Ces lignes décrivent un ancien lien et
+ne constituent aucun droit d'effacement. Le futur inventaire RGPD doit intégrer
+ces reçus avant son activation. Le démarrage hébergé reste fermé pendant cette
+préparation, avec la fermeture des anciennes routes traitée séparément.
 
 La migration épingle le prédécesseur de `api.user_can_write_crm_task(uuid)`
 avant de qualifier sa table CRM et son chemin de recherche. Le prédicat,
@@ -405,7 +421,8 @@ Préparer l'application qui appelle ces RPC avant la bascule. Installer la
 migration et confirmer les signatures, les droits effectifs et le rechargement
 de PostgREST avant de basculer les routes. L'ancienne application n'appelle pas
 ces RPC. Le témoin `tests/test_crm_document_unlink.sql` couvre les liens partagés,
-les droits et les statuts dans une transaction annulée. La remise en service
+les droits, les statuts, les relances sans nouveau reçu et le rollback du retrait
+si le reçu échoue, dans une transaction annulée. La remise en service
 d'une suppression physique exige un protocole distinct de protection des clés
 et des références.
 

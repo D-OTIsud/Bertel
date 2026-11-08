@@ -2,6 +2,33 @@
 -- appartenir à un autre usage, y compris à un rattachement concurrent.
 BEGIN;
 
+-- Trace privée de l'edge retiré. Aucune FK ne doit effacer cette provenance
+-- lors du retrait ultérieur d'un parent, du document ou du compte appelant.
+CREATE TABLE internal.crm_document_detachment (
+  id uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
+  parent_kind text NOT NULL CHECK (parent_kind IN ('actor', 'task')),
+  parent_id uuid NOT NULL,
+  document_id uuid NOT NULL,
+  subject_actor_id uuid,
+  storage_bucket text,
+  storage_path text,
+  detached_by uuid NOT NULL,
+  detached_at timestamptz NOT NULL DEFAULT pg_catalog.clock_timestamp(),
+  CONSTRAINT crm_document_detachment_locator_pair CHECK (
+    (storage_bucket IS NULL AND storage_path IS NULL)
+    OR (storage_bucket IS NOT NULL AND storage_bucket = 'actor-documents'
+      AND storage_path IS NOT NULL AND storage_path <> ''
+      AND storage_path !~ '(^/|^[A-Za-z][A-Za-z0-9+.-]*:|[?#[:cntrl:]])')
+  )
+);
+ALTER TABLE internal.crm_document_detachment OWNER TO postgres;
+ALTER TABLE internal.crm_document_detachment ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE internal.crm_document_detachment FROM PUBLIC, anon, authenticated, service_role;
+CREATE INDEX crm_document_detachment_subject_idx
+  ON internal.crm_document_detachment (subject_actor_id) WHERE subject_actor_id IS NOT NULL;
+COMMENT ON TABLE internal.crm_document_detachment IS
+  'Provenance privée des liens CRM retirés. Ne confère aucun droit de supprimer une référence ou un fichier. À consulter par le futur inventaire RGPD avant son activation.';
+
 -- Même prédicat CRM, mais la nouvelle mutation ne doit pas autoriser une
 -- tâche à partir d'une relation temporaire portant le même nom.
 DO $guard$
@@ -56,13 +83,16 @@ BEGIN
       SELECT 1 FROM auth.users u
       WHERE u.id = v_user_id
         AND NOT COALESCE(u.raw_app_meta_data @> '{"sandbox_discovery":true}'::jsonb, false)
-    )
-    OR api.user_can_write_crm_actor(p_actor_id) IS DISTINCT FROM true THEN
+    ) THEN
+    RETURN 'forbidden';
+  END IF;
+  PERFORM 1 FROM public.actor WHERE id = p_actor_id FOR SHARE;
+  IF NOT FOUND OR api.user_can_write_crm_actor(p_actor_id) IS DISTINCT FROM true THEN
     RETURN 'forbidden';
   END IF;
 
   -- Ne verrouiller que le document déjà lié à la cible autorisée. Le verrou
-  -- du catalogue précède celui du lien, comme lors d'une purge du catalogue.
+  -- du parent puis du catalogue précède celui du lien.
   IF NOT EXISTS (
     SELECT 1 FROM public.actor_document
     WHERE actor_id = p_actor_id AND document_id = p_document_id
@@ -85,8 +115,20 @@ BEGIN
     RETURN 'portal_photo';
   END IF;
 
-  DELETE FROM public.actor_document
-  WHERE actor_id = p_actor_id AND document_id = p_document_id;
+  -- Ne recopier aucun URL, même si un ancien storage_path est mal formé.
+  IF COALESCE(v_path, '') = '' OR v_path ~ '(^/|^[A-Za-z][A-Za-z0-9+.-]*:|[?#[:cntrl:]])' THEN
+    v_bucket := NULL;
+    v_path := NULL;
+  END IF;
+  WITH removed AS (
+    DELETE FROM public.actor_document
+    WHERE actor_id = p_actor_id AND document_id = p_document_id
+    RETURNING actor_id, document_id
+  )
+  INSERT INTO internal.crm_document_detachment (
+    parent_kind, parent_id, document_id, subject_actor_id, storage_bucket, storage_path, detached_by
+  )
+  SELECT 'actor', actor_id, document_id, actor_id, v_bucket, v_path, v_user_id FROM removed;
   RETURN CASE WHEN FOUND THEN 'deleted' ELSE 'not_found' END;
 END;
 $function$;
@@ -100,6 +142,7 @@ DECLARE
   v_user_id uuid := auth.uid();
   v_bucket text;
   v_path text;
+  v_actor_id uuid;
 BEGIN
   IF v_user_id IS NULL OR auth.role() IS DISTINCT FROM 'authenticated' THEN
     RETURN 'forbidden';
@@ -110,8 +153,12 @@ BEGIN
       SELECT 1 FROM auth.users u
       WHERE u.id = v_user_id
         AND NOT COALESCE(u.raw_app_meta_data @> '{"sandbox_discovery":true}'::jsonb, false)
-    )
-    OR api.user_can_write_crm_task(p_task_id) IS DISTINCT FROM true THEN
+    ) THEN
+    RETURN 'forbidden';
+  END IF;
+  SELECT t.actor_id INTO v_actor_id
+  FROM public.crm_task t WHERE t.id = p_task_id FOR SHARE;
+  IF NOT FOUND OR api.user_can_write_crm_task(p_task_id) IS DISTINCT FROM true THEN
     RETURN 'forbidden';
   END IF;
 
@@ -123,14 +170,29 @@ BEGIN
   END IF;
   SELECT d.storage_bucket, d.storage_path INTO v_bucket, v_path
   FROM public.ref_document d WHERE d.id = p_document_id FOR SHARE;
+  PERFORM 1 FROM public.crm_task_document
+  WHERE task_id = p_task_id AND document_id = p_document_id FOR UPDATE;
+  IF NOT FOUND THEN RETURN 'not_found'; END IF;
 
   -- La route autorisait le retrait d'un lien dont le chemin est vide, même
   -- lorsque le bucket est absent ou différent.
   IF COALESCE(v_path, '') <> '' AND v_bucket IS DISTINCT FROM 'actor-documents' THEN
     RETURN 'unexpected_bucket';
   END IF;
-  DELETE FROM public.crm_task_document
-  WHERE task_id = p_task_id AND document_id = p_document_id;
+  IF v_bucket IS DISTINCT FROM 'actor-documents' OR COALESCE(v_path, '') = ''
+    OR v_path ~ '(^/|^[A-Za-z][A-Za-z0-9+.-]*:|[?#[:cntrl:]])' THEN
+    v_bucket := NULL;
+    v_path := NULL;
+  END IF;
+  WITH removed AS (
+    DELETE FROM public.crm_task_document
+    WHERE task_id = p_task_id AND document_id = p_document_id
+    RETURNING task_id, document_id
+  )
+  INSERT INTO internal.crm_document_detachment (
+    parent_kind, parent_id, document_id, subject_actor_id, storage_bucket, storage_path, detached_by
+  )
+  SELECT 'task', task_id, document_id, v_actor_id, v_bucket, v_path, v_user_id FROM removed;
   RETURN CASE WHEN FOUND THEN 'deleted' ELSE 'not_found' END;
 END;
 $function$;

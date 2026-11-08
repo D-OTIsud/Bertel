@@ -221,7 +221,9 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           && url.searchParams.get('id') === 'eq.' + legalRecordId && request.postDataJSON()?.object_id === objectId) {
           kind = 'legal-write';
         } else if (request.method() === 'POST' && url.pathname.startsWith('/rest/v1/rpc/')) {
-          const rpcKind = editorRpcKinds.get(url.pathname) ?? (scene.legalMode ? legalRpcKinds.get(url.pathname) : undefined);
+          const rpcKind = editorRpcKinds.get(url.pathname) ?? (scene.legalMode ? legalRpcKinds.get(url.pathname) : undefined)
+            ?? (reload?.markdown && reload.committed && url.pathname === '/rest/v1/rpc/get_object_workspace_permissions'
+              ? 'markdown-permission' : undefined);
           if (rpcKind && request.postDataJSON()?.p_object_id === objectId) kind = rpcKind;
           if (kind === 'publish') publishCalls += 1;
           if (kind === 'restore') restoreCalls += 1;
@@ -230,6 +232,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       let gate = kind === 'reread' ? undefined : holds.get(kind);
       if (gate) holds.delete(kind);
       let failureStage = 'response';
+      let markdownAuthorization;
       try {
         if (kind) {
           failureStage = 'jwt';
@@ -243,6 +246,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
             if (realmPhase === realm.before) realm.authorization ??= headers.authorization;
             assert.ok(headers.authorization === realm.authorization, 'realm transition must reuse the exact original JWT');
           }
+          if (kind === 'markdown-permission') markdownAuthorization = headers.authorization;
           failureStage = 'content-profile';
           if (kind === 'legal-write') assert.equal(headers['content-profile'], 'public');
           else if (kind !== 'patch' && kind !== 'reload-auth' && kind !== 'draft-logout') {
@@ -289,6 +293,11 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
           assert.equal((await response.json())?.legal, true);
           scene.legalPermissions += 1;
           if (reload) reload.legalPermission = true;
+        } else if (kind === 'markdown-permission') {
+          assert.ok(response.ok(), 'the real workspace permission RPC must return HTTP 2xx');
+          const canonical = (await response.json())?.canonical;
+          assert.equal(typeof canonical, 'boolean');
+          reload.markdownPermission ??= { canonical, authorization: markdownAuthorization };
         } else if (kind === 'reload-auth') {
           assert.ok(response.ok());
           failureStage = 'reload-authenticated-user';
@@ -382,6 +391,101 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
       };
     }
 
+    async function testMarkdownRevocation({ page, scene, close }) {
+      assert.equal(canonical()[1], 'published', 'the synthetic record must stay readable after the role change');
+      assert.equal(writerId, '00000000-0000-4000-a000-00000000ae11');
+      const storedDescriptions = () => local.sql(`SELECT jsonb_agg(to_jsonb(d) ORDER BY d.id)::text
+        FROM public.object_description d WHERE d.object_id='HOTRUN999999AR01'`, 'read only synthetic descriptions');
+      const section = page.locator('#section-04');
+      async function reloadWithMarkdownAuthority() {
+        const reload = { nativeDocument: false, markdown: true, committed: false };
+        const onNavigation = (frame) => {
+          if (frame === page.mainFrame() && frame.url() === editorUrl) reload.committed = true;
+        };
+        scene.reload = reload;
+        page.on('framenavigated', onNavigation);
+        try {
+          const document = await page.reload();
+          assert.ok(reload.nativeDocument && reload.committed && document?.status() === 200 && document.url() === editorUrl
+            && document.request().redirectedFrom() === null, 'Markdown witness must reload the real editor without redirects');
+          await assertion.poll(() => reload.authenticatedUser === true && Boolean(reload.markdownPermission)).toBe(true);
+          return reload.markdownPermission;
+        } finally {
+          page.off('framenavigated', onNavigation);
+          scene.reload = undefined;
+        }
+      }
+      async function openMarkdownFields() {
+        await section.getByRole('button', { name: 'Français', exact: true }).click();
+        const canonicalScope = section.getByRole('tab', { name: 'Par défaut', exact: true });
+        if (await canonicalScope.isVisible()) await canonicalScope.click();
+        return ['Descriptif', 'Accroche'].map((name) => {
+          const field = page.getByLabel(`${name} — Français`, { exact: true });
+          return { field, toolbar: section.locator('.md-editor').filter({ has: field })
+            .getByRole('toolbar', { name: 'Mise en forme', exact: true }) };
+        });
+      }
+      function setFixtureEditorRole(active) {
+        assert.equal(local.sql(`BEGIN;
+          SET LOCAL request.jwt.claims='{"role":"service_role"}';
+          WITH changed AS (
+            UPDATE public.user_org_business_role SET is_active=${active}
+            WHERE membership_id='00000000-0000-4000-a000-00000000ab11' AND is_active=${!active}
+              AND role_id=(SELECT id FROM public.ref_org_business_role WHERE code='editor')
+            RETURNING membership_id
+          ) SELECT count(*) FROM changed;
+          COMMIT;`, 'toggle only the synthetic editor role'), '1');
+      }
+
+      const writable = await reloadWithMarkdownAuthority();
+      assert.equal(writable.canonical, true, 'browser must observe the authorized fixture before revocation');
+      const [description, introduction] = await openMarkdownFields();
+      for (const { field, toolbar } of [description, introduction]) {
+        await assertion(field).toBeEditable();
+        await assertion(toolbar.getByRole('button', { name: 'Gras', exact: true })).toBeEnabled();
+      }
+      const originalText = 'Synthetic editorial description';
+      await assertion(description.field).toHaveText(originalText);
+      await description.field.press('ControlOrMeta+A');
+      await description.toolbar.getByRole('button', { name: 'Gras', exact: true }).click();
+      await assertion(description.field.locator('strong')).toHaveText(originalText);
+      await description.toolbar.getByRole('button', { name: 'Annuler', exact: true }).click();
+      await assertion(description.field.locator('strong')).toHaveCount(0);
+      const originalDescriptions = storedDescriptions();
+
+      setFixtureEditorRole(false);
+      try {
+        const revoked = await reloadWithMarkdownAuthority();
+        assert.ok(revoked.authorization === writable.authorization, 'Markdown authority reload must reuse the exact original JWT');
+        assert.equal(revoked.canonical, false, 'browser must observe the committed fixture revocation');
+        const [readOnly, readOnlyIntroduction] = await openMarkdownFields();
+        for (const { field, toolbar } of [readOnly, readOnlyIntroduction]) {
+          await assertion(field).toHaveAttribute('contenteditable', 'false');
+          await assertion(field).toHaveAttribute('aria-readonly', 'true');
+          await assertion(toolbar).toHaveAttribute('aria-disabled', 'true');
+          assert.ok(await toolbar.getByRole('button').count() > 0, 'toolbar must still render its commands');
+          await assertion(toolbar.locator('button:enabled')).toHaveCount(0);
+        }
+        await assertion(readOnly.field).toHaveText(originalText);
+        await assertion(readOnlyIntroduction.field).toHaveText('Synthetic introduction');
+        const initialHtml = await readOnly.field.innerHTML();
+        const paragraph = readOnly.field.locator('p');
+        await paragraph.dblclick({ position: { x: 12, y: 8 } });
+        await assertion.poll(() => paragraph.evaluate((node) => {
+          const selection = node.ownerDocument.getSelection();
+          return selection && node.contains(selection.anchorNode) && node.contains(selection.focusNode)
+            ? selection.toString().trim() : '';
+        })).toBe('Synthetic');
+        await page.keyboard.press('ControlOrMeta+B');
+        await page.keyboard.type('Z');
+        assert.equal(await readOnly.field.innerHTML(), initialHtml);
+        assert.equal(storedDescriptions(), originalDescriptions, 'the synthetic descriptions must remain unchanged');
+      } finally {
+        try { await close(); }
+        finally { setFixtureEditorRole(true); }
+      }
+    }
+
     const races = await openAuthenticatedEditor();
     const { page } = races;
     const name = page.locator('#section-01').getByRole('textbox', { name: /Nom commercial/ });
@@ -439,7 +543,7 @@ export async function testEditorRaces({ local, objectId, writerId, email, passwo
     assert.equal(restoreCalls, 1);
     assert.equal(patches.length, 2);
     assert.equal(publishCalls, 1);
-    await races.close();
+    await testMarkdownRevocation(races);
 
     // Seed after the restore assertions so the original version remains unchanged.
     local.sql(`BEGIN;

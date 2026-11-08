@@ -782,6 +782,10 @@ COMMIT;
 
 \echo '== GDPR durable cleanup and CRM document provenance, all RPCs remain owner-only =='
 \ir gdpr_crm_document_provenance.sql
+\ir ../supabase/migrations/20261108073355_gdpr_avatar_inventory.sql
+\ir ../supabase/migrations/20261108073400_avatar_upload_intents.sql
+\ir tests/test_gdpr_avatar_inventory.sql
+\ir tests/test_avatar_upload_intents.sql
 \ir tests/test_gdpr_crm_document_provenance.sql
 
 \echo '== MV refresh (non-concurrent) =='

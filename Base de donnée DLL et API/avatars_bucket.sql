@@ -5,8 +5,9 @@
 -- stripped (process-image.ts, reused with a smaller maxDimension). This mirrors
 -- the media single-writer + metadata-strip invariant (CLAUDE.md §59) — a user's
 -- selfie can carry GPS/device EXIF, so avatars go through the same pipeline.
--- Read access is anonymous (public API); paths are {user_id}/avatar.jpg and the
--- app cache-busts via a ?v= query param stored in app_user_profile.avatar_url.
+-- Read access is anonymous (public API). The route now creates immutable
+-- {user_id}/avatar-{uuid}.jpg generations; legacy avatar.jpg remains readable.
+-- app_user_profile.avatar_url carries the selected generation (and optional ?v=).
 -- Idempotent: safe to apply multiple times.
 
 BEGIN;

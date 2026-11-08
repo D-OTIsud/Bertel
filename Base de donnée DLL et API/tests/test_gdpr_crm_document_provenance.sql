@@ -37,6 +37,11 @@ DECLARE
   v_scenario text;
   v_denied boolean;
   v_logs bigint;
+  v_avatar_upload uuid := gen_random_uuid();
+  v_avatar_orphan uuid := gen_random_uuid();
+  v_avatar_path text;
+  v_orphan_path text;
+  v_profile_before jsonb;
 BEGIN
   ------------------------------------------------------------------
   -- Fermeture : propriétaire seul, table sans accès API
@@ -267,6 +272,46 @@ BEGIN
   -- Le résultat ne rouvre aucun droit.
   FOREACH v_role IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP
     ASSERT NOT has_function_privilege(v_role, 'api.rpc_gdpr_erase_subject(text,text,text,text)', 'EXECUTE');
+  END LOOP;
+  ------------------------------------------------------------------
+  -- Les deux compagnons sont exercés par le vrai RPC, pas seulement isolément.
+  ------------------------------------------------------------------
+  v_avatar_path := v_writer::text || '/avatar-' || v_avatar_upload::text || '.jpg';
+  v_orphan_path := v_writer::text || '/avatar-' || v_avatar_orphan::text || '.jpg';
+  ASSERT (SELECT role NOT IN ('owner','super_admin') FROM public.app_user_profile WHERE id=v_writer);
+  SELECT to_jsonb(p) INTO v_profile_before FROM public.app_user_profile p WHERE p.id=v_writer;
+  SELECT count(*) INTO v_logs FROM public.gdpr_erasure_log;
+  PERFORM api.begin_avatar_upload(v_avatar_upload,v_writer,v_avatar_path,repeat('b',64),3);
+  v_denied := false;
+  BEGIN
+    PERFORM api.rpc_gdpr_erase_subject('user',upper(v_writer::text),'anonymize','avatar engaged');
+  EXCEPTION WHEN object_not_in_prerequisite_state THEN v_denied := true;
+  END;
+  ASSERT v_denied, 'Le vrai RPC doit refuser un avatar engagé avant le journal';
+  ASSERT (SELECT count(*)=v_logs FROM public.gdpr_erasure_log);
+  ASSERT (SELECT to_jsonb(p)=v_profile_before FROM public.app_user_profile p WHERE p.id=v_writer),
+    'Le refus ne doit pas modifier le profil';
+  ASSERT (SELECT state='engaged' FROM internal.avatar_upload_intent WHERE id=v_avatar_upload);
+
+  PERFORM api.complete_avatar_upload(v_avatar_upload,v_writer,v_avatar_path,repeat('b',64),3);
+  INSERT INTO storage.buckets(id,name,public) VALUES('avatars','avatars',true) ON CONFLICT(id) DO NOTHING;
+  INSERT INTO storage.objects(bucket_id,name) VALUES('avatars',v_avatar_path),('avatars',v_orphan_path);
+  v_report := api.rpc_gdpr_erase_subject('user',upper(v_writer::text),'anonymize','avatar inventory');
+  v_operation := (v_report->>'operationId')::uuid;
+  ASSERT (SELECT count(*)=v_logs+1 FROM public.gdpr_erasure_log);
+  ASSERT EXISTS(SELECT 1 FROM internal.gdpr_cleanup_task WHERE operation_id=v_operation
+    AND action='storage_remove' AND metadata->>'bucket'='avatars'
+    AND metadata->>'path'=v_orphan_path AND metadata ? 'storage_object_id'),
+    'Le vrai RPC doit retrouver la génération orpheline';
+  ASSERT (SELECT count(*)=2 FROM internal.gdpr_cleanup_task WHERE operation_id=v_operation
+    AND action='storage_remove' AND metadata->>'path' IN(v_avatar_path,v_orphan_path));
+  ASSERT internal.gdpr_enqueue_avatar_inventory(v_operation,v_writer)=0, 'Inventaire canonique sans doublon';
+  ASSERT NOT api.avatar_upload_allowed(v_writer), 'Les tâches pendantes ferment une nouvelle admission';
+  ASSERT (SELECT display_name IS NULL AND avatar_url IS NULL FROM public.app_user_profile WHERE id=v_writer);
+  FOREACH v_role IN ARRAY ARRAY['anon','authenticated','service_role'] LOOP
+    ASSERT NOT has_function_privilege(v_role,'api.rpc_gdpr_erase_subject(text,text,text,text)','EXECUTE');
+    ASSERT NOT has_function_privilege(v_role,'api.rpc_gdpr_get_cleanup_status(uuid)','EXECUTE');
+    ASSERT NOT has_function_privilege(v_role,'api.rpc_gdpr_ack_cleanup_task(uuid,uuid,boolean,text)','EXECUTE');
   END LOOP;
 END;
 $test$;

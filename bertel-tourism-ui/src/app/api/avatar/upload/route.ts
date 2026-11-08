@@ -1,10 +1,12 @@
 import { createCallerClient } from '@/lib/supabase-caller.server';
+import { createHash } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { routeFailure } from '../../_route-failure';
 import { processImage, MediaProcessingError, MAX_INPUT_BYTES } from '../../media/upload/process-image';
 import { authorizeAdminRoute, sharesActiveOrg } from '../../admin/_authorize';
+import { newAvatarStoragePath } from '../avatar-storage-key';
 import {
   readBoundedFormData,
   assertFormDataShape,
@@ -26,6 +28,14 @@ export const runtime = 'nodejs'; // sharp requires Node, not Edge
 const BUCKET = 'avatars';
 // Raw multipart envelope: single accepted file (image, 20 MiB) + 1 MiB overhead.
 const MAX_MULTIPART_BYTES = MAX_INPUT_BYTES + 1024 * 1024;
+
+type AvatarBinding = { uploadId: string; userId: string; path: string; sha256: string; sizeBytes: number };
+
+function receiptMatches(value: unknown, binding: AvatarBinding, state: 'engaged' | 'finished'): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const receipt = value as Record<string, unknown>;
+  return receipt.state === state && Object.entries(binding).every(([key, expected]) => receipt[key] === expected);
+}
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const server = getServerSupabaseClient();
@@ -142,15 +152,39 @@ async function handlePostAuthenticated(
     return routeFailure('avatar/upload.POST', 'process_failed');
   }
 
-  // Chemin STABLE dérivé du user.id : un seul fichier par utilisateur (pas d'orphelins).
-  // Le cache est invalidé par un ?v= dans l'URL enregistrée (le chemin, lui, reste constant).
-  const path = `${userId}/avatar.jpg`;
-  const { error: upErr } = await server.storage.from(BUCKET).upload(path, processed.buffer, {
-    contentType: processed.mimeType,
-    cacheControl: '31536000', // 1 an — l'URL enregistrée porte un ?v= qui casse le cache au changement
-    upsert: true,
-  });
-  if (upErr) {
+  // Intention durable AVANT Storage, jamais adoptée ou réarmée. Un ACK inconnu ne permet
+  // aucun upload ; une intention engagée demeure bloquante pour l'effacement du compte.
+  const path = newAvatarStoragePath(userId);
+  const binding: AvatarBinding = {
+    uploadId: path.slice(`${userId}/avatar-`.length, -'.jpg'.length),
+    userId, path, sha256: createHash('sha256').update(processed.buffer).digest('hex'),
+    sizeBytes: processed.buffer.byteLength,
+  };
+  const intentParams = {
+    p_upload_id: binding.uploadId, p_user_id: userId, p_storage_path: path,
+    p_sha256: binding.sha256, p_size_bytes: binding.sizeBytes,
+  };
+  try {
+    const { data: receipt, error } = await server.schema('api').rpc('begin_avatar_upload', intentParams);
+    if (error || !receiptMatches(receipt, binding, 'engaged')) {
+      return routeFailure('avatar/upload.POST', 'upload_failed', { status: 503 });
+    }
+  } catch {
+    return routeFailure('avatar/upload.POST', 'upload_failed', { status: 503 });
+  }
+
+  // Une clé par téléversement sous le préfixe du propriétaire, jamais réécrite : un nettoyage
+  // tardif visant une génération ne peut pas effacer une génération plus récente.
+  // L'inventaire SQL compagnon retrouve ces clés exactes dans storage.objects, même si l'ACK
+  // profil s'est perdu. Son intégration et la fence des anciens writers précèdent l'activation.
+  try {
+    const { error: upErr } = await server.storage.from(BUCKET).upload(path, processed.buffer, {
+      contentType: processed.mimeType,
+      cacheControl: '31536000', // 1 an — une clé n'est jamais réécrite
+      upsert: false,
+    });
+    if (upErr) return routeFailure('avatar/upload.POST', 'upload_failed', { status: 502 });
+  } catch {
     return routeFailure('avatar/upload.POST', 'upload_failed', { status: 502 });
   }
   const { data: pub } = server.storage.from(BUCKET).getPublicUrl(path);
@@ -159,23 +193,39 @@ async function handlePostAuthenticated(
   // Persistance : EN TANT QU'APPELANT sur son propre profil (policy self-update id = auth.uid()),
   // en SERVICE-ROLE sur le bras admin (la policy n'autorise que soi-même ou un owner — l'admin
   // d'ORG n'y passerait pas, et sa légitimité a déjà été établie ci-dessus).
+  // Un échec ici ne prouve pas l'absence de COMMIT (l'ACK peut se perdre après) : le fichier
+  // téléversé peut déjà être l'avatar enregistré, il n'est donc jamais supprimé en compensation.
   let profErr: { message: string } | null = null;
-  if (isAdminBranch) {
-    // upsert (pas update) : une cible peut légitimement ne pas encore avoir de ligne
-    // `app_user_profile` (compte invité) — un update() y serait un no-op silencieux (0 ligne
-    // matchée, aucune erreur) et la route rendrait 201 sur une écriture qui n'a rien persisté.
-    ({ error: profErr } = await server
-      .from('app_user_profile')
-      .upsert({ id: userId, avatar_url: url }, { onConflict: 'id' }));
-  } else {
-    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
-    const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-    const asCaller = createCallerClient(supabaseUrl, anon, jwt);
-    ({ error: profErr } = await asCaller.from('app_user_profile').update({ avatar_url: url }).eq('id', userId));
+  try {
+    if (isAdminBranch) {
+      // upsert (pas update) : une cible peut légitimement ne pas encore avoir de ligne
+      // `app_user_profile` (compte invité) — un update() y serait un no-op silencieux (0 ligne
+      // matchée, aucune erreur) et la route rendrait 201 sur une écriture qui n'a rien persisté.
+      ({ error: profErr } = await server
+        .from('app_user_profile')
+        .upsert({ id: userId, avatar_url: url }, { onConflict: 'id' }));
+    } else {
+      const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
+      const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
+      const asCaller = createCallerClient(supabaseUrl, anon, jwt);
+      ({ error: profErr } = await asCaller.from('app_user_profile').update({ avatar_url: url }).eq('id', userId));
+    }
+  } catch {
+    return routeFailure('avatar/upload.POST', 'profile_update_failed');
   }
   if (profErr) {
     return routeFailure('avatar/upload.POST', 'profile_update_failed');
   }
 
+  // Dernière écriture : après cet ACK il ne reste aucun effet Storage/profil à effectuer.
+  // En cas d'ACK perdu, l'intention peut rester engagée : aucun replay ni compensation.
+  try {
+    const { data: receipt, error } = await server.schema('api').rpc('complete_avatar_upload', intentParams);
+    if (error || !receiptMatches(receipt, binding, 'finished')) {
+      return routeFailure('avatar/upload.POST', 'profile_update_failed');
+    }
+  } catch {
+    return routeFailure('avatar/upload.POST', 'profile_update_failed');
+  }
   return NextResponse.json({ url }, { status: 201 });
 }

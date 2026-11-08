@@ -207,9 +207,6 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 14x    migration_object_hard_delete.sql  (§108 suppression définitive admin-only + journal immuable; non foldé) =='
 \ir migration_object_hard_delete.sql
 
-\echo '== 14x-test garde transactionnelle de la suppression définitive =='
-\ir tests/test_object_hard_delete.sql
-
 \echo '== 15e    migration_iti_section06_vocab.sql  (§111 Section 06 ITI editor vocab: ref_iti_assoc_role seed + iti_difficulty/iti_open_status/iti_stage_kind ref_code partitions + house RLS + seeds; idempotent, self-contained) =='
 \ir migration_iti_section06_vocab.sql
 
@@ -765,6 +762,10 @@ COMMIT;
 \echo '== Explorer direct reader authority before filtering and ranking =='
 \ir ../supabase/migrations/20261107193944_explorer_filtered_read_authority.sql
 \ir tests/test_explorer_filtered_read_authority.sql
+
+\echo '== DB02 archived-object purge retains surviving document references =='
+\ir ../supabase/migrations/20261107233351_guard_object_purge_references.sql
+\ir tests/test_object_hard_delete.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

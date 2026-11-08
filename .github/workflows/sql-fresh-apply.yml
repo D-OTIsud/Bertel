@@ -70,27 +70,38 @@ on:
         type: boolean
         required: false
         default: false
+      gdpr_cleanup:
+        description: 'Run the synthetic GDPR HTTP cleanup and lost-ACK witness on the disposable fresh stack (select alone)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   fresh-apply:
     # Push/PR always run the mandatory application/rights gate. The explicit
     # manual selector below starts a separate upstream capability probe only.
-    if: ${{ github.event_name != 'workflow_dispatch' || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true || (inputs.storage_contract != true && inputs.storage_db07_profile != true) }}
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true) && 'ubuntu-24.04' || 'ubuntu-latest' }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true || inputs.gdpr_cleanup == true || (inputs.storage_contract != true && inputs.storage_db07_profile != true) }}
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true || inputs.gdpr_cleanup == true) && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
       - name: Require the standalone public discovery selector
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery == true && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery == true && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.storage_contract == true || inputs.storage_db07_profile == true || inputs.gdpr_cleanup == true) }}
         run: |
           echo "::error::Select sandbox_discovery alone."
           exit 1
 
       - name: Require the standalone prestataire photo selector
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.portal_photo_browser == true && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.sandbox_discovery == true || inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.portal_photo_browser == true && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.sandbox_discovery == true || inputs.storage_contract == true || inputs.storage_db07_profile == true || inputs.gdpr_cleanup == true) }}
         run: |
           echo "::error::Select portal_photo_browser alone."
+          exit 1
+
+      - name: Require the standalone GDPR cleanup selector
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.gdpr_cleanup == true && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true || inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
+        run: |
+          echo "::error::Select gdpr_cleanup alone."
           exit 1
 
       - name: Validate Tourinsoft Reunion contract inventory
@@ -101,9 +112,34 @@ jobs:
           python tools/tourinsoft/check-regional-contract.py
 
       - name: Install Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.78.1
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          cli_dir="$(mktemp -d "$RUNNER_TEMP/bertel-supabase-cli.XXXXXX")"
+          cli_archive="$cli_dir/supabase.tar.gz"
+          # Official public release-asset API handles binary HTTP200 or HTTPS302.
+          # No token, curl config, verbose headers or signed redirect URL in logs.
+          if ! curl --disable --fail --silent --location --max-redirs 5 \
+            --proto '=https' --proto-redir '=https' \
+            --connect-timeout 15 --max-time 120 --retry 1 --retry-delay 2 --retry-max-time 240 \
+            --header 'Accept: application/octet-stream' \
+            --output "$cli_archive" \
+            'https://api.github.com/repos/supabase/cli/releases/assets/370925522'; then
+            echo '::error::Pinned Supabase CLI asset download failed.'
+            exit 1
+          fi
+          test "$(wc -c < "$cli_archive")" -eq 29997758
+          printf '%s  %s\n' 'fda98768f8c1d55f2fc7a5951435de8de7fd90568c84c8026612968dbe0e5117' "$cli_archive" \
+            | sha256sum --check --status
+          # Hash verification precedes both extraction and any executable call.
+          tar --extract --gzip --file "$cli_archive" --directory "$cli_dir" \
+            --no-same-owner --no-same-permissions supabase
+          chmod 0755 "$cli_dir/supabase"
+          cli_version="$("$cli_dir/supabase" --version 2>/dev/null)"
+          test "$cli_version" = '2.78.1'
+          printf '%s\n' "$cli_dir" >> "$GITHUB_PATH"
+          printf '%s\n' 'SUPABASE_INTERNAL_IMAGE_REGISTRY=ghcr.io' >> "$GITHUB_ENV"
 
       - name: Ensure psql is available
         run: psql --version || (sudo apt-get update && sudo apt-get install -y postgresql-client)
@@ -692,7 +728,7 @@ jobs:
           node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: Set up Node 22 for opt-in authenticated witnesses
-        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true) && steps.list_email_owned_stack.outcome == 'success' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true || inputs.gdpr_cleanup == true) && steps.list_email_owned_stack.outcome == 'success' }}
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -708,6 +744,22 @@ jobs:
         run: |
           npm ci --legacy-peer-deps
           node scripts/run-playwright.mjs install --with-deps chromium
+
+      - name: Install the locked Next runtime for the GDPR HTTP witness
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.gdpr_cleanup == true && steps.list_email_owned_stack.outcome == 'success' }}
+        working-directory: bertel-tourism-ui
+        timeout-minutes: 5
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+
+      - name: GDPR cleanup through GoTrue, Next, PostgREST and Storage (disposable only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.gdpr_cleanup == true && steps.list_email_owned_stack.outcome == 'success' }}
+        timeout-minutes: 5
+        env:
+          CURRENT_RIGHTS_TEST_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          CURRENT_RIGHTS_DISPOSABLE: 'true'
+          CURRENT_RIGHTS_SUPABASE_WORKDIR: ${{ runner.temp }}/bertel-fresh
+          CURRENT_RIGHTS_GDPR_CLEANUP: 'true'
+        run: node --test tools/current-rights/postgrest-rights.test.mjs
 
       - name: Public discovery in Chromium with GoTrue and external-effect guards (disposable only)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery == true && steps.list_email_owned_stack.outcome == 'success' }}
@@ -768,7 +820,7 @@ jobs:
 
   storage-contract:
     name: ${{ inputs.storage_contract == true && 'Strict Storage capability (manual, synthetic only)' || 'DB07 Storage copy profile (manual, synthetic only)' }}
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery != true && inputs.portal_photo_browser != true && (inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery != true && inputs.portal_photo_browser != true && inputs.gdpr_cleanup != true && (inputs.storage_contract == true || inputs.storage_db07_profile == true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

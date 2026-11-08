@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
 import { type SupabaseClient } from '@supabase/supabase-js';
@@ -353,12 +355,52 @@ async function verifyAuthDeleteAllowed(
 }
 
 /**
- * Execute every non-succeeded task of an operation (Storage removal / Auth deletion), then
- * acknowledge each outcome. Prior succeeded tasks are skipped (idempotent resume). Transport
- * exceptions are caught the same as a returned error. The acknowledgement call itself is
- * wrapped too — a network failure acking a real success must never crash the route after the
- * SQL erasure has already committed; the task's DB status is simply left as-is and a later
- * resume will retry it.
+ * Claim durable et exclusif AVANT tout effet Storage/Auth. La réponse doit reprendre exactement
+ * l'opération, la tâche, la tentative générée ici, l'action, les métadonnées et la cible
+ * normalisée. Toute autre réponse (perdue, mal formée, refusée, ou `linked` vers un reçu existant)
+ * n'admet aucun effet ; une tentative déjà enregistrée n'est jamais reprise.
+ */
+async function claimCleanupTask(
+  server: ServerClient,
+  operation: OperationStatus,
+  task: CleanupTask,
+  targetKey: string,
+): Promise<string | null> {
+  const attemptId = randomUUID();
+  let data: unknown;
+  let error: unknown;
+  try {
+    const res = await server.schema('api').rpc('rpc_gdpr_claim_cleanup_task', {
+      p_operation_id: operation.operationId,
+      p_task_id: task.id,
+      p_attempt_id: attemptId,
+      p_expected_action: task.action,
+      p_expected_metadata: task.metadata,
+      p_target_key: targetKey,
+    });
+    data = res.data;
+    error = res.error;
+  } catch {
+    return null;
+  }
+  if (error || !isPlainObject(data) || data.claimOutcome !== 'claimed') return null;
+  const sameId = (value: unknown, expected: string) =>
+    typeof value === 'string' && value.toLowerCase() === expected.toLowerCase();
+  const bound = sameId(data.operationId, operation.operationId)
+    && sameId(data.taskId, task.id)
+    && sameId(data.attemptId, attemptId)
+    && data.action === task.action
+    && data.targetKey === targetKey
+    && isDeepStrictEqual(data.metadata, task.metadata);
+  return bound ? attemptId : null;
+}
+
+/**
+ * Exécute les tâches non réussies d'une opération, chacune derrière un claim durable lié à sa
+ * cible normalisée, puis acquitte cette tentative. Après un envoi au provider, une réponse perdue
+ * ou en erreur rend l'issue inconnue : la tâche n'est jamais renvoyée. Sans envoi, l'échec est
+ * acquitté comme tel et la tâche reste reprenable. Un ACK perdu laisse la tentative non résolue,
+ * sans repli ni rejeu.
  */
 async function processTasks(
   server: ServerClient,
@@ -371,21 +413,51 @@ async function processTasks(
   for (const task of operation.tasks ?? []) {
     if (task.status === 'succeeded') continue;
 
+    const resolved = task.action === 'storage_remove' ? storageTargetFromMetadata(task.metadata, supabaseUrl) : null;
+    const storageTarget = resolved && storageTargetMatchesOperation(resolved, operation) ? resolved : null;
+    const authUserId = task.action === 'auth_delete' && typeof task.metadata.user_id === 'string' && UUID_RE.test(task.metadata.user_id)
+      ? task.metadata.user_id.toLowerCase()
+      : null;
+    const targetKey = storageTarget
+      ? `storage_remove:${storageTarget.bucket}/${storageTarget.path}`
+      : authUserId
+        ? `auth_delete:${authUserId}`
+        : null;
+
+    if (!targetKey) {
+      // Référence externe/invalide : jamais transformée en suppression locale. Marquée en
+      // échec (pas un faux succès) — reste visible comme non résolue, revue manuelle requise.
+      let refusal = 'unresolved_external_or_invalid_reference';
+      if (task.action === 'auth_delete') {
+        refusal = operation.subjectKind !== 'user' || operation.mode !== 'delete' ? 'task_operation_mismatch' : 'task_subject_mismatch';
+      }
+      try {
+        await server.schema('api').rpc('rpc_gdpr_refuse_cleanup_task', {
+          p_operation_id: operation.operationId,
+          p_task_id: task.id,
+          p_expected_action: task.action,
+          p_expected_metadata: task.metadata,
+          p_error: refusal,
+        });
+      } catch {
+        // La tâche reste à son état actuel, sans aucun effet provider.
+      }
+      continue;
+    }
+
+    const attemptId = await claimCleanupTask(server, operation, task, targetKey);
+    if (!attemptId) continue;
+
     let ok = false;
+    let effectIssued = false;
     let error: string | null = null;
     try {
-      if (task.action === 'storage_remove') {
-        const target = storageTargetFromMetadata(task.metadata, supabaseUrl);
-        if (!target || !storageTargetMatchesOperation(target, operation)) {
-          // Référence externe/invalide : jamais transformée en suppression locale. Marquée en
-          // échec (pas un faux succès) — reste visible comme non résolue, revue manuelle requise.
-          error = 'unresolved_external_or_invalid_reference';
-        } else {
-          const { error: rmErr } = await server.storage.from(target.bucket).remove([target.path]);
-          ok = !rmErr;
-          error = rmErr ? 'storage_remove_failed' : null;
-        }
-      } else if (task.action === 'auth_delete') {
+      if (storageTarget) {
+        effectIssued = true;
+        const { error: rmErr } = await server.storage.from(storageTarget.bucket).remove([storageTarget.path]);
+        ok = !rmErr;
+        error = rmErr ? 'storage_remove_failed' : null;
+      } else {
         const check = await verifyAuthDeleteAllowed(server, asCaller, callerId, operation, task);
         if (check.alreadyDeleted) {
           ok = true; // idempotent : déjà supprimé, considéré comme acquis
@@ -393,12 +465,11 @@ async function processTasks(
           error = check.reason ?? 'auth_delete_forbidden';
         } else {
           const userId = task.metadata.user_id as string;
+          effectIssued = true;
           const { error: delErr } = await server.auth.admin.deleteUser(userId);
           ok = !delErr;
           error = delErr ? 'auth_delete_failed' : null;
         }
-      } else {
-        error = 'unknown_task_action';
       }
     } catch {
       ok = false;
@@ -406,15 +477,17 @@ async function processTasks(
     }
 
     try {
-      await server.schema('api').rpc('rpc_gdpr_ack_cleanup_task', {
+      await server.schema('api').rpc('rpc_gdpr_ack_cleanup_attempt', {
         p_operation_id: operation.operationId,
         p_task_id: task.id,
+        p_attempt_id: attemptId,
         p_success: ok,
+        p_effect_issued: effectIssued,
         p_error: error,
       });
     } catch {
-      // L'acquittement lui-même a échoué (réseau) : la tâche reste non acquittée en base,
-      // récupérable par une reprise ultérieure — ne jamais faire échouer toute la route pour ça.
+      // ACK perdu : la tentative reste enregistrée sans issue connue, et aucune reprise ne
+      // renverra l'effet — ne jamais faire échouer toute la route pour ça.
     }
   }
 }
@@ -503,6 +576,35 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const b = parsed;
 
+  if (Object.hasOwn(b, 'requestId') && Object.hasOwn(b, 'operationId')) {
+    return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+  }
+
+  // Recovery is a lookup only. Absence (including an uncommitted START) never
+  // falls through to START and never claims or dispatches a cleanup task.
+  if (Object.hasOwn(b, 'requestId') && Object.keys(b).length === 1) {
+    const requestId = typeof b.requestId === 'string' ? b.requestId.trim() : '';
+    if (!UUID_RE.test(requestId)) return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+    try {
+      const { data, error } = await auth.asCaller.schema('api').rpc('rpc_gdpr_find_start_request', {
+        p_request_id: requestId,
+      });
+      if (error) {
+        const missing = data === null && error.code === 'P0002';
+        return NextResponse.json({ error: missing ? 'operation_not_found' : 'operation_lookup_failed' },
+          { status: missing ? 404 : 500 });
+      }
+      if (!isPlainObject(data) || Object.keys(data).length !== 2
+          || typeof data.requestId !== 'string' || data.requestId.toLowerCase() !== requestId.toLowerCase()
+          || typeof data.operationId !== 'string' || !UUID_RE.test(data.operationId)) {
+        return NextResponse.json({ error: 'operation_lookup_failed' }, { status: 500 });
+      }
+      return NextResponse.json({ requestId: data.requestId, operationId: data.operationId });
+    } catch {
+      return NextResponse.json({ error: 'operation_lookup_failed' }, { status: 500 });
+    }
+  }
+
   // Reprise — ne rappelle JAMAIS le RPC d'effacement, ne fait que recharger l'opération.
   if (typeof b.operationId === 'string') {
     const operationId = b.operationId.trim();
@@ -530,7 +632,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return buildStatusResponse(refreshed.status);
   }
 
-  // Démarrage — contrat d'entrée inchangé.
+  // START requires a caller-persisted request reference, distinct from the real
+  // operationId produced by erase4 and atomically bound by the closed wrapper.
   const subjectKind = b.subjectKind;
   const subjectId = b.subjectId;
   const mode = (b.mode as string | undefined) ?? 'anonymize';
@@ -545,6 +648,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!MODES.includes(mode as Mode)) {
     return NextResponse.json({ error: 'invalid_mode' }, { status: 400 });
   }
+  const requestId = typeof b.requestId === 'string' ? b.requestId.trim() : '';
+  if (!UUID_RE.test(requestId)) {
+    return NextResponse.json({ error: 'bad_request' }, { status: 400 });
+  }
 
   // Check before the destructive RPC: the previous SQL version could otherwise
   // commit an erasure and only then fail our operationId check, without cleanup.
@@ -552,13 +659,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'setup_incomplete' }, { status: 503 });
   }
 
-  const { data: rpcData, error: rpcErr } = await auth.asCaller.schema('api').rpc('rpc_gdpr_erase_subject', {
-    p_subject_kind: subjectKind,
-    p_subject_id: subjectId.trim(),
-    p_mode: mode,
-    p_reason: reason,
-  });
+  let rpcData: unknown;
+  let rpcErr: { message?: string; code?: string } | null = null;
+  try {
+    const reply = await auth.asCaller.schema('api').rpc('rpc_gdpr_start_erasure', {
+      p_request_id: requestId,
+      p_subject_kind: subjectKind,
+      p_subject_id: subjectId.trim(),
+      p_mode: mode,
+      p_reason: reason,
+    });
+    rpcData = reply.data;
+    rpcErr = reply.error;
+  } catch {
+    // The caller retains requestId. A thrown transport error is not permission
+    // to repeat the destructive RPC or manufacture a committed operationId.
+    return NextResponse.json({ error: 'erase_failed' }, { status: 500 });
+  }
   if (rpcErr) {
+    if (rpcErr.code === 'PT409') return NextResponse.json({ error: 'bad_request' }, { status: 409 });
     const msg = rpcErr.message ?? 'erase_failed';
     const forbidden = /administrateurs plateforme|permission|not allowed|denied|owner|super administrateur|auto-effacement/i.test(
       msg,
@@ -584,6 +703,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       },
       { status: 500 },
     );
+  }
+  if (!isPlainObject(rpcData) || !UUID_RE.test(operationId)
+      || typeof report.startRequestId !== 'string' || report.startRequestId.toLowerCase() !== requestId.toLowerCase()) {
+    return NextResponse.json({ error: 'setup_incomplete' }, { status: 500 });
   }
 
   // L'effacement SQL est déjà commis à partir d'ici (operationId connu) : PLUS AUCUN chemin ne

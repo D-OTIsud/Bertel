@@ -500,6 +500,18 @@ provider n'est exécuté ici. Le traitement exclusif des tâches, la récupérat
 intentions inconnues et le retrait de tous les writers legacy/privilégiés restent
 des conditions de l'activation future.
 
+La migration `20261108074602` s'applique après ces trois versions et refuse (`55000`)
+toute file contenant une tâche non réussie : un claim ne peut pas être inventé pour
+un envoi antérieur. Chaque tâche prend un claim durable, lié à sa cible normalisée,
+avant tout effet Storage ou Auth. Un alias se rattache au reçu de la cible, y compris
+depuis une autre opération, et ne réussit qu'avec lui. Une tentative sans issue connue
+reste définitive : aucun TTL, aucune reprise, et `avatar_upload_allowed` reste faux.
+Sa résolution est une décision manuelle du propriétaire, non outillée ici.
+L'ancien acquittement à quatre arguments échoue en `55000`. Les RPC restent réservées
+au propriétaire jusqu'à une release explicite ; un rejeu de `20261108070035` est
+ensuite refusé par son préflight. Le test `tests/test_gdpr_cleanup_claims.sql` n'est
+pas inscrit au manifeste et doit s'exécuter après cette migration.
+
 L'effacement d'un acteur inventorie ses bibliothèques, ses consentements, les pièces
 de ses tâches et les reçus de détachement et d'upload. Seul un lien vivant du sujet
 peut conduire à un `DELETE` du catalogue et à une tâche `storage_remove`, et seulement
@@ -518,6 +530,26 @@ rappelés par `report.unresolvedScope` : alias et copies Storage, générations 
 avatar du compte portail délié. Le test `tests/test_gdpr_crm_document_provenance.sql`
 suit la migration dans le manifeste frais, car les suites antérieures s'exécutent
 avant la fermeture.
+
+### Revue historique des pièces de tâches détachées (fermé)
+
+L'overlay `gdpr_historical_task_audit_review.sql` et la migration CLI
+`20261108083121` s'appliquent après les claims `20261108074602`, puis START
+`20261108075514` lors de la composition finale. START épingle l'ancien corps à
+son installation seulement ; à l'exécution il appelle la même signature. Ce lot
+ne modifie ni `20261108070035` ni ses octets historiques. Le manifeste de cette
+branche isolée n'importe pas les lots frères : leur ordre final reste à composer.
+
+Les `parent_id` des reçus de tâches absents de l'inventaire courant sont listés
+sous `report.crmProvenance.historicalTaskAuditReviewIds` et imposent
+`manualReviewRequired=true`, même si le catalogue du document a disparu. Cette
+liste signale une portée de revue potentielle ; elle n'affirme ni qu'une trace
+existe en production ni qu'elle a été nettoyée. Aucune rédaction supplémentaire
+par identifiant de tâche historique n'est faite : son nouveau titulaire et son
+historique restent intacts. Aucune tâche provider ni aucun grant ne sont ajoutés.
+Le corps connu est gardé, le rejeu du post-état est neutre, et les OID/ACL/attributs
+sont conservés. Les anciennes RPC RGPD restent owner-only. Cette source n'active
+pas l'effacement et ne fournit pas un mécanisme de résolution de la revue.
 
 ### CI enforcement (deploy integrity)
 A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest step for step **hormis les étapes foldées — no-op sur base fraîche — et `migration_gdpr_erasure.sql` (14j), dont l'entrée est activement INTERDITE par le step CI *RGPD mirror alignment***, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
@@ -2655,3 +2687,28 @@ après application, sans appel métier. Le test SQL frais couvre les brouillons
 des deux ORG, la recherche floue, l’identité absente, le service technique et
 la publication devenue obsolète dans la vue. La matrice HTTP utilise les JWT
 synthétiques de la pile jetable et appelle directement la RPC.
+
+### Référence stable du départ RGPD — raccord fermé
+
+Le manifeste frais applique `20261108074602_gdpr_cleanup_claims.sql` puis
+`20261108075514_gdpr_start_request_identity.sql`, puis
+`20261108083121_gdpr_historical_task_audit_review.sql`, avec leurs tests respectifs.
+Les nouvelles RPC restent owner-only ; ce raccord ne les active pas et ne
+change pas ses droits. Le wrapper START conserve l’effacement à quatre arguments ;
+l’overlay suivant change seulement son rapport de revue historique.
+
+Le serveur reçoit au départ un `requestId` distinct de l’`operationId` généré
+par l’effacement. Le wrapper lie ce premier identifiant au vrai journal dans
+la même transaction. Un POST contenant seulement `requestId` effectue une
+recherche par l’auteur courant et retourne seulement ces deux identifiants ;
+une absence, une panne ou une réponse non confirmée ne déclenche jamais de
+nouveau départ. La reprise existante utilise ensuite le vrai `operationId`
+et les claims de nettoyage. Une référence différente ne contourne pas une
+opération du même sujet dont les tâches ou la revue restent non résolues.
+
+L’ancien POST de départ sans référence est refusé sans effet. Le client et la
+vue restent inchangés dans ce lot ; leur conservation locale par compte et
+leur état de départ non confirmé nécessitent encore la validation dédiée.
+La recette HTTP intégrée sur pile jetable reste distincte des doubles Jest
+et des témoins PostgreSQL réduits ; aucun appel fournisseur ou déploiement
+n’est attesté par ce raccord fermé.

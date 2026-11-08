@@ -2787,7 +2787,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_delete_object(p_object_id text, p_confirm_name text)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
 - reads `public.actor_consent` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_task_document` _(high)_
 - reads `public.media` _(high)_
 - reads `public.object` _(high)_
 - reads `public.object_classification` _(high)_

@@ -2787,7 +2787,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.rpc_delete_object(p_object_id text, p_confirm_name text)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `internal.portal_photo_analysis` _(high)_
 - reads `public.actor_consent` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_task_document` _(high)_
 - reads `public.media` _(high)_
 - reads `public.object` _(high)_
 - reads `public.object_classification` _(high)_
@@ -2802,6 +2805,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.ref_document` _(high)_
 
 > Suppression définitive d'une fiche (§108) : superuser-only, établissements, archived requis, confirmation par nom. Journalise dans object_deletion_log, supprime l'objet (CASCADE) + les ref_document orphelinés, et retourne les URLs Storage (media + documents) à supprimer côté serveur.
+
+**Contrat depuis DB02.** Le commentaire du catalogue ci-dessus décrit l’ancien retour. La RPC renvoie toujours `media_to_delete: []` et `documents_to_delete: []` à la racine de la réponse. Les URL candidates restent dans `object_deletion_log.report` et `storage_cleanup_deferred` vaut `true` lorsque ce rapport contient des candidates. La purge ne supprime aucun fichier Storage.
 
 ## `api.rpc_delete_object_external_id(p_id uuid)`
 - returns: `void` — SECURITY DEFINER

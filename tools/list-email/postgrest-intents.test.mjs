@@ -81,7 +81,18 @@ test('real GoTrue/PostgREST enforce prepare/dispatch/result ACK, reload, generat
     const deniedPrepare = await rpc(service, 'prepare_list_email', { ...args, p_operation_id: randomUUID(), p_expected_generation: '3' });
     assert.equal(deniedPrepare.status, 200); assert.equal((await deniedPrepare.json()).state, 'forbidden');
   } finally {
-    sql(`DELETE FROM public.object_list WHERE id='${list}'; DELETE FROM public.object WHERE id='${org}'; ${user ? `DELETE FROM internal.list_email_metric WHERE user_id='${user}';` : ''}`);
+    sql(`BEGIN; SET LOCAL "request.jwt.claims"='{"role":"service_role"}';
+      DELETE FROM public.object_list WHERE id='${list}';
+      ${user ? `DELETE FROM public.user_org_membership WHERE user_id='${user}'; DELETE FROM internal.list_email_metric WHERE user_id='${user}';` : ''} COMMIT;`);
     if (user) { const removed = await request(`/auth/v1/admin/users/${user}`, service, undefined, 'DELETE'); assert.equal(removed.status, 200); }
+    sql(`DELETE FROM public.object WHERE id='${org}';`);
+    assert.equal(sql(`SELECT
+      (SELECT count(*) FROM public.object_list WHERE id='${list}')+
+      (SELECT count(*) FROM public.object WHERE id='${org}')+
+      (SELECT count(*) FROM internal.list_email_intent WHERE list_id='${list}')+
+      (SELECT count(*) FROM internal.list_email_scope WHERE list_id='${list}')
+      ${user ? `+(SELECT count(*) FROM auth.users WHERE id='${user}')+(SELECT count(*) FROM public.app_user_profile WHERE id='${user}')+
+        (SELECT count(*) FROM public.user_org_membership WHERE user_id='${user}')+(SELECT count(*) FROM internal.list_email_metric WHERE user_id='${user}')` : ''}`), '0',
+    'owned HTTP mail fixtures must be cleaned; append-only traces die with the disposable stack');
   }
 });

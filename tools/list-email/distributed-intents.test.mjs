@@ -90,7 +90,7 @@ test('two actual sessions reserve one permit and CAS one synthetic effect for th
     assert.equal(await f.complete(f.first, operation, receipts[0].attempt_token), 't');
     assert.equal((await f.prepare(f.second, operation)).state, 'accepted');
     assert.equal(await f.ack(f.second, operation), 't');
-    assert.equal(await f.admin.query(`SELECT sum(admitted)=1 AND sum(started)=1 AND sum(accepted)=1 FROM internal.list_email_metric WHERE user_id='${f.user}'`), 't');
+    assert.equal(await f.admin.query(`SELECT sum(admitted)=1 AND sum(started)=1 AND sum(accepted)=1 AND sum(conflicts)=0 FROM internal.list_email_metric WHERE user_id='${f.user}'`), 't');
   } finally { await f.close(); }
 });
 
@@ -100,7 +100,7 @@ test('two different gestures using the same captured generation cannot both rese
     const results = await Promise.all([f.prepare(f.first, randomUUID()), f.prepare(f.second, randomUUID())]);
     assert.deepEqual(results.map((r) => r.state).sort(), ['reserved', 'stale']);
     assert.equal(await f.admin.query(`SELECT count(*) FROM internal.list_email_intent WHERE user_id='${f.user}'`), '1');
-    assert.equal(await f.admin.query(`SELECT sum(started)=0 FROM internal.list_email_metric WHERE user_id='${f.user}'`), 't');
+    assert.equal(await f.admin.query(`SELECT sum(started)=0 AND sum(conflicts)=0 FROM internal.list_email_metric WHERE user_id='${f.user}'`), 't');
   } finally { await f.close(); }
 });
 
@@ -170,10 +170,46 @@ test('C atomically closes absent A/B predecessors while their preparations wait,
     const replacement = await f.prepare(f.holder, c, 0, true, [a, b]); assert.equal(replacement.state, 'reserved');
     await f.holder.query('COMMIT');
     assert.ok((await Promise.all(pending)).every((r) => r.state === 'conflict' && r.attempt_token === undefined));
+    assert.equal(await f.admin.query(`SELECT sum(admitted)=1 AND sum(conflicts)=2 AND sum(started)=0 FROM internal.list_email_metric WHERE user_id='${f.user}'`), 't',
+      'each incompatible delayed preparation is a conflict, not an SMTP attempt');
     assert.equal((await f.begin(f.first, c, replacement.attempt_token)).started, true);
     assert.equal(await f.complete(f.first, c, replacement.attempt_token), 't');
     assert.equal(await f.admin.query(`SELECT count(*)=2 AND bool_and(state='superseded' AND started_at IS NULL) FROM internal.list_email_intent WHERE user_id='${f.user}' AND operation_id IN ('${a}','${b}')`), 't');
   } finally { await f.close(); }
+});
+
+test('cross-list key collision counts one committed conflict after the unique-violation rollback', { timeout: 30000 }, async () => {
+  const f = await fixture(), otherList = randomUUID(), operation = randomUUID();
+  let pending;
+  try {
+    await f.admin.query(`INSERT INTO public.object_list(id,org_object_id,created_by,kind,name)
+      VALUES('${otherList}','${f.org}','${f.user}','static','Synthetic second mail list')`);
+    const [firstPid, secondPid] = await Promise.all([f.first, f.second].map((worker) => worker.query('SELECT pg_backend_pid()')));
+    await f.first.query('BEGIN');
+    const reserved = await f.prepare(f.first, operation);
+    assert.equal(reserved.state, 'reserved'); assert.ok(reserved.attempt_token);
+    pending = f.second.query(`SELECT api.prepare_list_email('${f.user}','${otherList}','${operation}',repeat('a',64),repeat('b',64),0)`).then(JSON.parse);
+    pending.catch(() => {}); // Observe promptly without hiding the later awaited failure.
+    await waitForLock(f, [secondPid]);
+    assert.equal(await f.admin.query(`SELECT ${firstPid}=ANY(pg_blocking_pids(${secondPid}))`), 't',
+      'the second list must wait for the first uncommitted global user/key');
+    await f.first.query('COMMIT');
+    assert.equal((await pending).state, 'conflict');
+    assert.equal(await f.admin.query(`SELECT count(*)=1 AND bool_and(list_id='${f.list}')
+      FROM internal.list_email_intent WHERE user_id='${f.user}'`), 't');
+    assert.equal(await f.admin.query(`SELECT count(*) FROM internal.list_email_scope WHERE list_id='${otherList}'`), '0',
+      'the exception rolls back the losing preparation scope');
+    assert.deepEqual(JSON.parse(await f.admin.query(`SELECT json_build_object(
+      'admitted',sum(admitted)::text,'conflicts',sum(conflicts)::text,'started',sum(started)::text,
+      'accepted',sum(accepted)::text,'rejected',sum(rejected)::text,'uncertain',sum(uncertain)::text)
+      FROM internal.list_email_metric WHERE user_id='${f.user}' AND org_object_id='${f.org}'`)),
+    { admitted: '1', conflicts: '1', started: '0', accepted: '0', rejected: '0', uncertain: '0' });
+  } finally {
+    await f.first.query('ROLLBACK').catch(() => {});
+    if (pending) await pending.catch(() => {});
+    try { await f.admin.query(`DELETE FROM public.object_list WHERE id='${otherList}'`); }
+    finally { await f.close(); }
+  }
 });
 
 test('authorization is reread after the real list-lock wait, and post-effect result recording survives committed departure', { timeout: 30000 }, async () => {

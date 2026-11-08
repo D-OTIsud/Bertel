@@ -126,6 +126,53 @@ BEGIN
  THEN RAISE EXCEPTION 'Measurement positive is empty'; END IF;
 END; $test$;
 RESET ROLE;
+SAVEPOINT metric_verdicts;
+INSERT INTO public.object_list(id,org_object_id,created_by,kind,name)
+ VALUES('d2000000-0000-4000-8000-000000000021','ORGMAILINTENT001','d2000000-0000-4000-8000-000000000010','static','Synthetic metric list');
+SET LOCAL ROLE service_role;
+DO $test$
+DECLARE
+ u uuid:='d2000000-0000-4000-8000-000000000010';l uuid:='d2000000-0000-4000-8000-000000000020';
+ other uuid:='d2000000-0000-4000-8000-000000000021';op uuid:=gen_random_uuid();r jsonb;t uuid;before_conflicts numeric;
+BEGIN
+ SELECT COALESCE(sum(conflicts),0) INTO before_conflicts FROM internal.list_email_metric WHERE user_id=u;
+ r:=api.prepare_list_email(u,l,op,repeat('9',64),repeat('9',64),0);t:=(r->>'attempt_token')::uuid;
+ IF r->>'state' IS DISTINCT FROM 'reserved' OR t IS NULL
+ THEN RAISE EXCEPTION 'Metric reservation positive was vacant'; END IF;
+ r:=api.prepare_list_email(u,l,op,repeat('9',64),repeat('9',64),0);
+ IF r->>'state' IS DISTINCT FROM 'reserved'
+  OR (SELECT sum(conflicts) FROM internal.list_email_metric WHERE user_id=u) IS DISTINCT FROM before_conflicts
+ THEN RAISE EXCEPTION 'Metric exact-replay positive was vacant'; END IF;
+ r:=api.prepare_list_email(u,l,op,repeat('8',64),repeat('9',64),0);
+ IF r->>'state' IS DISTINCT FROM 'conflict'
+  OR (SELECT sum(conflicts) FROM internal.list_email_metric WHERE user_id=u) IS DISTINCT FROM before_conflicts+1
+ THEN RAISE EXCEPTION 'Count one incompatible replay'; END IF;
+ r:=api.prepare_list_email(u,other,gen_random_uuid(),repeat('8',64),repeat('8',64),0,true,ARRAY[op]);
+ IF r->>'state' IS DISTINCT FROM 'conflict'
+  OR (SELECT sum(conflicts) FROM internal.list_email_metric WHERE user_id=u) IS DISTINCT FROM before_conflicts+2
+ THEN RAISE EXCEPTION 'Count one foreign-parent verdict'; END IF;
+ r:=api.begin_list_email(u,l,op,gen_random_uuid(),repeat('9',64),repeat('9',64));
+ IF r->>'state' IS DISTINCT FROM 'conflict'
+  OR (SELECT sum(conflicts) FROM internal.list_email_metric WHERE user_id=u) IS DISTINCT FROM before_conflicts+3
+ THEN RAISE EXCEPTION 'Count one incompatible permit'; END IF;
+ IF api.prepare_list_email(u,l,gen_random_uuid(),repeat('9',64),repeat('9',64),0)->>'state' IS DISTINCT FROM 'stale'
+  OR api.prepare_list_email(u,l,gen_random_uuid(),repeat('9',64),repeat('9',64),1)->>'state' IS DISTINCT FROM 'unknown'
+  OR api.get_list_email_context('d2000000-0000-4000-8000-000000000011',l)->>'state' IS DISTINCT FROM 'forbidden'
+  OR api.prepare_list_email('d2000000-0000-4000-8000-000000000011',l,gen_random_uuid(),repeat('9',64),repeat('9',64),0)->>'state' IS DISTINCT FROM 'forbidden'
+  OR api.begin_list_email('d2000000-0000-4000-8000-000000000011',l,op,t,repeat('9',64),repeat('9',64))->>'state' IS DISTINCT FROM 'forbidden'
+  OR api.ack_list_email_client(u,l,op,repeat('9',64)) IS DISTINCT FROM false
+ THEN RAISE EXCEPTION 'Non-conflict measurement controls changed verdict'; END IF;
+ IF EXISTS(SELECT 1 FROM internal.list_email_metric WHERE user_id='d2000000-0000-4000-8000-000000000011')
+ THEN RAISE EXCEPTION 'Forbidden requests were measured'; END IF;
+ BEGIN
+  PERFORM api.prepare_list_email(u,l,gen_random_uuid(),'bad',repeat('9',64),1);
+  RAISE EXCEPTION 'Malformed request was accepted';
+ EXCEPTION WHEN invalid_parameter_value THEN NULL; END;
+ IF (SELECT sum(conflicts) FROM internal.list_email_metric WHERE user_id=u) IS DISTINCT FROM before_conflicts+3
+ THEN RAISE EXCEPTION 'Count exactly returned conflict verdicts, not stale/unknown/forbidden/replay/errors'; END IF;
+END; $test$;
+RESET ROLE;
+ROLLBACK TO metric_verdicts;
 SAVEPOINT sandbox_case;
 INSERT INTO internal.sandbox_discovery_identity(singleton,user_id)
  VALUES(true,'d2000000-0000-4000-8000-000000000010') ON CONFLICT(singleton) DO UPDATE SET user_id=EXCLUDED.user_id;

@@ -134,6 +134,61 @@ it('admits the exact open mode through prepare and dispatch with a strictly fake
   expect(mockSend).toHaveBeenCalledTimes(1);
   expect(mockRpc.mock.calls.map(([name]) => name)).toEqual(['prepare_list_email', 'begin_list_email', 'mark_list_sent', 'complete_list_email']);
 });
+describe('manual quota verdict at dispatch', () => {
+  const rpcNames = () => mockRpc.mock.calls.map(([name]) => name);
+  function beginReturns(verdict: unknown) {
+    process.env.LIST_EMAIL_MODE = 'protocol-v1';
+    mockRpc.mockImplementation(async (name: string) => {
+      if (name === 'begin_list_email') return reply(verdict);
+      if (name === 'complete_list_email' || name === 'mark_list_sent') return reply(true);
+      throw new Error('Unexpected synthetic RPC');
+    });
+  }
+  it('turns a valid refusal into a typed 429 with no SMTP, completion or tracking', async () => {
+    beginReturns({ started: false, state: 'quota_exceeded', retryAfterSeconds: 61 });
+    const response = await POST(request('dispatch'));
+    expect(response.status).toBe(429);
+    expect(response.headers.get('retry-after')).toBe('61');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await response.json()).toEqual({ error: 'email_quota_exceeded', outcome: 'not_sent', operationId: OPERATION, retryAfterSeconds: 61 });
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(rpcNames()).toEqual(['begin_list_email']);
+  });
+  it.each([
+    { started: false, state: 'quota_exceeded' },
+    { started: false, state: 'quota_exceeded', retryAfterSeconds: 0 },
+    { started: false, state: 'quota_exceeded', retryAfterSeconds: -1 },
+    { started: false, state: 'quota_exceeded', retryAfterSeconds: 1.5 },
+    { started: false, state: 'quota_exceeded', retryAfterSeconds: '61' },
+    { started: false, state: 'quota_exceeded', retryAfterSeconds: null },
+    { started: false, state: 'quota_exceeded', retryAfterSeconds: 9007199254740992 },
+    { started: false, state: 'quota_exceeded', retryAfterSeconds: 61, extra: true },
+    { state: 'quota_exceeded', retryAfterSeconds: 61 },
+    { started: true, state: 'quota_exceeded', retryAfterSeconds: 61 },
+    { started: false, state: 'QUOTA_EXCEEDED', retryAfterSeconds: 61 },
+    { started: false, retryAfterSeconds: 61 },
+  ])('fails closed with no SMTP on a malformed verdict: %j', async (verdict) => {
+    beginReturns(verdict);
+    await expectClosed(await POST(request('dispatch')));
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(rpcNames()).toEqual(['begin_list_email']);
+  });
+  it('keeps a started replay unknown with no SMTP', async () => {
+    beginReturns({ started: false, state: 'started', operation_id: OPERATION, operation_ids: [OPERATION] });
+    const response = await POST(request('dispatch'));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'email_delivery_unknown', operationId: OPERATION, operationIds: [OPERATION] });
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(rpcNames()).toEqual(['begin_list_email']);
+  });
+  it('keeps an accepted replay successful with no second SMTP', async () => {
+    beginReturns({ started: false, state: 'accepted', result_token: 'c'.repeat(64), tracking_updated: true });
+    const response = await POST(request('dispatch'));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ phase: 'accepted', operationId: OPERATION, resultToken: 'c'.repeat(64) });
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+});
 it('does not pretend closing the mode cancels a dispatch already admitted past the guard', async () => {
   process.env.LIST_EMAIL_MODE = 'protocol-v1';
   let enter!: () => void, release!: () => void;

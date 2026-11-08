@@ -6,6 +6,14 @@ import { readSmtpConfig, type SmtpConfig } from './env.server';
 import { getServerSupabaseClient } from './supabase-server';
 
 const line = z.string().trim().max(320).refine((v) => !/[\r\n\u0000]/.test(v), 'Valeur invalide.');
+const DEFAULT_MANUAL_MAX_PER_MINUTE = 10;
+const DEFAULT_MANUAL_MAX_PER_24H = 1000;
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
+const manualLimitMessage = 'Indiquez un nombre entier supérieur ou égal à 1.';
+// Absence means "keep the stored value", so this schema must never supply a default.
+const manualLimit = z.number({ error: manualLimitMessage })
+  .refine(Number.isSafeInteger, manualLimitMessage).min(1, manualLimitMessage)
+  .max(POSTGRES_INTEGER_MAX, manualLimitMessage).optional();
 export const smtpSettingsInputSchema = z.object({
   enabled: z.boolean(),
   host: z.string().trim().min(1, 'Indiquez le serveur SMTP.').max(253)
@@ -18,6 +26,8 @@ export const smtpSettingsInputSchema = z.object({
   authMode: z.enum(['relay', 'password']),
   user: line,
   password: z.string().max(4096).optional(),
+  manualMaxPerMinute: manualLimit,
+  manualMaxPer24h: manualLimit,
 }).strict().superRefine((value, ctx) => {
   if (value.authMode === 'password' && !value.user) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['user'], message: 'Indiquez l’identifiant SMTP.' });
@@ -29,6 +39,8 @@ type SmtpRow = {
   from_email: string; from_name: string; auth_mode: 'relay' | 'password';
   username: string | null; has_password: boolean; updated_at: string;
   password?: string | null;
+  // Absent until the quota migration is installed.
+  manual_max_per_minute?: unknown; manual_max_per_24h?: unknown;
 };
 
 export class SmtpSettingsError extends Error {
@@ -50,7 +62,12 @@ function environmentSettings(editable: boolean): SmtpSettings {
     authMode: cfg?.user ? 'password' : 'relay', user: cfg?.user ?? '', hasPassword: Boolean(cfg?.pass),
     source: cfg ? 'environment' : 'none', configured: Boolean(cfg && (!cfg.user || cfg.pass)),
     editable, updatedAt: null,
+    manualMaxPerMinute: DEFAULT_MANUAL_MAX_PER_MINUTE, manualMaxPer24h: DEFAULT_MANUAL_MAX_PER_24H,
   };
+}
+
+function publicManualLimit(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 && value <= POSTGRES_INTEGER_MAX ? value : fallback;
 }
 
 /** Deliberate whitelist: no Vault ID or password can enter the HTTP response. */
@@ -61,6 +78,8 @@ function publicSettings(row: SmtpRow): SmtpSettings {
     user: row.username ?? '', hasPassword: row.has_password,
     source: 'database', editable: true, updatedAt: row.updated_at,
     configured: row.enabled && (row.auth_mode === 'relay' || row.has_password),
+    manualMaxPerMinute: publicManualLimit(row.manual_max_per_minute, DEFAULT_MANUAL_MAX_PER_MINUTE),
+    manualMaxPer24h: publicManualLimit(row.manual_max_per_24h, DEFAULT_MANUAL_MAX_PER_24H),
   };
 }
 

@@ -55,6 +55,53 @@ it('whitelists public fields even if an unexpected secret is returned by the man
   expect(response).not.toHaveProperty('password');
 });
 
+describe('manual list e-mail limits', () => {
+  const good = { enabled: true, host: 'smtp.example.com', port: 587, secure: false, fromEmail: 'mail@example.com', fromName: 'Bertel', authMode: 'relay', user: '' };
+
+  it('exposes stored limits through the whitelist without their database names', async () => {
+    rpc.mockResolvedValue({ data: [{ ...row, manual_max_per_minute: 25, manual_max_per_24h: 2000 }], error: null });
+    const response = await readAdminSmtpSettings(client as never);
+    expect(response).toMatchObject({ manualMaxPerMinute: 25, manualMaxPer24h: 2000 });
+    expect(JSON.stringify(response)).not.toMatch(/manual_max|vault-password/);
+  });
+
+  it.each([
+    { name: 'old schema', limits: {} },
+    { name: 'invalid values', limits: { manual_max_per_minute: 0, manual_max_per_24h: '2000' } },
+  ])('reports the defaults for a saved row with $name', async ({ limits }) => {
+    rpc.mockResolvedValue({ data: [{ ...row, ...limits }], error: null });
+    await expect(readAdminSmtpSettings(client as never)).resolves.toMatchObject({ manualMaxPerMinute: 10, manualMaxPer24h: 1000 });
+  });
+
+  it('reports the defaults for the environment and no-row fallbacks', async () => {
+    rpc.mockResolvedValue({ data: [], error: null });
+    await expect(readAdminSmtpSettings(client as never)).resolves.toMatchObject({ source: 'environment', manualMaxPerMinute: 10, manualMaxPer24h: 1000 });
+    jest.mocked(readSmtpConfig).mockReturnValue(null);
+    await expect(readAdminSmtpSettings(client as never)).resolves.toMatchObject({ source: 'none', manualMaxPerMinute: 10, manualMaxPer24h: 1000 });
+  });
+
+  it('leaves the SMTP secret reader output unchanged', async () => {
+    rpc.mockResolvedValue({ data: [{ ...row, manual_max_per_minute: 25, manual_max_per_24h: 2000 }], error: null });
+    await expect(resolveSmtpConfig()).resolves.toEqual({ host: row.host, port: 465, secure: true, fromEmail: row.from_email, fromName: 'Saved', user: 'smtp-user', pass: 'vault-password' });
+  });
+
+  it('keeps absent limits absent and accepts valid supplied limits', () => {
+    const absent = smtpSettingsInputSchema.parse(good);
+    expect(absent).not.toHaveProperty('manualMaxPerMinute');
+    expect(absent).not.toHaveProperty('manualMaxPer24h');
+    expect(smtpSettingsInputSchema.parse({ ...good, manualMaxPerMinute: 1, manualMaxPer24h: 2147483647 }))
+      .toMatchObject({ manualMaxPerMinute: 1, manualMaxPer24h: 2147483647 });
+  });
+
+  it.each(['manualMaxPerMinute', 'manualMaxPer24h'].flatMap((field) => (
+    [0, -1, 1.5, '10', null, 2147483648, Number.MAX_SAFE_INTEGER + 1, Infinity, NaN].map((value) => [field, value] as const)
+  )))('rejects %s=%s', (field, value) => {
+    const parsed = smtpSettingsInputSchema.safeParse({ ...good, [field]: value });
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0]?.message).toBe('Indiquez un nombre entier supérieur ou égal à 1.');
+  });
+});
+
 it('never downgrades an incomplete password authentication to an IP relay', async () => {
   rpc.mockResolvedValue({ data: [{ ...row, password: null }], error: null });
   await expect(resolveSmtpConfig()).rejects.toThrow('identifiants SMTP enregistrés sont incomplets');

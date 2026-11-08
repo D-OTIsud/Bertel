@@ -17,6 +17,7 @@ import { strictErrorMessage } from '../../lib/strict-error-message';
 const EMPTY: SmtpSettingsInput = {
   enabled: true, host: '', port: 587, secure: false, fromEmail: '',
   fromName: 'Bertel', authMode: 'relay', user: '', password: '',
+  manualMaxPerMinute: 10, manualMaxPer24h: 1000,
 };
 
 function toForm(settings: SavedSmtpSettings): SmtpSettingsInput {
@@ -24,6 +25,8 @@ function toForm(settings: SavedSmtpSettings): SmtpSettingsInput {
     enabled: settings.enabled, host: settings.host, port: settings.port,
     secure: settings.secure, fromEmail: settings.fromEmail, fromName: settings.fromName,
     authMode: settings.authMode, user: settings.user, password: '',
+    manualMaxPerMinute: settings.manualMaxPerMinute ?? 10,
+    manualMaxPer24h: settings.manualMaxPer24h ?? 1000,
   };
 }
 
@@ -150,6 +153,11 @@ export function SmtpSettings() {
           <div className="settings-admin__section-head"><div><h3>Envois de la plateforme</h3><p className="settings-admin__hint">Les listes et notifications utilisent la même configuration.</p></div></div>
           <label className="smtp-settings__toggle"><input type="checkbox" checked={form.enabled} disabled={disabled} onChange={(event) => update('enabled', event.target.checked)} /><span>Activer l’envoi d’e-mails</span></label>
           {!form.enabled && <p className="settings-admin__hint">Après enregistrement, les envois seront suspendus. Le partage des listes par lien restera disponible.</p>}
+          <p id="smtp-manual-limits-hint" className="settings-admin__hint">Ces limites concernent uniquement les envois manuels de listes. Les deux plafonds s’appliquent ensemble à l’ensemble de ces envois.</p>
+          <div className="settings-admin__form-grid">
+            <label className="settings-admin__field"><span>Maximum par minute</span><input className="input" type="number" inputMode="numeric" min={1} max={2147483647} step={1} required disabled={disabled} value={form.manualMaxPerMinute || ''} aria-describedby="smtp-manual-limits-hint smtp-manual-minute-hint" onChange={(event) => update('manualMaxPerMinute', Number(event.target.value))} /><small id="smtp-manual-minute-hint">Sur les 60 dernières secondes.</small></label>
+            <label className="settings-admin__field"><span>Maximum sur 24 h</span><input className="input" type="number" inputMode="numeric" min={1} max={2147483647} step={1} required disabled={disabled} value={form.manualMaxPer24h || ''} aria-describedby="smtp-manual-limits-hint smtp-manual-day-hint" onChange={(event) => update('manualMaxPer24h', Number(event.target.value))} /><small id="smtp-manual-day-hint">Sur les 24 dernières heures.</small></label>
+          </div>
           {settings?.source === 'environment' && <p className="settings-admin__hint">Réglages actuels fournis par le serveur. Enregistrez ce formulaire pour les gérer depuis Bertel.</p>}
         </div>
 

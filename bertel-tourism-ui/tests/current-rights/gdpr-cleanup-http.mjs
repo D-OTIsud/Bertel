@@ -79,7 +79,7 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
       UPDATE public.app_user_profile SET role='super_admin' WHERE id='${writerId}'`, 'install owned synthetic GDPR records');
     fixtureCreated = true;
     // Execute the reviewed installation act itself, never a fixture copy of its grants.
-    local.sqlFile(resolve('supabase/migrations/20261108091712_gdpr_cleanup_activation.sql'), 'activate the exact GDPR capability on the disposable stack');
+    local.sqlFile(resolve('supabase/releases/20261108_gdpr_cleanup/activate.sql'), 'activate the exact GDPR capability on the disposable stack');
     assert.equal(local.sql(`SELECT bool_and(NOT has_function_privilege(r,s,'EXECUTE'))
       FROM unnest(ARRAY[${legacyFunctions.map((s) => `'${s}'`).join(',')}]) s
       CROSS JOIN unnest(ARRAY['anon','authenticated','service_role']) r`, 'legacy GDPR entry points stay closed'), 't');

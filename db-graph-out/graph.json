@@ -1,12 +1,12 @@
 {
  "meta": {
-  "table_count": 426,
+  "table_count": 428,
   "view_count": 15,
-  "function_count": 652,
+  "function_count": 668,
   "policy_count": 647,
   "trigger_count": 1439,
   "enum_count": 9,
-  "edge_count": 6349
+  "edge_count": 6402
  },
  "nodes": [
   {
@@ -55617,80 +55617,6 @@
    }
   },
   {
-   "id": "realtime.messages_2026_11_04",
-   "kind": "table",
-   "label": "messages_2026_11_04",
-   "schema": "realtime",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "columns": [
-     {
-      "name": "topic",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "extension",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "payload",
-      "type": "jsonb",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "event",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "private",
-      "type": "boolean",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "updated_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "inserted_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "id",
-      "type": "uuid",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "binary_payload",
-      "type": "bytea",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "skip_broadcast",
-      "type": "boolean",
-      "nullable": false,
-      "pk": false
-     }
-    ],
-    "rls_enabled": false,
-    "rls_forced": false
-   }
-  },
-  {
    "id": "realtime.messages_2026_11_05",
    "kind": "table",
    "label": "messages_2026_11_05",
@@ -58458,6 +58384,234 @@
    }
   },
   {
+   "id": "realtime.messages_2026_11_11",
+   "kind": "table",
+   "label": "messages_2026_11_11",
+   "schema": "realtime",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "columns": [
+     {
+      "name": "topic",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "extension",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "payload",
+      "type": "jsonb",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "event",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "private",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp without time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "inserted_at",
+      "type": "timestamp without time zone",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "binary_payload",
+      "type": "bytea",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "skip_broadcast",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": false,
+    "rls_forced": false
+   }
+  },
+  {
+   "id": "internal.gdpr_cleanup_task",
+   "kind": "table",
+   "label": "gdpr_cleanup_task",
+   "schema": "internal",
+   "domain": "other",
+   "doc": "Tâches de nettoyage (Storage/Auth) issues d'un effacement RGPD, survivant au sujet effacé. Écrites par api.rpc_gdpr_erase_subject, lues et acquittées par les RPC de statut et d'acquittement.",
+   "props": {
+    "columns": [
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "operation_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "action",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "metadata",
+      "type": "jsonb",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "status",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "attempts",
+      "type": "integer",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "last_error",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "target_key",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "attempt_id",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "attempt_state",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "receipt_task_id",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true,
+    "rls_forced": false
+   }
+  },
+  {
+   "id": "internal.avatar_upload_intent",
+   "kind": "table",
+   "label": "avatar_upload_intent",
+   "schema": "internal",
+   "domain": "other",
+   "doc": "Private permanent avatar attempt identity and immutable byte/path binding. No cascade FK, expiry, adoption or rearm. Engaged attempts block user erasure; a receipt is never authority to erase.",
+   "props": {
+    "columns": [
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "storage_path",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "sha256",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "size_bytes",
+      "type": "bigint",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "state",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "finished_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true,
+    "rls_forced": false
+   }
+  },
+  {
    "id": "thesaurus.object_ids_for_row(p_table oid, p_row jsonb, p_visited oid[] DEFAULT '{}'::oid[], p_depth integer DEFAULT 0)",
    "kind": "function",
    "label": "object_ids_for_row",
@@ -58488,7 +58642,7 @@
    "label": "redact_subject",
    "schema": "audit",
    "domain": "audit",
-   "doc": "---------------------------------------------------------------------\n2. audit.redact_subject — ajoute le matching after_data\n---------------------------------------------------------------------",
+   "doc": "---------------------------------------------------------------------\n2. audit.redact_subject : correspondance after_data (19a)\n---------------------------------------------------------------------",
    "props": {
     "signature": "redact_subject(p_table text, p_match_key text, p_match_val text, p_pii_cols text[])",
     "returns": "integer",
@@ -58497,12 +58651,20 @@
     "dynamic_sql": false,
     "sources": [
      {
+      "path": "Base de donnée DLL et API/gdpr_crm_document_provenance.sql",
+      "line": 365
+     },
+     {
       "path": "Base de donnée DLL et API/schema_unified.sql",
       "line": 6764
      },
      {
       "path": "supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
       "line": 70
+     },
+     {
+      "path": "supabase/migrations/20261108070035_gdpr_crm_document_provenance.sql",
+      "line": 365
      }
     ]
    }
@@ -58513,7 +58675,7 @@
    "label": "rpc_gdpr_erase_subject",
    "schema": "api",
    "domain": "api",
-   "doc": "Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id.",
+   "doc": "Effacement/anonymisation RGPD Art. 17 d'un sujet, atomique et journalisé. Les documents CRM du sujet sont inventoriés avec leurs reçus de provenance ; un reçu ne donne aucun droit de suppression et tout document encore utilisé est conservé. Réservé au propriétaire jusqu'à la qualification globale de l'activation.",
    "props": {
     "signature": "rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
     "returns": "jsonb",
@@ -58521,6 +58683,10 @@
     "volatility": "v",
     "dynamic_sql": false,
     "sources": [
+     {
+      "path": "Base de donnée DLL et API/gdpr_crm_document_provenance.sql",
+      "line": 428
+     },
      {
       "path": "Base de donnée DLL et API/migration_actor_portal.sql",
       "line": 1790
@@ -58536,6 +58702,10 @@
      {
       "path": "supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
       "line": 101
+     },
+     {
+      "path": "supabase/migrations/20261108070035_gdpr_crm_document_provenance.sql",
+      "line": 428
      }
     ],
     "direct_execute_acl": {
@@ -74660,6 +74830,525 @@
    }
   },
   {
+   "id": "api.avatar_upload_allowed(p_user_id uuid)",
+   "kind": "function",
+   "label": "avatar_upload_allowed",
+   "schema": "api",
+   "domain": "api",
+   "doc": "This read prevents NEW route requests while an existing durable user operation\nhas outstanding tasks. It does not reserve or drain an already admitted HTTP\nupload, and it cannot fence external service-role writers or old instances.",
+   "props": {
+    "signature": "avatar_upload_allowed(p_user_id uuid)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108073355_gdpr_avatar_inventory.sql",
+      "line": 69
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108073355_gdpr_avatar_inventory.sql",
+     "line": 69
+    },
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "service_role"
+     ]
+    }
+   }
+  },
+  {
+   "id": "api.begin_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)",
+   "kind": "function",
+   "label": "begin_avatar_upload",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "begin_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108073400_avatar_upload_intents.sql",
+      "line": 64
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108073400_avatar_upload_intents.sql",
+     "line": 64
+    },
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "service_role"
+     ]
+    }
+   }
+  },
+  {
+   "id": "api.complete_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)",
+   "kind": "function",
+   "label": "complete_avatar_upload",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "complete_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108073400_avatar_upload_intents.sql",
+      "line": 89
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108073400_avatar_upload_intents.sql",
+     "line": 89
+    },
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "service_role"
+     ]
+    }
+   }
+  },
+  {
+   "id": "api.rpc_gdpr_ack_cleanup_attempt(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_success boolean, p_effect_issued boolean, p_error text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "rpc_gdpr_ack_cleanup_attempt",
+   "schema": "api",
+   "domain": "api",
+   "doc": "p_effect_issued distingue un refus prouvé sans effet (tâche relançable) d'un envoi provider dont\nl'issue est inconnue (définitif). Le succès propage le reçu aux tâches liées à cette cible.",
+   "props": {
+    "signature": "rpc_gdpr_ack_cleanup_attempt(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_success boolean, p_effect_issued boolean, p_error text DEFAULT NULL::text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108074602_gdpr_cleanup_claims.sql",
+      "line": 204
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108074602_gdpr_cleanup_claims.sql",
+     "line": 204
+    },
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "api.rpc_gdpr_ack_cleanup_task(p_operation_id uuid, p_task_id uuid, p_success boolean, p_error text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "rpc_gdpr_ack_cleanup_task",
+   "schema": "api",
+   "domain": "api",
+   "doc": "L'identité 4 arguments reste pour les préalables 19a, mais ne peut plus muter sans tentative.",
+   "props": {
+    "signature": "rpc_gdpr_ack_cleanup_task(p_operation_id uuid, p_task_id uuid, p_success boolean, p_error text DEFAULT NULL::text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/gdpr_crm_document_provenance.sql",
+      "line": 929
+     },
+     {
+      "path": "supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
+      "line": 592
+     },
+     {
+      "path": "supabase/migrations/20261108070035_gdpr_crm_document_provenance.sql",
+      "line": 929
+     },
+     {
+      "path": "supabase/migrations/20261108074602_gdpr_cleanup_claims.sql",
+      "line": 335
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "api.rpc_gdpr_claim_cleanup_task(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_expected_action text, p_expected_metadata jsonb, p_target_key text)",
+   "kind": "function",
+   "label": "rpc_gdpr_claim_cleanup_task",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "rpc_gdpr_claim_cleanup_task(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_expected_action text, p_expected_metadata jsonb, p_target_key text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108074602_gdpr_cleanup_claims.sql",
+      "line": 105
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108074602_gdpr_cleanup_claims.sql",
+     "line": 105
+    },
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "api.rpc_gdpr_find_start_request(p_request_id uuid)",
+   "kind": "function",
+   "label": "rpc_gdpr_find_start_request",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Recherche seule d'une demande START connue par son auteur courant ; absence ne permet jamais un nouveau START automatique. Propriétaire seul.",
+   "props": {
+    "signature": "rpc_gdpr_find_start_request(p_request_id uuid)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/gdpr_start_request_identity.sql",
+      "line": 144
+     },
+     {
+      "path": "supabase/migrations/20261108075514_gdpr_start_request_identity.sql",
+      "line": 144
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "api.rpc_gdpr_get_cleanup_status(p_operation_id uuid)",
+   "kind": "function",
+   "label": "rpc_gdpr_get_cleanup_status",
+   "schema": "api",
+   "domain": "api",
+   "doc": "---------------------------------------------------------------------\n5. Lecture et acquittement (corps durcis existants)\n---------------------------------------------------------------------",
+   "props": {
+    "signature": "rpc_gdpr_get_cleanup_status(p_operation_id uuid)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/gdpr_crm_document_provenance.sql",
+      "line": 890
+     },
+     {
+      "path": "supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
+      "line": 548
+     },
+     {
+      "path": "supabase/migrations/20261108010225_guard_legacy_gdpr_erase.sql",
+      "line": 157
+     },
+     {
+      "path": "supabase/migrations/20261108070035_gdpr_crm_document_provenance.sql",
+      "line": 890
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "api.rpc_gdpr_refuse_cleanup_task(p_operation_id uuid, p_task_id uuid, p_expected_action text, p_expected_metadata jsonb, p_error text)",
+   "kind": "function",
+   "label": "rpc_gdpr_refuse_cleanup_task",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Refus d'une référence externe ou invalide, qui n'a aucune cible à réclamer. Sans attemptId,\ncette RPC ne peut ni marquer un succès, ni libérer ou masquer une tentative en cours.",
+   "props": {
+    "signature": "rpc_gdpr_refuse_cleanup_task(p_operation_id uuid, p_task_id uuid, p_expected_action text, p_expected_metadata jsonb, p_error text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108074602_gdpr_cleanup_claims.sql",
+      "line": 287
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108074602_gdpr_cleanup_claims.sql",
+     "line": 287
+    },
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "api.rpc_gdpr_start_erasure(p_request_id uuid, p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "rpc_gdpr_start_erasure",
+   "schema": "api",
+   "domain": "api",
+   "doc": "START idempotent par demande/auteur/snapshot, lie la demande au vrai journal 19a atomiquement. Propriétaire seul ; aucune activation.",
+   "props": {
+    "signature": "rpc_gdpr_start_erasure(p_request_id uuid, p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/gdpr_start_request_identity.sql",
+      "line": 68
+     },
+     {
+      "path": "supabase/migrations/20261108075514_gdpr_start_request_identity.sql",
+      "line": 68
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "internal.avatar_subject_lock(p_user_id uuid)",
+   "kind": "function",
+   "label": "avatar_subject_lock",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "One shared formula, taken before active-state reads. RC is required because an\nadvisory-lock wait does not refresh a Repeatable Read transaction's old snapshot.",
+   "props": {
+    "signature": "avatar_subject_lock(p_user_id uuid)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108073400_avatar_upload_intents.sql",
+      "line": 41
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108073400_avatar_upload_intents.sql",
+     "line": 41
+    },
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "internal.gdpr_assert_no_avatar_upload(p_user_id uuid)",
+   "kind": "function",
+   "label": "gdpr_assert_no_avatar_upload",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "gdpr_assert_no_avatar_upload(p_user_id uuid)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108073400_avatar_upload_intents.sql",
+      "line": 53
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108073400_avatar_upload_intents.sql",
+     "line": 53
+    },
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "internal.gdpr_cleanup_lock_target(p_target_key text)",
+   "kind": "function",
+   "label": "gdpr_cleanup_lock_target",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "Claims et ACK d'une même cible se sérialisent ici, toujours avant les verrous de lignes.\nREAD COMMITTED garantit qu'après l'attente chaque instruction voit le dernier état commis.",
+   "props": {
+    "signature": "gdpr_cleanup_lock_target(p_target_key text)",
+    "returns": "void",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108074602_gdpr_cleanup_claims.sql",
+      "line": 90
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108074602_gdpr_cleanup_claims.sql",
+     "line": 90
+    },
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "kind": "function",
+   "label": "gdpr_document_is_referenced",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "Vrai si un document reste utilisé hors du sujet effacé. Réservé à api.rpc_gdpr_erase_subject.",
+   "props": {
+    "signature": "gdpr_document_is_referenced(p_document_id uuid)",
+    "returns": "boolean",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/gdpr_crm_document_provenance.sql",
+      "line": 394
+     },
+     {
+      "path": "supabase/migrations/20261108070035_gdpr_crm_document_provenance.sql",
+      "line": 394
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "internal.gdpr_enqueue_avatar_inventory(p_operation_id uuid, p_user_id uuid)",
+   "kind": "function",
+   "label": "gdpr_enqueue_avatar_inventory",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "gdpr_enqueue_avatar_inventory(p_operation_id uuid, p_user_id uuid)",
+    "returns": "integer",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108073355_gdpr_avatar_inventory.sql",
+      "line": 23
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108073355_gdpr_avatar_inventory.sql",
+     "line": 23
+    },
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "internal.gdpr_start_actor_identity()",
+   "kind": "function",
+   "label": "gdpr_start_actor_identity",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "gdpr_start_actor_identity()",
+    "returns": "text",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/gdpr_start_request_identity.sql",
+      "line": 49
+     },
+     {
+      "path": "supabase/migrations/20261108075514_gdpr_start_request_identity.sql",
+      "line": 49
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "policy:public.object_version_2026_11:admin_object_version",
+   "kind": "policy",
+   "label": "admin_object_version",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_version_2026_11",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
+   }
+  },
+  {
    "id": "policy:public.ref_code_mood:admin_ref_code_write",
    "kind": "policy",
    "label": "admin_ref_code_write",
@@ -74824,6 +75513,23 @@
      "authenticated"
     ],
     "predicate": "((topic = ( SELECT realtime.topic() AS topic)) AND internal.bertel_realtime_channel_allowed(topic, extension, true))"
+   }
+  },
+  {
+   "id": "policy:public.object_version_2027_01:admin_object_version",
+   "kind": "policy",
+   "label": "admin_object_version",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_version_2027_01",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
    }
   },
   {
@@ -75342,38 +76048,6 @@
    }
   },
   {
-   "id": "policy:public.org_config:member_org_config_read",
-   "kind": "policy",
-   "label": "member_org_config_read",
-   "schema": "public",
-   "domain": "actor-org",
-   "doc": null,
-   "props": {
-    "table": "public.org_config",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(api.is_platform_superuser() OR (EXISTS ( SELECT 1\n   FROM public.user_org_membership m\n  WHERE ((m.org_object_id = org_config.org_object_id) AND (m.user_id = ( SELECT auth.uid() AS uid)) AND (m.is_active = true)))))"
-   }
-  },
-  {
-   "id": "policy:public.org_config:superuser_org_config_write",
-   "kind": "policy",
-   "label": "superuser_org_config_write",
-   "schema": "public",
-   "domain": "actor-org",
-   "doc": null,
-   "props": {
-    "table": "public.org_config",
-    "cmd": "ALL",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.is_platform_superuser() | api.is_platform_superuser()"
-   }
-  },
-  {
    "id": "policy:audit.audit_log_2026_12:Insertion via triggers",
    "kind": "policy",
    "label": "Insertion via triggers",
@@ -75406,6 +76080,38 @@
     ],
     "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
     "partition_of": "audit.audit_log"
+   }
+  },
+  {
+   "id": "policy:public.org_config:member_org_config_read",
+   "kind": "policy",
+   "label": "member_org_config_read",
+   "schema": "public",
+   "domain": "actor-org",
+   "doc": null,
+   "props": {
+    "table": "public.org_config",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(api.is_platform_superuser() OR (EXISTS ( SELECT 1\n   FROM public.user_org_membership m\n  WHERE ((m.org_object_id = org_config.org_object_id) AND (m.user_id = ( SELECT auth.uid() AS uid)) AND (m.is_active = true)))))"
+   }
+  },
+  {
+   "id": "policy:public.org_config:superuser_org_config_write",
+   "kind": "policy",
+   "label": "superuser_org_config_write",
+   "schema": "public",
+   "domain": "actor-org",
+   "doc": null,
+   "props": {
+    "table": "public.org_config",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.is_platform_superuser() | api.is_platform_superuser()"
    }
   },
   {
@@ -81638,23 +82344,6 @@
    }
   },
   {
-   "id": "policy:public.object_version_2026_11:admin_object_version",
-   "kind": "policy",
-   "label": "admin_object_version",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_version_2026_11",
-    "cmd": "ALL",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-    "partition_of": "public.object_version"
-   }
-  },
-  {
    "id": "policy:public.object_version_2026_09:admin_object_version",
    "kind": "policy",
    "label": "admin_object_version",
@@ -82324,23 +83013,6 @@
      "public"
     ],
     "predicate": "((EXISTS ( SELECT 1\n   FROM public.object o\n  WHERE ((o.id = object_pet_policy.object_id) AND ((o.status = 'published'::public.object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))"
-   }
-  },
-  {
-   "id": "policy:public.object_version_2027_01:admin_object_version",
-   "kind": "policy",
-   "label": "admin_object_version",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_version_2027_01",
-    "cmd": "ALL",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-    "partition_of": "public.object_version"
    }
   },
   {
@@ -115434,6 +116106,40 @@
    }
   },
   {
+   "source": "internal.gdpr_cleanup_task",
+   "target": "public.gdpr_erasure_log",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "operation_id",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "internal.gdpr_cleanup_task",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "receipt_task_id",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "policy:public.object_version_2026_11:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_11"
+   }
+  },
+  {
    "source": "policy:public.ref_code_mood:admin_ref_code_write",
    "target": "public.ref_code",
    "kind": "gates",
@@ -115506,6 +116212,14 @@
    "target": "realtime.messages",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.object_version_2027_01:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2027_01"
+   }
   },
   {
    "source": "policy:public.object_stay_policy:canonical_del_object_stay_policy",
@@ -115700,18 +116414,6 @@
    "props": {}
   },
   {
-   "source": "policy:public.org_config:member_org_config_read",
-   "target": "public.org_config",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.org_config:superuser_org_config_write",
-   "target": "public.org_config",
-   "kind": "gates",
-   "props": {}
-  },
-  {
    "source": "policy:audit.audit_log_2026_12:Insertion via triggers",
    "target": "audit.audit_log",
    "kind": "gates",
@@ -115726,6 +116428,18 @@
    "props": {
     "via_partition": "audit.audit_log_2026_12"
    }
+  },
+  {
+   "source": "policy:public.org_config:member_org_config_read",
+   "target": "public.org_config",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.org_config:superuser_org_config_write",
+   "target": "public.org_config",
+   "kind": "gates",
+   "props": {}
   },
   {
    "source": "policy:public.user_org_membership:admin_user_org_membership_write",
@@ -118242,14 +118956,6 @@
    "props": {}
   },
   {
-   "source": "policy:public.object_version_2026_11:admin_object_version",
-   "target": "public.object_version",
-   "kind": "gates",
-   "props": {
-    "via_partition": "public.object_version_2026_11"
-   }
-  },
-  {
    "source": "policy:public.object_version_2026_09:admin_object_version",
    "target": "public.object_version",
    "kind": "gates",
@@ -118508,14 +119214,6 @@
    "target": "public.object_pet_policy",
    "kind": "gates",
    "props": {}
-  },
-  {
-   "source": "policy:public.object_version_2027_01:admin_object_version",
-   "target": "public.object_version",
-   "kind": "gates",
-   "props": {
-    "via_partition": "public.object_version_2027_01"
-   }
   },
   {
    "source": "policy:public.object_fma_occurrence:canonical_del_object_fma_occurrence",
@@ -119871,6 +120569,42 @@
   },
   {
    "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.crm_interaction",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM crm_interaction"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.actor_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM actor_document"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
    "target": "public.actor_consent",
    "kind": "reads",
    "props": {
@@ -119878,6 +120612,78 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM actor_consent"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.crm_task_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task_document"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "internal.crm_document_upload",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.crm_document_upload"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "internal.crm_document_detachment",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.crm_document_detachment"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.ref_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_document"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "internal.portal_photo_analysis",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.portal_photo_analysis"
     }
    }
   },
@@ -119955,6 +120761,18 @@
   },
   {
    "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.gdpr_erasure_log",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO gdpr_erasure_log"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
    "target": "public.app_user_profile",
    "kind": "writes",
    "props": {
@@ -119962,18 +120780,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "UPDATE app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
-   "target": "public.actor",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "DELETE FROM actor"
     }
    }
   },
@@ -120015,6 +120821,66 @@
   },
   {
    "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.crm_task_document",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.crm_task_document"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "internal.crm_document_upload",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.crm_document_upload"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "internal.crm_document_detachment",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.crm_document_detachment"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.actor",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE actor"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.actor_document",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM actor_document"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
    "target": "public.actor_consent",
    "kind": "writes",
    "props": {
@@ -120034,6 +120900,30 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "DELETE FROM actor_channel"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.ref_document",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM ref_document"
     }
    }
   },
@@ -120082,18 +120972,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "DELETE FROM contact_channel"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
-   "target": "public.gdpr_erasure_log",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "INSERT INTO gdpr_erasure_log"
     }
    }
   },
@@ -143090,6 +143968,438 @@
    }
   },
   {
+   "source": "api.avatar_upload_allowed(p_user_id uuid)",
+   "target": "public.gdpr_erasure_log",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.gdpr_erasure_log"
+    }
+   }
+  },
+  {
+   "source": "api.avatar_upload_allowed(p_user_id uuid)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.begin_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "api.begin_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)",
+   "target": "internal.avatar_upload_intent",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.avatar_upload_intent"
+    }
+   }
+  },
+  {
+   "source": "api.complete_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)",
+   "target": "internal.avatar_upload_intent",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.avatar_upload_intent"
+    }
+   }
+  },
+  {
+   "source": "api.complete_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)",
+   "target": "internal.avatar_upload_intent",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.avatar_upload_intent"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_ack_cleanup_attempt(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_success boolean, p_effect_issued boolean, p_error text DEFAULT NULL::text)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_ack_cleanup_attempt(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_success boolean, p_effect_issued boolean, p_error text DEFAULT NULL::text)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_claim_cleanup_task(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_expected_action text, p_expected_metadata jsonb, p_target_key text)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_claim_cleanup_task(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_expected_action text, p_expected_metadata jsonb, p_target_key text)",
+   "target": "public.gdpr_erasure_log",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.gdpr_erasure_log"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_claim_cleanup_task(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_expected_action text, p_expected_metadata jsonb, p_target_key text)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_find_start_request(p_request_id uuid)",
+   "target": "public.gdpr_erasure_log",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.gdpr_erasure_log"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_get_cleanup_status(p_operation_id uuid)",
+   "target": "public.gdpr_erasure_log",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM gdpr_erasure_log"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_get_cleanup_status(p_operation_id uuid)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_refuse_cleanup_task(p_operation_id uuid, p_task_id uuid, p_expected_action text, p_expected_metadata jsonb, p_error text)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_refuse_cleanup_task(p_operation_id uuid, p_task_id uuid, p_expected_action text, p_expected_metadata jsonb, p_error text)",
+   "target": "public.gdpr_erasure_log",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.gdpr_erasure_log"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_refuse_cleanup_task(p_operation_id uuid, p_task_id uuid, p_expected_action text, p_expected_metadata jsonb, p_error text)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_start_erasure(p_request_id uuid, p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.gdpr_erasure_log",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.gdpr_erasure_log"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_start_erasure(p_request_id uuid, p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_start_erasure(p_request_id uuid, p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.gdpr_erasure_log",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE public.gdpr_erasure_log"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_assert_no_avatar_upload(p_user_id uuid)",
+   "target": "internal.avatar_upload_intent",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.avatar_upload_intent"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.object_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_document"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.object_classification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_classification"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.object_legal",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_legal"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.object_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.object_iti",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_iti"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.actor_consent",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor_consent"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.actor_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor_document"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.crm_task_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task_document"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "internal.portal_photo_analysis",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.portal_photo_analysis"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.media"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_document_is_referenced(p_document_id uuid)",
+   "target": "public.ref_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_document"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_enqueue_avatar_inventory(p_operation_id uuid, p_user_id uuid)",
+   "target": "public.gdpr_erasure_log",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.gdpr_erasure_log"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_enqueue_avatar_inventory(p_operation_id uuid, p_user_id uuid)",
+   "target": "storage.objects",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM storage.objects"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_enqueue_avatar_inventory(p_operation_id uuid, p_user_id uuid)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "internal.gdpr_enqueue_avatar_inventory(p_operation_id uuid, p_user_id uuid)",
+   "target": "internal.gdpr_cleanup_task",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
    "source": "public.object_type",
    "target": "public.object_act",
    "kind": "applies_to",
@@ -143275,9 +144585,11 @@
   }
  ],
  "partitions": {
+  "public.object_version_2026_11": "public.object_version",
   "public.ref_code_mood": "public.ref_code",
   "public.ref_code_menu_category": "public.ref_code",
   "public.ref_code_dietary_tag": "public.ref_code",
+  "public.object_version_2027_01": "public.object_version",
   "public.object_version_default": "public.object_version",
   "public.ref_code_price_type": "public.ref_code",
   "audit.audit_log_2026_12": "audit.audit_log",
@@ -143340,12 +144652,10 @@
   "public.object_version_2026_12": "public.object_version",
   "public.object_version_2026_07": "public.object_version",
   "public.ref_code_price_kind": "public.ref_code",
-  "public.object_version_2026_11": "public.object_version",
   "public.object_version_2026_09": "public.object_version",
   "public.ref_code_other": "public.ref_code",
   "audit.audit_log_2026_07": "audit.audit_log",
   "audit.audit_log_2026_08": "audit.audit_log",
-  "public.object_version_2027_01": "public.object_version",
   "public.ref_code_contact_kind": "public.ref_code",
   "public.ref_code_media_type": "public.ref_code",
   "public.ref_code_client_type": "public.ref_code",

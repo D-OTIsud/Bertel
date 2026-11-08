@@ -134,6 +134,17 @@ Exécution directe réservée à authenticated ; rattache l’intention et revé
 - reads `public.ref_code_demand_subtopic` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
 
+## `api.avatar_upload_allowed(p_user_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `internal.gdpr_cleanup_task` _(high)_
+- reads `public.gdpr_erasure_log` _(high)_
+
+> This read prevents NEW route requests while an existing durable user operation
+> has outstanding tasks. It does not reserve or drain an already admitted HTTP
+> upload, and it cannot fence external service-role writers or old instances.
+
+Exécution directe réservée au rôle serveur `service_role` ; aucun accès `anon` ou `authenticated`.
+
 ## `api.b64url_decode(p text)`
 - returns: `bytea`
 
@@ -144,6 +155,13 @@ Exécution directe réservée à authenticated ; rattache l’intention et revé
 - returns: `trigger`
 
 > Génération d'ID si absent
+
+## `api.begin_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- writes `internal.avatar_upload_intent` _(high)_
+
+Exécution directe réservée au rôle serveur `service_role` ; aucun accès `anon` ou `authenticated`.
 
 ## `api.begin_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_fingerprint text, p_recipient_fingerprint text)`
 - returns: `jsonb`
@@ -341,6 +359,13 @@ Exécution directe réservée à authenticated ; rattache l’intention et revé
 - writes `staging.ref_classification_scheme_temp` _(high)_
 - writes `staging.ref_classification_value_temp` _(high)_
 - writes `staging.ref_code_temp` _(high)_
+
+## `api.complete_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.avatar_upload_intent` _(high)_
+- writes `internal.avatar_upload_intent` _(high)_
+
+Exécution directe réservée au rôle serveur `service_role` ; aucun accès `anon` ou `authenticated`.
 
 ## `api.complete_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_outcome text, p_tracking_updated boolean DEFAULT false, p_rejection_code text DEFAULT NULL::text, p_result_token text DEFAULT NULL::text)`
 - returns: `boolean`
@@ -2853,32 +2878,112 @@ Exécution directe réservée à authenticated ; prépare une intention privée 
 - returns: `void` — SECURITY DEFINER, dynamic SQL
 - reads `internal.v_ref_catalog` _(high)_
 
+## `api.rpc_gdpr_ack_cleanup_attempt(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_success boolean, p_effect_issued boolean, p_error text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gdpr_cleanup_task` _(high)_
+- writes `internal.gdpr_cleanup_task` _(high)_
+
+> p_effect_issued distingue un refus prouvé sans effet (tâche relançable) d'un envoi provider dont
+> l'issue est inconnue (définitif). Le succès propage le reçu aux tâches liées à cette cible.
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `api.rpc_gdpr_ack_cleanup_task(p_operation_id uuid, p_task_id uuid, p_success boolean, p_error text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+
+> L'identité 4 arguments reste pour les préalables 19a, mais ne peut plus muter sans tentative.
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `api.rpc_gdpr_claim_cleanup_task(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_expected_action text, p_expected_metadata jsonb, p_target_key text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gdpr_cleanup_task` _(high)_
+- reads `public.gdpr_erasure_log` _(high)_
+- writes `internal.gdpr_cleanup_task` _(high)_
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
 ## `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
+- reads `internal.crm_document_detachment` _(high)_
+- reads `internal.crm_document_upload` _(high)_
+- reads `internal.portal_photo_analysis` _(high)_
 - reads `public.actor` _(high)_
 - reads `public.actor_channel` _(high)_
 - reads `public.actor_consent` _(high)_
+- reads `public.actor_document` _(high)_
 - reads `public.app_user_profile` _(high)_
 - reads `public.contact_channel` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.crm_task_document` _(high)_
 - reads `public.incident_report` _(high)_
 - reads `public.object_legal` _(high)_
 - reads `public.object_review` _(high)_
+- reads `public.pending_change` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.crm_document_detachment` _(high)_
+- writes `internal.crm_document_upload` _(high)_
+- writes `internal.gdpr_cleanup_task` _(high)_
 - writes `public.actor` _(high)_
 - writes `public.actor_channel` _(high)_
 - writes `public.actor_consent` _(high)_
+- writes `public.actor_document` _(high)_
 - writes `public.app_user_profile` _(high)_
 - writes `public.contact_channel` _(high)_
 - writes `public.crm_interaction` _(high)_
 - writes `public.crm_task` _(high)_
+- writes `public.crm_task_document` _(high)_
 - writes `public.fiche_submission` _(high)_
 - writes `public.gdpr_erasure_log` _(high)_
 - writes `public.incident_report` _(high)_
 - writes `public.object_legal` _(high)_
 - writes `public.object_review` _(high)_
+- writes `public.ref_document` _(high)_
 
-> Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id.
+> Effacement/anonymisation RGPD Art. 17 d'un sujet, atomique et journalisé. Les documents CRM du sujet sont inventoriés avec leurs reçus de provenance ; un reçu ne donne aucun droit de suppression et tout document encore utilisé est conservé. Réservé au propriétaire jusqu'à la qualification globale de l'activation.
 
-**Exécution dans le catalogue hébergé.** L’exécution directe de cette fonction est réservée au propriétaire PostgreSQL. Les rôles API anon, authenticated et service_role ont perdu le droit EXECUTE. Le catalogue capturé ne contient ni la table durable de nettoyage RGPD ni ses RPC de statut et d’acquittement.
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `api.rpc_gdpr_find_start_request(p_request_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.gdpr_erasure_log` _(high)_
+
+> Recherche seule d'une demande START connue par son auteur courant ; absence ne permet jamais un nouveau START automatique. Propriétaire seul.
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `api.rpc_gdpr_get_cleanup_status(p_operation_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gdpr_cleanup_task` _(high)_
+- reads `public.gdpr_erasure_log` _(high)_
+
+> ---------------------------------------------------------------------
+> 5. Lecture et acquittement (corps durcis existants)
+> ---------------------------------------------------------------------
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `api.rpc_gdpr_refuse_cleanup_task(p_operation_id uuid, p_task_id uuid, p_expected_action text, p_expected_metadata jsonb, p_error text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gdpr_cleanup_task` _(high)_
+- reads `public.gdpr_erasure_log` _(high)_
+- writes `internal.gdpr_cleanup_task` _(high)_
+
+> Refus d'une référence externe ou invalide, qui n'a aucune cible à réclamer. Sans attemptId,
+> cette RPC ne peut ni marquer un succès, ni libérer ou masquer une tentative en cours.
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `api.rpc_gdpr_start_erasure(p_request_id uuid, p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.gdpr_cleanup_task` _(high)_
+- reads `public.gdpr_erasure_log` _(high)_
+- writes `public.gdpr_erasure_log` _(high)_
+
+> START idempotent par demande/auteur/snapshot, lie la demande au vrai journal 19a atomiquement. Propriétaire seul ; aucune activation.
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
 
 ## `api.rpc_grant_user_permission(p_target_user_id uuid, p_permission_code text)`
 - returns: `void` — SECURITY DEFINER
@@ -4058,12 +4163,20 @@ Exécution directe réservée au rôle `authenticated`, avec contrôle des droit
 - writes `audit.audit_log` _(high)_
 
 > ---------------------------------------------------------------------
-> 2. audit.redact_subject — ajoute le matching after_data
+> 2. audit.redact_subject : correspondance after_data (19a)
 > ---------------------------------------------------------------------
 
 ## `internal.actor_in_current_realm(p_actor_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.actor` _(high)_
+
+## `internal.avatar_subject_lock(p_user_id uuid)`
+- returns: `void` — SECURITY DEFINER
+
+> One shared formula, taken before active-state reads. RC is required because an
+> advisory-lock wait does not refresh a Repeatable Read transaction's old snapshot.
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
 
 ## `internal.backfill_list_feature_notifications()`
 - returns: `integer` — SECURITY DEFINER
@@ -4186,6 +4299,52 @@ Helper interne SECURITY INVOKER, exécution directe réservée au propriétaire 
 - returns: `integer`
 - reads `public.media` _(high)_
 - reads `public.ref_code_media_type` _(high)_
+
+## `internal.gdpr_assert_no_avatar_upload(p_user_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `internal.avatar_upload_intent` _(high)_
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `internal.gdpr_cleanup_lock_target(p_target_key text)`
+- returns: `void`
+
+> Claims et ACK d'une même cible se sérialisent ici, toujours avant les verrous de lignes.
+> READ COMMITTED garantit qu'après l'attente chaque instruction voit le dernier état commis.
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `internal.gdpr_document_is_referenced(p_document_id uuid)`
+- returns: `boolean`
+- reads `internal.portal_photo_analysis` _(high)_
+- reads `public.actor_consent` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.crm_task_document` _(high)_
+- reads `public.media` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_document` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.object_sustainability_action` _(high)_
+- reads `public.ref_document` _(high)_
+
+> Vrai si un document reste utilisé hors du sujet effacé. Réservé à api.rpc_gdpr_erase_subject.
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `internal.gdpr_enqueue_avatar_inventory(p_operation_id uuid, p_user_id uuid)`
+- returns: `integer` — SECURITY DEFINER
+- reads `internal.gdpr_cleanup_task` _(high)_
+- reads `public.gdpr_erasure_log` _(high)_
+- reads `storage.objects` _(high)_
+- writes `internal.gdpr_cleanup_task` _(high)_
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+
+## `internal.gdpr_start_actor_identity()`
+- returns: `text` — SECURITY DEFINER
+
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
 
 ## `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER

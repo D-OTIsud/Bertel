@@ -7,7 +7,9 @@ import { loadDisposable } from './disposable.mjs';
 const browserWitness = process.env.CURRENT_RIGHTS_EDITOR_BROWSER === 'true';
 const realtimeWitness = process.env.CURRENT_RIGHTS_REALTIME_SECURITY === 'true';
 const sandboxWitness = process.env.CURRENT_RIGHTS_SANDBOX_DISCOVERY === 'true';
-assert.ok(!sandboxWitness || (!browserWitness && !realtimeWitness), 'public discovery must run as a standalone witness');
+const gdprWitness = process.env.CURRENT_RIGHTS_GDPR_CLEANUP === 'true';
+assert.ok(!sandboxWitness || (!browserWitness && !realtimeWitness && !gdprWitness), 'public discovery must run as a standalone witness');
+assert.ok(!gdprWitness || (!browserWitness && !realtimeWitness && !sandboxWitness), 'GDPR HTTP cleanup must run as a standalone witness');
 const local = loadDisposable();
 const ids = {
   writer: '00000000-0000-4000-a000-00000000ae11', other: '00000000-0000-4000-a000-00000000ae12',
@@ -335,12 +337,13 @@ async function testPortalMaskedModule() {
   assert.deepEqual(state(), [1, 1, 1], 'the positive control must create the expected verification workflow');
 }
 
-const testName = sandboxWitness
+const testName = gdprWitness ? 'real GDPR HTTP cleanup recovers START and fences concurrent lost-ACK effects'
+  : sandboxWitness
   ? 'Chromium opens public discovery and separates GoTrue sessions and test data without external effects'
   : browserWitness ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
   : realtimeWitness ? 'real Realtime SDK enforces fixture roster and broadcast boundaries'
   : 'real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation';
-test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90000 }, async (t) => {
+test(testName, { timeout: browserWitness ? 300000 : sandboxWitness || gdprWitness ? 240000 : 90000 }, async (t) => {
   const createdIds = [];
   let fixtureCreated = false;
   let writerCredentials;
@@ -380,6 +383,12 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90
     'exactly six identities and five distinct real JWTs are required; the fixture-only admin never authenticates');
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
+    if (gdprWitness) {
+      const { testGdprCleanupHttp } = await import('../../bertel-tourism-ui/tests/current-rights/gdpr-cleanup-http.mjs');
+      await testGdprCleanupHttp({ local, commit, writerId: ids.writer, writerAuthorization: headers('writer').authorization });
+      t.diagnostic('Real GoTrue/Next/PostgREST/Storage verified lost START recovery, two concurrent RESUME, distinct Storage/SQL ACK loss, shared bytes retained and same-JWT revocation.');
+      return;
+    }
     if (sandboxWitness) {
       const { startApp, waitForApp, stopApp, launchOwnedBrowser } = await import('../../bertel-tourism-ui/tests/current-rights/editor-races.mjs');
       const app = await startApp(local, { signDocuments: true });

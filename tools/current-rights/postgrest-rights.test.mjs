@@ -8,6 +8,8 @@ const browserWitness = process.env.CURRENT_RIGHTS_EDITOR_BROWSER === 'true';
 const realtimeWitness = process.env.CURRENT_RIGHTS_REALTIME_SECURITY === 'true';
 const sandboxWitness = process.env.CURRENT_RIGHTS_SANDBOX_DISCOVERY === 'true';
 const gdprWitness = process.env.CURRENT_RIGHTS_GDPR_CLEANUP === 'true';
+const gdprRecoveryBrowser = process.env.CURRENT_RIGHTS_GDPR_RECOVERY_BROWSER === 'true';
+assert.ok(!gdprRecoveryBrowser || gdprWitness, 'GDPR recovery browser requires the standalone GDPR selector');
 assert.ok(!sandboxWitness || (!browserWitness && !realtimeWitness && !gdprWitness), 'public discovery must run as a standalone witness');
 assert.ok(!gdprWitness || (!browserWitness && !realtimeWitness && !sandboxWitness), 'GDPR HTTP cleanup must run as a standalone witness');
 const local = loadDisposable();
@@ -337,13 +339,14 @@ async function testPortalMaskedModule() {
   assert.deepEqual(state(), [1, 1, 1], 'the positive control must create the expected verification workflow');
 }
 
-const testName = gdprWitness ? 'real GDPR HTTP cleanup recovers START and fences concurrent lost-ACK effects'
+const testName = gdprRecoveryBrowser ? 'Chromium retains scoped GDPR recovery across reload, ACK loss, account switch and storage refusal'
+  : gdprWitness ? 'real GDPR HTTP cleanup recovers START and fences concurrent lost-ACK effects'
   : sandboxWitness
   ? 'Chromium opens public discovery and separates GoTrue sessions and test data without external effects'
   : browserWitness ? 'real editor retains newer inputs across a delayed canonical PATCH, restore and workspace read'
   : realtimeWitness ? 'real Realtime SDK enforces fixture roster and broadcast boundaries'
   : 'real GoTrue JWTs enforce current multi-ORG/realm rights after committed demotion, departure and portal revocation';
-test(testName, { timeout: browserWitness ? 300000 : sandboxWitness || gdprWitness ? 240000 : 90000 }, async (t) => {
+test(testName, { timeout: browserWitness || gdprRecoveryBrowser ? 300000 : sandboxWitness || gdprWitness ? 240000 : 90000 }, async (t) => {
   const createdIds = [];
   let fixtureCreated = false;
   let writerCredentials;
@@ -370,8 +373,8 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness || gdprWitnes
         { id, email, password, email_confirm: true, app_metadata: appMetadata }), 'confirmed synthetic Auth creation');
       if (typeof created.id === 'string' && /^[0-9a-f-]{36}$/i.test(created.id)) createdIds.push(created.id);
       assert.ok(created.id === id && created.email === email && created.email_confirmed_at, 'GoTrue must create the exact confirmed synthetic identity');
-      if (browserWitness && key === 'writer') writerCredentials = { email, password };
-      if (browserWitness && key === 'other') otherCredentials = { email, password };
+      if ((browserWitness || gdprRecoveryBrowser) && key === 'writer') writerCredentials = { email, password };
+      if ((browserWitness || gdprRecoveryBrowser) && key === 'other') otherCredentials = { email, password };
       if ((browserWitness || realtimeWitness) && key === 'tester') testerCredentials = { email, password };
       if (realtimeWitness && key === 'foreignPortal') foreignPortalCredentials = { email, password };
       if (key === 'admin') continue; // Only a fixture FK; never used to bypass HTTP assertions.
@@ -383,6 +386,13 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness || gdprWitnes
     'exactly six identities and five distinct real JWTs are required; the fixture-only admin never authenticates');
     local.sqlFile(resolve('Base de donnée DLL et API/tests/fixtures/object_current_rights_http.sql'), 'setup');
     fixtureCreated = true;
+    if (gdprRecoveryBrowser) {
+      const { testGdprRecoveryBrowser } = await import('../../bertel-tourism-ui/tests/current-rights/gdpr-recovery-browser.mjs');
+      await testGdprRecoveryBrowser({ local, commit, writerId: ids.writer, ...writerCredentials,
+        secondAccount: { id: ids.other, ...otherCredentials } });
+      t.diagnostic('Disposable Chromium verified scoped non-content GDPR reference persistence, reload, account changes, same-operation recovery, storage refusal and absent lookup without replaying provider tests.');
+      return;
+    }
     if (gdprWitness) {
       const { testGdprCleanupHttp } = await import('../../bertel-tourism-ui/tests/current-rights/gdpr-cleanup-http.mjs');
       await testGdprCleanupHttp({ local, commit, writerId: ids.writer, writerAuthorization: headers('writer').authorization });

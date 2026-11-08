@@ -25,8 +25,8 @@ DO $test$ BEGIN
 END; $test$;
 
 INSERT INTO public.object(id,object_type,name,status) VALUES
- ('ORGMAILQUOTA001','ORG','Synthetic quota ORG A','draft'),
- ('ORGMAILQUOTA002','ORG','Synthetic quota ORG B','draft');
+ ('ORGMAILQUOTA0001','ORG','Synthetic quota ORG A','draft'),
+ ('ORGMAILQUOTA0002','ORG','Synthetic quota ORG B','draft');
 INSERT INTO auth.users(id,email) VALUES
  ('d2100000-0000-4000-8000-000000000001','quota-a@example.invalid'),
  ('d2100000-0000-4000-8000-000000000002','quota-b@example.invalid'),
@@ -36,11 +36,11 @@ INSERT INTO public.app_user_profile(id,role) VALUES
  ('d2100000-0000-4000-8000-000000000002','tourism_agent'),
  ('d2100000-0000-4000-8000-000000000003','super_admin') ON CONFLICT(id) DO UPDATE SET role=EXCLUDED.role;
 INSERT INTO public.user_org_membership(user_id,org_object_id,is_active) VALUES
- ('d2100000-0000-4000-8000-000000000001','ORGMAILQUOTA001',true),
- ('d2100000-0000-4000-8000-000000000002','ORGMAILQUOTA002',true);
+ ('d2100000-0000-4000-8000-000000000001','ORGMAILQUOTA0001',true),
+ ('d2100000-0000-4000-8000-000000000002','ORGMAILQUOTA0002',true);
 INSERT INTO public.object_list(id,org_object_id,created_by,kind,name) VALUES
- ('d2100000-0000-4000-8000-000000000011','ORGMAILQUOTA001','d2100000-0000-4000-8000-000000000001','static','Synthetic quota list A'),
- ('d2100000-0000-4000-8000-000000000012','ORGMAILQUOTA002','d2100000-0000-4000-8000-000000000002','static','Synthetic quota list B');
+ ('d2100000-0000-4000-8000-000000000011','ORGMAILQUOTA0001','d2100000-0000-4000-8000-000000000001','static','Synthetic quota list A'),
+ ('d2100000-0000-4000-8000-000000000012','ORGMAILQUOTA0002','d2100000-0000-4000-8000-000000000002','static','Synthetic quota list B');
 
 SELECT set_config('request.jwt.claims','{"role":"authenticated","sub":"d2100000-0000-4000-8000-000000000003"}',true);
 SET LOCAL ROLE authenticated;

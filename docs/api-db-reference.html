@@ -5249,6 +5249,7 @@ Rang : la cible doit avoir un rang admin strictement inférieur à l&#x27;appela
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_hard_delete.sql:46</code><br><code>supabase/migrations/20261107233351_guard_object_purge_references.sql:5</code></p>
 </div>
 <blockquote>Suppression définitive d&#x27;une fiche (§108) : superuser-only, établissements, archived requis, confirmation par nom. Journalise dans object_deletion_log, supprime l&#x27;objet (CASCADE) + les ref_document orphelinés, et retourne les URLs Storage (media + documents) à supprimer côté serveur.</blockquote>
+<p><strong>Contrat depuis DB02.</strong> Le commentaire du catalogue ci-dessus décrit l’ancien retour. La RPC renvoie toujours <code>media_to_delete: []</code> et <code>documents_to_delete: []</code> à la racine de la réponse. Les URL candidates restent dans <code>object_deletion_log.report</code> et <code>storage_cleanup_deferred</code> vaut <code>true</code> lorsque ce rapport contient des candidates. La purge ne supprime aucun fichier Storage.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-portal_photo_analysis"><code>internal.portal_photo_analysis</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-actor_consent"><code>public.actor_consent</code></a></td><td>high</td></tr>

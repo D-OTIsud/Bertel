@@ -143,9 +143,10 @@ interface MapPanelProps {
   onCollapse?: () => void;
   /** Actions injectées dans l'en-tête colonne (ex. ExplorerViewSwitch en vue Carte). */
   headerActions?: ReactNode;
+  onCompactMarkerSelect?: (cardId: string, restoreMarkerFocus: () => boolean) => void;
 }
 
-export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions }: MapPanelProps) {
+export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions, onCompactMarkerSelect }: MapPanelProps) {
   const markerStyles = useUiStore((state) => state.markerStyles);
   const openDrawer = useUiStore((state) => state.openDrawer);
 
@@ -288,12 +289,21 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
     return () => window.cancelAnimationFrame(frame);
   }, [hoverPopupState]);
 
+  const focusMarker = useCallback((marker: HTMLButtonElement) => {
+    if (!marker.isConnected) return false;
+    suppressMarkerFocusRef.current = true;
+    try {
+      marker.focus({ preventScroll: true });
+      return document.activeElement === marker;
+    } finally {
+      suppressMarkerFocusRef.current = false;
+    }
+  }, []);
+
   const closeHoverPopup = useCallback(() => {
     dismissHoverPopup();
-    suppressMarkerFocusRef.current = true;
-    hoverPopupState?.trigger.focus({ preventScroll: true });
-    suppressMarkerFocusRef.current = false;
-  }, [dismissHoverPopup, hoverPopupState]);
+    if (hoverPopupState) focusMarker(hoverPopupState.trigger);
+  }, [dismissHoverPopup, focusMarker, hoverPopupState]);
 
   const schedulePopupClose = useCallback(() => {
     clearCloseTimer();
@@ -494,11 +504,15 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
   }, [schedulePopupClose]);
 
   const handleMarkerClick = useCallback(
-    (cardId: string) => {
+    (cardId: string, marker: HTMLButtonElement) => {
       dismissHoverPopup();
-      selectCard(cardId);
+      if (onCompactMarkerSelect) {
+        onCompactMarkerSelect(cardId, () => focusMarker(marker));
+      } else {
+        selectCard(cardId);
+      }
     },
-    [dismissHoverPopup, selectCard],
+    [dismissHoverPopup, focusMarker, onCompactMarkerSelect, selectCard],
   );
 
   const handlePopupClick = useCallback(
@@ -888,7 +902,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
                     schedulePopupClose();
                     if (!markerHoveredRef.current) useExplorerStore.getState().setHoveredCard(null);
                   }}
-                  onClick={() => handleMarkerClick(card.id)}
+                  onClick={(event) => handleMarkerClick(card.id, event.currentTarget)}
                   aria-label={`Ouvrir ${card.name}`}
                 >
                   <img src={imageSrc} alt={card.name} className="map-marker-pin__img" />

@@ -147,6 +147,137 @@ for (const width of [320, 390, 768, 1180]) {
   });
 }
 
+test.describe('compact map with touch', () => {
+  test.use({ hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+
+  for (const width of [320, 390, 768, 1180]) {
+    test('touch opens the same object from the compact map at ' + width + 'px', async ({ page }, testInfo) => {
+      test.setTimeout(60_000);
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(() => {
+        const pointerTypes: string[] = [];
+        document.addEventListener('pointerdown', (event) => {
+          if (event.isTrusted) pointerTypes.push(event.pointerType);
+        }, true);
+        Object.defineProperty(window, '__mapTouchWitness', { value: pointerTypes });
+      });
+      const { errors, unexpected } = await offlineExplorer(page, testInfo, '/explorer?search=Hotel+Basalte');
+      await expect(page.locator('.explorer-result-card')).toHaveCount(1);
+      expect(await page.evaluate(() => window.innerWidth)).toBe(width);
+      await page.getByRole('button', { name: 'Carte', exact: true }).tap();
+      const pin = page.locator('.map-marker-pin').first();
+      await expect(pin).toBeVisible({ timeout: 20_000 });
+      const name = (await pin.getAttribute('aria-label'))!.replace(/^Ouvrir /, '');
+      await pin.tap();
+
+      const preview = page.getByRole('dialog');
+      await expect(preview.getByText(name, { exact: true })).toBeVisible();
+      await expect(preview.locator('img')).toBeVisible();
+      const open = preview.getByRole('button', { name: 'Ouvrir la fiche', exact: true });
+      await expect(open).toBeVisible();
+      await expect(preview).toHaveAccessibleName(name);
+      // Measure both elements in the same frame while the sheet is entering.
+      const geometry = await preview.evaluate((element) => {
+        const title = element.querySelector('h2')!.getBoundingClientRect();
+        const target = element.querySelector('button.primary-button')!.getBoundingClientRect();
+        return { titleBottom: title.bottom, targetTop: target.top, width: target.width, height: target.height };
+      });
+      expect(geometry.height).toBeGreaterThanOrEqual(44);
+      expect(geometry.width).toBeGreaterThanOrEqual(44);
+      expect(geometry.targetTop).toBeGreaterThanOrEqual(geometry.titleBottom);
+      await open.tap();
+
+      const drawer = page.locator('.drawer-panel');
+      await expect(drawer.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
+      await expect(open).toHaveCount(0);
+      await drawer.getByRole('button', { name: 'Fermer', exact: true }).tap();
+      await expect(drawer).toHaveCount(0);
+      expect(await page.evaluate(() => Reflect.get(window, '__mapTouchWitness')))
+        .toEqual(['touch', 'touch', 'touch', 'touch']);
+
+      if (width === 390) {
+        await pin.focus();
+        await page.keyboard.press('Enter');
+        await expect(open).toBeFocused();
+        await page.keyboard.press('Enter');
+        await expect(drawer.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(drawer).toHaveCount(0);
+      }
+      expect(unexpected).toEqual([]);
+      expect(errors).toEqual([]);
+    });
+  }
+});
+
+test('compact map restores the opening pin after closing preview or object drawer', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  const { errors, unexpected } = await offlineExplorer(page, testInfo, '/explorer?search=Hotel+Basalte');
+  await expect(page.locator('.explorer-result-card')).toHaveCount(1);
+  const mapTab = page.getByRole('button', { name: 'Carte', exact: true });
+  await mapTab.click();
+  const pin = page.locator('.map-marker-pin').first();
+  await expect(pin).toBeVisible({ timeout: 20_000 });
+  const name = (await pin.getAttribute('aria-label'))!.replace(/^Ouvrir /, '');
+  const preview = page.getByRole('dialog', { name, exact: true });
+  const open = preview.getByRole('button', { name: 'Ouvrir la fiche', exact: true });
+  const drawer = page.locator('.drawer-panel');
+  const heading = drawer.getByRole('heading', { level: 1, name, exact: true });
+  const hover = page.getByRole('article', { name, exact: true });
+
+  await pin.focus();
+  await page.keyboard.press('Enter');
+  await expect(open).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(heading).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  await focusJournals.get(page)!.checkpoint('compact-drawer-dismissed');
+  await expect(pin).toBeFocused();
+  // Cross the map's hover intent delay before checking for a reopened preview.
+  await page.waitForTimeout(300);
+  await expect(hover).toHaveCount(0);
+  await expect(preview).toHaveCount(0);
+  await page.keyboard.press('Tab');
+  await expect(pin).not.toBeFocused();
+  await expect.poll(() => page.evaluate(() => {
+    const active = document.activeElement;
+    return active !== document.body && Boolean(active && !active.classList.contains('skip-link'));
+  })).toBe(true);
+  await focusJournals.get(page)!.checkpoint('compact-tab-after-return');
+
+  await pin.focus();
+  await page.keyboard.press('Enter');
+  await expect(open).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(preview).toHaveCount(0);
+  await expect(pin).toBeFocused();
+
+  await page.keyboard.press('Enter');
+  await expect(open).toBeFocused();
+  await preview.getByRole('button', { name: 'Fermer', exact: true }).press('Enter');
+  await expect(preview).toHaveCount(0);
+  await expect(pin).toBeFocused();
+  await page.waitForTimeout(300);
+  await expect(hover).toHaveCount(0);
+
+  await page.keyboard.press('Enter');
+  await expect(open).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(heading).toBeVisible();
+  await page.evaluate(() => {
+    const next = new URL(window.location.href);
+    next.searchParams.set('search', 'Fiche fictive qui ne correspond à aucun résultat');
+    window.history.replaceState(null, '', next);
+  });
+  await expect(pin).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(mapTab).toBeFocused();
+  expect(unexpected).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
 test('an unfinished hover of B preserves the displayed A preview focus owner', async ({ page }, testInfo) => {
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1180, height: 900 });

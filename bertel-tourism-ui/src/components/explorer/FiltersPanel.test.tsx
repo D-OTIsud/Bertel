@@ -83,6 +83,39 @@ function resetStore() {
   act(() => useExplorerStore.getState().resetAll());
 }
 
+describe('FiltersPanel — réinitialisation du lieu-dit', () => {
+  beforeEach(resetStore);
+
+  it.each([
+    { options: ['Lieu-dit témoin'], selected: 'Lieu-dit témoin' },
+    { options: [], selected: 'Lieu-dit hors catalogue' },
+  ])('propose Tous quand un lieu-dit est sélectionné ($selected)', ({ options, selected }) => {
+    act(() => useExplorerStore.getState().setLieuDit(selected));
+    const label = 'Tous les lieux-dits';
+    render(<FiltersPanel references={{ ...GRADED_REFERENCES, lieuDits: options }} />);
+    const trigger = screen.getByRole('button', { name: options.length ? selected : label });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+
+    const all = screen.getByRole('option', { name: label });
+    expect(all).toHaveAttribute('aria-selected', 'false');
+    const menu = screen.getByRole('listbox');
+    expect(menu).toHaveAttribute('aria-activedescendant', all.id);
+    fireEvent.keyDown(menu, { key: 'Enter' });
+
+    expect(useExplorerStore.getState().common.lieuDit).toBe('');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: label })).toHaveFocus();
+  });
+
+  it('conserve le menu vide quand aucun lieu-dit ne peut être choisi ou retiré', () => {
+    render(<FiltersPanel references={{ ...GRADED_REFERENCES, lieuDits: [] }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Tous les lieux-dits' }));
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+    expect(screen.getByText('Aucune correspondance')).toBeInTheDocument();
+  });
+});
+
 describe('FiltersPanel — équivalences du thésaurus', () => {
   beforeEach(resetStore);
 

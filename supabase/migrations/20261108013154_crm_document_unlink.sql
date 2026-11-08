@@ -42,7 +42,7 @@ BEGIN
       AND pg_catalog.has_function_privilege('authenticated', p.oid, 'EXECUTE')
       AND pg_catalog.has_function_privilege('service_role', p.oid, 'EXECUTE')
       AND NOT EXISTS (
-        SELECT 1 FROM pg_catalog.aclexplode(p.proacl) a
+        SELECT 1 FROM pg_catalog.aclexplode(COALESCE(p.proacl, pg_catalog.acldefault('f', p.proowner))) a
         WHERE a.grantee NOT IN ('postgres'::pg_catalog.regrole, 'authenticated'::pg_catalog.regrole, 'service_role'::pg_catalog.regrole)
       )
   ) THEN

@@ -7,7 +7,7 @@
 // Clarté (P3) : résolution du sujet + résultat structuré. États/focus (P4) : landmark, accès
 // refusé pédagogique, cible 44px. Le contrat backend (requestErasure) est inchangé.
 
-import { type FormEvent, useCallback, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Info, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSessionStore } from '@/store/session-store';
@@ -21,6 +21,7 @@ import { ErasureResultPanel } from './rgpd/ErasureResultPanel';
 import {
   requestErasure,
   resumeErasureCleanup,
+  lookupErasureStart,
   ERASURE_SUBJECT_KINDS,
   ERASURE_KIND_LABELS,
   ERASURE_ID_HINT,
@@ -28,17 +29,86 @@ import {
   type ErasureMode,
   type ErasureResult,
 } from '@/services/rgpd';
+import {
+  admitStartReference,
+  computeStartFingerprint,
+  isConfirmedCompletion,
+  isResultBoundToRequest,
+  readStartReference,
+  releaseConfirmedStartReference,
+  type RgpdStartReference,
+} from '@/services/rgpd-start-reference';
 import { strictErrorMessage } from '../lib/strict-error-message';
 
-interface DoneState {
-  result: ErasureResult;
+type SessionSnapshot = ReturnType<typeof useSessionStore.getState>;
+
+/** Compte courant confirmé par Auth ; `key` change aussi à chaque epoch (ABA). */
+interface Owner {
+  key: string;
+  userId: string;
+}
+
+interface ErasureSnapshot {
+  subjectKind: ErasureSubjectKind;
+  subjectId: string;
   mode: ErasureMode;
-  kind: ErasureSubjectKind;
-  id: string;
+  reason: string | null;
+}
+
+interface ConfirmationState {
+  owner: Owner;
+  snapshot: ErasureSnapshot;
+}
+
+interface DoneState {
+  ownerKey: string;
+  result: ErasureResult;
+  /** null quand la reprise vient d'une référence seule : sujet et mode restent inconnus. */
+  subject: { mode: ErasureMode; kind: ErasureSubjectKind; id: string } | null;
+}
+
+interface RecoveryState {
+  ownerKey: string;
+  reference: RgpdStartReference;
+}
+
+function ownerOf(state: SessionSnapshot): Owner | null {
+  const authority = state.authAuthority;
+  if (!authority?.hydrated || !authority.userId || state.userId !== authority.userId) return null;
+  return { key: `${authority.epoch}:${authority.userId}`, userId: authority.userId };
+}
+
+function ownerIsCurrent(owner: Owner): boolean {
+  return ownerOf(useSessionStore.getState())?.key === owner.key;
+}
+
+function sameSnapshot(left: ErasureSnapshot, right: ErasureSnapshot): boolean {
+  return (
+    left.subjectKind === right.subjectKind &&
+    left.subjectId === right.subjectId &&
+    left.mode === right.mode &&
+    left.reason === right.reason
+  );
+}
+
+/** Jeton seulement si la session Supabase appartient encore au compte attendu. */
+async function readOwnerToken(owner: Owner): Promise<string | null> {
+  const client = getSupabaseClient();
+  const session = client ? (await client.auth.getSession()).data.session : null;
+  const token = session?.access_token ?? '';
+  if (!token || session?.user?.id !== owner.userId || !ownerIsCurrent(owner)) return null;
+  return token;
 }
 
 export default function RgpdErasurePage() {
+  const ownerKey = useSessionStore((s) => ownerOf(s)?.key ?? null);
+  // Le changement de compte/epoch remonte tout le formulaire avant le premier commit.
+  return <AccountErasurePage key={ownerKey ?? 'guest'} />;
+}
+
+function AccountErasurePage() {
   const role = useSessionStore((s) => s.role);
+  const ownerKey = useSessionStore((s) => ownerOf(s)?.key ?? null);
   const allowed = role === 'owner' || role === 'super_admin';
 
   const [subjectKind, setSubjectKind] = useState<ErasureSubjectKind>('actor');
@@ -47,11 +117,50 @@ export default function RgpdErasurePage() {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [resuming, setResuming] = useState(false);
-  const [pendingConfirm, setPendingConfirm] = useState(false);
+  const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
   const [done, setDone] = useState<DoneState | null>(null);
+  const [recovery, setRecovery] = useState<RecoveryState | null>(null);
   const [resolverKey, setResolverKey] = useState(0);
 
+  const currentSnapshot: ErasureSnapshot = {
+    subjectKind,
+    subjectId: subjectId.trim(),
+    mode,
+    reason: reason.trim() || null,
+  };
+  const formRef = useRef(currentSnapshot);
+  formRef.current = currentSnapshot;
+  const runRef = useRef<object | null>(null);
+  const resumeRef = useRef<object | null>(null);
+  const lastOwnerKeyRef = useRef<string | null>(null);
+
   const handleResolved = useCallback((id: string) => setSubjectId(id), []);
+
+  // Lecture seule au montage ou au changement de compte : aucune requête n'est lancée ici.
+  useEffect(() => {
+    const previousOwnerKey = lastOwnerKeyRef.current;
+    lastOwnerKeyRef.current = ownerKey;
+    if (previousOwnerKey !== null && previousOwnerKey !== ownerKey) {
+      runRef.current = null;
+      resumeRef.current = null;
+      setBusy(false);
+      setResuming(false);
+      setConfirmation(null);
+      setDone(null);
+      setSubjectKind('actor');
+      setSubjectId('');
+      setMode('anonymize');
+      setReason('');
+      setResolverKey((key) => key + 1);
+    }
+    const owner = ownerOf(useSessionStore.getState());
+    if (!allowed || !owner || owner.key !== ownerKey) {
+      setRecovery(null);
+      return;
+    }
+    const stored = readStartReference(owner.userId);
+    setRecovery(stored.kind === 'present' ? { ownerKey: owner.key, reference: stored.reference } : null);
+  }, [ownerKey, allowed]);
 
   if (!allowed) {
     return (
@@ -78,67 +187,177 @@ export default function RgpdErasurePage() {
       toast.error('Sélectionnez ou saisissez un sujet valide.');
       return;
     }
+    const owner = ownerOf(useSessionStore.getState());
+    if (!owner) {
+      toast.error('Session expirée — reconnectez-vous.');
+      return;
+    }
+    const stored = readStartReference(owner.userId);
+    if (stored.kind !== 'absent') {
+      if (stored.kind === 'present') setRecovery({ ownerKey: owner.key, reference: stored.reference });
+      toast.error("Échec de l'effacement.");
+      return;
+    }
     setDone(null);
-    setPendingConfirm(true);
+    setConfirmation({ owner, snapshot: currentSnapshot });
   }
 
   async function runErasure() {
+    const pending = confirmation;
+    if (!pending || runRef.current || resumeRef.current) return;
+    const run = {};
+    runRef.current = run;
     setBusy(true);
+    const { owner, snapshot } = pending;
+    const admissible = () =>
+      runRef.current === run && ownerIsCurrent(owner) && sameSnapshot(snapshot, formRef.current);
     try {
-      const client = getSupabaseClient();
-      const token = client ? ((await client.auth.getSession()).data.session?.access_token ?? '') : '';
-      if (!token) {
-        toast.error('Session expirée — reconnectez-vous.');
-        setPendingConfirm(false);
+      if (!admissible()) {
+        if (ownerIsCurrent(owner)) toast.error("Échec de l'effacement.");
         return;
       }
-      const res = await requestErasure({
-        subjectKind,
-        subjectId: subjectId.trim(),
-        mode,
-        reason: reason.trim() || null,
-        accessToken: token,
+      const token = await readOwnerToken(owner);
+      if (!token) {
+        if (ownerIsCurrent(owner)) toast.error('Session expirée — reconnectez-vous.');
+        return;
+      }
+      const fingerprint = await computeStartFingerprint(snapshot);
+      const admission = fingerprint
+        ? await admitStartReference({
+            userId: owner.userId,
+            fingerprint,
+            isCurrent: admissible,
+            send: (reference) => requestErasure({ ...snapshot, requestId: reference.requestId, accessToken: token }),
+          })
+        : ({ kind: 'refused' } as const);
+      if (admission.kind !== 'started') {
+        if (ownerIsCurrent(owner)) {
+          if (admission.kind === 'blocked') setRecovery({ ownerKey: owner.key, reference: admission.reference });
+          toast.error("Échec de l'effacement.");
+        }
+        return;
+      }
+
+      const { reference } = admission;
+      if (ownerIsCurrent(owner)) setRecovery({ ownerKey: owner.key, reference });
+      const res = await admission.sent;
+      if (!ownerIsCurrent(owner)) return;
+
+      const confirmed = isConfirmedCompletion(res, reference.requestId);
+      if (!isResultBoundToRequest(res, reference.requestId) || (res.status === 'completed' && !confirmed)) {
+        toast.error("Échec de l'effacement.");
+        return;
+      }
+      if (confirmed) {
+        const released = await releaseConfirmedStartReference({
+          userId: owner.userId,
+          reference,
+          result: res,
+          isCurrent: () => ownerIsCurrent(owner),
+        });
+        if (!ownerIsCurrent(owner)) return;
+        if (released) setRecovery(null);
+      }
+
+      setDone({
+        ownerKey: owner.key,
+        result: res,
+        subject: { mode: snapshot.mode, kind: snapshot.subjectKind, id: snapshot.subjectId },
       });
-      setDone({ result: res, mode, kind: subjectKind, id: subjectId.trim() });
-      if (res.status === 'completed') {
-        toast.success(mode === 'delete' ? 'Sujet supprimé.' : 'Sujet anonymisé.');
-        setSubjectId('');
-        setReason('');
-        setResolverKey((key) => key + 1);
+      if (confirmed) {
+        toast.success(snapshot.mode === 'delete' ? 'Sujet supprimé.' : 'Sujet anonymisé.');
+        // Une saisie différente appartient à un autre snapshot : elle n'est pas vidée.
+        if (sameSnapshot(snapshot, formRef.current)) {
+          setSubjectId('');
+          setReason('');
+          setResolverKey((key) => key + 1);
+        }
       } else {
         toast.warning("Effacement enregistré, nettoyage incomplet — voir le rapport ci-dessous.");
       }
     } catch (err) {
-      toast.error(strictErrorMessage(err, "Échec de l'effacement."));
+      if (ownerIsCurrent(owner)) toast.error(strictErrorMessage(err, "Échec de l'effacement."));
     } finally {
-      setBusy(false);
-      setPendingConfirm(false);
+      if (runRef.current === run) {
+        runRef.current = null;
+        setBusy(false);
+        setConfirmation(null);
+      }
     }
   }
 
+  // Reprise explicite : référence persistée → lookup → RESUME du vrai operationId. Jamais de START.
   async function resumeCleanup() {
-    if (!done) return;
+    const owner = ownerOf(useSessionStore.getState());
+    if (!owner || runRef.current || resumeRef.current) return;
+    const run = {};
+    resumeRef.current = run;
     setResuming(true);
+    const live = () => resumeRef.current === run && ownerIsCurrent(owner);
     try {
-      const client = getSupabaseClient();
-      const token = client ? ((await client.auth.getSession()).data.session?.access_token ?? '') : '';
+      const token = await readOwnerToken(owner);
+      if (!live()) return;
       if (!token) {
         toast.error('Session expirée — reconnectez-vous.');
         return;
       }
-      const res = await resumeErasureCleanup(done.result.operationId, token);
-      setDone({ ...done, result: res });
-      if (res.status === 'completed') {
+      const stored = readStartReference(owner.userId);
+      if (stored.kind !== 'present') {
+        toast.error('Échec de la reprise.');
+        return;
+      }
+      const { reference } = stored;
+      const { operationId } = await lookupErasureStart(reference.requestId, token);
+      if (!live()) return;
+      const res = await resumeErasureCleanup(operationId, token);
+      if (!live()) return;
+
+      const confirmed = isConfirmedCompletion(res, reference.requestId, operationId);
+      if (!isResultBoundToRequest(res, reference.requestId, operationId) || (res.status === 'completed' && !confirmed)) {
+        toast.error('Échec de la reprise.');
+        return;
+      }
+      if (confirmed) {
+        const released = await releaseConfirmedStartReference({
+          userId: owner.userId,
+          reference,
+          result: res,
+          operationId,
+          isCurrent: () => ownerIsCurrent(owner),
+        });
+        if (!live()) return;
+        if (released) setRecovery(null);
+      }
+
+      setDone((previous) => ({
+        ownerKey: owner.key,
+        result: res,
+        subject:
+          previous?.ownerKey === owner.key && previous.result.operationId.toLowerCase() === operationId.toLowerCase()
+            ? previous.subject
+            : null,
+      }));
+      if (confirmed) {
         toast.success('Nettoyage repris et terminé.');
       } else {
         toast.warning('Nettoyage repris — toujours incomplet, voir le rapport.');
       }
     } catch (err) {
-      toast.error(strictErrorMessage(err, 'Échec de la reprise.'));
+      if (live()) toast.error(strictErrorMessage(err, 'Échec de la reprise.'));
     } finally {
-      setResuming(false);
+      if (resumeRef.current === run) {
+        resumeRef.current = null;
+        setResuming(false);
+      }
     }
   }
+
+  // Tout état d'un autre compte/epoch est masqué dès ce rendu, sans attendre l'effet de reset.
+  const visibleDone = done?.ownerKey === ownerKey ? done : null;
+  const visibleRecovery = recovery?.ownerKey === ownerKey ? recovery : null;
+  const visibleConfirmation = confirmation?.owner.key === ownerKey ? confirmation : null;
+  const dialogSnapshot = visibleConfirmation?.snapshot ?? currentSnapshot;
+  const dialogIsDelete = dialogSnapshot.mode === 'delete';
 
   return (
     <main aria-labelledby="rgpd-title" className="mx-auto max-w-2xl space-y-5 p-6">
@@ -232,27 +451,37 @@ export default function RgpdErasurePage() {
         </div>
       </form>
 
-      {done && (
+      {visibleDone ? (
         <ErasureResultPanel
-          result={done.result}
-          mode={done.mode}
-          subjectLabel={ERASURE_KIND_LABELS[done.kind]}
-          subjectId={done.id}
+          result={visibleDone.result}
+          mode={visibleDone.subject?.mode}
+          subjectLabel={visibleDone.subject ? ERASURE_KIND_LABELS[visibleDone.subject.kind] : undefined}
+          subjectId={visibleDone.subject?.id}
+          reference={visibleRecovery?.reference.requestId}
           onResume={resumeCleanup}
           resuming={resuming}
         />
+      ) : (
+        visibleRecovery &&
+        !busy && (
+          <ErasureResultPanel
+            reference={visibleRecovery.reference.requestId}
+            onResume={resumeCleanup}
+            resuming={resuming}
+          />
+        )
       )}
 
       <ConfirmDialog
-        open={pendingConfirm}
-        tone={isDelete ? 'danger' : 'default'}
-        title={isDelete ? 'Supprimer définitivement le sujet ?' : 'Anonymiser le sujet ?'}
-        confirmLabel={isDelete ? 'Supprimer le sujet' : 'Anonymiser'}
+        open={visibleConfirmation !== null}
+        tone={dialogIsDelete ? 'danger' : 'default'}
+        title={dialogIsDelete ? 'Supprimer définitivement le sujet ?' : 'Anonymiser le sujet ?'}
+        confirmLabel={dialogIsDelete ? 'Supprimer le sujet' : 'Anonymiser'}
         busy={busy}
         confirmGate={
-          isDelete
+          dialogIsDelete
             ? {
-                expected: [subjectId.trim(), 'SUPPRIMER'],
+                expected: [dialogSnapshot.subjectId, 'SUPPRIMER'],
                 label: (
                   <>
                     Tapez l&apos;identifiant du sujet ou le mot <strong>SUPPRIMER</strong> pour confirmer.
@@ -264,28 +493,28 @@ export default function RgpdErasurePage() {
         message={
           <span className="block space-y-2">
             <span className="block">
-              Vous allez {isDelete ? <strong>supprimer définitivement</strong> : 'anonymiser'} le sujet
-              ci-dessous. Cette action est journalisée{isDelete ? ' et irréversible' : ''}.
+              Vous allez {dialogIsDelete ? <strong>supprimer définitivement</strong> : 'anonymiser'} le sujet
+              ci-dessous. Cette action est journalisée{dialogIsDelete ? ' et irréversible' : ''}.
             </span>
             <span className="block space-y-1 rounded-shellMd border border-line bg-bgTint p-2 text-xs">
               <span className="flex justify-between gap-2">
                 <span className="text-ink-2">Type</span>
-                <span className="text-right text-ink">{ERASURE_KIND_LABELS[subjectKind]}</span>
+                <span className="text-right text-ink">{ERASURE_KIND_LABELS[dialogSnapshot.subjectKind]}</span>
               </span>
               <span className="flex justify-between gap-2">
                 <span className="text-ink-2">Identifiant</span>
-                <span className="break-all text-right font-mono text-ink">{subjectId.trim()}</span>
+                <span className="break-all text-right font-mono text-ink">{dialogSnapshot.subjectId}</span>
               </span>
               <span className="flex justify-between gap-2">
                 <span className="text-ink-2">Mode</span>
-                <span className={isDelete ? 'font-medium text-danger-ink' : 'font-medium text-teal'}>
-                  {isDelete ? 'Suppression dure' : 'Anonymisation'}
+                <span className={dialogIsDelete ? 'font-medium text-danger-ink' : 'font-medium text-teal'}>
+                  {dialogIsDelete ? 'Suppression dure' : 'Anonymisation'}
                 </span>
               </span>
             </span>
           </span>
         }
-        onCancel={() => setPendingConfirm(false)}
+        onCancel={() => setConfirmation(null)}
         onConfirm={runErasure}
       />
     </main>

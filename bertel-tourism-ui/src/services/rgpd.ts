@@ -1,6 +1,6 @@
 // RGPD Art. 17 — client service. Calls POST /api/rgpd/erase, which runs the SQL erasure RPC
 // as the caller (superuser-gated) then deletes the reported Storage files / auth account.
-import { apiError } from './api-error';
+import { API_ERROR_LABELS, apiError } from './api-error';
 
 export const ERASURE_SUBJECT_KINDS = [
   'actor',
@@ -34,6 +34,8 @@ export const ERASURE_ID_HINT: Record<ErasureSubjectKind, string> = {
 };
 
 export interface ErasureInput {
+  /** Référence du START, persistée localement avant l'appel. Distincte du vrai operationId. */
+  requestId: string;
   subjectKind: ErasureSubjectKind;
   subjectId: string;
   mode: ErasureMode;
@@ -73,6 +75,45 @@ export interface ErasureResult {
   counts: { total: number; succeeded: number; pending: number; failed: number };
 }
 
+export interface ErasureStartLookup {
+  requestId: string;
+  operationId: string;
+}
+
+const OPERATION_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ERASURE_STATUSES: readonly string[] = ['completed', 'partial', 'failed'];
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function invalidErasureEnvelope(): Error {
+  return new Error(API_ERROR_LABELS.operation_lookup_failed);
+}
+
+/** Une réponse hors contrat reste un statut inconnu : jamais lue comme un résultat. */
+function parseErasureResult(value: unknown): ErasureResult {
+  if (
+    !isPlainObject(value) ||
+    typeof value.ok !== 'boolean' ||
+    typeof value.status !== 'string' ||
+    !ERASURE_STATUSES.includes(value.status) ||
+    typeof value.operationId !== 'string' ||
+    value.operationId.length === 0 ||
+    !isPlainObject(value.report) ||
+    !Array.isArray(value.tasks) ||
+    !value.tasks.every(isPlainObject) ||
+    typeof value.cleanupStatusUnavailable !== 'boolean' ||
+    !isPlainObject(value.counts) ||
+    !['total', 'succeeded', 'pending', 'failed'].every(
+      (name) => typeof (value.counts as Record<string, unknown>)[name] === 'number',
+    )
+  ) {
+    throw invalidErasureEnvelope();
+  }
+  return value as unknown as ErasureResult;
+}
+
 export async function requestErasure(input: ErasureInput): Promise<ErasureResult> {
   const response = await fetch('/api/rgpd/erase', {
     method: 'POST',
@@ -81,6 +122,7 @@ export async function requestErasure(input: ErasureInput): Promise<ErasureResult
       Authorization: `Bearer ${input.accessToken}`,
     },
     body: JSON.stringify({
+      requestId: input.requestId,
       subjectKind: input.subjectKind,
       subjectId: input.subjectId,
       mode: input.mode,
@@ -92,7 +134,40 @@ export async function requestErasure(input: ErasureInput): Promise<ErasureResult
     throw await apiError(response);
   }
 
-  return (await response.json()) as ErasureResult;
+  return parseErasureResult(await response.json());
+}
+
+/**
+ * Retrouve le vrai operationId d'un START à partir de sa référence. Lecture seule : une absence ou
+ * une erreur lève une exception et n'autorise ni START ni retrait de la référence.
+ */
+export async function lookupErasureStart(requestId: string, accessToken: string): Promise<ErasureStartLookup> {
+  const response = await fetch('/api/rgpd/erase', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ requestId }),
+  });
+
+  if (!response.ok) {
+    throw await apiError(response);
+  }
+
+  const payload: unknown = await response.json();
+  if (
+    !isPlainObject(payload) ||
+    Object.keys(payload).length !== 2 ||
+    typeof payload.requestId !== 'string' ||
+    payload.requestId.toLowerCase() !== requestId.toLowerCase() ||
+    typeof payload.operationId !== 'string' ||
+    !OPERATION_UUID_RE.test(payload.operationId) ||
+    payload.operationId.toLowerCase() === requestId.toLowerCase()
+  ) {
+    throw invalidErasureEnvelope();
+  }
+  return { requestId: payload.requestId, operationId: payload.operationId };
 }
 
 /**
@@ -113,5 +188,5 @@ export async function resumeErasureCleanup(operationId: string, accessToken: str
     throw await apiError(response);
   }
 
-  return (await response.json()) as ErasureResult;
+  return parseErasureResult(await response.json());
 }

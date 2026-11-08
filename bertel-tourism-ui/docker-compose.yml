@@ -31,6 +31,8 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       # Optional dedicated HMAC key for thesaurus cursors, runtime only.
       THESAURUS_CURSOR_SECRET: ${THESAURUS_CURSOR_SECRET:-}
+      # Manual list sends only; absent/unknown modes never open SMTP admission.
+      LIST_EMAIL_MODE: ${LIST_EMAIL_MODE:-closed}
     # No persistent volumes - Next.js app is stateless, data lives in Supabase
 
 volumes: {}

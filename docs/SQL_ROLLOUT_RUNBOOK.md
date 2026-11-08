@@ -465,6 +465,42 @@ L'ancien Next répond `503 setup_incomplete` pour START et
 lecteur des deux tables de provenance et le traitement sûr des références
 partagées restent requis avant la réouverture RGPD.
 
+### Reprise du protocole RGPD et provenance CRM
+
+`gdpr_crm_document_provenance.sql` et sa copie exacte, la migration `20261108070035`,
+s'appliquent après `20261108021542`. Le préflight ne reconnaît que trois états :
+base hébergée avec l'ancien effacement fermé connu, base fraîche issue de 19a, de la
+garde realm, du lecteur 202 et de la fermeture 205, ou post-état exact pour un rejeu.
+Il refuse avant toute écriture un tuple partiel, un corps ou des attributs inconnus,
+une dérive des tables de tâches ou de provenance et un effacement encore ouvert. La
+migration installe ou reprend la table de tâches et les
+RPC de statut et d'acquittement, ajoute `after_data` à `audit.redact_subject` et
+remplace le corps d'effacement. Le SQL de cette étape ne modifie aucun objet Storage.
+
+Les RPC RGPD et `audit.redact_subject` restent réservées au propriétaire. Le rôle
+`service_role` perd aussi son accès direct aux tâches. START et RESUME conservent
+donc leurs réponses `503 setup_incomplete` et `500 operation_lookup_failed`.
+L'activation exige une qualification globale séparée.
+
+L'effacement d'un acteur inventorie ses bibliothèques, ses consentements, les pièces
+de ses tâches et les reçus de détachement et d'upload. Seul un lien vivant du sujet
+peut conduire à un `DELETE` du catalogue et à une tâche `storage_remove`, et seulement
+si aucune référence ne subsiste. La rétention porte sur toutes les FK vers
+`ref_document`, sans filtre de statut de fiche, ainsi que les photos publiées et les
+autres entrées qui désignent la même clé Storage.
+
+Un reçu sert à retrouver et à rédiger. Il ne crée ni suppression ni tâche. Le titre
+et les snapshots acteur des reçus sont rédigés ; le titre du catalogue ne l'est que
+si plus rien n'utilise le document. `report.crmProvenance` liste les identifiants à
+examiner et `manualReviewRequired` passe à vrai.
+
+Une photo du portail en cours de validation, de proposition ou d'analyse provoque
+un refus `55000` avant toute mutation. Restent des verrous de la future activation,
+rappelés par `report.unresolvedScope` : alias et copies Storage, générations d'objet,
+avatar du compte portail délié. Le test `tests/test_gdpr_crm_document_provenance.sql`
+suit la migration dans le manifeste frais, car les suites antérieures s'exécutent
+avant la fermeture.
+
 ### CI enforcement (deploy integrity)
 A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest step for step **hormis les étapes foldées — no-op sur base fraîche — et `migration_gdpr_erasure.sql` (14j), dont l'entrée est activement INTERDITE par le step CI *RGPD mirror alignment***, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
 

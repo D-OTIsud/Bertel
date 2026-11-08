@@ -780,6 +780,10 @@ COMMIT;
 \ir crm_document_upload_intents.sql
 \ir tests/test_crm_document_upload.sql
 
+\echo '== GDPR durable cleanup and CRM document provenance, all RPCs remain owner-only =='
+\ir gdpr_crm_document_provenance.sql
+\ir tests/test_gdpr_crm_document_provenance.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

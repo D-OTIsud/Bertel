@@ -1,6 +1,6 @@
 # GDPR cleanup admission
 
-Status: preparation only; no production activation or application delivery is implied.
+Production provenance: after verified N18 delivery, the independent read-only postflight at 2026-11-08T16:06:25.907117Z confirmed `activated_exact` (9/9 checks) for this manually selected act (`af367b8e…`), opening only six caller/server EXECUTE ACLs. The historical catalog-211 capture at 11:45 UTC remains unchanged. The act stays outside automatic migrations and the closed fresh-install manifest.
 
 `activate.sql` is the separate, manually selected activation
 following the six closed migrations 070035, 073355, 073400, 074602, 075514 and 083121.

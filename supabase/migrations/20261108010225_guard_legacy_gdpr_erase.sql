@@ -153,46 +153,47 @@ BEGIN
         RAISE EXCEPTION 'Unexpected predecessor for durable cleanup status';
       END IF;
 
-      EXECUTE $definition$
-    CREATE OR REPLACE FUNCTION api.rpc_gdpr_get_cleanup_status(p_operation_id UUID)
-    RETURNS JSONB
-    LANGUAGE plpgsql
-    STABLE
-    SECURITY DEFINER
-    SET search_path = pg_catalog, public, api, auth, internal, pg_temp
-    AS $function$
-    DECLARE
-      v_log   gdpr_erasure_log;
-      v_tasks JSONB;
-    BEGIN
-      SELECT * INTO v_log FROM gdpr_erasure_log WHERE id = p_operation_id
-        AND report->'operationId' = to_jsonb(p_operation_id);
-      IF NOT FOUND THEN
-        RAISE EXCEPTION 'Opération RGPD introuvable: %', p_operation_id USING ERRCODE = 'P0002';
-      END IF;
+    EXECUTE $definition$
+CREATE OR REPLACE FUNCTION api.rpc_gdpr_get_cleanup_status(p_operation_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth, internal, pg_temp
+AS $function$
+DECLARE
+  v_log   gdpr_erasure_log;
+  v_tasks JSONB;
+BEGIN
+  SELECT * INTO v_log FROM gdpr_erasure_log WHERE id = p_operation_id
+    AND report->'operationId' = to_jsonb(p_operation_id);
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Opération RGPD introuvable: %', p_operation_id USING ERRCODE = 'P0002';
+  END IF;
 
-      SELECT COALESCE(jsonb_agg(jsonb_build_object(
-               'id', t.id, 'action', t.action, 'metadata', t.metadata,
-               'status', t.status, 'attempts', t.attempts, 'lastError', t.last_error
-             ) ORDER BY t.created_at), '[]'::jsonb)
-        INTO v_tasks
-        FROM internal.gdpr_cleanup_task t
-       WHERE t.operation_id = p_operation_id;
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'id', t.id, 'action', t.action, 'metadata', t.metadata,
+           'status', t.status, 'attempts', t.attempts, 'lastError', t.last_error
+         ) ORDER BY t.created_at), '[]'::jsonb)
+    INTO v_tasks
+    FROM internal.gdpr_cleanup_task t
+   WHERE t.operation_id = p_operation_id;
 
-      RETURN jsonb_build_object(
-        'operationId', v_log.id,
-        'subjectKind', v_log.subject_kind,
-        'subjectId', v_log.subject_id,
-        'mode', v_log.mode,
-        'reason', v_log.reason,
-        'performedBy', v_log.performed_by,
-        'performedAt', v_log.performed_at,
-        'report', v_log.report,
-        'tasks', v_tasks
-      );
-    END;
-    $function$;
-      $definition$;
+  RETURN jsonb_build_object(
+    'operationId', v_log.id,
+    'subjectKind', v_log.subject_kind,
+    'subjectId', v_log.subject_id,
+    'mode', v_log.mode,
+    'reason', v_log.reason,
+    'performedBy', v_log.performed_by,
+    'performedAt', v_log.performed_at,
+    'report', v_log.report,
+    'tasks', v_tasks
+  );
+END;
+$function$;
+    $definition$;
+
 
       IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_proc p
         WHERE p.oid=v_oid AND p.proowner=v_owner AND p.proacl IS NOT DISTINCT FROM v_acl) THEN

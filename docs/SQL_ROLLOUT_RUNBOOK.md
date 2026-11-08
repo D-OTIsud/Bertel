@@ -488,8 +488,9 @@ Les RPC RGPD et `audit.redact_subject` restent réservées au propriétaire. Le 
 donc leurs réponses `503 setup_incomplete` et `500 operation_lookup_failed`.
 L'activation exige une qualification globale séparée. Les trois versions CLI sont strictement ordonnées :
 `20261108070035` (principal), `20261108073355` (inventaire), `20261108073400`
-(intentions). Les deux compagnons conservent les octets des sources gelées ;
-aucun ancien nom de migration compagnon n'est encore présent dans le manifeste.
+(intentions). L'inventaire conserve les octets du source gelé ; le compagnon
+d'intention inclut aussi la garde du compte Auth courant décrite ci-dessus. Aucun
+ancien nom de migration compagnon n'est encore présent dans le manifeste.
 Le RPC user prend le verrou de sujet avant le journal et appelle l'inventaire après
 les tâches avatar historiques. Le test intégré prouve un refus sans mutation pendant
 un upload engagé, puis l'inventaire d'une génération orpheline après sa fin.

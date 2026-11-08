@@ -225,7 +225,6 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     .select('id')
     .single();
   if (targetError || !targetDocument) {
-    await auth.server.storage.from(PUBLIC_BUCKET).remove([targetPath]);
     return routeFailure('actor-document.PATCH', 'promotion_document_failed');
   }
   const targetDocumentId = String((targetDocument as { id: string }).id);
@@ -239,8 +238,6 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     .eq('is_active', true)
     .maybeSingle();
   if (!role) {
-    await auth.server.from('ref_document').delete().eq('id', targetDocumentId);
-    await auth.server.storage.from(PUBLIC_BUCKET).remove([targetPath]);
     return NextResponse.json({ error: 'unknown_document_type' }, { status: 400 });
   }
   const { error: objectLinkError } = await auth.server.from('object_document').insert({
@@ -252,27 +249,21 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     valid_to: (link as { valid_to?: string | null }).valid_to ?? null,
   });
   if (objectLinkError) {
-    await auth.server.from('ref_document').delete().eq('id', targetDocumentId);
-    await auth.server.storage.from(PUBLIC_BUCKET).remove([targetPath]);
     return routeFailure('actor-document.PATCH', 'object_link_failed');
   }
-  const { error: historyError } = await auth.server.from('actor_document').update({
+  const { data: history, error: historyError } = await auth.server.from('actor_document').update({
     document_id: targetDocumentId,
     status: 'promoted',
     intended_role_id: (role as { id: string }).id,
     promoted_to_object_id: objectId,
     promoted_document_id: targetDocumentId,
     promoted_at: new Date().toISOString(),
-  }).eq('actor_id', actorId).eq('document_id', documentId);
-  if (historyError) {
-    await auth.server.from('ref_document').delete().eq('id', targetDocumentId);
-    await auth.server.storage.from(PUBLIC_BUCKET).remove([targetPath]);
+  }).eq('actor_id', actorId).eq('document_id', documentId).select('document_id').single();
+  if (historyError || history?.document_id !== targetDocumentId) {
     return routeFailure('actor-document.PATCH', 'history_update_failed');
   }
 
-  // Migration réelle, sans duplication durable : la ligne d'historique pointe désormais vers
-  // le document établissement ; le binaire privé et son ancienne métadonnée sont supprimés.
-  await auth.server.storage.from(sourceBucket).remove([sourcePath]);
-  await auth.server.from('ref_document').delete().eq('id', documentId);
+  // Keep both copies and their metadata. A lost SQL acknowledgement or another
+  // reference can outlive this request; promotion grants no physical cleanup right.
   return NextResponse.json({ documentId: targetDocumentId });
 }

@@ -2,6 +2,21 @@
 
 _Reads/writes are regex-inferred and flagged by confidence._
 
+## Addendum DCL RGPD
+
+État postérieur à la capture fermée du catalogue 211 (8 novembre 2026, 11:45:53 UTC) : **postflight indépendant du 8 novembre 2026 à 16:06:25.907117 UTC, `activated_exact`, 9/9 vérifications en `REPEATABLE READ READ ONLY`**. L’acte manuel [activate.sql](../supabase/releases/20261108_gdpr_cleanup/activate.sql), SHA-256 `af367b8ef88101c8a1cdd4f7c1d73dedf3f44d2f4467e61e3235289287bb5e65`, ouvre les seules autorisations API suivantes, en plus du propriétaire :
+
+| Signature | Rôle API autorisé à exécuter |
+|---|---|
+| `api.rpc_gdpr_start_erasure(uuid,text,text,text,text)` | `authenticated` |
+| `api.rpc_gdpr_find_start_request(uuid)` | `authenticated` |
+| `api.rpc_gdpr_get_cleanup_status(uuid)` | `service_role` |
+| `api.rpc_gdpr_claim_cleanup_task(uuid,uuid,uuid,text,jsonb,text)` | `service_role` |
+| `api.rpc_gdpr_ack_cleanup_attempt(uuid,uuid,uuid,boolean,boolean,text)` | `service_role` |
+| `api.rpc_gdpr_refuse_cleanup_task(uuid,uuid,text,jsonb,text)` | `service_role` |
+
+`anon` n’a accès à aucune de ces six fonctions ; les contrôles d’autorité courante restent dans les corps SQL et la route. Les entrées historiques erase/ACK à quatre arguments et les helpers du protocole restent réservés au propriétaire. Aucun droit sur les tables privées, corps de fonction, OID, compteur structurel ou reçu de migration n’est modifié : le ledger reste à 211. L’acte est distinct du fresh-install et des migrations automatiques. Les descripteurs générés ci-dessous restent ceux de la capture historique fermée ; cet addendum ne les régénère pas et ne recalcule pas le graphe.
+
 ## `api._covered_days(p_all_years boolean, p_s date, p_e date)`
 - returns: `integer[]`
 

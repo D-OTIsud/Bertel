@@ -788,6 +788,10 @@ COMMIT;
 \ir tests/test_avatar_upload_intents.sql
 \ir tests/test_gdpr_crm_document_provenance.sql
 
+\echo '== Historical detached task audit remains explicit manual review == '
+\ir gdpr_historical_task_audit_review.sql
+\ir tests/test_gdpr_historical_task_audit_review.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

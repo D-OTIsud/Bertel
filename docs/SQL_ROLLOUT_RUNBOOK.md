@@ -519,6 +519,26 @@ avatar du compte portail délié. Le test `tests/test_gdpr_crm_document_provenan
 suit la migration dans le manifeste frais, car les suites antérieures s'exécutent
 avant la fermeture.
 
+### Revue historique des pièces de tâches détachées (fermé)
+
+L'overlay `gdpr_historical_task_audit_review.sql` et la migration CLI
+`20261108083121` s'appliquent après les claims `20261108074602`, puis START
+`20261108075514` lors de la composition finale. START épingle l'ancien corps à
+son installation seulement ; à l'exécution il appelle la même signature. Ce lot
+ne modifie ni `20261108070035` ni ses octets historiques. Le manifeste de cette
+branche isolée n'importe pas les lots frères : leur ordre final reste à composer.
+
+Les `parent_id` des reçus de tâches absents de l'inventaire courant sont listés
+sous `report.crmProvenance.historicalTaskAuditReviewIds` et imposent
+`manualReviewRequired=true`, même si le catalogue du document a disparu. Cette
+liste signale une portée de revue potentielle ; elle n'affirme ni qu'une trace
+existe en production ni qu'elle a été nettoyée. Aucune rédaction supplémentaire
+par identifiant de tâche historique n'est faite : son nouveau titulaire et son
+historique restent intacts. Aucune tâche provider ni aucun grant ne sont ajoutés.
+Le corps connu est gardé, le rejeu du post-état est neutre, et les OID/ACL/attributs
+sont conservés. Les anciennes RPC RGPD restent owner-only. Cette source n'active
+pas l'effacement et ne fournit pas un mécanisme de résolution de la revue.
+
 ### CI enforcement (deploy integrity)
 A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest step for step **hormis les étapes foldées — no-op sur base fraîche — et `migration_gdpr_erasure.sql` (14j), dont l'entrée est activement INTERDITE par le step CI *RGPD mirror alignment***, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
 

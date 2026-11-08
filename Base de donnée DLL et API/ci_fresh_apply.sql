@@ -767,6 +767,10 @@ COMMIT;
 \ir ../supabase/migrations/20261107233351_guard_object_purge_references.sql
 \ir tests/test_object_hard_delete.sql
 
+\echo '== DB02 CRM document unlink keeps the shared catalogue and file =='
+\ir ../supabase/migrations/20261108003916_crm_document_unlink.sql
+\ir tests/test_crm_document_unlink.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

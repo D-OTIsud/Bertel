@@ -196,6 +196,18 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   if (sourceBucket !== PRIVATE_BUCKET || !sourcePath) {
     return NextResponse.json({ error: 'source_missing' }, { status: 409 });
   }
+  const { data: role, error: roleError } = await auth.server
+    // Les partitions ref_code_* ne sont pas exposées directement par PostgREST :
+    // résoudre le rôle via la table parente et son domaine explicite.
+    .from('ref_code')
+    .select('id')
+    .eq('domain', 'document_type')
+    .eq('code', roleCode)
+    .eq('is_active', true)
+    .maybeSingle();
+  if (roleError || !role) {
+    return NextResponse.json({ error: 'unknown_document_type' }, { status: 400 });
+  }
   const { data: blob, error: downloadError } = await auth.server.storage.from(sourceBucket).download(sourcePath);
   if (downloadError || !blob) return routeFailure('actor-document.PATCH', 'download_failed');
 
@@ -228,18 +240,6 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     return routeFailure('actor-document.PATCH', 'promotion_document_failed');
   }
   const targetDocumentId = String((targetDocument as { id: string }).id);
-  const { data: role } = await auth.server
-    // Les partitions ref_code_* ne sont pas exposées directement par PostgREST :
-    // résoudre le rôle via la table parente et son domaine explicite.
-    .from('ref_code')
-    .select('id')
-    .eq('domain', 'document_type')
-    .eq('code', roleCode)
-    .eq('is_active', true)
-    .maybeSingle();
-  if (!role) {
-    return NextResponse.json({ error: 'unknown_document_type' }, { status: 400 });
-  }
   const { error: objectLinkError } = await auth.server.from('object_document').insert({
     object_id: objectId,
     document_id: targetDocumentId,

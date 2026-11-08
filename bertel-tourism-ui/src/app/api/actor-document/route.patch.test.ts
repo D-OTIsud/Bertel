@@ -108,7 +108,7 @@ it.each([false, true])('preserves canonical writers promoting within realm %s', 
 });
 
 
-type PromotionFault = 'target_ack_lost' | 'object_ack_lost' | 'history_ack_lost' | 'history_zero' | 'success' | 'role_missing';
+type PromotionFault = 'target_ack_lost' | 'object_ack_lost' | 'history_ack_lost' | 'history_zero' | 'success' | 'role_missing' | 'role_error_with_data';
 
 /** The fake performs the write before returning a synthetic lost ACK. It exposes
  *  every old cleanup method, so a refusal cannot pass because a method is absent. */
@@ -138,15 +138,18 @@ function causalPromotion(fault: PromotionFault) {
     if (state.actorDocument === id) state.actorDocument = null;
     return Promise.resolve({ error: null });
   });
-  const query = (data: unknown) => {
-    const q: { eq: jest.Mock; maybeSingle: jest.Mock } = { eq: jest.fn(() => q), maybeSingle: jest.fn(async () => ({ data, error: null })) };
+  const query = (data: unknown, error: { message: string } | null = null) => {
+    const q: { eq: jest.Mock; maybeSingle: jest.Mock } = { eq: jest.fn(() => q), maybeSingle: jest.fn(async () => ({ data, error })) };
     return q;
   };
   const historySingle = jest.fn();
   const historySelect = jest.fn();
   const from = jest.fn((table: string) => {
     if (table === 'actor' || table === 'object') return { select: () => query({ is_test: false }) };
-    if (table === 'ref_code') return { select: () => query(fault === 'role_missing' ? null : { id: 'dddddddd-1111-4222-a333-eeeeeeeeeeee' }) };
+    if (table === 'ref_code') return { select: () => query(
+      fault === 'role_missing' ? null : { id: 'dddddddd-1111-4222-a333-eeeeeeeeeeee' },
+      fault === 'role_error_with_data' ? { message: 'synthetic role lookup failed' } : null,
+    ) };
     if (table === 'ref_document') return {
       select: () => query({ title: 'Shared source', storage_bucket: 'actor-documents', storage_path: sourcePath, extra: {} }),
       insert: () => ({ select: () => ({ single: async () => {
@@ -254,15 +257,26 @@ describe('PATCH promotion retains committed state and never infers a physical cl
     expect(h.historySingle).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the existing unknown-role response without deleting the already copied bytes or metadata', async () => {
-    const h = causalPromotion('role_missing');
+  it.each(['role_missing', 'role_error_with_data'] as const)('rejects %s before any download, copy or metadata creation', async (fault) => {
+    const h = causalPromotion(fault);
     jest.mocked(authenticated).mockResolvedValue({ ok: true, jwt: 'jwt', server: h.server } as never);
     const response = await PATCH(request());
-    expect(response.status).toBe(400);
+    assert.equal(response.status, 400, 'role failure must not acquire a public copy');
     await expect(response.json()).resolves.toEqual({ error: 'unknown_document_type' });
-    assert.equal(h.state.references.has(TARGET_DOC_ID), true, 'committed target metadata must be retained');
+    expect(h.storage.download).not.toHaveBeenCalled();
+    expect(h.storage.upload).not.toHaveBeenCalled();
+    expect(h.state.targetPath).toBe('');
+    expect(h.state.references.size).toBe(2);
+    expect(h.state.references.has(TARGET_DOC_ID)).toBe(false);
+    expect(h.state.references.get(DOC_ID)).toBe(h.sourcePath);
+    expect(h.state.references.get(h.aliasId)).toBe(h.sourcePath);
+    expect(h.state.bytes).toEqual(new Set([h.sourcePath]));
+    expect(h.state.taskDocuments.has(DOC_ID)).toBe(true);
+    expect(h.state.portalDocuments.has(DOC_ID)).toBe(true);
     expect(h.state.objectDocuments.size).toBe(0);
     expect(h.state.actorDocument).toBe(DOC_ID);
-    expectPreservedCopies(h);
+    expect(h.state.historyRows).toBe(0);
+    expect(h.remove).not.toHaveBeenCalled();
+    expect(h.deleteMetadata).not.toHaveBeenCalled();
   });
 });

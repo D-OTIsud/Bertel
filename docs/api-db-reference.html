@@ -16,13 +16,13 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <main><nav class="toc"><b>Navigation</b><a href="#coverage">Couverture</a><a href="#rpcs">RPC / fonctions</a><a href="#tables">Connexions tables</a><a href="#rls">RLS policies</a><a href="#enums">Enums & types</a><a href="#refs">CID, tags, refcodes</a><a href="#ref-tables">Tables de référence</a><a href="index.html">Retour doc API</a></nav><div>
 <section id="coverage"><h2>0) Couverture et sources</h2>
 <div class="grid cards">
-<article class="mini-card"><div class="metric">428</div><b>tables</b><p class="muted">15 vues · 9 enums</p></article>
-<article class="mini-card"><div class="metric">668</div><b>fonctions/RPC</b><p class="muted">647 policies · 1439 triggers</p></article>
+<article class="mini-card"><div class="metric">429</div><b>tables</b><p class="muted">15 vues · 9 enums</p></article>
+<article class="mini-card"><div class="metric">670</div><b>fonctions/RPC</b><p class="muted">647 policies · 1439 triggers</p></article>
 <article class="mini-card"><div class="metric">3174</div><b>valeurs référentielles</b><p class="muted">instantané public attesté</p></article>
-<article class="mini-card"><div class="metric">6402</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
+<article class="mini-card"><div class="metric">6406</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les 3 174 valeurs proviennent de l’instantané public du 6 novembre 2026, entre 20:23 et 20:32 UTC, conservé octet pour octet. Il couvre 28 tables autorisées et 246 documents de scope explicite public. Aucune valeur de seed n’a complété cet instantané.</p>
-<p class="muted">Catalogue et RLS physiques capturés le 2026-11-08T11:45:53.391988+00:00, ledger 211, dans un snapshot PostgreSQL en lecture seule. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
+<p class="muted">Catalogue et RLS physiques capturés le 2026-11-08T17:51:10.274935+00:00, ledger 212, dans un snapshot PostgreSQL en lecture seule. Les deux policies de realtime.messages sont issues du supplément MCP TLS RR/RO distinct du 8 novembre à 17:57:20 UTC, identiques au catalogue 211 ; leur omission dans le filtre local n’était pas une suppression en production. Les valeurs publiques gardent leur date d’origine. Voir <a href="../db-graph-out/DB_AGENT_INDEX.md">la provenance du catalogue</a>.</p>
 <p class="muted">Lecture live MCP effectuée sur 28 tables publiques de référence. 0 lignes seed SQL restent disponibles comme filet de secours.</p>
 <details><summary>Écarts de couverture à surveiller</summary>
 <table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>
@@ -34,7 +34,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 </details>
 </section>
 <section id="rpcs"><h2>1) RPC / fonctions et connexions base</h2><p>Chaque bloc liste le retour, les propriétés de sécurité, le commentaire SQL disponible, puis les tables lues ou écrites.</p>
-<h3>Schéma <code>api</code> (486)</h3>
+<h3>Schéma <code>api</code> (487)</h3>
 <details class="rpc" data-search="api._covered_days(p_all_years boolean, p_s date, p_e date) ">
 <summary><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code></summary>
 <div class="detail-grid">
@@ -234,10 +234,9 @@ house search_path. Cost per row: 2 PK probes + 1 two-key PK probe -- hot-path sa
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée à authenticated ; rattache l’intention et revérifie les droits courants, y compris au replay.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_document_upload_intents.sql:185</code><br><code>supabase/migrations/20261108021542_crm_document_upload_intents.sql:185</code></p>
 </div>
-<p>Exécution directe réservée à authenticated ; rattache l’intention et revérifie les droits courants, y compris au replay.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-crm_document_upload"><code>internal.crm_document_upload</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-internal-crm_document_upload"><code>internal.crm_document_upload</code></a></td><td>high</td></tr>
@@ -298,13 +297,12 @@ Function to audit legal compliance across all objects
 <div class="detail-grid">
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au rôle serveur <code>service_role</code> ; aucun accès <code>anon</code> ou <code>authenticated</code>.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108073355_gdpr_avatar_inventory.sql:69</code></p>
 </div>
 <blockquote>This read prevents NEW route requests while an existing durable user operation
 has outstanding tasks. It does not reserve or drain an already admitted HTTP
 upload, and it cannot fence external service-role writers or old instances.</blockquote>
-<p>Exécution directe réservée au rôle serveur <code>service_role</code> ; aucun accès <code>anon</code> ou <code>authenticated</code>.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-gdpr_cleanup_task"><code>internal.gdpr_cleanup_task</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-gdpr_erasure_log"><code>public.gdpr_erasure_log</code></a></td><td>high</td></tr>
@@ -347,10 +345,9 @@ upload, and it cannot fence external service-role writers or old instances.</blo
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au rôle serveur <code>service_role</code> ; aucun accès <code>anon</code> ou <code>authenticated</code>.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108073400_avatar_upload_intents.sql:64</code></p>
 </div>
-<p>Exécution directe réservée au rôle serveur <code>service_role</code> ; aucun accès <code>anon</code> ou <code>authenticated</code>.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-internal-avatar_upload_intent"><code>internal.avatar_upload_intent</code></a></td><td>high</td></tr>
@@ -361,8 +358,8 @@ upload, and it cannot fence external service-role writers or old instances.</blo
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
-<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:201</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:204</code></p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/distributed_list_email_intents.sql:201</code><br><code>supabase/migrations/20261107031344_distributed_list_email_intents.sql:204</code><br><code>supabase/migrations/20261108173157_manual_list_email_quotas.sql:155</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-list_email_intent"><code>internal.list_email_intent</code></a></td><td>high</td></tr>
@@ -725,10 +722,9 @@ et check_org_config_org_type).</blockquote>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au rôle serveur <code>service_role</code> ; aucun accès <code>anon</code> ou <code>authenticated</code>.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108073400_avatar_upload_intents.sql:89</code></p>
 </div>
-<p>Exécution directe réservée au rôle serveur <code>service_role</code> ; aucun accès <code>anon</code> ou <code>authenticated</code>.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-avatar_upload_intent"><code>internal.avatar_upload_intent</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-internal-avatar_upload_intent"><code>internal.avatar_upload_intent</code></a></td><td>high</td></tr>
@@ -803,11 +799,10 @@ et check_org_config_org_type).</blockquote>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Réservée au rôle serveur <code>service_role</code>.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée à service_role ; confirmation serveur du reçu d’upload.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_document_upload_intents.sql:163</code><br><code>supabase/migrations/20261108021542_crm_document_upload_intents.sql:163</code></p>
 </div>
 <blockquote>Only the trusted uploader can acknowledge the exact prepared bytes and locator.</blockquote>
-<p>Exécution directe réservée à service_role ; confirmation serveur du reçu d’upload.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-crm_document_upload"><code>internal.crm_document_upload</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-internal-crm_document_upload"><code>internal.crm_document_upload</code></a></td><td>high</td></tr>
@@ -3153,10 +3148,10 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <details class="rpc" data-search="api.get_smtp_config() public.app_smtp_config">
 <summary><code>api.get_smtp_config()</code></summary>
 <div class="detail-grid">
-<p><b>Retour</b><br><code>TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)</code></p>
+<p><b>Retour</b><br><code>TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone, manual_max_per_minute integer, manual_max_per_24h integer)</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>supabase/migrations/20260906031607_smtp_settings.sql:27</code></p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>authenticated</code>.</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20260906031607_smtp_settings.sql:27</code><br><code>supabase/migrations/20261108173157_manual_list_email_quotas.sql:106</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
@@ -3167,7 +3162,7 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <div class="detail-grid">
 <p><b>Retour</b><br><code>TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20260906031607_smtp_settings.sql:104</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -4621,10 +4616,9 @@ ponytail: met à jour last_used_at à chaque appel (write par requête) — thro
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée à authenticated ; prépare une intention privée sous les droits CRM courants.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_document_upload_intents.sql:126</code><br><code>supabase/migrations/20261108021542_crm_document_upload_intents.sql:126</code></p>
 </div>
-<p>Exécution directe réservée à authenticated ; prépare une intention privée sous les droits CRM courants.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-crm_document_upload"><code>internal.crm_document_upload</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-ref_document"><code>public.ref_document</code></a></td><td>high</td></tr>
@@ -5406,12 +5400,11 @@ Rang : la cible doit avoir un rang admin strictement inférieur à l&#x27;appela
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108074602_gdpr_cleanup_claims.sql:204</code></p>
 </div>
 <blockquote>p_effect_issued distingue un refus prouvé sans effet (tâche relançable) d&#x27;un envoi provider dont
 l&#x27;issue est inconnue (définitif). Le succès propage le reçu aux tâches liées à cette cible.</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-gdpr_cleanup_task"><code>internal.gdpr_cleanup_task</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-internal-gdpr_cleanup_task"><code>internal.gdpr_cleanup_task</code></a></td><td>high</td></tr>
@@ -5422,11 +5415,10 @@ l&#x27;issue est inconnue (définitif). Le succès propage le reçu aux tâches 
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/gdpr_crm_document_provenance.sql:929</code><br><code>supabase/migrations/20260905195257_gdpr_cleanup_operations.sql:592</code><br><code>supabase/migrations/20261108070035_gdpr_crm_document_provenance.sql:929</code><br><code>supabase/migrations/20261108074602_gdpr_cleanup_claims.sql:335</code></p>
 </div>
 <blockquote>L&#x27;identité 4 arguments reste pour les préalables 19a, mais ne peut plus muter sans tentative.</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
 <details class="rpc" data-search="api.rpc_gdpr_claim_cleanup_task(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_expected_action text, p_expected_metadata jsonb, p_target_key text) internal.gdpr_cleanup_task public.gdpr_erasure_log internal.gdpr_cleanup_task">
@@ -5434,10 +5426,9 @@ l&#x27;issue est inconnue (définitif). Le succès propage le reçu aux tâches 
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108074602_gdpr_cleanup_claims.sql:105</code></p>
 </div>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-gdpr_cleanup_task"><code>internal.gdpr_cleanup_task</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-gdpr_erasure_log"><code>public.gdpr_erasure_log</code></a></td><td>high</td></tr>
@@ -5449,11 +5440,10 @@ l&#x27;issue est inconnue (définitif). Le succès propage le reçu aux tâches 
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/gdpr_crm_document_provenance.sql:428</code><br><code>Base de donnée DLL et API/migration_actor_portal.sql:1790</code><br><code>Base de donnée DLL et API/migration_gdpr_erasure.sql:101</code><br><code>Base de donnée DLL et API/schema_unified.sql:6785</code><br><code>supabase/migrations/20260905195257_gdpr_cleanup_operations.sql:101</code><br><code>supabase/migrations/20261108070035_gdpr_crm_document_provenance.sql:428</code></p>
 </div>
 <blockquote>Effacement/anonymisation RGPD Art. 17 d&#x27;un sujet, atomique et journalisé. Les documents CRM du sujet sont inventoriés avec leurs reçus de provenance ; un reçu ne donne aucun droit de suppression et tout document encore utilisé est conservé. Réservé au propriétaire jusqu&#x27;à la qualification globale de l&#x27;activation.</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-crm_document_detachment"><code>internal.crm_document_detachment</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-internal-crm_document_upload"><code>internal.crm_document_upload</code></a></td><td>high</td></tr>
@@ -5497,11 +5487,10 @@ l&#x27;issue est inconnue (définitif). Le succès propage le reçu aux tâches 
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>authenticated</code>.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/gdpr_start_request_identity.sql:144</code><br><code>supabase/migrations/20261108075514_gdpr_start_request_identity.sql:144</code></p>
 </div>
 <blockquote>Recherche seule d&#x27;une demande START connue par son auteur courant ; absence ne permet jamais un nouveau START automatique. Propriétaire seul.</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-gdpr_erasure_log"><code>public.gdpr_erasure_log</code></a></td><td>high</td></tr>
 </tbody></table>
@@ -5511,13 +5500,12 @@ l&#x27;issue est inconnue (définitif). Le succès propage le reçu aux tâches 
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/gdpr_crm_document_provenance.sql:890</code><br><code>supabase/migrations/20260905195257_gdpr_cleanup_operations.sql:548</code><br><code>supabase/migrations/20261108010225_guard_legacy_gdpr_erase.sql:157</code><br><code>supabase/migrations/20261108070035_gdpr_crm_document_provenance.sql:890</code></p>
 </div>
 <blockquote>---------------------------------------------------------------------
 5. Lecture et acquittement (corps durcis existants)
 ---------------------------------------------------------------------</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-gdpr_cleanup_task"><code>internal.gdpr_cleanup_task</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-gdpr_erasure_log"><code>public.gdpr_erasure_log</code></a></td><td>high</td></tr>
@@ -5528,12 +5516,11 @@ l&#x27;issue est inconnue (définitif). Le succès propage le reçu aux tâches 
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108074602_gdpr_cleanup_claims.sql:287</code></p>
 </div>
 <blockquote>Refus d&#x27;une référence externe ou invalide, qui n&#x27;a aucune cible à réclamer. Sans attemptId,
 cette RPC ne peut ni marquer un succès, ni libérer ou masquer une tentative en cours.</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-gdpr_cleanup_task"><code>internal.gdpr_cleanup_task</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-gdpr_erasure_log"><code>public.gdpr_erasure_log</code></a></td><td>high</td></tr>
@@ -5545,11 +5532,10 @@ cette RPC ne peut ni marquer un succès, ni libérer ou masquer une tentative en
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>authenticated</code>.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/gdpr_start_request_identity.sql:68</code><br><code>supabase/migrations/20261108075514_gdpr_start_request_identity.sql:68</code></p>
 </div>
 <blockquote>START idempotent par demande/auteur/snapshot, lie la demande au vrai journal 19a atomiquement. Propriétaire seul ; aucune activation.</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-gdpr_cleanup_task"><code>internal.gdpr_cleanup_task</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-gdpr_erasure_log"><code>public.gdpr_erasure_log</code></a></td><td>high</td></tr>
@@ -7037,10 +7023,9 @@ object_id resolved through the parent (menu / menu_item / tag_link target_pk).</
 <div class="detail-grid">
 <p><b>Retour</b><br><code>text</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>authenticated</code>, avec contrôle des droits CRM courants. La référence documentaire et le fichier restent conservés.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108013154_crm_document_unlink.sql:64</code></p>
 </div>
-<p>Exécution directe réservée au rôle <code>authenticated</code>, avec contrôle des droits CRM courants. La référence documentaire et le fichier restent conservés.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-internal-sandbox_discovery_identity"><code>internal.sandbox_discovery_identity</code></a></td><td>high</td></tr>
@@ -7056,10 +7041,9 @@ object_id resolved through the parent (menu / menu_item / tag_link target_pk).</
 <div class="detail-grid">
 <p><b>Retour</b><br><code>text</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>authenticated</code>, avec contrôle des droits CRM courants. La référence documentaire et le fichier restent conservés.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108013154_crm_document_unlink.sql:136</code></p>
 </div>
-<p>Exécution directe réservée au rôle <code>authenticated</code>, avec contrôle des droits CRM courants. La référence documentaire et le fichier restent conservés.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-internal-sandbox_discovery_identity"><code>internal.sandbox_discovery_identity</code></a></td><td>high</td></tr>
@@ -7185,7 +7169,7 @@ p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
 <div class="detail-grid">
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>authenticated</code>.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20260906031607_smtp_settings.sql:43</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -7193,6 +7177,20 @@ p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
 <tr><td>lecture</td><td><a href="#table-vault-secrets"><code>vault.secrets</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-vault-secrets"><code>vault.secrets</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<details class="rpc" data-search="api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text, p_password text, p_manual_max_per_minute integer, p_manual_max_per_24h integer) public.app_smtp_config">
+<summary><code>api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text, p_password text, p_manual_max_per_minute integer, p_manual_max_per_24h integer)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>void</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>authenticated</code>.</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261108173157_manual_list_email_quotas.sql:127</code></p>
+</div>
+<blockquote>All eleven args are required: no ambiguous overlap with the unchanged legacy overload.
+New HTTP code passes NULL for omitted quota inputs; old nine-argument clients retain values.</blockquote>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>écriture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
 <details class="rpc" data-search="api.user_actor_ids() public.app_user_profile">
@@ -7761,7 +7759,7 @@ object_version rows are product data (version restore §98/14r), never dropped h
 <tr><td>écriture</td><td><a href="#table-audit-audit_log"><code>audit.audit_log</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<h3>Schéma <code>internal</code> (92)</h3>
+<h3>Schéma <code>internal</code> (93)</h3>
 <details class="rpc" data-search="internal.actor_in_current_realm(p_actor_id uuid) public.actor">
 <summary><code>internal.actor_in_current_realm(p_actor_id uuid)</code></summary>
 <div class="detail-grid">
@@ -7774,17 +7772,30 @@ object_version rows are product data (version restore §98/14r), never dropped h
 <tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
+<details class="rpc" data-search="internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid) internal.manual_list_email_admission public.app_smtp_config internal.manual_list_email_admission">
+<summary><code>internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>jsonb</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au rôle <code>service_role</code>.</p>
+<p><b>Source SQL</b><br><code>supabase/migrations/20261108173157_manual_list_email_quotas.sql:46</code></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-internal-manual_list_email_admission"><code>internal.manual_list_email_admission</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
+<tr><td>écriture</td><td><a href="#table-internal-manual_list_email_admission"><code>internal.manual_list_email_admission</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
 <details class="rpc" data-search="internal.avatar_subject_lock(p_user_id uuid) ">
 <summary><code>internal.avatar_subject_lock(p_user_id uuid)</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108073400_avatar_upload_intents.sql:41</code></p>
 </div>
 <blockquote>One shared formula, taken before active-state reads. RC is required because an
 advisory-lock wait does not refresh a Repeatable Read transaction&#x27;s old snapshot.</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
 <details class="rpc" data-search="internal.backfill_list_feature_notifications() public.object_list">
@@ -7899,11 +7910,10 @@ reliance on the current account, and the same completeness rounding as the live 
 <div class="detail-grid">
 <p><b>Retour</b><br><code>uuid</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
-<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Exécution directe</b><br>Helper interne SECURITY INVOKER, exécution directe réservée au propriétaire PostgreSQL.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_document_upload_intents.sql:95</code><br><code>supabase/migrations/20261108021542_crm_document_upload_intents.sql:95</code></p>
 </div>
 <blockquote>Reuse the current CRM predicates and the trusted sandbox exclusion of CRM unlink.</blockquote>
-<p>Helper interne SECURITY INVOKER, exécution directe réservée au propriétaire PostgreSQL.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-auth-users"><code>auth.users</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-internal-sandbox_discovery_identity"><code>internal.sandbox_discovery_identity</code></a></td><td>high</td></tr>
@@ -8044,10 +8054,9 @@ reliance on the current account, and the same completeness rounding as the live 
 <div class="detail-grid">
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108073400_avatar_upload_intents.sql:53</code></p>
 </div>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-avatar_upload_intent"><code>internal.avatar_upload_intent</code></a></td><td>high</td></tr>
 </tbody></table>
@@ -8057,12 +8066,11 @@ reliance on the current account, and the same completeness rounding as the live 
 <div class="detail-grid">
 <p><b>Retour</b><br><code>void</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108074602_gdpr_cleanup_claims.sql:90</code></p>
 </div>
 <blockquote>Claims et ACK d&#x27;une même cible se sérialisent ici, toujours avant les verrous de lignes.
 READ COMMITTED garantit qu&#x27;après l&#x27;attente chaque instruction voit le dernier état commis.</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
 <details class="rpc" data-search="internal.gdpr_document_is_referenced(p_document_id uuid) internal.portal_photo_analysis public.actor_consent public.actor_document public.crm_task_document public.media public.object_classification public.object_document public.object_iti public.object_legal public.object_sustainability_action public.ref_document">
@@ -8070,11 +8078,10 @@ READ COMMITTED garantit qu&#x27;après l&#x27;attente chaque instruction voit le
 <div class="detail-grid">
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/gdpr_crm_document_provenance.sql:394</code><br><code>supabase/migrations/20261108070035_gdpr_crm_document_provenance.sql:394</code></p>
 </div>
 <blockquote>Vrai si un document reste utilisé hors du sujet effacé. Réservé à api.rpc_gdpr_erase_subject.</blockquote>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-portal_photo_analysis"><code>internal.portal_photo_analysis</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-actor_consent"><code>public.actor_consent</code></a></td><td>high</td></tr>
@@ -8094,10 +8101,9 @@ READ COMMITTED garantit qu&#x27;après l&#x27;attente chaque instruction voit le
 <div class="detail-grid">
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.</p>
 <p><b>Source SQL</b><br><code>supabase/migrations/20261108073355_gdpr_avatar_inventory.sql:23</code></p>
 </div>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-internal-gdpr_cleanup_task"><code>internal.gdpr_cleanup_task</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-gdpr_erasure_log"><code>public.gdpr_erasure_log</code></a></td><td>high</td></tr>
@@ -8110,10 +8116,9 @@ READ COMMITTED garantit qu&#x27;après l&#x27;attente chaque instruction voit le
 <div class="detail-grid">
 <p><b>Retour</b><br><code>text</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
-<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
+<p><b>Exécution directe</b><br>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.</p>
 <p><b>Source SQL</b><br><code>Base de donnée DLL et API/gdpr_start_request_identity.sql:49</code><br><code>supabase/migrations/20261108075514_gdpr_start_request_identity.sql:49</code></p>
 </div>
-<p>Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour <code>anon</code>, <code>authenticated</code> ou <code>service_role</code> dans le catalogue fermé 211.</p>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
 <details class="rpc" data-search="internal.get_active_object_documents_unfiltered_20260908(p_object_id text) public.object_classification public.object_legal public.ref_classification_scheme public.ref_document public.ref_legal_type">
@@ -10569,6 +10574,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr id="table-internal-list_email_intent"><td><code>internal.list_email_intent</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.ack_list_email_client(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_result_token text)</code>, <code>api.begin_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_fingerprint text, p_recipient_fingerprint text)</code>, <code>api.complete_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_outcome text, p_tracking_updated boolean DEFAULT false, p_rejection_code text DEFAULT NULL::text, p_result_token text DEFAULT NULL::text)</code>, <code>api.prepare_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_fingerprint text, p_recipient_fingerprint text, p_expected_generation bigint, p_confirm_resend boolean DEFAULT false, p_confirmed_previous_operation_ids uuid[] DEFAULT &#x27;{}&#x27;::uuid[])</code></td><td><code>api.ack_list_email_client(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_result_token text)</code>, <code>api.begin_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_fingerprint text, p_recipient_fingerprint text)</code>, <code>api.complete_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_outcome text, p_tracking_updated boolean DEFAULT false, p_rejection_code text DEFAULT NULL::text, p_result_token text DEFAULT NULL::text)</code>, <code>api.prepare_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_fingerprint text, p_recipient_fingerprint text, p_expected_generation bigint, p_confirm_resend boolean DEFAULT false, p_confirmed_previous_operation_ids uuid[] DEFAULT &#x27;{}&#x27;::uuid[])</code></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-internal-list_email_metric"><td><code>internal.list_email_metric</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.list_email_measurements(p_from timestamp with time zone, p_until timestamp with time zone)</code></td><td><code>internal.measure_list_email(p_user_id uuid, p_org_object_id text, p_event text)</code></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-internal-list_email_scope"><td><code>internal.list_email_scope</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.begin_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_fingerprint text, p_recipient_fingerprint text)</code>, <code>api.get_list_email_context(p_user_id uuid, p_list_id uuid)</code>, <code>api.prepare_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_fingerprint text, p_recipient_fingerprint text, p_expected_generation bigint, p_confirm_resend boolean DEFAULT false, p_confirmed_previous_operation_ids uuid[] DEFAULT &#x27;{}&#x27;::uuid[])</code></td><td><code>api.prepare_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_fingerprint text, p_recipient_fingerprint text, p_expected_generation bigint, p_confirm_resend boolean DEFAULT false, p_confirmed_previous_operation_ids uuid[] DEFAULT &#x27;{}&#x27;::uuid[])</code></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
+<tr id="table-internal-manual_list_email_admission"><td><code>internal.manual_list_email_admission</code></td><td>table</td><td>other</td><td>oui</td><td><code>internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)</code></td><td><code>internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)</code></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-internal-mv_filtered_objects"><td><code>internal.mv_filtered_objects</code></td><td>matview</td><td>other</td><td>non</td><td><code>api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)</code></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-internal-mv_ref_data_json"><td><code>internal.mv_ref_data_json</code></td><td>matview</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-internal-partner_api_call"><td><code>internal.partner_api_call</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><code>api.partner_log_call(p_key_id uuid, p_path text, p_status integer)</code></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
@@ -10582,7 +10588,7 @@ UNION deduplicates identities and terminates even if a legacy source is cyclic.<
 <tr id="table-public-app_ai_provider_config"><td><code>public.app_ai_provider_config</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.delete_ai_provider(p_id uuid)</code>, <code>api.get_active_ai_provider_secret()</code>, <code>api.list_ai_providers()</code>, <code>api.reserve_portal_photo_analysis(p_object_id text, p_document_id uuid, p_request_id uuid)</code> <span class="muted">+4</span></td><td><code>api.delete_ai_provider(p_id uuid)</code>, <code>api.set_active_ai_provider(p_id uuid)</code>, <code>api.upsert_ai_provider(p_id uuid, p_label text, p_api_kind text, p_base_url text, p_model text, p_max_output_tokens integer, p_is_active boolean, p_extra jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_api_key text DEFAULT NULL::text)</code></td><td>0 policies · 0 triggers · FK → 0 · FK ← 2</td></tr>
 <tr id="table-public-app_branding_settings"><td><code>public.app_branding_settings</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.get_app_branding()</code>, <code>api.get_org_branding(p_org_object_id text)</code>, <code>api.get_org_smtp(p_org_object_id text)</code>, <code>api.get_org_smtp_secret(p_org_object_id text)</code> <span class="muted">+1</span></td><td><code>api.upsert_app_branding(p_brand_name text DEFAULT NULL::text, p_logo_storage_path text DEFAULT NULL::text, p_logo_public_url text DEFAULT NULL::text, p_logo_mime_type text DEFAULT NULL::text, p_primary_color text DEFAULT NULL::text, p_accent_color text DEFAULT NULL::text, p_text_color text DEFAULT NULL::text, p_background_color text DEFAULT NULL::text, p_surface_color text DEFAULT NULL::text, p_marker_styles jsonb DEFAULT NULL::jsonb, p_extra jsonb DEFAULT NULL::jsonb, p_clear_logo boolean DEFAULT false)</code></td><td>2 policies · 2 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-app_notification"><td><code>public.app_notification</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.count_notifications_blocked_no_smtp()</code>, <code>api.list_my_notifications(p_limit integer DEFAULT 50)</code>, <code>api.review_list_feature(p_list_id uuid, p_accept boolean)</code> <span class="muted">+4</span></td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.mark_all_notifications_read()</code>, <code>api.mark_notification_read(p_id uuid)</code>, <code>api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT &#x27;[]&#x27;::jsonb)</code> <span class="muted">+9</span></td><td>4 policies · 6 triggers · FK → 3 · FK ← 0</td></tr>
-<tr id="table-public-app_smtp_config"><td><code>public.app_smtp_config</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.get_smtp_config()</code>, <code>api.get_smtp_config_secret()</code>, <code>api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)</code></td><td><code>api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)</code></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
+<tr id="table-public-app_smtp_config"><td><code>public.app_smtp_config</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.get_smtp_config()</code>, <code>api.get_smtp_config_secret()</code>, <code>api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)</code>, <code>internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)</code></td><td><code>api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)</code>, <code>api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text, p_password text, p_manual_max_per_minute integer, p_manual_max_per_24h integer)</code></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-audit_criteria"><td><code>public.audit_criteria</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.validate_audit_result_points()</code></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 3 · FK ← 1</td></tr>
 <tr id="table-public-audit_result"><td><code>public.audit_result</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.recompute_audit_session_score()</code></td><td><span class="muted">-</span></td><td>1 policies · 9 triggers · FK → 4 · FK ← 0</td></tr>
 <tr id="table-public-audit_session"><td><code>public.audit_session</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><code>api.recompute_audit_session_score()</code></td><td>1 policies · 8 triggers · FK → 5 · FK ← 1</td></tr>

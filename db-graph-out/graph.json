@@ -1,12 +1,12 @@
 {
  "meta": {
-  "table_count": 428,
+  "table_count": 429,
   "view_count": 15,
-  "function_count": 668,
+  "function_count": 670,
   "policy_count": 647,
   "trigger_count": 1439,
   "enum_count": 9,
-  "edge_count": 6402
+  "edge_count": 6406
  },
  "nodes": [
   {
@@ -54970,6 +54970,18 @@
       "type": "uuid",
       "nullable": true,
       "pk": false
+     },
+     {
+      "name": "manual_max_per_minute",
+      "type": "integer",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "manual_max_per_24h",
+      "type": "integer",
+      "nullable": false,
+      "pk": false
      }
     ],
     "rls_enabled": true,
@@ -58612,6 +58624,38 @@
    }
   },
   {
+   "id": "internal.manual_list_email_admission",
+   "kind": "table",
+   "label": "manual_list_email_admission",
+   "schema": "internal",
+   "domain": "other",
+   "doc": "Global manual-list admissions, one per existing (user_id,operation_id) intent key. No FK: list/receipt deletion or SMTP setting changes never reset the budget. No mailbox/content/secret. No business receipt retention change.",
+   "props": {
+    "columns": [
+     {
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "operation_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "admitted_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true,
+    "rls_forced": false
+   }
+  },
+  {
    "id": "thesaurus.object_ids_for_row(p_table oid, p_row jsonb, p_visited oid[] DEFAULT '{}'::oid[], p_depth integer DEFAULT 0)",
    "kind": "function",
    "label": "object_ids_for_row",
@@ -60650,7 +60694,7 @@
    "doc": null,
    "props": {
     "signature": "get_smtp_config()",
-    "returns": "TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)",
+    "returns": "TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone, manual_max_per_minute integer, manual_max_per_24h integer)",
     "security_definer": true,
     "volatility": "v",
     "dynamic_sql": false,
@@ -60658,11 +60702,18 @@
      {
       "path": "supabase/migrations/20260906031607_smtp_settings.sql",
       "line": 27
+     },
+     {
+      "path": "supabase/migrations/20261108173157_manual_list_email_quotas.sql",
+      "line": 106
      }
     ],
-    "source": {
-     "path": "supabase/migrations/20260906031607_smtp_settings.sql",
-     "line": 27
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "authenticated"
+     ]
     }
    }
   },
@@ -61548,8 +61599,19 @@
      {
       "path": "supabase/migrations/20261107031344_distributed_list_email_intents.sql",
       "line": 204
+     },
+     {
+      "path": "supabase/migrations/20261108173157_manual_list_email_quotas.sql",
+      "line": 155
      }
-    ]
+    ],
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "service_role"
+     ]
+    }
    }
   },
   {
@@ -73530,6 +73592,13 @@
       "line": 43
      }
     ],
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "authenticated"
+     ]
+    },
     "source": {
      "path": "supabase/migrations/20260906031607_smtp_settings.sql",
      "line": 43
@@ -73558,6 +73627,13 @@
     "source": {
      "path": "supabase/migrations/20260906031607_smtp_settings.sql",
      "line": 104
+    },
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "service_role"
+     ]
     }
    }
   },
@@ -74949,9 +75025,11 @@
      "line": 204
     },
     "direct_execute_acl": {
-     "owner_only": true,
+     "owner_only": false,
      "owner": "postgres",
-     "api_roles": []
+     "api_roles": [
+      "service_role"
+     ]
     }
    }
   },
@@ -75017,9 +75095,11 @@
      "line": 105
     },
     "direct_execute_acl": {
-     "owner_only": true,
+     "owner_only": false,
      "owner": "postgres",
-     "api_roles": []
+     "api_roles": [
+      "service_role"
+     ]
     }
    }
   },
@@ -75047,9 +75127,11 @@
      }
     ],
     "direct_execute_acl": {
-     "owner_only": true,
+     "owner_only": false,
      "owner": "postgres",
-     "api_roles": []
+     "api_roles": [
+      "authenticated"
+     ]
     }
    }
   },
@@ -75085,9 +75167,11 @@
      }
     ],
     "direct_execute_acl": {
-     "owner_only": true,
+     "owner_only": false,
      "owner": "postgres",
-     "api_roles": []
+     "api_roles": [
+      "service_role"
+     ]
     }
    }
   },
@@ -75115,9 +75199,11 @@
      "line": 287
     },
     "direct_execute_acl": {
-     "owner_only": true,
+     "owner_only": false,
      "owner": "postgres",
-     "api_roles": []
+     "api_roles": [
+      "service_role"
+     ]
     }
    }
   },
@@ -75145,9 +75231,11 @@
      }
     ],
     "direct_execute_acl": {
-     "owner_only": true,
+     "owner_only": false,
      "owner": "postgres",
-     "api_roles": []
+     "api_roles": [
+      "authenticated"
+     ]
     }
    }
   },
@@ -75328,6 +75416,70 @@
      "owner_only": true,
      "owner": "postgres",
      "api_roles": []
+    }
+   }
+  },
+  {
+   "id": "api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text, p_password text, p_manual_max_per_minute integer, p_manual_max_per_24h integer)",
+   "kind": "function",
+   "label": "upsert_smtp_config",
+   "schema": "api",
+   "domain": "api",
+   "doc": "All eleven args are required: no ambiguous overlap with the unchanged legacy overload.\nNew HTTP code passes NULL for omitted quota inputs; old nine-argument clients retain values.",
+   "props": {
+    "signature": "upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text, p_password text, p_manual_max_per_minute integer, p_manual_max_per_24h integer)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108173157_manual_list_email_quotas.sql",
+      "line": 127
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "authenticated"
+     ]
+    },
+    "source": {
+     "path": "supabase/migrations/20261108173157_manual_list_email_quotas.sql",
+     "line": 127
+    }
+   }
+  },
+  {
+   "id": "internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)",
+   "kind": "function",
+   "label": "admit_manual_list_email",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "admit_manual_list_email(p_user_id uuid, p_operation_id uuid)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108173157_manual_list_email_quotas.sql",
+      "line": 46
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108173157_manual_list_email_quotas.sql",
+     "line": 46
+    },
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "service_role"
+     ]
     }
    }
   },
@@ -144396,6 +144548,54 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "INSERT INTO internal.gdpr_cleanup_task"
+    }
+   }
+  },
+  {
+   "source": "api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text, p_password text, p_manual_max_per_minute integer, p_manual_max_per_24h integer)",
+   "target": "public.app_smtp_config",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE public.app_smtp_config"
+    }
+   }
+  },
+  {
+   "source": "internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)",
+   "target": "public.app_smtp_config",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_smtp_config"
+    }
+   }
+  },
+  {
+   "source": "internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)",
+   "target": "internal.manual_list_email_admission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.manual_list_email_admission"
+    }
+   }
+  },
+  {
+   "source": "internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)",
+   "target": "internal.manual_list_email_admission",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.manual_list_email_admission"
     }
    }
   },

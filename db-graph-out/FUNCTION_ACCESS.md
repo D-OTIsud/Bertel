@@ -100,7 +100,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `api.avatar_upload_allowed(p_user_id uuid)` _(DEFINER)_
 - **returns:** `boolean`
-- **access:** Exécution directe réservée au rôle serveur `service_role` ; aucun accès `anon` ou `authenticated`.
+- **access:** Exécution directe réservée au rôle `service_role`.
 - **object types served:** —
 - _This read prevents NEW route requests while an existing durable user operation_
 
@@ -122,12 +122,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `api.begin_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au rôle serveur `service_role` ; aucun accès `anon` ou `authenticated`.
+- **access:** Exécution directe réservée au rôle `service_role`.
 - **object types served:** —
 
 ### `api.begin_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_fingerprint text, p_recipient_fingerprint text)`
 - **returns:** `jsonb`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/begin_list_email`
+- **access:** Exécution directe réservée au rôle `service_role`.
 - **object types served:** **all object types**
 
 ### `api.build_iti_track(p_object_id text, p_format text DEFAULT 'kml'::text, p_include_stages boolean DEFAULT true, p_stage_color text DEFAULT 'red'::text)`
@@ -259,7 +259,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `api.complete_avatar_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au rôle serveur `service_role` ; aucun accès `anon` ou `authenticated`.
+- **access:** Exécution directe réservée au rôle `service_role`.
 - **object types served:** —
 
 ### `api.complete_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_outcome text, p_tracking_updated boolean DEFAULT false, p_rejection_code text DEFAULT NULL::text, p_result_token text DEFAULT NULL::text)`
@@ -1089,13 +1089,13 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 
 ### `api.get_smtp_config()` _(DEFINER)_
-- **returns:** `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_smtp_config`
+- **returns:** `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone, manual_max_per_minute integer, manual_max_per_24h integer)`
+- **access:** Exécution directe réservée au rôle `authenticated`.
 - **object types served:** —
 
 ### `api.get_smtp_config_secret()` _(DEFINER)_
 - **returns:** `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_smtp_config_secret`
+- **access:** Exécution directe réservée au rôle `service_role`.
 - **object types served:** —
 
 ### `api.get_trail(p_trail_id uuid)` _(DEFINER)_
@@ -1953,48 +1953,48 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `api.rpc_gdpr_ack_cleanup_attempt(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_success boolean, p_effect_issued boolean, p_error text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au rôle `service_role`.
 - **object types served:** —
 - _p_effect_issued distingue un refus prouvé sans effet (tâche relançable) d'un envoi provider dont_
 
 ### `api.rpc_gdpr_ack_cleanup_task(p_operation_id uuid, p_task_id uuid, p_success boolean, p_error text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 - **object types served:** —
 - _L'identité 4 arguments reste pour les préalables 19a, mais ne peut plus muter sans tentative._
 
 ### `api.rpc_gdpr_claim_cleanup_task(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_expected_action text, p_expected_metadata jsonb, p_target_key text)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au rôle `service_role`.
 - **object types served:** —
 
 ### `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 - **object types served:** **all object types**
 - _Effacement/anonymisation RGPD Art. 17 d'un sujet, atomique et journalisé. Les documents CRM du sujet sont inventoriés avec leurs reçus de provenance ; un reçu ne donne aucun droit de suppression et tout document encore utilisé est conservé. Réservé au propriétaire jusqu'à la qualification globale de l'activation._
 
 ### `api.rpc_gdpr_find_start_request(p_request_id uuid)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au rôle `authenticated`.
 - **object types served:** —
 - _Recherche seule d'une demande START connue par son auteur courant ; absence ne permet jamais un nouveau START automatique. Propriétaire seul._
 
 ### `api.rpc_gdpr_get_cleanup_status(p_operation_id uuid)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au rôle `service_role`.
 - **object types served:** —
 - _5. Lecture et acquittement (corps durcis existants)_
 
 ### `api.rpc_gdpr_refuse_cleanup_task(p_operation_id uuid, p_task_id uuid, p_expected_action text, p_expected_metadata jsonb, p_error text)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au rôle `service_role`.
 - **object types served:** —
 - _Refus d'une référence externe ou invalide, qui n'a aucune cible à réclamer. Sans attemptId,_
 
 ### `api.rpc_gdpr_start_erasure(p_request_id uuid, p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au rôle `authenticated`.
 - **object types served:** —
 - _START idempotent par demande/auteur/snapshot, lie la demande au vrai journal 19a atomiquement. Propriétaire seul ; aucune activation._
 
@@ -2503,12 +2503,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)` _(DEFINER)_
 - **returns:** `text`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/unlink_crm_actor_document` — rôle `authenticated` uniquement, avec contrôle des droits CRM courants.
+- **access:** Exécution directe réservée au rôle `authenticated`, avec contrôle des droits CRM courants. La référence documentaire et le fichier restent conservés.
 - **object types served:** **all object types**
 
 ### `api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)` _(DEFINER)_
 - **returns:** `text`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/unlink_crm_task_document` — rôle `authenticated` uniquement, avec contrôle des droits CRM courants.
+- **access:** Exécution directe réservée au rôle `authenticated`, avec contrôle des droits CRM courants. La référence documentaire et le fichier restent conservés.
 - **object types served:** **all object types**
 
 ### `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode public.legal_validity_mode DEFAULT NULL::public.legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
@@ -2557,8 +2557,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `void`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/upsert_smtp_config`
+- **access:** Exécution directe réservée au rôle `authenticated`.
 - **object types served:** —
+
+### `api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text, p_password text, p_manual_max_per_minute integer, p_manual_max_per_24h integer)` _(DEFINER)_
+- **returns:** `void`
+- **access:** Exécution directe réservée au rôle `authenticated`.
+- **object types served:** —
+- _All eleven args are required: no ambiguous overlap with the unchanged legacy overload._
 
 ### `api.user_actor_ids()`
 - **returns:** `SETOF uuid`
@@ -2789,9 +2795,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
+### `internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** Exécution directe réservée au rôle `service_role`.
+- **object types served:** —
+
 ### `internal.avatar_subject_lock(p_user_id uuid)` _(DEFINER)_
 - **returns:** `void`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 - **object types served:** —
 - _One shared formula, taken before active-state reads. RC is required because an_
 
@@ -2887,29 +2898,29 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `internal.gdpr_assert_no_avatar_upload(p_user_id uuid)` _(DEFINER)_
 - **returns:** `void`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 - **object types served:** —
 
 ### `internal.gdpr_cleanup_lock_target(p_target_key text)`
 - **returns:** `void`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 - **object types served:** —
 - _Claims et ACK d'une même cible se sérialisent ici, toujours avant les verrous de lignes._
 
 ### `internal.gdpr_document_is_referenced(p_document_id uuid)`
 - **returns:** `boolean`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 - **object types served:** **all object types**
 - _Vrai si un document reste utilisé hors du sujet effacé. Réservé à api.rpc_gdpr_erase_subject._
 
 ### `internal.gdpr_enqueue_avatar_inventory(p_operation_id uuid, p_user_id uuid)` _(DEFINER)_
 - **returns:** `integer`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 - **object types served:** —
 
 ### `internal.gdpr_start_actor_identity()` _(DEFINER)_
 - **returns:** `text`
-- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+- **access:** Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 - **object types served:** —
 
 ### `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)` _(DEFINER)_

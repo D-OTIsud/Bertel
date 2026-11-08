@@ -426,6 +426,45 @@ si le reçu échoue, dans une transaction annulée. La remise en service
 d'une suppression physique exige un protocole distinct de protection des clés
 et des références.
 
+### Upload privé de documents CRM
+
+`crm_document_upload_intents.sql` et la migration `20261108021542` préparent les
+POST acteur et tâche. Une intention privée existe avant Storage. Seul le serveur
+peut confirmer la clé et l'empreinte préparées. L'attachement courant crée le
+catalogue, le lien et le résultat dans une seule transaction. Une reprise SQL du
+même identifiant relit les droits et retourne le résultat acquis sans recréer un
+lien retiré entretemps.
+
+Les octets, les intentions et les métadonnées sont conservés après un résultat
+inconnu. Les POST ne font aucune compensation destructive ni relance automatique
+Storage. La réponse normale reste `201 { documentId, title }`. Un nouveau POST
+client constitue une nouvelle intention. Une réponse perdue peut donc laisser un
+upload conservé à examiner, sans en déduire une absence d'effet. Si l'ACK de
+l'attachement est perdu, le POST renvoie son erreur habituelle et conserve le
+résultat acquis. La RPC idempotente peut retrouver ce résultat sous les droits
+courants. La récupération automatique par l'interface ne fait pas partie de ce
+lot.
+
+La table privée `internal.crm_document_upload` conserve la cible, l'appelant, le
+nom du fichier, la clé et l'empreinte ainsi que les acteurs aux instants de
+préparation et d'attachement. Le futur inventaire RGPD doit consulter ces deux
+instantanés et les intentions non attachées, puis traiter les données de titre.
+Aucune FK ne retire cette provenance avec le parent ou le catalogue. Le reçu ne
+donne aucun droit de suppression physique. Installer le SQL et qualifier ses RPC
+avant les deux nouvelles routes POST. Drainer les anciens POST pendant la bascule
+applicative pour éviter une compensation encore en vol. Le PATCH suit son lot
+distinct.
+
+Le lot ferme également l'exécution API de l'ancien effacement quatre arguments
+et du lecteur de statut, tout en préservant leurs définitions et identités. La
+base hébergée sans tuple durable conserve cette absence. Un tuple partiel est
+refusé. Sur base fraîche, le témoin capture d'abord un administrateur autorisé et
+les octrois positifs, puis vérifie la fermeture et l'absence de mutation.
+L'ancien Next répond `503 setup_incomplete` pour START et
+`500 operation_lookup_failed` pour RESUME avant tout effet externe. Le futur
+lecteur des deux tables de provenance et le traitement sûr des références
+partagées restent requis avant la réouverture RGPD.
+
 ### CI enforcement (deploy integrity)
 A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest step for step **hormis les étapes foldées — no-op sur base fraîche — et `migration_gdpr_erasure.sql` (14j), dont l'entrée est activement INTERDITE par le step CI *RGPD mirror alignment***, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
 

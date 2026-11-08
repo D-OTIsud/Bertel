@@ -769,6 +769,7 @@ COMMIT;
 
 \echo '== Guard legacy GDPR erasure before durable cleanup is installed =='
 \ir ../supabase/migrations/20261108010225_guard_legacy_gdpr_erase.sql
+\ir tests/test_gdpr_status_durable_report.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

@@ -51,9 +51,7 @@ export function DeleteObjectModal({ open, objectId, objectName, accessToken, onC
         </DialogHeader>
         <div className="ed-modal__body">
           <p className="delete-modal__warning">
-            Cette action est <strong>irréversible</strong>. La fiche «&nbsp;{objectName}&nbsp;» et toutes ses données
-            associées seront définitivement supprimées : photos et vidéos, descriptions, relations entrantes et
-            sortantes, tarifs, périodes d&apos;ouverture, documents… Aucune restauration n&apos;est possible.
+            La fiche et ses données seront supprimées définitivement.
           </p>
           <Field label="Pour confirmer, saisissez le nom exact de la fiche" required>
             <Input

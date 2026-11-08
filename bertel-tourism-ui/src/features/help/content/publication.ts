@@ -63,7 +63,7 @@ export const PUBLICATION_FAQ: FaqEntry[] = [
 
 **Confirmation.** Une fenêtre demande de **saisir le nom exact de la fiche** pour valider — pas de simple case à cocher.
 
-**Attention, IRRÉVERSIBLE.** Toutes les données associées (photos, vidéos, description, relations, tarifs, horaires, documents…) sont définitivement effacées. Aucune restauration possible après coup.`,
+La fiche et ses données seront supprimées définitivement.`,
   },
   {
     id: 'moderation-suggestions',

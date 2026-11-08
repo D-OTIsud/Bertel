@@ -135,7 +135,10 @@ it('the actual PATCH-produced public reference/history still opens after its obj
   const from = jest.fn((table: string) => {
     if (table === 'actor' || table === 'object') return { select: () => chain({ is_test: false }) };
     if (table === 'actor_document') return { select: () => chain({ status: 'active', title: 'Uploaded', valid_from: null, valid_to: '2000-01-01' }), update: (value: Row) => {
-      written.history = value; return { eq: () => ({ eq: async () => ({ error: null }) }) };
+      written.history = value;
+      const q = { error: null, eq: () => q, select: () => q,
+        single: async () => ({ data: { document_id: targetId }, error: null }) };
+      return q;
     } };
     if (table === 'ref_code') return { select: () => chain({ id: 'synthetic-role' }) };
     if (table === 'object_document') return { insert: async () => ({ error: null }) };

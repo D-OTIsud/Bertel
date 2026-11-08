@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
-import { engineErrorDetail } from '@/lib/db-error-message';
 import { routeFailure } from '../_route-failure';
+import { unlinkDocumentResponse } from '../_document-unlink';
 import { MediaProcessingError, MAX_INPUT_BYTES } from '../media/upload/process-image';
 import { processActorDocumentBuffer, ACTOR_PDF_MAX_BYTES } from './process-actor-document';
 import {
@@ -16,11 +16,11 @@ import {
   PRIVATE_BUCKET,
   UUID_SHAPE,
   authenticated,
+  callerClient,
   rejectOversizedBody,
   type AuthenticatedRequest,
 } from '../_document-auth';
 import { authorizeActor, authorizeObject } from './authorize';
-import { resolveActorDocument } from './resolve-document';
 
 // Documents privés d'un ACTEUR CRM. Le socle d'authentification (Bearer → getUser, client
 // « en tant qu'appelant », bucket privé, forme UUID) est partagé avec /api/task-document
@@ -174,27 +174,10 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   if (!UUID_SHAPE.test(actorId) || !UUID_SHAPE.test(documentId)) {
     return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
   }
-  if (!await authorizeActor(auth.jwt, actorId)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-
-  const resolved = await resolveActorDocument(auth.server, actorId, documentId, true);
-  if (!resolved.ok) return resolved.response;
-  if (resolved.path) await auth.server.storage.from(PRIVATE_BUCKET).remove([resolved.path]);
-  // A Storage wait must not carry an earlier namespace verdict into ref deletion.
-  const current = await resolveActorDocument(auth.server, actorId, documentId, true);
-  if (!current.ok) return current.response;
-  const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
-  if (error) {
-    // `delete_failed` est dans `CODES_WITH_BUSINESS_DETAIL` (api-error.ts) : son `detail` est
-    // affiché VERBATIM. Ici il ne vient d'aucun `RAISE` métier — c'est la sortie brute du moteur.
-    // Sans ce filtre, l'utilisateur qui retire une pièce jointe lisait « update or delete on table
-    // "ref_document" violates foreign key constraint … ». `engineErrorDetail` rend une phrase FR
-    // pour les SQLSTATE actionnables et `undefined` sinon, auquel cas le client retombe sur
-    // « La suppression a échoué. » — générique, mais jamais l'anglais du moteur.
-    return routeFailure('actor-document.DELETE', 'delete_failed', {
-      detail: engineErrorDetail(error, { operation: 'delete', logUnknown: false }),
-    });
-  }
-  return NextResponse.json({ deleted: true });
+  const { data, error } = await callerClient(auth.jwt).schema('api').rpc(
+    'unlink_crm_actor_document', { p_actor_id: actorId, p_document_id: documentId },
+  );
+  return unlinkDocumentResponse('actor-document.DELETE', data, error);
 }
 
 export async function PATCH(req: NextRequest): Promise<NextResponse> {

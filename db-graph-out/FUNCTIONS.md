@@ -15,7 +15,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 | `api.rpc_gdpr_ack_cleanup_attempt(uuid,uuid,uuid,boolean,boolean,text)` | `service_role` |
 | `api.rpc_gdpr_refuse_cleanup_task(uuid,uuid,text,jsonb,text)` | `service_role` |
 
-`anon` n’a accès à aucune de ces six fonctions ; les contrôles d’autorité courante restent dans les corps SQL et la route. Les entrées historiques erase/ACK à quatre arguments et les helpers du protocole restent réservés au propriétaire. Aucun droit sur les tables privées, corps de fonction, OID, compteur structurel ou reçu de migration n’est modifié : le ledger reste à 211. L’acte est distinct du fresh-install et des migrations automatiques. Les descripteurs générés ci-dessous restent ceux de la capture historique fermée ; cet addendum ne les régénère pas et ne recalcule pas le graphe.
+`anon` n’a accès à aucune de ces six fonctions ; les contrôles d’autorité courante restent dans les corps SQL et la route. Les entrées historiques erase/ACK à quatre arguments et les helpers du protocole restent réservés au propriétaire. Aucun droit sur les tables privées, corps de fonction, OID, compteur structurel ou reçu de migration n’est modifié : le ledger reste à 211. L’acte est distinct du fresh-install et des migrations automatiques. Les descripteurs générés ci-dessous proviennent désormais de la capture 212 du 8 novembre 2026 à 17:51:10 UTC et observent ces six ACL ouvertes ; l’acte et son postflight de 16:06 restent des preuves distinctes.
+
 
 ## `api._covered_days(p_all_years boolean, p_s date, p_e date)`
 - returns: `integer[]`
@@ -158,7 +159,7 @@ Exécution directe réservée à authenticated ; rattache l’intention et revé
 > has outstanding tasks. It does not reserve or drain an already admitted HTTP
 > upload, and it cannot fence external service-role writers or old instances.
 
-Exécution directe réservée au rôle serveur `service_role` ; aucun accès `anon` ou `authenticated`.
+Exécution directe réservée au rôle `service_role`.
 
 ## `api.b64url_decode(p text)`
 - returns: `bytea`
@@ -176,7 +177,7 @@ Exécution directe réservée au rôle serveur `service_role` ; aucun accès `an
 - reads `auth.users` _(high)_
 - writes `internal.avatar_upload_intent` _(high)_
 
-Exécution directe réservée au rôle serveur `service_role` ; aucun accès `anon` ou `authenticated`.
+Exécution directe réservée au rôle `service_role`.
 
 ## `api.begin_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_fingerprint text, p_recipient_fingerprint text)`
 - returns: `jsonb`
@@ -185,6 +186,8 @@ Exécution directe réservée au rôle serveur `service_role` ; aucun accès `an
 - reads `internal.sandbox_discovery_identity` _(high)_
 - reads `public.object_list` _(high)_
 - writes `internal.list_email_intent` _(high)_
+
+Exécution directe réservée au rôle `service_role`.
 
 ## `api.build_iti_track(p_object_id text, p_format text DEFAULT 'kml'::text, p_include_stages boolean DEFAULT true, p_stage_color text DEFAULT 'red'::text)`
 - returns: `text`
@@ -380,7 +383,7 @@ Exécution directe réservée au rôle serveur `service_role` ; aucun accès `an
 - reads `internal.avatar_upload_intent` _(high)_
 - writes `internal.avatar_upload_intent` _(high)_
 
-Exécution directe réservée au rôle serveur `service_role` ; aucun accès `anon` ou `authenticated`.
+Exécution directe réservée au rôle `service_role`.
 
 ## `api.complete_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_attempt_token uuid, p_outcome text, p_tracking_updated boolean DEFAULT false, p_rejection_code text DEFAULT NULL::text, p_result_token text DEFAULT NULL::text)`
 - returns: `boolean`
@@ -1770,13 +1773,17 @@ Exécution directe réservée à service_role ; confirmation serveur du reçu d�
 - reads `public.user_permission` _(high)_
 
 ## `api.get_smtp_config()`
-- returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)` — SECURITY DEFINER
+- returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone, manual_max_per_minute integer, manual_max_per_24h integer)` — SECURITY DEFINER
 - reads `public.app_smtp_config` _(high)_
+
+Exécution directe réservée au rôle `authenticated`.
 
 ## `api.get_smtp_config_secret()`
 - returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)` — SECURITY DEFINER
 - reads `public.app_smtp_config` _(high)_
 - reads `vault.decrypted_secrets` _(high)_
+
+Exécution directe réservée au rôle `service_role`.
 
 ## `api.get_trail(p_trail_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2901,14 +2908,14 @@ Exécution directe réservée à authenticated ; prépare une intention privée 
 > p_effect_issued distingue un refus prouvé sans effet (tâche relançable) d'un envoi provider dont
 > l'issue est inconnue (définitif). Le succès propage le reçu aux tâches liées à cette cible.
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au rôle `service_role`.
 
 ## `api.rpc_gdpr_ack_cleanup_task(p_operation_id uuid, p_task_id uuid, p_success boolean, p_error text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
 
 > L'identité 4 arguments reste pour les préalables 19a, mais ne peut plus muter sans tentative.
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 
 ## `api.rpc_gdpr_claim_cleanup_task(p_operation_id uuid, p_task_id uuid, p_attempt_id uuid, p_expected_action text, p_expected_metadata jsonb, p_target_key text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2916,7 +2923,7 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 - reads `public.gdpr_erasure_log` _(high)_
 - writes `internal.gdpr_cleanup_task` _(high)_
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au rôle `service_role`.
 
 ## `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2958,7 +2965,7 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 
 > Effacement/anonymisation RGPD Art. 17 d'un sujet, atomique et journalisé. Les documents CRM du sujet sont inventoriés avec leurs reçus de provenance ; un reçu ne donne aucun droit de suppression et tout document encore utilisé est conservé. Réservé au propriétaire jusqu'à la qualification globale de l'activation.
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 
 ## `api.rpc_gdpr_find_start_request(p_request_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2966,7 +2973,7 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 
 > Recherche seule d'une demande START connue par son auteur courant ; absence ne permet jamais un nouveau START automatique. Propriétaire seul.
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au rôle `authenticated`.
 
 ## `api.rpc_gdpr_get_cleanup_status(p_operation_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2977,7 +2984,7 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 > 5. Lecture et acquittement (corps durcis existants)
 > ---------------------------------------------------------------------
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au rôle `service_role`.
 
 ## `api.rpc_gdpr_refuse_cleanup_task(p_operation_id uuid, p_task_id uuid, p_expected_action text, p_expected_metadata jsonb, p_error text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2988,7 +2995,7 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 > Refus d'une référence externe ou invalide, qui n'a aucune cible à réclamer. Sans attemptId,
 > cette RPC ne peut ni marquer un succès, ni libérer ou masquer une tentative en cours.
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au rôle `service_role`.
 
 ## `api.rpc_gdpr_start_erasure(p_request_id uuid, p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2998,7 +3005,7 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 
 > START idempotent par demande/auteur/snapshot, lie la demande au vrai journal 19a atomiquement. Propriétaire seul ; aucune activation.
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au rôle `authenticated`.
 
 ## `api.rpc_grant_user_permission(p_target_user_id uuid, p_permission_code text)`
 - returns: `void` — SECURITY DEFINER
@@ -3895,6 +3902,17 @@ Exécution directe réservée au rôle `authenticated`, avec contrôle des droit
 - writes `public.app_smtp_config` _(high)_
 - writes `vault.secrets` _(high)_
 
+Exécution directe réservée au rôle `authenticated`.
+
+## `api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text, p_password text, p_manual_max_per_minute integer, p_manual_max_per_24h integer)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.app_smtp_config` _(high)_
+
+> All eleven args are required: no ambiguous overlap with the unchanged legacy overload.
+> New HTTP code passes NULL for omitted quota inputs; old nine-argument clients retain values.
+
+Exécution directe réservée au rôle `authenticated`.
+
 ## `api.user_actor_ids()`
 - returns: `SETOF uuid`
 - reads `public.app_user_profile` _(high)_
@@ -4185,13 +4203,21 @@ Exécution directe réservée au rôle `authenticated`, avec contrôle des droit
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.actor` _(high)_
 
+## `internal.admit_manual_list_email(p_user_id uuid, p_operation_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.manual_list_email_admission` _(high)_
+- reads `public.app_smtp_config` _(high)_
+- writes `internal.manual_list_email_admission` _(high)_
+
+Exécution directe réservée au rôle `service_role`.
+
 ## `internal.avatar_subject_lock(p_user_id uuid)`
 - returns: `void` — SECURITY DEFINER
 
 > One shared formula, taken before active-state reads. RC is required because an
 > advisory-lock wait does not refresh a Repeatable Read transaction's old snapshot.
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 
 ## `internal.backfill_list_feature_notifications()`
 - returns: `integer` — SECURITY DEFINER
@@ -4319,7 +4345,7 @@ Helper interne SECURITY INVOKER, exécution directe réservée au propriétaire 
 - returns: `void` — SECURITY DEFINER
 - reads `internal.avatar_upload_intent` _(high)_
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 
 ## `internal.gdpr_cleanup_lock_target(p_target_key text)`
 - returns: `void`
@@ -4327,7 +4353,7 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 > Claims et ACK d'une même cible se sérialisent ici, toujours avant les verrous de lignes.
 > READ COMMITTED garantit qu'après l'attente chaque instruction voit le dernier état commis.
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 
 ## `internal.gdpr_document_is_referenced(p_document_id uuid)`
 - returns: `boolean`
@@ -4345,7 +4371,7 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 
 > Vrai si un document reste utilisé hors du sujet effacé. Réservé à api.rpc_gdpr_erase_subject.
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 
 ## `internal.gdpr_enqueue_avatar_inventory(p_operation_id uuid, p_user_id uuid)`
 - returns: `integer` — SECURITY DEFINER
@@ -4354,12 +4380,12 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 - reads `storage.objects` _(high)_
 - writes `internal.gdpr_cleanup_task` _(high)_
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 
 ## `internal.gdpr_start_actor_identity()`
 - returns: `text` — SECURITY DEFINER
 
-Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour `anon`, `authenticated` ou `service_role` dans le catalogue fermé 211.
+Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE pour les rôles API dans la capture 212.
 
 ## `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER

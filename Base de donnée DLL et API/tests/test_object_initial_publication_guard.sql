@@ -89,6 +89,36 @@ BEGIN
 END;
 $test$;
 
+-- ACC-06: an ORG administrator still needs the editorial publication permission.
+RESET ROLE;
+INSERT INTO public.user_org_admin_role (membership_id, role_id, is_active)
+SELECT m.id, r.id, TRUE
+FROM public.user_org_membership m
+JOIN public.ref_org_admin_role r ON r.code = 'org_admin' AND r.rank = 30
+WHERE m.user_id = '00000000-0000-4000-a000-000000008001'::uuid
+  AND m.org_object_id = 'ORGRUN9980080001';
+SET LOCAL ROLE authenticated;
+DO $test$
+BEGIN
+  ASSERT current_user = 'authenticated' AND auth.uid() = '00000000-0000-4000-a000-000000008001'::uuid,
+    'admin-rank witness must retain the real contributor identity';
+  ASSERT api.current_user_admin_rank() = 30, 'non-vacuous ORG administrator rank';
+  ASSERT api.user_has_permission('publish_object') IS FALSE, 'admin rank must not grant publish permission';
+  ASSERT EXISTS (SELECT 1 FROM public.object_org_link l JOIN public.ref_org_role r ON r.id = l.role_id
+    WHERE l.object_id = 'HOTRUN9980080001' AND l.org_object_id = 'ORGRUN9980080001' AND r.code = 'publisher'),
+    'admin belongs to the actual publisher ORG';
+  ASSERT api.user_can_publish_object('HOTRUN9980080001') IS FALSE, 'admin rank plus publisher link is insufficient';
+  BEGIN
+    PERFORM api.rpc_publish_object('HOTRUN9980080001', TRUE);
+    RAISE EXCEPTION 'DB08_FAIL: administrative rank bypassed publication permission';
+  EXCEPTION WHEN raise_exception THEN
+    ASSERT position('FORBIDDEN' IN SQLERRM) > 0, 'admin-only RPC must reach the publication authorization gate';
+  END;
+  ASSERT (SELECT status FROM public.object WHERE id = 'HOTRUN9980080001') = 'draft',
+    'refused admin-only publication must preserve the draft';
+END;
+$test$;
+
 SELECT set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-a000-000000008002","role":"authenticated"}', TRUE);
 DO $test$
 DECLARE v_id text;

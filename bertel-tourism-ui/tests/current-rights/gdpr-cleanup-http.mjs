@@ -56,6 +56,7 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
   const errors = [];
   let app, operationId, proxy, unknownKey, confirmedTask;
   const authSubject = randomUUID();
+  const authEmail = `gdpr-auth-${authSubject}@example.invalid`;
   let authRegistered = false, authPhase = false, authOperationId;
   let fixtureCreated = false;
   const uploaded = [];
@@ -251,7 +252,6 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
     // One ordinary Auth target, created and registered only in this owned stack.
     // SQL user/delete redacts but keeps its profile until GoTrue deletes the user.
     assert.equal(local.sql(`SELECT count(*) FROM auth.users WHERE id='${authSubject}'`, 'Auth fixture UUID unused'), '0');
-    const authEmail = `gdpr-auth-${authSubject}@example.invalid`;
     const created = await local.request('/auth/v1/admin/users', local.service, {
       id: authSubject, email: authEmail, password: `Disposable!7-${randomUUID()}`, email_confirm: true,
     });
@@ -318,12 +318,14 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
       }
       if (fixtureCreated) {
         local.sqlFile(resolve('supabase/releases/20261108_gdpr_cleanup/close.sql'), 'close the exact GDPR capability without discarding receipts');
+        const ownedAuthOperation = authRegistered && uuid.test(authOperationId ?? '')
+          ? `OR (id='${authOperationId}' AND subject_kind='user' AND subject_id='${authSubject}')` : '';
         commit(`UPDATE public.app_user_profile SET role='tourism_agent' WHERE id='${writerId}';
         DELETE FROM internal.gdpr_cleanup_task WHERE operation_id IN
           (SELECT id FROM public.gdpr_erasure_log WHERE (subject_kind='actor' AND subject_id='${subject}')
-            OR (subject_kind='user' AND subject_id='${authSubject}'));
+            ${ownedAuthOperation});
         DELETE FROM public.gdpr_erasure_log WHERE (subject_kind='actor' AND subject_id='${subject}')
-          OR (subject_kind='user' AND subject_id='${authSubject}');
+          ${ownedAuthOperation};
         DELETE FROM public.crm_task WHERE id IN ('${task}','${otherTask}');
         DELETE FROM public.ref_document WHERE id IN (${documents.map((id) => `'${id}'`).join(',')});
         DELETE FROM public.actor WHERE id IN ('${subject}','${otherActor}');
@@ -332,7 +334,8 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
       if (authRegistered) {
         const remaining = await local.request(`/auth/v1/admin/users/${authSubject}`, local.service, undefined, 'GET');
         if (remaining.ok) {
-          assert.equal((await remaining.json()).id, authSubject, 'teardown must retain its exact creation binding');
+          const owned = await remaining.json();
+          assert.ok(owned.id === authSubject && owned.email === authEmail, 'teardown must retain its exact creation binding');
           const deleted = await local.request(`/auth/v1/admin/users/${authSubject}`, local.service, { should_soft_delete: false }, 'DELETE');
           assert.ok(deleted.ok, 'only the registered synthetic Auth target may be cleaned on a failed recipe');
         } else {

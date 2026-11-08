@@ -11,8 +11,9 @@ interface ObjectDrawerProps {
 
 export function ObjectDrawer({ objectId }: ObjectDrawerProps) {
   const closeDrawer = useUiStore((state) => state.closeDrawer);
+  const restoreDrawerFocus = useUiStore((state) => state.drawerRestoreFocus);
   const open = Boolean(objectId);
-  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const returnFocusRef = useRef<(() => boolean) | null>(null);
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) closeDrawer(); }}>
@@ -23,15 +24,16 @@ export function ObjectDrawer({ objectId }: ObjectDrawerProps) {
         className="drawer-panel w-full max-w-[1180px] overflow-hidden border-0 p-0 sm:max-w-[1180px]"
         onOpenAutoFocus={() => {
           const active = document.activeElement;
-          returnFocusRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+          returnFocusRef.current = restoreDrawerFocus ?? (() => {
+            if (!(active instanceof HTMLElement) || active === document.body || !active.isConnected) return false;
+            active.focus();
+            return true;
+          });
         }}
         onCloseAutoFocus={(event) => {
-          const target = returnFocusRef.current;
+          const restoreFocus = returnFocusRef.current;
           returnFocusRef.current = null;
-          if (target?.isConnected) {
-            event.preventDefault();
-            target.focus();
-          }
+          if (restoreFocus?.()) event.preventDefault();
         }}
       >
         <SheetTitle className="sr-only">Fiche objet</SheetTitle>

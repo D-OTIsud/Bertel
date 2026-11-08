@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
 import { NameMatchBand } from '../components/explorer/NameMatchBand';
@@ -11,7 +11,8 @@ import { useExplorerCardsQuery, useExplorerMarkersQuery, useExplorerReferencesQu
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useExplorerStore } from '../store/explorer-store';
 import { useExplorerViewStore, type ExplorerViewMode } from '../store/explorer-view-store';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useUiStore } from '../store/ui-store';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { EmptyState } from '../components/common/EmptyState';
 import { ExplorerActiveFilters } from '../components/explorer/ExplorerActiveFilters';
 import { buildExplorerErrorBanner } from './explorer-error';
@@ -51,6 +52,8 @@ const panelLabels: Record<ExplorerPanelKey, string> = {
 export default function ExplorerPage() {
   const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
   const filtersTabRef = useRef<HTMLButtonElement>(null);
+  const mapTabRef = useRef<HTMLButtonElement>(null);
+  const compactReturnFocusRef = useRef<(() => boolean) | null>(null);
   const resetButtonRef = useRef<HTMLButtonElement>(null);
   const [activeMobilePanel, setActiveMobilePanel] = useState<ExplorerPanelKey>('results');
   // D16 : mode de vue (Liste / Table / Carte / Split) — préférence persistée.
@@ -95,13 +98,26 @@ export default function ExplorerPage() {
 
   const setVisibleObjectIds = useExplorerStore((state) => state.setVisibleObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
+  const selectCard = useExplorerStore((state) => state.selectCard);
   const clearSelectedCard = useExplorerStore((state) => state.clearSelectedCard);
+  const openDrawer = useUiStore((state) => state.openDrawer);
 
   // A card selected from the map may not be in the lazily-loaded list yet — fall back to markers.
   const selectedCard = selectedCardId
     ? cards.find((card) => card.id === selectedCardId) ?? markers.find((m) => m.id === selectedCardId) ?? null
     : null;
   const mobileSheetOpen = isCompactExplorer && Boolean(selectedCard);
+
+  const selectCompactMarker = useCallback((cardId: string, restoreMarkerFocus: () => boolean) => {
+    compactReturnFocusRef.current = () => {
+      if (restoreMarkerFocus()) return true;
+      const mapTab = mapTabRef.current;
+      if (!mapTab?.isConnected) return false;
+      mapTab.focus({ preventScroll: true });
+      return document.activeElement === mapTab;
+    };
+    selectCard(cardId);
+  }, [selectCard]);
 
   // "Visible" = the full matching geolocated set (markers, the map's set), so selection
   // tools ("select all", lasso) cover everything shown — not just the loaded list pages.
@@ -147,7 +163,7 @@ export default function ExplorerPage() {
     }
     return (
       <Suspense fallback={<MapFallback />}>
-        <MapPanel objects={markers} variant="column" />
+        <MapPanel objects={markers} variant="column" onCompactMarkerSelect={selectCompactMarker} />
       </Suspense>
     );
   };
@@ -171,7 +187,18 @@ export default function ExplorerPage() {
           if (!open) clearSelectedCard();
         }}
       >
-        <SheetContent side="bottom" showClose={true} className="border-0 bg-transparent p-0 shadow-none">
+        <SheetContent
+          side="bottom"
+          showClose={true}
+          aria-describedby={undefined}
+          className="border-0 bg-transparent p-0 shadow-none"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            const restoreFocus = compactReturnFocusRef.current;
+            compactReturnFocusRef.current = null;
+            restoreFocus?.();
+          }}
+        >
           {selectedCard ? (
             <div className="panel-card panel-card--nested" style={{ padding: '0.9rem 1rem' }}>
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -190,7 +217,22 @@ export default function ExplorerPage() {
                 ) : null}
                 <div style={{ display: 'grid', gap: '0.35rem' }}>
                   <div className="eyebrow">Fiche</div>
-                  <strong style={{ fontSize: 18, lineHeight: 1.2 }}>{selectedCard.name}</strong>
+                  <SheetTitle className="font-bold tracking-normal" style={{ fontSize: 18, lineHeight: 1.2 }}>
+                    {selectedCard.name}
+                  </SheetTitle>
+                  <button
+                    type="button"
+                    className="primary-button min-h-[44px]"
+                    onClick={() => {
+                      // The drawer inherits the pin; the closing preview must not take focus back.
+                      const restoreFocus = compactReturnFocusRef.current;
+                      compactReturnFocusRef.current = null;
+                      clearSelectedCard();
+                      openDrawer(selectedCard.id, restoreFocus ?? undefined);
+                    }}
+                  >
+                    Ouvrir la fiche
+                  </button>
                 </div>
               </div>
             </div>
@@ -203,7 +245,7 @@ export default function ExplorerPage() {
             {(['filters', 'results', 'map'] as ExplorerPanelKey[]).map((panel) => (
               <button
                 key={panel}
-                ref={panel === 'filters' ? filtersTabRef : undefined}
+                ref={panel === 'filters' ? filtersTabRef : panel === 'map' ? mapTabRef : undefined}
                 type="button"
                 className={activeMobilePanel === panel ? 'chip chip--active explorer-mobile-tab' : 'chip explorer-mobile-tab'}
                 onClick={() => setActiveMobilePanel(panel)}

@@ -1,8 +1,24 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { dispatchNativeHoverAfterEntry } from './helpers/native-mouse-pair';
+import { startFocusJournal } from './helpers/focus-journal';
 
 test.use({ launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } });
 test.describe.configure({ retries: 0 });
+
+const focusJournals = new WeakMap<Page, Awaited<ReturnType<typeof startFocusJournal>>>();
+test.afterEach(async ({ page }, testInfo) => {
+  const journal = focusJournals.get(page);
+  if (!journal) return;
+  try {
+    await journal.checkpoint(`test-${testInfo.status}`);
+    await testInfo.attach('map-focus-journal', {
+      body: JSON.stringify(await journal.snapshot(), null, 2), contentType: 'application/json',
+    });
+  } finally {
+    focusJournals.delete(page);
+    await journal.dispose();
+  }
+});
 
 async function offlineExplorer(page: Page, testInfo: TestInfo, pathname = '/explorer') {
     const origin = new URL(testInfo.project.use.baseURL as string).origin;
@@ -28,6 +44,7 @@ async function offlineExplorer(page: Page, testInfo: TestInfo, pathname = '/expl
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto(pathname);
     await page.locator('time[datetime]').first().waitFor({ state: 'attached' });
+    focusJournals.set(page, await startFocusJournal(page));
     return { errors, unexpected };
 }
 
@@ -81,18 +98,30 @@ for (const width of [320, 390, 768, 1180]) {
     await drawer.getByRole('button', { name: 'Fermer', exact: true }).click();
     await expect(drawer).toHaveCount(0);
 
-    // Start from the actual pin, then use keyboard events for the preview flow.
+    // A fresh focus entry avoids a no-op on a pin already focused by close.
+    // Observe the product's pin -> async CTA autofocus before testing Tab/return.
+    const journal = focusJournals.get(page)!;
+    await journal.checkpoint('drawer-closed');
     await page.mouse.move(1, 1);
+    const search = page.getByRole('combobox', { name: 'Rechercher une fiche' });
+    await search.focus();
+    await expect(search).toBeFocused();
+    await journal.checkpoint('search-origin');
     await pin.focus();
+    await journal.checkpoint('pin-focus-requested');
+    await expect(open).toBeFocused();
+    await journal.checkpoint('cta-autofocus-before-tab');
     await page.keyboard.press('Tab');
     await page.keyboard.press('Shift+Tab');
     await expect(open).toBeFocused();
+    await journal.checkpoint('cta-after-tab-return');
     await page.mouse.move(1, 1);
     if (width === 1180) {
       // Cross the existing 3s minimum-visible/grace deadline with the action
       // focused; focus must keep the preview alive after the pointer leaves.
       await page.waitForTimeout(3300);
       await expect(open).toBeFocused();
+      await journal.checkpoint('cta-after-grace');
     }
     await page.keyboard.press('Escape');
     await expect(preview).toHaveCount(0);
@@ -138,6 +167,7 @@ test('an unfinished hover of B preserves the displayed A preview focus owner', a
   const previewA = page.getByRole('article', { name: nameA, exact: true });
   const actionA = previewA.getByRole('button', { name: `Ouvrir la fiche ${nameA}`, exact: true });
   await expect(actionA).toBeFocused();
+  await focusJournals.get(page)!.checkpoint('A-cta-before-B-input');
   await expect(actionA).toHaveCSS('outline-width', '2px');
   await expect(actionA).toHaveCSS('outline-offset', '2px');
   const bounds = (await previewA.boundingBox())!;
@@ -194,9 +224,12 @@ test('an unfinished hover of B preserves the displayed A preview focus owner', a
   expect(marks.leaveTrusted).toBe('true');
   expect(marks.order).toBe('enter,leave');
   const dwell = Number(marks.leave) - Number(marks.enter);
+  const handledDwell = Number(marks.leaveHandled) - Number(marks.enterHandled);
+  // Emit both real measures before a failed precondition can hide the second.
+  console.log(JSON.stringify({ mapBriefHoverPrecondition: { dwell, handledDwell,
+    inputOrder: marks.order, enterTrusted: marks.enterTrusted, leaveTrusted: marks.leaveTrusted } }));
   expect(dwell).toBeGreaterThanOrEqual(0);
   expect(dwell).toBeLessThan(250);
-  const handledDwell = Number(marks.leaveHandled) - Number(marks.enterHandled);
   expect(handledDwell).toBeGreaterThanOrEqual(0);
   expect(handledDwell).toBeLessThan(250);
   // Cross the existing hover-intent threshold: B must never become displayed.

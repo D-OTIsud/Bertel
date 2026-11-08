@@ -63,7 +63,8 @@ jobs:
         run: node scripts/run-playwright.mjs install --with-deps chromium
 
       - name: Critical e2e (Chromium, demo mode)
-        run: npm run test:e2e -- --project=chromium --workers=2
+        # Keep native <250ms pointer preconditions isolated from another Map/WebGL worker.
+        run: npm run test:e2e -- --project=chromium --workers=1
 
       - name: Upload Playwright report on failure
         if: failure()

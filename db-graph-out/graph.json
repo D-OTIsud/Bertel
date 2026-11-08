@@ -74587,6 +74587,13 @@
     "source": {
      "path": "supabase/migrations/20261108013154_crm_document_unlink.sql",
      "line": 64
+    },
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "authenticated"
+     ]
     }
    }
   },
@@ -74612,6 +74619,13 @@
     "source": {
      "path": "supabase/migrations/20261108013154_crm_document_unlink.sql",
      "line": 136
+    },
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "authenticated"
+     ]
     }
    }
   },

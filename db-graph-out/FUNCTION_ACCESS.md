@@ -2446,12 +2446,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)` _(DEFINER)_
 - **returns:** `text`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/unlink_crm_actor_document`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/unlink_crm_actor_document` — rôle `authenticated` uniquement, avec contrôle des droits CRM courants.
 - **object types served:** **all object types**
 
 ### `api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)` _(DEFINER)_
 - **returns:** `text`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/unlink_crm_task_document`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/unlink_crm_task_document` — rôle `authenticated` uniquement, avec contrôle des droits CRM courants.
 - **object types served:** **all object types**
 
 ### `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode public.legal_validity_mode DEFAULT NULL::public.legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`

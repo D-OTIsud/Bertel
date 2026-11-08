@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const source = fileURLToPath(new URL('../../bertel-tourism-ui/docker-compose.yml', import.meta.url));
 const prebuilt = fileURLToPath(new URL('../../bertel-tourism-ui/docker-compose.prebuilt.yml', import.meta.url));
+const closedB1 = fileURLToPath(new URL('../../bertel-tourism-ui/docker-compose.b1-closed.yml', import.meta.url));
 const serviceName = 'bertel-tourism-ui';
 const sourceSha = 'a'.repeat(40);
 const runtimeKeys = [
@@ -116,6 +117,22 @@ test('a second exact commit chooses its matching local tag without changing runt
   const expected = structuredClone(first);
   expected.services[serviceName].image = `bertel-candidate:${otherSha}`;
   assert.deepEqual(second, expected);
+});
+
+test('B1 rescue pins its image and source and stays closed despite the current checkout environment', async () => {
+  const candidate = parsed(await render(prebuilt, sourceSha));
+  const rescue = parsed(await render(closedB1, 'b'.repeat(40), 'protocol-v1'));
+  const expected = structuredClone(candidate);
+  const service = expected.services[serviceName];
+  service.image = 'bertel-candidate:a6be99c970e5a0cc5a30e26b39a38a461766b9b6';
+  service.environment.SOURCE_COMMIT = 'a6be99c970e5a0cc5a30e26b39a38a461766b9b6';
+  service.environment.LIST_EMAIL_MODE = 'closed';
+  assert.deepEqual(rescue, expected, 'only the B1 image/source pins and closed mode may differ');
+  assert.deepEqual(new Set(rescue.services[serviceName].ports.map(({ host_ip }) => host_ip)),
+    new Set(['127.0.0.1', '::1']));
+  for (const { published, target, protocol } of rescue.services[serviceName].ports) {
+    assert.deepEqual([published, target, protocol], ['8081', 3000, 'tcp']);
+  }
 });
 
 test('missing SOURCE_COMMIT fails even if an implicit dotenv tries to supply a different commit', async () => {

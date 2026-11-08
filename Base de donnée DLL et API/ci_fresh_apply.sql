@@ -788,6 +788,14 @@ COMMIT;
 \ir tests/test_avatar_upload_intents.sql
 \ir tests/test_gdpr_crm_document_provenance.sql
 
+\echo '== GDPR cleanup attempts, owner-only and no replay after an unknown effect =='
+\ir ../supabase/migrations/20261108074602_gdpr_cleanup_claims.sql
+\ir tests/test_gdpr_cleanup_claims.sql
+
+\echo '== GDPR START request identity, owner-only and no destructive recovery =='
+\ir ../supabase/migrations/20261108075514_gdpr_start_request_identity.sql
+\ir tests/test_gdpr_start_request_identity.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

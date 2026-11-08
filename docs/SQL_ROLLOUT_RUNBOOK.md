@@ -500,6 +500,18 @@ provider n'est exécuté ici. Le traitement exclusif des tâches, la récupérat
 intentions inconnues et le retrait de tous les writers legacy/privilégiés restent
 des conditions de l'activation future.
 
+La migration `20261108074602` s'applique après ces trois versions et refuse (`55000`)
+toute file contenant une tâche non réussie : un claim ne peut pas être inventé pour
+un envoi antérieur. Chaque tâche prend un claim durable, lié à sa cible normalisée,
+avant tout effet Storage ou Auth. Un alias se rattache au reçu de la cible, y compris
+depuis une autre opération, et ne réussit qu'avec lui. Une tentative sans issue connue
+reste définitive : aucun TTL, aucune reprise, et `avatar_upload_allowed` reste faux.
+Sa résolution est une décision manuelle du propriétaire, non outillée ici.
+L'ancien acquittement à quatre arguments échoue en `55000`. Les RPC restent réservées
+au propriétaire jusqu'à une release explicite ; un rejeu de `20261108070035` est
+ensuite refusé par son préflight. Le test `tests/test_gdpr_cleanup_claims.sql` n'est
+pas inscrit au manifeste et doit s'exécuter après cette migration.
+
 L'effacement d'un acteur inventorie ses bibliothèques, ses consentements, les pièces
 de ses tâches et les reçus de détachement et d'upload. Seul un lien vivant du sujet
 peut conduire à un `DELETE` du catalogue et à une tâche `storage_remove`, et seulement
@@ -2655,3 +2667,26 @@ après application, sans appel métier. Le test SQL frais couvre les brouillons
 des deux ORG, la recherche floue, l’identité absente, le service technique et
 la publication devenue obsolète dans la vue. La matrice HTTP utilise les JWT
 synthétiques de la pile jetable et appelle directement la RPC.
+
+### Référence stable du départ RGPD — raccord fermé
+
+Le manifeste frais applique `20261108074602_gdpr_cleanup_claims.sql` puis
+`20261108075514_gdpr_start_request_identity.sql`, avec leurs tests respectifs.
+Les nouvelles RPC restent owner-only ; ce raccord ne les active pas et ne
+change pas le corps de l’effacement à quatre arguments.
+
+Le serveur reçoit au départ un `requestId` distinct de l’`operationId` généré
+par l’effacement. Le wrapper lie ce premier identifiant au vrai journal dans
+la même transaction. Un POST contenant seulement `requestId` effectue une
+recherche par l’auteur courant et retourne seulement ces deux identifiants ;
+une absence, une panne ou une réponse non confirmée ne déclenche jamais de
+nouveau départ. La reprise existante utilise ensuite le vrai `operationId`
+et les claims de nettoyage. Une référence différente ne contourne pas une
+opération du même sujet dont les tâches ou la revue restent non résolues.
+
+L’ancien POST de départ sans référence est refusé sans effet. Le client et la
+vue restent inchangés dans ce lot ; leur conservation locale par compte et
+leur état de départ non confirmé nécessitent encore la validation dédiée.
+La recette HTTP intégrée sur pile jetable reste distincte des doubles Jest
+et des témoins PostgreSQL réduits ; aucun appel fournisseur ou déploiement
+n’est attesté par ce raccord fermé.

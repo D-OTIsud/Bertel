@@ -21,7 +21,11 @@ const mockedCreate = jest.mocked(createClient);
 const mockedReadJson = readBoundedJson as jest.Mock;
 
 function req(headers: Record<string, string>, body: unknown): never {
-  return { headers: new Headers(headers), json: async () => body } as never;
+  // Existing START scenarios now carry the persisted request reference. Raw
+  // missing/malformed references are exercised in start-request.test.ts.
+  const payload = body && typeof body === 'object' && !Array.isArray(body) && Object.hasOwn(body, 'subjectKind')
+    ? { requestId: REQUEST_ID, ...body } : body;
+  return { headers: new Headers(headers), json: async () => payload } as never;
 }
 
 const CALLER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -29,6 +33,7 @@ const TARGET_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const OWNER_TARGET_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const SUPERADMIN_TARGET_ID = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const OPERATION_ID = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+const REQUEST_ID = '99999999-9999-4999-8999-999999999999';
 // validateOperationStatus exige un id de tâche au format UUID (un placeholder du style 't1' est rejeté).
 const TASK_ID = '11111111-1111-4111-8111-111111111111';
 
@@ -67,6 +72,19 @@ function serverClient(opts: {
     storage: { from: jest.fn().mockReturnValue({ remove }) },
     from: jest.fn().mockReturnValue({ select: jest.fn().mockReturnValue({ eq: jest.fn().mockReturnValue({ maybeSingle }) }) }),
     ...apiClient({
+      // Claim admis par défaut : le contrat d'exclusivité est testé dans cleanup-claims.test.ts.
+      rpc_gdpr_claim_cleanup_task: (params) => {
+        const p = params as Record<string, unknown>;
+        return {
+          data: {
+            operationId: p.p_operation_id, taskId: p.p_task_id, attemptId: p.p_attempt_id,
+            action: p.p_expected_action, metadata: p.p_expected_metadata, targetKey: p.p_target_key,
+            claimOutcome: 'claimed',
+          },
+          error: null,
+        };
+      },
+      rpc_gdpr_refuse_cleanup_task: () => ({ data: { status: 'failed' }, error: null }),
       ...opts.handlers,
       rpc_gdpr_get_cleanup_status: (params) => {
         if ((params as { p_operation_id: unknown }).p_operation_id === null) {
@@ -177,7 +195,7 @@ describe('durable-cleanup deployment compatibility', () => {
     ['transport exception', () => { throw new Error('internal ECONNRESET'); }],
     ['rejected request', () => Promise.reject(new Error('internal fetch failed'))],
     ['null without the expected error', () => ({ data: null, error: null })],
-    ['successful operation envelope for SQL NULL', () => ({ data: { operationId: OPERATION_ID }, error: null })],
+    ['successful operation envelope for SQL NULL', () => ({ data: { operationId: OPERATION_ID, startRequestId: REQUEST_ID }, error: null })],
     ['data alongside P0002', () => ({ data: { operationId: OPERATION_ID }, error: { code: 'P0002', message: 'not found' } })],
     ['missing data alongside P0002', () => ({ data: undefined, error: { code: 'P0002', message: 'not found' } })],
   ];
@@ -187,7 +205,7 @@ describe('durable-cleanup deployment compatibility', () => {
     const remove = jest.fn();
     const deleteUser = jest.fn();
     const server = serverClient({ capabilityProbe, removeMock: remove, deleteUserMock: deleteUser });
-    const caller = superuserAsCaller({ rpc_gdpr_erase_subject: eraseRpc });
+    const caller = superuserAsCaller({ rpc_gdpr_start_erasure: eraseRpc });
     mockedServer.mockReturnValue(server as never);
     mockedCreate.mockReturnValue(caller as never);
 
@@ -208,7 +226,7 @@ describe('durable-cleanup deployment compatibility', () => {
 
   it('requires explicit P0002 before calling erase and keeps the new-schema completion flow', async () => {
     const capabilityProbe = jest.fn(() => ({ data: null, error: { code: 'P0002', message: 'not found' } }));
-    const eraseRpc = jest.fn(() => ({ data: { operationId: OPERATION_ID }, error: null }));
+    const eraseRpc = jest.fn(() => ({ data: { operationId: OPERATION_ID, startRequestId: REQUEST_ID }, error: null }));
     const server = serverClient({
       capabilityProbe,
       handlers: {
@@ -219,7 +237,7 @@ describe('durable-cleanup deployment compatibility', () => {
       },
     });
     mockedServer.mockReturnValue(server as never);
-    mockedCreate.mockReturnValue(superuserAsCaller({ rpc_gdpr_erase_subject: eraseRpc }) as never);
+    mockedCreate.mockReturnValue(superuserAsCaller({ rpc_gdpr_start_erasure: eraseRpc }) as never);
 
     const res = await POST(req({ authorization: 'Bearer t' }, { subjectKind: 'actor', subjectId: TARGET_ID }));
 
@@ -243,7 +261,7 @@ describe('durable-cleanup deployment compatibility', () => {
       },
     });
     mockedServer.mockReturnValue(server as never);
-    mockedCreate.mockReturnValue(superuserAsCaller({ rpc_gdpr_erase_subject: eraseRpc }) as never);
+    mockedCreate.mockReturnValue(superuserAsCaller({ rpc_gdpr_start_erasure: eraseRpc }) as never);
 
     const res = await POST(req({ authorization: 'Bearer t' }, { operationId: OPERATION_ID }));
 
@@ -258,7 +276,7 @@ describe('start flow', () => {
   it('500 setup_incomplete when the erase RPC succeeds but returns no operationId', async () => {
     mockedServer.mockReturnValue(serverClient({}) as never);
     mockedCreate.mockReturnValue(
-      superuserAsCaller({ rpc_gdpr_erase_subject: () => ({ data: { mode: 'anonymize' }, error: null }) }) as never,
+      superuserAsCaller({ rpc_gdpr_start_erasure: () => ({ data: { mode: 'anonymize' }, error: null }) }) as never,
     );
     const res = await POST(req({ authorization: 'Bearer t' }, { subjectKind: 'actor', subjectId: TARGET_ID }));
     expect(res.status).toBe(500);
@@ -266,11 +284,11 @@ describe('start flow', () => {
   });
 
   it('recoverable partial (207, cleanupStatusUnavailable) when the initial status load fails after a committed erase — never a generic 500, never a re-erase', async () => {
-    const eraseRpc = jest.fn(() => ({ data: { operationId: OPERATION_ID }, error: null }));
+    const eraseRpc = jest.fn(() => ({ data: { operationId: OPERATION_ID, startRequestId: REQUEST_ID }, error: null }));
     mockedServer.mockReturnValue(
       serverClient({ handlers: { rpc_gdpr_get_cleanup_status: () => ({ data: null, error: { message: 'db down' } }) } }) as never,
     );
-    mockedCreate.mockReturnValue(superuserAsCaller({ rpc_gdpr_erase_subject: eraseRpc }) as never);
+    mockedCreate.mockReturnValue(superuserAsCaller({ rpc_gdpr_start_erasure: eraseRpc }) as never);
 
     const res = await POST(req({ authorization: 'Bearer t' }, { subjectKind: 'actor', subjectId: TARGET_ID }));
     const json = await res.json();
@@ -307,7 +325,7 @@ describe('start flow', () => {
           },
           error: null,
         }),
-        rpc_gdpr_ack_cleanup_task: (params) => {
+        rpc_gdpr_ack_cleanup_attempt: (params) => {
           acked = params;
           return { data: { id: TASK_ID, status: 'succeeded', attempts: 1 }, error: null };
         },
@@ -315,7 +333,7 @@ describe('start flow', () => {
     });
     mockedServer.mockReturnValue(server as never);
     mockedCreate.mockReturnValue(
-      superuserAsCaller({ rpc_gdpr_erase_subject: () => ({ data: { operationId: OPERATION_ID }, error: null }) }) as never,
+      superuserAsCaller({ rpc_gdpr_start_erasure: () => ({ data: { operationId: OPERATION_ID, startRequestId: REQUEST_ID }, error: null }) }) as never,
     );
     const res = await POST(req({ authorization: 'Bearer t' }, { subjectKind: 'actor', subjectId: TARGET_ID }));
     expect(remove).toHaveBeenCalledWith(['u1/file.jpg']);
@@ -340,12 +358,12 @@ describe('start flow', () => {
           },
           error: null,
         }),
-        rpc_gdpr_ack_cleanup_task: () => { throw new Error('network blip'); },
+        rpc_gdpr_ack_cleanup_attempt: () => { throw new Error('network blip'); },
       },
     });
     mockedServer.mockReturnValue(server as never);
     mockedCreate.mockReturnValue(
-      superuserAsCaller({ rpc_gdpr_erase_subject: () => ({ data: { operationId: OPERATION_ID }, error: null }) }) as never,
+      superuserAsCaller({ rpc_gdpr_start_erasure: () => ({ data: { operationId: OPERATION_ID, startRequestId: REQUEST_ID }, error: null }) }) as never,
     );
     const res = await POST(req({ authorization: 'Bearer t' }, { subjectKind: 'actor', subjectId: TARGET_ID }));
     expect(res.status).toBe(207);
@@ -369,12 +387,12 @@ describe('start flow', () => {
           }
           return { data: null, error: { message: 'db down' } };
         },
-        rpc_gdpr_ack_cleanup_task: () => ({ data: { id: TASK_ID, status: 'succeeded', attempts: 1 }, error: null }),
+        rpc_gdpr_ack_cleanup_attempt: () => ({ data: { id: TASK_ID, status: 'succeeded', attempts: 1 }, error: null }),
       },
     });
     mockedServer.mockReturnValue(server as never);
     mockedCreate.mockReturnValue(
-      superuserAsCaller({ rpc_gdpr_erase_subject: () => ({ data: { operationId: OPERATION_ID }, error: null }) }) as never,
+      superuserAsCaller({ rpc_gdpr_start_erasure: () => ({ data: { operationId: OPERATION_ID, startRequestId: REQUEST_ID }, error: null }) }) as never,
     );
     const res = await POST(req({ authorization: 'Bearer t' }, { subjectKind: 'actor', subjectId: TARGET_ID }));
     const json = await res.json();
@@ -396,7 +414,7 @@ describe('POST /api/rgpd/erase — le message métier passe, le brut moteur non'
   async function eraseWith(error: RpcResult['error']) {
     mockedServer.mockReturnValue(serverClient({}) as never);
     const eraseRpc = jest.fn(() => ({ data: null, error }));
-    mockedCreate.mockReturnValue(superuserAsCaller({ rpc_gdpr_erase_subject: eraseRpc }) as never);
+    mockedCreate.mockReturnValue(superuserAsCaller({ rpc_gdpr_start_erasure: eraseRpc }) as never);
     const res = await POST(req({ authorization: 'Bearer t' }, { subjectKind: 'actor', subjectId: TARGET_ID, mode: 'anonymize' }));
     const payload = (await res.json()) as { error?: string; detail?: string };
     // A refusal earlier in authorization/preflight must not make these assertions vacuous.
@@ -454,7 +472,7 @@ describe('resume — initial lookup: not_found vs error, never leaks raw message
       removeMock: remove, deleteUserMock: deleteUser,
       handlers: { rpc_gdpr_get_cleanup_status: () => ({ data: null, error: { code, message: 'internal secret detail' } }) },
     });
-    const caller = superuserAsCaller({ rpc_gdpr_erase_subject: eraseRpc });
+    const caller = superuserAsCaller({ rpc_gdpr_start_erasure: eraseRpc });
     mockedServer.mockReturnValue(server as never);
     mockedCreate.mockReturnValue(caller as never);
     const res = await POST(req({ authorization: 'Bearer t' }, { operationId: OPERATION_ID }));
@@ -534,7 +552,9 @@ describe('storage path hardening', () => {
           data: { operationId: OPERATION_ID, subjectKind, subjectId: TARGET_ID, mode: 'anonymize', report: {}, tasks: [taskWith(metadata)] },
           error: null,
         }),
-        rpc_gdpr_ack_cleanup_task: (params) => {
+        rpc_gdpr_ack_cleanup_attempt: () => ({ data: { id: TASK_ID, status: 'succeeded', attempts: 1 }, error: null }),
+        // Une cible refusée n'a rien à réclamer : le refus passe par la RPC dédiée, sans tentative.
+        rpc_gdpr_refuse_cleanup_task: (params) => {
           ackSpy(params);
           return { data: { id: TASK_ID, status: 'failed', attempts: 1 }, error: null };
         },
@@ -550,7 +570,7 @@ describe('storage path hardening', () => {
     const ack = jest.fn();
     await runResumeWith({ raw_url: 'https://evil.example.com/storage/v1/object/public/media/x.jpg' }, remove, ack);
     expect(remove).not.toHaveBeenCalled();
-    expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_success: false }));
+    expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_error: 'unresolved_external_or_invalid_reference' }));
   });
 
   it('rejects embedded credentials in the URL', async () => {
@@ -666,7 +686,7 @@ describe('storage path hardening', () => {
       const ack = jest.fn();
       await runResumeWith(metadata, remove, ack, 'user');
       expect(remove).not.toHaveBeenCalled();
-      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_success: false, p_error: 'unresolved_external_or_invalid_reference' }));
+      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_error: 'unresolved_external_or_invalid_reference' }));
     });
 
     it('refuses an avatar key on a non-user operation even under the subject prefix', async () => {
@@ -674,7 +694,7 @@ describe('storage path hardening', () => {
       const ack = jest.fn();
       await runResumeWith({ bucket: 'avatars', path: `${TARGET_ID}/avatar.jpg` }, remove, ack, 'actor');
       expect(remove).not.toHaveBeenCalled();
-      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_success: false }));
+      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_error: 'unresolved_external_or_invalid_reference' }));
     });
 
     it('keeps the existing completion rule for a fully processed user operation', async () => {
@@ -724,7 +744,7 @@ describe('resume — never re-erases, auth_delete re-verified against CURRENT st
       deleteUserMock: opts.deleteUserMock,
       handlers: {
         rpc_gdpr_get_cleanup_status: () => ({ data: operation, error: null }),
-        rpc_gdpr_ack_cleanup_task: ack,
+        rpc_gdpr_ack_cleanup_attempt: ack,
       },
     });
     mockedServer.mockReturnValue(server as never);
@@ -732,11 +752,12 @@ describe('resume — never re-erases, auth_delete re-verified against CURRENT st
     return { server, ack };
   }
 
-  it('never calls rpc_gdpr_erase_subject on resume', async () => {
+  it('never calls rpc_gdpr_start_erasure on resume', async () => {
     const { server } = setup({});
     await POST(req({ authorization: 'Bearer t' }, { operationId: OPERATION_ID }));
-    // is_platform_superuser only — pas rpc_gdpr_erase_subject.
+    // is_platform_superuser only — pas rpc_gdpr_start_erasure.
     const asCallerRpc = mockedCreate.mock.results[0].value.schema().rpc as jest.Mock;
+    expect(asCallerRpc).not.toHaveBeenCalledWith('rpc_gdpr_start_erasure', expect.anything());
     expect(asCallerRpc).not.toHaveBeenCalledWith('rpc_gdpr_erase_subject', expect.anything());
     void server;
   });

@@ -771,6 +771,10 @@ COMMIT;
 \ir ../supabase/migrations/20261108010225_guard_legacy_gdpr_erase.sql
 \ir tests/test_gdpr_status_durable_report.sql
 
+\echo '== DB02 CRM document unlink keeps the shared catalogue and file =='
+\ir ../supabase/migrations/20261108003916_crm_document_unlink.sql
+\ir tests/test_crm_document_unlink.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

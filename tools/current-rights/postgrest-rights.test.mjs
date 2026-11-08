@@ -56,6 +56,43 @@ async function denied(response, label) {
 function commit(sql, stage) {
   return local.sql(`BEGIN; SELECT set_config('request.jwt.claims','{"role":"service_role"}',true); ${sql}; COMMIT;`, stage);
 }
+async function testCrmDocumentUnlinkTransport() {
+  const actor = '00000000-0000-4000-a000-00000000aa01';
+  const otherActor = '00000000-0000-4000-a000-00000000aa02';
+  const task = randomUUID();
+  const document = randomUUID();
+  const path = `tasks/${task}/synthetic.pdf`;
+  commit(`DO $fixture$ DECLARE permission uuid; BEGIN
+    SELECT id INTO STRICT permission FROM public.ref_permission WHERE code='write_crm_notes';
+    INSERT INTO public.user_permission(user_id,permission_id,is_active,granted_by)
+      VALUES('${ids.writer}',permission,true,'${ids.admin}');
+    INSERT INTO public.crm_task(id,object_id,title) VALUES('${task}','${A}','Synthetic unlink task');
+    INSERT INTO public.ref_document(id,url,storage_bucket,storage_path,access_scope)
+      VALUES('${document}','storage://actor-documents/${path}','actor-documents','${path}','crm_private');
+    INSERT INTO public.actor_document(actor_id,document_id) VALUES('${actor}','${document}'),('${otherActor}','${document}');
+    INSERT INTO public.crm_task_document(task_id,document_id,title) VALUES('${task}','${document}','Synthetic shared file');
+  END; $fixture$`, 'committed shared CRM unlink witness');
+  try {
+    const actorArgs = { p_actor_id: actor, p_document_id: document };
+    const taskArgs = { p_task_id: task, p_document_id: document };
+    for (const [name, args] of [['unlink_crm_actor_document', actorArgs], ['unlink_crm_task_document', taskArgs]]) {
+      assert.equal(await json(await rpc(headers('other'), name, args), 'real scoped unlink denial'), 'forbidden');
+      assert.equal(await json(await rpc(headers('writer'), name, args), 'real scoped unlink receipt'), 'deleted');
+      assert.equal(await json(await rpc(headers('writer'), name, args), 'real repeated unlink status'), 'not_found');
+    }
+    assert.deepEqual(JSON.parse(local.sql(`SELECT json_build_array(
+      EXISTS(SELECT 1 FROM public.ref_document WHERE id='${document}' AND storage_path='${path}'),
+      (SELECT count(*) FROM public.actor_document WHERE document_id='${document}' AND actor_id='${otherActor}'),
+      (SELECT count(*) FROM public.actor_document WHERE document_id='${document}' AND actor_id='${actor}'),
+      (SELECT count(*) FROM public.crm_task_document WHERE document_id='${document}'))`,
+    'committed unlink preserves the other exact association and catalogue')), [true, 1, 0, 0]);
+  } finally {
+    commit(`DELETE FROM public.ref_document WHERE id='${document}';
+      DELETE FROM public.crm_task WHERE id='${task}';
+      DELETE FROM public.user_permission WHERE user_id='${ids.writer}'
+        AND permission_id=(SELECT id FROM public.ref_permission WHERE code='write_crm_notes')`, 'clean shared CRM unlink witness');
+  }
+}
 async function testInitialPublication() {
   const writerRole = (code) => commit(
     `UPDATE public.user_org_business_role
@@ -472,6 +509,7 @@ test(testName, { timeout: browserWitness ? 300000 : sandboxWitness ? 240000 : 90
       t.diagnostic('Disposable document route verified canonical and legal-only signed bytes, foreign refusal and same-JWT revocation.');
       return;
     }
+    await t.test('PostgREST returns scalar CRM unlink statuses and retains the shared document', testCrmDocumentUnlinkTransport);
     const versionA = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${A}'`, 'private history witness'));
     const versionPublic = Number(local.sql(`SELECT min(version_number) FROM public.object_version WHERE object_id='${PUBLIC}'`, 'public history witness'));
     assert.ok(Number.isInteger(versionA) && versionA > 0 && Number.isInteger(versionPublic) && versionPublic > 0, 'history positives must be nonempty');

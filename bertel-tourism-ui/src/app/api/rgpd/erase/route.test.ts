@@ -298,7 +298,7 @@ describe('start flow', () => {
               {
                 id: TASK_ID,
                 action: 'storage_remove',
-                metadata: { bucket: 'avatars', path: 'u1/avatar.jpg' },
+                metadata: { bucket: 'media', path: 'u1/file.jpg' },
                 status: acked ? 'succeeded' : 'pending',
                 attempts: acked ? 1 : 0,
                 lastError: null,
@@ -318,7 +318,7 @@ describe('start flow', () => {
       superuserAsCaller({ rpc_gdpr_erase_subject: () => ({ data: { operationId: OPERATION_ID }, error: null }) }) as never,
     );
     const res = await POST(req({ authorization: 'Bearer t' }, { subjectKind: 'actor', subjectId: TARGET_ID }));
-    expect(remove).toHaveBeenCalledWith(['u1/avatar.jpg']);
+    expect(remove).toHaveBeenCalledWith(['u1/file.jpg']);
     const json = await res.json();
     expect(res.status).toBe(200);
     expect(json.status).toBe('completed');
@@ -336,7 +336,7 @@ describe('start flow', () => {
             subjectId: TARGET_ID,
             mode: 'anonymize',
             report: {},
-            tasks: [{ id: TASK_ID, action: 'storage_remove', metadata: { bucket: 'avatars', path: 'u1/avatar.jpg' }, status: 'pending', attempts: 0, lastError: null }],
+            tasks: [{ id: TASK_ID, action: 'storage_remove', metadata: { bucket: 'media', path: 'u1/file.jpg' }, status: 'pending', attempts: 0, lastError: null }],
           },
           error: null,
         }),
@@ -362,7 +362,7 @@ describe('start flow', () => {
             return {
               data: {
                 operationId: OPERATION_ID, subjectKind: 'actor', subjectId: TARGET_ID, mode: 'anonymize', report: {},
-                tasks: [{ id: TASK_ID, action: 'storage_remove', metadata: { bucket: 'avatars', path: 'u1/avatar.jpg' }, status: 'pending', attempts: 0, lastError: null }],
+                tasks: [{ id: TASK_ID, action: 'storage_remove', metadata: { bucket: 'media', path: 'u1/file.jpg' }, status: 'pending', attempts: 0, lastError: null }],
               },
               error: null,
             };
@@ -526,12 +526,12 @@ describe('storage path hardening', () => {
     return { id: TASK_ID, action: 'storage_remove' as const, metadata, status: 'pending' as const, attempts: 0, lastError: null };
   }
 
-  async function runResumeWith(metadata: Record<string, unknown>, remove: jest.Mock, ackSpy: jest.Mock) {
+  async function runResumeWith(metadata: Record<string, unknown>, remove: jest.Mock, ackSpy: jest.Mock, subjectKind = 'actor') {
     const server = serverClient({
       removeMock: remove,
       handlers: {
         rpc_gdpr_get_cleanup_status: () => ({
-          data: { operationId: OPERATION_ID, subjectKind: 'actor', subjectId: TARGET_ID, mode: 'anonymize', report: {}, tasks: [taskWith(metadata)] },
+          data: { operationId: OPERATION_ID, subjectKind, subjectId: TARGET_ID, mode: 'anonymize', report: {}, tasks: [taskWith(metadata)] },
           error: null,
         }),
         rpc_gdpr_ack_cleanup_task: (params) => {
@@ -633,8 +633,64 @@ describe('storage path hardening', () => {
   it('accepts a well-formed {bucket, path} pair', async () => {
     const remove = jest.fn().mockResolvedValue({ error: null });
     const ack = jest.fn();
-    await runResumeWith({ bucket: 'avatars', path: 'u1/avatar.jpg' }, remove, ack);
-    expect(remove).toHaveBeenCalledWith(['u1/avatar.jpg']);
+    await runResumeWith({ bucket: 'media', path: 'u1/file.jpg' }, remove, ack);
+    expect(remove).toHaveBeenCalledWith(['u1/file.jpg']);
+  });
+
+  describe('avatar keys: exact legacy and generation formats, owner-bound', () => {
+    const GENERATION = 'avatar-12345678-1234-4234-8234-123456789abc.jpg';
+    const PUBLIC_AVATARS = 'https://x.supabase.co/storage/v1/object/public/avatars';
+
+    it.each([
+      ['legacy key', { bucket: 'avatars', path: `${TARGET_ID}/avatar.jpg` }, `${TARGET_ID}/avatar.jpg`],
+      ['generation key', { bucket: 'avatars', path: `${TARGET_ID}/${GENERATION}` }, `${TARGET_ID}/${GENERATION}`],
+      ['legacy public URL', { raw_url: `${PUBLIC_AVATARS}/${TARGET_ID}/avatar.jpg?v=1` }, `${TARGET_ID}/avatar.jpg`],
+      ['generation public URL', { raw_url: `${PUBLIC_AVATARS}/${TARGET_ID}/${GENERATION}?v=1` }, `${TARGET_ID}/${GENERATION}`],
+    ])('accepts the subject %s', async (_name, metadata, expectedPath) => {
+      const remove = jest.fn().mockResolvedValue({ error: null });
+      await runResumeWith(metadata, remove, jest.fn(), 'user');
+      expect(remove).toHaveBeenCalledWith([expectedPath]);
+    });
+
+    it.each([
+      ['another user generation key', { bucket: 'avatars', path: `${OWNER_TARGET_ID}/${GENERATION}` }],
+      ['another user legacy key', { bucket: 'avatars', path: `${OWNER_TARGET_ID}/avatar.jpg` }],
+      ['another user URL stored in the subject avatar_url', { raw_url: `${PUBLIC_AVATARS}/${OWNER_TARGET_ID}/${GENERATION}?v=1` }],
+      ['arbitrary file under the owner prefix', { bucket: 'avatars', path: `${TARGET_ID}/other.jpg` }],
+      ['generation with a trailing extension', { bucket: 'avatars', path: `${TARGET_ID}/${GENERATION}.exe` }],
+      ['uppercase generation UUID', { bucket: 'avatars', path: `${TARGET_ID}/${GENERATION.toUpperCase()}` }],
+      ['nested key', { bucket: 'avatars', path: `${TARGET_ID}/sub/avatar.jpg` }],
+      ['bare owner prefix', { bucket: 'avatars', path: TARGET_ID }],
+    ])('refuses %s', async (_name, metadata) => {
+      const remove = jest.fn().mockResolvedValue({ error: null });
+      const ack = jest.fn();
+      await runResumeWith(metadata, remove, ack, 'user');
+      expect(remove).not.toHaveBeenCalled();
+      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_success: false, p_error: 'unresolved_external_or_invalid_reference' }));
+    });
+
+    it('refuses an avatar key on a non-user operation even under the subject prefix', async () => {
+      const remove = jest.fn().mockResolvedValue({ error: null });
+      const ack = jest.fn();
+      await runResumeWith({ bucket: 'avatars', path: `${TARGET_ID}/avatar.jpg` }, remove, ack, 'actor');
+      expect(remove).not.toHaveBeenCalled();
+      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_success: false }));
+    });
+
+    it('keeps the existing completion rule for a fully processed user operation', async () => {
+      mockedServer.mockReturnValue(serverClient({
+        handlers: {
+          rpc_gdpr_get_cleanup_status: () => ({
+            data: { operationId: OPERATION_ID, subjectKind: 'user', subjectId: TARGET_ID, mode: 'anonymize', report: {}, tasks: [] },
+            error: null,
+          }),
+        },
+      }) as never);
+      mockedCreate.mockReturnValue(superuserAsCaller() as never);
+      const res = await POST(req({ authorization: 'Bearer t' }, { operationId: OPERATION_ID }));
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual(expect.objectContaining({ ok: true, status: 'completed' }));
+    });
   });
 });
 

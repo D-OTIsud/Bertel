@@ -49,11 +49,14 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
   const profile = await local.request(`/storage/v1/bucket/${bucket}`, local.service, undefined, 'GET');
   assert.ok(profile.ok && (await profile.json()).public === false, 'private real Storage fixture bucket required');
 
-  const counters = { start: 0, lookup: 0, status: 0, claim: 0, ack: 0, lostStart: 0, lostStorage: 0, lostAck: 0 };
+  const counters = { start: 0, lookup: 0, status: 0, claim: 0, ack: 0, lostStart: 0, lostStorage: 0, lostAck: 0,
+    authDelete: 0, lostAuth: 0, emptyLegacyCleanup: 0 };
   const removes = new Map();
   const acceptedDelete = barrier(), releaseStorageResponse = barrier();
   const errors = [];
   let app, operationId, proxy, unknownKey, confirmedTask;
+  const authSubject = randomUUID();
+  let authRegistered = false, authPhase = false, authOperationId;
   let fixtureCreated = false;
   const uploaded = [];
   const state = () => JSON.parse(local.sql(`SELECT coalesce(json_agg(json_build_object(
@@ -102,21 +105,48 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
         const rpc = url.pathname.startsWith('/rest/v1/rpc/') ? url.pathname.slice('/rest/v1/rpc/'.length) : null;
         const allowedRpc = new Set(['is_platform_superuser', 'rpc_gdpr_start_erasure', 'rpc_gdpr_find_start_request',
           'rpc_gdpr_get_cleanup_status', 'rpc_gdpr_claim_cleanup_task', 'rpc_gdpr_ack_cleanup_attempt', 'rpc_gdpr_refuse_cleanup_task']);
+        const authTarget = authPhase && authRegistered && url.pathname === `/auth/v1/admin/users/${authSubject}`;
+        const authProfile = authPhase && authRegistered && url.pathname === '/rest/v1/app_user_profile'
+          && url.searchParams.size === 2 && url.searchParams.get('select') === 'role'
+          && url.searchParams.get('id') === `eq.${authSubject}`;
+        const emptyLegacy = authPhase && authRegistered && url.pathname === '/storage/v1/object/avatars';
         assert.ok((req.method === 'GET' && url.pathname === '/auth/v1/user')
+          || (req.method === 'GET' && (authTarget || authProfile))
           || (req.method === 'POST' && allowedRpc.has(rpc))
-          || (req.method === 'DELETE' && url.pathname === `/storage/v1/object/${bucket}`), 'unexpected Next egress');
+          || (req.method === 'DELETE' && (url.pathname === `/storage/v1/object/${bucket}` || authTarget || emptyLegacy)), 'unexpected Next egress');
         const chunks = [];
         let size = 0;
         for await (const chunk of req) { size += chunk.length; assert.ok(size <= 16 * 1024); chunks.push(chunk); }
         const bytes = Buffer.concat(chunks);
         const body = bytes.length ? JSON.parse(bytes.toString('utf8')) : null;
         if (rpc === 'rpc_gdpr_start_erasure') counters.start++;
+        if (rpc === 'rpc_gdpr_start_erasure' && authPhase) {
+          assert.equal(counters.start, 2, 'the Auth case admits only its single new START');
+          assert.equal(body?.p_subject_kind, 'user');
+          assert.equal(body?.p_subject_id, authSubject);
+          assert.equal(body?.p_mode, 'delete');
+        }
         if (rpc === 'rpc_gdpr_find_start_request') counters.lookup++;
         if (rpc === 'rpc_gdpr_get_cleanup_status') counters.status++;
         if (rpc === 'rpc_gdpr_claim_cleanup_task') counters.claim++;
         if (rpc === 'rpc_gdpr_ack_cleanup_attempt') counters.ack++;
         let key;
-        if (req.method === 'DELETE') {
+        if (req.method === 'DELETE' && authTarget) {
+          counters.authDelete++;
+          assert.equal(counters.authDelete, 1, 'Auth DELETE must never be dispatched twice');
+          assert.equal(body?.should_soft_delete, false, 'the existing application must request its real hard-delete contract');
+          assert.equal(local.sql(`SELECT count(*) FROM public.app_user_profile p JOIN auth.users u ON u.id=p.id
+            WHERE p.id='${authSubject}' AND (p.role IS NULL OR p.role='tourism_agent') AND u.deleted_at IS NULL`,
+          'ordinary target profile must still exist immediately before real Auth dispatch'), '1');
+        } else if (req.method === 'DELETE' && emptyLegacy) {
+          // user/delete always queues this legacy cleanup, even with no avatar.
+          // No avatar is uploaded or inventoried by this Auth-only addition.
+          assert.deepEqual(body?.prefixes, [`${authSubject}/avatar.jpg`]);
+          assert.equal(local.sql(`SELECT count(*) FROM storage.objects WHERE bucket_id='avatars'
+            AND starts_with(name,'${authSubject}/')`, 'the owned Auth target has no avatar bytes'), '0');
+          counters.emptyLegacyCleanup++;
+          assert.equal(counters.emptyLegacyCleanup, 1);
+        } else if (req.method === 'DELETE') {
           assert.ok(body?.prefixes?.length === 1 && removable.has(body.prefixes[0]), 'only the two exact owned targets may be removed');
           key = body.prefixes[0];
           removes.set(key, (removes.get(key) ?? 0) + 1);
@@ -129,7 +159,7 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
         const response = Buffer.from(await upstream.arrayBuffer());
         assert.ok(response.length <= 1024 * 1024, 'bounded fixture API response required');
         let lose = false;
-        if (rpc === 'rpc_gdpr_start_erasure') {
+        if (rpc === 'rpc_gdpr_start_erasure' && !authPhase) {
           assert.equal(counters.start, 1, 'lookup/resume must never send START again');
           assert.ok(upstream.ok && uuid.test(JSON.parse(response).operationId), 'real START must commit before response loss');
           operationId = JSON.parse(response).operationId;
@@ -141,10 +171,14 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
           acceptedDelete.release();
           await bounded(releaseStorageResponse.promise, 'concurrent RESUME did not finish while the first Storage ACK was held');
           lose = true;
-        } else if (rpc === 'rpc_gdpr_ack_cleanup_attempt' && body.p_success === true) {
+        } else if (rpc === 'rpc_gdpr_ack_cleanup_attempt' && body.p_success === true && !authPhase) {
           assert.ok(upstream.ok && !confirmedTask, 'the successful ACK must commit exactly once');
           confirmedTask = body.p_task_id;
           counters.lostAck++; lose = true;
+        } else if (req.method === 'DELETE' && authTarget) {
+          assert.ok(upstream.ok, 'real GoTrue DELETE must accept before its response is lost');
+          counters.lostAuth++;
+          lose = true;
         }
         res.writeHead(lose ? 503 : upstream.status, { 'content-type': 'application/json' });
         res.end(lose ? JSON.stringify({ code: 'SYNTHETIC_ACK_LOST', message: 'Synthetic committed response unavailable' }) : response);
@@ -214,6 +248,52 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
     assert.equal(sha(Buffer.from(await shared.arrayBuffer())), sha(pdf));
     assert.equal(local.sql(`SELECT count(*) FROM public.crm_task_document WHERE task_id='${otherTask}' AND document_id='${documents[2]}'`, 'shared association retained'), '1');
 
+    // One ordinary Auth target, created and registered only in this owned stack.
+    // SQL user/delete redacts but keeps its profile until GoTrue deletes the user.
+    assert.equal(local.sql(`SELECT count(*) FROM auth.users WHERE id='${authSubject}'`, 'Auth fixture UUID unused'), '0');
+    const authEmail = `gdpr-auth-${authSubject}@example.invalid`;
+    const created = await local.request('/auth/v1/admin/users', local.service, {
+      id: authSubject, email: authEmail, password: `Disposable!7-${randomUUID()}`, email_confirm: true,
+    });
+    assert.ok(created.ok, 'owned ordinary Auth fixture creation must succeed');
+    const registered = await created.json();
+    assert.ok(registered.id === authSubject && registered.email === authEmail && registered.email_confirmed_at,
+      'only the exact confirmed identity returned by this creation enters the teardown registry');
+    authRegistered = true;
+    commit(`INSERT INTO public.app_user_profile(id,role) VALUES('${authSubject}','tourism_agent')
+      ON CONFLICT(id) DO NOTHING`, 'ensure the ordinary synthetic application profile exists');
+    assert.equal(local.sql(`SELECT count(*) FROM public.app_user_profile WHERE id='${authSubject}'
+      AND (role IS NULL OR role='tourism_agent') AND avatar_url IS NULL`, 'ordinary owned target profile'), '1');
+    const beforeAuth = await local.request(`/auth/v1/admin/users/${authSubject}`, local.service, undefined, 'GET');
+    assert.ok(beforeAuth.ok && (await beforeAuth.json()).id === authSubject, 'real GoTrue must positively read the owned Auth target before erasure');
+    authPhase = true;
+    const authStart = await post({ requestId: randomUUID(), subjectKind: 'user', subjectId: authSubject,
+      mode: 'delete', reason: 'Synthetic Auth HTTP proof' });
+    assert.equal(authStart.status, 207);
+    assert.equal(authStart.body.status, 'partial');
+    authOperationId = authStart.body.operationId;
+    assert.ok(uuid.test(authOperationId) && authOperationId !== operationId);
+    assert.deepEqual([counters.authDelete, counters.lostAuth, counters.start], [1, 1, 2]);
+    const authState = () => JSON.parse(local.sql(`SELECT json_agg(json_build_object('id',id,'action',action,
+      'status',status,'attemptState',attempt_state) ORDER BY id) FROM internal.gdpr_cleanup_task
+      WHERE operation_id='${authOperationId}'`, 'durable owned Auth operation'));
+    const authFinal = authState();
+    assert.equal(authFinal.filter((t) => t.action === 'auth_delete').length, 1);
+    assert.ok(authFinal.some((t) => t.action === 'auth_delete' && t.status === 'failed' && t.attemptState === 'unknown'),
+      'accepted Auth DELETE with lost response must remain durably unknown');
+    const afterAuth = await local.request(`/auth/v1/admin/users/${authSubject}`, local.service, undefined, 'GET');
+    const absentAuth = await afterAuth.json();
+    assert.ok(afterAuth.status === 404 && (typeof absentAuth.code === 'string' ? absentAuth.code : absentAuth.error_code) === 'user_not_found',
+      'real GoTrue must explicitly report that exact owned user as missing');
+    assert.equal(local.sql(`SELECT count(*) FROM auth.users WHERE id='${authSubject}'`, 'hard-deleted owned Auth target'), '0');
+    const authResume = await post({ operationId: authOperationId });
+    assert.equal(authResume.status, 207);
+    assert.equal(authResume.body.status, 'partial');
+    assert.deepEqual(authState(), authFinal, 'RESUME must retain the unknown Auth receipt without rearming');
+    assert.deepEqual([counters.authDelete, counters.lostAuth, counters.start], [1, 1, 2], 'RESUME must never send a second Auth DELETE or START');
+    assert.deepEqual([...removes.values()], [1, 1]);
+    console.log('Real Auth DELETE accepted once; its lost response stays unknown/partial, GoTrue confirms absence, and RESUME emits no second DELETE.');
+
     commit(`UPDATE public.app_user_profile SET role='tourism_agent' WHERE id='${writerId}'`, 'revoke current fixture authority without refreshing its JWT');
     const beforeRefusal = { ...counters };
     const journalCount = local.sql('SELECT count(*) FROM public.gdpr_erasure_log', 'record journal count before refusal');
@@ -240,12 +320,26 @@ export async function testGdprCleanupHttp({ local, commit, writerId, writerAutho
         local.sqlFile(resolve('supabase/releases/20261108_gdpr_cleanup/close.sql'), 'close the exact GDPR capability without discarding receipts');
         commit(`UPDATE public.app_user_profile SET role='tourism_agent' WHERE id='${writerId}';
         DELETE FROM internal.gdpr_cleanup_task WHERE operation_id IN
-          (SELECT id FROM public.gdpr_erasure_log WHERE subject_kind='actor' AND subject_id='${subject}');
-        DELETE FROM public.gdpr_erasure_log WHERE subject_kind='actor' AND subject_id='${subject}';
+          (SELECT id FROM public.gdpr_erasure_log WHERE (subject_kind='actor' AND subject_id='${subject}')
+            OR (subject_kind='user' AND subject_id='${authSubject}'));
+        DELETE FROM public.gdpr_erasure_log WHERE (subject_kind='actor' AND subject_id='${subject}')
+          OR (subject_kind='user' AND subject_id='${authSubject}');
         DELETE FROM public.crm_task WHERE id IN ('${task}','${otherTask}');
         DELETE FROM public.ref_document WHERE id IN (${documents.map((id) => `'${id}'`).join(',')});
         DELETE FROM public.actor WHERE id IN ('${subject}','${otherActor}');
         NOTIFY pgrst,'reload schema'`, 'remove only the owned GDPR fixture records');
+      }
+      if (authRegistered) {
+        const remaining = await local.request(`/auth/v1/admin/users/${authSubject}`, local.service, undefined, 'GET');
+        if (remaining.ok) {
+          assert.equal((await remaining.json()).id, authSubject, 'teardown must retain its exact creation binding');
+          const deleted = await local.request(`/auth/v1/admin/users/${authSubject}`, local.service, { should_soft_delete: false }, 'DELETE');
+          assert.ok(deleted.ok, 'only the registered synthetic Auth target may be cleaned on a failed recipe');
+        } else {
+          const missing = await remaining.json();
+          assert.ok(remaining.status === 404 && (typeof missing.code === 'string' ? missing.code : missing.error_code) === 'user_not_found',
+            'an absent target must not be deleted again during teardown');
+        }
       }
       assert.equal(closed(), 't', 'the candidate must return to owner-only after the HTTP witness');
     }

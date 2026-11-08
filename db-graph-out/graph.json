@@ -6,7 +6,7 @@
   "policy_count": 647,
   "trigger_count": 1439,
   "enum_count": 9,
-  "edge_count": 6318
+  "edge_count": 6321
  },
  "nodes": [
   {
@@ -62842,12 +62842,12 @@
      {
       "path": "Base de donnée DLL et API/migration_object_hard_delete.sql",
       "line": 46
+     },
+     {
+      "path": "supabase/migrations/20261107233351_guard_object_purge_references.sql",
+      "line": 5
      }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_object_hard_delete.sql",
-     "line": 46
-    }
+    ]
    }
   },
   {
@@ -124940,19 +124940,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM object"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_delete_object(p_object_id text, p_confirm_name text)",
-   "target": "public.media",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM media"
+     "evidence": "FROM public.object"
     }
    }
   },
@@ -124964,7 +124952,19 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM object_place"
+     "evidence": "FROM public.object_place"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_delete_object(p_object_id text, p_confirm_name text)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.media"
     }
    }
   },
@@ -124976,7 +124976,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM object_document"
+     "evidence": "FROM public.object_document"
     }
    }
   },
@@ -124988,7 +124988,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM object_classification"
+     "evidence": "FROM public.object_classification"
     }
    }
   },
@@ -125000,7 +125000,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM object_legal"
+     "evidence": "FROM public.object_legal"
     }
    }
   },
@@ -125012,7 +125012,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM object_sustainability_action"
+     "evidence": "FROM public.object_sustainability_action"
     }
    }
   },
@@ -125024,7 +125024,19 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM object_iti"
+     "evidence": "FROM public.object_iti"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_delete_object(p_object_id text, p_confirm_name text)",
+   "target": "public.ref_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_document"
     }
    }
   },
@@ -125036,19 +125048,43 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM actor_consent"
+     "evidence": "FROM public.actor_consent"
     }
    }
   },
   {
    "source": "api.rpc_delete_object(p_object_id text, p_confirm_name text)",
-   "target": "public.ref_document",
+   "target": "public.actor_document",
    "kind": "reads",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "JOIN ref_document"
+     "evidence": "FROM public.actor_document"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_delete_object(p_object_id text, p_confirm_name text)",
+   "target": "public.crm_task_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task_document"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_delete_object(p_object_id text, p_confirm_name text)",
+   "target": "internal.portal_photo_analysis",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.portal_photo_analysis"
     }
    }
   },
@@ -125060,7 +125096,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "INSERT INTO object_deletion_log"
+     "evidence": "INSERT INTO public.object_deletion_log"
     }
    }
   },
@@ -125072,7 +125108,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "DELETE FROM ref_document"
+     "evidence": "DELETE FROM public.ref_document"
     }
    }
   },
@@ -125084,7 +125120,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "DELETE FROM object"
+     "evidence": "DELETE FROM public.object"
     }
    }
   },

@@ -17,34 +17,9 @@ function req(body: unknown, auth = 'Bearer jwt'): never {
   return { headers: new Headers(auth ? { authorization: auth } : {}), json: async () => body } as never;
 }
 
-/**
- * Le serveur de la route : `actor_document` porte le lien (statut), `ref_document` la métadonnée
- * (lecture du bucket, puis suppression). `deleteError` est ce que rend le DELETE final — le seul
- * point que ces tests exercent.
- */
-function serverWith(deleteError: unknown) {
-  const remove = jest.fn().mockResolvedValue({ error: null });
-  const from = jest.fn((table: string) => {
-    if (table === 'actor_document') {
-      return {
-        select: () => ({
-          eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { status: 'draft' } }) }) }),
-        }),
-      };
-    }
-    return {
-      select: () => ({
-        eq: () => ({ maybeSingle: async () => ({ data: { storage_bucket: 'actor-documents', storage_path: 'actors/a/f.pdf' } }) }),
-      }),
-      delete: () => ({ eq: async () => ({ error: deleteError }) }),
-    };
-  });
-  return {
-    auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }) },
-    from,
-    storage: { from: () => ({ remove }) },
-  };
-}
+const documentRpc = jest.fn();
+const privilegedTable = jest.fn();
+const storageBucket = jest.fn();
 
 describe('DELETE /api/actor-document — le `detail` de `delete_failed` n’est JAMAIS le brut moteur', () => {
   const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -56,12 +31,19 @@ describe('DELETE /api/actor-document — le `detail` de `delete_failed` n’est 
     mockedCreate.mockReset();
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://x.supabase.co';
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon';
-    // `user_can_write_crm_actor` → true : la garde d'écriture n'est pas le sujet ici.
-    mockedCreate.mockReturnValue({ schema: () => ({ rpc: jest.fn().mockResolvedValue({ data: true, error: null }) }) } as never);
+    documentRpc.mockReset();
+    privilegedTable.mockClear();
+    storageBucket.mockClear();
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc: documentRpc }) } as never);
+    mockedServer.mockReturnValue({
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }) },
+      from: privilegedTable,
+      storage: { from: storageBucket },
+    } as never);
   });
 
-  async function del(deleteError: unknown) {
-    mockedServer.mockReturnValue(serverWith(deleteError) as never);
+  async function del(deleteError: unknown, outcome = 'deleted') {
+    documentRpc.mockResolvedValue({ data: deleteError ? null : outcome, error: deleteError });
     const res = await DELETE(req({ actorId: ACTOR_ID, documentId: DOCUMENT_ID }));
     return {
       status: res.status,
@@ -70,10 +52,31 @@ describe('DELETE /api/actor-document — le `detail` de `delete_failed` n’est 
     };
   }
 
-  it('200 quand la suppression aboutit', async () => {
+  it('retire uniquement la paire par le RPC appelant', async () => {
     const { status, payload } = await del(null);
     expect(status).toBe(200);
     expect(payload).toEqual({ deleted: true });
+    expect(documentRpc).toHaveBeenCalledTimes(1);
+    expect(documentRpc).toHaveBeenCalledWith('unlink_crm_actor_document', {
+      p_actor_id: ACTOR_ID, p_document_id: DOCUMENT_ID,
+    });
+    expect(privilegedTable).not.toHaveBeenCalled();
+    expect(storageBucket).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['forbidden', 403, 'forbidden'],
+    ['not_found', 404, 'not_found'],
+    ['file_missing', 404, 'file_missing'],
+    ['unexpected_bucket', 409, 'unexpected_bucket'],
+    ['promoted_document', 409, 'promoted_document'],
+    ['portal_photo', 409, 'delete_failed'],
+  ])('conserve le statut du retrait %s', async (outcome, code, label) => {
+    const { status, payload } = await del(null, outcome);
+    expect(status).toBe(code);
+    expect(payload.error).toBe(label);
+    expect(privilegedTable).not.toHaveBeenCalled();
+    expect(storageBucket).not.toHaveBeenCalled();
   });
 
   it('une violation de clé étrangère ne fait plus fuiter la table ni la contrainte', async () => {

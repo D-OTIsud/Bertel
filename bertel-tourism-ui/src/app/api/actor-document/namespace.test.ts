@@ -1,6 +1,6 @@
 /** @jest-environment node */
 import { POST as open } from './url/route';
-import { DELETE, PATCH } from './route';
+import { PATCH } from './route';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -33,8 +33,6 @@ function harness(options: { bucket?: string; scope?: string; status?: string; pa
   const signedUrl = () => `https://storage.example.invalid/storage/v1/object/sign/${document.storage_bucket}/${document.storage_path}?token=synthetic`;
   const createSignedUrl = jest.fn(async () => ({ data: { signedUrl: signedUrl() }, error: null }));
   const createSignedUrls = jest.fn(async () => ({ data: [{ path: document.storage_path, signedUrl: signedUrl(), error: null }], error: null }));
-  const remove = jest.fn(async () => ({ error: null }));
-  const deleteEq = jest.fn(async () => ({ error: null }));
   const reads: Array<{ table: string; filters: Array<[string, unknown]> }> = [];
   const from = jest.fn((table: string) => ({
     select: () => {
@@ -45,52 +43,25 @@ function harness(options: { bucket?: string; scope?: string; status?: string; pa
         return { data: document, error: state.metadataError ? { message: 'metadata error' } : null };
       } };
       return builder;
-    }, delete: () => ({ eq: deleteEq }),
+    },
   }));
-  const storageFrom = jest.fn(() => ({ createSignedUrl, createSignedUrls, remove }));
+  const storageFrom = jest.fn(() => ({ createSignedUrl, createSignedUrls }));
   jest.mocked(getServerSupabaseClient).mockReturnValue({ auth: { getUser: jest.fn(async () => ({ data: { user: { id: 'synthetic-user' } }, error: null })) }, from, storage: { from: storageFrom } } as never);
-  return { state, rpc, remove, deleteEq, createSignedUrl, createSignedUrls, storageFrom, reads };
+  return { state, rpc, createSignedUrl, createSignedUrls, storageFrom, reads };
 }
 
 beforeEach(() => { jest.clearAllMocks(); process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://project.example.invalid'; process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'synthetic-anon'; });
 const noSignature = (h: ReturnType<typeof harness>) => { expect(h.createSignedUrl).not.toHaveBeenCalled(); expect(h.createSignedUrls).not.toHaveBeenCalled(); };
 
-it.each(['active', 'archived'])('DELETE refuses a legal namespace for %s before either mutation', async (status) => {
-  const h = harness({ bucket: 'legal-documents', scope: 'legal_private', status });
-  expect((await DELETE(request())).status).toBe(409);
-  expect(h.remove).not.toHaveBeenCalled(); expect(h.deleteEq).not.toHaveBeenCalled();
-});
-it.each(['old_legal_media', 'documents', 'media', ''])('DELETE refuses foreign bucket %s even without a path', async (bucket) => {
-  const h = harness({ bucket, path: '' });
-  expect((await DELETE(request())).status).toBe(409);
-  expect(h.remove).not.toHaveBeenCalled(); expect(h.deleteEq).not.toHaveBeenCalled();
-});
-it('DELETE retains the promoted409 before metadata lookup', async () => {
-  const h = harness({ bucket: 'legal-documents', status: 'promoted' });
-  const response = await DELETE(request());
-  expect(response.status).toBe(409); expect((await response.json()).error).toBe('promoted_document');
-  expect(h.reads.map((r) => r.table)).toEqual(['actor_document']); expect(h.remove).not.toHaveBeenCalled(); expect(h.deleteEq).not.toHaveBeenCalled();
-});
-it('DELETE permits missing-file cleanup in actor-documents only', async () => {
-  const h = harness({ path: '' });
-  expect((await DELETE(request())).status).toBe(200);
-  expect(h.remove).not.toHaveBeenCalled(); expect(h.deleteEq).toHaveBeenCalledWith('id', DOC);
-});
-it('DELETE rechecks namespace before deleting the reference after an admitted remove', async () => {
-  const h = harness();
-  h.remove.mockImplementationOnce(async () => { h.state.document.storage_bucket = 'legal-documents'; return { error: null }; });
-  expect((await DELETE(request())).status).toBe(409);
-  expect(h.remove).toHaveBeenCalledTimes(1); expect(h.deleteEq).not.toHaveBeenCalled();
-});
-it.each(['open', 'delete'])('%s blocks a metadata error instead of signing/deleting', async (action) => {
+it('blocks a metadata error before signing', async () => {
   const h = harness(); h.state.metadataError = true;
-  expect((await (action === 'open' ? open : DELETE)(request())).status).toBeGreaterThanOrEqual(500);
-  noSignature(h); expect(h.remove).not.toHaveBeenCalled(); expect(h.deleteEq).not.toHaveBeenCalled();
+  expect((await open(request())).status).toBeGreaterThanOrEqual(500);
+  noSignature(h);
 });
-it.each(['open', 'delete'])('%s blocks a link error even with data present', async (action) => {
+it('blocks a link error even with data present', async () => {
   const h = harness(); h.state.linkError = true;
-  expect((await (action === 'open' ? open : DELETE)(request())).status).toBeGreaterThanOrEqual(500);
-  noSignature(h); expect(h.remove).not.toHaveBeenCalled(); expect(h.deleteEq).not.toHaveBeenCalled();
+  expect((await open(request())).status).toBeGreaterThanOrEqual(500);
+  noSignature(h);
 });
 it('keeps the exact actor/document link as a prerequisite', async () => {
   const h = harness({ pair: false });
@@ -146,10 +117,9 @@ it('public promoted history retains CRM-read with no canonical/legal reader depe
   const h = harness({ bucket: 'documents', scope: 'public', status: 'promoted' });
   expect((await open(request())).status).toBe(200);
   expect(h.rpc.mock.calls.map((c) => c[0])).toEqual(['user_can_read_crm_actor']);
-  expect((await DELETE(request())).status).toBe(409);
 });
 
-it('the actual PATCH-produced public reference/history still opens after its object link is gone and cannot delete', async () => {
+it('the actual PATCH-produced public reference/history still opens after its object link is gone', async () => {
   const targetId = 'bbbbbbbb-1111-4222-a333-cccccccccccc';
   const written: { document?: Row; history?: Row } = {};
   const chain = (data: unknown) => { const q = { eq: () => q, maybeSingle: async () => ({ data, error: null }) }; return q; };
@@ -182,7 +152,5 @@ it('the actual PATCH-produced public reference/history still opens after its obj
     path: written.document!.storage_path as string, status: written.history!.status as string, documentId: targetId });
   expect((await open(request(targetId))).status).toBe(200);
   expect(h.rpc.mock.calls.map((c) => c[0])).toEqual(['user_can_read_crm_actor']);
-  expect((await DELETE(request(targetId))).status).toBe(409);
-  expect(h.remove).not.toHaveBeenCalled(); expect(h.deleteEq).not.toHaveBeenCalled();
 });
 

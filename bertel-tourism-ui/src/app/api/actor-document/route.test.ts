@@ -255,45 +255,6 @@ describe('/api/actor-document DELETE', () => {
     expect(res.status).toBe(400);
     expect(rpc).not.toHaveBeenCalled();
   });
-
-  it('403 quand user_can_write_crm_actor est faux, et AUCUNE lecture ni suppression', async () => {
-    const { server, remove, from } = spiedServer();
-    mockedServer.mockReturnValue(server);
-    callerCan(false);
-    const res = await DELETE(jsonReq({ actorId: ACTOR_ID, documentId: DOC_ID }));
-    expect(res.status).toBe(403);
-    await expect(res.json()).resolves.toEqual({ error: 'forbidden' });
-    expect(from).not.toHaveBeenCalled();
-    expect(remove).not.toHaveBeenCalled();
-  });
-
-  it('supprime le fichier puis la métadonnée quand le lien existe', async () => {
-    const remove = jest.fn().mockResolvedValue({ error: null });
-    const deleteEq = jest.fn().mockResolvedValue({ error: null });
-    const linkSelect = () => ({
-      eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { status: 'draft' }, error: null }) }) }),
-    });
-    const docSelect = () => ({
-      eq: () => ({
-        maybeSingle: async () => ({
-          data: { storage_bucket: 'actor-documents', storage_path: `actors/${ACTOR_ID}/x.pdf` },
-          error: null,
-        }),
-      }),
-    });
-    mockedServer.mockReturnValue(baseServer({
-      storage: { from: jest.fn().mockReturnValue({ remove }) },
-      from: (table: string) => (table === 'actor_document'
-        ? { select: linkSelect }
-        : { select: docSelect, delete: () => ({ eq: deleteEq }) }),
-    }));
-    callerCan(true);
-    const res = await DELETE(jsonReq({ actorId: ACTOR_ID, documentId: DOC_ID }));
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ deleted: true });
-    expect(remove).toHaveBeenCalledWith([`actors/${ACTOR_ID}/x.pdf`]);
-    expect(deleteEq).toHaveBeenCalledWith('id', DOC_ID);
-  });
 });
 
 describe('/api/actor-document PATCH', () => {

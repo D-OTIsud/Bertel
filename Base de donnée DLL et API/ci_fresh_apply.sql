@@ -796,6 +796,10 @@ COMMIT;
 \ir ../supabase/migrations/20261108075514_gdpr_start_request_identity.sql
 \ir tests/test_gdpr_start_request_identity.sql
 
+\echo '== Historical detached task audit remains explicit manual review == '
+\ir ../supabase/migrations/20261108083121_gdpr_historical_task_audit_review.sql
+\ir tests/test_gdpr_historical_task_audit_review.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

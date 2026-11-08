@@ -2,6 +2,8 @@
 -- One admitted mono-recipient send consumes one slot even if SMTP later rejects or is unknown.
 -- Notifications, transport, business receipts and Vault are unchanged.
 BEGIN;
+SET LOCAL lock_timeout='3s';
+SET LOCAL statement_timeout='30s';
 SET LOCAL search_path=pg_catalog,pg_temp;
 
 -- Refuse an unexpected existing management ACL before replacing its TABLE result type.

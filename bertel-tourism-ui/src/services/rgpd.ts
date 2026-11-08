@@ -99,16 +99,30 @@ function parseErasureResult(value: unknown): ErasureResult {
     typeof value.status !== 'string' ||
     !ERASURE_STATUSES.includes(value.status) ||
     typeof value.operationId !== 'string' ||
-    value.operationId.length === 0 ||
+    !OPERATION_UUID_RE.test(value.operationId) ||
     !isPlainObject(value.report) ||
     !Array.isArray(value.tasks) ||
-    !value.tasks.every(isPlainObject) ||
+    !value.tasks.every((task) => isPlainObject(task) && ['pending', 'succeeded', 'failed'].includes(task.status as string)) ||
     typeof value.cleanupStatusUnavailable !== 'boolean' ||
     !isPlainObject(value.counts) ||
     !['total', 'succeeded', 'pending', 'failed'].every(
-      (name) => typeof (value.counts as Record<string, unknown>)[name] === 'number',
+      (name) => Number.isSafeInteger((value.counts as Record<string, unknown>)[name]) &&
+        ((value.counts as Record<string, number>)[name] >= 0),
     )
   ) {
+    throw invalidErasureEnvelope();
+  }
+  const tasks = value.tasks as Record<string, unknown>[];
+  const counts = value.counts as Record<string, number>;
+  const succeeded = tasks.filter((task) => task.status === 'succeeded').length;
+  const allDone = succeeded === tasks.length;
+  const expectedOk = allDone && value.report.manualReviewRequired !== true && !value.cleanupStatusUnavailable;
+  const expectedStatus = expectedOk ? 'completed' :
+    value.cleanupStatusUnavailable || succeeded > 0 || allDone ? 'partial' : 'failed';
+  if (counts.total !== tasks.length || counts.succeeded !== succeeded ||
+      counts.pending !== tasks.filter((task) => task.status === 'pending').length ||
+      counts.failed !== tasks.filter((task) => task.status === 'failed').length ||
+      value.ok !== expectedOk || value.status !== expectedStatus) {
     throw invalidErasureEnvelope();
   }
   return value as unknown as ErasureResult;

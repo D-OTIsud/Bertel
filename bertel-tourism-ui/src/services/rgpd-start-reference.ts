@@ -29,6 +29,7 @@ export type RgpdStartAdmission<T> =
   | { kind: 'refused' };
 
 const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const OPERATION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const FINGERPRINT_RE = /^[0-9a-f]{64}$/;
 
 export function rgpdStartReferenceKey(userId: string): string {
@@ -163,6 +164,7 @@ export function isResultBoundToRequest(result: ErasureResult, requestId: string,
   const startRequestId = result.report.startRequestId;
   return (
     typeof startRequestId === 'string' &&
+    OPERATION_ID_RE.test(result.operationId) &&
     sameId(startRequestId, requestId) &&
     !sameId(result.operationId, requestId) &&
     (operationId === undefined || sameId(result.operationId, operationId))
@@ -178,6 +180,7 @@ export function isConfirmedCompletion(result: ErasureResult, requestId: string, 
     result.cleanupStatusUnavailable === false &&
     result.report.manualReviewRequired !== true &&
     result.tasks.every((task) => task.status === 'succeeded') &&
+    result.counts.total === result.tasks.length &&
     result.counts.pending === 0 &&
     result.counts.failed === 0 &&
     result.counts.succeeded === result.counts.total

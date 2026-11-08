@@ -175,7 +175,7 @@ export function ErasureResultPanel({
           ci-dessus.
         </Callout>
       )}
-      {!isComplete && resumeButton}
+      {(!isComplete || reference) && resumeButton}
 
       <details className="text-sm">
         <summary className="cursor-pointer text-ink-3">Détail technique (rapport JSON)</summary>

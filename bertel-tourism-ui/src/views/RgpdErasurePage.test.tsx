@@ -72,6 +72,10 @@ function partialFor(requestId: string) {
     ...completedFor(requestId),
     ok: false,
     status: 'partial' as const,
+    tasks: [
+      { id: '55555555-5555-4555-8555-555555555555', action: 'storage_remove', metadata: {}, status: 'succeeded', attempts: 1, lastError: null },
+      { id: '66666666-6666-4666-8666-666666666666', action: 'storage_remove', metadata: {}, status: 'pending', attempts: 0, lastError: null },
+    ],
     counts: { total: 2, succeeded: 1, pending: 1, failed: 0 },
   };
 }
@@ -661,7 +665,11 @@ describe('RgpdErasurePage', () => {
 
     it.each<[string, (requestId: string) => unknown]>([
       ['partial', (requestId) => partialFor(requestId)],
-      ['failed', (requestId) => ({ ...partialFor(requestId), status: 'failed' })],
+      ['failed', (requestId) => ({
+        ...partialFor(requestId), status: 'failed',
+        tasks: partialFor(requestId).tasks.map((task) => ({ ...task, status: 'failed' })),
+        counts: { total: 2, succeeded: 0, pending: 0, failed: 2 },
+      })],
       ['cleanupStatusUnavailable', (requestId) => ({ ...partialFor(requestId), cleanupStatusUnavailable: true })],
     ])('%s conserve la référence et ne montre aucun succès', async (_label, build) => {
       handlers.start = async (body) => reply(build(body.requestId as string), 207);
@@ -732,6 +740,159 @@ describe('RgpdErasurePage', () => {
       expect(window.localStorage.getItem(KEY_A)).toBe(REFERENCE_A);
       expect(toast.success).not.toHaveBeenCalled();
       expect(screen.getByText(UNCONFIRMED_TITLE)).toBeInTheDocument();
+    });
+  });
+
+  describe('référence affichée et concurrence interonglets', () => {
+    it('ne reprend pas R2 à la place de R1 affichée, puis exige un nouveau clic sur R2', async () => {
+      window.localStorage.setItem(KEY_A, REFERENCE_A);
+      handlers.lookup = async () => reply({ requestId: REQUEST_ID_B, operationId: OPERATION_ID });
+      handlers.resume = async () => reply(completedFor(REQUEST_ID_B));
+      render(<RgpdErasurePage />);
+      const button = await screen.findByRole('button', { name: RESUME_BUTTON });
+      expect(screen.getByText(REQUEST_ID)).toBeInTheDocument();
+      window.localStorage.setItem(KEY_A, REFERENCE_B);
+
+      fireEvent.click(button);
+      await flush();
+
+      expect(calls('lookup')).toHaveLength(0);
+      expect(calls('resume')).toHaveLength(0);
+      expect(calls('start')).toHaveLength(0);
+      expect(window.localStorage.getItem(KEY_A)).toBe(REFERENCE_B);
+      expect(screen.queryByText(REQUEST_ID)).not.toBeInTheDocument();
+      expect(screen.getByText(REQUEST_ID_B)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: RESUME_BUTTON }));
+      await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Nettoyage repris et terminé.'));
+      expect(calls('lookup')).toEqual([{ requestId: REQUEST_ID_B }]);
+      expect(calls('resume')).toEqual([{ operationId: OPERATION_ID }]);
+    });
+
+    it('ne lance pas RESUME de R1 si R2 apparaît pendant son lookup', async () => {
+      window.localStorage.setItem(KEY_A, REFERENCE_A);
+      const lookup = deferred<Reply>();
+      handlers.lookup = () => lookup.promise;
+      handlers.resume = async () => reply(completedFor(REQUEST_ID));
+      render(<RgpdErasurePage />);
+      fireEvent.click(await screen.findByRole('button', { name: RESUME_BUTTON }));
+      await waitFor(() => expect(calls('lookup')).toEqual([{ requestId: REQUEST_ID }]));
+      window.localStorage.setItem(KEY_A, REFERENCE_B);
+      await act(async () => lookup.resolve(reply({ requestId: REQUEST_ID, operationId: OPERATION_ID })));
+      await flush();
+      expect(calls('resume')).toHaveLength(0);
+      expect(calls('start')).toHaveLength(0);
+      expect(window.localStorage.getItem(KEY_A)).toBe(REFERENCE_B);
+      expect(screen.getByText(REQUEST_ID_B)).toBeInTheDocument();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('ne mélange pas le retour completed de R1 avec R2 créée pendant RESUME', async () => {
+      window.localStorage.setItem(KEY_A, REFERENCE_A);
+      const resume = deferred<Reply>();
+      handlers.lookup = async () => reply({ requestId: REQUEST_ID, operationId: OPERATION_ID });
+      handlers.resume = () => resume.promise;
+      render(<RgpdErasurePage />);
+      fireEvent.click(await screen.findByRole('button', { name: RESUME_BUTTON }));
+      await waitFor(() => expect(calls('resume')).toHaveLength(1));
+      window.localStorage.setItem(KEY_A, REFERENCE_B);
+      await act(async () => resume.resolve(reply(completedFor(REQUEST_ID))));
+      await flush();
+      expect(window.localStorage.getItem(KEY_A)).toBe(REFERENCE_B);
+      expect(screen.getByText(REQUEST_ID_B)).toBeInTheDocument();
+      expect(screen.queryByText(OPERATION_ID)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: RESUME_BUTTON })).toBeInTheDocument();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('remplace le résultat completed R1 par la reprise R2 découverte à la confirmation', async () => {
+      render(<RgpdErasurePage />);
+      setUuidSubject();
+      await confirmAnonymize();
+      await waitFor(() => expect(toast.success).toHaveBeenCalled());
+      expect(screen.getByText('Sujet anonymisé')).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      window.localStorage.setItem(KEY_A, REFERENCE_B);
+      setUuidSubject();
+      fireEvent.click(screen.getByRole('button', { name: 'Anonymiser le sujet' }));
+      expect(screen.queryByText('Sujet anonymisé')).not.toBeInTheDocument();
+      expect(screen.queryByText(OPERATION_ID)).not.toBeInTheDocument();
+      expect(screen.getByText(REQUEST_ID_B)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: RESUME_BUTTON })).toBeInTheDocument();
+      expect(calls('start')).toHaveLength(1);
+      expect(calls('lookup')).toHaveLength(0);
+    });
+
+    it('garde la référence et sa reprise quand la lecture échoue pendant la libération', async () => {
+      const start = deferred<Reply>();
+      handlers.start = () => start.promise;
+      render(<RgpdErasurePage />);
+      setUuidSubject();
+      await confirmAnonymize();
+      await waitFor(() => expect(calls('start')).toHaveLength(1));
+      const requestId = calls('start')[0].requestId as string;
+      const getItem = Storage.prototype.getItem;
+      let reads = 0;
+      const blocked = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(function (this: Storage, key: string) {
+        if (key === KEY_A && ++reads >= 2) throw new Error('synthetic_read_refusal');
+        return getItem.call(this, key);
+      });
+      await act(async () => start.resolve(reply(completedFor(requestId))));
+      await flush();
+      expect(reads).toBeGreaterThanOrEqual(3);
+      expect(screen.getByText(requestId)).toBeInTheDocument();
+      const retry = await screen.findByRole('button', { name: RESUME_BUTTON });
+      blocked.mockRestore();
+      handlers.lookup = async () => reply({ requestId, operationId: OPERATION_ID });
+      handlers.resume = async () => reply(completedFor(requestId));
+      fireEvent.click(retry);
+      await waitFor(() => expect(window.localStorage.getItem(KEY_A)).toBeNull());
+      expect(calls('start')).toHaveLength(1);
+      expect(calls('lookup')).toEqual([{ requestId }]);
+      expect(calls('resume')).toEqual([{ operationId: OPERATION_ID }]);
+    });
+
+    it('permet de revérifier la même opération sans reload après un removeItem refusé', async () => {
+      const removeItem = Storage.prototype.removeItem;
+      const blocked = jest.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key: string) {
+        if (key === KEY_A) throw new Error('synthetic_storage_refusal');
+        removeItem.call(this, key);
+      });
+      render(<RgpdErasurePage />);
+      setUuidSubject();
+      await confirmAnonymize();
+      await waitFor(() => expect(toast.success).toHaveBeenCalled());
+      const reference = JSON.parse(window.localStorage.getItem(KEY_A) as string);
+      expect(screen.getByText('Sujet anonymisé')).toBeInTheDocument();
+      const retry = await screen.findByRole('button', { name: RESUME_BUTTON });
+      blocked.mockRestore();
+      handlers.lookup = async () => reply({ requestId: reference.requestId, operationId: OPERATION_ID });
+      handlers.resume = async () => reply(completedFor(reference.requestId));
+      fireEvent.click(retry);
+      await waitFor(() => expect(window.localStorage.getItem(KEY_A)).toBeNull());
+      expect(calls('start')).toHaveLength(1);
+      expect(calls('lookup')).toEqual([{ requestId: reference.requestId }]);
+      expect(calls('resume')).toEqual([{ operationId: OPERATION_ID }]);
+      expect(screen.queryByRole('button', { name: RESUME_BUTTON })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('résultat lié mais hors contrat', () => {
+    it.each([
+      ['operationId non UUID', { operationId: 'not-an-operation-uuid' }],
+      ['compteurs négatifs égaux', { counts: { total: -1, succeeded: -1, pending: 0, failed: 0 } }],
+      ['compteurs fractionnaires', { counts: { total: 0.5, succeeded: 0.5, pending: 0, failed: 0 } }],
+      ['total différent des tâches', { counts: { total: 1, succeeded: 1, pending: 0, failed: 0 } }],
+    ])('%s reste inconnu sans libérer la référence', async (_label, invalid) => {
+      handlers.start = async (body) => reply({ ...completedFor(body.requestId as string), ...invalid });
+      render(<RgpdErasurePage />);
+      setUuidSubject();
+      await confirmAnonymize();
+      await waitFor(() => expect(calls('start')).toHaveLength(1));
+      await flush();
+      expect(window.localStorage.getItem(KEY_A)).not.toBeNull();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(screen.queryByText('Sujet anonymisé')).not.toBeInTheDocument();
+      expect(await screen.findByText(UNCONFIRMED_TITLE)).toBeInTheDocument();
     });
   });
 

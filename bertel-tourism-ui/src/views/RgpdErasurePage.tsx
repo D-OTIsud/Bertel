@@ -62,6 +62,7 @@ interface ConfirmationState {
 
 interface DoneState {
   ownerKey: string;
+  requestId: string;
   result: ErasureResult;
   /** null quand la reprise vient d'une référence seule : sujet et mode restent inconnus. */
   subject: { mode: ErasureMode; kind: ErasureSubjectKind; id: string } | null;
@@ -181,6 +182,18 @@ function AccountErasurePage() {
   const isDelete = mode === 'delete';
   const hasSubject = subjectId.trim().length > 0;
 
+  // Un clic reste lié à la référence affichée, même si un autre onglet remplace le stockage.
+  function referenceIsCurrent(owner: Owner, reference: RgpdStartReference): boolean {
+    const stored = readStartReference(owner.userId);
+    if (stored.kind === 'present' && stored.reference.requestId === reference.requestId &&
+        stored.reference.fingerprint === reference.fingerprint) return true;
+    if (stored.kind === 'present' || stored.kind === 'absent') {
+      setDone(null);
+      setRecovery(stored.kind === 'present' ? { ownerKey: owner.key, reference: stored.reference } : null);
+    }
+    return false;
+  }
+
   function openConfirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!hasSubject) {
@@ -193,12 +206,12 @@ function AccountErasurePage() {
       return;
     }
     const stored = readStartReference(owner.userId);
+    setDone(null);
     if (stored.kind !== 'absent') {
       if (stored.kind === 'present') setRecovery({ ownerKey: owner.key, reference: stored.reference });
       toast.error("Échec de l'effacement.");
       return;
     }
-    setDone(null);
     setConfirmation({ owner, snapshot: currentSnapshot });
   }
 
@@ -242,6 +255,10 @@ function AccountErasurePage() {
       if (ownerIsCurrent(owner)) setRecovery({ ownerKey: owner.key, reference });
       const res = await admission.sent;
       if (!ownerIsCurrent(owner)) return;
+      if (!referenceIsCurrent(owner, reference)) {
+        toast.error("Échec de l'effacement.");
+        return;
+      }
 
       const confirmed = isConfirmedCompletion(res, reference.requestId);
       if (!isResultBoundToRequest(res, reference.requestId) || (res.status === 'completed' && !confirmed)) {
@@ -257,10 +274,12 @@ function AccountErasurePage() {
         });
         if (!ownerIsCurrent(owner)) return;
         if (released) setRecovery(null);
+        else if (!referenceIsCurrent(owner, reference)) return;
       }
 
       setDone({
         ownerKey: owner.key,
+        requestId: reference.requestId,
         result: res,
         subject: { mode: snapshot.mode, kind: snapshot.subjectKind, id: snapshot.subjectId },
       });
@@ -287,7 +306,7 @@ function AccountErasurePage() {
   }
 
   // Reprise explicite : référence persistée → lookup → RESUME du vrai operationId. Jamais de START.
-  async function resumeCleanup() {
+  async function resumeCleanup(reference: RgpdStartReference) {
     const owner = ownerOf(useSessionStore.getState());
     if (!owner || runRef.current || resumeRef.current) return;
     const run = {};
@@ -301,16 +320,22 @@ function AccountErasurePage() {
         toast.error('Session expirée — reconnectez-vous.');
         return;
       }
-      const stored = readStartReference(owner.userId);
-      if (stored.kind !== 'present') {
+      if (!referenceIsCurrent(owner, reference)) {
         toast.error('Échec de la reprise.');
         return;
       }
-      const { reference } = stored;
       const { operationId } = await lookupErasureStart(reference.requestId, token);
       if (!live()) return;
+      if (!referenceIsCurrent(owner, reference)) {
+        toast.error('Échec de la reprise.');
+        return;
+      }
       const res = await resumeErasureCleanup(operationId, token);
       if (!live()) return;
+      if (!referenceIsCurrent(owner, reference)) {
+        toast.error('Échec de la reprise.');
+        return;
+      }
 
       const confirmed = isConfirmedCompletion(res, reference.requestId, operationId);
       if (!isResultBoundToRequest(res, reference.requestId, operationId) || (res.status === 'completed' && !confirmed)) {
@@ -327,13 +352,16 @@ function AccountErasurePage() {
         });
         if (!live()) return;
         if (released) setRecovery(null);
+        else if (!referenceIsCurrent(owner, reference)) return;
       }
 
       setDone((previous) => ({
         ownerKey: owner.key,
+        requestId: reference.requestId,
         result: res,
         subject:
-          previous?.ownerKey === owner.key && previous.result.operationId.toLowerCase() === operationId.toLowerCase()
+          previous?.ownerKey === owner.key && previous.requestId === reference.requestId &&
+          previous.result.operationId.toLowerCase() === operationId.toLowerCase()
             ? previous.subject
             : null,
       }));
@@ -353,8 +381,9 @@ function AccountErasurePage() {
   }
 
   // Tout état d'un autre compte/epoch est masqué dès ce rendu, sans attendre l'effet de reset.
-  const visibleDone = done?.ownerKey === ownerKey ? done : null;
   const visibleRecovery = recovery?.ownerKey === ownerKey ? recovery : null;
+  const visibleDone = done?.ownerKey === ownerKey &&
+    (!visibleRecovery || done.requestId === visibleRecovery.reference.requestId) ? done : null;
   const visibleConfirmation = confirmation?.owner.key === ownerKey ? confirmation : null;
   const dialogSnapshot = visibleConfirmation?.snapshot ?? currentSnapshot;
   const dialogIsDelete = dialogSnapshot.mode === 'delete';
@@ -458,7 +487,7 @@ function AccountErasurePage() {
           subjectLabel={visibleDone.subject ? ERASURE_KIND_LABELS[visibleDone.subject.kind] : undefined}
           subjectId={visibleDone.subject?.id}
           reference={visibleRecovery?.reference.requestId}
-          onResume={resumeCleanup}
+          onResume={visibleRecovery ? () => resumeCleanup(visibleRecovery.reference) : undefined}
           resuming={resuming}
         />
       ) : (
@@ -466,7 +495,7 @@ function AccountErasurePage() {
         !busy && (
           <ErasureResultPanel
             reference={visibleRecovery.reference.requestId}
-            onResume={resumeCleanup}
+            onResume={() => resumeCleanup(visibleRecovery.reference)}
             resuming={resuming}
           />
         )

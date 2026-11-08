@@ -6,7 +6,7 @@ const OPERATION_ID = '22222222-2222-4222-8222-222222222222';
 const completedResult = {
   ok: true,
   status: 'completed',
-  operationId: 'op-1',
+  operationId: OPERATION_ID,
   report: { actor: 'a1' },
   tasks: [],
   cleanupStatusUnavailable: false,
@@ -40,7 +40,7 @@ describe('requestErasure', () => {
       requestId: REQUEST_ID, subjectKind: 'actor', subjectId: 'a1', mode: 'anonymize', reason: 'demande X',
     });
     expect(res.report).toEqual({ actor: 'a1' });
-    expect(res.operationId).toBe('op-1');
+    expect(res.operationId).toBe(OPERATION_ID);
   });
 
   it('throws the server detail on a non-ok response (e.g. 403 gate)', async () => {
@@ -62,7 +62,11 @@ describe('requestErasure', () => {
   });
 
   it('surfaces a partial/incomplete result without throwing (ok=false is data, not an HTTP error)', async () => {
-    const partial = { ...completedResult, ok: false, status: 'partial', counts: { total: 2, succeeded: 1, pending: 1, failed: 0 } };
+    const partial = {
+      ...completedResult, ok: false, status: 'partial',
+      tasks: [{ status: 'succeeded' }, { status: 'pending' }],
+      counts: { total: 2, succeeded: 1, pending: 1, failed: 0 },
+    };
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => partial }) as unknown as typeof fetch;
     const res = await requestErasure({ requestId: REQUEST_ID, subjectKind: 'actor', subjectId: 'a1', mode: 'delete', accessToken: 't' });
     expect(res.ok).toBe(false);
@@ -74,6 +78,13 @@ describe('requestErasure', () => {
     ['statut inconnu', { ...completedResult, status: 'unknown' }],
     ['report absent', { ...completedResult, report: undefined }],
     ['compteurs incomplets', { ...completedResult, counts: { total: 0 } }],
+    ['operationId non UUID', { ...completedResult, operationId: 'op-1' }],
+    ['compteurs négatifs', { ...completedResult, counts: { total: -1, succeeded: -1, pending: 0, failed: 0 } }],
+    ['compteurs fractionnaires', { ...completedResult, counts: { total: 0.5, succeeded: 0.5, pending: 0, failed: 0 } }],
+    ['total différent des tâches', { ...completedResult, counts: { total: 1, succeeded: 1, pending: 0, failed: 0 } }],
+    ['compte par statut incorrect', { ...completedResult, tasks: [{ status: 'pending' }], counts: { total: 1, succeeded: 1, pending: 0, failed: 0 } }],
+    ['statut de tâche inconnu', { ...completedResult, tasks: [{ status: 'unknown' }], counts: { total: 1, succeeded: 1, pending: 0, failed: 0 } }],
+    ['succès incompatible', { ...completedResult, ok: false }],
   ])('rejects a response outside the ErasureResult contract: %s', async (_label, payload) => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => payload }) as unknown as typeof fetch;
     await expect(

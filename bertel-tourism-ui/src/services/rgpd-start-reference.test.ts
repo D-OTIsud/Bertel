@@ -241,6 +241,10 @@ describe('liaison du résultat', () => {
     ['revue manuelle', { ...completed, report: { startRequestId: REQUEST_ID, manualReviewRequired: true } }],
     ['tâche en attente', { ...completed, counts: { total: 1, succeeded: 0, pending: 1, failed: 0 } }],
     ['autre START', { ...completed, report: { startRequestId: OPERATION_ID } }],
+    ['operationId non UUID', { ...completed, operationId: 'not-a-uuid' }],
+    ['compteurs négatifs égaux', { ...completed, counts: { total: -1, succeeded: -1, pending: 0, failed: 0 } }],
+    ['compteurs fractionnaires', { ...completed, counts: { total: 0.5, succeeded: 0.5, pending: 0, failed: 0 } }],
+    ['total différent des tâches', { ...completed, counts: { total: 1, succeeded: 1, pending: 0, failed: 0 } }],
   ])("n'accepte pas comme confirmé : %s", (_label, result) => {
     expect(isConfirmedCompletion(result, REQUEST_ID)).toBe(false);
   });

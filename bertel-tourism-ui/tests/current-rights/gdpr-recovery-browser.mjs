@@ -152,18 +152,15 @@ export async function testGdprRecoveryBrowser({ local, commit, writerId, email, 
               await bounded(scene.releaseResume.promise, 'owned completed RESUME response was not released');
             }
           }
-          await route.fulfill({ response }).catch((error) => {
-            // A deliberately held A request may have been aborted by the actual authority change.
-            if (!scene.closing && !(kind === 'lookup' && scene.activeId !== writerId)) throw error;
-          });
+          await route.fulfill({ response });
           if (kind === 'lookup') scene.completedLookups++;
         } catch {
           if (!scene.closing) errors.push('unexpected_recovery_browser_contract');
           await route.abort().catch(() => {});
         }
       });
-      context.on('requestfinished', (request) => { if (request === scene.heldRequest) scene.lookupTerminal.release(); if (request === scene.heldResumeRequest) scene.resumeTerminal.release(); });
-      context.on('requestfailed', (request) => { if (request === scene.heldRequest) scene.lookupTerminal.release(); if (request === scene.heldResumeRequest) scene.resumeTerminal.release(); });
+      context.on('requestfinished', (request) => { if (request === scene.heldRequest) scene.lookupTerminal.release('requestfinished'); if (request === scene.heldResumeRequest) scene.resumeTerminal.release(); });
+      context.on('requestfailed', (request) => { if (request === scene.heldRequest) scene.lookupTerminal.release('requestfailed'); if (request === scene.heldResumeRequest) scene.resumeTerminal.release(); });
       scene.page = await context.newPage();
       scene.page.on('pageerror', () => { if (!scene.closing) errors.push('recovery_page_error'); });
       return scene;
@@ -171,7 +168,7 @@ export async function testGdprRecoveryBrowser({ local, commit, writerId, email, 
 
     async function signIn(scene, id, credentials) {
       scene.activeId = id;
-      await scene.page.goto(loginUrl);
+      if (scene.page.url() !== loginUrl) await scene.page.goto(loginUrl);
       const forgot = scene.page.getByRole('button', { name: 'Mot de passe oublié ?', exact: true });
       const back = scene.page.getByRole('button', { name: 'Retour à la connexion', exact: true });
       const submit = scene.page.getByRole('button', { name: 'Se connecter', exact: true });
@@ -235,20 +232,27 @@ export async function testGdprRecoveryBrowser({ local, commit, writerId, email, 
     assert.equal(await stored(recovery, writerId), recovery.stored);
     await check(recovery.page.getByText(recovery.requestId, { exact: true })).toBeVisible();
     assert.equal(sceneCalls(recovery, 'start').length, 1);
+    // Set once in this document, never in addInitScript: a full navigation must fail this proof.
+    const recoveryDocument = randomUUID();
+    await recovery.page.evaluate((sentinel) => { window.__gdprRecoveryDocument = sentinel; }, recoveryDocument);
     recovery.holdLookup = true;
     await recovery.page.getByRole('button', { name: resumeName, exact: true }).click();
     await check.poll(() => sceneCalls(recovery, 'lookup').length).toBe(1);
     await bounded(recovery.lookupSeen.promise, 'real A lookup did not complete before the account transition');
     await signOut(recovery);
     await signIn(recovery, secondAccount.id, secondAccount);
+    assert.equal(await recovery.page.evaluate(() => window.__gdprRecoveryDocument), recoveryDocument,
+      'real logout/login must preserve the document that owns the held A lookup');
     await check(recovery.page.getByText(unknownTitle, { exact: true })).toHaveCount(0);
     await check(recovery.page.getByRole('button', { name: resumeName, exact: true })).toHaveCount(0);
     await check(recovery.page.getByText(recovery.requestId, { exact: true })).toHaveCount(0);
     assert.equal(await stored(recovery, writerId), recovery.stored);
     assert.equal(await stored(recovery, secondAccount.id), null);
     recovery.releaseLookup.release();
-    await bounded(recovery.lookupTerminal.promise, 'held A request had no observed terminal browser event');
+    assert.equal(await bounded(recovery.lookupTerminal.promise, 'held A request had no observed terminal browser event'),
+      'requestfinished', 'held A lookup must actually finish under B, not be discarded by navigation or abort');
     await check.poll(() => recovery.completedLookups).toBe(1);
+    assert.equal(await recovery.page.evaluate(() => window.__gdprRecoveryDocument), recoveryDocument);
     // A positive current B frame is required; do not turn a permission-denied page into isolation proof.
     await check(recovery.page.getByRole('button', { name: 'Anonymiser le sujet', exact: true })).toBeVisible();
     await recovery.page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
@@ -298,7 +302,7 @@ export async function testGdprRecoveryBrowser({ local, commit, writerId, email, 
     await bounded(absent.lookupSeen.promise, 'real missing lookup was not observed');
     await check(absent.page.getByRole('button', { name: 'Reprise en cours…', exact: true })).toBeDisabled();
     absent.releaseLookup.release();
-    await bounded(absent.lookupTerminal.promise, 'missing lookup had no terminal browser event');
+    assert.equal(await bounded(absent.lookupTerminal.promise, 'missing lookup had no terminal browser event'), 'requestfinished');
     await check.poll(() => absent.completedLookups).toBe(1);
     await check(absent.page.getByRole('button', { name: resumeName, exact: true })).toBeEnabled();
     assert.equal(sceneCalls(absent, 'start').length, 1, 'missing lookup must not fall back to START');

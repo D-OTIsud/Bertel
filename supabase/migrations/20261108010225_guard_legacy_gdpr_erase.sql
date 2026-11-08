@@ -43,6 +43,27 @@ BEGIN
   REVOKE EXECUTE ON FUNCTION api.rpc_gdpr_erase_subject(text,text,text,text)
     FROM PUBLIC, anon, authenticated, service_role;
 
+  -- Reject a changed predecessor before committing the privilege update.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc
+     WHERE oid = v_erase
+       AND oid = to_regprocedure('api.rpc_gdpr_erase_subject(text,text,text,text)')
+       AND proowner = 'postgres'::regrole
+       AND prosecdef
+       AND proconfig = ARRAY['search_path=pg_catalog, public, api, auth, audit']
+       AND md5(prosrc) = 'e2105031945db1ef4efd383e6493a9b0'
+  ) THEN
+    RAISE EXCEPTION 'Legacy GDPR erasure predecessor changed';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+    CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) a
+     WHERE p.oid = v_erase AND a.grantee <> p.proowner
+  ) THEN
+    RAISE EXCEPTION 'Legacy GDPR erasure retains a non-owner grant';
+  END IF;
+
   IF has_function_privilege('anon', v_erase::oid, 'EXECUTE')
      OR has_function_privilege('authenticated', v_erase::oid, 'EXECUTE')
      OR has_function_privilege('service_role', v_erase::oid, 'EXECUTE') THEN

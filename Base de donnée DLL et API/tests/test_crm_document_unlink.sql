@@ -31,6 +31,7 @@ DECLARE
   v_receipts_before bigint;
   v_started timestamptz := clock_timestamp();
   v_api_role text;
+  v_failed_constraint text;
 BEGIN
   SELECT count(*) INTO v_receipts_before FROM internal.crm_document_detachment;
   FOREACH v_api_role IN ARRAY ARRAY['anon','authenticated','service_role'] LOOP
@@ -137,12 +138,16 @@ BEGIN
   BEGIN
     PERFORM api.unlink_crm_actor_document(v_actor,v_shared);
     RAISE EXCEPTION 'receipt failure must abort the actor unlink';
-  EXCEPTION WHEN check_violation THEN NULL;
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_failed_constraint = CONSTRAINT_NAME;
+    ASSERT v_failed_constraint='receipt_fixture_refusal';
   END;
   BEGIN
     PERFORM api.unlink_crm_task_document(v_task,v_shared);
     RAISE EXCEPTION 'receipt failure must abort the task unlink';
-  EXCEPTION WHEN check_violation THEN NULL;
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_failed_constraint = CONSTRAINT_NAME;
+    ASSERT v_failed_constraint='receipt_fixture_refusal';
   END;
   RESET ROLE;
   ASSERT EXISTS (SELECT 1 FROM public.actor_document WHERE actor_id=v_actor AND document_id=v_shared);

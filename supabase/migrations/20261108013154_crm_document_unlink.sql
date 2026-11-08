@@ -18,7 +18,7 @@ CREATE TABLE internal.crm_document_detachment (
     (storage_bucket IS NULL AND storage_path IS NULL)
     OR (storage_bucket IS NOT NULL AND storage_bucket = 'actor-documents'
       AND storage_path IS NOT NULL AND storage_path <> ''
-      AND storage_path !~ '(^/|^[A-Za-z][A-Za-z0-9+.-]*:|[?#[:cntrl:]])')
+      AND storage_path !~ '(^[[:space:]]*/|^[[:space:]]*[A-Za-z][A-Za-z0-9+.-]*:|[?#[:cntrl:]])')
   )
 );
 ALTER TABLE internal.crm_document_detachment OWNER TO postgres;
@@ -116,7 +116,7 @@ BEGIN
   END IF;
 
   -- Ne recopier aucun URL, même si un ancien storage_path est mal formé.
-  IF COALESCE(v_path, '') = '' OR v_path ~ '(^/|^[A-Za-z][A-Za-z0-9+.-]*:|[?#[:cntrl:]])' THEN
+  IF COALESCE(v_path, '') = '' OR v_path ~ '(^[[:space:]]*/|^[[:space:]]*[A-Za-z][A-Za-z0-9+.-]*:|[?#[:cntrl:]])' THEN
     v_bucket := NULL;
     v_path := NULL;
   END IF;
@@ -180,7 +180,7 @@ BEGIN
     RETURN 'unexpected_bucket';
   END IF;
   IF v_bucket IS DISTINCT FROM 'actor-documents' OR COALESCE(v_path, '') = ''
-    OR v_path ~ '(^/|^[A-Za-z][A-Za-z0-9+.-]*:|[?#[:cntrl:]])' THEN
+    OR v_path ~ '(^[[:space:]]*/|^[[:space:]]*[A-Za-z][A-Za-z0-9+.-]*:|[?#[:cntrl:]])' THEN
     v_bucket := NULL;
     v_path := NULL;
   END IF;

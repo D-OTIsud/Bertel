@@ -20,6 +20,7 @@ DECLARE
   v_wrong_bucket uuid := gen_random_uuid();
   v_empty_path uuid := gen_random_uuid();
   v_url_path uuid := gen_random_uuid();
+  v_valid_spaced_path uuid := gen_random_uuid();
   v_promoted uuid := gen_random_uuid();
   v_portal uuid := gen_random_uuid();
   v_portal_path uuid := gen_random_uuid();
@@ -68,7 +69,8 @@ BEGIN
     (v_foreign,'storage://actor-documents/unlink/foreign.pdf','actor-documents','unlink/foreign.pdf','crm_private','{}'),
     (v_wrong_bucket,'https://example.invalid/unlink/wrong.pdf','documents','unlink/wrong.pdf','public','{}'),
     (v_empty_path,'https://example.invalid/unlink/empty.pdf','documents','','public','{}'),
-    (v_url_path,'https://example.invalid/unlink/url.pdf','actor-documents','https://example.invalid/private?token=synthetic','crm_private','{}'),
+    (v_url_path,'https://example.invalid/unlink/url.pdf','actor-documents',' https://example.invalid/private','crm_private','{}'),
+    (v_valid_spaced_path,'storage://actor-documents/ valid name.pdf','actor-documents',' valid name.pdf','crm_private','{}'),
     (v_promoted,'https://example.invalid/unlink/promoted.pdf','documents','unlink/promoted.pdf','public','{}'),
     (v_portal,'storage://actor-documents/unlink/portal.jpg','actor-documents','unlink/portal.jpg','crm_private','{"source":"portal_photo"}'),
     (v_portal_path,'storage://actor-documents/portal-photos/unlink/portal.jpg','actor-documents','portal-photos/unlink/portal.jpg','crm_private','{}'),
@@ -76,13 +78,15 @@ BEGIN
   SELECT to_jsonb(d) INTO STRICT v_snapshot FROM public.ref_document d WHERE d.id=v_shared;
   INSERT INTO public.actor_document(actor_id,document_id) VALUES
     (v_actor,v_shared),(v_other_actor,v_shared),(v_other_actor,v_foreign),(v_actor,v_wrong_bucket),
-    (v_actor,v_portal),(v_actor,v_portal_path),(v_test_actor,v_test_doc);
+    (v_actor,v_portal),(v_actor,v_portal_path),(v_test_actor,v_test_doc),
+    (v_actor,v_url_path),(v_actor,v_valid_spaced_path);
   INSERT INTO public.actor_document(actor_id,document_id,status,promoted_to_object_id,promoted_document_id,promoted_at)
     VALUES(v_actor,v_promoted,'promoted','HOTRUN999999AR01',v_promoted,now());
   INSERT INTO public.crm_task_document(task_id,document_id,title) VALUES
     (v_task,v_shared,'Shared'),(v_other_task,v_shared,'Shared elsewhere'),(v_other_task,v_foreign,'Foreign'),
     (v_task,v_wrong_bucket,'Wrong bucket'),(v_task,v_empty_path,'Empty path'),(v_task,v_portal,'Separate task link'),
     (v_task_without_actor,v_empty_path,'Shared empty locator'),(v_task,v_url_path,'Malformed legacy locator'),
+    (v_task,v_valid_spaced_path,'Valid literal key'),
     (v_test_task,v_test_doc,'Sandbox witness');
   INSERT INTO public.actor_consent(actor_id,channel,consent_given,document_id)
     VALUES(v_other_actor,'email',true,v_shared);
@@ -166,6 +170,9 @@ BEGIN
   ASSERT api.unlink_crm_task_document(v_task,v_empty_path)='deleted';
   ASSERT api.unlink_crm_task_document(v_task_without_actor,v_empty_path)='deleted';
   ASSERT api.unlink_crm_task_document(v_task,v_url_path)='deleted';
+  ASSERT api.unlink_crm_actor_document(v_actor,v_url_path)='deleted';
+  ASSERT api.unlink_crm_actor_document(v_actor,v_valid_spaced_path)='deleted';
+  ASSERT api.unlink_crm_task_document(v_task,v_valid_spaced_path)='deleted';
   ASSERT api.unlink_crm_actor_document(v_actor,v_shared)='deleted';
   ASSERT api.unlink_crm_actor_document(v_actor,v_shared)='not_found';
   ASSERT api.unlink_crm_task_document(v_task,v_shared)='deleted';
@@ -177,14 +184,14 @@ BEGIN
   ASSERT EXISTS (SELECT 1 FROM public.crm_task_document WHERE task_id=v_other_task AND document_id=v_shared);
   ASSERT EXISTS (SELECT 1 FROM public.actor_consent WHERE actor_id=v_other_actor AND document_id=v_shared);
   ASSERT (SELECT count(*) FROM public.ref_document WHERE id IN
-    (v_shared,v_foreign,v_wrong_bucket,v_empty_path,v_url_path,v_promoted,v_portal,v_portal_path,v_test_doc))=9;
+    (v_shared,v_foreign,v_wrong_bucket,v_empty_path,v_url_path,v_valid_spaced_path,v_promoted,v_portal,v_portal_path,v_test_doc))=10;
   ASSERT EXISTS (SELECT 1 FROM public.actor_document WHERE actor_id=v_actor AND document_id=v_portal);
   ASSERT EXISTS (SELECT 1 FROM public.actor_document WHERE actor_id=v_actor AND document_id=v_portal_path);
   ASSERT EXISTS (SELECT 1 FROM public.actor_document WHERE actor_id=v_actor AND document_id=v_promoted AND status='promoted');
   ASSERT EXISTS (SELECT 1 FROM public.actor_document WHERE actor_id=v_test_actor AND document_id=v_test_doc);
   ASSERT EXISTS (SELECT 1 FROM public.crm_task_document WHERE task_id=v_test_task AND document_id=v_test_doc);
   -- Exactly one trace per deleted edge; absent pairs and all refusals add none.
-  ASSERT (SELECT count(*) FROM internal.crm_document_detachment)=v_receipts_before+6;
+  ASSERT (SELECT count(*) FROM internal.crm_document_detachment)=v_receipts_before+9;
   ASSERT (SELECT count(*) FROM internal.crm_document_detachment
     WHERE parent_kind='actor' AND parent_id=v_actor AND document_id=v_shared
       AND subject_actor_id=v_actor AND storage_bucket='actor-documents' AND storage_path='unlink/shared.pdf'
@@ -199,11 +206,26 @@ BEGIN
   ASSERT (SELECT count(*) FROM internal.crm_document_detachment
     WHERE parent_kind='task' AND parent_id=v_task AND document_id IN(v_empty_path,v_url_path)
       AND subject_actor_id=v_actor AND storage_bucket IS NULL AND storage_path IS NULL)=2;
+  ASSERT (SELECT count(*) FROM internal.crm_document_detachment
+    WHERE parent_kind='actor' AND parent_id=v_actor AND document_id=v_url_path
+      AND subject_actor_id=v_actor AND storage_bucket IS NULL AND storage_path IS NULL)=1;
+  ASSERT (SELECT count(*) FROM internal.crm_document_detachment
+    WHERE document_id=v_valid_spaced_path AND subject_actor_id=v_actor
+      AND storage_bucket='actor-documents' AND storage_path=' valid name.pdf' AND detached_by=v_writer)=2;
+  BEGIN
+    INSERT INTO internal.crm_document_detachment (
+      parent_kind,parent_id,document_id,storage_bucket,storage_path,detached_by
+    ) VALUES ('actor',v_actor,v_url_path,'actor-documents',' https://example.invalid/private',v_writer);
+    RAISE EXCEPTION 'the receipt constraint must reject an absolute locator after whitespace';
+  EXCEPTION WHEN check_violation THEN
+    GET STACKED DIAGNOSTICS v_failed_constraint = CONSTRAINT_NAME;
+    ASSERT v_failed_constraint='crm_document_detachment_locator_pair';
+  END;
   -- A later fixture parent/catalogue deletion must not erase detached provenance.
   DELETE FROM public.crm_task WHERE id=v_task_without_actor;
   DELETE FROM public.ref_document WHERE id=v_empty_path;
   DELETE FROM public.actor WHERE id=v_actor;
-  ASSERT (SELECT count(*) FROM internal.crm_document_detachment)=v_receipts_before+6;
+  ASSERT (SELECT count(*) FROM internal.crm_document_detachment)=v_receipts_before+9;
 END;
 $test$;
 ROLLBACK;

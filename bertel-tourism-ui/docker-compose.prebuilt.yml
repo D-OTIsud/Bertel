@@ -4,6 +4,9 @@ services:
   bertel-tourism-ui:
     image: "bertel-candidate:${SOURCE_COMMIT:?Exact reviewed source commit is required}"
     pull_policy: never
+    cpus: 2.0
+    mem_limit: "2g"
+    pids_limit: 512
     ports:
       - "127.0.0.1:8081:3000"
       - "[::1]:8081:3000"

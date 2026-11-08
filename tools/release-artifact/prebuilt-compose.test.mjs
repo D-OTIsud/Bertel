@@ -77,7 +77,7 @@ after(async () => {
   await rm(actual, { recursive: true, force: true });
 });
 
-test('native rendering changes only build -> image and pull_policy, preserving the full service', async () => {
+test('native rendering adds only image, pull policy and reviewed prebuilt resource caps', async () => {
   const current = parsed(await render(source, sourceSha));
   const candidate = parsed(await render(prebuilt, sourceSha));
   assert.deepEqual(Object.keys(current.services), [serviceName], 'positive service witness');
@@ -95,6 +95,7 @@ test('native rendering changes only build -> image and pull_policy, preserving t
   delete expected.services[serviceName].build;
   expected.services[serviceName].image = `bertel-candidate:${sourceSha}`;
   expected.services[serviceName].pull_policy = 'never';
+  Object.assign(expected.services[serviceName], { cpus: 2, mem_limit: String(2 * 1024 ** 3), pids_limit: 512 });
   assert.deepEqual(candidate, expected);
 });
 
@@ -124,10 +125,12 @@ test('B1 rescue pins its image and source and stays closed despite the current c
   const rescue = parsed(await render(closedB1, 'b'.repeat(40), 'protocol-v1'));
   const expected = structuredClone(candidate);
   const service = expected.services[serviceName];
+  // The historical B1 rescue stays unchanged; these caps apply to the current prebuilt service.
+  for (const key of ['cpus', 'mem_limit', 'pids_limit']) delete service[key];
   service.image = 'bertel-candidate:a6be99c970e5a0cc5a30e26b39a38a461766b9b6';
   service.environment.SOURCE_COMMIT = 'a6be99c970e5a0cc5a30e26b39a38a461766b9b6';
   service.environment.LIST_EMAIL_MODE = 'closed';
-  assert.deepEqual(rescue, expected, 'only the B1 image/source pins and closed mode may differ');
+  assert.deepEqual(rescue, expected, 'only the B1 pins, closed mode and current prebuilt resource caps may differ');
   assert.deepEqual(new Set(rescue.services[serviceName].ports.map(({ host_ip }) => host_ip)),
     new Set(['127.0.0.1', '::1']));
   for (const { published, target, protocol } of rescue.services[serviceName].ports) {

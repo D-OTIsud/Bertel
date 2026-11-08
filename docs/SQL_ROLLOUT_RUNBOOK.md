@@ -499,6 +499,18 @@ provider n'est exécuté ici. Le traitement exclusif des tâches, la récupérat
 intentions inconnues et le retrait de tous les writers legacy/privilégiés restent
 des conditions de l'activation future.
 
+La migration `20261108074602` s'applique après ces trois versions et refuse (`55000`)
+toute file contenant une tâche non réussie : un claim ne peut pas être inventé pour
+un envoi antérieur. Chaque tâche prend un claim durable, lié à sa cible normalisée,
+avant tout effet Storage ou Auth. Un alias se rattache au reçu de la cible, y compris
+depuis une autre opération, et ne réussit qu'avec lui. Une tentative sans issue connue
+reste définitive : aucun TTL, aucune reprise, et `avatar_upload_allowed` reste faux.
+Sa résolution est une décision manuelle du propriétaire, non outillée ici.
+L'ancien acquittement à quatre arguments échoue en `55000`. Les RPC restent réservées
+au propriétaire jusqu'à une release explicite ; un rejeu de `20261108070035` est
+ensuite refusé par son préflight. Le test `tests/test_gdpr_cleanup_claims.sql` n'est
+pas inscrit au manifeste et doit s'exécuter après cette migration.
+
 L'effacement d'un acteur inventorie ses bibliothèques, ses consentements, les pièces
 de ses tâches et les reçus de détachement et d'upload. Seul un lien vivant du sujet
 peut conduire à un `DELETE` du catalogue et à une tâche `storage_remove`, et seulement

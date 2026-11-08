@@ -67,6 +67,19 @@ function serverClient(opts: {
     storage: { from: jest.fn().mockReturnValue({ remove }) },
     from: jest.fn().mockReturnValue({ select: jest.fn().mockReturnValue({ eq: jest.fn().mockReturnValue({ maybeSingle }) }) }),
     ...apiClient({
+      // Claim admis par défaut : le contrat d'exclusivité est testé dans cleanup-claims.test.ts.
+      rpc_gdpr_claim_cleanup_task: (params) => {
+        const p = params as Record<string, unknown>;
+        return {
+          data: {
+            operationId: p.p_operation_id, taskId: p.p_task_id, attemptId: p.p_attempt_id,
+            action: p.p_expected_action, metadata: p.p_expected_metadata, targetKey: p.p_target_key,
+            claimOutcome: 'claimed',
+          },
+          error: null,
+        };
+      },
+      rpc_gdpr_refuse_cleanup_task: () => ({ data: { status: 'failed' }, error: null }),
       ...opts.handlers,
       rpc_gdpr_get_cleanup_status: (params) => {
         if ((params as { p_operation_id: unknown }).p_operation_id === null) {
@@ -307,7 +320,7 @@ describe('start flow', () => {
           },
           error: null,
         }),
-        rpc_gdpr_ack_cleanup_task: (params) => {
+        rpc_gdpr_ack_cleanup_attempt: (params) => {
           acked = params;
           return { data: { id: TASK_ID, status: 'succeeded', attempts: 1 }, error: null };
         },
@@ -340,7 +353,7 @@ describe('start flow', () => {
           },
           error: null,
         }),
-        rpc_gdpr_ack_cleanup_task: () => { throw new Error('network blip'); },
+        rpc_gdpr_ack_cleanup_attempt: () => { throw new Error('network blip'); },
       },
     });
     mockedServer.mockReturnValue(server as never);
@@ -369,7 +382,7 @@ describe('start flow', () => {
           }
           return { data: null, error: { message: 'db down' } };
         },
-        rpc_gdpr_ack_cleanup_task: () => ({ data: { id: TASK_ID, status: 'succeeded', attempts: 1 }, error: null }),
+        rpc_gdpr_ack_cleanup_attempt: () => ({ data: { id: TASK_ID, status: 'succeeded', attempts: 1 }, error: null }),
       },
     });
     mockedServer.mockReturnValue(server as never);
@@ -534,7 +547,9 @@ describe('storage path hardening', () => {
           data: { operationId: OPERATION_ID, subjectKind, subjectId: TARGET_ID, mode: 'anonymize', report: {}, tasks: [taskWith(metadata)] },
           error: null,
         }),
-        rpc_gdpr_ack_cleanup_task: (params) => {
+        rpc_gdpr_ack_cleanup_attempt: () => ({ data: { id: TASK_ID, status: 'succeeded', attempts: 1 }, error: null }),
+        // Une cible refusée n'a rien à réclamer : le refus passe par la RPC dédiée, sans tentative.
+        rpc_gdpr_refuse_cleanup_task: (params) => {
           ackSpy(params);
           return { data: { id: TASK_ID, status: 'failed', attempts: 1 }, error: null };
         },
@@ -550,7 +565,7 @@ describe('storage path hardening', () => {
     const ack = jest.fn();
     await runResumeWith({ raw_url: 'https://evil.example.com/storage/v1/object/public/media/x.jpg' }, remove, ack);
     expect(remove).not.toHaveBeenCalled();
-    expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_success: false }));
+    expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_error: 'unresolved_external_or_invalid_reference' }));
   });
 
   it('rejects embedded credentials in the URL', async () => {
@@ -666,7 +681,7 @@ describe('storage path hardening', () => {
       const ack = jest.fn();
       await runResumeWith(metadata, remove, ack, 'user');
       expect(remove).not.toHaveBeenCalled();
-      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_success: false, p_error: 'unresolved_external_or_invalid_reference' }));
+      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_error: 'unresolved_external_or_invalid_reference' }));
     });
 
     it('refuses an avatar key on a non-user operation even under the subject prefix', async () => {
@@ -674,7 +689,7 @@ describe('storage path hardening', () => {
       const ack = jest.fn();
       await runResumeWith({ bucket: 'avatars', path: `${TARGET_ID}/avatar.jpg` }, remove, ack, 'actor');
       expect(remove).not.toHaveBeenCalled();
-      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_success: false }));
+      expect(ack).toHaveBeenCalledWith(expect.objectContaining({ p_error: 'unresolved_external_or_invalid_reference' }));
     });
 
     it('keeps the existing completion rule for a fully processed user operation', async () => {
@@ -724,7 +739,7 @@ describe('resume — never re-erases, auth_delete re-verified against CURRENT st
       deleteUserMock: opts.deleteUserMock,
       handlers: {
         rpc_gdpr_get_cleanup_status: () => ({ data: operation, error: null }),
-        rpc_gdpr_ack_cleanup_task: ack,
+        rpc_gdpr_ack_cleanup_attempt: ack,
       },
     });
     mockedServer.mockReturnValue(server as never);

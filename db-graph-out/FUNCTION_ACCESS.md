@@ -77,6 +77,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/assert_staging_batch_integrity`
 - **object types served:** —
 
+### `api.attach_crm_document_upload(p_upload_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** Exécution directe réservée à authenticated ; rattache l’intention et revérifie les droits courants, y compris au replay.
+- **object types served:** **all object types**
+
 ### `api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)`
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/audit_legal_compliance`
@@ -260,6 +265,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `uuid`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/configure_sandbox_discovery_user`
 - **object types served:** **all object types**
+
+### `api.confirm_crm_document_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint, p_mime_type text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** Exécution directe réservée à service_role ; confirmation serveur du reçu d’upload.
+- **object types served:** —
+- _Only the trusted uploader can acknowledge the exact prepared bytes and locator._
 
 ### `api.count_notifications_blocked_no_smtp()` _(DEFINER)_
 - **returns:** `integer`
@@ -1627,6 +1638,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/portal_photo_upload_context`
 - **object types served:** **all object types**
 
+### `api.prepare_crm_document_upload(p_upload_id uuid, p_parent_kind text, p_parent_id uuid, p_title text, p_mime_type text, p_extension text, p_size_bytes bigint, p_sha256 text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** Exécution directe réservée à authenticated ; prépare une intention privée sous les droits CRM courants.
+- **object types served:** —
+
 ### `api.prepare_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_fingerprint text, p_recipient_fingerprint text, p_expected_generation bigint, p_confirm_resend boolean DEFAULT false, p_confirmed_previous_operation_ids uuid[] DEFAULT '{}'::uuid[])`
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/prepare_list_email`
@@ -1921,7 +1937,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `jsonb`
-- **access:** Next.js route — `POST /api/rgpd/erase` (wraps `api.rpc_gdpr_erase_subject`, runs as the caller)
+- **access:** PostgreSQL owner-only direct execution. The caller-scoped Next.js erase path remains held; API roles cannot execute this legacy function.
 - **object types served:** **all object types**
 - _Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id._
 
@@ -2428,6 +2444,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** —
 
+### `api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)` _(DEFINER)_
+- **returns:** `text`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/unlink_crm_actor_document`
+- **object types served:** **all object types**
+
+### `api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)` _(DEFINER)_
+- **returns:** `text`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/unlink_crm_task_document`
+- **object types served:** **all object types**
+
 ### `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode public.legal_validity_mode DEFAULT NULL::public.legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/update_legal_record`
@@ -2739,6 +2765,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 - _Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie._
+
+### `internal.crm_document_upload_actor(p_parent_kind text, p_parent_id uuid)`
+- **returns:** `uuid`
+- **access:** Helper interne SECURITY INVOKER, exécution directe réservée au propriétaire PostgreSQL.
+- **object types served:** **all object types**
+- _Reuse the current CRM predicates and the trusted sandbox exclusion of CRM unlink._
 
 ### `internal.crm_row_in_current_realm(p_object_id text, p_actor_id uuid)` _(DEFINER)_
 - **returns:** `boolean`

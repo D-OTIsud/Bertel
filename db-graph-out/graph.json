@@ -1,12 +1,12 @@
 {
  "meta": {
-  "table_count": 424,
+  "table_count": 426,
   "view_count": 15,
-  "function_count": 646,
+  "function_count": 652,
   "policy_count": 647,
   "trigger_count": 1439,
   "enum_count": 9,
-  "edge_count": 6321
+  "edge_count": 6349
  },
  "nodes": [
   {
@@ -58280,6 +58280,184 @@
    }
   },
   {
+   "id": "internal.crm_document_detachment",
+   "kind": "table",
+   "label": "crm_document_detachment",
+   "schema": "internal",
+   "domain": "other",
+   "doc": "Provenance privée des liens CRM retirés. Ne confère aucun droit de supprimer une référence ou un fichier. À consulter par le futur inventaire RGPD avant son activation.",
+   "props": {
+    "columns": [
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "parent_kind",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "parent_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "document_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "subject_actor_id",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "storage_bucket",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "storage_path",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "detached_by",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "detached_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true,
+    "rls_forced": false
+   }
+  },
+  {
+   "id": "internal.crm_document_upload",
+   "kind": "table",
+   "label": "crm_document_upload",
+   "schema": "internal",
+   "domain": "other",
+   "doc": "Private immutable upload intent and attachment receipt. No cascade FK. Prepared and attached actor snapshots and the filename title require future GDPR discovery/redaction. No receipt authorizes physical cleanup.",
+   "props": {
+    "columns": [
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "parent_kind",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "parent_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "prepared_actor_id",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "uploaded_by",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "storage_bucket",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "storage_path",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "title",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "mime_type",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "size_bytes",
+      "type": "bigint",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "sha256",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "state",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "prepared_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "uploaded_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "attached_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "attached_actor_id",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true,
+    "rls_forced": false
+   }
+  },
+  {
    "id": "thesaurus.object_ids_for_row(p_table oid, p_row jsonb, p_visited oid[] DEFAULT '{}'::oid[], p_depth integer DEFAULT 0)",
    "kind": "function",
    "label": "object_ids_for_row",
@@ -58359,7 +58537,12 @@
       "path": "supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
       "line": 101
      }
-    ]
+    ],
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
+    }
    }
   },
   {
@@ -67568,12 +67751,12 @@
      {
       "path": "Base de donnée DLL et API/migration_crm_task_email_documents.sql",
       "line": 240
+     },
+     {
+      "path": "supabase/migrations/20261108013154_crm_document_unlink.sql",
+      "line": 54
      }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_crm_task_email_documents.sql",
-     "line": 240
-    }
+    ]
    }
   },
   {
@@ -74283,6 +74466,182 @@
     "source": {
      "path": "supabase/migrations/20261106113509_thesaurus_consumers.sql",
      "line": 226
+    }
+   }
+  },
+  {
+   "id": "api.attach_crm_document_upload(p_upload_id uuid)",
+   "kind": "function",
+   "label": "attach_crm_document_upload",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "attach_crm_document_upload(p_upload_id uuid)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/crm_document_upload_intents.sql",
+      "line": 185
+     },
+     {
+      "path": "supabase/migrations/20261108021542_crm_document_upload_intents.sql",
+      "line": 185
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "authenticated"
+     ]
+    }
+   }
+  },
+  {
+   "id": "api.confirm_crm_document_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint, p_mime_type text)",
+   "kind": "function",
+   "label": "confirm_crm_document_upload",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Only the trusted uploader can acknowledge the exact prepared bytes and locator.",
+   "props": {
+    "signature": "confirm_crm_document_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint, p_mime_type text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/crm_document_upload_intents.sql",
+      "line": 163
+     },
+     {
+      "path": "supabase/migrations/20261108021542_crm_document_upload_intents.sql",
+      "line": 163
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "service_role"
+     ]
+    }
+   }
+  },
+  {
+   "id": "api.prepare_crm_document_upload(p_upload_id uuid, p_parent_kind text, p_parent_id uuid, p_title text, p_mime_type text, p_extension text, p_size_bytes bigint, p_sha256 text)",
+   "kind": "function",
+   "label": "prepare_crm_document_upload",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "prepare_crm_document_upload(p_upload_id uuid, p_parent_kind text, p_parent_id uuid, p_title text, p_mime_type text, p_extension text, p_size_bytes bigint, p_sha256 text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/crm_document_upload_intents.sql",
+      "line": 126
+     },
+     {
+      "path": "supabase/migrations/20261108021542_crm_document_upload_intents.sql",
+      "line": 126
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": false,
+     "owner": "postgres",
+     "api_roles": [
+      "authenticated"
+     ]
+    }
+   }
+  },
+  {
+   "id": "api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)",
+   "kind": "function",
+   "label": "unlink_crm_actor_document",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)",
+    "returns": "text",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108013154_crm_document_unlink.sql",
+      "line": 64
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108013154_crm_document_unlink.sql",
+     "line": 64
+    }
+   }
+  },
+  {
+   "id": "api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)",
+   "kind": "function",
+   "label": "unlink_crm_task_document",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "unlink_crm_task_document(p_task_id uuid, p_document_id uuid)",
+    "returns": "text",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "supabase/migrations/20261108013154_crm_document_unlink.sql",
+      "line": 136
+     }
+    ],
+    "source": {
+     "path": "supabase/migrations/20261108013154_crm_document_unlink.sql",
+     "line": 136
+    }
+   }
+  },
+  {
+   "id": "internal.crm_document_upload_actor(p_parent_kind text, p_parent_id uuid)",
+   "kind": "function",
+   "label": "crm_document_upload_actor",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "Reuse the current CRM predicates and the trusted sandbox exclusion of CRM unlink.",
+   "props": {
+    "signature": "crm_document_upload_actor(p_parent_kind text, p_parent_id uuid)",
+    "returns": "uuid",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/crm_document_upload_intents.sql",
+      "line": 95
+     },
+     {
+      "path": "supabase/migrations/20261108021542_crm_document_upload_intents.sql",
+      "line": 95
+     }
+    ],
+    "direct_execute_acl": {
+     "owner_only": true,
+     "owner": "postgres",
+     "api_roles": []
     }
    }
   },
@@ -131504,7 +131863,7 @@
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM crm_task"
+     "evidence": "FROM public.crm_task"
     }
    }
   },
@@ -142377,6 +142736,342 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN public.object"
+    }
+   }
+  },
+  {
+   "source": "api.attach_crm_document_upload(p_upload_id uuid)",
+   "target": "internal.crm_document_upload",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.crm_document_upload"
+    }
+   }
+  },
+  {
+   "source": "api.attach_crm_document_upload(p_upload_id uuid)",
+   "target": "public.ref_document",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.ref_document"
+    }
+   }
+  },
+  {
+   "source": "api.attach_crm_document_upload(p_upload_id uuid)",
+   "target": "public.actor_document",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.actor_document"
+    }
+   }
+  },
+  {
+   "source": "api.attach_crm_document_upload(p_upload_id uuid)",
+   "target": "public.crm_task_document",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.crm_task_document"
+    }
+   }
+  },
+  {
+   "source": "api.attach_crm_document_upload(p_upload_id uuid)",
+   "target": "internal.crm_document_upload",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.crm_document_upload"
+    }
+   }
+  },
+  {
+   "source": "api.confirm_crm_document_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint, p_mime_type text)",
+   "target": "internal.crm_document_upload",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.crm_document_upload"
+    }
+   }
+  },
+  {
+   "source": "api.confirm_crm_document_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint, p_mime_type text)",
+   "target": "internal.crm_document_upload",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.crm_document_upload"
+    }
+   }
+  },
+  {
+   "source": "api.prepare_crm_document_upload(p_upload_id uuid, p_parent_kind text, p_parent_id uuid, p_title text, p_mime_type text, p_extension text, p_size_bytes bigint, p_sha256 text)",
+   "target": "internal.crm_document_upload",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.crm_document_upload"
+    }
+   }
+  },
+  {
+   "source": "api.prepare_crm_document_upload(p_upload_id uuid, p_parent_kind text, p_parent_id uuid, p_title text, p_mime_type text, p_extension text, p_size_bytes bigint, p_sha256 text)",
+   "target": "public.ref_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_document"
+    }
+   }
+  },
+  {
+   "source": "api.prepare_crm_document_upload(p_upload_id uuid, p_parent_kind text, p_parent_id uuid, p_title text, p_mime_type text, p_extension text, p_size_bytes bigint, p_sha256 text)",
+   "target": "internal.crm_document_upload",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.crm_document_upload"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)",
+   "target": "internal.sandbox_discovery_identity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.sandbox_discovery_identity"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)",
+   "target": "public.actor_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor_document"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)",
+   "target": "public.ref_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_document"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)",
+   "target": "public.actor_document",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.actor_document"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)",
+   "target": "internal.crm_document_detachment",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.crm_document_detachment"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)",
+   "target": "internal.sandbox_discovery_identity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.sandbox_discovery_identity"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)",
+   "target": "public.crm_task_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task_document"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)",
+   "target": "public.ref_document",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_document"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)",
+   "target": "public.crm_task_document",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.crm_task_document"
+    }
+   }
+  },
+  {
+   "source": "api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)",
+   "target": "internal.crm_document_detachment",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.crm_document_detachment"
+    }
+   }
+  },
+  {
+   "source": "internal.crm_document_upload_actor(p_parent_kind text, p_parent_id uuid)",
+   "target": "internal.sandbox_discovery_identity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.sandbox_discovery_identity"
+    }
+   }
+  },
+  {
+   "source": "internal.crm_document_upload_actor(p_parent_kind text, p_parent_id uuid)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "internal.crm_document_upload_actor(p_parent_kind text, p_parent_id uuid)",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor"
+    }
+   }
+  },
+  {
+   "source": "internal.crm_document_upload_actor(p_parent_kind text, p_parent_id uuid)",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task"
     }
    }
   },

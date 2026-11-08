@@ -102,6 +102,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.assert_staging_batch_integrity(p_batch_id text)`
 - returns: `jsonb` — SECURITY DEFINER
 
+## `api.attach_crm_document_upload(p_upload_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.crm_document_upload` _(high)_
+- writes `internal.crm_document_upload` _(high)_
+- writes `public.actor_document` _(high)_
+- writes `public.crm_task_document` _(high)_
+- writes `public.ref_document` _(high)_
+
+Exécution directe réservée à authenticated ; rattache l’intention et revérifie les droits courants, y compris au replay.
+
 ## `api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)`
 - returns: `json`
 - reads `public.object` _(high)_
@@ -364,6 +374,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.app_user_profile` _(high)_
 - writes `public.user_org_business_role` _(high)_
 - writes `public.user_org_membership` _(high)_
+
+## `api.confirm_crm_document_upload(p_upload_id uuid, p_user_id uuid, p_storage_path text, p_sha256 text, p_size_bytes bigint, p_mime_type text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.crm_document_upload` _(high)_
+- writes `internal.crm_document_upload` _(high)_
+
+> Only the trusted uploader can acknowledge the exact prepared bytes and locator.
+
+Exécution directe réservée à service_role ; confirmation serveur du reçu d’upload.
 
 ## `api.count_notifications_blocked_no_smtp()`
 - returns: `integer` — SECURITY DEFINER
@@ -2447,6 +2466,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.actor_document` _(high)_
 - reads `public.ref_document` _(high)_
 
+## `api.prepare_crm_document_upload(p_upload_id uuid, p_parent_kind text, p_parent_id uuid, p_title text, p_mime_type text, p_extension text, p_size_bytes bigint, p_sha256 text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.crm_document_upload` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.crm_document_upload` _(high)_
+
+Exécution directe réservée à authenticated ; prépare une intention privée sous les droits CRM courants.
+
 ## `api.prepare_list_email(p_user_id uuid, p_list_id uuid, p_operation_id uuid, p_fingerprint text, p_recipient_fingerprint text, p_expected_generation bigint, p_confirm_resend boolean DEFAULT false, p_confirmed_previous_operation_ids uuid[] DEFAULT '{}'::uuid[])`
 - returns: `jsonb`
 - reads `internal.list_email_intent` _(high)_
@@ -2850,6 +2877,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_review` _(high)_
 
 > Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id.
+
+**Exécution dans le catalogue hébergé.** L’exécution directe de cette fonction est réservée au propriétaire PostgreSQL. Les rôles API anon, authenticated et service_role ont perdu le droit EXECUTE. Le catalogue capturé ne contient ni la table durable de nettoyage RGPD ni ses RPC de statut et d’acquittement.
 
 ## `api.rpc_grant_user_permission(p_target_user_id uuid, p_permission_code text)`
 - returns: `void` — SECURITY DEFINER
@@ -3663,6 +3692,30 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger` — SECURITY DEFINER
 - reads `public.ref_code_domain_registry` _(high)_
 
+## `api.unlink_crm_actor_document(p_actor_id uuid, p_document_id uuid)`
+- returns: `text` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
+- reads `public.actor` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.crm_document_detachment` _(high)_
+- writes `public.actor_document` _(high)_
+
+Exécution directe réservée au rôle `authenticated`, avec contrôle des droits CRM courants. La référence documentaire et le fichier restent conservés.
+
+## `api.unlink_crm_task_document(p_task_id uuid, p_document_id uuid)`
+- returns: `text` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.crm_task_document` _(high)_
+- reads `public.ref_document` _(high)_
+- writes `internal.crm_document_detachment` _(high)_
+- writes `public.crm_task_document` _(high)_
+
+Exécution directe réservée au rôle `authenticated`, avec contrôle des droits CRM courants. La référence documentaire et le fichier restent conservés.
+
 ## `api.update_legal_record(p_legal_id uuid, p_value jsonb DEFAULT NULL::jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT NULL::date, p_valid_to date DEFAULT NULL::date, p_validity_mode public.legal_validity_mode DEFAULT NULL::public.legal_validity_mode, p_status text DEFAULT NULL::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
 - returns: `boolean`
 - writes `public.object_legal` _(high)_
@@ -4074,6 +4127,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.crm_task_assignee` _(high)_
 
 > Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie.
+
+## `internal.crm_document_upload_actor(p_parent_kind text, p_parent_id uuid)`
+- returns: `uuid`
+- reads `auth.users` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
+- reads `public.actor` _(high)_
+- reads `public.crm_task` _(high)_
+
+> Reuse the current CRM predicates and the trusted sandbox exclusion of CRM unlink.
+
+Helper interne SECURITY INVOKER, exécution directe réservée au propriétaire PostgreSQL.
 
 ## `internal.crm_row_in_current_realm(p_object_id text, p_actor_id uuid)`
 - returns: `boolean` — SECURITY DEFINER

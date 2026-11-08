@@ -20,7 +20,13 @@ test.beforeEach(async ({ page: _page, preparationClock }, testInfo) => {
   testInfo.setTimeout(preparationClock.testTimeout + preparationTime);
 });
 
-test.use({ launchOptions: { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } });
+test.use({
+  launchOptions: async ({ browserName }, use) => {
+    await use(browserName === 'chromium'
+      ? { args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }
+      : {});
+  },
+});
 test.describe.configure({ retries: 0 });
 
 const focusJournals = new WeakMap<Page, Awaited<ReturnType<typeof startFocusJournal>>>();
@@ -212,6 +218,24 @@ test.describe('compact map with touch', () => {
       await expect(drawer).toHaveCount(0);
       expect(await page.evaluate(() => Reflect.get(window, '__mapTouchWitness')))
         .toEqual(['touch', 'touch', 'touch', 'touch']);
+
+      // Leave the returned pin through native Tab, then re-enter by a real tap.
+      // The same compact object must remain reachable after focus has moved.
+      await expect(pin).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(pin).not.toBeFocused();
+      await expect.poll(() => page.evaluate(() => {
+        const active = document.activeElement;
+        return active !== document.body && Boolean(active && !active.classList.contains('skip-link'));
+      })).toBe(true);
+      await pin.tap();
+      await expect(preview).toHaveAccessibleName(name);
+      await expect(open).toBeVisible();
+      await preview.getByRole('button', { name: 'Fermer', exact: true }).tap();
+      await expect(preview).toHaveCount(0);
+      await expect(pin).toBeFocused();
+      expect(await page.evaluate(() => Reflect.get(window, '__mapTouchWitness')))
+        .toEqual(['touch', 'touch', 'touch', 'touch', 'touch', 'touch']);
 
       if (width === 390) {
         await pin.focus();

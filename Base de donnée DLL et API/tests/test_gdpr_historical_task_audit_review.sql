@@ -22,7 +22,7 @@ BEGIN
   VALUES(t,'HOTRUN999999HR01',a,'Synthetic former task');
  INSERT INTO public.ref_document(id,url,title,storage_bucket,storage_path,access_scope,extra)
   VALUES(d,'storage://actor-documents/historical/synthetic.pdf','Synthetic former document',
-    'actor-documents','historical/synthetic.pdf','private','{}');
+    'actor-documents','historical/synthetic.pdf','crm_private','{}');
  INSERT INTO internal.crm_document_detachment(id,parent_kind,parent_id,document_id,
   subject_actor_id,storage_bucket,storage_path,detached_by)
   VALUES(receipt,'task',t,d,a,'actor-documents','historical/synthetic.pdf',a);

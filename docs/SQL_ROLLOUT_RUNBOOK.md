@@ -388,7 +388,7 @@ La migration prépare les politiques de jointure. Une connexion ouverte conserve
 
 ### DB02 — Retrait des pièces jointes CRM
 
-`supabase/migrations/20261108003916_crm_document_unlink.sql` suit les gardes CRM,
+`supabase/migrations/20261108013154_crm_document_unlink.sql` suit les gardes CRM,
 l'identité Découverte et la migration de purge `20261107233351` dans le manifeste frais.
 Elle crée les deux RPC `api.unlink_crm_actor_document(uuid, uuid)` et
 `api.unlink_crm_task_document(uuid, uuid)`. Seul le rôle `authenticated` reçoit

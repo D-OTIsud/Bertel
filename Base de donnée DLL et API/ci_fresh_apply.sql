@@ -772,7 +772,7 @@ COMMIT;
 \ir tests/test_gdpr_status_durable_report.sql
 
 \echo '== DB02 CRM document unlink keeps the shared catalogue and file =='
-\ir ../supabase/migrations/20261108003916_crm_document_unlink.sql
+\ir ../supabase/migrations/20261108013154_crm_document_unlink.sql
 \ir tests/test_crm_document_unlink.sql
 
 \echo '== MV refresh (non-concurrent) =='

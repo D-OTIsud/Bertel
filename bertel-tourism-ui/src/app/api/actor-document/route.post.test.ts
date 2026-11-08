@@ -47,14 +47,29 @@ function req(headers: Record<string, string>, form: FormData): never {
   return { headers: new Headers(headers), formData: async () => form } as never;
 }
 
-function serverWithUser(upload = jest.fn().mockResolvedValue({ error: null })) {
+function serverWithUser(upload: jest.Mock = jest.fn(async (path: string) => ({ data: { path }, error: null }))) {
   return {
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null }) },
     storage: { from: jest.fn(() => ({ upload })) },
+    schema: () => ({ rpc: jest.fn(async (_name: string, args: Record<string, unknown>) => ({
+      data: { uploadId: args.p_upload_id, state: 'uploaded' }, error: null,
+    })) }),
     from: jest.fn(() => ({
       insert: jest.fn(() => ({ select: jest.fn(() => ({ single: jest.fn().mockResolvedValue({ data: { id: 'doc-1' }, error: null }) })) })),
     })),
   } as never;
+}
+
+function authorizedCaller() {
+  const rpc = jest.fn(async (name: string, args: Record<string, unknown>) => {
+    if (name === 'prepare_crm_document_upload') return { data: {
+      uploadId: args.p_upload_id, documentId: args.p_upload_id, bucket: 'actor-documents',
+      path: `actors/${ACTOR_UUID}/${args.p_upload_id}.jpg`, state: 'prepared',
+    }, error: null };
+    if (name === 'attach_crm_document_upload') return { data: { documentId: args.p_upload_id, title: 'doc.jpg' }, error: null };
+    return { data: true, error: null };
+  });
+  mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
 }
 
 describe('POST /api/actor-document', () => {
@@ -80,8 +95,7 @@ describe('POST /api/actor-document', () => {
 
   it('201 when authorized', async () => {
     mockedServer.mockReturnValue(serverWithUser());
-    const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
-    mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+    authorizedCaller();
     const res = await POST(req({ authorization: 'Bearer t' }, makeForm()));
     expect(res.status).toBe(201);
   });
@@ -91,8 +105,7 @@ describe('POST /api/actor-document', () => {
     try {
       const upload = jest.fn().mockResolvedValue({ error: { message: 'fictional storage path SECRET_ACTOR' } });
       mockedServer.mockReturnValue(serverWithUser(upload));
-      const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
-      mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+      authorizedCaller();
       const res = await POST(req({ authorization: 'Bearer t' }, makeForm()));
       expect(res.status).toBe(500);
       await expect(res.json()).resolves.toEqual({ error: 'upload_failed' });

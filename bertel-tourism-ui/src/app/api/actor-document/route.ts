@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routeFailure } from '../_route-failure';
 import { unlinkDocumentResponse } from '../_document-unlink';
+import { uploadCrmDocument } from '../_document-upload';
 import { MediaProcessingError, MAX_INPUT_BYTES } from '../media/upload/process-image';
 import { processActorDocumentBuffer, ACTOR_PDF_MAX_BYTES } from './process-actor-document';
 import {
@@ -109,46 +110,10 @@ async function handlePostAuthenticated(
       );
     }
     const processed = await processFile(file);
-    const path = `actors/${actorId}/${randomUUID()}.${processed.extension}`;
-    const { error: uploadError } = await auth.server.storage.from(PRIVATE_BUCKET).upload(path, processed.buffer, {
-      contentType: processed.mimeType,
-      cacheControl: '3600',
-      upsert: false,
-    });
-    if (uploadError) return routeFailure('actor-document.POST', 'upload_failed');
-
     const title = file.name.trim() || 'Document acteur';
-    const storageUrl = `storage://${PRIVATE_BUCKET}/${path}`;
-    const { data: document, error: documentError } = await auth.server
-      .from('ref_document')
-      .insert({
-        url: storageUrl,
-        title,
-        storage_bucket: PRIVATE_BUCKET,
-        storage_path: path,
-        access_scope: 'crm_private',
-        extra: { mime_type: processed.mimeType, size_bytes: processed.buffer.byteLength },
-      })
-      .select('id')
-      .single();
-    if (documentError || !document) {
-      await auth.server.storage.from(PRIVATE_BUCKET).remove([path]);
-      return routeFailure('actor-document.POST', 'document_create_failed');
-    }
-
-    const documentId = String((document as { id: string }).id);
-    const { error: linkError } = await auth.server.from('actor_document').insert({
-      actor_id: actorId,
-      document_id: documentId,
-      title,
-      created_by: auth.userId,
-    });
-    if (linkError) {
-      await auth.server.from('ref_document').delete().eq('id', documentId);
-      await auth.server.storage.from(PRIVATE_BUCKET).remove([path]);
-      return routeFailure('actor-document.POST', 'actor_document_create_failed');
-    }
-    return NextResponse.json({ documentId, title }, { status: 201 });
+    const result = await uploadCrmDocument(auth, 'actor', actorId, title, processed);
+    if (!result.ok) return routeFailure('actor-document.POST', result.stage);
+    return NextResponse.json({ documentId: result.documentId, title: result.title }, { status: 201 });
   } catch (error) {
     if (error instanceof MediaProcessingError) {
       const status = error.code === 'size' ? 413 : error.code === 'mime' ? 415 : 400;

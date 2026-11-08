@@ -1,7 +1,7 @@
-import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routeFailure } from '../_route-failure';
 import { unlinkDocumentResponse } from '../_document-unlink';
+import { uploadCrmDocument } from '../_document-upload';
 import {
   readBoundedFormData,
   assertFormDataShape,
@@ -13,7 +13,6 @@ import {
 import { MediaProcessingError } from '../media/upload/process-image';
 import { processActorDocumentBuffer } from '../actor-document/process-actor-document';
 import {
-  PRIVATE_BUCKET,
   UUID_SHAPE,
   MAX_UPLOAD_BODY_BYTES,
   authenticated,
@@ -26,7 +25,7 @@ import { authorizeTask } from './authorize';
 // Pièces jointes de TÂCHE CRM (17i) — clone du modèle actor-document : Bearer → getUser,
 // autorisation par RPC DEFINER « en tant qu'appelant » (jamais la service key), fichier
 // dans le bucket privé actor-documents sous tasks/{taskId}/, ref_document crm_private,
-// lien crm_task_document, rollback en cascade sur échec partiel. Le gate est le prédicat
+// lien crm_task_document et reçu privé conservé en cas de résultat incertain. Le gate est le prédicat
 // d'ÉCRITURE (user_can_write_crm_task) pour les trois verbes : toutes les surfaces
 // documents vivent derrière le modal d'édition, lui-même gated écriture. Le socle
 // d'autorisation (gate + résolution du document lié) vit dans ./authorize, partagé avec
@@ -92,50 +91,10 @@ async function handlePostAuthenticated(
 
   try {
     const processed = await processFile(file);
-    const path = `tasks/${taskId}/${randomUUID()}.${processed.extension}`;
-    const { error: uploadError } = await auth.server.storage.from(PRIVATE_BUCKET).upload(path, processed.buffer, {
-      contentType: processed.mimeType,
-      cacheControl: '3600',
-      upsert: false,
-    });
-    if (uploadError) return routeFailure('task-document.POST', 'upload_failed');
-
     const title = file.name.trim() || 'Document de tâche';
-    const storageUrl = `storage://${PRIVATE_BUCKET}/${path}`;
-    const { data: document, error: documentError } = await auth.server
-      .from('ref_document')
-      .insert({
-        url: storageUrl,
-        title,
-        storage_bucket: PRIVATE_BUCKET,
-        storage_path: path,
-        access_scope: 'crm_private',
-        extra: { mime_type: processed.mimeType, size_bytes: processed.buffer.byteLength },
-      })
-      .select('id')
-      .single();
-    if (documentError || !document) {
-      // Le fichier est déjà dans le bucket : sans ce retrait, il devient orphelin (plus
-      // aucune ligne ref_document ne le référence, plus aucune purge automatique).
-      await auth.server.storage.from(PRIVATE_BUCKET).remove([path]);
-      return routeFailure('task-document.POST', 'document_create_failed');
-    }
-
-    const documentId = String((document as { id: string }).id);
-    const { error: linkError } = await auth.server.from('crm_task_document').insert({
-      task_id: taskId,
-      document_id: documentId,
-      title,
-      created_by: auth.userId,
-    });
-    if (linkError) {
-      // Le lien est le seul rattachement entre le document et la tâche : sans lui,
-      // ref_document + le fichier storage sont deux orphelins muets. On retire les deux.
-      await auth.server.from('ref_document').delete().eq('id', documentId);
-      await auth.server.storage.from(PRIVATE_BUCKET).remove([path]);
-      return routeFailure('task-document.POST', 'task_document_create_failed');
-    }
-    return NextResponse.json({ documentId, title }, { status: 201 });
+    const result = await uploadCrmDocument(auth, 'task', taskId, title, processed);
+    if (!result.ok) return routeFailure('task-document.POST', result.stage);
+    return NextResponse.json({ documentId: result.documentId, title: result.title }, { status: 201 });
   } catch (error) {
     if (error instanceof MediaProcessingError) {
       const status = error.code === 'size' ? 413 : error.code === 'mime' ? 415 : 400;

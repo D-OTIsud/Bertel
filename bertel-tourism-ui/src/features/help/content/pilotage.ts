@@ -1,5 +1,5 @@
-/** Rubrique « Dashboard & modules » — tableau de bord, filtres partagés, onglet activité
- *  à venir, modules Audits/Publications en démonstration. Vérifié contre
+/** Rubrique « Dashboard & modules » — tableau de bord, filtres partagés, onglet activité,
+ *  modules Audits/Publications en démonstration. Vérifié contre
  *  `DashboardPage.tsx`, `DashboardTabs`, `dashboard-filter-store`, `AuditsPage.tsx`,
  *  `PublicationsPage.tsx`, `utils/features.ts` (`isDemoOnlyModule`). */
 import type { FaqEntry } from './types';
@@ -36,12 +36,10 @@ Vous pouvez aussi restreindre une **période de mise à jour** (dates de derniè
     id: 'dashboard-activite',
     rubrique: 'pilotage',
     question: 'L\'onglet « Activité équipe » du Dashboard ?',
-    keywords: ['activité', 'équipe', 'vélocité', 'contributeurs', 'modération'],
+    keywords: ['activité', 'équipe', 'contributeurs', 'demandes', 'crm'],
     routes: ['/dashboard'],
     related: ['dashboard-comprendre', 'moderer'],
-    answer: `L'onglet **Activité équipe** est **en cours de conception** : vélocité de contribution, contributeurs actifs et suivi de modération arriveront dans un **prochain lot**.
-
-Pour l'instant, la page affiche un message « À venir » — les onglets **Qualité** et **Offre** sont pleinement opérationnels.`,
+    answer: `L'onglet **Activité équipe** montre le **rythme de saisie** et les **contributeurs** des douze dernières semaines, puis le suivi des **demandes CRM** : demandes ouvertes dans le temps, ancienneté et flux.`,
   },
   {
     id: 'modules-audits-publications',

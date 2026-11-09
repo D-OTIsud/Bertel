@@ -162,6 +162,85 @@ describe('GET /api/public/objects', () => {
     expect(rpcMock.mock.calls[0][0]).toBe('list_partner_objects_with_vocabulary');
   });
 
+  it.each(['card', 'full'])('keeps the historical RPC, parameters and response identical with absent/false enrichment (%s)', async (view) => {
+    selectionMock.mockRejectedValue(new Error('registry unavailable'));
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: {
+      meta: { page_size: 2, total: 3, next_cursor: 'legacy-cursor', vocabulary_release: 3 },
+      data: [{ id: 'A', type: 'HLO', name: 'Published', apidae: { unchanged: true } }],
+    } });
+    const query = `?view=${view}&page_size=2&types=HLO&lang=en&search=maison&format=apidae&cursor=legacy-cursor`;
+    const baseline = await GET(req(query));
+    const baselineCall = rpcMock.mock.calls[0];
+    const explicitFalse = await GET(req(`${query}&include_selection_ids=false`));
+    expect(rpcMock.mock.calls[1]).toEqual(baselineCall);
+    expect(baselineCall[0]).toBe('list_partner_objects_with_vocabulary');
+    const body = await baseline.json();
+    expect(await explicitFalse.json()).toEqual(body);
+    expect(body.data[0]).not.toHaveProperty('selection_ids');
+    const stableHeaders = (response: Response) => Object.fromEntries([...response.headers].map(([key, value]) =>
+      [key, key === 'server-timing' ? value.replace(/dur=[0-9.]+/g, 'dur=*') : value]));
+    expect(stableHeaders(explicitFalse)).toEqual(stableHeaders(baseline));
+    expect(selectionMock).not.toHaveBeenCalled();
+  });
+
+  it.each(['card', 'full'])('opts into memberships without changing envelope, representations, filters or cursors (%s)', async (view) => {
+    const items = [
+      { id: 'A', type: 'ITI', selection_ids: ['1001', '1002'], apidae: { id: 'pivot-A' }, canonical_description: 'editor-only' },
+      { id: 'B', type: 'ITI', selection_ids: [], apidae: { id: 'pivot-B' } },
+    ];
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: {
+      info: { page_size: 2, total: 4, next_cursor: 'same-cursor', vocabulary_release: 3, internal: 'hidden' }, data: items,
+    } });
+    const response = await GET(req(`?include_selection_ids=true&view=${view}&page_size=2&types=ITI&lang=en&format=apidae&cursor=same-cursor`));
+    expect(response.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(rpcMock).toHaveBeenCalledWith('list_partner_objects_with_selection_ids', expect.objectContaining({
+      p_view: view, p_page_size: 2, p_types: ['ITI'], p_status: ['published'],
+      p_lang_prefs: ['en'], p_format: 'apidae', p_cursor: 'same-cursor',
+    }));
+    const body = await response.json();
+    expect(body.meta).toEqual({ contract_version: '1.0.0', page_size: 2, total: 4, next_cursor: 'same-cursor', vocabulary_release: 3 });
+    expect(body.data.map((item: { selection_ids: string[] }) => item.selection_ids)).toEqual([['1001', '1002'], []]);
+    expect(body.data.map((item: { apidae: unknown }) => item.apidae)).toEqual([{ id: 'pivot-A' }, { id: 'pivot-B' }]);
+    if (view === 'full') expect(body.data[0]).not.toHaveProperty('canonical_description');
+    expect(selectionMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'include_selection_ids=', 'include_selection_ids=1', 'include_selection_ids=TRUE',
+    'include_selection_ids=true&include_selection_ids=true',
+    'include_selection_ids=true&include_selection_ids=false',
+    'selection_id=1006&include_selection_ids=true', 'selection_id=1006&include_selection_ids=false',
+  ])('rejects ambiguous or unsupported membership options before resolution (%s)', async (query) => {
+    const response = await GET(req(`?${query}`));
+    expect(response.status).toBe(400);
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(selectionMock).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, null, '1001', [1001], ['__proto__'], ['1001', '1001']])(
+    'never turns invalid membership data into a successful empty-membership scan (%p)', async (ids) => {
+      rpcMock.mockResolvedValue({ ok: true, status: 200, body: { data: [{ id: 'A', selection_ids: ids }] } });
+      const response = await GET(req('?include_selection_ids=true'));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: 'selection_membership_unavailable' });
+      expect(rpcMock).toHaveBeenCalledTimes(1);
+      expect(after).toHaveBeenCalledTimes(1);
+      await (after as jest.Mock).mock.calls[0][0]();
+      expect(logPartnerCall).toHaveBeenCalledTimes(1);
+      expect(logPartnerCall).toHaveBeenCalledWith('k1', 'GET /api/public/objects', 503);
+    },
+  );
+
+  it('does not fall back to the historical reader when membership resolution fails', async () => {
+    rpcMock.mockResolvedValue({ ok: false, status: 503, body: { error: 'selection_membership_unavailable' } });
+    const response = await GET(req('?include_selection_ids=true'));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'selection_membership_unavailable' });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(rpcMock.mock.calls[0][0]).toBe('list_partner_objects_with_selection_ids');
+  });
+
   it.each([
     'selection_id=', 'selection_id=1006&selection_id=1006',
     'selection_id=1006&types=PRD', 'selection_id=1006&taxonomy=taxonomy_com:local_crafts',

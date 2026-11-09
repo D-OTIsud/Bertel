@@ -1468,6 +1468,13 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _Liste les clés (métadonnées seulement — JAMAIS le hash ni la clé)._
 
+### `api.list_partner_objects_with_selection_ids(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_taxonomy_codes text[] DEFAULT NULL::text[], p_include_equivalent_predecessors boolean DEFAULT false)`
+- **returns:** `jsonb`
+- **Effective EXECUTE:** service_role only; anon and authenticated denied. STABLE SECURITY INVOKER.
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_partner_objects_with_selection_ids`
+- **object types served:** —
+- _Opt-in general partner page: unchanged legacy page plus root selection_ids strings from active dynamic definitions. Service-role only; no work added to historical readers._
+
 ### `api.list_partner_objects_with_vocabulary(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_taxonomy_codes text[] DEFAULT NULL::text[], p_include_equivalent_predecessors boolean DEFAULT false)`
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_partner_objects_with_vocabulary`
@@ -3109,6 +3116,13 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **Result scope:** organization-owned selection configuration; not an object resource serializer.
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** —
+
+### `internal.partner_selection_memberships(p_object_ids text[])`
+- **returns:** `jsonb`
+- **Effective EXECUTE:** service_role only; anon and authenticated denied. STABLE SECURITY INVOKER.
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+- _Private active-selection membership for at most 200 page objects. Shared filter engine per relevant branch, canonical global search gate, published real objects only; errors fail closed._
 
 ### `internal.partner_selection_validate(p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[])` _(DEFINER)_
 - **returns:** `void`

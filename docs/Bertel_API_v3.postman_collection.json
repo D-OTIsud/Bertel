@@ -1176,6 +1176,45 @@
           }
         },
         {
+          "name": "Fiches et appartenances aux sélections (option à confirmer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Option activée : HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const d = pm.response.json();",
+                  "  pm.test('Enveloppe du flux général', function () { pm.expect(d.meta).to.be.an('object'); pm.expect(d.data).to.be.an('array'); });",
+                  "  pm.test('Chaque objet porte des selection_ids triés et uniques', function () { for (const item of d.data) { pm.expect(item).to.have.property('selection_ids'); pm.expect(item.selection_ids).to.be.an('array'); pm.expect(item.selection_ids.every(id => typeof id === 'string' && id.length > 0)).to.eql(true); pm.expect(item.selection_ids).to.eql([...new Set(item.selection_ids)].sort()); } });",
+                  "  if (d.meta.next_cursor) { pm.collectionVariables.set('membership_next_cursor', d.meta.next_cursor); } else { pm.collectionVariables.unset('membership_next_cursor'); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}", "description": "Même clé partenaire bk_live_…, utilisée côté serveur"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects?view=full&include_selection_ids=true&page_size=25",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects"],
+              "query": [
+                {"key": "view", "value": "full", "description": "card est aussi disponible"},
+                {"key": "include_selection_ids", "value": "true", "description": "Absent/false : flux historique, champ absent. Incompatible avec selection_id même false."},
+                {"key": "page_size", "value": "25"},
+                {"key": "cursor", "value": "{{membership_next_cursor}}", "disabled": true, "description": "Activer seulement pour la page suivante ; garder true et les mêmes options jusqu’à la dernière page"}
+              ]
+            },
+            "description": "Confirmer l'activation de cette option avec l'OTI ; cet exemple ne prouve pas son déploiement. Même GET /objects et clé partenaire. Chaque item card/full reçoit selection_ids à sa racine : chaînes triées uniques, [] sans sélection active, aucun nom privé ni règle. Détail et documents pivots inchangés. Absent ou false conserve le traitement historique sans champ. Paramètre vide, répété ou autre que true/false : 400. Toute combinaison avec selection_id, même false : 400. Conserver le flag et les mêmes options pendant la pagination. Pas d'instantané entre pages. Actualiser selection_ids à chaque synchronisation complète même si updated_at est inchangé, car une suspension ou une modification des critères peut changer les appartenances seules. Appliquer les retraits uniquement après toutes les pages réussies ; 503 selection_membership_unavailable conserve l'état précédent et n'est jamais un tableau vide. Le test mémorise membership_next_cursor."
+          }
+        },
+        {
           "name": "Sélection bêta — Terroir et artisanat (1006)",
           "event": [
             {
@@ -1210,7 +1249,7 @@
                 {"key": "cursor", "value": "{{selection_next_cursor}}", "disabled": true, "description": "Activer pour la page suivante seulement, puis désactiver pour recommencer"}
               ]
             },
-            "description": "Extension BÊTA : confirmer son activation avec l'OTI avant utilisation ; cette collection n'atteste pas son déploiement. Même endpoint /objects et mêmes fiches full. 1006 fusionne producteurs, artisans et marchés sans doublon, sur les quatre communes OTI (INSEE 97403/97412/97417/97422), publié et hors test. meta ajoute selection_id/selection_name/selection_revision (1 initialement). Ne pas combiner avec types/taxonomy/search/include_equivalent_predecessors, même false ; seules cursor/page_size/view/lang/track/format/variant sont acceptées. Sélection inconnue : 404 sans retour au catalogue global ; vide/répétée ou conflit : 400. Le test conserve next_cursor dans selection_next_cursor pour une pagination manuelle. Lectures en temps réel sans snapshot : rapprocher les appartenances uniquement après toutes les pages réussies ; une erreur ne justifie aucun retrait. Les identifiants 1001–1015 sont détaillés dans le guide partenaires."
+            "description": "Extension BÊTA : confirmer son activation avec l'OTI avant utilisation ; cette collection n'atteste pas son déploiement. Même endpoint /objects et mêmes fiches full. 1006 fusionne producteurs, artisans et marchés sans doublon, sur les quatre communes OTI (INSEE 97403/97412/97417/97422), publié et hors test. meta ajoute selection_id/selection_name/selection_revision (1 initialement). Ne pas combiner avec types/taxonomy/search/include_equivalent_predecessors/include_selection_ids, même false ; seules cursor/page_size/view/lang/track/format/variant sont acceptées. Sélection inconnue : 404 sans retour au catalogue global ; vide/répétée ou conflit : 400. Le test conserve next_cursor dans selection_next_cursor pour une pagination manuelle. Lectures en temps réel sans snapshot : rapprocher les appartenances uniquement après toutes les pages réussies ; une erreur ne justifie aucun retrait. Les identifiants 1001–1015 sont détaillés dans le guide partenaires."
           }
         },
         {

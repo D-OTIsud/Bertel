@@ -2286,6 +2286,11 @@ Exécution directe réservée au rôle `service_role`.
 
 > Liste les clés (métadonnées seulement — JAMAIS le hash ni la clé).
 
+## `api.list_partner_objects_with_selection_ids(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_taxonomy_codes text[] DEFAULT NULL::text[], p_include_equivalent_predecessors boolean DEFAULT false)`
+- returns: `jsonb`
+
+> Opt-in general partner page: unchanged legacy page plus root selection_ids strings from active dynamic definitions. Service-role only; no work added to historical readers.
+
 ## `api.list_partner_objects_with_vocabulary(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_taxonomy_codes text[] DEFAULT NULL::text[], p_include_equivalent_predecessors boolean DEFAULT false)`
 - returns: `jsonb`
 - reads `public.object` _(high)_
@@ -4589,6 +4594,15 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 
 ## `internal.partner_selection_document(p_row internal.partner_selection)`
 - returns: `jsonb`
+
+## `internal.partner_selection_memberships(p_object_ids text[])`
+- returns: `jsonb`
+- reads `internal.partner_selection` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_iti_practice` _(high)_
+- reads `public.object_location` _(high)_
+
+> Private active-selection membership for at most 200 page objects. Shared filter engine per relevant branch, canonical global search gate, published real objects only; errors fail closed.
 
 ## `internal.partner_selection_validate(p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[])`
 - returns: `void` — SECURITY DEFINER

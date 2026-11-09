@@ -37,6 +37,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const url = new URL(req.url);
+  // Membership enrichment is opt-in: historical callers keep their exact RPC,
+  // representation and independence from the selection registry.
+  const membershipOptions = url.searchParams.getAll('include_selection_ids');
+  if (membershipOptions.length > 1
+    || (membershipOptions.length === 1 && !['true', 'false'].includes(membershipOptions[0]))) {
+    return metrics.json({ error: 'bad_request', detail: 'invalid include_selection_ids option' }, { status: 400, headers });
+  }
+  const includeSelectionIds = membershipOptions[0] === 'true';
   const selectionIds = url.searchParams.getAll('selection_id');
   let selection: PartnerSelection | undefined;
   if (selectionIds.length > 0) {
@@ -112,7 +120,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       p_variant: tourinsoftVariant.variant,
       p_commune_insee: selection.communeInsee,
     })
-    : callPublicRpc('list_partner_objects_with_vocabulary', {
+    : callPublicRpc(includeSelectionIds ? 'list_partner_objects_with_selection_ids' : 'list_partner_objects_with_vocabulary', {
     p_cursor: cursor,
     p_lang_prefs: [lang],
     p_page_size: pageSize,
@@ -127,11 +135,22 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     p_include_equivalent_predecessors: equivalents === 'true',
   }));
 
-  metrics.audit(partner.keyId, 'GET /api/public/objects', result.status);
+  if (!includeSelectionIds || !result.ok) metrics.audit(partner.keyId, 'GET /api/public/objects', result.status);
   if (!result.ok) return metrics.json(result.body, { status: result.status, headers });
 
   // The RPC returns its own { info|meta, data }. Re-wrap under the public contract envelope.
   const rpcBody = (result.body ?? {}) as { info?: Record<string, unknown>; meta?: Record<string, unknown>; data?: unknown };
+  // A broken enrichment must not look like a successful scan with no memberships.
+  if (includeSelectionIds && (!Array.isArray(rpcBody.data) || rpcBody.data.some((item: unknown) => {
+    if (!item || typeof item !== 'object') return true;
+    const ids = (item as Record<string, unknown>).selection_ids;
+    return !Array.isArray(ids) || ids.some((id: unknown) => typeof id !== 'string' || !/^[1-9][0-9]{0,18}$/.test(id))
+      || new Set(ids).size !== ids.length;
+  }))) {
+    metrics.audit(partner.keyId, 'GET /api/public/objects', 503);
+    return metrics.json({ error: 'selection_membership_unavailable' }, { status: 503, headers });
+  }
+  if (includeSelectionIds) metrics.audit(partner.keyId, 'GET /api/public/objects', result.status);
   const pageInfo = rpcBody.info ?? rpcBody.meta ?? {};
   let items = Array.isArray(rpcBody.data) ? (rpcBody.data as Record<string, unknown>[]) : [];
 

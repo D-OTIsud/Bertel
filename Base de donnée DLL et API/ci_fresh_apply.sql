@@ -816,6 +816,11 @@ COMMIT;
 \ir ../supabase/migrations/20261109080851_partner_selection_registry.sql
 \ir tests/test_partner_selection_registry.sql
 
+\echo '== Opt-in general partner selection memberships, legacy unchanged =='
+\ir ../supabase/migrations/20261109100741_partner_selection_memberships.sql
+\ir tests/test_partner_selection_memberships.sql
+\ir tests/test_partner_selection_memberships_regression.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

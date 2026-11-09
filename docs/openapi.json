@@ -33,13 +33,14 @@
         "tags": ["Objets"],
         "operationId": "listObjects",
         "summary": "Lister les objets publiés (paginé)",
-        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.\n\nAvec `format=<profil>` (`jsonld` | `datatourisme` | `apidae` | `tourinsoft`), chaque objet de la page porte en plus son document pivot sous une clé additive nommée d'après le profil — même pagination par curseur, un seul appel par page. Un objet non couvert par le profil n'a simplement pas la clé. Pour Tourinsoft, l'absence de `variant` conserve le contrat historique `legacy-v1`; `variant=reunion-hebergement-v1` active le contrat hébergement CRT Réunion pour HOT, HLO et CAMP ; `variant=reunion-regional-v1` route les fiches couvertes vers les six familles CRT Réunion.\n\nAvec `view=full`, chaque objet de la page est la **fiche complète** (identique à `GET /objects/{id}`) au lieu de la carte allégée. En mode `full` la page est bornée à **100** (défaut 25) pour la performance ; `track=gpx|kml` ajoute le blob GPX/KML des itinéraires (le tracé GeoJSON est de toute façon natif).",
+        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.\n\nAvec `format=<profil>` (`jsonld` | `datatourisme` | `apidae` | `tourinsoft`), chaque objet de la page porte en plus son document pivot sous une clé additive nommée d'après le profil — même pagination par curseur, un seul appel par page. Un objet non couvert par le profil n'a simplement pas la clé. Pour Tourinsoft, l'absence de `variant` conserve le contrat historique `legacy-v1`; `variant=reunion-hebergement-v1` active le contrat hébergement CRT Réunion pour HOT, HLO et CAMP ; `variant=reunion-regional-v1` route les fiches couvertes vers les six familles CRT Réunion.\n\nAvec `view=full`, chaque objet de la page est la **fiche complète** (identique à `GET /objects/{id}`) au lieu de la carte allégée. En mode `full` la page est bornée à **100** (défaut 25) pour la performance ; `track=gpx|kml` ajoute le blob GPX/KML des itinéraires (le tracé GeoJSON est de toute façon natif).\n\nOption additionnelle, activation à confirmer avec l’OTI : include_selection_ids=true ajoute sur chaque item card/full un tableau racine selection_ids de chaînes triées sans doublon ([] sans sélection active). Aucun nom ni règle de sélection ; détail et pivots inchangés. Absent ou false conserve le flux historique sans champ. Actualiser les appartenances à chaque synchronisation complète même si updated_at est inchangé, et ne retirer des appartenances qu’après toutes les pages réussies.",
         "parameters": [
           { "$ref": "#/components/parameters/Cursor" },
           { "$ref": "#/components/parameters/PageSize" },
           { "$ref": "#/components/parameters/View" },
           { "$ref": "#/components/parameters/Track" },
           { "$ref": "#/components/parameters/SelectionId" },
+          { "$ref": "#/components/parameters/IncludeSelectionIds" },
           { "$ref": "#/components/parameters/Types" },
           { "name": "taxonomy", "in": "query", "description": "Codes taxonomiques CSV qualifiés, par exemple taxonomy_hlo:appartement. Inclut les descendants selon la hiérarchie publiée. Garder ce filtre identique pendant la pagination.", "schema": { "type": "string" } },
           { "name": "include_equivalent_predecessors", "in": "query", "description": "Avec taxonomy uniquement : inclure les prédécesseurs déclarés exactement équivalents. Faux par défaut ; une scission ou un simple replaced_by ne provoque aucun élargissement.", "schema": { "type": "boolean", "default": false } },
@@ -66,14 +67,14 @@
                         "total": { "type": "integer", "description": "Nombre total d'objets correspondant à la requête (toutes pages confondues)." }
                       }
                     },
-                    "data": { "type": "array", "items": { "oneOf": [ { "$ref": "#/components/schemas/CardItem" }, { "$ref": "#/components/schemas/ObjectResource" } ], "description": "Carte allégée (`view=card`, défaut) ou fiche complète (`view=full`, identique à `GET /objects/{id}`)." } }
+                    "data": { "type": "array", "items": { "oneOf": [ { "$ref": "#/components/schemas/CardItem" }, { "$ref": "#/components/schemas/ObjectResource" } ], "description": "Carte allégée (`view=card`, défaut) ou fiche complète (`view=full`). Avec l'option include_selection_ids=true, chaque objet porte aussi selection_ids à sa racine. Sans option ou avec false, ce champ est absent. Cet ajout de liste ne modifie pas GET /objects/{id} ni les documents pivots.", "properties": { "selection_ids": { "$ref": "#/components/schemas/SelectionIds" } } } }
                   }
                 }
               }
             }
           },
           "400": {
-            "description": "Code types inconnu, filtre taxonomy malformé ou option d’équivalence invalide/sans taxonomy. En bêta selection_id : identifiant vide ou répété, curseur incompatible, combinaison avec types/taxonomy/search/include_equivalent_predecessors ou option non autorisée.",
+            "description": "Code types inconnu, filtre taxonomy malformé ou option d’équivalence invalide/sans taxonomy. include_selection_ids doit être une occurrence unique de true ou false : vide, répété ou autre valeur donne 400. Toute présence de ce flag avec selection_id, même false, donne aussi 400. En bêta selection_id : identifiant vide ou répété, curseur incompatible, combinaison avec types/taxonomy/search/include_equivalent_predecessors ou option non autorisée.",
             "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "bad_request", "detail": "unknown object type code(s): XXX" } } }
           },
@@ -87,9 +88,9 @@
           "500": { "$ref": "#/components/responses/ServerError" },
           "502": { "$ref": "#/components/responses/UpstreamError" },
           "503": {
-            "description": "Le registre des sélections est temporairement indisponible. Aucun retour à une ancienne définition ; conserver les appartenances du dernier parcours réussi.",
+            "description": "selection_unavailable : registre temporairement indisponible pour selection_id, sans retour à une ancienne définition. selection_membership_unavailable : calcul des appartenances indisponible avec include_selection_ids=true. Ce second échec ne modifie pas le traitement historique sans option ou avec false. Conserver les appartenances du dernier parcours entièrement réussi.",
             "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "selection_unavailable" } } }
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "examples": { "selection": { "value": { "error": "selection_unavailable" } }, "memberships": { "value": { "error": "selection_membership_unavailable" } } } } }
           }
         }
       }
@@ -1933,12 +1934,19 @@
       },
       "SelectionId": {
         "name": "selection_id", "in": "query", "required": false,
-        "description": "Extension bêta, activation à confirmer avec l'OTI. Identifiant permanent d'une sélection dynamique administrée dans Bertel par son organisation. Même endpoint, clé partenaire et fiches data[] ; seules meta.selection_id, selection_name et selection_revision sont ajoutées. Les quinze définitions initiales couvrent les communes INSEE 97403/97412/97417/97422 ; leurs critères et ceux des nouvelles sélections sont enregistrés côté serveur. Seules les fiches publiées hors test sont diffusées. Avec selection_id, seules les options cursor/page_size/view/lang/track/format/variant sont autorisées : types/taxonomy/search/include_equivalent_predecessors (même false) ou une autre option entraînent 400. Identifiant vide ou répété : 400 ; inconnu ou suspendu : 404, jamais de retour au catalogue complet ; registre indisponible : 503. Conserver sélection et options pendant la pagination ; recommencer sans curseur après modification des critères. Lecture dynamique sans snapshot ; ne rapprocher les appartenances qu'après un parcours entièrement réussi. La définition initiale 1007 contient les événements publiés : dates, occurrences et annulations restent à traiter par le partenaire. Les labels, types de handicap, animaux, capacités et cuisines peuvent entrer dans les critères enregistrés ; ils ne deviennent pas des paramètres supplémentaires de cet endpoint.",
+        "description": "Extension bêta, activation à confirmer avec l'OTI. Identifiant permanent d'une sélection dynamique administrée dans Bertel par son organisation. Même endpoint, clé partenaire et fiches data[] ; seules meta.selection_id, selection_name et selection_revision sont ajoutées. Les quinze définitions initiales couvrent les communes INSEE 97403/97412/97417/97422 ; leurs critères et ceux des nouvelles sélections sont enregistrés côté serveur. Seules les fiches publiées hors test sont diffusées. Avec selection_id, seules les options cursor/page_size/view/lang/track/format/variant sont autorisées : types/taxonomy/search/include_equivalent_predecessors/include_selection_ids (même false) ou une autre option entraînent 400. Identifiant vide ou répété : 400 ; inconnu ou suspendu : 404, jamais de retour au catalogue complet ; registre indisponible : 503. Conserver sélection et options pendant la pagination ; recommencer sans curseur après modification des critères. Lecture dynamique sans snapshot ; ne rapprocher les appartenances qu'après un parcours entièrement réussi. La définition initiale 1007 contient les événements publiés : dates, occurrences et annulations restent à traiter par le partenaire. Les labels, types de handicap, animaux, capacités et cuisines peuvent entrer dans les critères enregistrés ; ils ne deviennent pas des paramètres supplémentaires de cet endpoint.",
         "schema": { "$ref": "#/components/schemas/SelectionId" },
         "examples": {
           "terroir_artisanat": { "summary": "Producteurs, artisans et marchés, fusionnés sans doublons", "value": "1006" },
           "velo": { "summary": "Itinéraires à vélo, pratiques et repli taxonomique", "value": "1002" }
         }
+      },
+      "IncludeSelectionIds": {
+        "name": "include_selection_ids", "in": "query", "required": false,
+        "description": "Option additionnelle, activation à confirmer avec l'OTI avant utilisation. Uniquement sur le flux général GET /objects : true ajoute selection_ids à CHAQUE objet card/full, comme champ racine frère de id/type. Tableau de chaînes triées sans doublon, [] sans appartenance ; sélections actives uniquement, aucun nom privé ni règle enregistrée. Les pivots et GET /objects/{id} restent inchangés. Absent ou false conserve strictement le flux historique et n'ajoute pas le champ. Valeurs littérales true/false seulement ; vide, répétition ou autre valeur : 400. Incompatible avec selection_id même si false. Garder true et les mêmes options pendant la pagination ; règles de curseur du flux général inchangées, sans instantané entre pages. Suspendre une sélection ou changer ses critères peut modifier les appartenances sans modifier object.updated_at : actualiser selection_ids à CHAQUE synchronisation complète, même pour une fiche inchangée. N'appliquer les retraits qu'après toutes les pages réussies. Une indisponibilité donne 503 selection_membership_unavailable et ne signifie jamais [].",
+        "allowEmptyValue": false,
+        "schema": { "type": "boolean", "default": false },
+        "examples": { "with_memberships": { "summary": "Flux général avec appartenances", "value": true }, "legacy": { "summary": "Flux historique, champ absent", "value": false } }
       },
       "Search": {
         "name": "search", "in": "query", "required": false,
@@ -2327,9 +2335,17 @@
       },
       "SelectionId": {
         "type": "string",
-        "description": "Identifiants bêta stables gérés par l'OTI : 1001 À pied ; 1002 À vélo ; 1003 Nature ; 1004 Patrimoine ; 1005 Loisirs ; 1006 Terroir et artisanat ; 1007 Événements ; 1008 Restaurants ; 1009 Hôtels ; 1010 Locations et chambres ; 1011 Campings et aires ; 1012 Résidences ; 1013 Transports ; 1014 Offices de tourisme ; 1015 Services.",
+        "description": "Identifiants bêta stables gérés par l'OTI : 1001 À pied ; 1002 À vélo ; 1003 Nature ; 1004 Patrimoine ; 1005 Loisirs ; 1006 Terroir et artisanat ; 1007 Événements ; 1008 Restaurants ; 1009 Hôtels ; 1010 Locations et chambres ; 1011 Campings et aires ; 1012 Résidences de vacances ; 1013 Transports ; 1014 Offices de tourisme ; 1015 Services.",
         "enum": ["1001", "1002", "1003", "1004", "1005", "1006", "1007", "1008", "1009", "1010", "1011", "1012", "1013", "1014", "1015"],
         "example": "1006"
+      },
+      "SelectionIds": {
+        "type": "array",
+        "readOnly": true,
+        "uniqueItems": true,
+        "items": { "type": "string", "minLength": 1 },
+        "description": "Présent sur chaque item de GET /objects UNIQUEMENT avec include_selection_ids=true : identifiants des sélections actives auxquelles appartient la fiche, chaînes triées sans doublon, [] si aucune. Aucune liste de noms ni de règles. Absent sans option, avec false et sur le détail. Champ racine de l'item, jamais imbriqué dans un pivot. Les appartenances sont dynamiques et peuvent changer sans modification de updated_at.",
+        "examples": [["1008"], []]
       },
       "SelectionMeta": {
         "type": "object",
@@ -2355,7 +2371,7 @@
         "type": "object",
         "required": ["error"],
         "properties": {
-          "error": { "type": "string", "description": "Code d'erreur stable.", "examples": ["unauthorized", "rate_limited", "not_found", "invalid_object_id", "bad_request", "server_misconfigured", "upstream_error"] },
+          "error": { "type": "string", "description": "Code d'erreur stable.", "examples": ["unauthorized", "rate_limited", "not_found", "invalid_object_id", "bad_request", "server_misconfigured", "upstream_error", "selection_unavailable", "selection_membership_unavailable"] },
           "detail": { "type": "string", "description": "Détail optionnel lisible." },
           "retry_after": { "type": "integer", "description": "Présent sur `rate_limited` : secondes avant réessai." }
         }

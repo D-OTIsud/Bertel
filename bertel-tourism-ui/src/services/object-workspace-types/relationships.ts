@@ -171,7 +171,6 @@ export interface ObjectWorkspaceDistributionModule {
 export interface ObjectWorkspaceProviderModule {
   siret: string;
   companyName: string;
-  sireneVerified: boolean;
   legalForm: string;
   nafCode: string;
   consularChamber: string;

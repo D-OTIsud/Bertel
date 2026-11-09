@@ -126,8 +126,4 @@ export const mockDashboardData = {
   distinctionOverview,
   completeness,
   // provisional stubs — referenced by service stubs
-  capacity: null,
-  velocity: null,
-  contributors: null,
-  seasonality: null,
 };

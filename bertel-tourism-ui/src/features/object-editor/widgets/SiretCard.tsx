@@ -1,5 +1,3 @@
-import { Provenance } from './Provenance';
-
 export interface SiretCardProps {
   siret: string;
   company: string;
@@ -8,7 +6,6 @@ export interface SiretCardProps {
   capital?: string;
   workforce?: string;
   registeredAt?: string;
-  lastCheckedAt?: string;
 }
 
 export function SiretCard({
@@ -19,23 +16,11 @@ export function SiretCard({
   capital,
   workforce,
   registeredAt,
-  lastCheckedAt,
 }: SiretCardProps) {
   return (
     <div className="siret-card">
       <div className="siret-card__head">
         <div className="siret-card__siret">{siret}</div>
-        <div className="siret-card__status">
-          <span className="dot" /> INSEE vérifié
-        </div>
-        <button
-          type="button"
-          className="pill-mini"
-          disabled
-          title="La re-vérification sera disponible prochainement."
-        >
-          Re-vérifier
-        </button>
       </div>
       <div className="siret-card__grid">
         <div className="siret-card__kv">
@@ -72,9 +57,6 @@ export function SiretCard({
             <span className="v">{registeredAt}</span>
           </div>
         )}
-      </div>
-      <div className="siret-card__foot">
-        <Provenance source="INSEE" who="SIRENE" when={lastCheckedAt} />
       </div>
     </div>
   );

@@ -1412,17 +1412,6 @@
   font-weight: 900;
   letter-spacing: 0.04em;
 }
-.object-editor .siret-card__status {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px;
-  color: var(--ink-3);
-  font-weight: 700;
-}
-.object-editor .siret-card__status .dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--green);
-}
 .object-editor .siret-card__grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1449,7 +1438,6 @@
   font-weight: 700;
   color: var(--ink);
 }
-.object-editor .siret-card__foot { margin-top: 10px; }
 
 .object-editor .section-toolbar {
   display: flex;

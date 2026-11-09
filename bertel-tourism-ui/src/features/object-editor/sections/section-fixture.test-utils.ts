@@ -445,7 +445,6 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
     provider: {
       siret: '44851998300012',
       companyName: 'SARL Domaine du Bel Air',
-      sireneVerified: true,
       legalForm: 'SARL',
       nafCode: '55.10Z',
       consularChamber: 'CCI',

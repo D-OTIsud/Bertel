@@ -240,7 +240,7 @@ export const mockObjectDetails: Record<string, ObjectDetail> = {
       legal_records: [
         {
           label: 'Licence exploitation',
-          status: 'Valide',
+          status: 'active',
           document_id: 'doc-lic-2026',
           validity_mode: 'fixed_end_date',
           days_until_expiry: '294',

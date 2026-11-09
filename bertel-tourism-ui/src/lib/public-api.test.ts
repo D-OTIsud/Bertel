@@ -69,7 +69,7 @@ it('does not apply thesaurus error translation to unrelated public RPCs', async 
   expect(await callPublicRpc('get_object_resource', {})).toEqual(genericError);
 });
 
-it.each(['list_partner_objects_with_vocabulary', 'get_partner_object_with_vocabulary'])(
+it.each(['list_partner_objects_with_vocabulary', 'get_partner_object_with_vocabulary', 'list_partner_selection_objects_with_vocabulary'])(
   'translates invalid atomic-wrapper parameters into safe 400 (%s)', async (name) => {
     rpcMock.mockResolvedValue({ data: null, error: { code: 'PT400', message: 'private SQL state' } });
     expect(await callPublicRpc(name, {})).toEqual({ ok: false, status: 400,

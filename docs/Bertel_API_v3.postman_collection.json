@@ -1176,6 +1176,44 @@
           }
         },
         {
+          "name": "Sélection bêta — Terroir et artisanat (1006)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sélection disponible : HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code === 200) {",
+                  "  const d = pm.response.json();",
+                  "  pm.test('Même enveloppe, contexte sélection et fiches', function () { pm.expect(d.meta.selection_id).to.eql('1006'); pm.expect(d.meta.selection_name).to.eql('Terroir et artisanat'); pm.expect(d.meta.selection_revision).to.be.a('number'); pm.expect(d.data).to.be.an('array'); });",
+                  "  if (d.meta.next_cursor) { pm.collectionVariables.set('selection_next_cursor', d.meta.next_cursor); } else { pm.collectionVariables.unset('selection_next_cursor'); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}", "description": "Même clé partenaire bk_live_…"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects?selection_id=1006&view=full&page_size=100",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects"],
+              "query": [
+                {"key": "selection_id", "value": "1006", "description": "Identifiant stable de Terroir et artisanat"},
+                {"key": "view", "value": "full"},
+                {"key": "page_size", "value": "100"},
+                {"key": "cursor", "value": "{{selection_next_cursor}}", "disabled": true, "description": "Activer pour la page suivante seulement, puis désactiver pour recommencer"}
+              ]
+            },
+            "description": "Extension BÊTA : confirmer son activation avec l'OTI avant utilisation ; cette collection n'atteste pas son déploiement. Même endpoint /objects et mêmes fiches full. 1006 fusionne producteurs, artisans et marchés sans doublon, sur les quatre communes OTI (INSEE 97403/97412/97417/97422), publié et hors test. meta ajoute selection_id/selection_name/selection_revision (1 initialement). Ne pas combiner avec types/taxonomy/search/include_equivalent_predecessors, même false ; seules cursor/page_size/view/lang/track/format/variant sont acceptées. Sélection inconnue : 404 sans retour au catalogue global ; vide/répétée ou conflit : 400. Le test conserve next_cursor dans selection_next_cursor pour une pagination manuelle. Lectures en temps réel sans snapshot : rapprocher les appartenances uniquement après toutes les pages réussies ; une erreur ne justifie aucun retrait. Les identifiants 1001–1015 sont détaillés dans le guide partenaires."
+          }
+        },
+        {
           "name": "Récupérer une fiche publiée",
           "request": {
             "method": "GET",

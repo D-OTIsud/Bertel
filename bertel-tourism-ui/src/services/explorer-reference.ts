@@ -642,6 +642,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     taxonomies,
     accommodationFamiliesResult,
     practicesResult,
+    cuisinesResult,
     environmentTagsResult,
     accommodationUnitTypesResult,
     amenityFamiliesResult,
@@ -660,6 +661,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     snapshotTaxonomies(snapshot),
     result(codeRows('accommodation_family')),
     result(codeRows('iti_practice')),
+    result(codeRows('cuisine_type')),
     result(codeRows('environment_tag')),
     result(codeRows('accommodation_unit_type').filter((r) => r.is_assignable !== false)),
     result(codeRows('amenity_family')),
@@ -678,6 +680,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     listTaxonomyReferences(),
     client.from('ref_code').select('code,name,description,position,metadata').eq('domain', 'accommodation_family').eq('is_active', true).order('position', { ascending: true }),
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
+    client.from('ref_code').select('code,name,position').eq('domain', 'cuisine_type').eq('is_active', true).order('position', { ascending: true }),
     // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters.environmentTagsAny).
     client.from('ref_code').select('code,name,position').eq('domain', 'environment_tag').eq('is_active', true).order('position', { ascending: true }),
     // §201 — types d'unité d'hébergement. Lu sur le PARENT `ref_code` avec un
@@ -732,6 +735,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   if (practicesResult.error) {
     throw practicesResult.error;
   }
+  if (cuisinesResult.error) throw cuisinesResult.error;
   if (environmentTagsResult.error) {
     throw environmentTagsResult.error;
   }
@@ -810,6 +814,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),
+    resCuisineTypes: toReferenceOptions((cuisinesResult.data ?? []) as PracticeRow[]),
     environmentTags: toReferenceOptions(environmentTags),
     accommodationUnitTypes: toReferenceOptions(accommodationUnitTypes),
     accommodationPositionings: toReferenceOptions(accommodationPositionings),

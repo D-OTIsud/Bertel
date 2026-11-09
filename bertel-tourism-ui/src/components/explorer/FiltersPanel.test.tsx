@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { FiltersPanel } from './FiltersPanel';
-import { useExplorerStore } from '../../store/explorer-store';
+import { createExplorerStore, useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 import type { ExplorerReferences } from '../../types/domain';
 
@@ -82,6 +82,38 @@ function sectionToggle(name: RegExp, expanded: boolean) {
 function resetStore() {
   act(() => useExplorerStore.getState().resetAll());
 }
+
+describe('FiltersPanel — portée de l’éditeur de sélections partenaires', () => {
+  it('excludes editorial status, completeness and category controls from public common criteria', () => {
+    const store = createExplorerStore();
+    act(() => { useSessionStore.setState({ canEditObjects: true }); store.getState().toggleBucket('HOT'); });
+    render(<FiltersPanel references={GRADED_REFERENCES} useStore={store} selectionScope="common" typeSpecificFacets={false} />);
+    expect(screen.queryByText('Statut')).not.toBeInTheDocument();
+    expect(screen.queryByText('Remplissage')).not.toBeInTheDocument();
+    expect(screen.queryByText('Catégorie')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Section Hébergements/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Labels & certifications')).toBeInTheDocument();
+  });
+  it('offers only chosen criterion groups and keeps common groups out of branches', () => {
+    const store = createExplorerStore();
+    render(<FiltersPanel useStore={store} selectionScope="branch" typeSpecificFacets={false} visibleSelectionGroups={['pets', 'city', 'lieuDit']} lockedCommonGroups={['city']} />);
+    expect(screen.getByRole('checkbox', { name: 'Animaux acceptés' })).toBeInTheDocument();
+    expect(screen.queryByText('Ville')).not.toBeInTheDocument();
+    expect(screen.getByText('Lieu-dit')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Accessibilité (PMR)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Ouvert maintenant' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Cadre & environnement')).not.toBeInTheDocument();
+  });
+  it('starts a chosen label with certification only, keeping equivalence as an explicit choice', () => {
+    const store = createExplorerStore();
+    render(<FiltersPanel references={GRADED_REFERENCES} useStore={store} selectionScope="common" typeSpecificFacets={false} visibleSelectionGroups={['label']} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Toutes les distinctions' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Clef Verte' }));
+    expect(store.getState().common.rankedLabelSchemeCode).toBe('LBL_CLEF_VERTE');
+    expect(store.getState().common.rankedLabelIncludeEquivalents).toBe(false);
+    expect(screen.getByRole('checkbox', { name: /Inclure les démarches équivalentes/ })).not.toBeChecked();
+  });
+});
 
 describe('FiltersPanel — réinitialisation du lieu-dit', () => {
   beforeEach(resetStore);

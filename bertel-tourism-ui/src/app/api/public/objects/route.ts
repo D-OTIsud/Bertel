@@ -4,6 +4,8 @@ import { admitPartner } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { OBJECT_TYPE_CODES } from '@/lib/object-types';
 import { resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
+import { type PartnerSelection, selectionDefinitionHash } from '@/lib/partner-selections';
+import { loadPartnerSelection } from '@/lib/partner-selection-store';
 
 export const runtime = 'nodejs';
 
@@ -35,6 +37,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   const url = new URL(req.url);
+  const selectionIds = url.searchParams.getAll('selection_id');
+  let selection: PartnerSelection | undefined;
+  if (selectionIds.length > 0) {
+    const allowed = new Set(['selection_id', 'cursor', 'page_size', 'view', 'lang', 'track', 'format', 'variant']);
+    if (selectionIds.length !== 1 || !selectionIds[0].trim()
+      || [...url.searchParams.keys()].some((name) => !allowed.has(name) || url.searchParams.getAll(name).length !== 1)) {
+      return metrics.json({ error: 'bad_request', detail: 'invalid or conflicting selection parameters' }, { status: 400, headers });
+    }
+    try {
+      selection = await metrics.measure('list_rpc', () => loadPartnerSelection(selectionIds[0]));
+    } catch {
+      return metrics.json({ error: 'selection_unavailable' }, { status: 503, headers });
+    }
+    if (!selection) return metrics.json({ error: 'not_found' }, { status: 404, headers });
+  }
   const cursor = url.searchParams.get('cursor');
   // Mode d'affichage : 'full' = fiche complète get_object_resource par item (lourd, plafond bas),
   // 'card' (défaut) = carte allégée. Toute valeur ≠ 'full' ⇒ 'card'.
@@ -80,7 +97,22 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return metrics.json({ error: 'bad_request', detail: 'invalid taxonomy filter' }, { status: 400, headers });
   }
 
-  const result = await metrics.measure('list_rpc', () => callPublicRpc('list_partner_objects_with_vocabulary', {
+  const result = await metrics.measure('list_rpc', () => selection
+    ? callPublicRpc('list_partner_selection_objects_with_vocabulary', {
+      p_buckets: selection.buckets,
+      p_selection_id: selection.id,
+      p_definition_hash: selectionDefinitionHash(selection),
+      p_partner_key_id: partner.keyId,
+      p_cursor: cursor,
+      p_lang_prefs: [lang],
+      p_page_size: pageSize,
+      p_track_format: track,
+      p_view: view,
+      p_format: format,
+      p_variant: tourinsoftVariant.variant,
+      p_commune_insee: selection.communeInsee,
+    })
+    : callPublicRpc('list_partner_objects_with_vocabulary', {
     p_cursor: cursor,
     p_lang_prefs: [lang],
     p_page_size: pageSize,
@@ -139,6 +171,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         total,
         next_cursor: nextCursor,
         ...(pageInfo.vocabulary_release != null ? { vocabulary_release: pageInfo.vocabulary_release } : {}),
+        ...(selection ? { selection_id: selection.id, selection_name: selection.name, selection_revision: selection.revision } : {}),
       },
       data,
     },

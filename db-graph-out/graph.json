@@ -1,12 +1,12 @@
 {
  "meta": {
-  "table_count": 429,
+  "table_count": 430,
   "view_count": 15,
-  "function_count": 670,
+  "function_count": 683,
   "policy_count": 647,
   "trigger_count": 1439,
   "enum_count": 9,
-  "edge_count": 6406
+  "edge_count": 6430
  },
  "nodes": [
   {
@@ -58656,6 +58656,94 @@
    }
   },
   {
+   "id": "internal.partner_selection",
+   "kind": "table",
+   "label": "partner_selection",
+   "schema": "internal",
+   "domain": "other",
+   "doc": "Durable organization-owned dynamic public selections. Private CRUD via role-gated RPC; partner reader service-only.",
+   "props": {
+    "columns": [
+     {
+      "name": "id",
+      "type": "bigint",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "org_object_id",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "name",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "buckets",
+      "type": "jsonb",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "explorer_state",
+      "type": "jsonb",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "commune_insee",
+      "type": "text[]",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "state",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "revision",
+      "type": "integer",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "created_by",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "updated_by",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true,
+    "rls_forced": false,
+    "owner": "postgres",
+    "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}"
+   }
+  },
+  {
    "id": "thesaurus.object_ids_for_row(p_table oid, p_row jsonb, p_visited oid[] DEFAULT '{}'::oid[], p_depth integer DEFAULT 0)",
    "kind": "function",
    "label": "object_ids_for_row",
@@ -58850,18 +58938,33 @@
    }
   },
   {
-   "id": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
+   "id": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
    "kind": "function",
    "label": "get_filtered_object_ids",
    "schema": "api",
    "domain": "api",
    "doc": "---- 1) api.get_filtered_object_ids (corps complet §157+§162+§173) ----",
    "props": {
-    "signature": "get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
+    "signature": "get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
     "returns": "TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)",
     "security_definer": true,
     "volatility": "s",
     "dynamic_sql": false,
+    "body_md5": "d4905c8d789de044d82fe65dba4633c1",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "PUBLIC",
+     "postgres"
+    ],
+    "effective_execute": {
+     "anon": true,
+     "service_role": true,
+     "authenticated": true
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, extensions, auth, audit, crm, ref"
+    ],
+    "owner": "postgres",
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
@@ -58898,6 +59001,14 @@
      {
       "path": "Base de donnée DLL et API/migration_label_filter_sections.sql",
       "line": 17
+     },
+     {
+      "path": "supabase/migrations/20261109080813_restaurant_cuisine_filter.sql",
+      "line": 35
+     },
+     {
+      "path": "Base de donnée DLL et API/restaurant_cuisine_filter.sql",
+      "line": 35
      }
     ]
    }
@@ -75481,6 +75592,465 @@
       "service_role"
      ]
     }
+   }
+  },
+  {
+   "id": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+   "kind": "function",
+   "label": "list_partner_selection_objects_with_vocabulary",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Server-registry selection: union before keyset pagination, real published objects only, public serializers and vocabulary from one statement snapshot. Cursor bound to definition, partner and representation. Service-role only.",
+   "props": {
+    "signature": "list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "catalog_captured_at": "2026-11-09 06:00:31.011316+00",
+    "body_md5": "b39369e86bff568b267e832da825dfe9",
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, extensions, pg_temp"
+    ]
+   }
+  },
+  {
+   "id": "api.create_partner_selection(p_name text, p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+   "kind": "function",
+   "label": "create_partner_selection",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "create_partner_selection(p_name text, p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "body_md5": "2e41d6e1b131999d378e5557e62d2c17",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "authenticated"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": false,
+     "authenticated": true
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 257
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.get_active_partner_selection_definition(p_selection_id text)",
+   "kind": "function",
+   "label": "get_active_partner_selection_definition",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_active_partner_selection_definition(p_selection_id text)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "75ccda759952e10fc02a3a5a15392d0e",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": true,
+     "authenticated": false
+    },
+    "settings": [
+     "search_path=pg_catalog, internal, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 341
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.get_partner_selection(p_selection_id text)",
+   "kind": "function",
+   "label": "get_partner_selection",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_partner_selection(p_selection_id text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "8dce3d48cfc1f97727b26bff5f9d32cd",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "authenticated"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": false,
+     "authenticated": true
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 244
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.list_partner_selections(p_org_object_id text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "list_partner_selections",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_partner_selections(p_org_object_id text DEFAULT NULL::text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "7fdaa88f35d830ddb617c56062970f51",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "authenticated"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": false,
+     "authenticated": true
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 230
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.prepare_partner_selection_preview(p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_commune_insee text[] DEFAULT NULL::text[], p_name text DEFAULT 'Aperçu'::text)",
+   "kind": "function",
+   "label": "prepare_partner_selection_preview",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "prepare_partner_selection_preview(p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_commune_insee text[] DEFAULT NULL::text[], p_name text DEFAULT 'Aperçu'::text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "3bff006abf6c2314b5b5358ea061c286",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "authenticated"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": false,
+     "authenticated": true
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 325
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.seed_beta_partner_selections(p_org_object_id text)",
+   "kind": "function",
+   "label": "seed_beta_partner_selections",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "seed_beta_partner_selections(p_org_object_id text)",
+    "returns": "integer",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "body_md5": "4c0c2050621defee3d42a824d3edc367",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": true,
+     "authenticated": false
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 370
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.set_partner_selection_state(p_selection_id text, p_expected_revision integer, p_state text)",
+   "kind": "function",
+   "label": "set_partner_selection_state",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "set_partner_selection_state(p_selection_id text, p_expected_revision integer, p_state text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "body_md5": "59950a5b0803639118296f167591f0f2",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "authenticated"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": false,
+     "authenticated": true
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 298
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.update_partner_selection(p_selection_id text, p_expected_revision integer, p_name text, p_buckets jsonb, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+   "kind": "function",
+   "label": "update_partner_selection",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "update_partner_selection(p_selection_id text, p_expected_revision integer, p_name text, p_buckets jsonb, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "body_md5": "1e6856319ea799308630b04cd20afacf",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "authenticated"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": false,
+     "authenticated": true
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 275
+     }
+    ]
+   }
+  },
+  {
+   "id": "internal.cuisine_filter_codes(p_filters jsonb)",
+   "kind": "function",
+   "label": "cuisine_filter_codes",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "cuisine_filter_codes(p_filters jsonb)",
+    "returns": "text[]",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "690a1fa64f9ec225f9b10188598d055b",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": true,
+     "authenticated": false
+    },
+    "settings": [
+     "search_path=pg_catalog, public, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080813_restaurant_cuisine_filter.sql",
+      "line": 6
+     },
+     {
+      "path": "Base de donnée DLL et API/restaurant_cuisine_filter.sql",
+      "line": 6
+     }
+    ]
+   }
+  },
+  {
+   "id": "internal.partner_selection_can_manage(p_org_object_id text)",
+   "kind": "function",
+   "label": "partner_selection_can_manage",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "partner_selection_can_manage(p_org_object_id text)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "f5a074fe22c4c46c7291c06918501511",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": false,
+     "authenticated": false
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 32
+     }
+    ]
+   }
+  },
+  {
+   "id": "internal.partner_selection_document(p_row internal.partner_selection)",
+   "kind": "function",
+   "label": "partner_selection_document",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "partner_selection_document(p_row internal.partner_selection)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "a173a831e5f5efaa195a5312eff808bc",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": true,
+     "authenticated": false
+    },
+    "settings": [
+     "search_path=pg_catalog, internal, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 216
+     }
+    ]
+   }
+  },
+  {
+   "id": "internal.partner_selection_validate(p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[])",
+   "kind": "function",
+   "label": "partner_selection_validate",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "partner_selection_validate(p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[])",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "0f64b868dab66fce701af831dd52dd5f",
+    "catalog_captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": true,
+     "authenticated": false
+    },
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, pg_temp"
+    ],
+    "owner": "postgres",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109080851_partner_selection_registry.sql",
+      "line": 42
+     }
+    ]
    }
   },
   {
@@ -121152,402 +121722,6 @@
    }
   },
   {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "internal.mv_filtered_objects",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "from internal.mv_filtered_objects"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.object"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_location",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_location"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "thesaurus.source_rows",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "medium",
-     "evidence": "FROM source_rows"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_classification",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_classification"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_classification_scheme",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_classification_scheme"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_classification_value",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_classification_value"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_sustainability_action",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_sustainability_action"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_sustainability_action",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_sustainability_action"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_classification_equivalent_action",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM ref_classification_equivalent_action"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_classification_equivalent_group",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM ref_classification_equivalent_group"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_sustainability_action_label",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_sustainability_action_label"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_amenity",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_amenity"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_amenity",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_amenity"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_code_amenity_family",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_amenity_family"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.actor_object_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM public.actor_object_role"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_sustainability_action_category",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_sustainability_action_category"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_pet_policy",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_pet_policy"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.media",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM media"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_code_media_type",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_media_type"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_meeting_room",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_meeting_room"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.meeting_room_equipment",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM meeting_room_equipment"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_code_meeting_equipment",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_meeting_equipment"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_capacity_metric",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_capacity_metric"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_capacity",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_capacity"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.tag_link",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM tag_link"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_tag",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_tag"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_accommodation_unit_type",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_accommodation_unit_type"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_code_accommodation_unit_type",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_accommodation_unit_type"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_iti",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_iti"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_iti_practice",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_iti_practice"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.ref_code_iti_practice",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_iti_practice"
-    }
-   }
-  },
-  {
-   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)",
-   "target": "public.object_fma",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_fma"
-    }
-   }
-  },
-  {
    "source": "api.get_object_environment_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
    "target": "public.object_environment_tag",
    "kind": "reads",
@@ -144782,6 +144956,693 @@
    "props": {
     "object_type": "RVA"
    }
+  },
+  {
+   "source": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "public.object_iti_practice",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_iti_practice"
+    }
+   }
+  },
+  {
+   "source": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object"
+    }
+   }
+  },
+  {
+   "source": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "public.object_location",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_location"
+    }
+   }
+  },
+  {
+   "source": "internal.partner_selection",
+   "target": "public.object",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "org_object_id",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "internal.partner_selection",
+   "target": "auth.users",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "created_by",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "internal.partner_selection",
+   "target": "auth.users",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "updated_by",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "api.create_partner_selection(p_name text, p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "internal.partner_selection",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "api.get_active_partner_selection_definition(p_selection_id text)",
+   "target": "internal.partner_selection",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "internal.mv_filtered_objects",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "from internal.mv_filtered_objects"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM media"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.meeting_room_equipment",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM meeting_room_equipment"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_accommodation_unit_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_accommodation_unit_type"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_capacity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_capacity"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_classification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object_classification"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_fma",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_fma"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_iti",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_iti_practice",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_practice"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_location",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_location"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_meeting_room",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object_meeting_room"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_pet_policy",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_pet_policy"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_sustainability_action_label",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_sustainability_action_label"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.actor_object_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.actor_object_role"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_cuisine_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_cuisine_type"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_code_cuisine_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.ref_code_cuisine_type"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_amenity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_amenity"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_capacity_metric",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_capacity_metric"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_classification_equivalent_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_classification_equivalent_action"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_classification_equivalent_group",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_classification_equivalent_group"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_classification_scheme",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_classification_scheme"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_classification_value",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_classification_value"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_accommodation_unit_type"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_code_amenity_family",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_amenity_family"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_code_iti_practice",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_iti_practice"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_code_media_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_media_type"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_code_meeting_equipment",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_meeting_equipment"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_sustainability_action",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_sustainability_action"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_sustainability_action_category",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_sustainability_action_category"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "thesaurus.source_rows",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "medium",
+     "evidence": "FROM source_rows"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.tag_link",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM tag_link"
+    }
+   }
+  },
+  {
+   "source": "api.get_partner_selection(p_selection_id text)",
+   "target": "internal.partner_selection",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "api.list_partner_selections(p_org_object_id text DEFAULT NULL::text)",
+   "target": "internal.partner_selection",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "api.seed_beta_partner_selections(p_org_object_id text)",
+   "target": "internal.partner_selection",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "api.seed_beta_partner_selections(p_org_object_id text)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "api.seed_beta_partner_selections(p_org_object_id text)",
+   "target": "internal.partner_selection",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "api.set_partner_selection_state(p_selection_id text, p_expected_revision integer, p_state text)",
+   "target": "internal.partner_selection",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "api.set_partner_selection_state(p_selection_id text, p_expected_revision integer, p_state text)",
+   "target": "thesaurus.revision",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "medium",
+     "evidence": "FROM s.revision"
+    }
+   }
+  },
+  {
+   "source": "api.set_partner_selection_state(p_selection_id text, p_expected_revision integer, p_state text)",
+   "target": "internal.partner_selection",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "api.update_partner_selection(p_selection_id text, p_expected_revision integer, p_name text, p_buckets jsonb, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "internal.partner_selection",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "api.update_partner_selection(p_selection_id text, p_expected_revision integer, p_name text, p_buckets jsonb, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "thesaurus.revision",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "medium",
+     "evidence": "FROM s.revision"
+    }
+   }
+  },
+  {
+   "source": "api.update_partner_selection(p_selection_id text, p_expected_revision integer, p_name text, p_buckets jsonb, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "internal.partner_selection",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "internal.cuisine_filter_codes(p_filters jsonb)",
+   "target": "public.ref_code_cuisine_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_code_cuisine_type"
+    }
+   }
+  },
+  {
+   "source": "internal.partner_selection_validate(p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[])",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "internal.partner_selection_validate(p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[])",
+   "target": "public.ref_code_cuisine_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_code_cuisine_type"
+    }
+   }
   }
  ],
  "partitions": {
@@ -144863,5 +145724,72 @@
   "audit.audit_log_2027_01": "audit.audit_log",
   "public.ref_code_payment_method": "public.ref_code",
   "public.ref_code_allergen": "public.ref_code"
+ },
+ "catalog_provenance": {
+  "full_catalog_capture_at": "2026-11-08T17:51:10.274935+00:00",
+  "full_catalog_ledger": 212,
+  "full_catalog_details": "DB_AGENT_INDEX.md",
+  "targeted_function_updates": [
+   {
+    "scope": "targeted live production function addition; not a complete catalog refresh",
+    "project_id": "ryycrdhlkmzpxwwwwupy",
+    "captured_at": "2026-11-09 06:00:31.011316+00",
+    "source": "Supabase MCP pg_proc/pg_namespace/ACL metadata",
+    "migration": "supabase/migrations/20261109055511_partner_selection_objects.sql",
+    "function_id": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+    "body_md5": "b39369e86bff568b267e832da825dfe9",
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "service_role_execute": true,
+    "anon_execute": false,
+    "authenticated_execute": false,
+    "direct_table_reads": [
+     "public.object",
+     "public.object_iti_practice",
+     "public.object_location"
+    ],
+    "indirect_calls_are_not_exhaustive_graph_edges": true
+   }
+  ],
+  "targeted_catalog_updates": [
+   {
+    "scope": "targeted table/function metadata; not a complete catalog refresh",
+    "source": "Supabase MCP - Bertel production",
+    "captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "table": "internal.partner_selection",
+    "project_ref": "ryycrdhlkmzpxwwwwupy",
+    "migration_history": [
+     {
+      "version": "20261109080813",
+      "name": "restaurant_cuisine_filter"
+     },
+     {
+      "version": "20261109080851",
+      "name": "partner_selection_registry"
+     }
+    ],
+    "functions": [
+     "api.create_partner_selection(p_name text, p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+     "api.get_active_partner_selection_definition(p_selection_id text)",
+     "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+     "api.get_partner_selection(p_selection_id text)",
+     "api.list_partner_selections(p_org_object_id text DEFAULT NULL::text)",
+     "api.prepare_partner_selection_preview(p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_commune_insee text[] DEFAULT NULL::text[], p_name text DEFAULT 'Aperçu'::text)",
+     "api.seed_beta_partner_selections(p_org_object_id text)",
+     "api.set_partner_selection_state(p_selection_id text, p_expected_revision integer, p_state text)",
+     "api.update_partner_selection(p_selection_id text, p_expected_revision integer, p_name text, p_buckets jsonb, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])",
+     "internal.cuisine_filter_codes(p_filters jsonb)",
+     "internal.partner_selection_can_manage(p_org_object_id text)",
+     "internal.partner_selection_document(p_row internal.partner_selection)",
+     "internal.partner_selection_validate(p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[])"
+    ],
+    "preserved_readers": {
+     "api.list_partner_objects_with_vocabulary": "ddcb1112ad9cdb9b7fcba9bfd4a881e6",
+     "api.list_partner_selection_objects_with_vocabulary": "b39369e86bff568b267e832da825dfe9"
+    }
+   }
+  ]
  }
 }

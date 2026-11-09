@@ -804,6 +804,18 @@ COMMIT;
 \ir ../supabase/migrations/20261108173157_manual_list_email_quotas.sql
 \ir tests/test_manual_list_email_quotas.sql
 
+\echo '== Partner selection reader: server registry, union before paging =='
+\ir ../supabase/migrations/20261109055511_partner_selection_objects.sql
+\ir tests/test_partner_selection_objects.sql
+
+\echo '== Structured restaurant cuisine shared filter (no menus) =='
+\ir ../supabase/migrations/20261109080813_restaurant_cuisine_filter.sql
+\ir tests/test_restaurant_cuisine_filter.sql
+
+\echo '== Durable organization-owned partner selections and public draft preview =='
+\ir ../supabase/migrations/20261109080851_partner_selection_registry.sql
+\ir tests/test_partner_selection_registry.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

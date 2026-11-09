@@ -112,6 +112,10 @@ interface FiltersPanelProps {
   onReset?: () => void;
   periodActive?: boolean;
   resetButtonRef?: Ref<HTMLButtonElement>;
+  /** Isolated partner editor: public criteria only, with one editing home for shared criteria. */
+  selectionScope?: 'common' | 'branch';
+  lockedCommonGroups?: readonly string[];
+  visibleSelectionGroups?: readonly string[];
 }
 
 function readCapacityValue(filters: Array<{ code: string; min?: number; max?: number }>, code: string, key: 'min' | 'max'): number | undefined {
@@ -186,7 +190,8 @@ function filterSustainabilityActions(
   );
 }
 
-export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true, includeArchivedStatus = true, contextPage = 'explorer', onReset, periodActive = false, resetButtonRef }: FiltersPanelProps) {
+export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true, includeArchivedStatus = true, contextPage = 'explorer', onReset, periodActive = false, resetButtonRef, selectionScope, lockedCommonGroups = [], visibleSelectionGroups }: FiltersPanelProps) {
+  const sharedVisible = (group: string) => (!selectionScope || !visibleSelectionGroups || visibleSelectionGroups.includes(group)) && (selectionScope !== 'branch' || !lockedCommonGroups.includes(group));
   const [accommodationQuery, setAccommodationQuery] = useState('');
   const [openAccommodationFamily, setOpenAccommodationFamily] = useState<string | null>('locatif');
   const [showAccommodationComplements, setShowAccommodationComplements] = useState(false);
@@ -243,6 +248,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const setIncludeEquivalentPredecessors = useStore((state) => state.setIncludeEquivalentPredecessors);
   const setHotCapacityFilter = useStore((state) => state.setHotCapacityFilter);
   const setResCapacityFilter = useStore((state) => state.setResCapacityFilter);
+  const setResCuisineTypes = useStore((state) => state.setResCuisineTypes);
   const setHotMeetingRoom = useStore((state) => state.setHotMeetingRoom);
   const setItiIsLoop = useStore((state) => state.setItiIsLoop);
   const setItiDifficulty = useStore((state) => state.setItiDifficulty);
@@ -338,7 +344,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
     accommodationPositioningsAny.length +
     countActiveRanges(hot.capacityFilters) +
     (Object.values(hot.meetingRoom).some((value) => value != null) ? 1 : 0);
-  const resSectionCount = taxonomyCountForBucket(taxonomyAny, 'RES') + countActiveRanges(res.capacityFilters);
+  const resSectionCount = taxonomyCountForBucket(taxonomyAny, 'RES') + countActiveRanges(res.capacityFilters) + (res.cuisineTypesAny ?? []).length;
   const itiSectionCount =
     taxonomyCountForBucket(taxonomyAny, 'ITI') +
     (iti.isLoop != null ? 1 : 0) +
@@ -952,8 +958,8 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
     <div className="filter-context-panel flex min-h-0 min-w-0 flex-col border-r border-line bg-surface">
       <div className="flex min-h-14 flex-none flex-wrap items-center justify-between gap-2 border-b border-line bg-surface px-4 py-2">
         <div className="flex min-w-0 flex-wrap items-baseline gap-2 font-display text-sm leading-5 font-bold tracking-tight text-ink">
-          Filtres
-          <span className="font-sans text-xs font-medium text-ink-3">{activeFilterCount} appliqués{context.memorized.length > 0 ? ` · ${context.memorized.length} mémorisés` : ''}</span>
+          {selectionScope ? 'Critères' : 'Filtres'}
+          {!selectionScope && <span className="font-sans text-xs font-medium text-ink-3">{activeFilterCount} appliqués{context.memorized.length > 0 ? ` · ${context.memorized.length} mémorisés` : ''}</span>}
         </div>
         <button ref={resetButtonRef} type="button" onClick={onReset ?? resetAll} title="Réinitialiser les filtres en conservant le choix du périmètre prestataires" className="filter-context-action text-sm leading-5 font-semibold text-orange-2 hover:text-orange">
           Réinitialiser
@@ -961,7 +967,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-6 pt-1">
-        <FilterColumnGroup label="Catégorie">
+        <FilterColumnGroup label="Catégorie" hidden={!!selectionScope}>
           <div className="flex flex-wrap gap-2">
             {EXPLORER_BUCKET_OPTIONS.map((option) => (
               <button
@@ -979,7 +985,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
         </FilterColumnGroup>
 
         {taxonomyAny.length > 0 && (
-          <FilterColumnGroup label="Anciennes dénominations">
+          <FilterColumnGroup label="Anciennes dénominations" hidden={selectionScope === 'common' || (!!selectionScope && !typeSpecificFacets)}>
             <label className="flex cursor-pointer items-start gap-2 text-sm leading-5 text-ink-2">
               <input
                 type="checkbox"
@@ -1001,7 +1007,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
         {/* §205 — groupe réservé aux éditeurs et plus. Le masquage n'est PAS la
             garde : resolveExplorerStatuses force ['published'] pour un lecteur
             seul (URL partagée, changement de rôle) et RLS reste le filet. */}
-        {canEditObjects ? (
+        {canEditObjects && !selectionScope ? (
           <FilterColumnGroup label="Statut">
             <div className="flex flex-wrap gap-2">
               {statusOptions.map((option) => {
@@ -1041,7 +1047,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             canEditObjects que le groupe Statut ci-dessus. Le masquage n'est PAS
             la garde : le hook neutralise l'état et le RPC ignore les clés d'un
             non-éditeur. On dit « remplissage », jamais « complétude ». */}
-        {canEditObjects ? (
+        {canEditObjects && !selectionScope ? (
           <FilterColumnGroup label="Remplissage">
             <div className="space-y-3">
               <div>
@@ -1088,9 +1094,9 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </FilterColumnGroup>
         ) : null}
 
-        <FilterColumnGroup label="Localisation">
+        <FilterColumnGroup label="Localisation" hidden={!sharedVisible('city') && !sharedVisible('lieuDit')}>
           <div className="space-y-3">
-            <div>
+            {sharedVisible('city') && <div>
               <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Ville</span>
               <FilterDropdown<string>
                 mode="multi"
@@ -1102,8 +1108,8 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 selected={cities}
                 onChange={(vals) => setCities(vals)}
               />
-            </div>
-            <div>
+            </div>}
+            {sharedVisible('lieuDit') && <div>
               <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Lieu-dit</span>
               <FilterDropdown<string>
                 mode="single"
@@ -1113,7 +1119,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 selected={common.lieuDit ? [common.lieuDit] : []}
                 onChange={(vals) => setLieuDit(vals[0] ?? '')}
               />
-            </div>
+            </div>}
           </div>
         </FilterColumnGroup>
 
@@ -1121,7 +1127,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             (et qu'aucune n'est active) : un sélecteur « Toutes les distinctions » sur une liste
             vide ne dit rien. Une section de moins dans la colonne. */}
         {rankedLabelOptions.length > 0 || rankedLabelSchemeCode ? (
-        <FilterColumnGroup label="Labels & certifications" count={labelFilterCount > 0 ? labelFilterCount : undefined}>
+        <FilterColumnGroup label="Labels & certifications" hidden={!sharedVisible('label')} count={labelFilterCount > 0 ? labelFilterCount : undefined}>
           <div className="space-y-3">
             <div>
               {/* §175 — « Distinctions » (et non « Classement / label ») : le mot « classement »
@@ -1136,7 +1142,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 searchPlaceholder="Rechercher une distinction"
                 options={rankedLabelOptions.map((option) => ({ code: option.code, label: option.name, group: option.group }))}
                 selected={rankedLabelSchemeCode ? [rankedLabelSchemeCode] : []}
-                onChange={(vals) => setRankedLabelScheme(vals[0] ?? null)}
+                onChange={(vals) => { setRankedLabelScheme(vals[0] ?? null); if (selectionScope) setRankedLabelIncludeEquivalents(false); }}
               />
             </div>
 
@@ -1163,7 +1169,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 <span>
                   <span className="font-medium">Inclure les démarches équivalentes</span>
                   <span className="mt-0.5 block text-sm leading-5 text-ink-3">
-                    Affiche aussi les fiches sans le label mais avec des actions/équipements compatibles (2ᵉ section).
+                    {selectionScope ? 'Ajoute les fiches sans ce label qui déclarent des actions ou équipements compatibles.' : 'Affiche aussi les fiches sans le label mais avec des actions/équipements compatibles (2ᵉ section).'}
                   </span>
                 </span>
               </label>
@@ -1173,7 +1179,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
         </FilterColumnGroup>
         ) : null}
 
-        <FilterColumnGroup label="Tags" count={tagsAny.length > 0 ? tagsAny.length : undefined}>
+        <FilterColumnGroup label="Tags" hidden={!sharedVisible('tags')} count={tagsAny.length > 0 ? tagsAny.length : undefined}>
           <div className="space-y-2">
             {/* §160 — picker : les tags sont ajoutables depuis le panneau, plus
                 seulement par clic sur une carte de résultat (découvrabilité). */}
@@ -1234,31 +1240,33 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
         <FilterColumnGroup
           label="Accessibilité et services"
+          hidden={['accessibility', 'sustainability', 'pets', 'opening'].every((group) => !sharedVisible(group))}
           count={accessibilityDetailCount + sustainabilityDetailCount > 0 ? accessibilityDetailCount + sustainabilityDetailCount : undefined}
         >
           <div className="flex flex-col gap-2">
-            <label className="switch-row">
+            {sharedVisible('accessibility') && <label className="switch-row">
               <span>Accessibilité (PMR)</span>
               <input type="checkbox" checked={pmr} onChange={(event) => setPmr(event.target.checked)} />
-            </label>
-            {pmr ? renderAccessibilityDetails() : null}
-            <label className="switch-row">
+            </label>}
+            {sharedVisible('accessibility') && pmr ? renderAccessibilityDetails() : null}
+            {selectionScope && sharedVisible('accessibility') && <p className="text-xs text-ink-3">Accessibilité déclarée ou équipements. La certification Tourisme &amp; Handicap se choisit dans Labels &amp; certifications.</p>}
+            {sharedVisible('sustainability') && <label className="switch-row">
               <span>Démarche durable</span>
               <input type="checkbox" checked={sustainable} onChange={(event) => setSustainable(event.target.checked)} />
-            </label>
-            {sustainable ? renderSustainabilityDetails() : null}
-            <label className="switch-row">
+            </label>}
+            {sharedVisible('sustainability') && sustainable ? renderSustainabilityDetails() : null}
+            {sharedVisible('pets') && <label className="switch-row">
               <span>Animaux acceptés</span>
               <input type="checkbox" checked={common.petsAccepted} onChange={(event) => setPetsAccepted(event.target.checked)} />
-            </label>
-            <label className="switch-row">
+            </label>}
+            {sharedVisible('opening') && <label className="switch-row">
               <span>Ouvert maintenant</span>
               <input type="checkbox" checked={common.openNow} onChange={(event) => setOpenNow(event.target.checked)} />
-            </label>
+            </label>}
             {/* §157 — « ouvert à … » : le moteur d'ouverture évalué à un instant
                 choisi (« les restaurants encore ouverts à 18 h »). Exclusif avec
                 « Ouvert maintenant » (le store gère l'exclusion). */}
-            <div>
+            {sharedVisible('opening') && <div>
               <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Ouvert à… (date et heure)</span>
               <div className="flex items-center gap-2">
                 <Input className="filter-context-input min-h-10 h-auto"
@@ -1277,7 +1285,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                   </button>
                 ) : null}
               </div>
-            </div>
+            </div>}
           </div>
         </FilterColumnGroup>
 
@@ -1285,6 +1293,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             types — rural, vue panoramique, volcan… — pas seulement les activités). */}
         <FilterColumnGroup
           label="Cadre & environnement"
+          hidden={!sharedVisible('environment')}
           count={environmentTagsAny.length > 0 ? environmentTagsAny.length : undefined}
         >
           <FilterDropdown<string>
@@ -1303,6 +1312,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             trans-types — piscine d'un camping, parking d'un musée…). */}
         <FilterColumnGroup
           label="Services & équipements"
+          hidden={!sharedVisible('amenities')}
           count={amenityFamiliesAny.length > 0 ? amenityFamiliesAny.length : undefined}
         >
           <FilterDropdown<string>
@@ -1403,6 +1413,18 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               <div>
                 <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Type de restauration</span>
                 {renderTaxonomyChips('RES') ?? taxonomyCatalogFallback}
+              </div>
+              <div>
+                <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Types de cuisine</span>
+                {!references?.resCuisineTypes?.length && <p className="text-xs text-ink-3">{references ? 'Catalogue des cuisines indisponible.' : 'Chargement du catalogue des cuisines…'}</p>}
+                <div className="flex flex-wrap gap-1.5">
+                  {(references?.resCuisineTypes ?? []).map((cuisine) => {
+                    const selected = res.cuisineTypesAny ?? [];
+                    const active = selected.includes(cuisine.code);
+                    return <button key={cuisine.code} type="button" className={bucketChipClass(active)} aria-pressed={active}
+                      onClick={() => setResCuisineTypes(active ? selected.filter((code) => code !== cuisine.code) : [...selected, cuisine.code])}>{cuisine.name}</button>;
+                  })}
+                </div>
               </div>
 
               {/* §159 — même idiome que HEB, sur la métrique que les restaurants

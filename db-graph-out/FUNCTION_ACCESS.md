@@ -315,6 +315,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/create_membership_tier`
 - **object types served:** —
 
+### `api.create_partner_selection(p_name text, p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])` _(DEFINER)_
+- **returns:** `jsonb`
+- **EXECUTE grants:** `postgres`, `authenticated`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": true, "service_role": false}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/create_partner_selection`
+- **object types served:** **all object types**
+
 ### `api.create_tag(p_anchor_object_id text, p_name text, p_color text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/create_tag`
@@ -581,6 +589,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_active_object_documents`
 - **object types served:** **all object types**
 
+### `api.get_active_partner_selection_definition(p_selection_id text)`
+- **returns:** `jsonb`
+- **EXECUTE grants:** `postgres`, `service_role`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": false, "service_role": true}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_active_partner_selection_definition`
+- **object types served:** **all object types**
+
 ### `api.get_actor_data(p_object_id text)`
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_actor_data`
@@ -704,8 +720,10 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Function to get expiring legal records in API format_
 
-### `api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)` _(DEFINER)_
+### `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)`
+- **EXECUTE grants:** `PUBLIC`, `postgres`.
+- **Effective EXECUTE:** {"anon": true, "authenticated": true, "service_role": true}.
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_filtered_object_ids`
 - **object types served:** **all object types**
 - _1) api.get_filtered_object_ids (corps complet §157+§162+§173)_
@@ -1032,6 +1050,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_partner_object_with_vocabulary`
 - **object types served:** **all object types**
 - _Published real object, optional pivot and vocabulary release from one statement snapshot; service_role only._
+
+### `api.get_partner_selection(p_selection_id text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **EXECUTE grants:** `postgres`, `authenticated`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": true, "service_role": false}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_partner_selection`
+- **object types served:** **all object types**
 
 ### `api.get_pending_document_requests(p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])`
 - **returns:** `TABLE(legal_id uuid, object_id text, object_name text, object_type text, legal_type_code text, legal_type_name text, value jsonb, document_requested_at timestamp with time zone, days_since_requested integer, note text)`
@@ -1448,6 +1474,21 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Published real object page and vocabulary release from one snapshot; opt-in exact-equivalence taxonomy filters._
 
+### `api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])`
+- **returns:** `jsonb`
+- **EXECUTE grants:** `postgres`, `service_role`; `anon` and `authenticated` denied (live catalogue 9 November 2026).
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_partner_selection_objects_with_vocabulary`
+- **object types served:** **all object types**
+- _Server-registry selection: union before keyset pagination, real published objects only, public serializers and vocabulary from one statement snapshot. Cursor bound to definition, partner and representation. Service-role only._
+
+### `api.list_partner_selections(p_org_object_id text DEFAULT NULL::text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **EXECUTE grants:** `postgres`, `authenticated`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": true, "service_role": false}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_partner_selections`
+- **object types served:** **all object types**
+
 ### `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)` _(DEFINER)_
 - **returns:** `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone, submission_id uuid, submission_note text, actor_label text, manual_apply boolean)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_pending_changes`
@@ -1663,6 +1704,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/prepare_list_email`
 - **object types served:** **all object types**
+
+### `api.prepare_partner_selection_preview(p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_commune_insee text[] DEFAULT NULL::text[], p_name text DEFAULT 'Aperçu'::text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **EXECUTE grants:** `postgres`, `authenticated`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": true, "service_role": false}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/prepare_partner_selection_preview`
+- **object types served:** —
 
 ### `api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -2253,6 +2302,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/search_restaurants_by_cuisine`
 - **object types served:** **all object types**
 
+### `api.seed_beta_partner_selections(p_org_object_id text)`
+- **returns:** `integer`
+- **EXECUTE grants:** `postgres`, `service_role`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": false, "service_role": true}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/seed_beta_partner_selections`
+- **object types served:** **all object types**
+
 ### `api.send_portal_message(p_object_id text, p_subject text, p_body text, p_attachments jsonb DEFAULT '[]'::jsonb, p_reply_to text DEFAULT NULL::text, p_client_id uuid DEFAULT NULL::uuid)` _(DEFINER)_
 - **returns:** `uuid`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/send_portal_message`
@@ -2280,6 +2337,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/set_list_items`
 - **object types served:** **all object types**
 - _11. Items statiques — verrou, reconcile non-destructif, cible normalisée UNIQUE_
+
+### `api.set_partner_selection_state(p_selection_id text, p_expected_revision integer, p_state text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **EXECUTE grants:** `postgres`, `authenticated`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": true, "service_role": false}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/set_partner_selection_state`
+- **object types served:** **all object types**
 
 ### `api.set_provider_only_preference(p_enabled boolean)`
 - **returns:** `boolean`
@@ -2522,6 +2587,14 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/update_list`
 - **object types served:** **all object types**
 - _10. Mise à jour des métadonnées — verrou + bump SEULEMENT sur diff réel_
+
+### `api.update_partner_selection(p_selection_id text, p_expected_revision integer, p_name text, p_buckets jsonb, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])` _(DEFINER)_
+- **returns:** `jsonb`
+- **EXECUTE grants:** `postgres`, `authenticated`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": true, "service_role": false}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/update_partner_selection`
+- **object types served:** **all object types**
 
 ### `api.update_portal_photo_proposal_texts(p_object_id text, p_document_id uuid, p_expected jsonb, p_title text, p_description text)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -2851,6 +2924,13 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** —
 
+### `internal.cuisine_filter_codes(p_filters jsonb)`
+- **returns:** `text[]`
+- **EXECUTE grants:** `postgres`, `service_role`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": false, "service_role": true}.
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
 ### `internal.dashboard_crm_interactions()`
 - **returns:** `SETOF public.crm_interaction`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
@@ -3013,6 +3093,30 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 - _Le créateur (ou tout p_user_id) est-il ACTIVEMENT membre de cette ORG ?_
+
+### `internal.partner_selection_can_manage(p_org_object_id text)` _(DEFINER)_
+- **returns:** `boolean`
+- **EXECUTE grants:** `postgres`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": false, "service_role": false}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.partner_selection_document(p_row internal.partner_selection)`
+- **returns:** `jsonb`
+- **EXECUTE grants:** `postgres`, `service_role`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": false, "service_role": true}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.partner_selection_validate(p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[])` _(DEFINER)_
+- **returns:** `void`
+- **EXECUTE grants:** `postgres`, `service_role`.
+- **Effective EXECUTE:** {"anon": false, "authenticated": false, "service_role": true}.
+- **Result scope:** organization-owned selection configuration; not an object resource serializer.
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
 
 ### `internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)` _(DEFINER)_
 - **returns:** `boolean`

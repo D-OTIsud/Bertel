@@ -218,10 +218,11 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
           },
         }
       : {}),
-    ...(parseCapacityFilters(searchParams.get('resCapacity')) !== undefined
+    ...(parseCapacityFilters(searchParams.get('resCapacity')) !== undefined || searchParams.has('resCuisines')
       ? {
           res: {
             ...DEFAULT_EXPLORER_FILTERS.res,
+            cuisineTypesAny: [...new Set((searchParams.get('resCuisines') ?? '').split(',').map((code) => code.trim()).filter(Boolean))],
             capacityFilters: parseCapacityFilters(searchParams.get('resCapacity')) ?? DEFAULT_EXPLORER_FILTERS.res.capacityFilters,
           },
         }
@@ -363,6 +364,7 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
     p.set('hotCapacity', hotCapacity);
   }
   const resCapacity = serializeCapacityFilters(normalizedFilters.res.capacityFilters);
+  if (normalizedFilters.res.cuisineTypesAny?.length) p.set('resCuisines', normalizedFilters.res.cuisineTypesAny.join(','));
   if (resCapacity) {
     p.set('resCapacity', resCapacity);
   }

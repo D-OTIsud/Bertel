@@ -133,6 +133,7 @@ export const DEFAULT_EXPLORER_FILTERS: ExplorerFilters = {
   },
   res: {
     capacityFilters: [],
+    cuisineTypesAny: [],
   },
   iti: {
     isLoop: null,
@@ -198,6 +199,7 @@ export function normalizeExplorerFilters(
     res: {
       ...res,
       capacityFilters: res.capacityFilters ?? [],
+      cuisineTypesAny: [...new Set((res.cuisineTypesAny ?? []).map(cleanString).filter(Boolean))],
     },
     iti: {
       ...iti,
@@ -312,6 +314,7 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
   if (normalizeCapacityFilters(res.capacityFilters).length > 0) {
     return true;
   }
+  if ((res.cuisineTypesAny ?? []).length > 0) return true;
   if (iti.isLoop != null) {
     return true;
   }
@@ -773,6 +776,8 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   }
 
   if (bucket === 'RES') {
+    const cuisines = normalizedFilters.res.cuisineTypesAny ?? [];
+    if (cuisines.length > 0) payload.cuisine_types_any = cuisines;
     const capacityFilters = normalizeCapacityFilters(normalizedFilters.res.capacityFilters);
     if (capacityFilters.length > 0) {
       payload.capacity_filters = capacityFilters;

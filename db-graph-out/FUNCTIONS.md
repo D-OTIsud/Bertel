@@ -464,6 +464,10 @@ Exécution directe réservée à service_role ; confirmation serveur du reçu d�
 - reads `public.ref_code` _(high)_
 - writes `public.ref_code` _(high)_
 
+## `api.create_partner_selection(p_name text, p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `internal.partner_selection` _(high)_
+
 ## `api.create_tag(p_anchor_object_id text, p_name text, p_color text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.ref_tag` _(high)_
@@ -841,6 +845,10 @@ Exécution directe réservée à service_role ; confirmation serveur du reçu d�
 - reads `public.object_legal` _(high)_
 - reads `public.ref_document` _(high)_
 
+## `api.get_active_partner_selection_definition(p_selection_id text)`
+- returns: `jsonb`
+- reads `internal.partner_selection` _(high)_
+
 ## `api.get_actor_data(p_object_id text)`
 - returns: `jsonb`
 - reads `public.actor` _(high)_
@@ -1033,7 +1041,7 @@ Exécution directe réservée à service_role ; confirmation serveur du reçu d�
 > Function to get expiring legal records in API format
 > =====================================================
 
-## `api.get_filtered_object_ids(p_filters jsonb, p_types public.object_type[], p_status public.object_status[], p_search text DEFAULT NULL::text)`
+## `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)`
 - returns: `TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)` — SECURITY DEFINER
 - reads `internal.mv_filtered_objects` _(high)_
 - reads `public.actor_object_role` _(high)_
@@ -1044,6 +1052,7 @@ Exécution directe réservée à service_role ; confirmation serveur du reçu d�
 - reads `public.object_amenity` _(high)_
 - reads `public.object_capacity` _(high)_
 - reads `public.object_classification` _(high)_
+- reads `public.object_cuisine_type` _(high)_
 - reads `public.object_fma` _(high)_
 - reads `public.object_iti` _(high)_
 - reads `public.object_iti_practice` _(high)_
@@ -1060,6 +1069,7 @@ Exécution directe réservée à service_role ; confirmation serveur du reçu d�
 - reads `public.ref_classification_value` _(high)_
 - reads `public.ref_code_accommodation_unit_type` _(high)_
 - reads `public.ref_code_amenity_family` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
 - reads `public.ref_code_iti_practice` _(high)_
 - reads `public.ref_code_media_type` _(high)_
 - reads `public.ref_code_meeting_equipment` _(high)_
@@ -1691,6 +1701,10 @@ Exécution directe réservée à service_role ; confirmation serveur du reçu d�
 
 > Published real object, optional pivot and vocabulary release from one statement snapshot; service_role only.
 
+## `api.get_partner_selection(p_selection_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.partner_selection` _(high)_
+
 ## `api.get_pending_document_requests(p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])`
 - returns: `TABLE(legal_id uuid, object_id text, object_name text, object_type text, legal_type_code text, legal_type_name text, value jsonb, document_requested_at timestamp with time zone, days_since_requested integer, note text)`
 - reads `public.object` _(high)_
@@ -2278,6 +2292,18 @@ Exécution directe réservée au rôle `service_role`.
 
 > Published real object page and vocabulary release from one snapshot; opt-in exact-equivalence taxonomy filters.
 
+## `api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_iti_practice` _(high)_
+- reads `public.object_location` _(high)_
+
+> Server-registry selection: union before keyset pagination, real published objects only, public serializers and vocabulary from one statement snapshot. Cursor bound to definition, partner and representation. Service-role only.
+
+## `api.list_partner_selections(p_org_object_id text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.partner_selection` _(high)_
+
 ## `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
 - returns: `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone, submission_id uuid, submission_note text, actor_label text, manual_apply boolean)` — SECURITY DEFINER
 - reads `public.actor` _(high)_
@@ -2529,6 +2555,9 @@ Exécution directe réservée à authenticated ; prépare une intention privée 
 - reads `public.object_list` _(high)_
 - writes `internal.list_email_intent` _(high)_
 - writes `internal.list_email_scope` _(high)_
+
+## `api.prepare_partner_selection_preview(p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_commune_insee text[] DEFAULT NULL::text[], p_name text DEFAULT 'Aperçu'::text)`
+- returns: `jsonb` — SECURITY DEFINER
 
 ## `api.prepare_portal_photo_approval(p_id uuid, p_batch boolean, p_claim_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -3518,6 +3547,12 @@ Exécution directe réservée au rôle `authenticated`.
 - reads `public.object_menu_item_cuisine_type` _(high)_
 - reads `public.ref_code_cuisine_type` _(high)_
 
+## `api.seed_beta_partner_selections(p_org_object_id text)`
+- returns: `integer`
+- reads `internal.partner_selection` _(high)_
+- reads `public.object` _(high)_
+- writes `internal.partner_selection` _(high)_
+
 ## `api.send_portal_message(p_object_id text, p_subject text, p_body text, p_attachments jsonb DEFAULT '[]'::jsonb, p_reply_to text DEFAULT NULL::text, p_client_id uuid DEFAULT NULL::uuid)`
 - returns: `uuid` — SECURITY DEFINER
 - reads `public.actor_document` _(high)_
@@ -3585,6 +3620,12 @@ Exécution directe réservée au rôle `authenticated`.
 > au DELETE et à l'UPSERT, puis l'état réel FINAL (relu après écriture) est
 > comparé à l'état INITIAL — jamais un état "prévu" qui peut diverger du
 > stockage réel.
+
+## `api.set_partner_selection_state(p_selection_id text, p_expected_revision integer, p_state text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.partner_selection` _(high)_
+- reads `thesaurus.revision` _(medium)_
+- writes `internal.partner_selection` _(high)_
 
 ## `api.set_provider_only_preference(p_enabled boolean)`
 - returns: `boolean`
@@ -3859,6 +3900,12 @@ Exécution directe réservée au rôle `authenticated`, avec contrôle des droit
 > =====================================================================
 > 10. Mise à jour des métadonnées — verrou + bump SEULEMENT sur diff réel
 > =====================================================================
+
+## `api.update_partner_selection(p_selection_id text, p_expected_revision integer, p_name text, p_buckets jsonb, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[])`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.partner_selection` _(high)_
+- reads `thesaurus.revision` _(medium)_
+- writes `internal.partner_selection` _(high)_
 
 ## `api.update_portal_photo_proposal_texts(p_object_id text, p_document_id uuid, p_expected jsonb, p_title text, p_description text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -4296,6 +4343,10 @@ Helper interne SECURITY INVOKER, exécution directe réservée au propriétaire 
 ## `internal.crm_row_in_current_realm(p_object_id text, p_actor_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 
+## `internal.cuisine_filter_codes(p_filters jsonb)`
+- returns: `text[]`
+- reads `public.ref_code_cuisine_type` _(high)_
+
 ## `internal.dashboard_crm_interactions()`
 - returns: `SETOF public.crm_interaction`
 - reads `public.actor` _(high)_
@@ -4532,6 +4583,17 @@ Exécution directe réservée au propriétaire PostgreSQL ; aucun droit EXECUTE 
 > fonction rend FALSE pour lui — c'est ce qui couvre à la fois "ancien
 > membre" (adhésion désactivée) ET "compte supprimé" (adhésion disparue) en
 > un seul test.
+
+## `internal.partner_selection_can_manage(p_org_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+## `internal.partner_selection_document(p_row internal.partner_selection)`
+- returns: `jsonb`
+
+## `internal.partner_selection_validate(p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[])`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.ref_code_cuisine_type` _(high)_
 
 ## `internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)`
 - returns: `boolean` — SECURITY DEFINER

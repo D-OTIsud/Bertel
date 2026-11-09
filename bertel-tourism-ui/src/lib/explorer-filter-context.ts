@@ -17,7 +17,7 @@ export type FilterCriterionGroup =
   | 'amenityFamilies' | 'accommodationUnitTypes' | 'accommodationPositionings'
   | 'accessDisability' | 'accessAmenities' | 'sustCategories' | 'sustActions'
   | 'taxonomy' | 'hotSubtypes' | 'visSubtypes' | 'srvSubtypes' | 'meetingRoom'
-  | 'hotCapacity' | 'resCapacity' | 'itiLoop' | 'itiDifficulty' | 'itiDistance'
+  | 'hotCapacity' | 'resCapacity' | 'resCuisine' | 'itiLoop' | 'itiDifficulty' | 'itiDistance'
   | 'itiDuration' | 'itiPractices' | 'missingEssentialsBuckets' | 'missingEssentialsAny';
 
 export interface FilterCriterion {
@@ -113,6 +113,7 @@ export const FILTER_CRITERION_RULES = {
   meetingRoom: { values: (f) => keysOf(f.hot.meetingRoom), removalScope: 'group' },
   hotCapacity: { values: (f, c) => f.hot.capacityFilters.filter((capacity) => capacity.code === c.value && (capacity.min != null || capacity.max != null)).map((capacity) => capacity.code) },
   resCapacity: { values: (f, c) => f.res.capacityFilters.filter((capacity) => capacity.code === c.value && (capacity.min != null || capacity.max != null)).map((capacity) => capacity.code) },
+  resCuisine: { values: (f) => f.res.cuisineTypesAny ?? [], scope: 'RES', removalScope: 'group' },
   itiLoop: { values: (f) => flag(f.iti.isLoop != null, 'isLoop') },
   itiDifficulty: { values: (f) => rangeKeys(f.iti.difficultyMin, f.iti.difficultyMax), removalScope: 'group' },
   itiDistance: { values: (f) => rangeKeys(f.iti.distanceMinKm, f.iti.distanceMaxKm), removalScope: 'group' },
@@ -185,6 +186,7 @@ function effectiveSnapshot(raw: ExplorerFilters, options: ExplorerFilterContextO
     : scopedBuckets.includes(bucket) && getEffectiveBackendTypesForBucket(query, bucket).length > 0 ? buildBucketRpcFilters(query, bucket) : {};
   effective.hot.capacityFilters = copy(specific('HOT').capacity_filters as ExplorerFilters['hot']['capacityFilters'] ?? []);
   effective.res.capacityFilters = copy(specific('RES').capacity_filters as ExplorerFilters['res']['capacityFilters'] ?? []);
+  effective.res.cuisineTypesAny = copy(specific('RES').cuisine_types_any as string[] ?? []);
   const meeting = specific('HOT').meeting_room as Record<string, number> | undefined;
   const meetingKeys: Record<keyof MeetingRoomFilter, string> = { minCount: 'min_count', minAreaM2: 'min_area_m2', minCapTheatre: 'min_cap_theatre', minCapClassroom: 'min_cap_classroom' };
   effective.hot.meetingRoom = Object.fromEntries(Object.entries(meetingKeys).filter(([, key]) => meeting?.[key] != null).map(([key, rpcKey]) => [key, meeting![rpcKey]]));

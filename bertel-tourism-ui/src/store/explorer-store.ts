@@ -22,7 +22,7 @@ import {
   normalizeExplorerFilters,
 } from '../utils/facets';
 
-interface ExplorerState extends ExplorerFilters {
+export interface ExplorerState extends ExplorerFilters {
   selectedObjectIds: string[];
   visibleObjectIds: string[];
   selectedCardId: string | null;
@@ -94,6 +94,7 @@ interface ExplorerState extends ExplorerFilters {
   toggleTaxonomy: (domain: string, code: string) => void;
   setHotCapacityFilter: (code: string, min?: number, max?: number) => void;
   setResCapacityFilter: (code: string, min?: number, max?: number) => void;
+  setResCuisineTypes: (codes: string[]) => void;
   setHotMeetingRoom: (patch: Partial<MeetingRoomFilter>) => void;
   setItiIsLoop: (value: boolean | null) => void;
   setItiDifficulty: (min?: number, max?: number) => void;
@@ -197,7 +198,7 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
   });
 }
 
-const createExplorerStore = () => create<ExplorerState>((set) => ({
+export const createExplorerStore = () => create<ExplorerState>((set) => ({
   ...DEFAULT_EXPLORER_FILTERS,
   selectedObjectIds: [],
   visibleObjectIds: [],
@@ -232,7 +233,7 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
             hot: { subtypes: [...DEFAULT_HOT_SUBTYPES], capacityFilters: [], meetingRoom: {} },
           };
         case 'RES':
-          return { selectedBuckets, common, res: { capacityFilters: [] } };
+          return { selectedBuckets, common, res: { capacityFilters: [], cuisineTypesAny: [] } };
         case 'ITI':
           return { selectedBuckets, common, iti: { ...DEFAULT_EXPLORER_FILTERS.iti } };
         case 'EVT':
@@ -475,6 +476,7 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
         capacityFilters: upsertCapacityFilter(state.res.capacityFilters ?? [], code, min, max),
       },
     })),
+  setResCuisineTypes: (codes) => set((state) => ({ res: { ...state.res, cuisineTypesAny: [...new Set(codes.map((code) => code.trim()).filter(Boolean))] } })),
   setHotMeetingRoom: (patch) =>
     set((state) => ({
       hot: {

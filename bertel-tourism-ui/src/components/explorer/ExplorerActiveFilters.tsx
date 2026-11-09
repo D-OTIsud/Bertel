@@ -213,6 +213,9 @@ export function ExplorerActiveFilters({
       case 'amenityFamilies':
         useStore.getState().setAmenityFamilies([]);
         break;
+      case 'resCuisine':
+        useStore.getState().setResCuisineTypes([]);
+        break;
       case 'evtDates':
         useStore.getState().setEvtEventRange(null, null);
         break;

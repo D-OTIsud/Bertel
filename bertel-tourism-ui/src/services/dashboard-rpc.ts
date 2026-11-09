@@ -194,8 +194,6 @@ export async function getDashboardCrmActivity(providerOnly = false): Promise<Das
   return data as DashboardCrmActivity;
 }
 
-// ─── Phase 2B+ stubs — mock-only until backend is implemented ─────────────────
-// Pattern matches existing stubs in rpc.ts (listPendingChanges, listCrmTasks…).
 
 export async function getDashboardCompleteness(
   params: DashboardStatsParams,
@@ -213,44 +211,4 @@ export async function getDashboardCompleteness(
 
   if (error) throw error;
   return data as DashboardCompleteness;
-}
-
-export async function getDashboardCapacity(params: DashboardStatsParams): Promise<unknown> {
-  const { demoMode } = useSessionStore.getState();
-  if (demoMode) {
-    const { mockDashboardData } = await import('../data/mock-dashboard');
-    return mockDashboardData.capacity;
-  }
-  void params;
-  throw new Error('RPC get_dashboard_capacity à brancher sur le backend.');
-}
-
-export async function getDashboardVelocity(params: DashboardStatsParams): Promise<unknown> {
-  const { demoMode } = useSessionStore.getState();
-  if (demoMode) {
-    const { mockDashboardData } = await import('../data/mock-dashboard');
-    return mockDashboardData.velocity;
-  }
-  void params;
-  throw new Error('RPC get_dashboard_velocity à brancher sur le backend.');
-}
-
-export async function getDashboardContributors(params: DashboardStatsParams): Promise<unknown> {
-  const { demoMode } = useSessionStore.getState();
-  if (demoMode) {
-    const { mockDashboardData } = await import('../data/mock-dashboard');
-    return mockDashboardData.contributors;
-  }
-  void params;
-  throw new Error('RPC get_dashboard_contributors à brancher sur le backend.');
-}
-
-export async function getDashboardSeasonality(params: DashboardStatsParams): Promise<unknown> {
-  const { demoMode } = useSessionStore.getState();
-  if (demoMode) {
-    const { mockDashboardData } = await import('../data/mock-dashboard');
-    return mockDashboardData.seasonality;
-  }
-  void params;
-  throw new Error('RPC get_dashboard_seasonality à brancher sur le backend.');
 }

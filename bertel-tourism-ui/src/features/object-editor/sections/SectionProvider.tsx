@@ -19,11 +19,11 @@ export function SectionProvider({ editor, folded }: SectionProps) {
     <Fs
       num="18"
       title="Fournisseur / Prestataire"
-      sub="Entité juridique exploitant la fiche et informations de vérification"
+      sub="Entité juridique exploitant la fiche"
       folded={folded}
       pill={{
-        tone: module.sireneVerified ? 'ok' : 'warn',
-        label: module.sireneVerified ? 'SIRET vérifié' : 'À vérifier',
+        tone: module.siret ? 'ok' : 'warn',
+        label: module.siret ? 'SIRET renseigné' : 'À renseigner',
       }}
     >
       {module.siret ? (
@@ -33,7 +33,6 @@ export function SectionProvider({ editor, folded }: SectionProps) {
           naf={module.nafCode}
           legalForm={module.legalForm}
           registeredAt={module.incorporationDate}
-          lastCheckedAt={module.sireneVerified ? 'SIRENE' : undefined}
         />
       ) : (
         <p style={{ fontSize: 12, color: 'var(--ink-4)', marginBottom: 12 }}>SIRET non renseigné sur l'acteur opérateur.</p>

@@ -2530,7 +2530,6 @@ function parseWorkspaceProviderModule(
   return {
     siret,
     companyName,
-    sireneVerified: Boolean(siret),
     legalForm: findLegalRecordValue(records, ['forme', 'juridique', 'legal form']),
     nafCode: findLegalRecordValue(records, ['naf', 'ape']),
     consularChamber: findLegalRecordValue(records, ['chambre', 'consulaire', 'cci', 'cma']),

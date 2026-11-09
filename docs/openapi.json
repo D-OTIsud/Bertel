@@ -39,6 +39,7 @@
           { "$ref": "#/components/parameters/PageSize" },
           { "$ref": "#/components/parameters/View" },
           { "$ref": "#/components/parameters/Track" },
+          { "$ref": "#/components/parameters/SelectionId" },
           { "$ref": "#/components/parameters/Types" },
           { "name": "taxonomy", "in": "query", "description": "Codes taxonomiques CSV qualifiés, par exemple taxonomy_hlo:appartement. Inclut les descendants selon la hiérarchie publiée. Garder ce filtre identique pendant la pagination.", "schema": { "type": "string" } },
           { "name": "include_equivalent_predecessors", "in": "query", "description": "Avec taxonomy uniquement : inclure les prédécesseurs déclarés exactement équivalents. Faux par défaut ; une scission ou un simple replaced_by ne provoque aucun élargissement.", "schema": { "type": "boolean", "default": false } },
@@ -58,7 +59,7 @@
                   "required": ["meta", "data"],
                   "properties": {
                     "meta": {
-                      "allOf": [{ "$ref": "#/components/schemas/Meta" }],
+                      "allOf": [{ "$ref": "#/components/schemas/Meta" }, { "$ref": "#/components/schemas/SelectionMeta" }],
                       "description": "Métadonnées de l'enveloppe + pagination par curseur.",
                       "properties": {
                         "next_cursor": { "type": ["string", "null"], "description": "Curseur opaque de la page suivante (à repasser en `cursor`). `null` = dernière page." },
@@ -72,11 +73,16 @@
             }
           },
           "400": {
-            "description": "Code types inconnu, filtre taxonomy malformé ou option d’équivalence invalide/sans taxonomy.",
+            "description": "Code types inconnu, filtre taxonomy malformé ou option d’équivalence invalide/sans taxonomy. En bêta selection_id : identifiant vide ou répété, curseur incompatible, combinaison avec types/taxonomy/search/include_equivalent_predecessors ou option non autorisée.",
             "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "bad_request", "detail": "unknown object type code(s): XXX" } } }
           },
           "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": {
+            "description": "Bêta selection_id : sélection inconnue. Aucun retour au catalogue complet ; une sélection connue vide répond 200 avec data: [].",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "not_found" } } }
+          },
           "429": { "$ref": "#/components/responses/RateLimited" },
           "500": { "$ref": "#/components/responses/ServerError" },
           "502": { "$ref": "#/components/responses/UpstreamError" }
@@ -1920,6 +1926,15 @@
         "description": "Liste de codes `object_type` séparés par des virgules. Codes insensibles à la casse (`res` = `RES`). Un code inconnu fait échouer toute la requête avec `400 bad_request`.",
         "schema": { "type": "string", "example": "HOT,RES,ACT" }
       },
+      "SelectionId": {
+        "name": "selection_id", "in": "query", "required": false,
+        "description": "Extension bêta, activation à confirmer avec l'OTI. Identifiant permanent d'une sélection OTI du Sud. Même endpoint, clé partenaire et fiches data[] ; seules meta.selection_id, selection_name et selection_revision sont ajoutées. Les sélections diffusent les fiches publiées hors test dont l'adresse principale est dans les communes INSEE 97403/97412/97417/97422. Avec selection_id, seules les options cursor/page_size/view/lang/track/format/variant sont autorisées : types/taxonomy/search/include_equivalent_predecessors (même false) ou une autre option entraînent 400. Identifiant vide ou répété : 400 ; inconnu : 404, jamais de retour au catalogue complet. Conserver sélection et options pendant la pagination. Lecture en temps réel sans snapshot ; ne rapprocher les appartenances qu'après un parcours entièrement réussi. 1007 = événements publiés : dates, occurrences et annulations restent à traiter par le partenaire. Les labels, types de handicap, animaux et capacités restent des champs full, pas des filtres API.",
+        "schema": { "$ref": "#/components/schemas/SelectionId" },
+        "examples": {
+          "terroir_artisanat": { "summary": "Producteurs, artisans et marchés, fusionnés sans doublons", "value": "1006" },
+          "velo": { "summary": "Itinéraires à vélo, pratiques et repli taxonomique", "value": "1002" }
+        }
+      },
       "Search": {
         "name": "search", "in": "query", "required": false,
         "description": "Recherche par **nom de la fiche uniquement** (correspondance sur le nom de l'objet). Ne porte PAS sur la ville, les aménités, les tags, les menus, les cuisines, les labels, la taxonomie ni la description.",
@@ -2304,6 +2319,22 @@
             ]
           }
         }
+      },
+      "SelectionId": {
+        "type": "string",
+        "description": "Identifiants bêta stables gérés par l'OTI : 1001 À pied ; 1002 À vélo ; 1003 Nature ; 1004 Patrimoine ; 1005 Loisirs ; 1006 Terroir et artisanat ; 1007 Événements ; 1008 Restaurants ; 1009 Hôtels ; 1010 Locations et chambres ; 1011 Campings et aires ; 1012 Résidences ; 1013 Transports ; 1014 Offices de tourisme ; 1015 Services.",
+        "enum": ["1001", "1002", "1003", "1004", "1005", "1006", "1007", "1008", "1009", "1010", "1011", "1012", "1013", "1014", "1015"],
+        "example": "1006"
+      },
+      "SelectionMeta": {
+        "type": "object",
+        "description": "Contexte additif de GET /objects?selection_id=… : les trois propriétés sont présentes ensemble pour une sélection et absentes sans sélection. La révision décrit les critères, pas un instantané des résultats. Initialement 1 en bêta.",
+        "properties": {
+          "selection_id": { "$ref": "#/components/schemas/SelectionId" },
+          "selection_name": { "type": "string", "example": "Terroir et artisanat" },
+          "selection_revision": { "type": "integer", "minimum": 1, "example": 1 }
+        },
+        "additionalProperties": true
       },
       "Meta": {
         "type": "object",

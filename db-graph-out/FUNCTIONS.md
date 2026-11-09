@@ -2278,6 +2278,14 @@ Exécution directe réservée au rôle `service_role`.
 
 > Published real object page and vocabulary release from one snapshot; opt-in exact-equivalence taxonomy filters.
 
+## `api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_iti_practice` _(high)_
+- reads `public.object_location` _(high)_
+
+> Server-registry selection: union before keyset pagination, real published objects only, public serializers and vocabulary from one statement snapshot. Cursor bound to definition, partner and representation. Service-role only.
+
 ## `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
 - returns: `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone, submission_id uuid, submission_note text, actor_label text, manual_apply boolean)` — SECURITY DEFINER
 - reads `public.actor` _(high)_

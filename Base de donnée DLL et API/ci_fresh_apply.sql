@@ -804,6 +804,10 @@ COMMIT;
 \ir ../supabase/migrations/20261108173157_manual_list_email_quotas.sql
 \ir tests/test_manual_list_email_quotas.sql
 
+\echo '== Partner selection reader: server registry, union before paging =='
+\ir ../supabase/migrations/20261109055511_partner_selection_objects.sql
+\ir tests/test_partner_selection_objects.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

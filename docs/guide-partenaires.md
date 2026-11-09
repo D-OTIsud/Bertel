@@ -8,7 +8,7 @@
 
 # API publique Bertel — Guide partenaires
 
-**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrat `1.0.0` · Guide mis à jour le 2026-11-06
+**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrat `1.0.0` · Guide mis à jour le 2026-11-09
 
 Bertel est le système d'information touristique de l'OTI du Sud. Son API publique donne aux partenaires un accès **en lecture seule** aux fiches touristiques **publiées** du territoire : hébergements, restaurants, activités, itinéraires, événements, patrimoine, sites naturels…
 
@@ -87,7 +87,7 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 |---|---|---|
 | 400 | `invalid_object_id` / `bad_request` | Paramètre malformé (id hors format, `since` non ISO 8601, code `types` inconnu) |
 | 401 | `unauthorized` | Clé absente, invalide, révoquée ou expirée |
-| 404 | `not_found` | Fiche inconnue **ou non publiée** (indistinguable, par conception) |
+| 404 | `not_found` | Fiche inconnue **ou non publiée** (indistinguable, par conception) ; en bêta `selection_id`, sélection inconnue |
 | 429 | `rate_limited` | Limite de débit atteinte — respecter `Retry-After` |
 | 500 / 502 | `server_misconfigured` / `upstream_error` | Erreur côté Bertel — réessayer plus tard avec backoff |
 
@@ -103,6 +103,7 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | `page_size` | int 1–200 | 50 | Nombre de fiches par page (borné à **100** en `view=full`) |
 | `view` | `card` \| `full` | `card` | `full` = fiche complète par objet (voir §3.1.1) |
 | `track` | `gpx` \| `kml` | — | En `view=full` : ajoute le blob GPX/KML des itinéraires |
+| `selection_id` | string | — | Bêta : identifiant permanent d'une sélection OTI du Sud, par exemple `1006` pour Terroir et artisanat ; voir §3.1.2 |
 | `types` | csv | tous | Filtre par types de fiche (codes ci-dessous) |
 | `taxonomy` | csv | — | Codes qualifiés `taxonomy_hlo:appartement`, avec descendants selon la hiérarchie publiée |
 | `include_equivalent_predecessors` | bool | `false` | Avec `taxonomy` uniquement : inclut les prédécesseurs déclarés exactement équivalents ; aucun élargissement implicite après une scission |
@@ -158,6 +159,60 @@ de la page est la **fiche complète** — strictement le même contenu que `GET 
 curl -H "Authorization: Bearer bk_live_…" \
   "https://VOTRE_DOMAINE/api/public/objects?view=full&page_size=100&track=gpx"
 ```
+
+#### 3.1.2 Sélections OTI du Sud — `selection_id` (bêta)
+
+Cette extension bêta utilise le même endpoint et la même clé partenaire. **Confirmez son activation avec l'OTI avant de l'utiliser** : la documentation de ce contrat n'atteste pas son déploiement. Les définitions et leurs identifiants sont gérés par l'OTI du Sud.
+
+```bash
+curl -H "Authorization: Bearer bk_live_…" \
+  "https://VOTRE_DOMAINE/api/public/objects?selection_id=1006&view=full&page_size=100"
+```
+
+| Identifiant | Sélection |
+|---|---|
+| `1001` | À pied |
+| `1002` | À vélo |
+| `1003` | Nature |
+| `1004` | Patrimoine |
+| `1005` | Loisirs |
+| `1006` | Terroir et artisanat |
+| `1007` | Événements |
+| `1008` | Restaurants |
+| `1009` | Hôtels |
+| `1010` | Locations et chambres |
+| `1011` | Campings et aires |
+| `1012` | Résidences |
+| `1013` | Transports |
+| `1014` | Offices de tourisme |
+| `1015` | Services |
+
+Chaque sélection couvre les communes de l'Entre-Deux (`97403`), de Saint-Joseph (`97412`), de Saint-Philippe (`97417`) et du Tampon (`97422`), selon le code INSEE de l'adresse principale de la fiche. Seules les fiches publiées et hors corpus de test sont diffusées. Les résultats de plusieurs branches d'une sélection, notamment producteurs et artisans/marchés pour `1006`, sont fusionnés sans doublon d'identifiant Bertel.
+
+Les sélections À pied et À vélo utilisent les pratiques des itinéraires. En l'absence de pratique renseignée, le classement taxonomique sert de repli. La sélection `1007` contient les événements publiés : le partenaire doit encore traiter les dates, les occurrences et les annulations pour construire son agenda. Les labels, les types de handicap, les animaux et les capacités restent des champs des fiches complètes (`view=full`) à exploiter par le partenaire.
+
+Avec `selection_id`, seules les options `cursor`, `page_size`, `view`, `lang`, `track`, `format` et `variant` peuvent être ajoutées. La présence de `types`, `taxonomy`, `search` ou `include_equivalent_predecessors`, même à `false`, entraîne `400 bad_request`. Un identifiant vide, répété ou une autre option entraîne aussi `400 bad_request`. Une sélection inconnue renvoie `404 not_found` : elle ne provoque jamais un retour au catalogue complet. Une sélection connue sans résultat renvoie `200` avec `data: []`.
+
+Le contenu de chaque fiche dans `data` conserve le contrat existant. Trois métadonnées décrivent le contexte de la sélection ; elles sont absentes des appels sans `selection_id` :
+
+```json
+{
+  "meta": {
+    "contract_version": "1.0.0",
+    "selection_id": "1006",
+    "selection_name": "Terroir et artisanat",
+    "selection_revision": 1,
+    "page_size": 100,
+    "total": 0,
+    "next_cursor": null
+  },
+  "data": []
+}
+```
+
+Cet exemple illustre une page vide, pas un volume de production. `selection_revision` identifie la définition des critères (révision `1` pour les définitions initiales de la bêta). Elle ne constitue ni une version des fiches ni un instantané de leurs appartenances. L'appartenance est recalculée à chaque page à partir des données et projections courantes de Bertel. Conservez le même `selection_id`, la même clé partenaire et les mêmes options pendant toute la pagination ; après une rotation de clé ou un changement de sélection, repartez sans curseur. Un curseur incompatible est refusé.
+
+Pour synchroniser une sélection, parcourez toutes ses pages et mettez les fiches à jour par `id`. **Rapprochez les appartenances seulement après un parcours entièrement réussi jusqu'à `next_cursor=null`.** Une erreur, un délai dépassé ou un curseur refusé ne signifie pas que la sélection est vide : conservez les appartenances précédentes tant que le parcours n'a pas abouti. Une fiche peut appartenir à plusieurs sélections ; sa sortie d'une sélection ne supprime pas ses autres appartenances. Le flux `/objects/deletions` ne signale pas ces sorties.
 
 ### 3.2 `GET /objects/{id}` — une fiche complète
 

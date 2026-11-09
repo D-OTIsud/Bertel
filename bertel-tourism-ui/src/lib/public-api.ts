@@ -18,6 +18,7 @@ export const PUBLIC_API_CONTRACT_VERSION = '1.0.0';
 export const PUBLIC_RPC_ALLOWLIST = new Set<string>([
   'list_object_resources_page_text',
   'list_partner_objects_with_vocabulary',
+  'list_partner_selection_objects_with_vocabulary',
   'get_partner_object_with_vocabulary',
   'get_object_resource',
   'list_object_markers',
@@ -92,7 +93,7 @@ export async function callPublicRpc(rpcName: string, params: Record<string, unkn
       code: typeof error.code === 'string' && /^(?:[0-9A-Z]{5}|PGRST\d{3})$/.test(error.code) ? error.code : null,
       ...pagination,
     });
-    if (['list_partner_objects_with_vocabulary','get_partner_object_with_vocabulary'].includes(rpcName)
+    if (['list_partner_objects_with_vocabulary','get_partner_object_with_vocabulary','list_partner_selection_objects_with_vocabulary'].includes(rpcName)
       && error.code === 'PT400') return { ok: false, status: 400, body: { error: 'bad_request', detail: 'invalid parameters or cursor' } };
     return { ok: false, status: 502, body: { error: 'upstream_error', detail: 'upstream error' } };
   }

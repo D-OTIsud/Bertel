@@ -86,6 +86,78 @@ describe('GET /api/public/objects', () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
+  it('resolves Terroir server-side into two branches before pagination, preserving the public objects envelope', async () => {
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: {
+      meta: { page_size: 2, total: 3, next_cursor: 'selection-next', vocabulary_release: 7 },
+      data: [{ id: 'PRODUCER', type: 'PRD' }, { id: 'CRAFT', type: 'COM' }],
+    } });
+    const res = await GET(req('?selection_id=1006&view=full&page_size=2'));
+    expect(res.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(rpcMock).toHaveBeenCalledWith('list_partner_selection_objects_with_vocabulary', expect.objectContaining({
+      p_selection_id: '1006', p_partner_key_id: 'k1', p_view: 'full', p_page_size: 2,
+      p_definition_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      p_buckets: [
+        { types: ['PRD'] },
+        { types: ['COM'], filters: { taxonomy_any: [
+          { domain: 'taxonomy_com', code: 'local_crafts' },
+          { domain: 'taxonomy_com', code: 'weekly_market' },
+          { domain: 'taxonomy_com', code: 'covered_market' },
+        ] } },
+      ],
+      p_commune_insee: ['97403', '97412', '97417', '97422'],
+    }));
+    expect(await res.json()).toEqual({
+      meta: { contract_version: '1.0.0', page_size: 2, total: 3, next_cursor: 'selection-next', vocabulary_release: 7,
+        selection_id: '1006', selection_name: 'Terroir et artisanat', selection_revision: 1 },
+      data: [{ id: 'PRODUCER', type: 'PRD' }, { id: 'CRAFT', type: 'COM' }],
+    });
+  });
+
+  it.each(['9999', 'constructor', '__proto__'])('rejects unknown selection %s before any RPC, never returning the global catalogue', async (id) => {
+    const res = await GET(req(`?selection_id=${id}`));
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: 'not_found' });
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'selection_id=', 'selection_id=1006&selection_id=1006',
+    'selection_id=1006&types=PRD', 'selection_id=1006&taxonomy=taxonomy_com:local_crafts',
+    'selection_id=1006&search=vanille', 'selection_id=1006&include_equivalent_predecessors=true',
+    'selection_id=1006&page_size=2&page_size=3', 'selection_id=1006&status=draft',
+  ])('rejects ambiguous selection parameters: %s', async (query) => {
+    const res = await GET(req(`?${query}`));
+    expect(res.status).toBe(400);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves representation options and the selection cursor for the dedicated RPC', async () => {
+    await GET(req('?selection_id=1002&view=full&track=gpx&lang=en&format=tourinsoft&variant=reunion-regional-v1&cursor=selection-page-2'));
+    expect(rpcMock).toHaveBeenCalledWith('list_partner_selection_objects_with_vocabulary', expect.objectContaining({
+      p_cursor: 'selection-page-2', p_track_format: 'gpx', p_lang_prefs: ['en'],
+      p_format: 'tourinsoft', p_variant: 'reunion-regional-v1', p_view: 'full',
+    }));
+  });
+
+  it('returns an empty known selection as a successful empty page', async () => {
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { meta: { total: 0, next_cursor: null }, data: [] } });
+    const res = await GET(req('?selection_id=1012'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toEqual([]);
+    expect(body.meta).toMatchObject({ selection_id: '1012', total: 0, next_cursor: null });
+  });
+
+  it('never falls back to the global catalogue when the selection RPC fails', async () => {
+    rpcMock.mockResolvedValue({ ok: false, status: 502, body: { error: 'upstream_error' } });
+    const res = await GET(req('?selection_id=1006'));
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ error: 'upstream_error' });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(rpcMock.mock.calls[0][0]).toBe('list_partner_selection_objects_with_vocabulary');
+  });
+
   it('clamps page_size into [1,200]', async () => {
     await GET(req('?page_size=9999'));
     expect(rpcMock.mock.calls[0][1].p_page_size).toBe(200);

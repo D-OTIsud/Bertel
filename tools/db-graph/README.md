@@ -85,6 +85,17 @@ data and mocked readers, with no database or credentials:
 
 The `DB reference privacy` workflow runs this suite on relevant changes.
 
+## Targeted catalogue supplements
+
+For an additive RPC capture, preserve the complete catalogue baseline and record
+the partial observation separately. The 9 November 2026 partner-selection RPC
+capture is documented in `db-graph-out/PARTNER_SELECTION_RPC.md` and its body-free
+`PARTNER_SELECTION_RPC_CATALOG.json`. The deployment graph preserves catalogue
+212 (8 November) and adds one function plus three direct read edges. This is not
+a full refresh; per-table tbls docs do not need regeneration for that addition.
+A later full render must use complete live inputs and retain the supplement's
+provenance and EXECUTE grants until superseded by a complete live extraction.
+
 ## Viewer (`graph.html`)
 Open directly in a browser (no server needed). Features: dark theme by default (Light/Dark toggle),
 filter chips by node kind and table domain (with all/none shortcuts), search, wheel-zoom + drag-pan,

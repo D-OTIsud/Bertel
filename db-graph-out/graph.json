@@ -2,11 +2,11 @@
  "meta": {
   "table_count": 429,
   "view_count": 15,
-  "function_count": 670,
+  "function_count": 671,
   "policy_count": 647,
   "trigger_count": 1439,
   "enum_count": 9,
-  "edge_count": 6406
+  "edge_count": 6409
  },
  "nodes": [
   {
@@ -75484,6 +75484,30 @@
    }
   },
   {
+   "id": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+   "kind": "function",
+   "label": "list_partner_selection_objects_with_vocabulary",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Server-registry selection: union before keyset pagination, real published objects only, public serializers and vocabulary from one statement snapshot. Cursor bound to definition, partner and representation. Service-role only.",
+   "props": {
+    "signature": "list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "catalog_captured_at": "2026-11-09 06:00:31.011316+00",
+    "body_md5": "b39369e86bff568b267e832da825dfe9",
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, extensions, pg_temp"
+    ]
+   }
+  },
+  {
    "id": "policy:public.object_version_2026_11:admin_object_version",
    "kind": "policy",
    "label": "admin_object_version",
@@ -144782,6 +144806,42 @@
    "props": {
     "object_type": "RVA"
    }
+  },
+  {
+   "source": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "public.object_iti_practice",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_iti_practice"
+    }
+   }
+  },
+  {
+   "source": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object"
+    }
+   }
+  },
+  {
+   "source": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+   "target": "public.object_location",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_location"
+    }
+   }
   }
  ],
  "partitions": {
@@ -144863,5 +144923,34 @@
   "audit.audit_log_2027_01": "audit.audit_log",
   "public.ref_code_payment_method": "public.ref_code",
   "public.ref_code_allergen": "public.ref_code"
+ },
+ "catalog_provenance": {
+  "full_catalog_capture_at": "2026-11-08T17:51:10.274935+00:00",
+  "full_catalog_ledger": 212,
+  "full_catalog_details": "DB_AGENT_INDEX.md",
+  "targeted_function_updates": [
+   {
+    "scope": "targeted live production function addition; not a complete catalog refresh",
+    "project_id": "ryycrdhlkmzpxwwwwupy",
+    "captured_at": "2026-11-09 06:00:31.011316+00",
+    "source": "Supabase MCP pg_proc/pg_namespace/ACL metadata",
+    "migration": "supabase/migrations/20261109055511_partner_selection_objects.sql",
+    "function_id": "api.list_partner_selection_objects_with_vocabulary(p_buckets jsonb, p_selection_id text, p_definition_hash text, p_partner_key_id text, p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_commune_insee text[] DEFAULT NULL::text[])",
+    "body_md5": "b39369e86bff568b267e832da825dfe9",
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "service_role_execute": true,
+    "anon_execute": false,
+    "authenticated_execute": false,
+    "direct_table_reads": [
+     "public.object",
+     "public.object_iti_practice",
+     "public.object_location"
+    ],
+    "indirect_calls_are_not_exhaustive_graph_edges": true
+   }
+  ]
  }
 }

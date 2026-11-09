@@ -96,6 +96,44 @@ a full refresh; per-table tbls docs do not need regeneration for that addition.
 A later full render must use complete live inputs and retain the supplement's
 provenance and EXECUTE grants until superseded by a complete live extraction.
 
+### Registry/cuisine targeted capture and merge
+
+For the subsequent partner-selection administration lot, first generate a single
+read-only, body-free catalogue query:
+
+```powershell
+.tools/python/Scripts/python.exe tools/db-graph/partner_selection_catalog_query.py
+```
+
+Run that SELECT through the verified Bertel Supabase MCP connection **after** the
+production migrations have been applied and postflighted. It returns metadata
+for `internal.partner_selection`, its FK/indexes/RLS/ACL, thirteen scoped
+functions, direct references inferred by regex, and the hashes of the two
+unchanged public readers. No configuration rows or function bodies are returned.
+Save the `supplement` JSON object without the MCP wrapper. Transport provenance
+comes from the actual MCP call, not from the PostgreSQL database name alone.
+
+Preview the merge before applying it; omitting `--apply` never changes artifacts:
+
+```powershell
+.tools/python/Scripts/python.exe tools/db-graph/merge_partner_selection_catalog.py path/to/capture.json --source-label "actual capture transport and environment"
+.tools/python/Scripts/python.exe tools/db-graph/merge_partner_selection_catalog.py path/to/capture.json --source-label "production via Bertel Supabase MCP" --project-ref ryycrdhlkmzpxwwwwupy --apply
+```
+
+The production write additionally requires the verified project and `postgres`
+catalogue; a named local/test fixture is rejected. Test captures must remain
+explicitly labelled local/synthetic and must not replace production artifacts.
+The merge preserves catalogue 212, the existing 055511 supplement, unrelated
+nodes/edges, Markdown schema headings and manual ACL addenda. It updates only the
+scoped graph identities, function sections and index, and emits a dated
+`PARTNER_SELECTION_ADMIN` Markdown/JSON supplement plus one ignored targeted
+per-table page. Other derived views and the API/DB HTML retain their earlier
+provenance. This is not a full tbls regeneration. A future complete refresh needs
+a complete live catalogue; never rebuild it from a reduced native test substrate.
+
+The pure merge/Markdown safety regressions run with:
+`python -m pytest tools/db-graph/test_partner_selection_catalog.py -q`.
+
 ## Viewer (`graph.html`)
 Open directly in a browser (no server needed). Features: dark theme by default (Light/Dark toggle),
 filter chips by node kind and table domain (with all/none shortcuts), search, wheel-zoom + drag-pan,

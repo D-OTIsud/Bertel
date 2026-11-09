@@ -809,11 +809,11 @@ COMMIT;
 \ir tests/test_partner_selection_objects.sql
 
 \echo '== Structured restaurant cuisine shared filter (no menus) =='
-\ir ../supabase/migrations/20261109071354_restaurant_cuisine_filter.sql
+\ir ../supabase/migrations/20261109080813_restaurant_cuisine_filter.sql
 \ir tests/test_restaurant_cuisine_filter.sql
 
 \echo '== Durable organization-owned partner selections and public draft preview =='
-\ir ../supabase/migrations/20261109064127_partner_selection_registry.sql
+\ir ../supabase/migrations/20261109080851_partner_selection_registry.sql
 \ir tests/test_partner_selection_registry.sql
 
 \echo '== MV refresh (non-concurrent) =='

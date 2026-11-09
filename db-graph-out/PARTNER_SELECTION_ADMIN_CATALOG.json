@@ -1,0 +1,1017 @@
+{
+  "_capture": {
+    "scope": "partner-selection-admin-cuisine",
+    "source": "PostgreSQL catalogue SELECT; transport/provenance supplied by the operator",
+    "captured_at": "2026-11-09T08:10:32.028193+00:00",
+    "database_name": "postgres",
+    "project_ref": "ryycrdhlkmzpxwwwwupy"
+  },
+  "functions": [
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "args": "p_name text, p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[]",
+      "name": "create_partner_selection",
+      "owner": "postgres",
+      "schema": "api",
+      "comment": null,
+      "returns": "jsonb",
+      "body_md5": "2e41d6e1b131999d378e5557e62d2c17",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+      ],
+      "references": [
+        {
+          "kind": "writes",
+          "evidence": "INSERT INTO internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        }
+      ],
+      "volatility": "v",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "authenticated"
+      ],
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "args": "p_selection_id text",
+      "name": "get_active_partner_selection_definition",
+      "owner": "postgres",
+      "schema": "api",
+      "comment": null,
+      "returns": "jsonb",
+      "body_md5": "75ccda759952e10fc02a3a5a15392d0e",
+      "settings": [
+        "search_path=pg_catalog, internal, pg_temp"
+      ],
+      "references": [
+        {
+          "kind": "reads",
+          "evidence": "FROM internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        }
+      ],
+      "volatility": "s",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "service_role"
+      ],
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": true,
+        "authenticated": false
+      }
+    },
+    {
+      "acl": null,
+      "args": "p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text",
+      "name": "get_filtered_object_ids",
+      "owner": "postgres",
+      "schema": "api",
+      "comment": null,
+      "returns": "TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)",
+      "body_md5": "d4905c8d789de044d82fe65dba4633c1",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, extensions, auth, audit, crm, ref"
+      ],
+      "references": [
+        {
+          "kind": "reads",
+          "evidence": "FROM et",
+          "identifier": "et"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN fuzzy_gate",
+          "identifier": "fuzzy_gate"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM internal.mv_filtered_objects",
+          "identifier": "internal.mv_filtered_objects"
+        },
+        {
+          "kind": "reads",
+          "evidence": "from internal.mv_filtered_objects",
+          "identifier": "internal.mv_filtered_objects"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM jsonb_array_elements",
+          "identifier": "jsonb_array_elements"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM jsonb_array_elements_text",
+          "identifier": "jsonb_array_elements_text"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM LATERAL",
+          "identifier": "lateral"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN LATERAL",
+          "identifier": "lateral"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM media",
+          "identifier": "media"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM meeting_room_equipment",
+          "identifier": "meeting_room_equipment"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM normalized",
+          "identifier": "normalized"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_accommodation_unit_type",
+          "identifier": "object_accommodation_unit_type"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_amenity",
+          "identifier": "object_amenity"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_capacity",
+          "identifier": "object_capacity"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_classification",
+          "identifier": "object_classification"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN object_classification",
+          "identifier": "object_classification"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_fma",
+          "identifier": "object_fma"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_iti",
+          "identifier": "object_iti"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_iti_practice",
+          "identifier": "object_iti_practice"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_location",
+          "identifier": "object_location"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_meeting_room",
+          "identifier": "object_meeting_room"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN object_meeting_room",
+          "identifier": "object_meeting_room"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_pet_policy",
+          "identifier": "object_pet_policy"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_sustainability_action",
+          "identifier": "object_sustainability_action"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM object_sustainability_action_label",
+          "identifier": "object_sustainability_action_label"
+        },
+        {
+          "kind": "reads",
+          "evidence": "join on",
+          "identifier": "on"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM open_at_state",
+          "identifier": "open_at_state"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM params",
+          "identifier": "params"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN params",
+          "identifier": "params"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM public.actor_object_role",
+          "identifier": "public.actor_object_role"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM public.object",
+          "identifier": "public.object"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM public.object_cuisine_type",
+          "identifier": "public.object_cuisine_type"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN public.ref_code_cuisine_type",
+          "identifier": "public.ref_code_cuisine_type"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_amenity",
+          "identifier": "ref_amenity"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_capacity_metric",
+          "identifier": "ref_capacity_metric"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM ref_classification_equivalent_action",
+          "identifier": "ref_classification_equivalent_action"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM ref_classification_equivalent_group",
+          "identifier": "ref_classification_equivalent_group"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_classification_scheme",
+          "identifier": "ref_classification_scheme"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_classification_value",
+          "identifier": "ref_classification_value"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_code_accommodation_unit_type",
+          "identifier": "ref_code_accommodation_unit_type"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_code_amenity_family",
+          "identifier": "ref_code_amenity_family"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_code_iti_practice",
+          "identifier": "ref_code_iti_practice"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_code_media_type",
+          "identifier": "ref_code_media_type"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_code_meeting_equipment",
+          "identifier": "ref_code_meeting_equipment"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_sustainability_action",
+          "identifier": "ref_sustainability_action"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_sustainability_action_category",
+          "identifier": "ref_sustainability_action_category"
+        },
+        {
+          "kind": "reads",
+          "evidence": "JOIN ref_tag",
+          "identifier": "ref_tag"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM regexp_split_to_table",
+          "identifier": "regexp_split_to_table"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM source_rows",
+          "identifier": "source_rows"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM tag_link",
+          "identifier": "tag_link"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM TRUE",
+          "identifier": "true"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM unnest",
+          "identifier": "unnest"
+        }
+      ],
+      "volatility": "s",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "PUBLIC",
+        "postgres"
+      ],
+      "security_definer": true,
+      "effective_execute": {
+        "anon": true,
+        "service_role": true,
+        "authenticated": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "args": "p_selection_id text",
+      "name": "get_partner_selection",
+      "owner": "postgres",
+      "schema": "api",
+      "comment": null,
+      "returns": "jsonb",
+      "body_md5": "8dce3d48cfc1f97727b26bff5f9d32cd",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+      ],
+      "references": [
+        {
+          "kind": "reads",
+          "evidence": "FROM internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        }
+      ],
+      "volatility": "s",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "authenticated"
+      ],
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "args": "p_org_object_id text DEFAULT NULL::text",
+      "name": "list_partner_selections",
+      "owner": "postgres",
+      "schema": "api",
+      "comment": null,
+      "returns": "jsonb",
+      "body_md5": "7fdaa88f35d830ddb617c56062970f51",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+      ],
+      "references": [
+        {
+          "kind": "reads",
+          "evidence": "FROM internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        }
+      ],
+      "volatility": "s",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "authenticated"
+      ],
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "args": "p_buckets jsonb, p_org_object_id text DEFAULT NULL::text, p_commune_insee text[] DEFAULT NULL::text[], p_name text DEFAULT 'Aperçu'::text",
+      "name": "prepare_partner_selection_preview",
+      "owner": "postgres",
+      "schema": "api",
+      "comment": null,
+      "returns": "jsonb",
+      "body_md5": "3bff006abf6c2314b5b5358ea061c286",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+      ],
+      "references": [],
+      "volatility": "s",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "authenticated"
+      ],
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "args": "p_org_object_id text",
+      "name": "seed_beta_partner_selections",
+      "owner": "postgres",
+      "schema": "api",
+      "comment": null,
+      "returns": "integer",
+      "body_md5": "4c0c2050621defee3d42a824d3edc367",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, pg_temp"
+      ],
+      "references": [
+        {
+          "kind": "reads",
+          "evidence": "FROM internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM jsonb_array_elements",
+          "identifier": "jsonb_array_elements"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM p_org_object_id",
+          "identifier": "p_org_object_id"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM public.object",
+          "identifier": "public.object"
+        },
+        {
+          "kind": "writes",
+          "evidence": "INSERT INTO internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        }
+      ],
+      "volatility": "v",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "service_role"
+      ],
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": true,
+        "authenticated": false
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "args": "p_selection_id text, p_expected_revision integer, p_state text",
+      "name": "set_partner_selection_state",
+      "owner": "postgres",
+      "schema": "api",
+      "comment": null,
+      "returns": "jsonb",
+      "body_md5": "59950a5b0803639118296f167591f0f2",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+      ],
+      "references": [
+        {
+          "kind": "reads",
+          "evidence": "FROM internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM p_state",
+          "identifier": "p_state"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM s.revision",
+          "identifier": "s.revision"
+        },
+        {
+          "kind": "writes",
+          "evidence": "UPDATE internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        }
+      ],
+      "volatility": "v",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "authenticated"
+      ],
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "args": "p_selection_id text, p_expected_revision integer, p_name text, p_buckets jsonb, p_explorer_state jsonb DEFAULT NULL::jsonb, p_commune_insee text[] DEFAULT NULL::text[]",
+      "name": "update_partner_selection",
+      "owner": "postgres",
+      "schema": "api",
+      "comment": null,
+      "returns": "jsonb",
+      "body_md5": "1e6856319ea799308630b04cd20afacf",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+      ],
+      "references": [
+        {
+          "kind": "reads",
+          "evidence": "FROM internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM s.revision",
+          "identifier": "s.revision"
+        },
+        {
+          "kind": "writes",
+          "evidence": "UPDATE internal.partner_selection",
+          "identifier": "internal.partner_selection"
+        }
+      ],
+      "volatility": "v",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "authenticated"
+      ],
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": true
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "args": "p_filters jsonb",
+      "name": "cuisine_filter_codes",
+      "owner": "postgres",
+      "schema": "internal",
+      "comment": null,
+      "returns": "text[]",
+      "body_md5": "690a1fa64f9ec225f9b10188598d055b",
+      "settings": [
+        "search_path=pg_catalog, public, pg_temp"
+      ],
+      "references": [
+        {
+          "kind": "reads",
+          "evidence": "FROM jsonb_array_elements",
+          "identifier": "jsonb_array_elements"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM jsonb_array_elements_text",
+          "identifier": "jsonb_array_elements_text"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM public.ref_code_cuisine_type",
+          "identifier": "public.ref_code_cuisine_type"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM unnest",
+          "identifier": "unnest"
+        }
+      ],
+      "volatility": "s",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "service_role"
+      ],
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": true,
+        "authenticated": false
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres}",
+      "args": "p_org_object_id text",
+      "name": "partner_selection_can_manage",
+      "owner": "postgres",
+      "schema": "internal",
+      "comment": null,
+      "returns": "boolean",
+      "body_md5": "f5a074fe22c4c46c7291c06918501511",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, auth, pg_temp"
+      ],
+      "references": [],
+      "volatility": "s",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres"
+      ],
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": false,
+        "authenticated": false
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "args": "p_row internal.partner_selection",
+      "name": "partner_selection_document",
+      "owner": "postgres",
+      "schema": "internal",
+      "comment": null,
+      "returns": "jsonb",
+      "body_md5": "a173a831e5f5efaa195a5312eff808bc",
+      "settings": [
+        "search_path=pg_catalog, internal, pg_temp"
+      ],
+      "references": [],
+      "volatility": "s",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "service_role"
+      ],
+      "security_definer": false,
+      "effective_execute": {
+        "anon": false,
+        "service_role": true,
+        "authenticated": false
+      }
+    },
+    {
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "args": "p_org_object_id text, p_name text, p_buckets jsonb, p_explorer_state jsonb, p_commune_insee text[]",
+      "name": "partner_selection_validate",
+      "owner": "postgres",
+      "schema": "internal",
+      "comment": null,
+      "returns": "void",
+      "body_md5": "0f64b868dab66fce701af831dd52dd5f",
+      "settings": [
+        "search_path=pg_catalog, public, api, internal, pg_temp"
+      ],
+      "references": [
+        {
+          "kind": "reads",
+          "evidence": "FROM jsonb_array_elements",
+          "identifier": "jsonb_array_elements"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM jsonb_each",
+          "identifier": "jsonb_each"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM jsonb_object_keys",
+          "identifier": "jsonb_object_keys"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM public.object",
+          "identifier": "public.object"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM public.ref_code_cuisine_type",
+          "identifier": "public.ref_code_cuisine_type"
+        },
+        {
+          "kind": "reads",
+          "evidence": "FROM unnest",
+          "identifier": "unnest"
+        }
+      ],
+      "volatility": "s",
+      "dynamic_sql": false,
+      "execute_roles": [
+        "postgres",
+        "service_role"
+      ],
+      "security_definer": true,
+      "effective_execute": {
+        "anon": false,
+        "service_role": true,
+        "authenticated": false
+      }
+    }
+  ],
+  "table_catalog": {
+    "tables": [
+      {
+        "name": "internal.partner_selection",
+        "type": "BASE TABLE",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "nullable": false,
+            "extra_def": "GENERATED BY DEFAULT AS IDENTITY"
+          },
+          {
+            "name": "org_object_id",
+            "type": "text",
+            "nullable": false
+          },
+          {
+            "name": "name",
+            "type": "text",
+            "nullable": false
+          },
+          {
+            "name": "buckets",
+            "type": "jsonb",
+            "nullable": false
+          },
+          {
+            "name": "explorer_state",
+            "type": "jsonb",
+            "nullable": true
+          },
+          {
+            "name": "commune_insee",
+            "type": "text[]",
+            "nullable": true
+          },
+          {
+            "name": "state",
+            "type": "text",
+            "default": "'active'::text",
+            "nullable": false
+          },
+          {
+            "name": "revision",
+            "type": "integer",
+            "default": "1",
+            "nullable": false
+          },
+          {
+            "name": "created_by",
+            "type": "uuid",
+            "nullable": true
+          },
+          {
+            "name": "updated_by",
+            "type": "uuid",
+            "nullable": true
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp with time zone",
+            "default": "now()",
+            "nullable": false
+          },
+          {
+            "name": "updated_at",
+            "type": "timestamp with time zone",
+            "default": "now()",
+            "nullable": false
+          }
+        ],
+        "comment": "Durable organization-owned dynamic public selections. Private CRUD via role-gated RPC; partner reader service-only.",
+        "indexes": [
+          {
+            "def": "CREATE UNIQUE INDEX partner_selection_pkey ON internal.partner_selection USING btree (id)",
+            "name": "partner_selection_pkey",
+            "table": "internal.partner_selection",
+            "columns": [
+              "id"
+            ]
+          },
+          {
+            "def": "CREATE INDEX partner_selection_org_updated_idx ON internal.partner_selection USING btree (org_object_id, updated_at DESC, id)",
+            "name": "partner_selection_org_updated_idx",
+            "table": "internal.partner_selection",
+            "columns": [
+              "org_object_id",
+              "updated_at",
+              "id"
+            ]
+          },
+          {
+            "def": "CREATE INDEX partner_selection_public_id_idx ON internal.partner_selection USING btree (((id)::text))",
+            "name": "partner_selection_public_id_idx",
+            "table": "internal.partner_selection",
+            "columns": [
+              "id"
+            ]
+          }
+        ],
+        "triggers": [],
+        "constraints": [
+          {
+            "def": "CHECK (((length(btrim(name)) >= 1) AND (length(btrim(name)) <= 160)))",
+            "name": "partner_selection_name_check",
+            "type": "CHECK",
+            "table": "internal.partner_selection",
+            "columns": [
+              "name"
+            ],
+            "referenced_table": "",
+            "referenced_columns": []
+          },
+          {
+            "def": "CHECK ((revision > 0))",
+            "name": "partner_selection_revision_check",
+            "type": "CHECK",
+            "table": "internal.partner_selection",
+            "columns": [
+              "revision"
+            ],
+            "referenced_table": "",
+            "referenced_columns": []
+          },
+          {
+            "def": "CHECK ((state = ANY (ARRAY['active'::text, 'suspended'::text])))",
+            "name": "partner_selection_state_check",
+            "type": "CHECK",
+            "table": "internal.partner_selection",
+            "columns": [
+              "state"
+            ],
+            "referenced_table": "",
+            "referenced_columns": []
+          },
+          {
+            "def": "FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL",
+            "name": "partner_selection_created_by_fkey",
+            "type": "FOREIGN KEY",
+            "table": "internal.partner_selection",
+            "columns": [
+              "created_by"
+            ],
+            "referenced_table": "auth.users",
+            "referenced_columns": [
+              "id"
+            ]
+          },
+          {
+            "def": "FOREIGN KEY (updated_by) REFERENCES auth.users(id) ON DELETE SET NULL",
+            "name": "partner_selection_updated_by_fkey",
+            "type": "FOREIGN KEY",
+            "table": "internal.partner_selection",
+            "columns": [
+              "updated_by"
+            ],
+            "referenced_table": "auth.users",
+            "referenced_columns": [
+              "id"
+            ]
+          },
+          {
+            "def": "FOREIGN KEY (org_object_id) REFERENCES object(id) ON DELETE RESTRICT",
+            "name": "partner_selection_org_object_id_fkey",
+            "type": "FOREIGN KEY",
+            "table": "internal.partner_selection",
+            "columns": [
+              "org_object_id"
+            ],
+            "referenced_table": "public.object",
+            "referenced_columns": [
+              "id"
+            ]
+          },
+          {
+            "def": "PRIMARY KEY (id)",
+            "name": "partner_selection_pkey",
+            "type": "PRIMARY KEY",
+            "table": "internal.partner_selection",
+            "columns": [
+              "id"
+            ],
+            "referenced_table": "",
+            "referenced_columns": []
+          }
+        ]
+      }
+    ],
+    "relations": [
+      {
+        "def": "FOREIGN KEY (org_object_id) REFERENCES object(id) ON DELETE RESTRICT",
+        "table": "internal.partner_selection",
+        "columns": [
+          "org_object_id"
+        ],
+        "parent_table": "public.object",
+        "parent_columns": [
+          "id"
+        ]
+      },
+      {
+        "def": "FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL",
+        "table": "internal.partner_selection",
+        "columns": [
+          "created_by"
+        ],
+        "parent_table": "auth.users",
+        "parent_columns": [
+          "id"
+        ]
+      },
+      {
+        "def": "FOREIGN KEY (updated_by) REFERENCES auth.users(id) ON DELETE SET NULL",
+        "table": "internal.partner_selection",
+        "columns": [
+          "updated_by"
+        ],
+        "parent_table": "auth.users",
+        "parent_columns": [
+          "id"
+        ]
+      }
+    ]
+  },
+  "table_security": [
+    {
+      "acl": "{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+      "name": "internal.partner_selection",
+      "owner": "postgres",
+      "policies": [],
+      "rls_forced": false,
+      "rls_enabled": true,
+      "client_write": {
+        "anon": false,
+        "authenticated": false
+      },
+      "client_select": {
+        "anon": false,
+        "authenticated": false
+      }
+    }
+  ],
+  "preserved_readers": [
+    {
+      "name": "api.list_partner_objects_with_vocabulary",
+      "body_md5": "ddcb1112ad9cdb9b7fcba9bfd4a881e6"
+    },
+    {
+      "name": "api.list_partner_selection_objects_with_vocabulary",
+      "body_md5": "b39369e86bff568b267e832da825dfe9"
+    }
+  ],
+  "migration_history": [
+    {
+      "version": "20261109080813",
+      "name": "restaurant_cuisine_filter"
+    },
+    {
+      "version": "20261109080851",
+      "name": "partner_selection_registry"
+    }
+  ],
+  "migration_history_source": "Supabase MCP schema_migrations SELECT immediately before the scoped metadata capture",
+  "capture_provenance": {
+    "source": "Supabase MCP - Bertel production",
+    "project_ref": "ryycrdhlkmzpxwwwwupy",
+    "scope": "targeted only; complete catalogue baseline remains 212"
+  }
+}

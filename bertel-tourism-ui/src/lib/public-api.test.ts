@@ -69,10 +69,20 @@ it('does not apply thesaurus error translation to unrelated public RPCs', async 
   expect(await callPublicRpc('get_object_resource', {})).toEqual(genericError);
 });
 
-it.each(['list_partner_objects_with_vocabulary', 'get_partner_object_with_vocabulary', 'list_partner_selection_objects_with_vocabulary'])(
+it.each(['list_partner_objects_with_vocabulary', 'list_partner_objects_with_selection_ids', 'get_partner_object_with_vocabulary', 'list_partner_selection_objects_with_vocabulary'])(
   'translates invalid atomic-wrapper parameters into safe 400 (%s)', async (name) => {
     rpcMock.mockResolvedValue({ data: null, error: { code: 'PT400', message: 'private SQL state' } });
     expect(await callPublicRpc(name, {})).toEqual({ ok: false, status: 400,
       body: { error: 'bad_request', detail: 'invalid parameters or cursor' } });
   },
 );
+
+it.each(['PT503', '57014', 'PGRST202'])('keeps membership failures isolated and fails closed (%s)', async (code) => {
+  const privateMessage = 'private selection criteria or database details';
+  rpcMock.mockResolvedValue({ data: null, error: { code, message: privateMessage, details: privateMessage } });
+  expect(await callPublicRpc('list_partner_objects_with_selection_ids', { p_view: 'full' })).toEqual({
+    ok: false, status: 503, body: { error: 'selection_membership_unavailable' },
+  });
+  expect(JSON.stringify((console.error as jest.Mock).mock.calls)).not.toContain(privateMessage);
+  expect(await callPublicRpc('list_partner_objects_with_vocabulary', {})).toEqual(genericError);
+});

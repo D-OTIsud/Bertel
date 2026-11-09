@@ -1,5 +1,9 @@
 # DB knowledge graph (tools/db-graph)
 
+## Membership projection supplement (9 November 2026)
+
+`db-graph-out/PARTNER_SELECTION_MEMBERSHIPS_CATALOG.json` is a body-free production MCP catalogue capture of only the two additive functions from migration `20261109100741`, plus preserved-reader hashes and ledger metadata. `merge_partner_selection_memberships.py` applies this specific supplement once, validates service-only invoker privileges and the four historical hashes, and asserts that every baseline node and edge remains data-identical and ordered. It appends two function nodes and four inferred reads; it does not refresh table pages or claim a new full catalogue. Run it only against a fresh, reviewed capture for this lot; rerunning against an already merged graph deliberately fails. The full catalogue 212 and previous 055511/admin/cuisine supplements remain the baseline.
+
 Composes [tbls](https://github.com/k1LoW/tbls) (tables/FKs/ER/markdown) with a thin Python glue that adds
 functions/RPCs, RLS policies, enums, and a unified interactive force graph. See the design spec:
 `docs/superpowers/specs/2026-06-10-db-knowledge-graph-design.md`.

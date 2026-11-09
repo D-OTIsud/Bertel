@@ -90,6 +90,7 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | 404 | `not_found` | Fiche inconnue **ou non publiée** (indistinguable, par conception) ; en bêta `selection_id`, sélection inconnue |
 | 429 | `rate_limited` | Limite de débit atteinte — respecter `Retry-After` |
 | 500 / 502 | `server_misconfigured` / `upstream_error` | Erreur côté Bertel — réessayer plus tard avec backoff |
+| 503 | `selection_unavailable` / `selection_membership_unavailable` | Registre de sélection indisponible, ou calcul des appartenances indisponible avec `include_selection_ids=true` ; conserver le dernier état synchronisé avec succès |
 
 ---
 
@@ -104,6 +105,7 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | `view` | `card` \| `full` | `card` | `full` = fiche complète par objet (voir §3.1.1) |
 | `track` | `gpx` \| `kml` | — | En `view=full` : ajoute le blob GPX/KML des itinéraires |
 | `selection_id` | string | — | Bêta : identifiant permanent d'une sélection OTI du Sud, par exemple `1006` pour Terroir et artisanat ; voir §3.1.2 |
+| `include_selection_ids` | bool | `false` | Option à confirmer avec l'OTI : `true` ajoute les identifiants des sélections actives à chaque fiche du flux général ; incompatible avec `selection_id`, même à `false` ; voir §3.1.3 |
 | `types` | csv | tous | Filtre par types de fiche (codes ci-dessous) |
 | `taxonomy` | csv | — | Codes qualifiés `taxonomy_hlo:appartement`, avec descendants selon la hiérarchie publiée |
 | `include_equivalent_predecessors` | bool | `false` | Avec `taxonomy` uniquement : inclut les prédécesseurs déclarés exactement équivalents ; aucun élargissement implicite après une scission |
@@ -182,7 +184,7 @@ curl -H "Authorization: Bearer bk_live_…" \
 | `1009` | Hôtels |
 | `1010` | Locations et chambres |
 | `1011` | Campings et aires |
-| `1012` | Résidences |
+| `1012` | Résidences de vacances |
 | `1013` | Transports |
 | `1014` | Offices de tourisme |
 | `1015` | Services |
@@ -191,7 +193,7 @@ Les quinze définitions initiales ci-dessus couvrent les communes de l'Entre-Deu
 
 Les sélections À pied et À vélo utilisent les pratiques des itinéraires. En l'absence de pratique renseignée, le classement taxonomique sert de repli. La sélection `1007` contient les événements publiés : le partenaire doit encore traiter les dates, les occurrences et les annulations pour construire son agenda. Les labels, les types de handicap, les animaux et les capacités restent des champs des fiches complètes (`view=full`) à exploiter par le partenaire.
 
-Avec `selection_id`, seules les options `cursor`, `page_size`, `view`, `lang`, `track`, `format` et `variant` peuvent être ajoutées. La présence de `types`, `taxonomy`, `search` ou `include_equivalent_predecessors`, même à `false`, entraîne `400 bad_request`. Un identifiant vide, répété ou une autre option entraîne aussi `400 bad_request`. Une sélection inconnue ou suspendue renvoie `404 not_found` : elle ne provoque jamais un retour au catalogue complet. Une sélection connue sans résultat renvoie `200` avec `data: []`. Une indisponibilité du registre renvoie `503 selection_unavailable` ; elle ne remplace pas la définition enregistrée par une ancienne configuration.
+Avec `selection_id`, seules les options `cursor`, `page_size`, `view`, `lang`, `track`, `format` et `variant` peuvent être ajoutées. La présence de `types`, `taxonomy`, `search`, `include_equivalent_predecessors` ou `include_selection_ids`, même à `false`, entraîne `400 bad_request`. Un identifiant vide, répété ou une autre option entraîne aussi `400 bad_request`. Une sélection inconnue ou suspendue renvoie `404 not_found` : elle ne provoque jamais un retour au catalogue complet. Une sélection connue sans résultat renvoie `200` avec `data: []`. Une indisponibilité du registre renvoie `503 selection_unavailable` ; elle ne remplace pas la définition enregistrée par une ancienne configuration.
 
 Le contenu de chaque fiche dans `data` conserve le contrat existant. Trois métadonnées décrivent le contexte de la sélection ; elles sont absentes des appels sans `selection_id` :
 
@@ -213,6 +215,35 @@ Le contenu de chaque fiche dans `data` conserve le contrat existant. Trois méta
 Cet exemple illustre une page vide, pas un volume de production. `selection_revision` identifie la révision enregistrée de la sélection (révision `1` pour les définitions initiales de la bêta). Elle ne constitue ni une version des fiches ni un instantané de leurs appartenances. L'appartenance est recalculée à chaque page à partir des données et projections courantes de Bertel. Conservez le même `selection_id`, la même clé partenaire et les mêmes options pendant toute la pagination ; après une rotation de clé, une modification des critères ou un changement de sélection, repartez sans curseur. Un curseur incompatible est refusé.
 
 Pour synchroniser une sélection, parcourez toutes ses pages et mettez les fiches à jour par `id`. **Rapprochez les appartenances seulement après un parcours entièrement réussi jusqu'à `next_cursor=null`.** Une erreur, un délai dépassé ou un curseur refusé ne signifie pas que la sélection est vide : conservez les appartenances précédentes tant que le parcours n'a pas abouti. Une fiche peut appartenir à plusieurs sélections ; sa sortie d'une sélection ne supprime pas ses autres appartenances. Le flux `/objects/deletions` ne signale pas ces sorties.
+
+#### 3.1.3 Appartenances dans le flux général — `include_selection_ids`
+
+**Confirmez l'activation de cette option avec l'OTI avant de l'utiliser.** Cette documentation décrit le contrat ; elle n'atteste pas son déploiement.
+
+Pour recevoir les appartenances sans parcourir séparément chaque sélection, ajoutez `include_selection_ids=true` à `GET /objects`, avec la même clé partenaire utilisée côté serveur :
+
+```bash
+curl -H "Authorization: Bearer bk_live_…" \
+  "https://VOTRE_DOMAINE/api/public/objects?view=full&include_selection_ids=true&page_size=25"
+```
+
+Chaque objet de `data[]` porte alors un champ racine `selection_ids`, en `view=card` comme en `view=full`. Il contient uniquement des identifiants de sélections **actives**, sous forme de chaînes triées sans doublon. Une fiche sans appartenance reçoit `[]`. Aucun nom de sélection ni critère enregistré n'est fourni par ce champ. Exemple illustratif d'un extrait de fiche :
+
+```json
+{
+  "id": "RESRUN0000000001",
+  "type": "RES",
+  "selection_ids": ["1008"]
+}
+```
+
+Le champ est au même niveau que `id` et `type`, jamais à l'intérieur de `jsonld`, `datatourisme`, `apidae` ou `tourinsoft`. Les documents pivots et le détail `GET /objects/{id}` restent inchangés. L'option n'ajoute pas `selection_ids` aux réponses de détail.
+
+Sans l'option, ou avec la valeur littérale `false`, le flux historique est conservé et le champ est **absent**. Les seules valeurs acceptées sont `true` et `false` : valeur vide, autre valeur ou paramètre répété donnent `400 bad_request`. L'option est incompatible avec `selection_id`, y compris `include_selection_ids=false` : les parcours par sélection conservent leur contrat existant.
+
+Conservez `include_selection_ids=true` et les mêmes options pendant toutes les pages du parcours. Les règles de curseur du flux général restent applicables. Les appartenances sont calculées sur les données courantes : **il n'y a pas d'instantané entre les pages**. Une suspension de sélection ou une modification de ses critères peut changer `selection_ids` sans modifier la fiche ni son `updated_at`.
+
+À chaque synchronisation complète, actualisez donc les appartenances de **toutes** les fiches reçues, même si leur horodatage n'a pas changé. Vous pouvez éviter de réimporter leur contenu inchangé, mais pas ignorer leur nouveau `selection_ids`. Préparez les retraits et appliquez-les seulement après la dernière page réussie (`next_cursor=null`). Une erreur, notamment `503 {"error":"selection_membership_unavailable"}`, n'est pas un tableau vide : conservez les appartenances du dernier parcours réussi. Cette indisponibilité de l'option ne change pas le traitement des appels historiques sans option ou avec `false`. Le flux `/objects/deletions` ne signale pas les sorties de sélection.
 
 ### 3.2 `GET /objects/{id}` — une fiche complète
 

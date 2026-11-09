@@ -2,11 +2,11 @@
  "meta": {
   "table_count": 430,
   "view_count": 15,
-  "function_count": 683,
+  "function_count": 685,
   "policy_count": 647,
   "trigger_count": 1439,
   "enum_count": 9,
-  "edge_count": 6430
+  "edge_count": 6434
  },
  "nodes": [
   {
@@ -86774,6 +86774,86 @@
      "canceled"
     ]
    }
+  },
+  {
+   "id": "api.list_partner_objects_with_selection_ids(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_taxonomy_codes text[] DEFAULT NULL::text[], p_include_equivalent_predecessors boolean DEFAULT false)",
+   "kind": "function",
+   "label": "list_partner_objects_with_selection_ids",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Opt-in general partner page: unchanged legacy page plus root selection_ids strings from active dynamic definitions. Service-role only; no work added to historical readers.",
+   "props": {
+    "signature": "list_partner_objects_with_selection_ids(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_taxonomy_codes text[] DEFAULT NULL::text[], p_include_equivalent_predecessors boolean DEFAULT false)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "8981d8b7c9a36e8092f195fbfb46084e",
+    "owner": "postgres",
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, extensions, pg_temp"
+    ],
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": true,
+     "authenticated": false
+    },
+    "catalog_captured_at": "2026-11-09T10:09:29.58167+00:00",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109100741_partner_selection_memberships.sql",
+      "line": 88
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_partner_selection_memberships.sql",
+      "line": 88
+     }
+    ]
+   }
+  },
+  {
+   "id": "internal.partner_selection_memberships(p_object_ids text[])",
+   "kind": "function",
+   "label": "partner_selection_memberships",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "Private active-selection membership for at most 200 page objects. Shared filter engine per relevant branch, canonical global search gate, published real objects only; errors fail closed.",
+   "props": {
+    "signature": "partner_selection_memberships(p_object_ids text[])",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "body_md5": "5c784398738396df1fdc16484b64285e",
+    "owner": "postgres",
+    "settings": [
+     "search_path=pg_catalog, public, api, internal, extensions, pg_temp"
+    ],
+    "execute_roles": [
+     "postgres",
+     "service_role"
+    ],
+    "effective_execute": {
+     "anon": false,
+     "service_role": true,
+     "authenticated": false
+    },
+    "catalog_captured_at": "2026-11-09T10:09:29.58167+00:00",
+    "sources": [
+     {
+      "path": "supabase/migrations/20261109100741_partner_selection_memberships.sql",
+      "line": 5
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_partner_selection_memberships.sql",
+      "line": 5
+     }
+    ]
+   }
   }
  ],
  "edges": [
@@ -145643,6 +145723,54 @@
      "evidence": "FROM public.ref_code_cuisine_type"
     }
    }
+  },
+  {
+   "source": "internal.partner_selection_memberships(p_object_ids text[])",
+   "target": "internal.partner_selection",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.partner_selection"
+    }
+   }
+  },
+  {
+   "source": "internal.partner_selection_memberships(p_object_ids text[])",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "internal.partner_selection_memberships(p_object_ids text[])",
+   "target": "public.object_iti_practice",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_iti_practice"
+    }
+   }
+  },
+  {
+   "source": "internal.partner_selection_memberships(p_object_ids text[])",
+   "target": "public.object_location",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_location"
+    }
+   }
   }
  ],
  "partitions": {
@@ -145789,6 +145917,43 @@
      "api.list_partner_objects_with_vocabulary": "ddcb1112ad9cdb9b7fcba9bfd4a881e6",
      "api.list_partner_selection_objects_with_vocabulary": "b39369e86bff568b267e832da825dfe9"
     }
+   },
+   {
+    "scope": "partner-selection-memberships",
+    "source": "PostgreSQL catalogue SELECT; transport/provenance supplied by the operator",
+    "captured_at": "2026-11-09T10:09:29.58167+00:00",
+    "database_name": "postgres",
+    "project_ref": "ryycrdhlkmzpxwwwwupy",
+    "transport": "production via Bertel Supabase MCP; catalog SELECT only",
+    "functions": [
+     "api.list_partner_objects_with_selection_ids(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_view text DEFAULT 'card'::text, p_format text DEFAULT ''::text, p_variant text DEFAULT 'legacy-v1'::text, p_taxonomy_codes text[] DEFAULT NULL::text[], p_include_equivalent_predecessors boolean DEFAULT false)",
+     "internal.partner_selection_memberships(p_object_ids text[])"
+    ],
+    "migration_history": [
+     {
+      "name": "partner_selection_objects",
+      "version": "20261109055511"
+     },
+     {
+      "name": "restaurant_cuisine_filter",
+      "version": "20261109080813"
+     },
+     {
+      "name": "partner_selection_registry",
+      "version": "20261109080851"
+     },
+     {
+      "name": "partner_selection_memberships",
+      "version": "20261109100741"
+     }
+    ],
+    "preserved_readers": {
+     "api.list_partner_objects_with_vocabulary": "ddcb1112ad9cdb9b7fcba9bfd4a881e6",
+     "api.list_partner_selection_objects_with_vocabulary": "b39369e86bff568b267e832da825dfe9",
+     "api.get_partner_object_with_vocabulary": "665e3aae006cc8a55a14562ae8f07f79",
+     "api.get_filtered_object_ids": "d4905c8d789de044d82fe65dba4633c1"
+    },
+    "ledger_count": 216
    }
   ]
  }

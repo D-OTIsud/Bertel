@@ -89,6 +89,7 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 > Surface **tierce** dédiée : un prestataire externe passe par cette passerelle (jamais PostgREST direct). Auth par **clé partenaire** `Authorization: Bearer bk_live_…` (variable `partner_key`), base = `public_base_url`. Enveloppe `{ meta, data }`, `meta.contract_version` + header `X-Bertel-Api-Version`, fiches **publiées** uniquement. Lancer « Lister les fiches publiées » en premier (remplit `object_id`).
 
 - **Lister les fiches publiées** : `GET /api/public/objects` (curseur, `page_size`, `types`, `search`, `lang` ; **`format=<profil>`** ajoute le document pivot par fiche sous `data[i].<profil>` — synchronisation par lots, même pagination ; `variant` sélectionne le contrat Tourinsoft)
+- **Fiches et appartenances aux sélections (option à confirmer)** : `GET /api/public/objects?view=full&include_selection_ids=true`. Sur activation confirmée par l'OTI, chaque fiche card/full porte `selection_ids`, tableau de chaînes triées sans doublon, `[]` sans sélection active. Le champ est à la racine de la fiche ; les pivots et le détail sont inchangés. Sans option ou avec `false`, il est absent et le traitement historique est conservé. Une valeur vide, répétée ou autre que `true`/`false` donne `400` ; toute combinaison avec `selection_id`, même à `false`, donne aussi `400`. La requête mémorise `membership_next_cursor` : activer son paramètre `cursor` pour la page suivante et conserver le flag ainsi que les autres options.
 - **Récupérer une fiche publiée** : `GET /api/public/objects/{id}`
 - **Fiche + JSON-LD schema.org (I4)** : `GET /api/public/objects/{id}?format=jsonld` → bloc additif `data.jsonld` (document schema.org, `@type` selon le type d'objet ; prêt pour SEO / interop)
 - **Fiche + DATAtourisme (I4b)** : `?format=datatourisme` → bloc additif `data.datatourisme` (JSON-LD ontologie nationale)
@@ -104,6 +105,8 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 - **Flux tombstone (C-4)** : `GET /api/public/objects/deletions?since=…` (suppressions définitives, pour miroir partenaire)
 - **Catalogues de référentiels (I1)** : `GET /api/public/catalog?domains=…`
 
+Pour les appartenances, actualiser `selection_ids` à chaque parcours complet, même si `updated_at` est inchangé : suspendre une sélection ou changer ses critères ne modifie pas l'horodatage des fiches. Les pages ne forment pas un instantané. Appliquer les retraits seulement après toutes les pages réussies ; un échec, dont `503 selection_membership_unavailable`, conserve l'état précédent et ne signifie pas `[]`. Aucun nom privé ni règle de sélection n'est retourné. La présence de cet exemple dans la collection ne confirme pas le déploiement de l'option.
+
 ## 🔧 Variables d'environnement
 
 | Variable | Description | Exemple |
@@ -115,6 +118,7 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 | `partner_key` | Clé partenaire Bearer pour `/api/public/*` (émise par l'OTI) | `bk_live_…` |
 | `object_id` | ID d'objet (auto-rempli) | Auto-généré |
 | `tourinsoft_regional_object_id` | ID couvert par la variante régionale (auto-rempli par la liste I4f) | Auto-généré |
+| `membership_next_cursor` | Curseur du flux général avec `include_selection_ids=true` (auto-rempli par la requête correspondante) | Auto-généré |
 | `itinerary_id` | ID d'itinéraire (auto-rempli) | Auto-généré |
 | `current_timestamp` | Timestamp actuel (auto-généré) | Auto-généré |
 

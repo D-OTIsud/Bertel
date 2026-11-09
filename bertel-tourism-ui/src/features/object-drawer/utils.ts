@@ -81,6 +81,7 @@ export interface MediaItem {
 }
 
 export interface LegalItem {
+  typeCode: string;
   label: string;
   status: string;
   documentId: string;
@@ -1157,6 +1158,7 @@ export function parseLegal(raw: Record<string, unknown>): LegalItem[] {
     // same table). Top-level kept as a harmless fallback in case a future producer flattens it.
     const explicit = readBoolean(readRecord(record.type).is_public ?? record.is_public);
     return {
+      typeCode: readString(readRecord(record.type).code),
       label: readNamedValue(record.type, readString(record.label, 'Document legal')),
       status: readString(record.status, 'Statut inconnu'),
       documentId: readString(record.document_id, 'non fourni'),

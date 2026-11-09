@@ -40,6 +40,8 @@ import {
   Tag,
   Trash2,
 } from 'lucide-react';
+import { buildLegalMentions } from './legal-mentions';
+import { LegalMentionsCard } from './LegalMentionsCard';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { csvCell } from '@/lib/safe-output';
@@ -86,7 +88,6 @@ import {
   type ItineraryProfilePoint,
   type ItinerarySummary,
   type MediaItem,
-  type LegalItem,
   type MembershipItem,
   type MeetingRoomItem,
   type OpeningItem,
@@ -1867,40 +1868,6 @@ function networkRolePillLabel(linkType: string): string {
     return 'PARTENAIRE';
   }
   return 'PARTENAIRE';
-}
-
-function LegalSection({ records }: { records: LegalItem[] }) {
-  const publicRecords = records.filter((r) => r.isPublic && Boolean(r.label?.trim() || r.status?.trim()));
-  if (!publicRecords.length) {
-    return null;
-  }
-
-  return (
-    <Section id="detail-section-legal" title="Mentions legales">
-      <ul className="detail-legal-list">
-        {publicRecords.map((record, index) => {
-          const meta = [
-            record.status,
-            record.daysUntilExpiry && record.daysUntilExpiry !== 'n/a' ? `valide jusqu'au ${record.daysUntilExpiry}` : '',
-          ]
-            .filter(Boolean)
-            .join(' · ');
-
-          return (
-            <li key={`${record.label}-${index}`} className="detail-legal-list__row">
-              <div className="detail-legal-list__main">
-                <strong>{record.label}</strong>
-                {meta ? <span className="detail-legal-list__meta">{meta}</span> : null}
-              </div>
-              {record.documentId && record.documentId !== 'non fourni' ? (
-                <span className="detail-legal-list__doc">{record.documentId}</span>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </Section>
-  );
 }
 
 function LocationMapSection({ preview }: { preview: PreviewData }) {
@@ -3690,16 +3657,15 @@ type DrawerSectionKind =
   | 'amenities'
   | 'weekSchedule'
   | 'pricing'
-  | 'legal'
   | 'notes';
 
-// Queue commune « équipements → (horaires) → tarifs → légal → notes ».
-const TAIL_WITH_SCHEDULE: DrawerSectionKind[] = ['amenities', 'weekSchedule', 'pricing', 'legal', 'notes'];
-const TAIL_NO_SCHEDULE: DrawerSectionKind[] = ['amenities', 'pricing', 'legal', 'notes'];
+// Queue commune « équipements → (horaires) → tarifs → notes ».
+const TAIL_WITH_SCHEDULE: DrawerSectionKind[] = ['amenities', 'weekSchedule', 'pricing', 'notes'];
+const TAIL_NO_SCHEDULE: DrawerSectionKind[] = ['amenities', 'pricing', 'notes'];
 
 // Exhaustif sur ArchetypeCode (pas de fallback silencieux d'archétype — invariant §46).
 const ARCHETYPE_SECTIONS: Record<ArchetypeCode, DrawerSectionKind[]> = {
-  HEB: ['apercu', 'amenities', 'rooms', 'meetingRooms', 'pricing', 'legal', 'notes'],
+  HEB: ['apercu', 'amenities', 'rooms', 'meetingRooms', 'pricing', 'notes'],
   RES: ['apercu', 'restaurantMenu', ...TAIL_WITH_SCHEDULE],
   ITI: ['apercu-iti', 'waypoints', 'profile', 'itineraryPractical', ...TAIL_NO_SCHEDULE],
   ASC: ['apercu', 'activityFacts', ...TAIL_NO_SCHEDULE],
@@ -3787,8 +3753,8 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
     () => buildItineraryPracticalNotes(preview.itinerary),
     [preview.itinerary],
   );
-  const publicLegalRecords = useMemo(
-    () => parsed.internal.legalRecords.filter((r) => r.isPublic && Boolean(r.label?.trim() || r.status?.trim())),
+  const legalMentions = useMemo(
+    () => buildLegalMentions(parsed.internal.legalRecords),
     [parsed.internal.legalRecords],
   );
   // §5 : gate de l'onglet « Notes internes » = notes existantes OU droit d'écriture
@@ -3908,14 +3874,6 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
               render: () => <PricingAndOpeningsSection key="pricing" prices={preview.prices} sectionId="detail-section-pricing" />,
             }
           : null;
-      case 'legal':
-        return publicLegalRecords.length > 0
-          ? {
-              key: 'legal', id: 'detail-section-legal', label: 'Légal', placement: 'main',
-              count: publicLegalRecords.length,
-              render: () => <LegalSection key="legal" records={parsed.internal.legalRecords} />,
-            }
-          : null;
       case 'notes':
         return preview.privateNotes.length > 0 || canAddNotes
           ? {
@@ -3966,6 +3924,9 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
     { key: 'related', id: '', label: '', placement: 'aside', render: () => <RelatedObjectsSection items={preview.relatedObjects} /> },
     { key: 'team', id: '', label: '', placement: 'aside', render: () => <TeamSection actors={canSeeActors ? preview.actors : []} shownContactKeys={shownContactKeys} crmHrefFor={crmHrefFor} /> },
     { key: 'network', id: '', label: '', placement: 'aside', render: () => <NetworkSection organizations={preview.organizations} memberships={preview.memberships} /> },
+    ...(legalMentions.length > 0
+      ? [{ key: 'legal', id: '', label: '', placement: 'aside' as const, render: () => <LegalMentionsCard mentions={legalMentions} /> }]
+      : []),
   ];
 
   // Ordre du tableau (= ordre des onglets ET du rendu) : Médias suit Aperçu (le hero
@@ -3982,8 +3943,8 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
     }
   }
   if (hoursSection && !sections.includes(hoursSection)) {
-    // Pas d'onglet Tarifs comme ancre — placer Horaires avant Légal/Notes, sinon en fin.
-    const idx = sections.findIndex((s) => s.id === 'detail-section-legal' || s.id === 'detail-section-notes');
+    // Pas d'onglet Tarifs comme ancre — placer Horaires avant Notes, sinon en fin.
+    const idx = sections.findIndex((s) => s.id === 'detail-section-notes');
     if (idx === -1) sections.push(hoursSection);
     else sections.splice(idx, 0, hoursSection);
   }

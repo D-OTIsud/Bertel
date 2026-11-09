@@ -84,7 +84,7 @@ jobs:
     runs-on: ${{ github.event_name == 'workflow_dispatch' && (inputs.editor_browser == true || inputs.sandbox_discovery == true || inputs.portal_photo_browser == true || inputs.gdpr_cleanup == true) && 'ubuntu-24.04' || 'ubuntu-latest' }}
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Require the standalone public discovery selector
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.sandbox_discovery == true && (inputs.editor_browser == true || inputs.realtime_security == true || inputs.storage_contract == true || inputs.storage_db07_profile == true || inputs.gdpr_cleanup == true) }}

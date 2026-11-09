@@ -52,6 +52,7 @@ export type ActiveChipGroup =
   | 'meetingRoom'
   | 'hotCapacity'
   | 'resCapacity'
+  | 'resCuisine'
   | 'itiLoop'
   | 'itiDifficulty'
   | 'itiDistance'
@@ -341,6 +342,9 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
       value: capacity.code,
       label: `Capacité resto · ${rangeLabel(capacity.min, capacity.max)}`,
     });
+  }
+  if (filters.res.cuisineTypesAny?.length) {
+    chips.push({ key: 'resCuisine', group: 'resCuisine', value: '*', label: 'Types de cuisine · ' + filters.res.cuisineTypesAny.length });
   }
 
   const iti = filters.iti;

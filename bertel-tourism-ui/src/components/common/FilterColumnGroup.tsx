@@ -19,15 +19,18 @@ export function FilterColumnGroup({
   children,
   collapsible = false,
   defaultOpen = true,
+  hidden = false,
 }: {
   label: string;
   count?: number;
   children: ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
+  hidden?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const bodyId = useId();
+  if (hidden) return null;
 
   // Suffixe sr-only dans le chemin collapsible : sans lui le nom accessible du
   // bouton serait « Hebergements 2 » — un nombre nu sans contexte pour les AT.

@@ -4,7 +4,8 @@ import { admitPartner } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { OBJECT_TYPE_CODES } from '@/lib/object-types';
 import { resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
-import { getPartnerSelection, selectionDefinitionHash } from '@/lib/partner-selections';
+import { type PartnerSelection, selectionDefinitionHash } from '@/lib/partner-selections';
+import { loadPartnerSelection } from '@/lib/partner-selection-store';
 
 export const runtime = 'nodejs';
 
@@ -37,12 +38,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const url = new URL(req.url);
   const selectionIds = url.searchParams.getAll('selection_id');
-  const selection = selectionIds.length === 1 ? getPartnerSelection(selectionIds[0]) : undefined;
+  let selection: PartnerSelection | undefined;
   if (selectionIds.length > 0) {
     const allowed = new Set(['selection_id', 'cursor', 'page_size', 'view', 'lang', 'track', 'format', 'variant']);
     if (selectionIds.length !== 1 || !selectionIds[0].trim()
       || [...url.searchParams.keys()].some((name) => !allowed.has(name) || url.searchParams.getAll(name).length !== 1)) {
       return metrics.json({ error: 'bad_request', detail: 'invalid or conflicting selection parameters' }, { status: 400, headers });
+    }
+    try {
+      selection = await metrics.measure('list_rpc', () => loadPartnerSelection(selectionIds[0]));
+    } catch {
+      return metrics.json({ error: 'selection_unavailable' }, { status: 503, headers });
     }
     if (!selection) return metrics.json({ error: 'not_found' }, { status: 404, headers });
   }

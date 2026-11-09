@@ -18,6 +18,7 @@ import { saveBrandingSettings } from '../services/branding';
 import { updateCurrentUserProfile } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { PartnerKeysSettings } from '../features/settings/PartnerKeysSettings';
+import { PartnerSelectionsSettings } from '../features/partner-selections/PartnerSelectionsSettings';
 import { TestCorpusSettings } from '../features/settings/TestCorpusSettings';
 import { SmtpSettings } from '../features/settings/SmtpSettings';
 import { OrgsPanel } from '../features/orgs/OrgsPanel';
@@ -85,9 +86,10 @@ export default function SettingsPage() {
   // est celui qu'api.rpc_set_actor_section_visibility applique côté serveur ; l'ORG est
   // exigée parce que la matrice est portée PAR ORG (org_object_id est un paramètre du RPC).
   const canManageActorPortal = (adminRank ?? 0) >= 30 && !!orgId;
+  const canManagePartnerSelections = role === 'super_admin' || role === 'owner' || ((adminRank ?? 0) >= 30 && !!orgId);
   const settingsNavOptions = useMemo(
-    () => ({ canManageTeam, canManageOrgBranding, canManageActorPortal }),
-    [canManageTeam, canManageOrgBranding, canManageActorPortal],
+    () => ({ canManageTeam, canManageOrgBranding, canManageActorPortal, canManagePartnerSelections }),
+    [canManageTeam, canManageOrgBranding, canManageActorPortal, canManagePartnerSelections],
   );
   const settingsNav = useMemo(() => buildSettingsNav(role, settingsNavOptions), [role, settingsNavOptions]);
   const [activeSection, setActiveSection] = useState<string>(() =>
@@ -95,16 +97,18 @@ export default function SettingsPage() {
   );
   const [referenceManagementView, setReferenceManagementView] = useState<'catalogs' | 'thesaurus'>('catalogs');
   const [thesaurusDirty, setThesaurusDirty] = useState(false);
+  const [partnerSelectionDirty, setPartnerSelectionDirty] = useState(false);
   const [pendingReferenceNavigation, setPendingReferenceNavigation] = useState<{ section?: string; view?: 'catalogs' | 'thesaurus' } | null>(null);
   useEffect(() => {
     setActiveSection((current) => resolveSettingsSection(role, current, settingsNavOptions));
   }, [role, settingsNavOptions]);
   function selectSection(id: string) {
-    if (thesaurusDirty && id !== activeSection) { setPendingReferenceNavigation({ section: id }); return; }
+    if ((thesaurusDirty || partnerSelectionDirty) && id !== activeSection) { setPendingReferenceNavigation({ section: id }); return; }
     applySection(id);
   }
   function applySection(id: string) {
     setThesaurusDirty(false);
+    setPartnerSelectionDirty(false);
     setActiveSection(id);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -741,6 +745,7 @@ export default function SettingsPage() {
       {activeSection === 'ai' && role === 'super_admin' && <AiProviderSettings />}
 
       {activeSection === 'partner-keys' && role === 'super_admin' && <PartnerKeysSettings />}
+      {activeSection === 'partner-selections' && canManagePartnerSelections && <PartnerSelectionsSettings onDirtyChange={setPartnerSelectionDirty} />}
 
       {activeSection === 'organisations' && role === 'super_admin' && (
         <article className="panel-card">
@@ -788,7 +793,7 @@ export default function SettingsPage() {
 
         </div>
       </div>
-      <ConfirmDialog open={Boolean(pendingReferenceNavigation)} title="Quitter le brouillon du thésaurus ?" message="Des modifications ne sont pas enregistrées. Quitter cette vue abandonnera votre saisie locale." confirmLabel="Quitter sans enregistrer" onCancel={() => setPendingReferenceNavigation(null)} onConfirm={() => { const next = pendingReferenceNavigation; setPendingReferenceNavigation(null); setThesaurusDirty(false); if (next?.section) applySection(next.section); if (next?.view) setReferenceManagementView(next.view); }} />
+      <ConfirmDialog open={Boolean(pendingReferenceNavigation)} title={partnerSelectionDirty ? 'Quitter la sélection sans enregistrer ?' : 'Quitter le brouillon du thésaurus ?'} message="Des modifications ne sont pas enregistrées. Quitter cette vue abandonnera votre saisie locale." confirmLabel="Quitter sans enregistrer" onCancel={() => setPendingReferenceNavigation(null)} onConfirm={() => { const next = pendingReferenceNavigation; setPendingReferenceNavigation(null); setThesaurusDirty(false); setPartnerSelectionDirty(false); if (next?.section) applySection(next.section); if (next?.view) setReferenceManagementView(next.view); }} />
     </section>
   );
 }

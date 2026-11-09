@@ -4,6 +4,14 @@ import {
 } from './settings-nav';
 
 describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
+  it('offers partner selections in the organisation group only with the explicit administration capability', () => {
+    expect(settingsSectionIds('tourism_agent')).not.toContain('partner-selections');
+    expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).not.toContain('partner-selections');
+    const groups = buildSettingsNav('super_admin', { canManagePartnerSelections: true });
+    expect(groups.find((group) => group.id === 'org')?.sections.map((section) => section.id)).toContain('partner-selections');
+    expect(resolveSettingsSection('tourism_agent', 'partner-selections', { canManagePartnerSelections: true })).toBe('partner-selections');
+    expect(resolveSettingsSection('tourism_agent', 'partner-selections')).toBe(DEFAULT_SETTINGS_SECTION);
+  });
   it('super-admin voit « Mon compte » ET « Plateforme »', () => {
     const groups = buildSettingsNav('super_admin');
     expect(groups.map((g) => g.id)).toEqual(['account', 'platform']);

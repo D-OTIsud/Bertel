@@ -270,6 +270,8 @@ export interface HotBucketFilters {
 
 export interface ResBucketFilters {
   capacityFilters: CapacityFilter[];
+  /** Object-level cuisines; absent in older saved Explorer states. */
+  cuisineTypesAny?: string[];
 }
 
 export interface ItiBucketFilters {
@@ -446,6 +448,7 @@ export interface ExplorerReferences {
   accommodationFamilies?: ExplorerAccommodationFamily[];
   hotCapacityMetrics: ExplorerReferenceOption[];
   resCapacityMetrics: ExplorerReferenceOption[];
+  resCuisineTypes?: ExplorerReferenceOption[];
   /**
    * Bornes OBSERVÉES des métriques de capacité (`public.v_capacity_metric_bounds`,
    * manifest 16o), indexées `metric_code → object_type`. Elles bornent les curseurs

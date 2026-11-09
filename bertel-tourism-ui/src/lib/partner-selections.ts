@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 export interface PartnerSelectionBucket {
   types: readonly string[];
   filters?: Record<string, unknown>;
+  search?: string | null;
   only_without_practices?: boolean;
 }
 
@@ -13,7 +14,7 @@ export interface PartnerSelection {
   name: string;
   revision: number;
   buckets: readonly PartnerSelectionBucket[];
-  communeInsee: readonly string[];
+  communeInsee: readonly string[] | null;
 }
 
 const OTI_SUD_COMMUNES = ['97403', '97412', '97417', '97422'] as const;

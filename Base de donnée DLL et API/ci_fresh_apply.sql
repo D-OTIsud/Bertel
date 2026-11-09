@@ -808,6 +808,14 @@ COMMIT;
 \ir ../supabase/migrations/20261109055511_partner_selection_objects.sql
 \ir tests/test_partner_selection_objects.sql
 
+\echo '== Structured restaurant cuisine shared filter (no menus) =='
+\ir ../supabase/migrations/20261109071354_restaurant_cuisine_filter.sql
+\ir tests/test_restaurant_cuisine_filter.sql
+
+\echo '== Durable organization-owned partner selections and public draft preview =='
+\ir ../supabase/migrations/20261109064127_partner_selection_registry.sql
+\ir tests/test_partner_selection_registry.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

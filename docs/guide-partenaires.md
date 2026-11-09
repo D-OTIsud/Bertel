@@ -162,7 +162,7 @@ curl -H "Authorization: Bearer bk_live_…" \
 
 #### 3.1.2 Sélections OTI du Sud — `selection_id` (bêta)
 
-Cette extension bêta utilise le même endpoint et la même clé partenaire. **Confirmez son activation avec l'OTI avant de l'utiliser** : la documentation de ce contrat n'atteste pas son déploiement. Les définitions et leurs identifiants sont gérés par l'OTI du Sud.
+Cette extension bêta utilise le même endpoint et la même clé partenaire. **Confirmez son activation avec l'OTI avant de l'utiliser** : la documentation de ce contrat n'atteste pas son déploiement. Les sélections sont gérées dans les Paramètres de Bertel par les administrateurs de leur organisation et les super-administrateurs. Un identifiant est permanent : le renommage, la modification des critères et la suspension ne le remplacent pas.
 
 ```bash
 curl -H "Authorization: Bearer bk_live_…" \
@@ -187,11 +187,11 @@ curl -H "Authorization: Bearer bk_live_…" \
 | `1014` | Offices de tourisme |
 | `1015` | Services |
 
-Chaque sélection couvre les communes de l'Entre-Deux (`97403`), de Saint-Joseph (`97412`), de Saint-Philippe (`97417`) et du Tampon (`97422`), selon le code INSEE de l'adresse principale de la fiche. Seules les fiches publiées et hors corpus de test sont diffusées. Les résultats de plusieurs branches d'une sélection, notamment producteurs et artisans/marchés pour `1006`, sont fusionnés sans doublon d'identifiant Bertel.
+Les quinze définitions initiales ci-dessus couvrent les communes de l'Entre-Deux (`97403`), de Saint-Joseph (`97412`), de Saint-Philippe (`97417`) et du Tampon (`97422`), selon le code INSEE de l'adresse principale de la fiche. Leurs critères peuvent ensuite être administrés ; de nouvelles sélections peuvent avoir un autre périmètre. Seules les fiches publiées et hors corpus de test sont diffusées. Les résultats de plusieurs branches d'une sélection, notamment producteurs et artisans/marchés pour `1006`, sont fusionnés sans doublon d'identifiant Bertel.
 
 Les sélections À pied et À vélo utilisent les pratiques des itinéraires. En l'absence de pratique renseignée, le classement taxonomique sert de repli. La sélection `1007` contient les événements publiés : le partenaire doit encore traiter les dates, les occurrences et les annulations pour construire son agenda. Les labels, les types de handicap, les animaux et les capacités restent des champs des fiches complètes (`view=full`) à exploiter par le partenaire.
 
-Avec `selection_id`, seules les options `cursor`, `page_size`, `view`, `lang`, `track`, `format` et `variant` peuvent être ajoutées. La présence de `types`, `taxonomy`, `search` ou `include_equivalent_predecessors`, même à `false`, entraîne `400 bad_request`. Un identifiant vide, répété ou une autre option entraîne aussi `400 bad_request`. Une sélection inconnue renvoie `404 not_found` : elle ne provoque jamais un retour au catalogue complet. Une sélection connue sans résultat renvoie `200` avec `data: []`.
+Avec `selection_id`, seules les options `cursor`, `page_size`, `view`, `lang`, `track`, `format` et `variant` peuvent être ajoutées. La présence de `types`, `taxonomy`, `search` ou `include_equivalent_predecessors`, même à `false`, entraîne `400 bad_request`. Un identifiant vide, répété ou une autre option entraîne aussi `400 bad_request`. Une sélection inconnue ou suspendue renvoie `404 not_found` : elle ne provoque jamais un retour au catalogue complet. Une sélection connue sans résultat renvoie `200` avec `data: []`. Une indisponibilité du registre renvoie `503 selection_unavailable` ; elle ne remplace pas la définition enregistrée par une ancienne configuration.
 
 Le contenu de chaque fiche dans `data` conserve le contrat existant. Trois métadonnées décrivent le contexte de la sélection ; elles sont absentes des appels sans `selection_id` :
 
@@ -210,7 +210,7 @@ Le contenu de chaque fiche dans `data` conserve le contrat existant. Trois méta
 }
 ```
 
-Cet exemple illustre une page vide, pas un volume de production. `selection_revision` identifie la définition des critères (révision `1` pour les définitions initiales de la bêta). Elle ne constitue ni une version des fiches ni un instantané de leurs appartenances. L'appartenance est recalculée à chaque page à partir des données et projections courantes de Bertel. Conservez le même `selection_id`, la même clé partenaire et les mêmes options pendant toute la pagination ; après une rotation de clé ou un changement de sélection, repartez sans curseur. Un curseur incompatible est refusé.
+Cet exemple illustre une page vide, pas un volume de production. `selection_revision` identifie la révision enregistrée de la sélection (révision `1` pour les définitions initiales de la bêta). Elle ne constitue ni une version des fiches ni un instantané de leurs appartenances. L'appartenance est recalculée à chaque page à partir des données et projections courantes de Bertel. Conservez le même `selection_id`, la même clé partenaire et les mêmes options pendant toute la pagination ; après une rotation de clé, une modification des critères ou un changement de sélection, repartez sans curseur. Un curseur incompatible est refusé.
 
 Pour synchroniser une sélection, parcourez toutes ses pages et mettez les fiches à jour par `id`. **Rapprochez les appartenances seulement après un parcours entièrement réussi jusqu'à `next_cursor=null`.** Une erreur, un délai dépassé ou un curseur refusé ne signifie pas que la sélection est vide : conservez les appartenances précédentes tant que le parcours n'a pas abouti. Une fiche peut appartenir à plusieurs sélections ; sa sortie d'une sélection ne supprime pas ses autres appartenances. Le flux `/objects/deletions` ne signale pas ces sorties.
 

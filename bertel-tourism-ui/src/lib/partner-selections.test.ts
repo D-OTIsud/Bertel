@@ -60,7 +60,7 @@ describe('partner selection registry', () => {
 
   it('keeps every feed within the four CASUD communes', () => {
     for (const selection of PARTNER_SELECTIONS) {
-      expect([...selection.communeInsee].sort()).toEqual(['97403', '97412', '97417', '97422']);
+      expect([...(selection.communeInsee ?? [])].sort()).toEqual(['97403', '97412', '97417', '97422']);
     }
   });
 

@@ -157,6 +157,7 @@ export function buildDemoReferences(ACCESSIBILITY_DISABILITY_REFERENCES: Explore
       { code: 'seats', name: 'Places assises', objectTypes: ['RES'] },
       { code: 'standing_places', name: 'Places debout', objectTypes: ['RES'] },
     ],
+    resCuisineTypes: [{ code: 'creole', name: 'Créole' }, { code: 'indian', name: 'Indienne' }, { code: 'seafood', name: 'Fruits de mer' }],
     capacityBounds: {
       beds: { HOT: { min: 4, max: 120, sampleSize: 6 }, HLO: { min: 2, max: 14, sampleSize: 22 } },
       bedrooms: { HOT: { min: 2, max: 60, sampleSize: 6 } },

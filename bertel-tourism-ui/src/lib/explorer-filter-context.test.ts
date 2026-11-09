@@ -39,6 +39,7 @@ function full(): ExplorerFilters {
   });
   f.hot = { subtypes: [DEFAULT_HOT_SUBTYPES[0]], capacityFilters: [{ code: 'beds', min: 0, max: 60 }], meetingRoom: { minCount: 0, minAreaM2: 20 } };
   f.res.capacityFilters = [{ code: 'seats', min: 0, max: 60 }];
+  f.res.cuisineTypesAny = ['creole'];
   f.vis.subtypes = [DEFAULT_VIS_SUBTYPES[0]];
   f.srv.subtypes = [DEFAULT_SRV_SUBTYPES[0]];
   f.iti = { isLoop: false, difficultyMin: 0, difficultyMax: 2, distanceMinKm: 0, distanceMaxKm: 10, durationMinH: 0, durationMaxH: 3, practicesAny: ['walk'] };

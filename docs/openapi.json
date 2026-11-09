@@ -79,13 +79,18 @@
           },
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "404": {
-            "description": "Bêta selection_id : sélection inconnue. Aucun retour au catalogue complet ; une sélection connue vide répond 200 avec data: [].",
+            "description": "Bêta selection_id : sélection inconnue ou suspendue. Aucun retour au catalogue complet ; une sélection active vide répond 200 avec data: [].",
             "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "not_found" } } }
           },
           "429": { "$ref": "#/components/responses/RateLimited" },
           "500": { "$ref": "#/components/responses/ServerError" },
-          "502": { "$ref": "#/components/responses/UpstreamError" }
+          "502": { "$ref": "#/components/responses/UpstreamError" },
+          "503": {
+            "description": "Le registre des sélections est temporairement indisponible. Aucun retour à une ancienne définition ; conserver les appartenances du dernier parcours réussi.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "selection_unavailable" } } }
+          }
         }
       }
     },
@@ -1928,7 +1933,7 @@
       },
       "SelectionId": {
         "name": "selection_id", "in": "query", "required": false,
-        "description": "Extension bêta, activation à confirmer avec l'OTI. Identifiant permanent d'une sélection OTI du Sud. Même endpoint, clé partenaire et fiches data[] ; seules meta.selection_id, selection_name et selection_revision sont ajoutées. Les sélections diffusent les fiches publiées hors test dont l'adresse principale est dans les communes INSEE 97403/97412/97417/97422. Avec selection_id, seules les options cursor/page_size/view/lang/track/format/variant sont autorisées : types/taxonomy/search/include_equivalent_predecessors (même false) ou une autre option entraînent 400. Identifiant vide ou répété : 400 ; inconnu : 404, jamais de retour au catalogue complet. Conserver sélection et options pendant la pagination. Lecture en temps réel sans snapshot ; ne rapprocher les appartenances qu'après un parcours entièrement réussi. 1007 = événements publiés : dates, occurrences et annulations restent à traiter par le partenaire. Les labels, types de handicap, animaux et capacités restent des champs full, pas des filtres API.",
+        "description": "Extension bêta, activation à confirmer avec l'OTI. Identifiant permanent d'une sélection dynamique administrée dans Bertel par son organisation. Même endpoint, clé partenaire et fiches data[] ; seules meta.selection_id, selection_name et selection_revision sont ajoutées. Les quinze définitions initiales couvrent les communes INSEE 97403/97412/97417/97422 ; leurs critères et ceux des nouvelles sélections sont enregistrés côté serveur. Seules les fiches publiées hors test sont diffusées. Avec selection_id, seules les options cursor/page_size/view/lang/track/format/variant sont autorisées : types/taxonomy/search/include_equivalent_predecessors (même false) ou une autre option entraînent 400. Identifiant vide ou répété : 400 ; inconnu ou suspendu : 404, jamais de retour au catalogue complet ; registre indisponible : 503. Conserver sélection et options pendant la pagination ; recommencer sans curseur après modification des critères. Lecture dynamique sans snapshot ; ne rapprocher les appartenances qu'après un parcours entièrement réussi. La définition initiale 1007 contient les événements publiés : dates, occurrences et annulations restent à traiter par le partenaire. Les labels, types de handicap, animaux, capacités et cuisines peuvent entrer dans les critères enregistrés ; ils ne deviennent pas des paramètres supplémentaires de cet endpoint.",
         "schema": { "$ref": "#/components/schemas/SelectionId" },
         "examples": {
           "terroir_artisanat": { "summary": "Producteurs, artisans et marchés, fusionnés sans doublons", "value": "1006" },

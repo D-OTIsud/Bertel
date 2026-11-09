@@ -4,6 +4,7 @@
 jest.mock('server-only', () => ({}));
 jest.mock('next/server', () => ({ ...jest.requireActual('next/server'), after: jest.fn() }));
 jest.mock('@/lib/partner-auth', () => ({ authenticatePartner: jest.fn(), checkPartnerRate: jest.fn(), logPartnerCall: jest.fn(), admitPartner: jest.fn() }));
+jest.mock('@/lib/partner-selection-store', () => ({ loadPartnerSelection: jest.fn() }));
 jest.mock('@/lib/public-api', () => ({
   callPublicRpc: jest.fn(),
   publicHeaders: () => ({ 'X-Bertel-Api-Version': '1.0.0' }),
@@ -14,10 +15,13 @@ import { after, NextRequest } from 'next/server';
 import { GET } from './route';
 import { authenticatePartner, checkPartnerRate, admitPartner, logPartnerCall } from '@/lib/partner-auth';
 import { callPublicRpc } from '@/lib/public-api';
+import { loadPartnerSelection } from '@/lib/partner-selection-store';
+import { getPartnerSelection } from '@/lib/partner-selections';
 
 const authMock = authenticatePartner as jest.Mock;
 const checkMock = checkPartnerRate as jest.Mock;
 const rpcMock = callPublicRpc as jest.Mock;
+const selectionMock = loadPartnerSelection as jest.Mock;
 
 function req(qs = '') {
   return new NextRequest(`http://localhost/api/public/objects${qs}`, {
@@ -37,6 +41,7 @@ beforeEach(() => {
   authMock.mockReset();
   checkMock.mockReset();
   rpcMock.mockReset();
+  selectionMock.mockReset().mockImplementation(async (id: string) => getPartnerSelection(id));
   authMock.mockResolvedValue({ keyId: 'k1', label: 'P', scopes: [] });
   checkMock.mockResolvedValue({ allowed: true, retryAfter: 0, limit: 120, remaining: 119 });
   rpcMock.mockResolvedValue({ ok: true, status: 200, body: { info: { next_cursor: 'c2' }, data: [{ id: 'X' }] } });
@@ -114,11 +119,47 @@ describe('GET /api/public/objects', () => {
     });
   });
 
-  it.each(['9999', 'constructor', '__proto__'])('rejects unknown selection %s before any RPC, never returning the global catalogue', async (id) => {
+  it.each(['9999', 'constructor', '__proto__'])('rejects unknown selection %s before object resolution, never returning the global catalogue', async (id) => {
     const res = await GET(req(`?selection_id=${id}`));
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: 'not_found' });
     expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('does not fall back to the beta definition when a saved selection is suspended', async () => {
+    selectionMock.mockResolvedValue(undefined);
+    const res = await GET(req('?selection_id=1006'));
+    expect(res.status).toBe(404);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the registry cannot be read', async () => {
+    selectionMock.mockRejectedValue(new Error('database unavailable'));
+    const res = await GET(req('?selection_id=1006'));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'selection_unavailable' });
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('uses the saved revision and criteria for a permanent selection identifier', async () => {
+    selectionMock.mockResolvedValue({
+      id: '2000', name: 'Artisans labellisés', revision: 4,
+      buckets: [{ types: ['COM'], filters: { label: 'local' } }], communeInsee: null,
+    });
+    const res = await GET(req('?selection_id=2000'));
+    expect(res.status).toBe(200);
+    expect(rpcMock.mock.calls[0][1]).toMatchObject({
+      p_selection_id: '2000', p_buckets: [{ types: ['COM'], filters: { label: 'local' } }], p_commune_insee: null,
+    });
+    expect((await res.json()).meta).toMatchObject({ selection_id: '2000', selection_name: 'Artisans labellisés', selection_revision: 4 });
+  });
+
+  it('keeps requests without selection independent from the registry', async () => {
+    selectionMock.mockRejectedValue(new Error('database unavailable'));
+    const res = await GET(req('?types=RES'));
+    expect(res.status).toBe(200);
+    expect(selectionMock).not.toHaveBeenCalled();
+    expect(rpcMock.mock.calls[0][0]).toBe('list_partner_objects_with_vocabulary');
   });
 
   it.each([

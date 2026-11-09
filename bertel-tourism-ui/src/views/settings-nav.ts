@@ -13,6 +13,7 @@ import {
   FlaskConical,
   KeyRound,
   ListChecks,
+  Layers,
   Mail,
   MapPin,
   Palette,
@@ -82,6 +83,7 @@ function buildOrgGroup(options: SettingsNavOptions): SettingsNavGroup | null {
   // même que celui d'api.rpc_set_actor_section_visibility : proposer la section plus bas
   // offrirait un écran dont chaque bascule échouerait en 42501.
   if (options.canManageActorPortal) sections.push({ id: 'actor-portal', label: 'Portail acteurs', icon: KeyRound, introducedAt: '2026-09-04T00:00:00Z' });
+  if (options.canManagePartnerSelections) sections.push({ id: 'partner-selections', label: 'Sélections partenaires', icon: Layers, introducedAt: '2026-11-09T00:00:00Z' });
   if (sections.length === 0) return null;
   return { id: 'org', label: 'Mon organisation', scope: { label: 'admin ORG', gated: true }, sections };
 }
@@ -110,6 +112,7 @@ export interface SettingsNavOptions {
   canManageOrgBranding?: boolean;
   /** L'utilisateur peut régler le portail acteurs de son ORG (admin rang ≥ 30) ⇒ section « Portail acteurs ». */
   canManageActorPortal?: boolean;
+  canManagePartnerSelections?: boolean;
 }
 
 /** Groupes du rail visibles pour ce rôle + périmètre (gating). Ordre : compte → organisation → plateforme. */

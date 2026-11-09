@@ -124,6 +124,28 @@ it('does not show a failed preview as zero records and preserves the editor', as
   expect(screen.getByRole('textbox', { name: 'Nom de la sélection' })).toHaveValue('Terroir');
   expect(screen.queryByText('0 fiche')).not.toBeInTheDocument();
 });
+it.each([false, true])('recovers an optimistic conflict only after confirmation; failed reload preserves the draft (%s)', async (fail) => {
+  (service.updatePartnerSelection as jest.Mock).mockRejectedValue(new Error('La sélection a changé. Rechargez-la avant de réessayer.'));
+  (service.getPartnerSelectionAdmin as jest.Mock)[fail ? 'mockRejectedValue' : 'mockResolvedValue'](fail ? new Error('Lecture indisponible') : saved({ name: 'Dernière version', revision: 7 }));
+  renderPage(); fireEvent.click(await screen.findByRole('button', { name: 'Terroir' }));
+  const input = screen.getByRole('textbox', { name: 'Nom de la sélection' });
+  fireEvent.change(input, { target: { value: 'Mon brouillon local' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Enregistrer la sélection' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Recharger la version enregistrée' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Recharger la version enregistrée ?' });
+  expect(service.getPartnerSelectionAdmin).not.toHaveBeenCalled();
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Recharger' }));
+  await waitFor(() => expect(service.getPartnerSelectionAdmin).toHaveBeenCalledWith('1006'));
+  if (fail) {
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Votre saisie est conservée');
+    expect(input).toHaveValue('Mon brouillon local');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Annuler' }));
+  } else {
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('textbox', { name: 'Nom de la sélection' })).toHaveValue('Dernière version');
+    expect(screen.getByRole('button', { name: 'Enregistrer la sélection' })).toBeDisabled();
+  }
+});
 it('shows a real zero volume, and does not claim a suspension until the service confirms it', async () => {
   let finish!: (selection: PartnerSelectionAdmin) => void;
   (service.previewPartnerSelection as jest.Mock).mockResolvedValue({ meta: { total: 0, next_cursor: null, preview: true }, data: [] });

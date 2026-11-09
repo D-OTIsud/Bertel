@@ -13,7 +13,7 @@ import { isPlatformSuperuser } from '../../store/session-selectors';
 import { listOrgs } from '../../services/orgs';
 import { listExplorerReferences } from '../../services/explorer-reference';
 import { ensureReferenceCatalogs } from '../../hooks/useReferenceCatalogsQuery';
-import { createPartnerSelection, listPartnerSelections, previewPartnerSelection, setPartnerSelectionState, updatePartnerSelection,
+import { createPartnerSelection, getPartnerSelectionAdmin, listPartnerSelections, previewPartnerSelection, setPartnerSelectionState, updatePartnerSelection,
   type PartnerSelectionAdmin, type PartnerSelectionPreview } from '../../services/partner-selection-admin';
 import type { ExplorerFilters, ExplorerReferences } from '../../types/domain';
 import { EXPLORER_BUCKET_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, normalizeExplorerFilters } from '../../utils/facets';
@@ -157,6 +157,9 @@ function SelectionWorkspace({ platform, currentOrgId, onDirtyChange }: {
   const [editorKey, setEditorKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
+  const [confirmReload, setConfirmReload] = useState(false);
+  const [reloadError, setReloadError] = useState<string | null>(null);
   const [discard, setDiscard] = useState(false);
   const [preview, setPreview] = useState<PartnerSelectionPreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -218,10 +221,10 @@ function SelectionWorkspace({ platform, currentOrgId, onDirtyChange }: {
     // Names do not change membership. The stable signature owns cancellation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewSignature, previewRetry]);
-  const closeEditor = () => { setDraft(null); setSaveError(null); setDiscard(false); window.setTimeout(() => { if (opener.current?.isConnected) opener.current.focus(); else listHeading.current?.focus(); }, 0); };
+  const closeEditor = () => { setDraft(null); setSaveError(null); setConflict(false); setConfirmReload(false); setReloadError(null); setDiscard(false); window.setTimeout(() => { if (opener.current?.isConnected) opener.current.focus(); else listHeading.current?.focus(); }, 0); };
   const startEditor = (selection?: PartnerSelectionAdmin, button?: HTMLButtonElement) => {
     opener.current = button ?? null; setDraft(selection ? openSelectionDraft(selection) : newSelectionDraft());
-    setSaveError(null); setEditorKey((key) => key + 1); setMobileTab('criteria');
+    setSaveError(null); setConflict(false); setConfirmReload(false); setReloadError(null); setEditorKey((key) => key + 1); setMobileTab('criteria');
   };
   const changeDraft = (next: SelectionDraft) => { setDraft(next); setSaveError(null); };
   const changeCommon = (filters: ExplorerFilters) => {
@@ -246,8 +249,8 @@ function SelectionWorkspace({ platform, currentOrgId, onDirtyChange }: {
       const saved = draft.original ? await updatePartnerSelection(draft.original.id, draft.original.revision, input) : await createPartnerSelection(input);
       if (!mounted.current) return;
       setItems((rows) => [saved, ...rows.filter((row) => row.id !== saved.id)]);
-      setDraft(openSelectionDraft(saved)); setEditorKey((key) => key + 1); toast.success('Sélection enregistrée.');
-    } catch (error) { if (mounted.current) setSaveError(message(error)); }
+      setDraft(openSelectionDraft(saved)); setConflict(false); setEditorKey((key) => key + 1); toast.success('Sélection enregistrée.');
+    } catch (error) { if (mounted.current) { setSaveError(message(error)); if (message(error).includes('La sélection a changé.')) setConflict(true); } }
     finally { actionLock.current = false; if (mounted.current) setBusy(false); }
   };
   const toggleState = async (selection: PartnerSelectionAdmin) => {
@@ -259,7 +262,19 @@ function SelectionWorkspace({ platform, currentOrgId, onDirtyChange }: {
       setItems((rows) => rows.map((row) => row.id === saved.id ? saved : row));
       setDraft((current) => current?.original?.id === saved.id ? { ...current, original: saved } : current);
       toast.success(saved.state === 'active' ? 'Sélection réactivée.' : 'Sélection suspendue.');
-    } catch (error) { if (mounted.current) { setSaveError(message(error)); toast.error(message(error)); } }
+    } catch (error) { if (mounted.current) { setSaveError(message(error)); if (message(error).includes('La sélection a changé.')) setConflict(true); toast.error(message(error)); } }
+    finally { actionLock.current = false; if (mounted.current) setBusy(false); }
+  };
+  const reloadVersion = async () => {
+    if (!draft?.original || actionLock.current) return;
+    actionLock.current = true; setBusy(true); setReloadError(null);
+    try {
+      const latest = await getPartnerSelectionAdmin(draft.original.id);
+      if (!mounted.current) return;
+      setItems((rows) => rows.map((row) => row.id === latest.id ? latest : row));
+      setDraft(openSelectionDraft(latest)); setEditorKey((key) => key + 1);
+      setConflict(false); setSaveError(null); setConfirmReload(false); toast.success('Version enregistrée rechargée.');
+    } catch (error) { if (mounted.current) setReloadError(message(error)); }
     finally { actionLock.current = false; if (mounted.current) setBusy(false); }
   };
   const morePreview = async () => {
@@ -333,8 +348,9 @@ function SelectionWorkspace({ platform, currentOrgId, onDirtyChange }: {
         })}</ul>{preview.meta.total === 0 && <div className="partner-selections__preview-state"><h4>Aucune fiche ne correspond</h4><p>Vous pouvez alléger un critère ou enregistrer cette sélection. Elle se remplira lorsque des fiches correspondront.</p></div>}
           {preview.meta.next_cursor && <button className="ghost-button" type="button" disabled={previewLoading} onClick={() => void morePreview()}>{previewLoading ? 'Chargement…' : 'Charger plus de fiches'}</button>}<p className="partner-selections__preview-foot">{preview.data.length} fiche{preview.data.length > 1 ? 's' : ''} chargée{preview.data.length > 1 ? 's' : ''} sur {preview.meta.total}. L’aperçu évolue avec les fiches Bertel.</p></>}
       </aside></div>
-      <footer className="partner-selections__savebar"><div>{saveError ? <p role="alert" className="text-red-600">{saveError}</p> : <p>{dirty ? 'Modifications non enregistrées' : 'Toutes les modifications sont enregistrées.'}</p>}<span>L’identifiant reste stable. Les partenaires utilisent les derniers critères enregistrés.</span></div><button type="button" className="ghost-button" disabled={busy} onClick={() => dirty ? setDiscard(true) : closeEditor()}>Fermer</button><button type="button" className="primary-button" disabled={busy || !dirty || labelIncompatible} onClick={() => void save()}>{busy ? 'Enregistrement…' : 'Enregistrer la sélection'}</button></footer>
+      <footer className="partner-selections__savebar"><div>{saveError ? <p role="alert" className="text-red-600">{saveError}</p> : <p>{dirty ? 'Modifications non enregistrées' : 'Toutes les modifications sont enregistrées.'}</p>}<span>L’identifiant reste stable. Les partenaires utilisent les derniers critères enregistrés.</span></div>{conflict && <button type="button" className="ghost-button" disabled={busy} onClick={() => { setReloadError(null); setConfirmReload(true); }}>Recharger la version enregistrée</button>}<button type="button" className="ghost-button" disabled={busy} onClick={() => dirty ? setDiscard(true) : closeEditor()}>Fermer</button><button type="button" className="primary-button" disabled={busy || !dirty || labelIncompatible || conflict} onClick={() => void save()}>{busy ? 'Enregistrement…' : 'Enregistrer la sélection'}</button></footer>
     </div>}
     <ConfirmDialog open={discard} title="Quitter sans enregistrer ?" message="Les modifications de cette sélection seront abandonnées. La version enregistrée reste disponible pour les partenaires." confirmLabel="Quitter sans enregistrer" onCancel={() => setDiscard(false)} onConfirm={closeEditor} />
+    <ConfirmDialog open={confirmReload} title="Recharger la version enregistrée ?" message={<><p>Recharger la dernière version de « {draft?.original?.name} » abandonnera vos modifications locales. L’identifiant reste identique.</p>{reloadError && <p role="alert">{reloadError} Votre saisie est conservée.</p>}</>} confirmLabel="Recharger" busy={busy} onCancel={() => { if (!busy) setConfirmReload(false); }} onConfirm={() => void reloadVersion()} />
   </section>;
 }

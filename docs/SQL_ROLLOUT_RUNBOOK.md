@@ -2849,3 +2849,94 @@ Références officielles : [paramètres de fonction PostgREST](https://docs.post
 [liste des paramètres relevés](https://docs.postgrest.org/en/stable/references/configuration.html#db-hoisted-tx-settings),
 [cache de schéma](https://docs.postgrest.org/en/stable/references/schema_cache.html#schema-cache-reloading-with-notify)
 et [timeouts Supabase](https://supabase.com/docs/guides/database/postgres/timeouts).
+
+### Métadonnées multilingues figées du thésaurus
+
+L’upgrade `thesaurus_domain_metadata_localization` et son miroir frais
+`thesaurus_domain_metadata_localization.sql` ajoutent `vocabulary.name_i18n` pour
+les 78 domaines existants. FR/EN/ES/DE sont non vides et `name` égale le français.
+Un nouveau domaine doit fournir explicitement ses traductions ; aucun défaut ne
+les invente. Le dictionnaire canonique est
+`tools/thesaurus-content/domain-labels.i18n.json`. Le générateur et le validateur
+garantissent l’égalité des deux SQL et du dictionnaire.
+
+Avant installation, exiger une transaction READ COMMITTED, le prédécesseur exact
+des fonctions, aucun brouillon ou révision validée en attente, et une revue des
+droits. L’ajout de colonne change les empreintes optimistes du vocabulaire ; les
+brouillons ne sont jamais rebasés automatiquement. Le verrou source partagé S2
+puis K1 exclusif sérialisent la vérification avec les éditeurs. Une attente de
+verrou supérieure à cinq secondes ou un brouillon restant annule l’installation.
+
+Le seul changement d’activation concerne la construction des nouvelles
+métadonnées : chaque domaine fige `name_i18n`, et le manifeste reçoit
+`metadata_scope=release_snapshot` et `metadata_checksum=md5(domains::text)` en
+JSONB PostgreSQL. L’empreinte existante des concepts garde son sens. Le lecteur
+projette cette empreinte de métadonnées depuis le manifeste sélectionné ; les
+anciennes publications sans cette clé la gardent absente. Les remplacements sont
+gardés par les empreintes exactes des corps et conservent OID, propriétaires,
+ACL et paramètres. La capacité d’héritage temporaire du rôle de migration est
+limitée au remplacement puis restaurée exactement, par grantor.
+
+L’installation ne publie rien et ne réécrit aucune version historique. Après CI
+complète et postflight des métadonnées, utiliser le circuit super-administrateur
+authentifié existant `bootstrap`, avec les domaines publics relus, la publication
+attendue et une clé d’idempotence propre à l’opération. Cette republication de
+métadonnées n’exige aucune fausse révision de concept. Vérifier les anciens
+manifestes, le checksum et les documents des concepts, le nouveau checksum des
+métadonnées, les domaines publics/internes et l’outbox. Ne pas injecter de claims,
+assumer le rôle de publication ni extraire une session en production.
+
+La CI fraîche inclut le test transactionnel de bootstrap et de republication
+après ce miroir. Le harnais temporaire PostgreSQL 17
+`tools/thesaurus-content/test_domain_metadata_migration.py` vérifie séparément le
+remplacement sous rôle non superuser, la restauration des grants, les patches
+partiels et la concurrence ; ce harnais réduit ne remplace pas la pile Supabase
+complète. La revue et ses limites figurent dans
+`docs/audits/2026-11-10-thesaurus-sql-review.md`.
+
+### Neuf dictionnaires natifs et appartenances aux groupes
+
+Après la migration de métadonnées, `thesaurus_native_dictionary_adapters` ajoute
+neuf adaptateurs typés : six dictionnaires publics (`iti_assoc_role`,
+`object_relation_type`, `capacity_metric`, `legal_type`, `review_source`,
+`sustainability_group`) et trois vocabulaires privés de relations métier
+(`actor_role`, `contact_role`, `org_role`). Les 78 domaines antérieurs gardent
+leurs paramètres ; les neuf nouveaux domaines restent non gouvernés à
+l’installation. Les rôles d’autorisation et les permissions ne deviennent pas
+des concepts. La matrice exhaustive des 104 catalogues se trouve dans
+`docs/audits/2026-11-10-thesaurus-catalog-coverage.md`.
+
+La migration exige le prédécesseur exact des onze fonctions et de la vue source,
+une transaction READ COMMITTED, aucun brouillon et des verrous bornés. Elle
+vérifie le contrat de préparation avant de l’étendre et restaure exactement les
+appartenances temporaires au rôle de publication. Elle ne crée aucun concept,
+ne publie aucun contenu et ne réécrit aucun instantané historique. Le détail de
+la revue et les conditions de qualification figurent dans
+`docs/audits/2026-11-10-thesaurus-native-sql-review.md`.
+
+Après qualification complète, installer par migration native, vérifier les
+identités et sources, puis charger des propositions construites depuis les
+identités et empreintes fraîches. Le contrôle éditorial portable porte sur les
+134 entrées publiques (`node tools/thesaurus-content/validate-native-dictionaries.mjs`).
+L’option `--include-private` contrôle aussi les 14 entrées privées depuis le
+contexte opérateur local, qui ne doit pas être ajouté au dépôt. Enregistrer,
+valider, prévisualiser et publier avec la session super-administrateur existante.
+Une première lecture authentifiée de l’espace sans `read_only:true` synchronise
+les identités canoniques, sans publier de contenu. L’import des 148 propositions,
+leur validation par groupes de 100 au plus, puis une prévisualisation commune
+précèdent la publication atomique des 148 révisions avec versions attendues,
+empreinte de prévisualisation, publication attendue et clé d’idempotence. La
+publication normale gouverne les neuf domaines représentés ; les trois privés
+gardent `is_public=false`. Ne pas faire de bootstrap avant cet enrichissement :
+les définitions et traductions natives incomplètes seraient refusées. Aucun
+jeton de session n’est extrait de l’administration.
+
+Les appartenances natives des actions aux groupes restent distinctes du parent
+de catégorie. Les nouveaux documents figent `member_of` et `members` ; le
+JSON-LD utilise les prédicats Bertel correspondants. Les deux catégories peuvent
+être différentes, conformément aux FK natives. Le test frais transactionnel
+`tests/test_thesaurus_native_dictionary_publication.sql` vérifie les identités,
+une appartenance entre catégories distinctes, les deux moteurs de rendu, les
+copies d’instantanés non concernés, les écritures différées, les champs protégés
+et la non-exposition privée. Les comptes et claims de ce test sont réservés à
+la pile jetable de CI.

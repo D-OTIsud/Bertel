@@ -1,0 +1,1372 @@
+{
+  "rows": [
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "230ac7c0-c8a1-4d13-9fcd-a98047adfeb4",
+      "code": "SA_ACTION_PLAN_ANNUAL",
+      "preferred_labels": {
+        "fr": "Plan d'action annuel",
+        "en": "Annual action plan",
+        "es": "Plan de acción anual",
+        "de": "Jährlicher Maßnahmenplan"
+      },
+      "definitions": {
+        "fr": "Plan d'action annuel ou pluriannuel avec actions, responsables, échéances et indicateurs.",
+        "en": "Annual or multi-year plan specifying actions, responsible people, deadlines and indicators.",
+        "es": "Plan anual o plurianual que especifica acciones, responsables, plazos e indicadores.",
+        "de": "Jährlicher oder mehrjähriger Plan mit Maßnahmen, Zuständigkeiten, Fristen und Kennzahlen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "1ed345e7-7688-4638-b1ed-cbeb678f11b9",
+      "code": "SA_ANNUAL_REVIEW",
+      "preferred_labels": {
+        "fr": "Revue annuelle de performance",
+        "en": "Annual performance review",
+        "es": "Revisión anual del desempeño",
+        "de": "Jährliche Leistungsbewertung"
+      },
+      "definitions": {
+        "fr": "Revue périodique des résultats, écarts, non-conformités et actions correctives.",
+        "en": "Periodic review of results, deviations, non-conformities and corrective actions.",
+        "es": "Revisión periódica de los resultados, las desviaciones, las no conformidades y las acciones correctivas.",
+        "de": "Regelmäßige Überprüfung von Ergebnissen, Abweichungen, Nichtkonformitäten und Korrekturmaßnahmen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c30d23d3-60fa-464b-b919-26a43251bcde",
+      "code": "SA_AUTO_SWITCH_OFF",
+      "preferred_labels": {
+        "fr": "Extinction automatique des équipements",
+        "en": "Automatic equipment shut-off",
+        "es": "Apagado automático de equipos",
+        "de": "Automatische Geräteabschaltung"
+      },
+      "definitions": {
+        "fr": "Coupure automatique des éclairages ou équipements quand les espaces sont inoccupés.",
+        "en": "Automatic switching off of lights or equipment when spaces are unoccupied.",
+        "es": "Apagado automático de luces o equipos cuando los espacios están desocupados.",
+        "de": "Automatisches Abschalten von Beleuchtung oder Geräten, wenn Räume nicht genutzt werden."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "07bf6a12-49f7-4a94-9f1f-265a0600f7e2",
+      "code": "SA_BEACH_WATER_QUALITY",
+      "preferred_labels": {
+        "fr": "Qualité de l'eau de baignade",
+        "en": "Bathing water quality",
+        "es": "Calidad del agua de baño",
+        "de": "Badegewässerqualität"
+      },
+      "definitions": {
+        "fr": "Surveillance, affichage et gestion de la qualité de l'eau de baignade ou d'usage récréatif, avec prévention des pollutions.",
+        "en": "Monitoring, display and management of bathing or recreational water quality, including pollution prevention.",
+        "es": "Seguimiento, publicación y gestión de la calidad del agua de baño o de uso recreativo, con prevención de la contaminación.",
+        "de": "Überwachung, Bekanntgabe und Management der Wasserqualität beim Baden und anderen Freizeitnutzungen, einschließlich der Vermeidung von Verunreinigungen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "16f30307-cbd3-4c13-b63c-a53e460c7006",
+      "code": "SA_BIODIVERSITY_PROTECTION",
+      "preferred_labels": {
+        "fr": "Protection de la biodiversité",
+        "en": "Biodiversity protection",
+        "es": "Protección de la biodiversidad",
+        "de": "Schutz der biologischen Vielfalt"
+      },
+      "definitions": {
+        "fr": "Mesures de protection des milieux, de la faune, de la flore et des espaces naturels proches.",
+        "en": "Measures to protect habitats, wildlife, plants and nearby natural areas.",
+        "es": "Medidas para proteger los hábitats, la fauna, la flora y los espacios naturales cercanos.",
+        "de": "Maßnahmen zum Schutz von Lebensräumen, Tieren, Pflanzen und nahe gelegenen Naturgebieten."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c9f4506f-65f2-4d2b-b250-08bcdf897a0c",
+      "code": "SA_BULK_OR_REFILL",
+      "preferred_labels": {
+        "fr": "Produits en vrac ou rechargeables",
+        "en": "Bulk or refillable products",
+        "es": "Productos a granel o recargables",
+        "de": "Unverpackte oder nachfüllbare Produkte"
+      },
+      "definitions": {
+        "fr": "Remplacement des petits conditionnements par du vrac, du rechargeable ou du grand format.",
+        "en": "Replacement of small packs with bulk, refillable or larger-format products.",
+        "es": "Sustitución de pequeños envases por productos a granel, recargables o de mayor formato.",
+        "de": "Ersatz von Kleinpackungen durch unverpackte Produkte, Nachfülllösungen oder Großpackungen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "9d05c03b-51c3-4291-b8ad-d5ad0c95c489",
+      "code": "SA_CARBON_FOOTPRINT",
+      "preferred_labels": {
+        "fr": "Bilan carbone et trajectoire",
+        "en": "Carbon footprint and reduction pathway",
+        "es": "Huella de carbono y trayectoria de reducción",
+        "de": "CO₂-Bilanz und Reduktionspfad"
+      },
+      "definitions": {
+        "fr": "Calcul des émissions de GES, au moins scopes 1 et 2, et si possible scope 3, puis définition d'une trajectoire de réduction et de financement bas-carbone.",
+        "en": "Calculation of greenhouse gas emissions covering at least scopes 1 and 2 and, where possible, scope 3, followed by a reduction pathway and low-carbon financing plan.",
+        "es": "Cálculo de las emisiones de gases de efecto invernadero que incluya al menos los alcances 1 y 2 y, si es posible, el alcance 3, seguido de una trayectoria de reducción y de financiación de soluciones bajas en carbono.",
+        "de": "Berechnung der Treibhausgasemissionen mindestens für Scope 1 und 2 und nach Möglichkeit Scope 3 sowie Festlegung eines Reduktionspfads und der Finanzierung kohlenstoffarmer Lösungen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c67e01c5-e647-46c8-9a37-db2d09c66fc5",
+      "code": "SA_CLIENT_SENSITIZATION",
+      "preferred_labels": {
+        "fr": "Sensibilisation du voyageur avant et pendant le séjour",
+        "en": "Traveller awareness before and during the stay",
+        "es": "Sensibilización del viajero antes y durante la estancia",
+        "de": "Sensibilisierung der Reisenden vor und während des Aufenthalts"
+      },
+      "definitions": {
+        "fr": "Information donnée au voyageur sur les impacts, comportements responsables et spécificités locales.",
+        "en": "Information for travellers about impacts, responsible behaviour and local characteristics.",
+        "es": "Información al viajero sobre los impactos, los comportamientos responsables y las particularidades locales.",
+        "de": "Informationen für Reisende über Auswirkungen, verantwortungsvolles Verhalten und örtliche Besonderheiten."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "d9e7f6e8-983e-4307-b88e-c29ae377b9fb",
+      "code": "SA_CLIMATE_ADAPTATION",
+      "preferred_labels": {
+        "fr": "Plan d'adaptation climatique",
+        "en": "Climate adaptation plan",
+        "es": "Plan de adaptación climática",
+        "de": "Klimaanpassungsplan"
+      },
+      "definitions": {
+        "fr": "Mesures d'adaptation aux risques climatiques, chaleur, eau, événements extrêmes, continuité d'activité.",
+        "en": "Measures to adapt to climate risks, including heat, water-related risks and extreme events, and to maintain business continuity.",
+        "es": "Medidas de adaptación a los riesgos climáticos, como el calor, los riesgos relacionados con el agua y los fenómenos extremos, y para mantener la continuidad de la actividad.",
+        "de": "Maßnahmen zur Anpassung an Klimarisiken wie Hitze, wasserbezogene Risiken und Extremereignisse sowie zur Sicherung des laufenden Betriebs."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "543db608-7328-43e1-8601-f259dd159e50",
+      "code": "SA_COASTAL_WASTE_MANAGEMENT",
+      "preferred_labels": {
+        "fr": "Gestion des déchets littoraux",
+        "en": "Coastal waste management",
+        "es": "Gestión de residuos costeros",
+        "de": "Abfallmanagement an Küsten"
+      },
+      "definitions": {
+        "fr": "Prévention des déchets sauvages, organisation du nettoyage raisonné des plages, ports ou abords aquatiques, et dispositifs de tri adaptés.",
+        "en": "Prevention of litter, carefully planned cleaning of beaches, ports or waterside areas, and suitable waste sorting facilities.",
+        "es": "Prevención del abandono de residuos, limpieza planificada y cuidadosa de playas, puertos o zonas junto al agua, y medios de separación de residuos adecuados.",
+        "de": "Vermeidung von achtlos entsorgtem Müll, bedarfsgerecht geplante Reinigung von Stränden, Häfen oder Gewässerrändern und geeignete Einrichtungen zur Abfalltrennung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "76c838b2-5ace-498a-99a0-26f3cfe58f74",
+      "code": "SA_COMPOSTING",
+      "preferred_labels": {
+        "fr": "Compostage des biodéchets",
+        "en": "Composting of organic waste",
+        "es": "Compostaje de residuos orgánicos",
+        "de": "Kompostierung von Bioabfällen"
+      },
+      "definitions": {
+        "fr": "Compostage sur site ou recours à une filière de compostage/valorisation organique.",
+        "en": "On-site composting or use of a composting or organic recovery service.",
+        "es": "Compostaje en el propio establecimiento o recurso a un servicio de compostaje o valorización orgánica.",
+        "de": "Kompostierung vor Ort oder Nutzung eines Verwertungswegs für Kompostierung oder organische Verwertung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "bc90b7e5-af35-4412-9be6-aba78f17d857",
+      "code": "SA_CONCENTRATED_CLEANERS",
+      "preferred_labels": {
+        "fr": "Produits d'entretien concentrés",
+        "en": "Concentrated cleaning products",
+        "es": "Productos de limpieza concentrados",
+        "de": "Konzentrierte Reinigungsmittel"
+      },
+      "definitions": {
+        "fr": "Utilisation de produits concentrés avec dosage maîtrisé pour limiter emballages et surconsommation.",
+        "en": "Use of concentrated products with controlled dosing to reduce packaging and excessive consumption.",
+        "es": "Uso de productos concentrados con dosificación controlada para reducir los envases y el consumo excesivo.",
+        "de": "Verwendung konzentrierter Produkte mit kontrollierter Dosierung, um Verpackungen und übermäßigen Verbrauch zu verringern."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "b920789d-96fa-473a-bba9-b220d988d5ff",
+      "code": "SA_CUSTOMER_FEEDBACK",
+      "preferred_labels": {
+        "fr": "Collecte de satisfaction client",
+        "en": "Customer satisfaction collection",
+        "es": "Recogida de información sobre la satisfacción del cliente",
+        "de": "Erfassung der Kundenzufriedenheit"
+      },
+      "definitions": {
+        "fr": "Dispositif de collecte de la satisfaction, des remarques et des réclamations clients.",
+        "en": "A system for collecting customer satisfaction information, comments and complaints.",
+        "es": "Sistema para recoger información sobre la satisfacción de los clientes, sus comentarios y sus reclamaciones.",
+        "de": "Verfahren zur Erfassung von Kundenzufriedenheit, Anmerkungen und Beschwerden."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "f208e25b-ba87-4a73-ae87-e1d8dde2301b",
+      "code": "SA_DESTINATION_PARTNER_AUDIT",
+      "preferred_labels": {
+        "fr": "Audit ou contrôle des partenaires de destination",
+        "en": "Audits or checks of destination partners",
+        "es": "Auditoría o control de los socios en destino",
+        "de": "Audits oder Kontrollen von Partnern im Reiseziel"
+      },
+      "definitions": {
+        "fr": "Pré-audit, audit ou contrôle des partenaires ou réceptifs selon des critères responsables.",
+        "en": "Pre-audits, audits or checks of partners or inbound tour operators against responsible tourism criteria.",
+        "es": "Preauditorías, auditorías o controles de socios u operadores receptivos según criterios de turismo responsable.",
+        "de": "Voraudits, Audits oder Kontrollen von Partnern oder Incoming-Reiseveranstaltern anhand von Kriterien für verantwortungsvollen Tourismus."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "5b1fb112-3987-460b-9a96-193678abccaf",
+      "code": "SA_DESTINATION_SUST_INDICATORS",
+      "preferred_labels": {
+        "fr": "Indicateurs de destination durable",
+        "en": "Sustainable destination indicators",
+        "es": "Indicadores de destino sostenible",
+        "de": "Kennzahlen für nachhaltige Reiseziele"
+      },
+      "definitions": {
+        "fr": "Suivi structuré des indicateurs de durabilité à l'échelle de la destination : eau, déchets, énergie, emplois locaux, satisfaction, fréquentation.",
+        "en": "Structured monitoring of destination-level sustainability indicators covering water, waste, energy, local jobs, satisfaction and visitor numbers.",
+        "es": "Seguimiento estructurado de indicadores de sostenibilidad del destino sobre agua, residuos, energía, empleo local, satisfacción y afluencia de visitantes.",
+        "de": "Strukturierte Erfassung von Nachhaltigkeitskennzahlen des Reiseziels zu Wasser, Abfall, Energie, örtlichen Arbeitsplätzen, Zufriedenheit und Besucheraufkommen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "dd652358-aea2-4c06-bb8c-055891df5912",
+      "code": "SA_DIGITAL_SOBRIETY",
+      "preferred_labels": {
+        "fr": "Sobriété numérique",
+        "en": "Reducing the environmental impact of digital technology",
+        "es": "Reducción del impacto ambiental digital",
+        "de": "Verringerung der Umweltbelastung durch Digitaltechnik"
+      },
+      "definitions": {
+        "fr": "Réduction de l'impact environnemental du numérique : site éco-conçu, hébergement responsable, limitation du poids des contenus, allongement de la durée de vie du matériel.",
+        "en": "Reduction of digital technology's environmental impact through eco-designed websites, responsible hosting, smaller content files and longer equipment lifetimes.",
+        "es": "Reducción del impacto ambiental digital mediante sitios web con ecodiseño, alojamiento responsable, contenidos de menor tamaño y una mayor vida útil de los equipos.",
+        "de": "Verringerung der Umweltbelastung durch umweltbewusst gestaltete Websites, verantwortungsvolles Hosting, kleinere Inhaltsdateien und eine längere Nutzungsdauer der Geräte."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "2779ba53-fa4c-4036-86cc-f4d938f25357",
+      "code": "SA_DISHWASHER_WATER_EFF",
+      "preferred_labels": {
+        "fr": "Lave-vaisselle sobre en eau",
+        "en": "Water-efficient dishwashers",
+        "es": "Lavavajillas eficientes en el uso del agua",
+        "de": "Wassersparende Geschirrspüler"
+      },
+      "definitions": {
+        "fr": "Choix ou réglage de lave-vaisselle optimisés pour limiter la consommation d'eau.",
+        "en": "Selection or adjustment of dishwashers to limit water consumption.",
+        "es": "Elección o ajuste de lavavajillas para limitar el consumo de agua.",
+        "de": "Auswahl oder Einstellung von Geschirrspülern zur Begrenzung des Wasserverbrauchs."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "dcce97b4-b830-41e3-b598-ed9e63492075",
+      "code": "SA_DISPOSABLE_REDUCTION",
+      "preferred_labels": {
+        "fr": "Réduction des produits jetables",
+        "en": "Reduction of disposable products",
+        "es": "Reducción de productos desechables",
+        "de": "Verringerung von Einwegprodukten"
+      },
+      "definitions": {
+        "fr": "Suppression ou forte limitation des articles à usage unique.",
+        "en": "Elimination or substantial reduction of single-use items.",
+        "es": "Eliminación o reducción considerable de los artículos de un solo uso.",
+        "de": "Verzicht auf Einwegartikel oder deutliche Verringerung ihres Einsatzes."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "59bd60f4-5335-4278-a130-b53df0cafccc",
+      "code": "SA_DURABLE_GOODS_REUSE",
+      "preferred_labels": {
+        "fr": "Biens durables, réparation et réemploi",
+        "en": "Durable goods, repair and reuse",
+        "es": "Bienes duraderos, reparación y reutilización",
+        "de": "Langlebige Güter, Reparatur und Wiederverwendung"
+      },
+      "definitions": {
+        "fr": "Choix de biens durables et recours à la réparation, au réemploi ou au don.",
+        "en": "Selection of durable goods and use of repair, reuse or donation.",
+        "es": "Elección de bienes duraderos y recurso a la reparación, la reutilización o la donación.",
+        "de": "Auswahl langlebiger Güter sowie Nutzung von Reparatur, Wiederverwendung oder Weitergabe als Spende."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c601dc33-876d-468f-8dd9-be4ef3b0b992",
+      "code": "SA_ECOLABEL_CLEANERS",
+      "preferred_labels": {
+        "fr": "Produits d'entretien écolabellisés",
+        "en": "Ecolabelled cleaning products",
+        "es": "Productos de limpieza con etiqueta ecológica",
+        "de": "Reinigungsmittel mit Umweltzeichen"
+      },
+      "definitions": {
+        "fr": "Utilisation de produits d'entretien porteurs d'un écolabel ou d'une certification reconnue.",
+        "en": "Use of cleaning products bearing an ecolabel or recognised certification.",
+        "es": "Uso de productos de limpieza con una etiqueta ecológica o una certificación reconocida.",
+        "de": "Verwendung von Reinigungsmitteln mit einem Umweltzeichen oder einer anerkannten Zertifizierung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "4e952a37-a086-4f38-8a47-7d9aedb132fb",
+      "code": "SA_EFFICIENT_IRRIGATION",
+      "preferred_labels": {
+        "fr": "Arrosage économe",
+        "en": "Water-efficient irrigation",
+        "es": "Riego eficiente en el uso del agua",
+        "de": "Wassersparende Bewässerung"
+      },
+      "definitions": {
+        "fr": "Systèmes d'irrigation économes et pilotés selon les besoins.",
+        "en": "Water-saving irrigation systems controlled according to need.",
+        "es": "Sistemas de riego que ahorran agua y se regulan según las necesidades.",
+        "de": "Wassersparende Bewässerungssysteme mit bedarfsgerechter Steuerung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "6a2ada3c-cfad-4629-be69-1f0afa399338",
+      "code": "SA_EFFICIENT_LIGHTING",
+      "preferred_labels": {
+        "fr": "Éclairage basse consommation",
+        "en": "Energy-efficient lighting",
+        "es": "Iluminación de bajo consumo",
+        "de": "Energiesparende Beleuchtung"
+      },
+      "definitions": {
+        "fr": "Équipement majoritaire en LED ou solutions à haute efficacité énergétique.",
+        "en": "Predominant use of LEDs or other highly energy-efficient lighting solutions.",
+        "es": "Uso mayoritario de LED u otras soluciones de iluminación de alta eficiencia energética.",
+        "de": "Überwiegender Einsatz von LED oder anderen Beleuchtungslösungen mit hoher Energieeffizienz."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "d9d79ef5-9353-49b3-8224-49d89689d7bf",
+      "code": "SA_EFFICIENT_TAPS_SHOWERS",
+      "preferred_labels": {
+        "fr": "Robinets et douches économes",
+        "en": "Water-efficient taps and showers",
+        "es": "Grifos y duchas de bajo consumo",
+        "de": "Wassersparende Armaturen und Duschen"
+      },
+      "definitions": {
+        "fr": "Mousseurs, réducteurs de débit ou équipements sobres sur les robinets et douches.",
+        "en": "Aerators, flow restrictors or water-saving fittings on taps and showers.",
+        "es": "Aireadores, reductores de caudal o dispositivos de bajo consumo en grifos y duchas.",
+        "de": "Strahlregler, Durchflussbegrenzer oder wassersparende Ausstattung an Armaturen und Duschen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "e6b55ae0-bf45-4571-9c67-9a38ebd3d748",
+      "code": "SA_EFFICIENT_TOILETS",
+      "preferred_labels": {
+        "fr": "Toilettes et urinoirs économes",
+        "en": "Water-efficient toilets and urinals",
+        "es": "Inodoros y urinarios de bajo consumo",
+        "de": "Wassersparende Toiletten und Urinale"
+      },
+      "definitions": {
+        "fr": "Double chasse, systèmes économes ou équipements limitant la consommation d'eau des sanitaires.",
+        "en": "Dual-flush, water-saving systems or fittings that limit water use in sanitary facilities.",
+        "es": "Doble descarga, sistemas de ahorro o dispositivos que limitan el consumo de agua en los sanitarios.",
+        "de": "Zweimengenspülungen, Sparsysteme oder Ausstattung zur Begrenzung des Wasserverbrauchs in Sanitäranlagen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "4582d675-7eaa-4116-8e87-ee24ac236109",
+      "code": "SA_ENERGY_AUDIT",
+      "preferred_labels": {
+        "fr": "Audit énergétique",
+        "en": "Energy audit",
+        "es": "Auditoría energética",
+        "de": "Energieaudit"
+      },
+      "definitions": {
+        "fr": "Audit ou pré-audit énergétique réalisé par un expert ou via une méthode structurée.",
+        "en": "An energy audit or preliminary audit conducted by an expert or using a structured method.",
+        "es": "Auditoría o preauditoría energética realizada por un experto o mediante un método estructurado.",
+        "de": "Energieaudit oder Voraudit durch eine Fachperson oder nach einer strukturierten Methode."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "e18b7966-b45e-4b11-a311-607cfad3effe",
+      "code": "SA_ENERGY_MONITORING",
+      "preferred_labels": {
+        "fr": "Suivi des consommations d'énergie",
+        "en": "Energy consumption monitoring",
+        "es": "Seguimiento del consumo energético",
+        "de": "Erfassung des Energieverbrauchs"
+      },
+      "definitions": {
+        "fr": "Mesure régulière des consommations d'énergie avec historique et indicateurs de suivi.",
+        "en": "Regular measurement of energy consumption with historical records and monitoring indicators.",
+        "es": "Medición periódica del consumo energético con registros históricos e indicadores de seguimiento.",
+        "de": "Regelmäßige Messung des Energieverbrauchs mit Verlaufsdaten und Kennzahlen zur Überwachung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "fdf39515-cd64-40d5-a37b-ce5d950fd840",
+      "code": "SA_FAIR_LOCAL_CONTRACTS",
+      "preferred_labels": {
+        "fr": "Contrats équitables avec les partenaires locaux",
+        "en": "Fair contracts with local partners",
+        "es": "Contratos justos con socios locales",
+        "de": "Faire Verträge mit lokalen Partnern"
+      },
+      "definitions": {
+        "fr": "Relations contractuelles transparentes, durables et équitables avec les partenaires ou prestataires locaux.",
+        "en": "Transparent, long-term and fair contractual relationships with local partners or service providers.",
+        "es": "Relaciones contractuales transparentes, duraderas y justas con socios o prestadores de servicios locales.",
+        "de": "Transparente, langfristige und faire Vertragsbeziehungen mit lokalen Partnern oder Dienstleistern."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "b61e164a-f568-48ee-adc0-6288c537762d",
+      "code": "SA_FEEDBACK_ANALYSIS",
+      "preferred_labels": {
+        "fr": "Analyse des retours clients",
+        "en": "Customer feedback analysis",
+        "es": "Análisis de las opiniones de los clientes",
+        "de": "Auswertung von Kundenrückmeldungen"
+      },
+      "definitions": {
+        "fr": "Analyse structurée des retours clients et intégration dans l'amélioration continue.",
+        "en": "Structured analysis of customer feedback and use of the findings in continuous improvement.",
+        "es": "Análisis estructurado de las opiniones de los clientes e incorporación de sus resultados a la mejora continua.",
+        "de": "Strukturierte Auswertung von Kundenrückmeldungen und Einbindung der Ergebnisse in die kontinuierliche Verbesserung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "e24eddc6-68c1-4544-9528-3fbbd715b98d",
+      "code": "SA_FOOD_WASTE_REDUCTION",
+      "preferred_labels": {
+        "fr": "Réduction du gaspillage alimentaire",
+        "en": "Food waste reduction",
+        "es": "Reducción del desperdicio alimentario",
+        "de": "Verringerung von Lebensmittelverschwendung"
+      },
+      "definitions": {
+        "fr": "Mesures pour prévenir, mesurer et réduire le gaspillage alimentaire.",
+        "en": "Measures to prevent, measure and reduce food waste.",
+        "es": "Medidas para prevenir, medir y reducir el desperdicio alimentario.",
+        "de": "Maßnahmen zur Vermeidung, Erfassung und Verringerung von Lebensmittelverschwendung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "74273c23-5c98-4121-908c-d22b9844c74b",
+      "code": "SA_GUEST_INFO_SUST",
+      "preferred_labels": {
+        "fr": "Information client sur les écogestes",
+        "en": "Guest information on environmentally responsible actions",
+        "es": "Información al cliente sobre prácticas ambientales responsables",
+        "de": "Gästeinformation zu umweltbewusstem Verhalten"
+      },
+      "definitions": {
+        "fr": "Information donnée aux clients sur les écogestes attendus et sur les pratiques durables de l'établissement.",
+        "en": "Information for guests on expected environmentally responsible actions and the establishment's sustainable practices.",
+        "es": "Información a los clientes sobre los comportamientos ambientales esperados y las prácticas sostenibles del establecimiento.",
+        "de": "Informationen für Gäste über erwartetes umweltbewusstes Verhalten und die nachhaltigen Praktiken des Betriebs."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "775b23cd-2711-451e-a214-0937a8d7f0f1",
+      "code": "SA_HAZARDOUS_WASTE",
+      "preferred_labels": {
+        "fr": "Gestion des déchets dangereux",
+        "en": "Hazardous waste management",
+        "es": "Gestión de residuos peligrosos",
+        "de": "Umgang mit gefährlichen Abfällen"
+      },
+      "definitions": {
+        "fr": "Tri, stockage et élimination sécurisés des piles, lampes, produits chimiques ou équivalents.",
+        "en": "Safe sorting, storage and disposal of batteries, lamps, chemicals and similar waste.",
+        "es": "Separación, almacenamiento y eliminación seguros de pilas, lámparas, productos químicos y residuos similares.",
+        "de": "Sichere Trennung, Lagerung und Entsorgung von Batterien, Lampen, Chemikalien und vergleichbaren Abfällen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "e9fccbcb-da0f-430c-ba6f-a98839be64e7",
+      "code": "SA_HOT_WATER_EFFICIENCY",
+      "preferred_labels": {
+        "fr": "Production d'eau chaude performante",
+        "en": "Efficient hot water production",
+        "es": "Producción eficiente de agua caliente",
+        "de": "Effiziente Warmwasserbereitung"
+      },
+      "definitions": {
+        "fr": "Systèmes de production d'eau chaude efficaces et réglés pour limiter les pertes.",
+        "en": "Efficient hot water production systems adjusted to limit losses.",
+        "es": "Sistemas eficientes de producción de agua caliente ajustados para limitar las pérdidas.",
+        "de": "Effiziente Systeme zur Warmwasserbereitung, die zur Begrenzung von Verlusten eingestellt sind."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "6831449e-64e6-45b3-a35d-c6c3f4413e6a",
+      "code": "SA_HUMAN_RIGHTS_DECENT_WORK",
+      "preferred_labels": {
+        "fr": "Engagement droits humains et travail décent",
+        "en": "Commitment to human rights and decent work",
+        "es": "Compromiso con los derechos humanos y el trabajo decente",
+        "de": "Engagement für Menschenrechte und menschenwürdige Arbeit"
+      },
+      "definitions": {
+        "fr": "Engagement formalisé contre les atteintes aux droits humains et en faveur de conditions de travail décentes.",
+        "en": "Formal commitment to preventing human rights abuses and supporting decent working conditions.",
+        "es": "Compromiso formal contra las vulneraciones de los derechos humanos y a favor de condiciones de trabajo decentes.",
+        "de": "Formell festgehaltenes Engagement gegen Menschenrechtsverletzungen und für menschenwürdige Arbeitsbedingungen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c1da7dd2-b876-4d66-b5f9-3431a8d2a0c1",
+      "code": "SA_HVAC_EFFICIENCY",
+      "preferred_labels": {
+        "fr": "Chauffage et climatisation performants",
+        "en": "Efficient heating and air conditioning",
+        "es": "Calefacción y climatización eficientes",
+        "de": "Effiziente Heizungs- und Klimaanlagen"
+      },
+      "definitions": {
+        "fr": "Équipements de chauffage ou de climatisation performants et entretenus.",
+        "en": "Efficient heating or air conditioning equipment kept in good working order.",
+        "es": "Equipos de calefacción o climatización eficientes y con mantenimiento.",
+        "de": "Effiziente und gewartete Heizungs- oder Klimaanlagen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "9735c52f-c61d-471d-b500-ab4fcfdf7db1",
+      "code": "SA_IMPACT_REPORTING",
+      "preferred_labels": {
+        "fr": "Mesure et reporting des impacts",
+        "en": "Impact measurement and reporting",
+        "es": "Medición y comunicación de impactos",
+        "de": "Messung und Berichterstattung zu Auswirkungen"
+      },
+      "definitions": {
+        "fr": "Suivi et restitution d'indicateurs d'impact environnemental, social ou territorial.",
+        "en": "Monitoring and reporting of indicators of environmental, social or local impacts.",
+        "es": "Seguimiento y comunicación de indicadores de impacto ambiental, social o territorial.",
+        "de": "Erfassung und Berichterstattung zu Kennzahlen für ökologische, soziale oder örtliche Auswirkungen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "d8c355ec-524a-41d9-9317-eab271133e59",
+      "code": "SA_LABELLED_LOCAL_OFFERS",
+      "preferred_labels": {
+        "fr": "Mise en avant des offres locales engagées",
+        "en": "Promotion of committed local tourism offers",
+        "es": "Promoción de ofertas locales comprometidas",
+        "de": "Hervorhebung engagierter lokaler Tourismusangebote"
+      },
+      "definitions": {
+        "fr": "Valorisation des offres, produits ou prestataires locaux engagés ou labellisés.",
+        "en": "Promotion of local offers, products or providers with sustainability commitments or labels.",
+        "es": "Promoción de ofertas, productos o prestadores locales con compromisos de sostenibilidad o distintivos.",
+        "de": "Hervorhebung lokaler Angebote, Produkte oder Anbieter mit Nachhaltigkeitsengagement oder entsprechenden Gütesiegeln."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "828c51cb-daf9-40df-8289-8019e501f094",
+      "code": "SA_LAUNDRY_WATER_EFF",
+      "preferred_labels": {
+        "fr": "Lave-linge sobre en eau",
+        "en": "Water-efficient washing machines",
+        "es": "Lavadoras eficientes en el uso del agua",
+        "de": "Wassersparende Waschmaschinen"
+      },
+      "definitions": {
+        "fr": "Choix ou réglage de lave-linge optimisés pour limiter la consommation d'eau.",
+        "en": "Selection or adjustment of washing machines to limit water consumption.",
+        "es": "Elección o ajuste de lavadoras para limitar el consumo de agua.",
+        "de": "Auswahl oder Einstellung von Waschmaschinen zur Begrenzung des Wasserverbrauchs."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "237d74c8-7138-431f-a7a4-3022c27b7391",
+      "code": "SA_LEAK_DETECTION",
+      "preferred_labels": {
+        "fr": "Détection des fuites",
+        "en": "Leak detection",
+        "es": "Detección de fugas",
+        "de": "Leckerkennung"
+      },
+      "definitions": {
+        "fr": "Routine de contrôle ou système permettant d'identifier rapidement les fuites et surconsommations.",
+        "en": "Routine checks or a system to quickly identify leaks and excessive consumption.",
+        "es": "Controles periódicos o un sistema para detectar rápidamente fugas y consumos excesivos.",
+        "de": "Regelmäßige Kontrollen oder ein System zur schnellen Erkennung von Lecks und übermäßigem Verbrauch."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "358b6893-b31e-412d-8eb6-00ced5ffe132",
+      "code": "SA_LOCAL_COMMUNITY_SUPPORT",
+      "preferred_labels": {
+        "fr": "Soutien à l'économie et à la communauté locale",
+        "en": "Support for the local economy and community",
+        "es": "Apoyo a la economía y a la comunidad local",
+        "de": "Unterstützung der lokalen Wirtschaft und Gemeinschaft"
+      },
+      "definitions": {
+        "fr": "Actions qui renforcent les retombées locales, les partenariats et le développement local.",
+        "en": "Actions that strengthen local benefits, partnerships and development.",
+        "es": "Acciones que refuerzan los beneficios para el territorio, las alianzas y el desarrollo local.",
+        "de": "Maßnahmen zur Stärkung des lokalen Nutzens, der Partnerschaften und der örtlichen Entwicklung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "874f9c35-31af-49af-979f-deffcb10bc6f",
+      "code": "SA_LOCAL_ORGANIC_FAIRTRADE_FOOD",
+      "preferred_labels": {
+        "fr": "Produits locaux, bio ou équitables",
+        "en": "Local, organic or fair-trade products",
+        "es": "Productos locales, ecológicos o de comercio justo",
+        "de": "Lokale, biologische oder fair gehandelte Produkte"
+      },
+      "definitions": {
+        "fr": "Part d'offre alimentaire issue du local, du bio, de l'écolabellisé ou du commerce équitable.",
+        "en": "The share of the food offering that is local, organic, ecolabelled or fair trade.",
+        "es": "Proporción de la oferta alimentaria que es local, ecológica, con etiqueta ecológica o de comercio justo.",
+        "de": "Anteil des Lebensmittelangebots aus lokaler Herkunft, biologischer Erzeugung, mit Umweltzeichen oder aus fairem Handel."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "0c19d442-2b1f-4a48-afe0-049570f50175",
+      "code": "SA_LOCAL_POPULATION_INVOLVEMENT",
+      "preferred_labels": {
+        "fr": "Implication des populations locales",
+        "en": "Involvement of local communities",
+        "es": "Participación de las poblaciones locales",
+        "de": "Einbindung der lokalen Bevölkerung"
+      },
+      "definitions": {
+        "fr": "Participation des populations locales à la conception, à l'accueil ou à la mise en œuvre de l'offre.",
+        "en": "Participation of local communities in designing, hosting or delivering the tourism offering.",
+        "es": "Participación de las poblaciones locales en el diseño, la acogida o la puesta en práctica de la oferta turística.",
+        "de": "Beteiligung der lokalen Bevölkerung an der Gestaltung, am Empfang oder an der Umsetzung des touristischen Angebots."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "19a20bdf-c4e9-4937-9ac5-0bc83f42a0b1",
+      "code": "SA_LOCAL_SUPPLIERS",
+      "preferred_labels": {
+        "fr": "Priorité aux fournisseurs locaux",
+        "en": "Priority for local suppliers",
+        "es": "Prioridad a proveedores locales",
+        "de": "Vorrang für lokale Lieferanten"
+      },
+      "definitions": {
+        "fr": "Choix prioritaire de fournisseurs locaux, de proximité ou en circuits courts.",
+        "en": "Preference for local or nearby suppliers or short supply chains.",
+        "es": "Preferencia por proveedores locales, de proximidad o de circuitos cortos.",
+        "de": "Bevorzugung lokaler oder nahe gelegener Lieferanten oder kurzer Lieferketten."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "dc16624d-db1a-4df5-b840-81e4c638d2f6",
+      "code": "SA_LOW_CHEMICAL_DISINFECTION",
+      "preferred_labels": {
+        "fr": "Réduction des produits chimiques de désinfection",
+        "en": "Reduction of disinfection chemicals",
+        "es": "Reducción de productos químicos de desinfección",
+        "de": "Verringerung von Chemikalien zur Desinfektion"
+      },
+      "definitions": {
+        "fr": "Recours à des méthodes ou produits limitant les impacts des opérations de désinfection.",
+        "en": "Use of methods or products that limit the impacts of disinfection operations.",
+        "es": "Uso de métodos o productos que limitan los impactos de las operaciones de desinfección.",
+        "de": "Einsatz von Methoden oder Produkten, die die Auswirkungen von Desinfektionsmaßnahmen begrenzen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "8b51e79a-3590-480a-9cd3-982333d3e8a1",
+      "code": "SA_LOW_IMPACT_TRANSPORT_INFO",
+      "preferred_labels": {
+        "fr": "Information sur les mobilités à faible impact",
+        "en": "Information on low-impact travel",
+        "es": "Información sobre movilidad de bajo impacto",
+        "de": "Informationen zu umweltschonender Mobilität"
+      },
+      "definitions": {
+        "fr": "Information sur les transports en commun, le vélo, la marche, le covoiturage ou l'arrivée sans voiture.",
+        "en": "Information on public transport, cycling, walking, carpooling or arrival without a car.",
+        "es": "Información sobre transporte público, bicicleta, desplazamientos a pie, coche compartido o llegada sin automóvil.",
+        "de": "Informationen zu öffentlichen Verkehrsmitteln, Radfahren, Zufußgehen, Fahrgemeinschaften oder der Anreise ohne Auto."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c678e090-a222-48b6-9ac6-826229add2da",
+      "code": "SA_LOW_IMPACT_TRANSPORT_SERVICES",
+      "preferred_labels": {
+        "fr": "Services de mobilité à faible impact",
+        "en": "Low-impact mobility services",
+        "es": "Servicios de movilidad de bajo impacto",
+        "de": "Angebote für umweltschonende Mobilität"
+      },
+      "definitions": {
+        "fr": "Services ou équipements facilitant les mobilités à faible impact, stationnement vélo, recharge, navette.",
+        "en": "Services or facilities that support low-impact travel, such as bicycle parking, charging or shuttle services.",
+        "es": "Servicios o instalaciones que facilitan la movilidad de bajo impacto, como aparcamiento de bicicletas, recarga o transporte lanzadera.",
+        "de": "Dienstleistungen oder Einrichtungen für umweltschonende Mobilität, etwa Fahrradabstellplätze, Lademöglichkeiten oder Shuttles."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "fff54e43-7275-4a76-8dc5-bf8730f0d0f6",
+      "code": "SA_MOUNTAIN_MOBILITY_PLAN",
+      "preferred_labels": {
+        "fr": "Mobilité durable en montagne",
+        "en": "Sustainable mountain mobility",
+        "es": "Movilidad sostenible en la montaña",
+        "de": "Nachhaltige Mobilität in Bergregionen"
+      },
+      "definitions": {
+        "fr": "Plan de mobilité douce pour destination de montagne : navettes, réduction de la voiture individuelle, intermodalité, services vélo et marche.",
+        "en": "A sustainable mobility plan for mountain destinations covering shuttles, reduced private car use, intermodal travel, cycling and walking services.",
+        "es": "Plan de movilidad sostenible para destinos de montaña con lanzaderas, reducción del automóvil privado, intermodalidad y servicios para ciclistas y peatones.",
+        "de": "Plan für nachhaltige Mobilität in Bergreisezielen mit Shuttles, weniger Individualverkehr, verknüpften Verkehrsmitteln sowie Angeboten für Rad- und Fußverkehr."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "af317e7c-86a1-4c1b-97be-e58c705750df",
+      "code": "SA_NATIVE_PLANTING",
+      "preferred_labels": {
+        "fr": "Plantations locales ou non invasives",
+        "en": "Local or non-invasive planting",
+        "es": "Plantaciones de especies locales o no invasoras",
+        "de": "Bepflanzung mit lokalen oder nicht invasiven Arten"
+      },
+      "definitions": {
+        "fr": "Choix d'espèces locales ou non invasives dans les aménagements extérieurs.",
+        "en": "Selection of local or non-invasive species for outdoor landscaping.",
+        "es": "Elección de especies locales o no invasoras en el acondicionamiento de espacios exteriores.",
+        "de": "Auswahl lokaler oder nicht invasiver Arten für die Gestaltung von Außenanlagen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "6f3e7a64-4559-449e-95da-2df3e293089c",
+      "code": "SA_NO_ENDANGERED_SPECIES",
+      "preferred_labels": {
+        "fr": "Exclusion des espèces menacées",
+        "en": "Exclusion of endangered species",
+        "es": "Exclusión de especies amenazadas",
+        "de": "Ausschluss gefährdeter Arten"
+      },
+      "definitions": {
+        "fr": "Absence de produits issus d'espèces menacées ou de filières non durables.",
+        "en": "Absence of products derived from endangered species or unsustainable supply chains.",
+        "es": "Ausencia de productos procedentes de especies amenazadas o de cadenas de suministro no sostenibles.",
+        "de": "Verzicht auf Produkte aus gefährdeten Arten oder nicht nachhaltigen Lieferketten."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "031d2a15-8059-4340-a415-d1dbb0c43429",
+      "code": "SA_ONSITE_RENEWABLE_ENERGY",
+      "preferred_labels": {
+        "fr": "Production d'énergie renouvelable sur site",
+        "en": "On-site renewable energy production",
+        "es": "Producción de energía renovable en el establecimiento",
+        "de": "Erzeugung erneuerbarer Energie vor Ort"
+      },
+      "definitions": {
+        "fr": "Production sur site d'énergie renouvelable, par exemple photovoltaïque ou solaire thermique.",
+        "en": "Production of renewable energy on site, for example through photovoltaic or solar thermal systems.",
+        "es": "Producción de energía renovable en el propio establecimiento, por ejemplo mediante energía fotovoltaica o solar térmica.",
+        "de": "Erzeugung erneuerbarer Energie vor Ort, etwa durch Photovoltaik oder Solarthermie."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "68432c78-39ea-4747-b684-544555bf000b",
+      "code": "SA_ORGANIC_WASTE_SORTING",
+      "preferred_labels": {
+        "fr": "Tri des biodéchets",
+        "en": "Organic waste separation",
+        "es": "Separación de residuos orgánicos",
+        "de": "Getrennte Erfassung von Bioabfällen"
+      },
+      "definitions": {
+        "fr": "Tri à la source des biodéchets pour collecte ou valorisation adaptée.",
+        "en": "Separation of organic waste at source for suitable collection or recovery.",
+        "es": "Separación en origen de los residuos orgánicos para su recogida o valorización adecuada.",
+        "de": "Trennung von Bioabfällen am Entstehungsort für eine geeignete Sammlung oder Verwertung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "3085e2cf-c537-4af5-8757-5da6302daf42",
+      "code": "SA_PAPER_REDUCTION",
+      "preferred_labels": {
+        "fr": "Réduction du papier",
+        "en": "Paper reduction",
+        "es": "Reducción del uso de papel",
+        "de": "Verringerung des Papierverbrauchs"
+      },
+      "definitions": {
+        "fr": "Réduction des impressions, brochures ou supports papier non indispensables.",
+        "en": "Reduction of unnecessary printing, brochures and other paper materials.",
+        "es": "Reducción de impresiones, folletos y otros soportes en papel que no sean indispensables.",
+        "de": "Verringerung nicht notwendiger Ausdrucke, Broschüren und anderer Papiermaterialien."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "0e6918d6-4f0c-45b9-a68e-d5f4ae81cdf6",
+      "code": "SA_PESTICIDE_AVOIDANCE",
+      "preferred_labels": {
+        "fr": "Évitement des pesticides",
+        "en": "Avoidance of pesticides",
+        "es": "Evitación de pesticidas",
+        "de": "Vermeidung von Pestiziden"
+      },
+      "definitions": {
+        "fr": "Absence ou forte réduction des pesticides, herbicides ou produits assimilés.",
+        "en": "Elimination or substantial reduction of pesticides, herbicides and similar products.",
+        "es": "Eliminación o reducción considerable de pesticidas, herbicidas y productos similares.",
+        "de": "Verzicht auf Pestizide, Herbizide und vergleichbare Produkte oder deutliche Verringerung ihres Einsatzes."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "aadbcca0-a3c7-43e2-8849-7086e8b5ad2e",
+      "code": "SA_POLICY_SUSTAINABILITY",
+      "preferred_labels": {
+        "fr": "Politique de durabilité formalisée",
+        "en": "Formal sustainability policy",
+        "es": "Política de sostenibilidad formalizada",
+        "de": "Schriftlich festgelegte Nachhaltigkeitspolitik"
+      },
+      "definitions": {
+        "fr": "Document formalisé qui fixe les engagements de durabilité, le périmètre, les objectifs et les responsabilités.",
+        "en": "A formal document setting out sustainability commitments, scope, objectives and responsibilities.",
+        "es": "Documento formal que establece los compromisos de sostenibilidad, el alcance, los objetivos y las responsabilidades.",
+        "de": "Formelles Dokument mit Nachhaltigkeitsverpflichtungen, Geltungsbereich, Zielen und Zuständigkeiten."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "ed2a9a51-fd65-422b-9715-4e70012e2315",
+      "code": "SA_PRO_TRANSITION_SUPPORT",
+      "preferred_labels": {
+        "fr": "Accompagnement des professionnels dans leur transition",
+        "en": "Support for professionals in their sustainability transition",
+        "es": "Apoyo a los profesionales en su transición sostenible",
+        "de": "Unterstützung von Betrieben beim Übergang zu mehr Nachhaltigkeit"
+      },
+      "definitions": {
+        "fr": "Aide apportée aux professionnels pour progresser vers des pratiques ou labels plus durables.",
+        "en": "Support for professionals in moving towards more sustainable practices or labels.",
+        "es": "Ayuda a los profesionales para avanzar hacia prácticas o distintivos más sostenibles.",
+        "de": "Unterstützung von Betrieben auf dem Weg zu nachhaltigeren Praktiken oder Gütesiegeln."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "076d75a6-25ae-4768-8ac1-849c14b7bbfc",
+      "code": "SA_PUBLIC_COMMUNICATION",
+      "preferred_labels": {
+        "fr": "Communication publique sur les engagements",
+        "en": "Public communication of sustainability commitments",
+        "es": "Comunicación pública de los compromisos",
+        "de": "Öffentliche Kommunikation zu Nachhaltigkeitsverpflichtungen"
+      },
+      "definitions": {
+        "fr": "Page web, affichage ou support public décrivant les engagements, résultats ou dispositifs de durabilité.",
+        "en": "A website, display or other public material describing sustainability commitments, results or arrangements.",
+        "es": "Página web, cartel u otro soporte público que describe compromisos, resultados o medidas de sostenibilidad.",
+        "de": "Website, Aushang oder anderes öffentliches Material zur Darstellung von Nachhaltigkeitsverpflichtungen, Ergebnissen oder Maßnahmen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "599ddad4-a4a8-438e-ace5-cc82197f3ed7",
+      "code": "SA_RAINWATER_REUSE",
+      "preferred_labels": {
+        "fr": "Réutilisation des eaux de pluie ou eaux grises",
+        "en": "Reuse of rainwater or greywater",
+        "es": "Reutilización de aguas pluviales o grises",
+        "de": "Nutzung von Regen- oder Grauwasser"
+      },
+      "definitions": {
+        "fr": "Dispositifs de récupération ou de réutilisation de l'eau pour des usages adaptés.",
+        "en": "Systems for collecting or reusing water for suitable purposes.",
+        "es": "Sistemas de recogida o reutilización de agua para usos adecuados.",
+        "de": "Anlagen zur Sammlung oder Wiederverwendung von Wasser für geeignete Zwecke."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "5d5cfa48-e83c-4911-b93a-395a20c69f7f",
+      "code": "SA_REGULATORY_COMPLIANCE",
+      "preferred_labels": {
+        "fr": "Suivi de conformité réglementaire",
+        "en": "Regulatory compliance monitoring",
+        "es": "Seguimiento del cumplimiento normativo",
+        "de": "Überwachung der Einhaltung rechtlicher Vorgaben"
+      },
+      "definitions": {
+        "fr": "Registre de conformité et preuves à jour sur les obligations applicables, sécurité, accessibilité, déchets, eau, travail.",
+        "en": "A compliance register and up-to-date evidence for applicable requirements concerning safety, accessibility, waste, water and work.",
+        "es": "Registro de cumplimiento y pruebas actualizadas de las obligaciones aplicables en materia de seguridad, accesibilidad, residuos, agua y trabajo.",
+        "de": "Konformitätsregister und aktuelle Nachweise zu geltenden Anforderungen an Sicherheit, Barrierefreiheit, Abfall, Wasser und Arbeit."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "d89807c9-25f8-4f7e-b1bb-fd994d8ed9e5",
+      "code": "SA_RENEWABLE_ELECTRICITY",
+      "preferred_labels": {
+        "fr": "Achat d'électricité renouvelable",
+        "en": "Purchase of renewable electricity",
+        "es": "Compra de electricidad renovable",
+        "de": "Bezug von Strom aus erneuerbaren Quellen"
+      },
+      "definitions": {
+        "fr": "Contrat d'approvisionnement en électricité d'origine renouvelable ou équivalente.",
+        "en": "An electricity supply contract for electricity of renewable origin or an equivalent arrangement.",
+        "es": "Contrato de suministro de electricidad de origen renovable o una modalidad equivalente.",
+        "de": "Stromliefervertrag für Strom aus erneuerbaren Quellen oder eine gleichwertige Regelung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "17ae4ed4-c699-4e29-a830-a0e0c003ec55",
+      "code": "SA_RENEWABLE_HEAT",
+      "preferred_labels": {
+        "fr": "Chaleur renouvelable",
+        "en": "Renewable heat",
+        "es": "Calor renovable",
+        "de": "Wärme aus erneuerbaren Quellen"
+      },
+      "definitions": {
+        "fr": "Recours à une chaleur d'origine renouvelable, biomasse, solaire thermique, géothermie ou équivalent.",
+        "en": "Use of heat from renewable sources such as biomass, solar thermal energy, geothermal energy or equivalent sources.",
+        "es": "Uso de calor de origen renovable, como biomasa, energía solar térmica, geotermia o fuentes equivalentes.",
+        "de": "Nutzung von Wärme aus erneuerbaren Quellen wie Biomasse, Solarthermie, Geothermie oder vergleichbaren Quellen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "683b716e-ab1d-4b34-9733-f5e75829afa1",
+      "code": "SA_RESPONSIBLE_PROCUREMENT_POLICY",
+      "preferred_labels": {
+        "fr": "Politique d'achats responsables",
+        "en": "Responsible procurement policy",
+        "es": "Política de compras responsables",
+        "de": "Verantwortungsvolle Beschaffungspolitik"
+      },
+      "definitions": {
+        "fr": "Politique achats intégrant des critères environnementaux, sociaux, éthiques et de cycle de vie.",
+        "en": "A procurement policy incorporating environmental, social, ethical and life-cycle criteria.",
+        "es": "Política de compras que incorpora criterios ambientales, sociales, éticos y de ciclo de vida.",
+        "de": "Beschaffungspolitik mit ökologischen, sozialen, ethischen und lebenszyklusbezogenen Kriterien."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "138e2eac-d2f6-4331-be45-bcb641631919",
+      "code": "SA_RSE_STRATEGY_ALIGNMENT",
+      "preferred_labels": {
+        "fr": "Alignement stratégique RSE",
+        "en": "Strategic alignment with corporate social responsibility",
+        "es": "Alineación estratégica con la responsabilidad social empresarial",
+        "de": "Strategische Ausrichtung an gesellschaftlicher Unternehmensverantwortung"
+      },
+      "definitions": {
+        "fr": "Alignement de la stratégie d'entreprise, des offres et du modèle économique avec les principes de responsabilité sociétale et de tourisme responsable.",
+        "en": "Alignment of company strategy, offerings and business model with the principles of corporate social responsibility and responsible tourism.",
+        "es": "Alineación de la estrategia empresarial, la oferta y el modelo económico con los principios de responsabilidad social empresarial y turismo responsable.",
+        "de": "Ausrichtung der Unternehmensstrategie, der Angebote und des Geschäftsmodells an den Grundsätzen gesellschaftlicher Unternehmensverantwortung und verantwortungsvollen Tourismus."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "a2d3e72b-3f77-4437-ab0b-738dd2e599f9",
+      "code": "SA_STAFF_TRAINING_SUST",
+      "preferred_labels": {
+        "fr": "Formation du personnel aux écogestes",
+        "en": "Staff training in environmentally responsible practices",
+        "es": "Formación del personal en prácticas ambientales responsables",
+        "de": "Schulung des Personals zu umweltbewussten Praktiken"
+      },
+      "definitions": {
+        "fr": "Formation des équipes aux pratiques de durabilité, énergie, eau, déchets, achats, accueil responsable.",
+        "en": "Training teams in sustainability practices relating to energy, water, waste, procurement and responsible guest service.",
+        "es": "Formación de los equipos en prácticas de sostenibilidad sobre energía, agua, residuos, compras y atención responsable al visitante.",
+        "de": "Schulung der Teams zu Nachhaltigkeitspraktiken in den Bereichen Energie, Wasser, Abfall, Beschaffung und verantwortungsvoller Gästebetreuung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "3b0ddf8b-3ac1-4540-ba47-a9e48357a465",
+      "code": "SA_STAKEHOLDER_DIALOGUE",
+      "preferred_labels": {
+        "fr": "Dialogue parties prenantes",
+        "en": "Stakeholder dialogue",
+        "es": "Diálogo con las partes interesadas",
+        "de": "Dialog mit Interessengruppen"
+      },
+      "definitions": {
+        "fr": "Échanges structurés avec salariés, partenaires, collectivités, associations, habitants ou clients.",
+        "en": "Structured exchanges with employees, partners, local authorities, associations, residents or customers.",
+        "es": "Intercambios estructurados con empleados, socios, administraciones locales, asociaciones, residentes o clientes.",
+        "de": "Strukturierter Austausch mit Beschäftigten, Partnern, Kommunen, Verbänden, Einwohnern oder Kunden."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "3c717388-bbe4-4afd-84e7-63403de235b9",
+      "code": "SA_SUBMETERING",
+      "preferred_labels": {
+        "fr": "Sous-comptage énergie et eau",
+        "en": "Energy and water submetering",
+        "es": "Submedición de energía y agua",
+        "de": "Unterzähler für Energie und Wasser"
+      },
+      "definitions": {
+        "fr": "Sous-comptage par usage ou zone pour identifier les postes les plus consommateurs.",
+        "en": "Separate metering by use or area to identify the largest sources of consumption.",
+        "es": "Medición separada por uso o zona para identificar los mayores consumos.",
+        "de": "Getrennte Verbrauchsmessung nach Nutzung oder Bereich, um die größten Verbrauchsstellen zu erkennen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "0bbfba5e-9db3-49a2-87c5-15e9630cdf18",
+      "code": "SA_SUPPLIER_EVALUATION",
+      "preferred_labels": {
+        "fr": "Évaluation RSE des fournisseurs",
+        "en": "Supplier corporate social responsibility assessment",
+        "es": "Evaluación de la responsabilidad social de los proveedores",
+        "de": "Bewertung der gesellschaftlichen Verantwortung von Lieferanten"
+      },
+      "definitions": {
+        "fr": "Qualification ou évaluation des fournisseurs selon des critères de conformité, environnement et responsabilité sociale.",
+        "en": "Qualification or assessment of suppliers against compliance, environmental and social responsibility criteria.",
+        "es": "Calificación o evaluación de proveedores según criterios de cumplimiento, medio ambiente y responsabilidad social.",
+        "de": "Qualifizierung oder Bewertung von Lieferanten anhand von Kriterien zu Regelkonformität, Umwelt und sozialer Verantwortung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "087b9c1b-5e13-4e12-b480-b6015d040e37",
+      "code": "SA_TAP_WATER_SERVICE",
+      "preferred_labels": {
+        "fr": "Proposition d'eau du robinet ou en carafe",
+        "en": "Offering tap water or water in a carafe",
+        "es": "Oferta de agua del grifo o en jarra",
+        "de": "Angebot von Leitungswasser oder Wasser in Karaffen"
+      },
+      "definitions": {
+        "fr": "Mise à disposition d'eau en carafe lorsque la qualité locale le permet.",
+        "en": "Provision of water in carafes where local water quality allows.",
+        "es": "Disponibilidad de agua en jarra cuando la calidad del agua local lo permite.",
+        "de": "Bereitstellung von Wasser in Karaffen, soweit die örtliche Wasserqualität dies zulässt."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "b905f361-d1b6-4f89-b183-55f86c849db1",
+      "code": "SA_TERRITORY_SUST_INFO",
+      "preferred_labels": {
+        "fr": "Information sur la durabilité du territoire",
+        "en": "Information on local sustainability",
+        "es": "Información sobre la sostenibilidad del territorio",
+        "de": "Informationen zur Nachhaltigkeit der Region"
+      },
+      "definitions": {
+        "fr": "Information donnée aux visiteurs sur les engagements du territoire, ressources, transport, accessibilité.",
+        "en": "Information for visitors on the area's commitments, resources, transport and accessibility.",
+        "es": "Información a los visitantes sobre los compromisos del territorio, sus recursos, el transporte y la accesibilidad.",
+        "de": "Informationen für Besucher zu den Verpflichtungen der Region, Ressourcen, Verkehr und Barrierefreiheit."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "613a5c84-41fe-4854-8ab1-b52971550036",
+      "code": "SA_THERMOREGULATION",
+      "preferred_labels": {
+        "fr": "Régulation des températures",
+        "en": "Temperature regulation",
+        "es": "Regulación de temperaturas",
+        "de": "Temperaturregelung"
+      },
+      "definitions": {
+        "fr": "Consignes et dispositifs de régulation pour le chauffage, la climatisation ou les plages de température.",
+        "en": "Setpoints and control devices for heating, air conditioning or temperature ranges.",
+        "es": "Consignas y dispositivos de regulación de la calefacción, la climatización o los intervalos de temperatura.",
+        "de": "Sollwerte und Regeleinrichtungen für Heizung, Klimaanlage oder Temperaturbereiche."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "a3cc83f7-e017-4c56-a916-0e4255a6dc23",
+      "code": "SA_TOWEL_LINEN_REUSE",
+      "preferred_labels": {
+        "fr": "Réutilisation des serviettes et du linge",
+        "en": "Reuse of towels and linen",
+        "es": "Reutilización de toallas y ropa de cama",
+        "de": "Wiederverwendung von Handtüchern und Wäsche"
+      },
+      "definitions": {
+        "fr": "Changement du linge et des serviettes à fréquence maîtrisée ou sur demande.",
+        "en": "Changing linen and towels at controlled intervals or on request.",
+        "es": "Cambio de ropa de cama y toallas con una frecuencia controlada o a petición.",
+        "de": "Wechsel von Wäsche und Handtüchern in festgelegten Abständen oder auf Wunsch."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "0f28b9cd-203f-45af-847a-1b7fc0b06235",
+      "code": "SA_TRANSPARENT_SALES_INFO",
+      "preferred_labels": {
+        "fr": "Information transparente sur l'offre et ses impacts",
+        "en": "Transparent information on the offer and its impacts",
+        "es": "Información transparente sobre la oferta y sus impactos",
+        "de": "Transparente Informationen zum Angebot und seinen Auswirkungen"
+      },
+      "definitions": {
+        "fr": "Information claire sur le contenu de l'offre, ses impacts, ses limites et ses conditions.",
+        "en": "Clear information on what the offer includes, its impacts, limitations and terms.",
+        "es": "Información clara sobre el contenido de la oferta, sus impactos, sus limitaciones y sus condiciones.",
+        "de": "Klare Informationen über Inhalt, Auswirkungen, Grenzen und Bedingungen des Angebots."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "7aedd828-d1cc-4ba8-a08c-ed9634d8b928",
+      "code": "SA_VEGETARIAN_OFFER",
+      "preferred_labels": {
+        "fr": "Offre végétarienne",
+        "en": "Vegetarian options",
+        "es": "Oferta vegetariana",
+        "de": "Vegetarisches Angebot"
+      },
+      "definitions": {
+        "fr": "Présence d'au moins une offre végétarienne ou végétale identifiable.",
+        "en": "At least one clearly identifiable vegetarian or plant-based option.",
+        "es": "Presencia de al menos una opción vegetariana o vegetal claramente identificable.",
+        "de": "Mindestens ein eindeutig erkennbares vegetarisches oder pflanzliches Angebot."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "505b5e49-2dba-4c41-b192-48dfde5fa04d",
+      "code": "SA_VISITOR_FLOW_MANAGEMENT",
+      "preferred_labels": {
+        "fr": "Gestion des flux touristiques",
+        "en": "Visitor flow management",
+        "es": "Gestión de flujos turísticos",
+        "de": "Steuerung von Besucherströmen"
+      },
+      "definitions": {
+        "fr": "Actions de gestion des flux, de désaisonnalisation ou d'orientation des visiteurs.",
+        "en": "Actions to manage visitor flows, reduce seasonality or guide visitors.",
+        "es": "Acciones para gestionar los flujos de visitantes, reducir la estacionalidad u orientar a los visitantes.",
+        "de": "Maßnahmen zur Steuerung von Besucherströmen, zur Verringerung der Saisonabhängigkeit oder zur Besucherlenkung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "60468d9a-3bd9-4cca-9289-a8ccedf75b50",
+      "code": "SA_WASTE_SORTING_GUESTS",
+      "preferred_labels": {
+        "fr": "Tri des déchets pour les clients",
+        "en": "Waste sorting for guests",
+        "es": "Separación de residuos para clientes",
+        "de": "Abfalltrennung für Gäste"
+      },
+      "definitions": {
+        "fr": "Mise à disposition de bacs et consignes de tri claires pour les clients.",
+        "en": "Provision of bins and clear waste sorting instructions for guests.",
+        "es": "Disponibilidad de contenedores e instrucciones claras de separación de residuos para los clientes.",
+        "de": "Bereitstellung von Behältern und klaren Hinweisen zur Abfalltrennung für Gäste."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "a7311c7e-662c-44a8-8210-32df4c3ab3d7",
+      "code": "SA_WASTE_SORTING_STAFF",
+      "preferred_labels": {
+        "fr": "Tri des déchets pour le personnel",
+        "en": "Waste sorting for staff",
+        "es": "Separación de residuos para el personal",
+        "de": "Abfalltrennung für das Personal"
+      },
+      "definitions": {
+        "fr": "Consignes, bacs et organisation permettant le tri des déchets dans les zones internes.",
+        "en": "Instructions, bins and arrangements enabling waste sorting in internal areas.",
+        "es": "Instrucciones, contenedores y organización que permiten separar los residuos en las zonas internas.",
+        "de": "Anweisungen, Behälter und organisatorische Maßnahmen zur Abfalltrennung in internen Bereichen."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c4ca8cb9-bd6c-4439-bb47-ae32839f8f39",
+      "code": "SA_WASTEWATER_TREATMENT",
+      "preferred_labels": {
+        "fr": "Traitement maîtrisé des eaux usées",
+        "en": "Controlled wastewater treatment",
+        "es": "Tratamiento controlado de aguas residuales",
+        "de": "Geregelte Abwasserbehandlung"
+      },
+      "definitions": {
+        "fr": "Gestion conforme du traitement ou du raccordement des eaux usées et suivi associé.",
+        "en": "Compliant management of wastewater treatment or sewer connection, with associated monitoring.",
+        "es": "Gestión conforme del tratamiento de aguas residuales o de la conexión al alcantarillado, con el seguimiento correspondiente.",
+        "de": "Vorschriftsgemäßes Management der Abwasserbehandlung oder des Kanalanschlusses mit zugehöriger Überwachung."
+      }
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "8022c1fa-66e6-49ac-80ab-e5be39b8df00",
+      "code": "SA_WATER_MONITORING",
+      "preferred_labels": {
+        "fr": "Suivi des consommations d'eau",
+        "en": "Water consumption monitoring",
+        "es": "Seguimiento del consumo de agua",
+        "de": "Erfassung des Wasserverbrauchs"
+      },
+      "definitions": {
+        "fr": "Mesure régulière des consommations d'eau et détection des dérives.",
+        "en": "Regular measurement of water consumption and identification of deviations.",
+        "es": "Medición periódica del consumo de agua y detección de desviaciones.",
+        "de": "Regelmäßige Messung des Wasserverbrauchs und Erkennung von Abweichungen."
+      }
+    }
+  ]
+}

@@ -654,29 +654,13 @@
         ],
         "operationId": "getThesaurus",
         "summary": "Découvrir les vocabulaires et la publication courante",
-        "description": "Surface de lecture partenaire. Une publication fixe ses valeurs/dates ; les concepts dépréciés et retirés restent résolvables. Aucun scope supplémentaire n’est exigé. lang localise le nom des vocabulaires dans data.domains et dans data.releases[].domains ; name_i18n conserve les traductions de métadonnées disponibles et requested_lang/effective_lang rendent le repli explicite. required_languages reste une règle de publication, indépendante de la langue de réponse. Les identifiants, as_of et checksums stockés sont conservés ; l’ETag identifie la représentation HTTP localisée.",
+        "description": "Découvre la publication courante et les vocabulaires publics. `lang` localise les noms de domaines. `domains` et `status` sont rejetés.",
         "parameters": [
-          {
-            "name": "domains",
-            "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
-            "schema": {
-              "type": "string",
-              "example": "taxonomy_hlo,taxonomy_hot"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
-            "schema": {
-              "type": "string"
-            }
-          },
+
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 du nom des vocabulaires dans data.domains et data.releases[].domains. requested_lang est canonicalisée ; effective_lang indique la langue réellement utilisée. Résolution : locale demandée, variante en minuscules, langue de base, fr, puis autre traduction disponible. name_i18n contient les traductions de métadonnées disponibles ; required_languages reste inchangé. Les traductions des concepts sont indépendantes.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -807,7 +791,7 @@
         ],
         "operationId": "getThesaurusRelease",
         "summary": "Lire le manifeste d’une publication",
-        "description": "Le manifeste contient le périmètre, as_of, previous_release_id, empreinte, provenance, licence effective et attribution. lang localise le nom des vocabulaires de data.domains, avec name_i18n et requested_lang/effective_lang. La projection conserve les identifiants, as_of, checksums stockés et règles required_languages ; l’ETag identifie la représentation HTTP localisée.",
+        "description": "Manifeste immuable de la publication demandée. Les noms de domaines sont localisés dans ce snapshot; metadata_scope vaut release_snapshot et metadata_checksum est facultatif dans les snapshots historiques. domains et status sont rejetés.",
         "parameters": [
           {
             "name": "releaseId",
@@ -821,26 +805,9 @@
             "description": "Identifiant immuable de publication ; ne pas confondre avec contract_version."
           },
           {
-            "name": "domains",
-            "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
-            "schema": {
-              "type": "string",
-              "example": "taxonomy_hlo,taxonomy_hot"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 du nom des vocabulaires de data.domains. requested_lang est canonicalisée ; effective_lang indique la langue réellement utilisée. Résolution : locale demandée, variante en minuscules, langue de base, fr, puis autre traduction disponible. name_i18n contient les traductions de métadonnées disponibles ; required_languages reste inchangé. Les traductions des concepts sont indépendantes.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -971,7 +938,7 @@
         ],
         "operationId": "listThesaurusConcepts",
         "summary": "Parcourir les concepts d’une publication",
-        "description": "Pagination déterministe attachée à la publication. Une nouvelle publication concurrente ne modifie pas le parcours.",
+        "description": "Liste paginée des concepts de la publication. domains et status filtrent cette publication; sans status, tous les états sont inclus. page_size vaut 100 par défaut (maximum 200).",
         "parameters": [
           {
             "name": "releaseId",
@@ -987,7 +954,7 @@
           {
             "name": "domains",
             "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "description": "Domaines publics CSV (1–100 éléments) ; absent = périmètre livré. Domaine interne/inconnu renvoie une erreur générique (400).",
             "schema": {
               "type": "string",
               "example": "taxonomy_hlo,taxonomy_hot"
@@ -996,7 +963,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "description": "États CSV parmi active,deprecated,retired (1–100 éléments) ; absent = tous les états.",
             "schema": {
               "type": "string"
             }
@@ -1004,7 +971,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1162,7 +1129,7 @@
         ],
         "operationId": "getThesaurusConcept",
         "summary": "Lire un concept dans une publication",
-        "description": "Un concept retiré connu répond 200 avec lifecycle et ses remplacements ; un inconnu répond 404.",
+        "description": "Concept de la publication immuable demandée. La réponse conserve les maps de langue et expose le fallback réellement utilisé.",
         "parameters": [
           {
             "name": "releaseId",
@@ -1188,7 +1155,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1319,7 +1286,7 @@
         ],
         "operationId": "resolveThesaurusConcept",
         "summary": "Résoudre une URI pérenne dans la publication courante",
-        "description": "Résolution réservée aux partenaires authentifiés ; sans clé 401. Le concept ne change pas d’identité après renommage ou dépréciation.",
+        "description": "Résout le concept dans la publication courante. La réponse conserve les maps de langue et expose le fallback réellement utilisé.",
         "parameters": [
           {
             "name": "conceptId",
@@ -1334,7 +1301,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1465,7 +1432,7 @@
         ],
         "operationId": "listThesaurusChanges",
         "summary": "Lire les changements depuis la publication précédente",
-        "description": "added/modified/deprecated/retired avec before et after ; aucun retrait ne supprime physiquement le concept. Enchaîner les publications intermédiaires pour un delta éloigné.",
+        "description": "Changements par rapport à previous_release_id. domains et status filtrent les concepts; sans status, tous les états sont inclus.",
         "parameters": [
           {
             "name": "releaseId",
@@ -1481,7 +1448,7 @@
           {
             "name": "domains",
             "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "description": "Domaines publics CSV (1–100 éléments) ; absent = périmètre livré. Domaine interne/inconnu renvoie une erreur générique (400).",
             "schema": {
               "type": "string",
               "example": "taxonomy_hlo,taxonomy_hot"
@@ -1490,7 +1457,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "description": "États CSV parmi active,deprecated,retired (1–100 éléments) ; absent = tous les états.",
             "schema": {
               "type": "string"
             }
@@ -1498,7 +1465,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1656,7 +1623,7 @@
         ],
         "operationId": "exportThesaurus",
         "summary": "Exporter une publication en JSON ou JSON-LD/SKOS",
-        "description": "format=json utilise l’enveloppe habituelle ; format=jsonld renvoie un document RDF autonome application/ld+json, version dans X-Bertel-Vocabulary-Release. Les langues absentes ne sont jamais inventées.",
+        "description": "Export filtré de la publication demandée. JSON-LD est autonome et conserve les maps SKOS de libellés et définitions par langue; ETag lié à la représentation.",
         "parameters": [
           {
             "name": "releaseId",
@@ -1672,7 +1639,7 @@
           {
             "name": "domains",
             "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "description": "Domaines publics CSV (1–100 éléments) ; absent = périmètre livré. Domaine interne/inconnu renvoie une erreur générique (400).",
             "schema": {
               "type": "string",
               "example": "taxonomy_hlo,taxonomy_hot"
@@ -1681,7 +1648,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "description": "États CSV parmi active,deprecated,retired (1–100 éléments) ; absent = tous les états.",
             "schema": {
               "type": "string"
             }
@@ -1689,7 +1656,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1762,8 +1729,27 @@
                     },
                     "@graph": {
                       "type": "array",
+                      "description": "Les concepts de groupe ou d’action peuvent inclure les prédicats Bertel `bertel:member` et `bertel:memberOf`, sous forme de références `@id`. Ils représentent la relation de groupe native et ne remplacent pas `skos:broader`.",
                       "items": {
-                        "type": "object"
+                        "type": "object",
+                        "properties": {
+                          "bertel:memberOf": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": ["@id"],
+                              "properties": {"@id": {"type": "string", "format": "uri"}}
+                            }
+                          },
+                          "bertel:member": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": ["@id"],
+                              "properties": {"@id": {"type": "string", "format": "uri"}}
+                            }
+                          }
+                        }
                       }
                     }
                   }
@@ -2047,7 +2033,10 @@
           "preferred_labels",
           "definitions",
           "lifecycle",
-          "assignable"
+          "assignable",
+          "requested_lang",
+          "effective_lang",
+          "definition_lang"
         ],
         "properties": {
           "context_key": { "type": "string", "description": "Portée opaque du code (schéma ou catégorie). Le code n’est unique que dans (domain,context_key,code) ; utiliser concept_id/uri comme identité de synchronisation." },
@@ -2066,13 +2055,15 @@
             "type": "string"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Nom résolu dans preferred_labels ; le champ scalaire historique reste français s’il n’existe aucune traduction correspondante."
           },
           "description": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Définition résolue dans definitions ; le champ scalaire historique reste français s’il n’existe aucune traduction correspondante."
           },
           "preferred_labels": {
             "type": "object",
@@ -2087,19 +2078,22 @@
             }
           },
           "requested_lang": {
-            "type": "string"
+            "type": "string",
+            "description": "Tag BCP 47 canonique demandé par le client."
           },
           "effective_lang": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Langue réelle du nom, ou fr lorsque le champ historique français est utilisé; null si inconnue."
           },
           "definition_lang": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Langue réelle de la définition, ou fr lorsque le champ historique français est utilisé; null si inconnue."
           },
           "labels": {
             "type": "array",
@@ -2143,6 +2137,24 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "member_of": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Optionnel. Groupes natifs qui incluent cette action, figés dans la publication. Absent des anciens snapshots et des actions sans groupe public gouverné. Cette appartenance ne remplace pas broader, related ou le contexte de catégorie."
+          },
+          "members": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Optionnel. Actions natives appartenant à ce groupe, figées dans la publication. Absent des anciens snapshots qui ne contiennent pas ce champ ; un groupe publié sans membre public gouverné peut contenir un tableau vide. Cette appartenance ne remplace pas broader, related ou le parent de catégorie."
           },
           "narrower": {
             "type": "array",
@@ -2250,7 +2262,7 @@
       },
       "ThesaurusVocabulary": {
         "type": "object",
-        "description": "Métadonnées d’un vocabulaire dans un manifeste localisé. Le catalogue de traductions couvre les titres français standards et les alias identiques au domaine. Un titre personnalisé ou inconnu conserve son français en l’absence de traduction name_i18n publiée. Les traductions publiées ont priorité ; en français, le titre stocké dans le manifeste fait autorité. Ces traductions de métadonnées ne traduisent pas les concepts.",
+        "description": "Métadonnées d’un vocabulaire dans un manifeste localisé. Les nouvelles publications conservent leurs noms figés sans enrichissement externe. Pour les anciens manifestes, le catalogue versionné traduit uniquement les alias français exactement relus pour ce domaine ; un titre personnalisé ou inconnu conserve son français sans traduction publiée. Cette projection historique ne réécrit aucun manifeste. Ces noms de métadonnées ne traduisent pas les concepts.",
         "required": ["domain", "name", "name_i18n", "requested_lang", "effective_lang"],
         "properties": {
           "domain": { "type": "string", "example": "activity_type" },
@@ -2258,6 +2270,7 @@
           "name_i18n": { "type": "object", "description": "Traductions de métadonnées disponibles, dont le titre français stocké dans le manifeste.", "additionalProperties": { "type": "string" }, "example": { "fr": "Types d’activité", "en": "Activity types" } },
           "requested_lang": { "type": "string", "description": "Locale BCP 47 canonicalisée demandée par le partenaire.", "example": "en" },
           "effective_lang": { "type": ["string", "null"], "description": "Langue réellement utilisée pour name ; null si aucun titre n’est disponible.", "example": "en" },
+          "name_metadata_scope": { "type": "string", "enum": ["release_snapshot", "reviewed_legacy_dictionary", "legacy_scalar"], "description": "Provenance des noms de domaine : map figée, dictionnaire historique versionné ou scalaire historique français." },
           "source_kind": { "type": "string", "example": "ref_code" },
           "require_definition": { "type": "boolean" },
           "required_languages": { "type": "array", "description": "Langues exigées pour la publication éditoriale ; ni la langue de réponse, ni l’inventaire des traductions disponibles.", "items": { "type": "string" }, "example": ["fr"] }
@@ -2273,6 +2286,8 @@
           "previous_release_id": { "type": ["integer", "null"] },
           "as_of": { "type": "string", "format": "date-time" },
           "checksum": { "type": "string", "description": "Empreinte stockée de la publication ; utiliser l’ETag pour la représentation HTTP localisée." },
+          "metadata_scope": { "type": "string", "const": "release_snapshot", "description": "Le manifeste est lu dans la publication sélectionnée. Les traductions HTTP des titres historiques sont qualifiées séparément." },
+          "metadata_checksum": { "type": "string", "description": "MD5 des domaines bruts figés en JSONB PostgreSQL, avant localisation HTTP ; absent des anciens manifestes sans cette empreinte." },
           "domains": { "type": "array", "items": { "$ref": "#/components/schemas/ThesaurusVocabulary" } },
           "releases": { "type": "array", "description": "Présent à la découverte : manifestes récents dont les domaines utilisent la même langue demandée.", "items": { "$ref": "#/components/schemas/ThesaurusManifest" } }
         },
@@ -2334,6 +2349,10 @@
                   "integer",
                   "null"
                 ]
+              },
+              "metadata_checksum": {
+                "type": "string",
+                "description": "MD5 de domains::text JSONB PostgreSQL pour le snapshot; distinct du checksum conceptuel. Absent sur les publications historiques qui ne le possèdent pas."
               }
             }
           },

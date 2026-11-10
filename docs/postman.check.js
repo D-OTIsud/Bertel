@@ -189,6 +189,32 @@ check('OpenAPI and implemented public HTTP routes agree', () => {
   const documented = new Set(Object.entries(openapi.paths).flatMap(([route, spec]) => Object.keys(spec).filter((method) => /^(get|post|put|patch|delete|head|options)$/.test(method)).map((method) => `${method.toUpperCase()} ${canonical(route)}`)));
   assert.deepEqual([...implemented].sort(), [...documented].sort(), 'a public HTTP route is missing from OpenAPI, or OpenAPI describes an unimplemented route');
 });
+check('every structured Postman URL matches its raw URL', () => {
+  for (const entry of entries) {
+    const url = entry.item.request.url;
+    if (!url || typeof url === 'string') continue;
+    assert.ok(typeof url.raw === 'string' && Array.isArray(url.host) && Array.isArray(url.path),
+      `missing structured URL fields: ${entry.item.name}`);
+    const variableHost = url.raw.match(/^\{\{[^}]+\}\}/)?.[0];
+    let suffix;
+    if (variableHost) {
+      assert.ok(url.host.includes(variableHost), `raw host disagrees with structured host: ${entry.item.name}`);
+      suffix = url.raw.slice(variableHost.length);
+    } else {
+      const parsed = new URL(url.raw);
+      assert.equal(url.host.join('.'), parsed.host, `raw host disagrees with structured host: ${entry.item.name}`);
+      suffix = parsed.pathname + parsed.search;
+    }
+    const rawPath = suffix.split(/[?#]/, 1)[0] || '/';
+    const structuredPath = `/${url.path.join('/')}`;
+    assert.equal(structuredPath, rawPath, `raw path disagrees with structured path: ${entry.item.name}`);
+    const rawQuery = suffix.includes('?') ? suffix.slice(suffix.indexOf('?') + 1).split('#', 1)[0] : '';
+    const rawParameters = [...new URLSearchParams(rawQuery).entries()];
+    const structuredParameters = new URLSearchParams();
+    for (const query of url.query || []) if (!query.disabled) structuredParameters.append(query.key, query.value ?? '');
+    assert.deepEqual([...structuredParameters.entries()], rawParameters, `raw query disagrees with structured query: ${entry.item.name}`);
+  }
+});
 check('legacy RPC signatures and object types remain canonical', () => {
   const types = new Set(graph.nodes.find((n) => n.kind === 'enum' && n.id === 'public.object_type').props.values);
   for (const entry of legacy) {
@@ -370,7 +396,10 @@ check('manifest discovery captures a fresh release and invalidates dependent sta
   const s = sandbox(entry, {
     collection: { thesaurus_release_id: '17', thesaurus_previous_release_id: '16', thesaurus_next_cursor: 'stale' },
     environment: { thesaurus_release_id: 'stale-environment' },
-    body: { meta: { contract_version: '1.0.0', release_id: 42, previous_release_id: 39, vocabulary_release: 42 }, data: { domains: [] } },
+    body: { meta: { contract_version: '1.0.0', release_id: 42, previous_release_id: 39, vocabulary_release: 42 }, data: { domains: [
+      { domain: 'opening_schedule_type', name: 'Types d’horaires', requested_lang: 'fr', effective_lang: 'fr',
+        name_i18n: { fr: 'Types d’horaires', en: 'Opening schedule types', es: 'Tipos de horario', de: 'Öffnungszeitarten' } },
+    ] } },
   }).pre().post();
   assert.deepEqual(s.state.failures, []);
   assert.equal(s.pm.collectionVariables.get('thesaurus_release_id'), '42');
@@ -399,6 +428,30 @@ check('JSON-LD and conditional-read assertions reject broken representations', (
   const bad304 = sandbox(conditional, { status: 304, rawBody: '{}' }).pre().post({ globalOnly: true });
   assert.ok(bad304.state.failures.length > 0);
   assert.equal(bad304.state.jsonCalls, 0);
+});
+
+check('discovery language scripts detect French returned for a translated domain and preserve legacy history', () => {
+  const names = { fr: 'Types d’horaires', en: 'Opening schedule types', es: 'Tipos de horario', de: 'Öffnungszeitarten' };
+  for (const requested of ['fr', 'en', 'es', 'de', 'en-GB']) {
+    const entry = publicEntries.find(e => rawUrl(e).endsWith(`/thesaurus?lang=${requested}`));
+    assert.ok(entry, `Missing discovery example for ${requested}`);
+    const effective = requested.split('-')[0];
+    const body = { meta: { contract_version: '1.0.0', release_id: 42, vocabulary_release: 42 }, data: {
+      domains: [{ domain: 'opening_schedule_type', name: names[effective], name_i18n: names, requested_lang: requested, effective_lang: effective }],
+      releases: [{ release_id: 1, is_current: false, metadata_scope: 'release_snapshot', domains: [
+        { domain: 'opening_schedule_type', name: 'Modes d’ouverture', require_definition: false, required_languages: ['fr'], requested_lang: requested, effective_lang: 'fr' },
+      ] }],
+    } };
+    const valid = sandbox(entry, { body }).pre().post();
+    assert.deepEqual(valid.state.failures, [], `Valid ${requested} representation failed`);
+    if (requested !== 'fr') {
+      const broken = structuredClone(body);
+      broken.data.domains[0].name = names.fr;
+      broken.data.domains[0].effective_lang = 'fr';
+      assert.ok(sandbox(entry, { body: broken }).pre().post().state.failures.length > 0,
+        `${requested} script failed to detect the production localization defect`);
+    }
+  }
 });
 
 console.log(`Postman checks PASS: ${passed} offline checks; ${Object.keys(openapi.paths).length} OpenAPI paths; ${entries.length} requests. No HTTP or database execution.`);

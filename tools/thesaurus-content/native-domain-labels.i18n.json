@@ -1,0 +1,56 @@
+{
+  "iti_assoc_role": {
+    "fr": "Rôles d’association d’itinéraire",
+    "en": "Itinerary association roles",
+    "es": "Funciones de asociación a itinerarios",
+    "de": "Rollen der Zuordnung zu Routen"
+  },
+  "object_relation_type": {
+    "fr": "Types de relation entre fiches",
+    "en": "Listing relationship types",
+    "es": "Tipos de relación entre fichas",
+    "de": "Beziehungstypen zwischen Einträgen"
+  },
+  "capacity_metric": {
+    "fr": "Indicateurs de capacité",
+    "en": "Capacity indicators",
+    "es": "Indicadores de capacidad",
+    "de": "Kapazitätskennzahlen"
+  },
+  "legal_type": {
+    "fr": "Informations et justificatifs administratifs",
+    "en": "Administrative information and supporting documents",
+    "es": "Datos y justificantes administrativos",
+    "de": "Verwaltungsangaben und Nachweise"
+  },
+  "review_source": {
+    "fr": "Sources d’avis",
+    "en": "Review sources",
+    "es": "Fuentes de opiniones",
+    "de": "Bewertungsquellen"
+  },
+  "actor_role": {
+    "fr": "Rôles des acteurs",
+    "en": "Actor relationship roles",
+    "es": "Funciones de relación de los actores",
+    "de": "Beziehungsrollen der Akteure"
+  },
+  "contact_role": {
+    "fr": "Rôles des contacts",
+    "en": "Contact roles",
+    "es": "Funciones de contacto",
+    "de": "Kontaktrollen"
+  },
+  "org_role": {
+    "fr": "Rôles des organisations liées",
+    "en": "Linked organization roles",
+    "es": "Funciones de las organizaciones vinculadas",
+    "de": "Rollen verknüpfter Organisationen"
+  },
+  "sustainability_group": {
+    "fr": "Groupes d’actions de durabilité",
+    "en": "Sustainability action groups",
+    "es": "Grupos de acciones de sostenibilidad",
+    "de": "Gruppen von Nachhaltigkeitsmaßnahmen"
+  }
+}

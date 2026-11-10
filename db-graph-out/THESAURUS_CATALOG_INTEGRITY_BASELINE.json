@@ -1,0 +1,1543 @@
+{
+  "_capture": {
+    "transport": "Bertel Supabase MCP execute_sql",
+    "project_ref": "ryycrdhlkmzpxwwwwupy",
+    "phase": "pre-adapter production baseline",
+    "counts_and_identity_hashes_only": true,
+    "independent_statement_snapshots": true
+  },
+  "catalogs": 104,
+  "canonical_public_foreign_keys": 67,
+  "physical_partition_constraints_ignored": 162,
+  "checks": {
+    "identity:ref_amenity": {
+      "key": "ref_amenity",
+      "rows": 167,
+      "identity_checksum": "1939e503b8adfcbb97778e5711310276",
+      "distinct_identities": 167,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:mood": {
+      "key": "ref_code:mood",
+      "rows": 10,
+      "identity_checksum": "17e71af339e4abc783828ca4bb3158bc",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_actor_role": {
+      "key": "ref_actor_role",
+      "rows": 5,
+      "identity_checksum": "5ddc83cc9251262d0a9bbfc7eb3d34dd",
+      "distinct_identities": 5,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:allergen": {
+      "key": "ref_code:allergen",
+      "rows": 14,
+      "identity_checksum": "83c434dfeaf35a438df52e2d6afb7aa3",
+      "distinct_identities": 14,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:bed_type": {
+      "key": "ref_code:bed_type",
+      "rows": 10,
+      "identity_checksum": "ee5b607ae3608f5eaf7fbbb3612cdb94",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:media_tag": {
+      "key": "ref_code:media_tag",
+      "rows": 23,
+      "identity_checksum": "7d4e73acd964fa024de8425740f45a48",
+      "distinct_identities": 23,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_capacity_metric": {
+      "key": "ref_capacity_metric",
+      "rows": 12,
+      "identity_checksum": "0ad176db632615d3e81d58d46024eb2b",
+      "distinct_identities": 12,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:event_type": {
+      "key": "ref_code:event_type",
+      "rows": 10,
+      "identity_checksum": "cb471c9d7480a2cb1b61c35a74c1430a",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:media_type": {
+      "key": "ref_code:media_type",
+      "rows": 11,
+      "identity_checksum": "f24e10eacafb517806b1f3e06f017007",
+      "distinct_identities": 11,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_catalog_registry": {
+      "key": "ref_catalog_registry",
+      "rows": 103,
+      "identity_checksum": "d75f3f17ab0b3e3f4fb32b32e34e4a83",
+      "distinct_identities": 103,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:client_type": {
+      "key": "ref_code:client_type",
+      "rows": 10,
+      "identity_checksum": "e1f583ea12b564f49354901cb0e43fe8",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:dietary_tag": {
+      "key": "ref_code:dietary_tag",
+      "rows": 12,
+      "identity_checksum": "2f30723a8168a50ac1621cd32701995f",
+      "distinct_identities": 12,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:contact_kind": {
+      "key": "ref_code:contact_kind",
+      "rows": 15,
+      "identity_checksum": "c924ac5e22d056e541e8c8d425589f0e",
+      "distinct_identities": 15,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:cuisine_type": {
+      "key": "ref_code:cuisine_type",
+      "rows": 43,
+      "identity_checksum": "0d7c2388791b290f76b5215155b7f453",
+      "distinct_identities": 43,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:demand_topic": {
+      "key": "ref_code:demand_topic",
+      "rows": 20,
+      "identity_checksum": "bb5b17352b5bc0f1088370c7d69b0559",
+      "distinct_identities": 20,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:iti_practice": {
+      "key": "ref_code:iti_practice",
+      "rows": 16,
+      "identity_checksum": "afafcb98f84e05f1e117fecd4db28740",
+      "distinct_identities": 16,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:activity_type": {
+      "key": "ref_code:activity_type",
+      "rows": 10,
+      "identity_checksum": "a2af20a8493cdbfbe1ec72a96bb8d5fb",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:crm_sentiment": {
+      "key": "ref_code:crm_sentiment",
+      "rows": 6,
+      "identity_checksum": "b7ba2d57b327c2e4ace9d7d03ee8b20f",
+      "distinct_identities": 6,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:document_type": {
+      "key": "ref_code:document_type",
+      "rows": 3,
+      "identity_checksum": "5b65c61da7b350ec64bd00ec6da782f2",
+      "distinct_identities": 3,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:feedback_type": {
+      "key": "ref_code:feedback_type",
+      "rows": 10,
+      "identity_checksum": "3668a0cf840f35d60c693e0873e8c0b8",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:menu_category": {
+      "key": "ref_code:menu_category",
+      "rows": 12,
+      "identity_checksum": "571d98e3a7157215176169c9c23f39e8",
+      "distinct_identities": 12,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:amenity_family": {
+      "key": "ref_code:amenity_family",
+      "rows": 22,
+      "identity_checksum": "da3ded3d9ad0c51c46c1691f46b93257",
+      "distinct_identities": 22,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:booking_status": {
+      "key": "ref_code:booking_status",
+      "rows": 10,
+      "identity_checksum": "2be397ca06aeb00abae4973372ce156a",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:insurance_type": {
+      "key": "ref_code:insurance_type",
+      "rows": 10,
+      "identity_checksum": "68e89870b899a288bc02b7cdf1265e96",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:iti_difficulty": {
+      "key": "ref_code:iti_difficulty",
+      "rows": 5,
+      "identity_checksum": "3fd827998242b6e1d2370ba3128274d8",
+      "distinct_identities": 5,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:iti_stage_kind": {
+      "key": "ref_code:iti_stage_kind",
+      "rows": 8,
+      "identity_checksum": "4215af5f869e9e40cc072094f91b6980",
+      "distinct_identities": 8,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:language_level": {
+      "key": "ref_code:language_level",
+      "rows": 7,
+      "identity_checksum": "226779d177df3166d71901914e745e90",
+      "distinct_identities": 7,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_classification_value": {
+      "key": "ref_classification_value",
+      "rows": 125,
+      "identity_checksum": "40a318d2c508d84ba8fe2c47f63684a6",
+      "distinct_identities": 125,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:assistance_type": {
+      "key": "ref_code:assistance_type",
+      "rows": 10,
+      "identity_checksum": "5ade100cdf229af58fe3766d865d97d4",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:environment_tag": {
+      "key": "ref_code:environment_tag",
+      "rows": 30,
+      "identity_checksum": "e305345928d71c65ea1ff922715572f5",
+      "distinct_identities": 30,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:iti_open_status": {
+      "key": "ref_code:iti_open_status",
+      "rows": 7,
+      "identity_checksum": "bcc90013fb190278644a4d7d9b3aebce",
+      "distinct_identities": 7,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:membership_tier": {
+      "key": "ref_code:membership_tier",
+      "rows": 4,
+      "identity_checksum": "dc7d83ebccc8281d09536c60c771500d",
+      "distinct_identities": 4,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_classification_scheme": {
+      "key": "ref_classification_scheme",
+      "rows": 39,
+      "identity_checksum": "2084da0860a4eccd22d573d10a8a0e62",
+      "distinct_identities": 39,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:destination_type": {
+      "key": "ref_code:destination_type",
+      "rows": 10,
+      "identity_checksum": "568211fd84cf429c3145d0090afe0a07",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_capacity_applicability": {
+      "key": "ref_capacity_applicability",
+      "rows": 60,
+      "identity_checksum": "6e08308ff5fe339abb3890884c69ac02",
+      "distinct_identities": 60,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:meeting_equipment": {
+      "key": "ref_code:meeting_equipment",
+      "rows": 11,
+      "identity_checksum": "6b786aba15b133ab990feef26f7fdce6",
+      "distinct_identities": 11,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:accommodation_type": {
+      "key": "ref_code:accommodation_type",
+      "rows": 10,
+      "identity_checksum": "2f306bd228bc2c8b8ae0b6213f0e90d4",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:membership_campaign": {
+      "key": "ref_code:membership_campaign",
+      "rows": 3,
+      "identity_checksum": "dc247e688fa5d4b366e8457dc3faa166",
+      "distinct_identities": 3,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:accommodation_family": {
+      "key": "ref_code:accommodation_family",
+      "rows": 6,
+      "identity_checksum": "be9759827ab65796c9102eaed7ff4645",
+      "distinct_identities": 6,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:distribution_channel": {
+      "key": "ref_code:distribution_channel",
+      "rows": 8,
+      "identity_checksum": "c1e63b435cb2fd95767db9b4f4fd7498",
+      "distinct_identities": 8,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:accommodation_unit_type": {
+      "key": "ref_code:accommodation_unit_type",
+      "rows": 22,
+      "identity_checksum": "7c06efe08562f8c6307e8af986167a99",
+      "distinct_identities": 22,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_classification_equivalent_group": {
+      "key": "ref_classification_equivalent_group",
+      "rows": 176,
+      "identity_checksum": "1a4d6b61f87cd566d72d22d9cdc60d8c",
+      "distinct_identities": 176,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_classification_equivalent_action": {
+      "key": "ref_classification_equivalent_action",
+      "rows": 544,
+      "identity_checksum": "414cd4c5b2c03ea913b18c21bd9eb6df",
+      "distinct_identities": 544,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_classification_scheme_applicability": {
+      "key": "ref_classification_scheme_applicability",
+      "rows": 166,
+      "identity_checksum": "792f98cbd21adca2ee3cf809c31dee88",
+      "distinct_identities": 166,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_commune": {
+      "key": "ref_commune",
+      "rows": 24,
+      "identity_checksum": "a040df4056b908942ef6f0a2a80c8d76",
+      "distinct_identities": 24,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_document": {
+      "key": "ref_document",
+      "rows": 1981,
+      "identity_checksum": "3c9aa05afdf872f535ece2f359858c9b",
+      "distinct_identities": 1981,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:weekday": {
+      "key": "ref_code:weekday",
+      "rows": 7,
+      "identity_checksum": "3a9ffecedf8e0e67fb7e08989b0e71d1",
+      "distinct_identities": 7,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_contact_role": {
+      "key": "ref_contact_role",
+      "rows": 6,
+      "identity_checksum": "b9bf0280863d8c50befb3e476834f753",
+      "distinct_identities": 6,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:room_type": {
+      "key": "ref_code:room_type",
+      "rows": 10,
+      "identity_checksum": "7f52049b9a69b0490c4f1e24b4a5c7ba",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:view_type": {
+      "key": "ref_code:view_type",
+      "rows": 13,
+      "identity_checksum": "0cd1726038cb07a85d86fcbc1ba6f0fb",
+      "distinct_identities": 13,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_facet_registry": {
+      "key": "ref_facet_registry",
+      "rows": 13,
+      "identity_checksum": "6b0706c29ecde585a785a693ad8705e2",
+      "distinct_identities": 13,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:price_kind": {
+      "key": "ref_code:price_kind",
+      "rows": 15,
+      "identity_checksum": "4b8c17f6f703c627994294e09dd8d591",
+      "distinct_identities": 15,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:price_type": {
+      "key": "ref_code:price_type",
+      "rows": 8,
+      "identity_checksum": "41cb36718cee7079c95e79ff1ef73928",
+      "distinct_identities": 8,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:price_unit": {
+      "key": "ref_code:price_unit",
+      "rows": 20,
+      "identity_checksum": "ec067e645fd382c13c5f8c0852936c11",
+      "distinct_identities": 20,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:season_type": {
+      "key": "ref_code:season_type",
+      "rows": 10,
+      "identity_checksum": "43b0b4f27432fb6b58a2c13f30a7b6ea",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:package_type": {
+      "key": "ref_code:package_type",
+      "rows": 10,
+      "identity_checksum": "e8cad4d32eaf808ddab004937a9f6f90",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:service_type": {
+      "key": "ref_code:service_type",
+      "rows": 10,
+      "identity_checksum": "ec4fe2f4533257c283e566b9c005507e",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_act": {
+      "key": "ref_code:taxonomy_act",
+      "rows": 24,
+      "identity_checksum": "d60ed256957868dff673961aad858b70",
+      "distinct_identities": 24,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_asc": {
+      "key": "ref_code:taxonomy_asc",
+      "rows": 7,
+      "identity_checksum": "6ffe74dcc4d4a5e5a588cde8623c7148",
+      "distinct_identities": 7,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_com": {
+      "key": "ref_code:taxonomy_com",
+      "rows": 13,
+      "identity_checksum": "302067ce9004c3bb955ae8794fb3601c",
+      "distinct_identities": 13,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_fma": {
+      "key": "ref_code:taxonomy_fma",
+      "rows": 12,
+      "identity_checksum": "211e3ba8826580f28a0b3579aa125b37",
+      "distinct_identities": 12,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_hlo": {
+      "key": "ref_code:taxonomy_hlo",
+      "rows": 15,
+      "identity_checksum": "1d5e02a6dd60d2dc771591248d978572",
+      "distinct_identities": 15,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_hot": {
+      "key": "ref_code:taxonomy_hot",
+      "rows": 11,
+      "identity_checksum": "f80cdc78e6f821a8cc5f2b8ff89a2123",
+      "distinct_identities": 11,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_hpa": {
+      "key": "ref_code:taxonomy_hpa",
+      "rows": 9,
+      "identity_checksum": "7d33ca2557e542c541e159d772078513",
+      "distinct_identities": 9,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_iti": {
+      "key": "ref_code:taxonomy_iti",
+      "rows": 7,
+      "identity_checksum": "e8a5c713037c60903641ba7c30f4d57d",
+      "distinct_identities": 7,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_loi": {
+      "key": "ref_code:taxonomy_loi",
+      "rows": 37,
+      "identity_checksum": "ff99adaf6bf6117b46a75b2d1245a37f",
+      "distinct_identities": 37,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_org": {
+      "key": "ref_code:taxonomy_org",
+      "rows": 8,
+      "identity_checksum": "9cc94e5c2efec1a2fe457b275550c64c",
+      "distinct_identities": 8,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_pcu": {
+      "key": "ref_code:taxonomy_pcu",
+      "rows": 7,
+      "identity_checksum": "eef260b26331220c1eda344e6027447e",
+      "distinct_identities": 7,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_pna": {
+      "key": "ref_code:taxonomy_pna",
+      "rows": 14,
+      "identity_checksum": "2baae21809ff81dd98d7d83449b1b62c",
+      "distinct_identities": 14,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_prd": {
+      "key": "ref_code:taxonomy_prd",
+      "rows": 11,
+      "identity_checksum": "ea1b2094d1aee4fa934e81fd7b6f704b",
+      "distinct_identities": 11,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_psv": {
+      "key": "ref_code:taxonomy_psv",
+      "rows": 17,
+      "identity_checksum": "eb4c84a958b6d21f32d104fe24783c23",
+      "distinct_identities": 17,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_res": {
+      "key": "ref_code:taxonomy_res",
+      "rows": 30,
+      "identity_checksum": "442b04c2b21e27982951e6365a6a2a0d",
+      "distinct_identities": 30,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_rva": {
+      "key": "ref_code:taxonomy_rva",
+      "rows": 4,
+      "identity_checksum": "eb9a58d08f1ccdd682fb590194495c99",
+      "distinct_identities": 4,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_spu": {
+      "key": "ref_code:taxonomy_spu",
+      "rows": 15,
+      "identity_checksum": "042f11370a5d69e3b6faab322b2969a3",
+      "distinct_identities": 15,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_vil": {
+      "key": "ref_code:taxonomy_vil",
+      "rows": 5,
+      "identity_checksum": "90c4485e11ba1fe1d49c5d98d8e115a8",
+      "distinct_identities": 5,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:tourism_type": {
+      "key": "ref_code:tourism_type",
+      "rows": 10,
+      "identity_checksum": "4dd02afe0eaed5cb686754adba4e5a7d",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_interop_crosswalk": {
+      "key": "ref_interop_crosswalk",
+      "rows": 80,
+      "identity_checksum": "c28fa112874b95067fe617694aed9d22",
+      "distinct_identities": 80,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:taxonomy_camp": {
+      "key": "ref_code:taxonomy_camp",
+      "rows": 3,
+      "identity_checksum": "a59abc388fc467092bbdc06ea1252437",
+      "distinct_identities": 3,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:payment_method": {
+      "key": "ref_code:payment_method",
+      "rows": 15,
+      "identity_checksum": "a121aa1267c1f6da3800d8e05108933f",
+      "distinct_identities": 15,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:promotion_type": {
+      "key": "ref_code:promotion_type",
+      "rows": 14,
+      "identity_checksum": "539d10f5c7507120ff20d881dbb64a42",
+      "distinct_identities": 14,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:social_network": {
+      "key": "ref_code:social_network",
+      "rows": 11,
+      "identity_checksum": "cf4842c624dbd92458667d0a3733d168",
+      "distinct_identities": 11,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:transport_type": {
+      "key": "ref_code:transport_type",
+      "rows": 10,
+      "identity_checksum": "a867fd7dfa03b3ecfd4f30ee810dac92",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_facet_applicability": {
+      "key": "ref_facet_applicability",
+      "rows": 23,
+      "identity_checksum": "c02e4fc77c515b0d53f0dcac19e04fd1",
+      "distinct_identities": 23,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:trail_link_role": {
+      "key": "ref_code:trail_link_role",
+      "rows": 6,
+      "identity_checksum": "796baa8bbb2a6b9c814296d2cf3f353d",
+      "distinct_identities": 6,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code_domain_registry": {
+      "key": "ref_code_domain_registry",
+      "rows": 19,
+      "identity_checksum": "5c4ed50428d8a0b2a92960ea58e1775e",
+      "distinct_identities": 19,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:partnership_type": {
+      "key": "ref_code:partnership_type",
+      "rows": 10,
+      "identity_checksum": "06e3487374a9d317de5c6e66a3d749dc",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code_taxonomy_closure": {
+      "key": "ref_code_taxonomy_closure",
+      "rows": 560,
+      "identity_checksum": "960b2fef921566b8225719c1447f74c8",
+      "distinct_identities": 560,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:opening_period_type": {
+      "key": "ref_code:opening_period_type",
+      "rows": 3,
+      "identity_checksum": "a0e3d708542d0e26cc978c7bc7803eea",
+      "distinct_identities": 3,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_code:opening_schedule_type": {
+      "key": "ref_code:opening_schedule_type",
+      "rows": 5,
+      "identity_checksum": "6eb687d9c7b115a770a0063b789f972f",
+      "distinct_identities": 5,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_tag": {
+      "key": "ref_tag",
+      "rows": 46,
+      "identity_checksum": "522a81d9b97ac5c01ec9e0fde0abcaaf",
+      "distinct_identities": 46,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_language": {
+      "key": "ref_language",
+      "rows": 20,
+      "identity_checksum": "a14156c5af764d52da7e1a7bd76e122e",
+      "distinct_identities": 20,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_org_role": {
+      "key": "ref_org_role",
+      "rows": 3,
+      "identity_checksum": "3b31065b1566349bf326d89a38f6d0a5",
+      "distinct_identities": 3,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_legal_type": {
+      "key": "ref_legal_type",
+      "rows": 21,
+      "identity_checksum": "9b50142d9f02c889b60c6c26df1e4e88",
+      "distinct_identities": 21,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_permission": {
+      "key": "ref_permission",
+      "rows": 13,
+      "identity_checksum": "9c246703cbf80bce272886eb7f51b17d",
+      "distinct_identities": 13,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_trail_source": {
+      "key": "ref_trail_source",
+      "rows": 1,
+      "identity_checksum": "290013c3795a482f5df7e20aa6041401",
+      "distinct_identities": 1,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_review_source": {
+      "key": "ref_review_source",
+      "rows": 7,
+      "identity_checksum": "6534a6b2be5ae1a832fa1faac3e158fd",
+      "distinct_identities": 7,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_trail_manager": {
+      "key": "ref_trail_manager",
+      "rows": 8,
+      "identity_checksum": "fc5be642eb24dcb9ced07faf9e75f0cc",
+      "distinct_identities": 8,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_iti_assoc_role": {
+      "key": "ref_iti_assoc_role",
+      "rows": 8,
+      "identity_checksum": "2b89f7a1894362ab244890cb3d5bf953",
+      "distinct_identities": 8,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_org_admin_role": {
+      "key": "ref_org_admin_role",
+      "rows": 3,
+      "identity_checksum": "431fa6ea863416cacf33450929c983a8",
+      "distinct_identities": 3,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_org_business_role": {
+      "key": "ref_org_business_role",
+      "rows": 3,
+      "identity_checksum": "cc4968e695254cdd5435a7dd561a807e",
+      "distinct_identities": 3,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_object_relation_type": {
+      "key": "ref_object_relation_type",
+      "rows": 10,
+      "identity_checksum": "93d8bddc5a23261c5bcbe688719adbda",
+      "distinct_identities": 10,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_sustainability_action": {
+      "key": "ref_sustainability_action",
+      "rows": 239,
+      "identity_checksum": "164801a92c2b8ae42ba50de1c0c995a1",
+      "distinct_identities": 239,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "identity:ref_sustainability_action_group": {
+      "key": "ref_sustainability_action_group",
+      "rows": 76,
+      "identity_checksum": "9e4d52b3ce2fcc69864a4186f038f6db",
+      "distinct_identities": 76,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "fk:public.actor:actor_default_role_id_fkey": {
+      "source": "public.actor",
+      "target": "public.ref_actor_role",
+      "validated": true,
+      "constraint": "actor_default_role_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 709,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "2d681919aeb9ef95a8ee01e7119c624d"
+    },
+    "identity:ref_sustainability_action_category": {
+      "key": "ref_sustainability_action_category",
+      "rows": 9,
+      "identity_checksum": "fc8e7b952228d0ae28a0da68252b7c86",
+      "distinct_identities": 9,
+      "duplicate_identities": 0,
+      "missing_key_components": 0
+    },
+    "fk:public.actor_channel:actor_channel_role_id_fkey": {
+      "source": "public.actor_channel",
+      "target": "public.ref_contact_role",
+      "validated": true,
+      "constraint": "actor_channel_role_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.actor_consent:actor_consent_document_id_fkey": {
+      "source": "public.actor_consent",
+      "target": "public.ref_document",
+      "validated": true,
+      "constraint": "actor_consent_document_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.audit_template:audit_template_scheme_id_fkey": {
+      "source": "public.audit_template",
+      "target": "public.ref_classification_scheme",
+      "validated": true,
+      "constraint": "audit_template_scheme_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.contact_channel:contact_channel_role_id_fkey": {
+      "source": "public.contact_channel",
+      "target": "public.ref_contact_role",
+      "validated": true,
+      "constraint": "contact_channel_role_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 118,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "0ef8df72930a412eeff5e4d84ae9917d"
+    },
+    "fk:public.object_amenity:object_amenity_amenity_id_fkey": {
+      "source": "public.object_amenity",
+      "target": "public.ref_amenity",
+      "validated": true,
+      "constraint": "object_amenity_amenity_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 9123,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "f70b8e8b8a34901d752b78314a2402e8"
+    },
+    "fk:public.object_iti:object_iti_status_document_id_fkey": {
+      "source": "public.object_iti",
+      "target": "public.ref_document",
+      "validated": true,
+      "constraint": "object_iti_status_document_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.actor_document:actor_document_document_id_fkey": {
+      "source": "public.actor_document",
+      "target": "public.ref_document",
+      "validated": true,
+      "constraint": "actor_document_document_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 19,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "bc907726fabe5def97799da7f28bee7d"
+    },
+    "fk:public.object_capacity:object_capacity_metric_id_fkey": {
+      "source": "public.object_capacity",
+      "target": "public.ref_capacity_metric",
+      "validated": true,
+      "constraint": "object_capacity_metric_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 660,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "36b5c78b596f459e0c9ce6aec486f652"
+    },
+    "fk:public.actor_object_role:actor_object_role_role_id_fkey": {
+      "source": "public.actor_object_role",
+      "target": "public.ref_actor_role",
+      "validated": true,
+      "constraint": "actor_object_role_role_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 1079,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "40cffae2a99a4fa1074a043334e44ec7"
+    },
+    "fk:public.object_document:object_document_document_id_fkey": {
+      "source": "public.object_document",
+      "target": "public.ref_document",
+      "validated": true,
+      "constraint": "object_document_document_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 83,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "bc045821ebc9c2cd0fed3e57405e47bf"
+    },
+    "fk:public.i18n_translation:i18n_translation_language_id_fkey": {
+      "source": "public.i18n_translation",
+      "target": "public.ref_language",
+      "validated": true,
+      "constraint": "i18n_translation_language_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 48,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "10bb9c94466e49143838213405c58b6f"
+    },
+    "fk:public.crm_task_document:crm_task_document_document_id_fkey": {
+      "source": "public.crm_task_document",
+      "target": "public.ref_document",
+      "validated": true,
+      "constraint": "crm_task_document_document_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.actor_document:actor_document_promoted_document_id_fkey": {
+      "source": "public.actor_document",
+      "target": "public.ref_document",
+      "validated": true,
+      "constraint": "actor_document_promoted_document_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.object_hotel_positioning:fk_object_hotel_positioning_ref": {
+      "source": "public.object_hotel_positioning",
+      "target": "public.ref_code",
+      "validated": true,
+      "constraint": "fk_object_hotel_positioning_ref",
+      "orphan_rows": 0,
+      "referencing_rows": 5,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "1736b5fa2b704c6fc274e1acf053c099"
+    },
+    "fk:public.object_classification:object_classification_value_id_fkey": {
+      "source": "public.object_classification",
+      "target": "public.ref_classification_value",
+      "validated": true,
+      "constraint": "object_classification_value_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 355,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "c9baa2effcd183ea557de99245d1fdff"
+    },
+    "fk:public.audit_template:audit_template_classification_value_id_fkey": {
+      "source": "public.audit_template",
+      "target": "public.ref_classification_value",
+      "validated": true,
+      "constraint": "audit_template_classification_value_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.object_classification:object_classification_scheme_id_fkey": {
+      "source": "public.object_classification",
+      "target": "public.ref_classification_scheme",
+      "validated": true,
+      "constraint": "object_classification_scheme_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 355,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "a6ab5b1a82ecbfbba8d5557d31dea0e2"
+    },
+    "fk:public.object_classification:object_classification_document_id_fkey": {
+      "source": "public.object_classification",
+      "target": "public.ref_document",
+      "validated": true,
+      "constraint": "object_classification_document_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 98,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "58f337aada454da738bc1bb2c1bd6bb5"
+    },
+    "fk:public.object_legal:object_legal_type_id_fkey": {
+      "source": "public.object_legal",
+      "target": "public.ref_legal_type",
+      "validated": true,
+      "constraint": "object_legal_type_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 1210,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "ecb1c8f51cf9e75b4f66eed8f0f49eae"
+    },
+    "fk:public.ref_amenity:ref_amenity_family_id_fkey": {
+      "source": "public.ref_amenity",
+      "target": "public.ref_code_amenity_family",
+      "validated": true,
+      "constraint": "ref_amenity_family_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 167,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "9bd5c4e763e4fd17b99ea15d5ab57d64"
+    },
+    "fk:public.object_taxonomy:fk_object_taxonomy_domain": {
+      "source": "public.object_taxonomy",
+      "target": "public.ref_code_domain_registry",
+      "validated": true,
+      "constraint": "fk_object_taxonomy_domain",
+      "orphan_rows": 0,
+      "referencing_rows": 912,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "53d4484e5c9761a86bf9e29f15a461b3"
+    },
+    "fk:public.object_legal:object_legal_document_id_fkey": {
+      "source": "public.object_legal",
+      "target": "public.ref_document",
+      "validated": true,
+      "constraint": "object_legal_document_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 145,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "67bbfdb5e78e43dbf5d72174f6bef22a"
+    },
+    "fk:public.object_review:object_review_source_id_fkey": {
+      "source": "public.object_review",
+      "target": "public.ref_review_source",
+      "validated": true,
+      "constraint": "object_review_source_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.object_zone:object_zone_insee_commune_fkey": {
+      "source": "public.object_zone",
+      "target": "public.ref_commune",
+      "validated": true,
+      "constraint": "object_zone_insee_commune_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.object_taxonomy:fk_object_taxonomy_ref_code": {
+      "source": "public.object_taxonomy",
+      "target": "public.ref_code",
+      "validated": true,
+      "constraint": "fk_object_taxonomy_ref_code",
+      "orphan_rows": 0,
+      "referencing_rows": 912,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "ac34ff8b77f9d2a6d038b47d8d2aca98"
+    },
+    "fk:public.object_org_link:object_org_link_role_id_fkey": {
+      "source": "public.object_org_link",
+      "target": "public.ref_org_role",
+      "validated": true,
+      "constraint": "object_org_link_role_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 1186,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "df163a5c8021cc662724e00192cca328"
+    },
+    "fk:public.object_review:object_review_language_id_fkey": {
+      "source": "public.object_review",
+      "target": "public.ref_language",
+      "validated": true,
+      "constraint": "object_review_language_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.object_web_channel:object_web_channel_kind_fkey": {
+      "source": "public.object_web_channel",
+      "target": "public.ref_code",
+      "validated": true,
+      "constraint": "object_web_channel_kind_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 1339,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "2009fc2a365a652cc656594f4e5cf8fc"
+    },
+    "fk:public.object_language:object_language_language_id_fkey": {
+      "source": "public.object_language",
+      "target": "public.ref_language",
+      "validated": true,
+      "constraint": "object_language_language_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 1415,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "1bea87d5a3de8a0b4e5f729d281215c6"
+    },
+    "fk:public.org_permission:org_permission_permission_id_fkey": {
+      "source": "public.org_permission",
+      "target": "public.ref_permission",
+      "validated": true,
+      "constraint": "org_permission_permission_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 24,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "5fa3cfed762d0b3fa70740b4ebd28fa3"
+    },
+    "fk:public.org_role_permission:org_role_permission_role_id_fkey": {
+      "source": "public.org_role_permission",
+      "target": "public.ref_org_business_role",
+      "validated": true,
+      "constraint": "org_role_permission_role_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 63,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "c3a5d9304dd3a74102efbdb00220d29c"
+    },
+    "fk:public.object_relation:object_relation_relation_type_id_fkey": {
+      "source": "public.object_relation",
+      "target": "public.ref_object_relation_type",
+      "validated": true,
+      "constraint": "object_relation_relation_type_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 14,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "5ec960b1fe537d1c23ecc01ada362a74"
+    },
+    "fk:public.org_role_permission:org_role_permission_permission_id_fkey": {
+      "source": "public.org_role_permission",
+      "target": "public.ref_permission",
+      "validated": true,
+      "constraint": "org_role_permission_permission_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 63,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "f4609db4efa181ca51516b7de533d9d8"
+    },
+    "fk:public.ref_classification_value:ref_classification_value_parent_id_fkey": {
+      "source": "public.ref_classification_value",
+      "target": "public.ref_classification_value",
+      "validated": true,
+      "constraint": "ref_classification_value_parent_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 4,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "425a2b4370a53a97b93eed12db8bb3dc"
+    },
+    "fk:public.ref_classification_value:ref_classification_value_scheme_id_fkey": {
+      "source": "public.ref_classification_value",
+      "target": "public.ref_classification_scheme",
+      "validated": true,
+      "constraint": "ref_classification_value_scheme_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 125,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "0964dc7ef3b5991e9e803f284c9b991f"
+    },
+    "fk:public.object_room_type_amenity:object_room_type_amenity_amenity_id_fkey": {
+      "source": "public.object_room_type_amenity",
+      "target": "public.ref_amenity",
+      "validated": true,
+      "constraint": "object_room_type_amenity_amenity_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.ref_capacity_applicability:ref_capacity_applicability_metric_id_fkey": {
+      "source": "public.ref_capacity_applicability",
+      "target": "public.ref_capacity_metric",
+      "validated": true,
+      "constraint": "ref_capacity_applicability_metric_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 60,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "45cf4acb2593726531746cca41e73ae4"
+    },
+    "fk:public.object_iti_associated_object:object_iti_associated_object_role_id_fkey": {
+      "source": "public.object_iti_associated_object",
+      "target": "public.ref_iti_assoc_role",
+      "validated": true,
+      "constraint": "object_iti_associated_object_role_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 1,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "250d23f9a2101db54af40c74f18ad956"
+    },
+    "fk:public.object_private_description:object_private_description_language_id_fkey": {
+      "source": "public.object_private_description",
+      "target": "public.ref_language",
+      "validated": true,
+      "constraint": "object_private_description_language_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.object_sustainability_action:object_sustainability_action_action_id_fkey": {
+      "source": "public.object_sustainability_action",
+      "target": "public.ref_sustainability_action",
+      "validated": true,
+      "constraint": "object_sustainability_action_action_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 117,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "6449cb175286588e23e1487ae87ab387"
+    },
+    "fk:public.object_sustainability_action:object_sustainability_action_document_id_fkey": {
+      "source": "public.object_sustainability_action",
+      "target": "public.ref_document",
+      "validated": true,
+      "constraint": "object_sustainability_action_document_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.ref_classification_equivalent_group:ref_classification_equivalent_group_group_id_fkey": {
+      "source": "public.ref_classification_equivalent_group",
+      "target": "public.ref_sustainability_action_group",
+      "validated": true,
+      "constraint": "ref_classification_equivalent_group_group_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 176,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "fc25242346be874afa06c45ef367655c"
+    },
+    "fk:public.ref_classification_equivalent_group:ref_classification_equivalent_group_scheme_id_fkey": {
+      "source": "public.ref_classification_equivalent_group",
+      "target": "public.ref_classification_scheme",
+      "validated": true,
+      "constraint": "ref_classification_equivalent_group_scheme_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 176,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "09de6e02720193959320b39385964978"
+    },
+    "fk:public.ref_classification_equivalent_action:ref_classification_equivalent_action_action_id_fkey": {
+      "source": "public.ref_classification_equivalent_action",
+      "target": "public.ref_sustainability_action",
+      "validated": true,
+      "constraint": "ref_classification_equivalent_action_action_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 544,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "c072090cbd0a578bcc9f9e3d2f1d167a"
+    },
+    "fk:public.ref_classification_equivalent_action:ref_classification_equivalent_action_scheme_id_fkey": {
+      "source": "public.ref_classification_equivalent_action",
+      "target": "public.ref_classification_scheme",
+      "validated": true,
+      "constraint": "ref_classification_equivalent_action_scheme_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 544,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "e81d26d44b4f17f89c2c4599c7a3a79a"
+    },
+    "fk:public.ref_classification_scheme_applicability:ref_classification_scheme_applicability_scheme_id_fkey": {
+      "source": "public.ref_classification_scheme_applicability",
+      "target": "public.ref_classification_scheme",
+      "validated": true,
+      "constraint": "ref_classification_scheme_applicability_scheme_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 166,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "fe3c3c9b9c5efc0f951c6749065b0634"
+    },
+    "fk:public.tag_link:tag_link_tag_id_fkey": {
+      "source": "public.tag_link",
+      "target": "public.ref_tag",
+      "validated": true,
+      "constraint": "tag_link_tag_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 4626,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "1ab52dde8db17f17b33b4ca6c48c74ec"
+    },
+    "fk:public.ref_tag:ref_tag_created_by_fkey": {
+      "source": "public.ref_tag",
+      "target": "auth.users",
+      "validated": true,
+      "constraint": "ref_tag_created_by_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 29,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "7dbb1bb2ea1afcdf7a705c7918b3763e"
+    },
+    "fk:public.ref_tag:ref_tag_updated_by_fkey": {
+      "source": "public.ref_tag",
+      "target": "auth.users",
+      "validated": true,
+      "constraint": "ref_tag_updated_by_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.trail_commune:trail_commune_insee_code_fkey": {
+      "source": "public.trail_commune",
+      "target": "public.ref_commune",
+      "validated": true,
+      "constraint": "trail_commune_insee_code_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.trail_sync_run:trail_sync_run_source_id_fkey": {
+      "source": "public.trail_sync_run",
+      "target": "public.ref_trail_source",
+      "validated": true,
+      "constraint": "trail_sync_run_source_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 3,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "06de8b7195e5ed6ce84b374ee4783bba"
+    },
+    "fk:public.user_permission:user_permission_permission_id_fkey": {
+      "source": "public.user_permission",
+      "target": "public.ref_permission",
+      "validated": true,
+      "constraint": "user_permission_permission_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 83,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "ac56105dcb3488ca178e2054c2e68443"
+    },
+    "fk:public.user_org_admin_role:user_org_admin_role_role_id_fkey": {
+      "source": "public.user_org_admin_role",
+      "target": "public.ref_org_admin_role",
+      "validated": true,
+      "constraint": "user_org_admin_role_role_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 8,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "c2b3191a81ebaeeef292a92da483ae5a"
+    },
+    "fk:public.trail_manager_link:trail_manager_link_manager_id_fkey": {
+      "source": "public.trail_manager_link",
+      "target": "public.ref_trail_manager",
+      "validated": true,
+      "constraint": "trail_manager_link_manager_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 11,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "ff7675ced07b2912ed0963deb6258448"
+    },
+    "fk:public.ref_trail_manager:ref_trail_manager_org_object_id_fkey": {
+      "source": "public.ref_trail_manager",
+      "target": "public.object",
+      "validated": true,
+      "constraint": "ref_trail_manager_org_object_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 0,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fk:public.trail_source_record:trail_source_record_source_id_fkey": {
+      "source": "public.trail_source_record",
+      "target": "public.ref_trail_source",
+      "validated": true,
+      "constraint": "trail_source_record_source_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 15,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "9838e7f952c162a734f594b4f11a63d7"
+    },
+    "fk:public.user_org_business_role:user_org_business_role_role_id_fkey": {
+      "source": "public.user_org_business_role",
+      "target": "public.ref_org_business_role",
+      "validated": true,
+      "constraint": "user_org_business_role_role_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 21,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "a8df160034d5414a7a7468607f0d4f44"
+    },
+    "fk:public.ref_interop_crosswalk:fk_ref_interop_crosswalk_taxonomy_code": {
+      "source": "public.ref_interop_crosswalk",
+      "target": "public.ref_code",
+      "validated": true,
+      "constraint": "fk_ref_interop_crosswalk_taxonomy_code",
+      "orphan_rows": 0,
+      "referencing_rows": 4,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "577a0355885a7bd6cd0a24d8d86b2920"
+    },
+    "fk:public.ref_code_taxonomy_closure:fk_ref_code_taxonomy_closure_domain": {
+      "source": "public.ref_code_taxonomy_closure",
+      "target": "public.ref_code_domain_registry",
+      "validated": true,
+      "constraint": "fk_ref_code_taxonomy_closure_domain",
+      "orphan_rows": 0,
+      "referencing_rows": 560,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "a0fc63c1d2105abeca946e3eb881e065"
+    },
+    "fk:public.ref_code_taxonomy_closure:fk_ref_code_taxonomy_closure_ancestor": {
+      "source": "public.ref_code_taxonomy_closure",
+      "target": "public.ref_code",
+      "validated": true,
+      "constraint": "fk_ref_code_taxonomy_closure_ancestor",
+      "orphan_rows": 0,
+      "referencing_rows": 560,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "1ac38dd748fbbf28d46c5f1bedb8a238"
+    },
+    "fk:public.ref_facet_applicability:ref_facet_applicability_facet_table_fkey": {
+      "source": "public.ref_facet_applicability",
+      "target": "public.ref_facet_registry",
+      "validated": true,
+      "constraint": "ref_facet_applicability_facet_table_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 23,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "dd922c1a335291a55016d3aea674f007"
+    },
+    "fk:public.trail_source_record:trail_source_record_status_published_by_fkey": {
+      "source": "public.trail_source_record",
+      "target": "public.ref_trail_manager",
+      "validated": true,
+      "constraint": "trail_source_record_status_published_by_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 11,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "ff7675ced07b2912ed0963deb6258448"
+    },
+    "fk:public.ref_code_taxonomy_closure:fk_ref_code_taxonomy_closure_descendant": {
+      "source": "public.ref_code_taxonomy_closure",
+      "target": "public.ref_code",
+      "validated": true,
+      "constraint": "fk_ref_code_taxonomy_closure_descendant",
+      "orphan_rows": 0,
+      "referencing_rows": 560,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "3e45ef540c8360760c1d290bef79e6a2"
+    },
+    "fk:public.ref_sustainability_action:ref_sustainability_action_group_id_fkey": {
+      "source": "public.ref_sustainability_action",
+      "target": "public.ref_sustainability_action_group",
+      "validated": true,
+      "constraint": "ref_sustainability_action_group_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 239,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "552057f2acd5d68759da330f8111d49f"
+    },
+    "fk:public.ref_sustainability_action:ref_sustainability_action_category_id_fkey": {
+      "source": "public.ref_sustainability_action",
+      "target": "public.ref_sustainability_action_category",
+      "validated": true,
+      "constraint": "ref_sustainability_action_category_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 239,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "3ecf559e140fb5040e81915991dd5ba7"
+    },
+    "fk:public.ref_sustainability_action_group:ref_sustainability_action_group_category_id_fkey": {
+      "source": "public.ref_sustainability_action_group",
+      "target": "public.ref_sustainability_action_category",
+      "validated": true,
+      "constraint": "ref_sustainability_action_group_category_id_fkey",
+      "orphan_rows": 0,
+      "referencing_rows": 76,
+      "partial_null_rows": 0,
+      "target_identity_checksum": "1aa6579f49c4b9962408a2640bae23c7"
+    }
+  },
+  "batches": [
+    {
+      "captured_at": "2026-11-10 19:24:16.264646+00",
+      "query_sha256": "cd639606f395db5d5a9199b288e13805952919c316c542eb0371c4454b84ba49",
+      "query_file": "catalog-integrity-001.sql"
+    },
+    {
+      "captured_at": "2026-11-10 19:24:14.611905+00",
+      "query_sha256": "4d24d5d10ed03e5ba8c6fa243dc795e227aac8a775f832b15a5792276a8a05df",
+      "query_file": "catalog-integrity-002.sql"
+    },
+    {
+      "captured_at": "2026-11-10 19:24:15.391579+00",
+      "query_sha256": "3a6a1e08185e8e62def70c19fead3326dd3ce741883eb5025af5f42b3dc0aff2",
+      "query_file": "catalog-integrity-003.sql"
+    },
+    {
+      "captured_at": "2026-11-10 19:26:44.289198+00",
+      "query_sha256": "24f9e7ead6673b54379ae8c483bec29177ddbf6f26cc030bbd1952f13735c4e6",
+      "query_file": "catalog-integrity-004.sql"
+    },
+    {
+      "captured_at": "2026-11-10 19:26:43.579416+00",
+      "query_sha256": "ba9854b246b154e5ef2e63ea47b2d3ba99d416a4a52c87f0a84de37eaaea3e4a",
+      "query_file": "catalog-integrity-005.sql"
+    }
+  ]
+}

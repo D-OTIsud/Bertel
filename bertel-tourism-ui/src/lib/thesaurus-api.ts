@@ -33,7 +33,7 @@ const LIFECYCLES = new Set(['active', 'deprecated', 'retired']);
 const PUBLIC_CONCEPT_KEYS = [
   'concept_id', 'uri', 'domain', 'code', 'context_key', 'name', 'description', 'preferred_labels', 'definitions',
   'labels', 'notes', 'sources', 'broader', 'narrower', 'related', 'replaced_by', 'relations',
-  'mappings', 'lifecycle', 'assignable', 'valid_from', 'valid_to', 'effective_lang',
+  'mappings', 'lifecycle', 'assignable', 'valid_from', 'valid_to', 'effective_lang', 'member_of', 'members',
 ] as const;
 
 function object(value: unknown): JsonObject | null {
@@ -103,6 +103,9 @@ function parseQuery(url: URL, action: ThesaurusAction): Query {
   if (action === 'concept' || action === 'resolve') {
     supported.delete('domains'); supported.delete('status');
   }
+  if (action === 'manifest' || action === 'release') {
+    supported.delete('domains'); supported.delete('status');
+  }
   for (const name of url.searchParams.keys()) {
     if (!supported.has(name) || url.searchParams.getAll(name).length !== 1) throw new Error('invalid_parameters');
   }
@@ -136,38 +139,72 @@ function stringMap(value: unknown): Record<string, string> {
 }
 
 function localized(values: Record<string, string>, requested: string): { value: string | null; lang: string | null } {
-  const candidates = [requested, requested.toLowerCase(), requested.split('-')[0], 'fr', ...Object.keys(values).sort()];
+  const primary = requested.split('-')[0];
+  const candidates = [requested, requested.toLowerCase(), primary, primary.toLowerCase(), 'fr'];
   for (const lang of candidates) if (values[lang]) return { value: values[lang], lang };
   return { value: null, lang: null };
 }
 
-/** Localize metadata in the HTTP representation without rewriting a published manifest. */
-function publicThesaurusManifest(value: unknown, requestedLang: string): JsonObject {
+/** Localize the HTTP view of a stored manifest without changing its snapshot fields. */
+function publicThesaurusManifest(value: unknown, requestedLang: string, discoveryRelease: number | null): JsonObject {
   const source = object(value);
   if (!source) throw new Error('invalid_snapshot');
-  const result = { ...source };
+  const result: JsonObject = { ...source, metadata_scope: 'release_snapshot' };
+  const frozenMetadata = typeof source.metadata_checksum === 'string' && source.metadata_checksum.length > 0;
   if (source.domains !== undefined) {
     if (!Array.isArray(source.domains)) throw new Error('invalid_snapshot');
     result.domains = source.domains.map((value) => {
       const vocabulary = object(value);
       if (!vocabulary || typeof vocabulary.domain !== 'string'
         || typeof vocabulary.name !== 'string' || !vocabulary.name.trim()) throw new Error('invalid_snapshot');
-      const standard = Object.hasOwn(THESAURUS_VOCABULARY_LABELS, vocabulary.domain)
-        ? THESAURUS_VOCABULARY_LABELS[vocabulary.domain] : undefined;
-      // A custom or historical title must never inherit an unrelated standard translation.
-      const names = {
-        ...(standard?.fr.includes(vocabulary.name) ? { en: standard.en } : {}),
-        ...stringMap(vocabulary.name_i18n),
-        fr: vocabulary.name,
-      };
+      const storedNames = stringMap(vocabulary.name_i18n);
+      const hasStoredNames = Object.keys(storedNames).length > 0;
+      let names: Record<string, string>;
+      let nameMetadataScope: 'release_snapshot' | 'reviewed_legacy_dictionary' | 'legacy_scalar';
+      if (frozenMetadata) {
+        // New checksummed manifests own their exact maps; never repair or augment them from code.
+        names = storedNames;
+        nameMetadataScope = hasStoredNames ? 'release_snapshot' : 'legacy_scalar';
+      } else {
+        const standard = Object.hasOwn(THESAURUS_VOCABULARY_LABELS, vocabulary.domain)
+          ? THESAURUS_VOCABULARY_LABELS[vocabulary.domain] : undefined;
+        const reviewedEnglish = standard && standard.fr.includes(vocabulary.name) && !storedNames.en
+          ? standard.en : undefined;
+        // For legacy releases, a reviewed English alias may fill the old scalar representation.
+        // Stored valid translations win; the historical scalar remains the authoritative French title.
+        names = {
+          ...(reviewedEnglish ? { en: reviewedEnglish } : {}),
+          ...storedNames,
+          fr: vocabulary.name,
+        };
+        nameMetadataScope = reviewedEnglish ? 'reviewed_legacy_dictionary' : hasStoredNames ? 'release_snapshot' : 'legacy_scalar';
+      }
       const selected = localized(names, requestedLang);
-      return { ...vocabulary, name: selected.value, name_i18n: names,
-        requested_lang: requestedLang, effective_lang: selected.lang };
+      const legacyFrenchName = !frozenMetadata || !hasStoredNames
+        ? (typeof vocabulary.name === 'string' && vocabulary.name.trim() ? vocabulary.name : null) : null;
+      const translatedName = selected.value ?? legacyFrenchName;
+      return {
+        ...vocabulary,
+        ...(frozenMetadata && !hasStoredNames
+          ? (vocabulary.name_i18n === undefined ? {} : { name_i18n: vocabulary.name_i18n })
+          : { name_i18n: frozenMetadata ? vocabulary.name_i18n : names }),
+        ...(translatedName !== null ? { name: translatedName } : { name: null }),
+        requested_lang: requestedLang,
+        effective_lang: selected.lang ?? (legacyFrenchName !== null ? 'fr' : null),
+        name_metadata_scope: nameMetadataScope,
+      };
     });
   }
+  if (discoveryRelease === null) delete result.is_current;
   if (source.releases !== undefined) {
     if (!Array.isArray(source.releases)) throw new Error('invalid_snapshot');
-    result.releases = source.releases.map((release) => publicThesaurusManifest(release, requestedLang));
+    result.releases = source.releases.map((entry) => {
+      const release = object(entry);
+      if (!release) throw new Error('invalid_snapshot');
+      const localizedRelease = publicThesaurusManifest(release, requestedLang, discoveryRelease);
+      if (discoveryRelease !== null) localizedRelease.is_current = Number(release.release_id) === discoveryRelease;
+      return localizedRelease;
+    });
   }
   return result;
 }
@@ -179,10 +216,19 @@ export function publicThesaurusConcept(value: unknown, requestedLang = 'fr'): Js
     || typeof source.uri !== 'string' || !/^(?:https?:\/\/|urn:)/.test(source.uri)) throw new Error('invalid_snapshot');
   const result: JsonObject = {};
   for (const key of PUBLIC_CONCEPT_KEYS) if (source[key] !== undefined) result[key] = source[key];
+  for (const key of ['member_of', 'members'] as const) {
+    if (source[key] === undefined) continue;
+    const ids = source[key];
+    if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string' || !UUID.test(id))) throw new Error('invalid_snapshot');
+    if (new Set((ids as string[]).map((id) => id.toLowerCase())).size !== ids.length) throw new Error('invalid_snapshot');
+    result[key] = ids;
+  }
   const labels = stringMap(source.preferred_labels);
   const definitions = stringMap(source.definitions);
   const name = localized(labels, requestedLang);
   const definition = localized(definitions, requestedLang);
+  const sourceName = typeof source.name === 'string' && source.name.trim() ? source.name : null;
+  const sourceDescription = typeof source.description === 'string' && source.description.trim() ? source.description : null;
   result.preferred_labels = labels;
   result.definitions = definitions;
   result.labels = (Array.isArray(source.labels) ? source.labels : []).flatMap((item) => {
@@ -211,10 +257,12 @@ export function publicThesaurusConcept(value: unknown, requestedLang = 'fr'): Js
     result[key] = (Array.isArray(source[key]) ? source[key] as unknown[] : []).filter((id): id is string => typeof id === 'string' && UUID.test(id));
   }
   if (name.value !== null) result.name = name.value;
+  else if (sourceName !== null) result.name = sourceName;
   if (definition.value !== null) result.description = definition.value;
+  else if (sourceDescription !== null) result.description = sourceDescription;
   result.requested_lang = requestedLang;
-  result.effective_lang = name.lang;
-  result.definition_lang = definition.lang;
+  result.effective_lang = name.lang ?? (sourceName !== null ? 'fr' : null);
+  result.definition_lang = definition.lang ?? (sourceDescription !== null ? 'fr' : null);
   return result;
 }
 
@@ -278,6 +326,10 @@ export function thesaurusJsonLd(values: unknown[]): JsonObject {
     for (const [key, property] of [['broader', 'skos:broader'], ['narrower', 'skos:narrower'], ['related', 'skos:related'], ['replaced_by', 'dct:isReplacedBy']]) {
       const ids = concept[key] as string[];
       if (ids.length) node[property] = ids.map((id) => ({ '@id': targetUri(id, concept) }));
+    }
+    for (const [field, property] of [['member_of', 'bertel:memberOf'], ['members', 'bertel:member']] as const) {
+      const ids = concept[field];
+      if (Array.isArray(ids) && ids.length) node[property] = ids.map((id) => ({ '@id': targetUri(id as string, concept) }));
     }
     const mappingTypes: Record<string, string> = { exact: 'exactMatch', close: 'closeMatch', broad: 'broadMatch', narrow: 'narrowMatch', related: 'relatedMatch', exactMatch: 'exactMatch', closeMatch: 'closeMatch', broadMatch: 'broadMatch', narrowMatch: 'narrowMatch', relatedMatch: 'relatedMatch' };
     for (const mapping of concept.mappings as JsonObject[]) {
@@ -357,10 +409,11 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
   const meta: JsonObject = { contract_version: PUBLIC_API_CONTRACT_VERSION, release_id: actualRelease,
     vocabulary_release: actualRelease, previous_release_id: rpcMeta.previous_release_id ?? null,
     as_of: rpcMeta.as_of ?? null };
+  if (typeof rpcMeta.metadata_checksum === 'string') meta.metadata_checksum = rpcMeta.metadata_checksum;
   let data: unknown = body.data;
   try {
     if (target.action === 'manifest' || target.action === 'release') {
-      data = publicThesaurusManifest(data, query.lang);
+      data = publicThesaurusManifest(data, query.lang, target.action === 'manifest' ? actualRelease : null);
     } else if (target.action === 'concept' || target.action === 'resolve') {
       if (data === null) return fail(404, 'not_found');
       data = publicThesaurusConcept(data, query.lang);

@@ -8,7 +8,7 @@
 
 # API publique Bertel — Guide partenaires
 
-**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrat `1.0.0` · Guide mis à jour le 2026-11-09
+**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrats objets `1.0.0`, thésaurus `1.0.0` · Guide mis à jour le 2026-11-10
 
 Bertel est le système d'information touristique de l'OTI du Sud. Son API publique donne aux partenaires un accès **en lecture seule** aux fiches touristiques **publiées** du territoire : hébergements, restaurants, activités, itinéraires, événements, patrimoine, sites naturels…
 
@@ -349,7 +349,7 @@ Ces routes utilisent la même clé partenaire et le même quota que les fiches. 
 | Route | Usage |
 |---|---|
 | `GET /thesaurus` | Découvrir les vocabulaires et la publication courante |
-| `GET /thesaurus/releases/{releaseId}` | Lire le manifeste d'une publication |
+| `GET /thesaurus/releases/{releaseId}` | Lire le manifeste immuable d'une publication |
 | `GET /thesaurus/releases/{releaseId}/concepts` | Parcourir les concepts de cette publication |
 | `GET /thesaurus/releases/{releaseId}/concepts/{conceptId}` | Lire un concept dans cette publication |
 | `GET /thesaurus/releases/{releaseId}/changes` | Lire les changements depuis sa publication précédente |
@@ -357,65 +357,27 @@ Ces routes utilisent la même clé partenaire et le même quota que les fiches. 
 | `GET /thesaurus/releases/{releaseId}/export?format=jsonld` | Télécharger le document RDF JSON-LD/SKOS |
 | `GET /thesaurus/concepts/{conceptId}` | Résoudre l'identité pérenne dans la publication courante |
 
-`contract_version` décrit le contrat HTTP ; `release_id` et `vocabulary_release` identifient les données. Le numéro de publication n'est pas un numéro de version du logiciel Bertel. Une publication conserve ses libellés, relations, états et dates : elle ne change pas parce que la date du jour ou le vocabulaire courant change.
+`contract_version` décrit le contrat HTTP ; `release_id` et `vocabulary_release` identifient les données. Le numéro de publication n'est pas un numéro de version du logiciel Bertel. Une publication conserve ses libellés, relations, états et dates. Les publications historiques restent inchangées après une nouvelle publication.
 
-Pour découvrir les noms des vocabulaires en anglais :
+Les paramètres sont stricts : un paramètre inconnu ou répété donne `400 invalid_parameters`. `lang` accepte un tag BCP 47 de 2 à 35 caractères (défaut `fr`) sur toutes les routes. `domains` et `status` sont acceptés uniquement sur les listes de concepts, changements et export. Ils sont rejetés sur les deux manifestes et les deux routes de concept unique. Les listes CSV sont limitées à 100 éléments; les domaines sont des noms de domaine (jusqu'à 80 caractères chacun) et les états sont `active`, `deprecated`, `retired`. Sans `status`, tous les états sont inclus. Les domaines inconnus ou non publics produisent une erreur générique, sans divulguer les référentiels internes.
 
-```bash
-curl -H "Authorization: Bearer bk_live_…" \
-  "https://VOTRE_DOMAINE/api/public/thesaurus?lang=en"
-```
+Sur les routes `concepts` et `changes`, `query` filtre le texte (maximum 200 caractères), `page_size` va de 1 à 200 (défaut 100) et `cursor` est opaque. Les curseurs lient publication, filtres, langue, format et taille de page. Gardez les mêmes paramètres lors de la pagination. Un curseur altéré, expiré, d'une autre publication ou réutilisé avec des paramètres différents répond `400 invalid_cursor`.
 
-`lang` localise `name` dans chaque entrée de `data.domains`, ainsi que dans `data.releases[].domains`. La même règle s'applique au manifeste d'une publication précise, `/thesaurus/releases/{releaseId}?lang=en`. Exemple d'entrée de domaine :
+La réponse JSON utilise `{ "meta": {...}, "data": ... }`. Les métadonnées communes indiquent `contract_version`, `release_id`, `vocabulary_release`, `previous_release_id` et `as_of`; seules les listes ajoutent `page_size`, `total` et `next_cursor`. Le manifeste dans `data` porte `metadata_scope: "release_snapshot"` aussi bien en découverte qu'en lecture d'une publication épinglée. `metadata_checksum` figure dans le manifeste `data` et dans `meta` lorsqu’il existe; c’est le MD5 de `domains::text` sérialisé en JSONB par PostgreSQL, distinct du checksum conceptuel et absent des anciennes publications qui ne l’ont pas. Dans la découverte, les entrées de l'historique `data.releases[]` portent `is_current` relatif à la publication courante annoncée par cette réponse; une lecture d'une publication historique ne prétend pas définir le courant.
 
-```json
-{
-  "domain": "activity_type",
-  "name": "Activity types",
-  "name_i18n": {
-    "fr": "Types d’activité",
-    "en": "Activity types"
-  },
-  "requested_lang": "en",
-  "effective_lang": "en",
-  "source_kind": "ref_code",
-  "require_definition": false,
-  "required_languages": ["fr"]
-}
-```
+Un concept porte `concept_id`, `uri`, `domain`, `code`, `name`, les maps `preferred_labels` et `definitions`, les synonymes validés, notes, relations et correspondances externes. La demande de langue localise le nom (correspondance exacte, langue principale, puis libellé français). `requested_lang` est toujours présent sur le concept; `effective_lang` et `definition_lang` sont toujours présents, et valent `null` seulement quand aucun texte de repli ne permet d’établir la langue. Sur les concepts historiques sans map correspondante, le `name` ou la `description` scalaire canonique reste français et la langue effective est indiquée `fr`; aucune entrée française n’est inventée dans les maps. Chaque entrée de domaine du manifeste conserve `name_i18n` et expose son `name`, `requested_lang` et `effective_lang` propres. Les réponses ne prétendent pas exposer une langue effective globale au niveau de la réponse.
 
-`name_i18n` contient les traductions de métadonnées disponibles. Le catalogue de traduction couvre les titres français standards et les alias identiques au domaine. Un titre personnalisé ou inconnu reste en français, sauf si le manifeste porte sa propre traduction `name_i18n`, qui a priorité. En français, le titre stocké dans le manifeste fait autorité. Le serveur canonicalise la locale BCP 47 dans `requested_lang`, puis essaie la locale demandée, sa variante en minuscules, sa langue de base, le français et enfin une autre traduction disponible. Ainsi, `lang=en-GB` peut produire `effective_lang: "en"` ; une traduction absente utilise un repli explicite. `required_languages: ["fr"]` exige le français pour la publication éditoriale : ce champ ne choisit pas la langue de réponse et ne liste pas les traductions disponibles.
+Les traductions du snapshot restent intégralement disponibles dans `preferred_labels`, `definitions` et `name_i18n`, y compris si la langue demandée manque. JSON-LD conserve les maps de libellés et de définitions par langue; un fallback ne crée pas une traduction. Pour les anciens manifestes, un catalogue de traductions versionné conserve le comportement anglais déjà livré : il traduit seulement un titre français correspondant exactement à un alias relu du domaine. Un titre personnalisé ou inconnu garde son français sans traduction publiée. Ces traductions historiques sont une représentation HTTP, pas une modification du manifeste enregistré ni une lecture des métadonnées courantes. Les nouvelles publications portent leurs quatre noms figés et leur checksum de métadonnées ; leurs maps ne sont pas complétées depuis ce catalogue. Chaque domaine indique la provenance de ses noms dans `name_metadata_scope` : `release_snapshot`, `reviewed_legacy_dictionary` ou `legacy_scalar`. `context_key` qualifie les codes réutilisés entre schémas : un code n'est unique que dans `(domain, context_key, code)`. Utilisez `concept_id` ou `uri` comme identité de synchronisation.
 
-Cette localisation conserve les identifiants de publication, `as_of`, les `checksum` stockés et les règles éditoriales. L'`ETag` identifie la représentation HTTP localisée. Les noms des vocabulaires et les traductions des concepts sont indépendants : pour lire les libellés anglais réellement publiés des concepts, appelez `/thesaurus/releases/{releaseId}/concepts?lang=en` et vérifiez leur `effective_lang` et leur `definition_lang`.
+Lorsqu'un snapshot publié contient la relation native entre les actions de développement durable et leurs groupes, il peut inclure `member_of: [<UUID de groupe>]` sur une action et `members: [<UUID d'action>, ...]` sur un groupe. Ces champs sont facultatifs, triés et uniques. Un snapshot ancien qui ne les contient pas les laisse absents. Une action sans groupe public gouverné omet `member_of`; un groupe publié sans action publique gouvernée peut porter `members: []`. La publication 26, créée en production le 10 novembre 2026 à 21:20:40 UTC, contient 1 496 concepts publics répartis dans 72 domaines publics, soit six domaines et 134 concepts publics ajoutés au périmètre précédent, ainsi que 239 liens natifs d'appartenance, dont deux entre catégories. Les publications jusqu'à la 25 et leurs empreintes sont restées inchangées. Ces champs font partie du contenu figé de la publication 26; leur disponibilité HTTP dépend du déploiement de la projection API correspondante. Ils ne déclenchent pas de lecture du référentiel courant. L'appartenance native est distincte de la hiérarchie : une action conserve son `broader` et son `context_key` de catégorie, un groupe conserve son parent de catégorie, et une appartenance entre catégories reste représentée sans réécrire ces valeurs. En JSON-LD, les références utilisent `bertel:memberOf` et `bertel:member` avec des cibles `@id`; elles ne sont pas converties en `skos:broader`, `skos:related` ni en collection SKOS.
 
-Pour les listes de concepts et de changements :
+`lifecycle` et `assignable` sont distincts : un concept déprécié ou retiré reste résolvable avec `200`, même lorsqu'il n'est plus sélectionnable pour une nouvelle fiche. `replaced_by` signale ses successeurs éventuels. Le flux `changes` distingue `added`, `modified`, `deprecated` et `retired`, avec les représentations `before` et `after`; un retrait n'est pas une suppression physique.
 
-| Paramètre | Description |
-|---|---|
-| `domains` | Domaines publics séparés par des virgules ; absent = périmètre public de la publication |
-| `status` | `active`, `deprecated`, `retired`, séparés par des virgules ; absent = tous les états |
-| `lang` | Langue demandée, `fr` par défaut ; le détail conserve aussi toutes les traductions réellement publiées |
-| `query` | Texte recherché, au plus 200 caractères |
-| `page_size` | Entier de 1 à 200, 100 par défaut |
-| `cursor` | Curseur opaque obtenu dans `meta.next_cursor` |
+Les réponses portent un `ETag` propre à la représentation et `Cache-Control: private, no-cache`. Réutilisez-le avec `If-None-Match` pour recevoir `304` sans corps si la représentation est identique. Chaque requête conditionnelle vérifie encore la clé et consomme du quota. JSON-LD est un document autonome `application/ld+json`; la publication est indiquée dans `X-Bertel-Vocabulary-Release`. Les autres réponses utilisent l'enveloppe JSON habituelle.
 
-La réponse reprend `{ "meta": { "contract_version", "release_id", "vocabulary_release", "as_of", "previous_release_id", "next_cursor", "total" }, "data": [...] }`. Les curseurs sont liés à une publication, aux filtres, à la langue et à la taille de page : conservez ces paramètres pendant le parcours. Une publication concurrente ne modifie pas les pages de la version que vous avez choisie. Un curseur malformé, altéré ou utilisé avec d'autres paramètres renvoie `400`.
+Le manifeste contient la provenance, la licence effective et les attributions du vocabulaire publié. La licence du logiciel Bertel (MIT) est distincte de celle des données. Pour le vocabulaire produit par l'OTI du Sud, la politique publiée est la Licence Ouverte / Etalab 2.0, avec attribution à l'Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud). Les éventuelles restrictions et attributions de sources externes restent indiquées dans leur provenance.
 
-Un concept porte `concept_id`, `uri`, `domain`, `code`, les libellés préférés par langue, les définitions, les synonymes validés, les notes, les relations et les correspondances externes. Les relations utilisent des identités de concepts ; un code seul n'est pas une identité universelle. `requested_lang`, `effective_lang` et `definition_lang` rendent les replis linguistiques explicites. Une définition française utilisée comme repli n'est jamais présentée comme une traduction anglaise dans l'export SKOS.
-
-Certains catalogues réutilisent un même code dans plusieurs schémas ou catégories. `context_key` est le qualifiant opaque de cette portée : l'unicité d'un code est celle du triplet `(domain, context_key, code)`. Utilisez `concept_id` ou `uri` comme identité de synchronisation, jamais ce seul code. Le parent public dans `broader` décrit le contexte métier lorsqu'il existe. L'export SKOS conserve le code comme notation et sa portée dans `bertel:contextKey` ; il ne lui attribue pas une unicité globale.
-
-`lifecycle` et `assignable` sont distincts : un concept déprécié ou retiré reste résolvable avec `200`, même lorsqu'il n'est plus sélectionnable pour une nouvelle fiche. `replaced_by` signale ses successeurs éventuels ; plusieurs successeurs après une scission ne constituent pas une autorisation de choisir arbitrairement l'un d'eux. Un identifiant inconnu ou non publié renvoie `404`.
-
-Le flux `changes` est paginé et compare la publication demandée à `previous_release_id`. Il distingue `added`, `modified`, `deprecated` et `retired`, avec les représentations `before` et `after`. Un retrait conserve le concept historique ; il ne constitue pas une suppression physique. Pour passer plusieurs publications, enchaînez leurs différentiels ou téléchargez un nouvel export complet.
-
-Les réponses portent un `ETag` et `Cache-Control: private, no-cache`. Réutilisez l'ETag avec `If-None-Match` pour recevoir `304` sans corps si la représentation est identique. **Chaque requête conditionnelle vérifie encore la clé et consomme du quota** : une clé révoquée répond `401`, un quota dépassé `429`, même avec un ETag valide. Le JSON-LD est un document autonome `application/ld+json` ; sa publication est indiquée dans `X-Bertel-Vocabulary-Release`. Les autres réponses utilisent l'enveloppe JSON habituelle.
-
-Le manifeste contient la provenance, la licence effective et les attributions du vocabulaire publié. Les concepts externes et les classes utilisées pour un export ne sont pas supposés équivalents automatiquement. N'inférez pas une licence à partir du seul format JSON-LD.
-
-La licence du logiciel Bertel (MIT) est distincte de celle des données. Pour le vocabulaire produit par l'OTI du Sud, la politique publiée est la Licence Ouverte / Etalab 2.0, avec attribution à l'Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud). Les éventuelles restrictions et attributions de sources externes restent indiquées dans leur provenance ; une correspondance vers un référentiel externe n'en transfère pas les droits.
-
-Avant la première activation du thésaurus, ces routes répondent `503 {"error":"release_unavailable"}`. Les autres erreurs sont documentées dans OpenAPI. Un domaine inconnu ou non autorisé donne une erreur générique, sans divulguer les référentiels internes.
+Avant la première activation du thésaurus, ces routes répondent `503 {"error":"release_unavailable"}`. Les réponses d'erreur sont plates et documentées dans OpenAPI.
 
 ### 3.6 Synchroniser les versions de vocabulaire
 
@@ -615,5 +577,5 @@ Au sein de la v1, les évolutions sont **additives** (de nouvelles clés peuvent
 ## 7. Références
 
 - **OpenAPI 3.1** : [openapi.json](openapi.json) (importable dans Postman, Insomnia, ou un générateur de client) · [rendu lisible](openapi.html)
-- **Collection Postman publique** : [Bertel API v3.0](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/61gyd5k/bertel-api-v3-0) — dossier « 13. API Publique Partenaire »
+- **Collection Postman publique** : [Bertel API v3.0](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/fcl0g7z/bertel-api-v3-0?action=share&creator=24615556) — dossier « 13. API Publique Partenaire »
 - **Contact** : d.philippe@otisud.com (clés API, questions techniques, demandes d'enrichissement des profils)

@@ -1,0 +1,28 @@
+{
+  "description": "Vocabulaire minimal relu pour les exemples Postman ; ce fichier ne constitue pas un export complet des catalogues.",
+  "provenance": {
+    "thesaurus_release": 6,
+    "captured_at": "2026-11-09T18:21:18.923572+00:00",
+    "release_checksum": "de8e694365e58b3a7c839de7e7cb8f88",
+    "source": "Copie locale production-final-snapshot.json, concepts publics actifs uniquement ; aucune nouvelle lecture de production pendant cette vérification.",
+    "capacity_and_tag_sources": "seeds_data.sql, migration_capacity_applicability_seed.sql et capture locale db-graph-out/reference_live.json ; max_capacity et les slugs luxe/family y sont confirmés.",
+    "disability_types_source": "api_views_functions.sql, paramètres de get_filtered_object_ids : motor/hearing/visual/cognitive."
+  },
+  "codes": {
+    "amenity": ["parking", "wifi", "restaurant"],
+    "amenity_family": ["parking", "general", "services"],
+    "payment_method": ["carte_bleue", "especes"],
+    "environment_tag": ["montagne", "foret"],
+    "language": ["fr", "en", "es", "de"],
+    "media_type": ["photo", "video"],
+    "media_tag": ["facade", "interieur", "cuisine", "paysage"],
+    "meeting_equipment": ["videoprojecteur", "paperboard"],
+    "iti_practice": ["randonnee_pedestre", "trail"],
+    "classification_scheme": ["hot_stars", "LBL_TOURISME_HANDICAP"],
+    "cuisine_type": ["creole", "vegetarienne"],
+    "capacity_metric": ["max_capacity"],
+    "tag_slug": ["luxe", "family"],
+    "disability_type": ["motor", "hearing", "visual", "cognitive"]
+  },
+  "classification_values": { "hot_stars": ["4"] }
+}

@@ -183,7 +183,12 @@ describe('ThesaurusAdmin editorial workflow', () => {
     mock.fetchThesaurusWorkspace.mockResolvedValue({ ...base, domains: base.domains.map((item) => ({ ...item, is_governed: false })) });
     renderAdmin();
     await screen.findByLabelText('Libellé préféré (fr)');
+    expect(screen.queryByRole('link', { name: 'Guide métier du thésaurus (nouvel onglet)' })).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole('button', { name: 'Configuration' }));
+    const guide = screen.getByRole('link', { name: 'Guide métier du thésaurus (nouvel onglet)' });
+    expect(guide).toHaveAttribute('href', 'https://doc.bertel.otisud.re/thesaurus.html');
+    expect(guide).toHaveAttribute('target', '_blank');
+    expect(guide).toHaveAttribute('rel', 'noopener noreferrer');
     expect(mock.bootstrapThesaurus).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('checkbox', { name: /Hébergements locatifs/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Vérifier l’activation de 1 domaine' }));

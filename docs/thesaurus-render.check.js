@@ -8,7 +8,8 @@ const guide = require('./thesaurus-render.js');
 const read = (name) => fs.readFileSync(path.join(__dirname, name), 'utf8');
 const canonical = read('guide-metier-thesaurus.md');
 const partner = read('guide-partenaires.md');
-const page = read('thesaurus.html');
+// Git may check out CRLF on Windows; only line endings are platform-specific.
+const page = read('thesaurus.html').replace(/\r\n/g, '\n');
 assert.equal(page, guide.buildFromFiles(), 'regenerate the public guide after a source or template change');
 
 const body = page.match(/<main class="doc" id="doc">\n([\s\S]*?)\n    <\/main>/)?.[1];

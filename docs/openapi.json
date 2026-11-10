@@ -590,7 +590,7 @@
             }
           },
           "400": {
-            "description": "Identifiant mal formé.",
+            "description": "Identifiant mal formé ou variante Tourinsoft invalide.",
             "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "invalid_object_id" } } }
           },
@@ -1903,11 +1903,11 @@
         "schema": { "type": "integer" }
       },
       "RateLimitLimit": {
-        "description": "Plafond de requêtes par fenêtre pour la clé (présent sur chaque réponse).",
+        "description": "Plafond de requêtes par fenêtre pour une clé valide ; absent lorsque l’authentification est refusée (401).",
         "schema": { "type": "integer", "example": 120 }
       },
       "RateLimitRemaining": {
-        "description": "Requêtes restantes dans la fenêtre courante (présent sur chaque réponse ; 0 sur un 429).",
+        "description": "Requêtes restantes dans la fenêtre courante pour une clé valide ; 0 sur un 429, absent sur un 401.",
         "schema": { "type": "integer", "example": 117 }
       }
     },

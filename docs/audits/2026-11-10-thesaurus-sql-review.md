@@ -1,6 +1,6 @@
 # Thesaurus metadata SQL review — 10 November 2026
 
-Scope: the generator, migration `20261110183550`, fresh-apply mirror, existing
+Scope: the generator, migration `20261110195115`, fresh-apply mirror, existing
 publication/preparation/authority kernel, and frozen public reader. This review
 does not deploy SQL or publish a production release.
 
@@ -62,3 +62,10 @@ describes this ordered migration, not coverage of every native reference catalog
 PostgreSQL role-grant syntax and explicit grantors were checked against the
 [PostgreSQL 17 GRANT](https://www.postgresql.org/docs/17/sql-grant.html) and
 [REVOKE](https://www.postgresql.org/docs/17/sql-revoke.html) references.
+
+Production installation: native migration ledger `20261110195115` succeeded on
+10 November. Postflight verified all 78 domain maps, the exact reviewed activation
+hash, zero pending revisions, unchanged 1,477 concept identities and release 25,
+unchanged digest of every historical release row, and exact publisher memberships.
+Installation did not publish new metadata; normal authenticated publication
+remains a separate step.

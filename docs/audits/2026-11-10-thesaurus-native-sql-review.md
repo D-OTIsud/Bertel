@@ -1,6 +1,7 @@
 # Native dictionary SQL review — 10 November 2026
 
-Status: review in progress. This file is not deployment approval. No production
+Status: all eight findings below are resolved in the corrected SQL; full fresh/
+behavior CI remains pending. This file is not deployment approval. No production
 writes, publication, commits or overlapping SQL edits were performed by reviewer.
 
 Reviewed candidate: `supabase/migrations/20261110190229_thesaurus_native_dictionary_adapters.sql`
@@ -49,6 +50,21 @@ The reviewer reproduced item 8 in a newly created, independently identified
 temporary PostgreSQL 17 cluster bound to loopback, verified before any mutation.
 The table creation rolled back and the cluster stopped/was removed afterward.
 No existing database, archived harness or production connection was used.
+
+## Corrected candidate reread
+
+Migration and standalone mirror are byte-identical, SHA-256
+`d44ed53cb13facdbb25cd4485264706318e8d79976668b379126ce3c843d1956`.
+The reviewer re-read the actual corrected SQL. It now pins eleven normalized
+function predecessors plus the view, preserves all twelve existing function
+metadata snapshots and the view metadata, validates the old preparation contract
+before changes, and attests the new contract before commit. All temporary
+publisher grants restore the complete per-grantor membership catalog exactly.
+The old eight-column one-of constraint is identified by its original name and
+compared with the complete PostgreSQL canonical definition before replacement.
+Catalog timestamp triggers remain enabled normally; only label/timestamp are
+excluded from the nonlabel-metadata comparison. No concrete code blocker remains
+in this candidate, subject to actual full fresh/publication runtime qualification.
 
 The root also identified production-only row/edge count assertions that reject
 legitimate fresh seeds. Keep exact production evidence in deployment preflight;

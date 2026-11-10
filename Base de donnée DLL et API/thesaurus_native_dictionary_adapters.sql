@@ -168,8 +168,8 @@ DO $native_catalog_labels$
 BEGIN
   IF (SELECT count(*) FROM thesaurus_native_catalog_before)<>9
     OR EXISTS(SELECT 1 FROM thesaurus_native_catalog_before prior_catalog
-      JOIN public.ref_catalog_registry current_catalog USING(catalog_key)
-      WHERE prior_catalog.row_image IS DISTINCT FROM to_jsonb(current_catalog)-'label'-'updated_at')
+      JOIN public.ref_catalog_registry observed_registry USING(catalog_key)
+      WHERE prior_catalog.row_image IS DISTINCT FROM to_jsonb(observed_registry)-'label'-'updated_at')
     OR EXISTS(SELECT 1 FROM (VALUES
       ('iti_assoc_role','ref_iti_assoc_role'),('object_relation_type','ref_object_relation_type'),
       ('capacity_metric','ref_capacity_metric'),('legal_type','ref_legal_type'),('review_source','ref_review_source'),
@@ -737,5 +737,34 @@ BEGIN
   END IF;
 END
 $native_adapter_metadata$;
+
+DO $native_contract_final$
+DECLARE executor_name text;executor_oid oid;had_executor_grant boolean;prior_admin boolean;prior_inherit boolean;prior_set boolean;
+  memberships_before jsonb;memberships_after jsonb;
+BEGIN
+  executor_name:=current_user;executor_oid:=executor_name::regrole::oid;
+  SELECT COALESCE(jsonb_agg(to_jsonb(m) ORDER BY m.member,m.grantor),'[]') INTO memberships_before
+    FROM pg_auth_members m WHERE m.roleid='bertel_thesaurus_publisher'::regrole;
+  SELECT admin_option,inherit_option,set_option INTO prior_admin,prior_inherit,prior_set
+    FROM pg_auth_members WHERE roleid='bertel_thesaurus_publisher'::regrole AND member=executor_oid AND grantor=executor_oid;
+  had_executor_grant:=FOUND;
+  EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH ADMIN %s, INHERIT TRUE, SET FALSE GRANTED BY %I',
+    executor_name,CASE WHEN prior_admin THEN 'TRUE' ELSE 'FALSE' END,executor_name);
+  PERFORM thesaurus.assert_preparation_contract();
+  IF had_executor_grant THEN
+    EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH ADMIN %s, INHERIT %s, SET %s GRANTED BY %I',
+      executor_name,CASE WHEN prior_admin THEN 'TRUE' ELSE 'FALSE' END,
+      CASE WHEN prior_inherit THEN 'TRUE' ELSE 'FALSE' END,
+      CASE WHEN prior_set THEN 'TRUE' ELSE 'FALSE' END,executor_name);
+  ELSE
+    EXECUTE format('REVOKE bertel_thesaurus_publisher FROM %I GRANTED BY %I',executor_name,executor_name);
+  END IF;
+  SELECT COALESCE(jsonb_agg(to_jsonb(m) ORDER BY m.member,m.grantor),'[]') INTO memberships_after
+    FROM pg_auth_members m WHERE m.roleid='bertel_thesaurus_publisher'::regrole;
+  IF memberships_after IS DISTINCT FROM memberships_before THEN
+    RAISE EXCEPTION 'Publisher memberships were not restored after final preparation-contract assertion';
+  END IF;
+END
+$native_contract_final$;
 
 COMMIT;

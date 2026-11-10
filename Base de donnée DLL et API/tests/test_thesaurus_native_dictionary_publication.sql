@@ -100,7 +100,9 @@ BEGIN
       'sustainability_group','actor_role','contact_role','org_role'])),
     'Disposable fixtures must exercise every new native adapter domain';
   ASSERT NOT EXISTS(SELECT 1 FROM _native_fixture_ids i JOIN thesaurus.source_link sl USING(concept_id)
-    WHERE num_nonnulls(sl.iti_assoc_role_id,sl.object_relation_type_id,sl.capacity_metric_id,sl.legal_type_id,
+    WHERE i.domain=ANY(ARRAY['iti_assoc_role','object_relation_type','capacity_metric','legal_type','review_source',
+      'sustainability_group','actor_role','contact_role','org_role'])
+      AND num_nonnulls(sl.iti_assoc_role_id,sl.object_relation_type_id,sl.capacity_metric_id,sl.legal_type_id,
       sl.review_source_id,sl.sustainability_group_id,sl.actor_role_id,sl.contact_role_id,sl.org_role_id)<>1),
     'Every synthetic native adapter fixture must have exactly one new typed source link';
 END $synthetic_adapter_identity$;

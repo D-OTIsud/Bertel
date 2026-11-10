@@ -2154,7 +2154,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Optionnel. Actions natives appartenant à ce groupe, figées dans la publication. Absent des anciens snapshots et des groupes sans membre public gouverné. Cette appartenance ne remplace pas broader, related ou le parent de catégorie."
+            "description": "Optionnel. Actions natives appartenant à ce groupe, figées dans la publication. Absent des anciens snapshots qui ne contiennent pas ce champ ; un groupe publié sans membre public gouverné peut contenir un tableau vide. Cette appartenance ne remplace pas broader, related ou le parent de catégorie."
           },
           "narrower": {
             "type": "array",

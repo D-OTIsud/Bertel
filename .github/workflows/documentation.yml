@@ -4,10 +4,14 @@ on:
   push:
     paths:
       - 'docs/**'
+      - 'bertel-tourism-ui/src/app/api/public/**'
+      - 'db-graph-out/graph.json'
       - '.github/workflows/documentation.yml'
   pull_request:
     paths:
       - 'docs/**'
+      - 'bertel-tourism-ui/src/app/api/public/**'
+      - 'db-graph-out/graph.json'
       - '.github/workflows/documentation.yml'
 
 permissions:
@@ -30,5 +34,7 @@ jobs:
         run: node docs/partenaires-render.check.js
       - name: Check the complete static thesaurus guide
         run: node docs/thesaurus-render.check.js
+      - name: Check Postman route coverage and scripts without sending requests
+        run: node docs/postman.check.js
       - name: Build the documentation image with its explicit public file list
         run: docker build --tag bertel-documentation-ci ./docs

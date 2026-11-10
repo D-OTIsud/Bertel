@@ -1,224 +1,230 @@
-# Collection Postman - API Bertel v3.0
+# Utiliser la collection Postman Bertel
 
-Cette collection Postman fournit une interface complète pour tester et explorer l'API Bertel v3.0.
+La collection contient **100 requêtes : 67 exemples partenaires et 33 appels
+techniques à 24 RPC distinctes**. Elle couvre les **11 chemins de l’OpenAPI
+partenaire**. Ces deux périmètres ont leur propre adresse, leur authentification
+et leurs droits.
 
-## 📁 Fichiers inclus
+| Périmètre | Adresse et authentification | Usage |
+|---|---|---|
+| API partenaire | `{{public_base_url}}/api/public/*` ; clé `partner_key` | Fiches publiées, sélections, catalogues et thésaurus versionné |
+| Exemples techniques PostgREST | `{{base_url}}/rpc/*` ; `apikey` Supabase et session `authorization`, schéma `api` | Développement et recette par une personne autorisée |
 
-- `Bertel_API_v3.postman_collection.json` - Collection principale
-- `Bertel_API_v3.postman_environment.json` - Environnement avec variables
-- `README_Postman.md` - Ce guide d'utilisation
+Les routes applicatives d’administration, de CRM, de documents et de RGPD relèvent
+de contrats internes distincts. Les fonctions PostgreSQL incluent aussi des helpers
+et des traitements réservés ; leur nombre ne définit pas la couverture de cette
+collection.
 
-## 🚀 Installation
+## Importer et configurer
 
-### 1. Importer la collection
-1. Ouvrez Postman
-2. Cliquez sur **Import**
-3. Sélectionnez le fichier `Bertel_API_v3.postman_collection.json`
+1. Importer `Bertel_API_v3.postman_collection.json` dans Postman.
+2. Importer `Bertel_API_v3.postman_environment.json`, puis sélectionner cet environnement.
+3. Renseigner localement les variables du périmètre choisi. Les fichiers distribués
+   contiennent des emplacements de configuration, sans identifiants de connexion réels.
 
-### 2. Importer l'environnement
-1. Dans Postman, cliquez sur **Environments**
-2. Cliquez sur **Import**
-3. Sélectionnez le fichier `Bertel_API_v3.postman_environment.json`
+Un environnement privé facilite le choix de la cible. Si vous utilisez déjà
+**No Environment** et vos **Globals locales**, ce fonctionnement est conservé pour
+les clés et les adresses : la collection ne redéfinit pas `apikey`, `authorization`,
+`partner_key`, `base_url` ou `public_base_url`.
+Une valeur vide explicitement définie dans un environnement actif prend la priorité
+sur les Globals et fait ignorer la requête qui exige cette clé ; renseigner
+cet environnement ou sélectionner No Environment.
 
-### 3. Configurer l'environnement
-1. Sélectionnez l'environnement "Bertel API v3.0 - Environment"
-2. Modifiez les variables :
-   - `base_url` : URL de votre API (ex: `https://api.bertel.example.com`)
-   - `apikey` : Votre clé API
-   - `authorization` : Votre token Bearer (optionnel)
+Une adresse déjà définie conserve sa valeur, y compris une adresse de recette.
+Lorsque l’adresse est entièrement absente des portées configurées, les scripts
+utilisent localement les adresses Bertel connues :
+`https://supabertel.otisud.re/rest/v1` et `https://bertel.otisud.re`. Une adresse
+explicitement vide n’active pas ce repli : la requête est ignorée.
 
-## 📋 Structure de la collection
+Utiliser une version de Postman qui prend en charge
+[`pm.execution.skipRequest()`](https://learning.postman.com/docs/tests-and-scripts/write-scripts/postman-sandbox-reference/pm-execution).
+Les scripts ignorent ainsi, avant son envoi, une requête dont les prérequis manquent
+ou dont l’écriture n’est pas activée. Ce parcours vise l’API Client et le Collection Runner.
 
-### 1. Authentication & Headers
-- **Test Authentication** : Vérification de l'authentification
+### Partenaire
 
-### 2. Core Endpoints
-- **Get Object Resource** : Récupérer une ressource spécifique
-- **List Object Resources (Page)** : Lister avec pagination par curseur (`p_cursor`, `p_page_size`)
-- **List Object Resources (Since)** : Lister depuis une date (keyset)
-- **List Objects with Validated Changes Since** : IDs d'objets avec modifications validées depuis une date (accès `service_role`/`admin`)
+| Variable | Valeur attendue |
+|---|---|
+| `public_base_url` | Origine de l’application, sans `/api/public` final ; par exemple `https://bertel.otisud.re` |
+| `partner_key` | Clé partenaire fournie par l’OTI, conservée localement |
+| `public_selection_id` | Identifiant permanent d’une sélection ; `1006` est l’exemple « Terroir et artisanat » |
 
-### 3. Advanced Filtering
-- **List with Rich Filters (Page)** : Filtres avancés + pagination
-- **List with Rich Filters (Since)** : Filtres avancés + synchronisation
+Les requêtes construisent `Authorization: Bearer {{partner_key}}`. Cette clé donne
+accès à la passerelle partenaire, avec son quota et le périmètre autorisé.
 
-### 4. Filter Examples
-- **Equipment & Services Filters** : Exemples de filtres équipements
-- **Media Filters** : Exemples de filtres médias
-- **Geolocation Filters** : Exemples de filtres géolocalisation
-- **Itinerary Filters** : Exemples de filtres itinéraires
-- **Capacity & Classification Filters** : Exemples de filtres capacité
+### Technique PostgREST
 
-### 5. Track Data Examples
-- **Get Itinerary with KML Track** : Récupérer tracé KML
-- **Get Itinerary with GPX Track** : Récupérer tracé GPX
+| Variable | Valeur attendue |
+|---|---|
+| `base_url` | Racine REST complète, par exemple `https://<hôte-supabase>/rest/v1` ; la collection ajoute `/rpc/<fonction>` |
+| `apikey` | Clé cliente Supabase publiée pour cette instance |
+| `authorization` | Jeton de session d’un utilisateur autorisé, avec ou sans préfixe `Bearer` |
+| `allow_write_requests` | `false` pour une recette en lecture ; `true` active les deux écritures juridiques après satisfaction de leurs autres prérequis |
 
-### 6. Deep Data
-- **Get Object with Deep Data** : Récupérer un objet avec parents, acteurs et organisations
-- **Search Objects with Deep Data** : Recherche avec inclusion automatique des données liées
+Les scripts normalisent le JWT dans une variable locale `rpc_authorization`.
+Les POST RPC envoient `Authorization`, `apikey` et `Content-Profile: api` ; les droits
+de la personne et les règles de la base continuent à s’appliquer.
 
-### 7. Search & Discovery
-- **Search Objects by Label** : Recherche par labels de durabilité avec correspondances partielles
-- **List Objects Map View** : Vue carte allégée (payload minimal pour marqueurs)
-- **Search Restaurants by Cuisine** : Recherche spécialisée par types de cuisine
+La clé partenaire et le JWT Supabase remplissent des rôles différents. Une clé
+serveur privilégiée n’est pas nécessaire aux exemples destinés à une personne et
+n’est pas fournie dans l’environnement distribué. Conserver clés et jetons dans ses
+valeurs locales ; les retirer avant de partager un environnement renseigné.
 
-### 8. Media
-- **Get Media for Web** : Médias filtrés pour le web (exclut internes/brouillons, sélection intelligente)
+## Choisir les dossiers
 
-### 9. Reviews & Room Types
-- **Get Object Reviews** : Avis avec agrégats (note moyenne, nombre total)
-- **Get Object Room Types** : Types de chambres avec équipements, capacités et tarifs
+| Dossiers | Contenu |
+|---|---|
+| Authentication & Headers ; Core Endpoints | Fiche, listes paginées, changements depuis une date et exemple serveur réservé |
+| Advanced Filtering ; Filter Examples | Équipements, langues, accessibilité, labels, géolocalisation, itinéraires, capacités et salles |
+| Track Data Examples ; Track & GPX Export | Tracés KML, GPX et GeoJSON |
+| Deep Data ; Search & Discovery | Données liées, recherche, carte, labels et cuisines |
+| Media ; Reviews & Room Types ; Promotions | Médias, avis, chambres et code promotionnel |
+| Legal System | Quatre lectures juridiques |
+| API Publique Partenaire | Fiches, exports, sélections, appartenances, suppressions, catalogues et thésaurus |
+| Technique — écritures (désactivées par défaut) | Deux opérations juridiques : ajout d’un enregistrement et demande de document |
 
-### 10. Promotions
-- **Validate Promotion Code** : Validation de codes promotionnels avec vérification temporelle
+Pour une recette partenaire, sélectionner les dossiers de la passerelle publique.
+Pour une recette technique, configurer les variables PostgREST et choisir les exemples
+adaptés à ses droits et aux données de la cible.
 
-### 11. Track & GPX Export
-- **Export Itinerary GPX** : Export GPX complet avec métadonnées et waypoints
-- **Export Itineraries GPX Batch** : Export batch pour plusieurs itinéraires
-- **Get Itinerary Track GeoJSON** : Tracé GeoJSON FeatureCollection (Leaflet, Mapbox)
+Les variables `legacy_label_value_id`, `legacy_legal_id` et `legacy_promotion_code`
+restent à renseigner pour leurs exemples spécialisés. Pour les écritures, fournir
+`legacy_legal_type_code`, `legacy_legal_value`, `legacy_legal_valid_from`,
+`legacy_legal_valid_to` et `legacy_requested_at`. `legacy_legal_value` contient un
+**JSON valide complet**, par exemple `{"policy_number":"EXEMPLE"}` : le corps de
+requête l’insère comme valeur JSON, sans guillemets supplémentaires.
 
-### 12. Legal System
-- **Add Legal Record** : Ajouter un enregistrement juridique (assurance, licence, certification)
-- **Get Object Legal Data** : Récupérer tous les enregistrements juridiques d'un objet
-- **Get Object Legal Compliance** : Vérifier la conformité (documents manquants, expirés)
-- **Get Expiring Legal Records** : Lister les enregistrements arrivant à expiration
-- **Request Legal Document** : Marquer un document comme demandé (workflow)
-- **Get Pending Document Requests** : Lister les demandes de documents en attente
+`list_objects_with_validated_changes_since` reste un exemple réservé au serveur et
+est ignoré par le parcours distribué. Une session utilisateur ordinaire ne représente
+pas ce contexte ; une liste vide ne prouve pas une validation de ses privilèges.
 
-### 13. API Publique Partenaire (`/api/public/*`)
-> Surface **tierce** dédiée : un prestataire externe passe par cette passerelle (jamais PostgREST direct). Auth par **clé partenaire** `Authorization: Bearer bk_live_…` (variable `partner_key`), base = `public_base_url`. Enveloppe `{ meta, data }`, `meta.contract_version` + header `X-Bertel-Api-Version`, fiches **publiées** uniquement. Lancer « Lister les fiches publiées » en premier (remplit `object_id`).
+Les deux écritures juridiques sont ignorées tant que `allow_write_requests` ne vaut
+pas exactement `true`. Leur activation doit viser une cible de recette et des objets
+prévus à cet effet : elles modifient réellement les données. Les autres POST RPC de
+la collection sont des lectures ; la méthode HTTP seule ne détermine pas si une
+fonction écrit.
 
-- **Lister les fiches publiées** : `GET /api/public/objects` (curseur, `page_size`, `types`, `search`, `lang` ; **`format=<profil>`** ajoute le document pivot par fiche sous `data[i].<profil>` — synchronisation par lots, même pagination ; `variant` sélectionne le contrat Tourinsoft)
-- **Fiches et appartenances aux sélections** : `GET /api/public/objects?view=full&include_selection_ids=true`. Chaque fiche card/full porte `selection_ids`, tableau de chaînes triées sans doublon, `[]` sans sélection active. Le champ est à la racine de la fiche ; les pivots et le détail sont inchangés. Sans option ou avec `false`, il est absent et le traitement historique est conservé. Une valeur vide, répétée ou autre que `true`/`false` donne `400` ; toute combinaison avec `selection_id`, même à `false`, donne aussi `400`. La requête mémorise `membership_next_cursor` : activer son paramètre `cursor` pour la page suivante et conserver le flag ainsi que les autres options.
-- **Récupérer une fiche publiée** : `GET /api/public/objects/{id}`
-- **Fiche + JSON-LD schema.org (I4)** : `GET /api/public/objects/{id}?format=jsonld` → bloc additif `data.jsonld` (document schema.org, `@type` selon le type d'objet ; prêt pour SEO / interop)
-- **Fiche + DATAtourisme (I4b)** : `?format=datatourisme` → bloc additif `data.datatourisme` (JSON-LD ontologie nationale)
-- **Fiche + Apidae (I4b)** : `?format=apidae` → bloc additif `data.apidae` (JSON régional Apidae)
-- **Fiche + Tourinsoft historique (I4b)** : `?format=tourinsoft` → bloc additif `data.tourinsoft` au contrat `legacy-v1` inchangé
-- **Fiche + Tourinsoft CRT Réunion hébergement (I4e)** : `?format=tourinsoft&variant=reunion-hebergement-v1` → projection enrichie, public-only, pour HOT/HLO/CAMP
-- **Liste + Tourinsoft CRT Réunion hébergement (I4e)** : `?types=HOT,HLO,CAMP&format=tourinsoft&variant=reunion-hebergement-v1` → même contrat par fiche et même pagination
-- **Liste + Tourinsoft CRT Réunion régional (I4f)** : `?page_size=200&format=tourinsoft&variant=reunion-regional-v1` → projection taxonomique additive vers les six familles ; mémorise le premier id couvert
-- **Fiche + Tourinsoft CRT Réunion régional (I4f)** : `/{tourinsoft_regional_object_id}?format=tourinsoft&variant=reunion-regional-v1` → même document qu'en batch pour l'id mémorisé
-- **Fiche — toutes les langues (C-5)** : `GET /api/public/objects/{id}?lang=all` → bloc additif `data.i18n`
+## Parcourir les fiches et les sélections
 
-> `jsonld`, `datatourisme`, `apidae`, Tourinsoft `legacy-v1` et `reunion-hebergement-v1` restent inchangés. `reunion-regional-v1` couvre 683 chemins déclarés ou observés sur les six flux (187 approuvés, 278 en attente CRT, 218 exclus). Les flux et `$metadata` prouvent la forme de lecture, pas le contrat d'import : une validation CRT reste obligatoire avant toute écriture de production.
-- **Flux tombstone (C-4)** : `GET /api/public/objects/deletions?since=…` (suppressions définitives, pour miroir partenaire)
-- **Catalogues de référentiels (I1)** : `GET /api/public/catalog?domains=…`
+1. Lancer la liste des fiches publiées. Si elle contient des résultats, les scripts
+   mémorisent un identifiant public utilisable pour le détail et le curseur suivant.
+2. Consulter une fiche, ses langues ou ses représentations JSON-LD, DATAtourisme,
+   Apidae et Tourinsoft. Les variantes Tourinsoft sont des contrats distincts ;
+   choisir une fiche couverte par la variante demandée.
+3. Pour une sélection, renseigner `public_selection_id`, puis conserver le même
+   identifiant, la même clé et les mêmes options pendant toute la pagination.
+   Un renommage de sélection conserve son identifiant permanent.
+4. Pour connaître les appartenances dans le flux général, utiliser
+   `include_selection_ids=true`. Cette option est incompatible avec `selection_id`,
+   y compris lorsqu’elle vaut `false`.
 
-Pour les appartenances, actualiser `selection_ids` à chaque parcours complet, même si `updated_at` est inchangé : suspendre une sélection ou changer ses critères ne modifie pas l'horodatage des fiches. Les pages ne forment pas un instantané. Appliquer les retraits seulement après toutes les pages réussies ; un échec, dont `503 selection_membership_unavailable`, conserve l'état précédent et ne signifie pas `[]`. Aucun nom privé ni règle de sélection n'est retourné. La présence de cet exemple dans la collection ne confirme pas le déploiement de l'option.
+Les pages suivantes utilisent les curseurs capturés. Une requête qui dépend d’un
+curseur ou d’un identifiant absent est ignorée ; une page vide connue est une réponse
+valide. Poursuivre jusqu’à `next_cursor: null` pour une synchronisation complète.
 
-## 🔧 Variables d'environnement
+Les appartenances `selection_ids` sont recalculées sur les données courantes. Une
+suspension ou une modification des critères peut les changer sans changer
+`updated_at` sur la fiche. Les pages ne forment pas un instantané : appliquer les
+retraits dans son miroir après un parcours complet réussi. Une erreur, notamment
+`503 selection_membership_unavailable`, conserve l’état précédemment synchronisé.
 
-| Variable | Description | Exemple |
-|----------|-------------|---------|
-| `base_url` | URL de base de l'API (PostgREST/RPC) | `https://api.bertel.example.com` |
-| `apikey` | Votre clé API | `your-api-key-here` |
-| `authorization` | Token Bearer (optionnel) | `Bearer your-token-here` |
-| `public_base_url` | URL de l'app (passerelle partenaire `/api/public/*`) | `https://app.bertel.example.com` |
-| `partner_key` | Clé partenaire Bearer pour `/api/public/*` (émise par l'OTI) | `bk_live_…` |
-| `object_id` | ID d'objet (auto-rempli) | Auto-généré |
-| `tourinsoft_regional_object_id` | ID couvert par la variante régionale (auto-rempli par la liste I4f) | Auto-généré |
-| `membership_next_cursor` | Curseur du flux général avec `include_selection_ids=true` (auto-rempli par la requête correspondante) | Auto-généré |
-| `itinerary_id` | ID d'itinéraire (auto-rempli) | Auto-généré |
-| `current_timestamp` | Timestamp actuel (auto-généré) | Auto-généré |
+Pour un flux depuis une date, conserver son point de départ pendant le parcours et
+ne l’avancer qu’après réussite de toutes les pages. Les exemples techniques utilisent
+`p_cursor` et `p_page_size` ou `p_limit`, selon la signature ; la passerelle publique
+utilise `cursor` et `page_size`.
 
-## 🧪 Tests automatiques
+`current_timestamp` est le point de départ configurable des exemples techniques
+« since ». Il n’est pas remplacé automatiquement par l’heure présente. `public_lang`,
+`public_search` et `thesaurus_query` règlent les exemples correspondants. Les codes de
+filtres sont sensibles à la casse : par exemple `parking`, `wifi`, `photo`,
+`carte_bleue`, `especes`, `hot_stars` et `max_capacity`. Les coordonnées des exemples
+géographiques illustrent une zone du Sud de La Réunion ; elles ne garantissent pas
+la présence de fiches correspondant à l’ensemble des autres critères.
 
-Chaque requête inclut des tests automatiques :
-- ✅ Vérification du code de statut (200)
-- ✅ Vérification du Content-Type JSON
-- ✅ Validation de la structure de réponse
-- ✅ Sauvegarde automatique des IDs pour les requêtes suivantes
+## Parcourir le thésaurus
 
-## 📊 Exemples d'utilisation
+Le thésaurus apporte des identités stables, les textes multilingues, les synonymes,
+les relations et les versions historiques. Le catalogue fournit les choix actifs
+du moment. Le [guide partenaires](guide-partenaires.md) détaille ces contrats ; le
+[guide métier](thesaurus.html) explique l’entretien du contenu.
 
-### Récupérer une ressource
-```json
-{
-  "p_object_id": "example-id",
-  "p_lang_prefs": ["fr", "en"],
-  "p_track_format": "none"
-}
+1. **Découvrir la publication courante** avec `GET /thesaurus`. Les scripts capturent
+   l’identifiant retourné ; aucun numéro de publication n’est fixé dans les exemples.
+2. **Lire son manifeste**, puis **lister ses concepts** avec cet identifiant. La
+   première page peut fournir un concept à consulter et un curseur pour continuer.
+3. **Consulter un concept dans la publication choisie**, puis son **URI pérenne**
+   dans la publication courante. Ces deux lectures ont des temporalités distinctes.
+4. **Essayer les langues**, notamment `lang=de`. Les champs de langue effective
+   indiquent les replis : une définition française de repli reste une définition
+   française et n’est pas présentée comme une traduction.
+5. **Télécharger l’export JSON** ou le document **JSON-LD/SKOS** de la publication.
+   Le second répond en `application/ld+json` et décrit les relations sémantiques.
+6. **Lire les changements** depuis la publication précédente, avec leur propre
+   curseur. Les concepts dépréciés ou retirés restent utiles pour les anciennes fiches.
+7. **Rejouer une lecture avec l’ETag capturé**. Un `304` attendu ne contient pas de
+   corps ; la clé partenaire et le quota sont toujours contrôlés.
+
+Les curseurs du thésaurus sont liés à la publication, aux filtres, à la langue et à
+la taille de page. Conserver ces paramètres jusqu’à la fin du parcours. Une nouvelle
+publication n’altère pas les pages de la version choisie.
+
+Les exemples d’erreurs vérifient leurs statuts attendus, notamment les paramètres
+invalides ou un concept inconnu. Leur réponse d’erreur attendue constitue la réussite
+du cas testé ; elle ne transforme pas l’échec d’une requête normale en synchronisation réussie.
+
+## Variables de parcours
+
+Les valeurs capturées sont conservées dans les **variables de collection**. Les
+scripts les recopient dans la portée locale de la requête qui en dépend. L’environnement
+fourni ne déclare pas ces valeurs : une ancienne valeur d’environnement ne masque
+ainsi pas une publication ou un curseur fraîchement capturé.
+
+| Variables | Origine |
+|---|---|
+| `public_object_id`, `public_itinerary_id`, `public_next_cursor` | Résultats et pagination des fiches publiques |
+| `selection_next_cursor`, `membership_next_cursor` | Pagination des sélections et du flux avec appartenances |
+| `public_deletions_cursor`, `public_taxonomy_code` | Pagination des suppressions et exemple de code taxonomique découvert |
+| `tourinsoft_regional_object_id` | Première fiche couverte par la variante régionale de l’exemple |
+| `thesaurus_release_id`, `thesaurus_previous_release_id` | Découverte et manifeste du thésaurus |
+| `thesaurus_concept_id` | Liste des concepts de la publication choisie |
+| `thesaurus_historical_concept_id` | Concept déprécié ou retiré découvert dans la publication |
+| `thesaurus_next_cursor`, `thesaurus_changes_cursor` | Pagination des concepts et des changements |
+| `thesaurus_etag` | Réponse d’une lecture conditionnelle du thésaurus |
+
+Les exemples techniques utilisent leurs propres identifiants, dont `object_id` et
+`itinerary_id`. Une valeur issue d’une autre instance ou inventée peut produire une
+absence de résultat ou une erreur de validation. Renseigner les valeurs de la cible
+lorsqu’un exemple ne peut pas les découvrir automatiquement.
+
+Pour saisir manuellement une valeur de parcours, utiliser l’onglet **Variables de
+la collection**. Une liste technique peut fournir `object_id` et `itinerary_id`
+avant les lectures de détail ; des filtres trop restrictifs peuvent laisser la
+liste vide. Les identifiants techniques et partenaires sont capturés séparément.
+
+Les portées et leur priorité sont décrites dans la
+[documentation officielle des variables Postman](https://learning.postman.com/docs/use/send-requests/variables/variables/).
+
+## Comprendre les tests
+
+Les scripts vérifient le statut et le type de contenu attendus, puis la structure
+correspondante. Ils distinguent JSON usuel, JSON-LD et `304` sans corps. Les variables
+locales `expected_status` et `expected_content_type` sont pilotées par les cas particuliers.
+
+Consulter les requêtes **ignorées** dans le rapport du Runner. Un parcours privé de
+clé, d’identifiant ou de curseur peut ignorer plusieurs étapes : il ne constitue pas
+une recette complète de ces étapes.
+
+Depuis la racine du dépôt, les contrôles hors connexion se lancent avec :
+
+```bash
+node docs/postman.check.js
 ```
 
-### Lister avec pagination
-```json
-{
-  "p_cursor": null,
-  "p_page_size": 20,
-  "p_types": ["ITI", "HER"],
-  "p_status": ["published"]
-}
-```
+Ils comparent la couverture à OpenAPI et vérifient les scripts et les garde-fous sur
+des réponses simulées. Ils recoupent aussi OpenAPI avec les routes HTTP publiques
+implémentées et vérifient les codes d’exemples à partir du vocabulaire minimal relu
+dans `postman-sample-catalog.json`. Ce dernier est un contrat de recette, avec sa
+provenance ; il ne constitue pas un export complet des catalogues.
 
-### Filtrer par équipements
-```json
-{
-  "p_cursor": null,
-  "p_page_size": 20,
-  "p_filters": {
-    "amenities_any": ["PARKING", "WIFI"],
-    "pet_accepted": true
-  }
-}
-```
-
-### Synchronisation depuis une date
-```json
-{
-  "p_since": "2024-04-01T00:00:00Z",
-  "p_cursor": null,
-  "p_limit": 50
-}
-```
-
-## 🔍 Filtres disponibles
-
-### Équipements & Services
-- `amenities_any` / `amenities_all` : Équipements
-- `amenity_families_any` : Familles d'équipements
-- `pet_accepted` : Animaux acceptés
-- `payment_methods_any` : Moyens de paiement
-- `environment_tags_any` : Tags environnement
-- `languages_any` : Langues parlées
-
-### Médias
-- `media_types_any` : Types de médias
-- `media_published_only` : Médias publiés uniquement
-- `media_must_have_main` : Doit avoir un média principal
-
-### Géolocalisation
-- `within_radius` : Dans un rayon
-- `bbox` : Dans une bounding box
-
-### Itinéraires
-- `itinerary` : Critères d'itinéraire (boucle, difficulté, distance, durée, pratiques)
-
-### Capacité & Classement
-- `capacity_filters` : Filtres de capacité
-- `classifications_any` : Classifications
-- `tags_any` : Tags
-- `meeting_room` : Salle de réunion
-
-### Disponibilité
-- `open_now` : Ouvert maintenant
-
-## 🎯 Conseils d'utilisation
-
-1. **Commencez par** "Test Authentication" pour vérifier votre configuration
-2. **Utilisez** les exemples de filtres pour comprendre les possibilités
-3. **Les variables** sont automatiquement remplies par les scripts
-4. **Les tests** vous donnent un retour immédiat sur la validité des réponses
-5. **Copiez** les exemples de requêtes pour vos propres développements
-6. **Pagination** : pour les endpoints *Page*, utilisez `p_cursor` et `p_page_size` (pas `p_page`)
-
-## 📚 Documentation complète
-
-Pour plus de détails sur l'API, consultez la documentation complète dans `index.html`.
-
-## 🤝 Support
-
-Pour toute question ou problème :
-- Consultez la documentation API
-- Vérifiez vos variables d'environnement
-- Testez avec "Test Authentication" en premier
+Ces contrôles n’envoient aucune requête et ne prouvent pas, à eux seuls, le
+fonctionnement d’une instance déployée ou la validité d’une clé.

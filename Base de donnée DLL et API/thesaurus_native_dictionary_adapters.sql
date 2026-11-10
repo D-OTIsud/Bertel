@@ -231,7 +231,7 @@ BEGIN
     WHERE domain=ANY(ARRAY['iti_assoc_role','object_relation_type','capacity_metric','legal_type','review_source','sustainability_group','actor_role','contact_role','org_role']);
   IF adapter_rows<>native_rows
     OR (SELECT count(DISTINCT (source_kind,source_id,domain)) FROM thesaurus.source_rows WHERE domain=ANY(ARRAY['iti_assoc_role','object_relation_type','capacity_metric','legal_type','review_source','sustainability_group','actor_role','contact_role','org_role']))<>native_rows
-    OR EXISTS(SELECT 1 FROM thesaurus.source_rows s WHERE s.domain=ANY(ARRAY['iti_assoc_role','object_relation_type','capacity_metric','legal_type','review_source','sustainability_group','actor_role','contact_role','org_role']) AND (s.source_key<>jsonb_build_object('id',s.source_id::uuid) OR s.payload->>'id' IS NULL)) THEN
+    OR EXISTS(SELECT 1 FROM thesaurus.source_rows s WHERE s.domain=ANY(ARRAY['iti_assoc_role','object_relation_type','capacity_metric','legal_type','review_source','sustainability_group','actor_role','contact_role','org_role']) AND (s.source_key<>jsonb_build_object('id',s.source_id) OR s.payload->>'id' IS NULL)) THEN
     RAISE EXCEPTION 'Native source projection does not cover the exact current nine-table identity set';
   END IF;
 END

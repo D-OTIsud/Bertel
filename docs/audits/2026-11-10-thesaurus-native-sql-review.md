@@ -1,6 +1,6 @@
 # Native dictionary SQL review — 10 November 2026
 
-Status: all ten findings are resolved, including native migration ordering;
+Status: all eleven findings are resolved, including native migration ordering;
 full fresh/behavior CI remains pending. This file is not deployment approval. No production
 writes, publication, commits or overlapping SQL edits were performed by reviewer.
 
@@ -57,6 +57,13 @@ Production counts are not assumed to equal fresh-seed counts.
     the reviewed SQL body was moved into that native migration. The applied
     metadata ledger remains unchanged. Align this filename with the real native
     ledger version after installation.
+11. A real behavioral-test failure exposed planner-reordered casts of mixed-kind
+    `source_id` values, including commune `97406`. The migration audit found one
+    similarly unnecessary cast in its identity preflight. It now compares the
+    exact JSON object using `jsonb_build_object('id',s.source_id)`; UUID-native
+    source arms already derive canonical text from their typed UUID IDs. A bounded
+    production constant SELECT confirmed UUID/text JSON serialization equality.
+    All remaining source-ID UUID casts are inside source-kind CASE branches.
 
 The reviewer reproduced item 8 in a newly created, independently identified
 temporary PostgreSQL 17 cluster bound to loopback, verified before any mutation.
@@ -65,9 +72,9 @@ No existing database, archived harness or production connection was used.
 
 ## Corrected candidate reread
 
-Migration and standalone mirror after the item-9 literal correction are
+Migration and standalone mirror after the item-11 preflight correction are
 byte-identical, SHA-256
-`7b445ff1e6f334b8b549ef689abf85a0dd11e6988e5d918e4939e2299cefce40`.
+`0d44a607d218191089779cc5eff15cf989fcec84981492075f000ccecb771f67`.
 The reviewer re-read the actual corrected SQL. It now pins eleven normalized
 function predecessors plus the view, preserves all twelve existing function
 metadata snapshots and the view metadata, validates the old preparation contract

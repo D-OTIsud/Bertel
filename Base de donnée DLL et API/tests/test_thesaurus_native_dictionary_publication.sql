@@ -188,31 +188,31 @@ BEGIN
   ASSERT NOT EXISTS(
     (SELECT c.concept_id FROM thesaurus.concept c WHERE c.domain='sustainability_group'
      UNION SELECT ac.concept_id FROM thesaurus.concept ac
-       JOIN public.ref_sustainability_action a ON a.id=ac.source_id::uuid
+       JOIN public.ref_sustainability_action a ON a.id::text=ac.source_id
        WHERE ac.domain='sustainability_action' AND a.group_id IS NOT NULL
      UNION SELECT cc.concept_id FROM thesaurus.concept cc
-       JOIN public.ref_sustainability_action_group g ON g.category_id=cc.source_id::uuid
+       JOIN public.ref_sustainability_action_group g ON g.category_id::text=cc.source_id
        WHERE cc.domain='sustainability_category')
     EXCEPT (SELECT concept_id FROM thesaurus.release_change WHERE release_id=rid))
     AND NOT EXISTS((SELECT concept_id FROM thesaurus.release_change WHERE release_id=rid)
     EXCEPT (SELECT c.concept_id FROM thesaurus.concept c WHERE c.domain='sustainability_group'
      UNION SELECT ac.concept_id FROM thesaurus.concept ac
-       JOIN public.ref_sustainability_action a ON a.id=ac.source_id::uuid
+       JOIN public.ref_sustainability_action a ON a.id::text=ac.source_id
        WHERE ac.domain='sustainability_action' AND a.group_id IS NOT NULL
      UNION SELECT cc.concept_id FROM thesaurus.concept cc
-       JOIN public.ref_sustainability_action_group g ON g.category_id=cc.source_id::uuid
+       JOIN public.ref_sustainability_action_group g ON g.category_id::text=cc.source_id
        WHERE cc.domain='sustainability_category')),
     'Initial group bootstrap must dirty exactly groups, member actions and their category parents';
   ASSERT NOT EXISTS(SELECT 1 FROM _native_group_base b JOIN thesaurus.release_concept r USING(concept_id)
     JOIN thesaurus.concept c USING(concept_id)
-    JOIN public.ref_sustainability_action a ON a.id=c.source_id::uuid
+    JOIN public.ref_sustainability_action a ON a.id::text=c.source_id
     WHERE r.release_id=rid AND b.document IS DISTINCT FROM r.document
       AND b.domain='sustainability_action' AND a.group_id IS NULL),
     'Nonmember action documents must copy byte-for-byte from the earlier snapshot';
   ASSERT NOT EXISTS(SELECT 1 FROM _native_group_base b JOIN thesaurus.release_concept r USING(concept_id)
     JOIN thesaurus.concept c USING(concept_id)
     WHERE r.release_id=rid AND b.domain='sustainability_category'
-      AND NOT EXISTS(SELECT 1 FROM public.ref_sustainability_action_group g WHERE g.category_id=c.source_id::uuid)
+      AND NOT EXISTS(SELECT 1 FROM public.ref_sustainability_action_group g WHERE g.category_id::text=c.source_id)
       AND b.document IS DISTINCT FROM r.document),
     'Categories unrelated to any native group must copy byte-for-byte';
   ASSERT NOT EXISTS(SELECT 1 FROM thesaurus.publication_documents() d

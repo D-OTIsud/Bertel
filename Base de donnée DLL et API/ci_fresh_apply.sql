@@ -860,6 +860,7 @@ COMMIT;
 \echo '== Native dictionaries: six scoped public adapters and three private role adapters =='
 \ir thesaurus_native_dictionary_adapters.sql
 \ir tests/test_thesaurus_native_dictionary_adapters.sql
+\ir tests/test_thesaurus_native_dictionary_publication.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

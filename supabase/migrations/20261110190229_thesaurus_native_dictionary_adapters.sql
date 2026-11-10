@@ -6,14 +6,77 @@ SET LOCAL lock_timeout='5s';
 SET LOCAL statement_timeout='120s';
 
 DO $preflight$
+DECLARE native_table text;executor_name text;executor_oid oid;had_executor_grant boolean;
+  prior_admin boolean;prior_inherit boolean;prior_set boolean;memberships_before jsonb;memberships_after jsonb;
 BEGIN
   IF current_setting('transaction_isolation')<>'read committed' THEN
     RAISE EXCEPTION 'Native dictionary adapter upgrade requires READ COMMITTED' USING ERRCODE='PT409';
   END IF;
   PERFORM thesaurus.take_source_gate();
+  -- These nine dictionaries did not participate in the old source gate.
+  -- Drain their native writers before checking/installing the new gates.
+  FOR native_table IN SELECT unnest(ARRAY[
+    'public.ref_actor_role','public.ref_capacity_metric','public.ref_contact_role','public.ref_iti_assoc_role',
+    'public.ref_legal_type','public.ref_object_relation_type','public.ref_org_role','public.ref_review_source',
+    'public.ref_sustainability_action_group','public.ref_catalog_registry']) ORDER BY 1 LOOP
+    EXECUTE format('LOCK TABLE %s IN SHARE ROW EXCLUSIVE MODE',native_table::regclass);
+  END LOOP;
   -- S2 -> X1 exactly matches the metadata migration and waits out editorial
   -- writes before inspecting drafts, source identities, or frozen vocabulary.
   PERFORM pg_advisory_xact_lock(741126,1);
+  -- Fail closed on any prior prepared-publication drift before changing the
+  -- reviewed registry. Temporarily inherit only the existing publisher role,
+  -- restoring every grantor's exact membership row before continuing.
+  executor_name:=current_user;executor_oid:=executor_name::regrole::oid;
+  -- Pin production predecessor bodies and capture complete function/view
+  -- metadata before any schema object is touched. OIDs are intentionally
+  -- captured from this database rather than copied from another cluster.
+  IF (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.guard_source()'::regprocedure)<>'019744a91ecedeadc998b911cf9ab778'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.sync_sources(text[])'::regprocedure)<>'19f8b5120bf090539baa60bf67f82100'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.usage_objects(uuid[])'::regprocedure)<>'c86b54135a58ac0d70ad059a0833c193'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.concept_document(uuid,boolean)'::regprocedure)<>'d701242b717044c27cb25ec63ad3ca8d'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.publication_documents(uuid[])'::regprocedure)<>'1302cfff941a16e4c1d0220ffba99a85'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.validate_document(uuid,jsonb)'::regprocedure)<>'215c245b6b3334049de9ede7c5a44416'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.apply_source(uuid,jsonb)'::regprocedure)<>'6bb8e65e21cf5d437be1d82eefc435cf'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.admin_dispatch(text,jsonb)'::regprocedure)<>'32f1b1b3cfedd47dd338e8713fdf6437'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.row_has_historical_reference(oid,jsonb,oid[],integer)'::regprocedure)<>'78a1c2d56f14fb5611992e6b808d4b12'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.guard_assignment()'::regprocedure)<>'9e7bc848a0b4f5168380108bc511ee30'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.preparation_sources()'::regprocedure)<>'e47f98f26bc9b82bd677f766e4fc088d'
+    OR (SELECT md5(replace(pg_get_viewdef('thesaurus.source_rows'::regclass,true),chr(13),'')))<>'fbcb3685b4ede2c6a572f19d677acbf6' THEN
+    RAISE EXCEPTION 'Reviewed native adapter predecessor body contract changed';
+  END IF;
+  CREATE TEMP TABLE thesaurus_native_adapter_function_metadata_before ON COMMIT DROP AS
+    SELECT p.oid::regprocedure::text signature,to_jsonb(p)-'prosrc' metadata FROM pg_proc p
+    WHERE p.oid=ANY(ARRAY['thesaurus.guard_source()'::regprocedure,'thesaurus.sync_sources(text[])'::regprocedure,
+      'thesaurus.usage_objects(uuid[])'::regprocedure,'thesaurus.concept_document(uuid,boolean)'::regprocedure,
+      'thesaurus.publication_documents(uuid[])'::regprocedure,'thesaurus.validate_document(uuid,jsonb)'::regprocedure,
+      'thesaurus.apply_source(uuid,jsonb)'::regprocedure,'thesaurus.admin_dispatch(text,jsonb)'::regprocedure,
+      'thesaurus.row_has_historical_reference(oid,jsonb,oid[],integer)'::regprocedure,
+      'thesaurus.guard_assignment()'::regprocedure,'thesaurus.preparation_sources()'::regprocedure,
+      'thesaurus.activate(uuid[],text[],text,bigint,jsonb)'::regprocedure]::oid[]);
+  CREATE TEMP TABLE thesaurus_native_adapter_view_metadata_before ON COMMIT DROP AS
+    SELECT c.oid,c.relowner,c.relacl,c.reloptions FROM pg_class c WHERE c.oid='thesaurus.source_rows'::regclass;
+  SELECT COALESCE(jsonb_agg(to_jsonb(m) ORDER BY m.member,m.grantor),'[]') INTO memberships_before
+    FROM pg_auth_members m WHERE m.roleid='bertel_thesaurus_publisher'::regrole;
+  SELECT admin_option,inherit_option,set_option INTO prior_admin,prior_inherit,prior_set
+    FROM pg_auth_members WHERE roleid='bertel_thesaurus_publisher'::regrole AND member=executor_oid AND grantor=executor_oid;
+  had_executor_grant:=FOUND;
+  EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH ADMIN %s, INHERIT TRUE, SET FALSE GRANTED BY %I',
+    executor_name,CASE WHEN prior_admin THEN 'TRUE' ELSE 'FALSE' END,executor_name);
+  PERFORM thesaurus.assert_preparation_contract();
+  CREATE TEMP TABLE thesaurus_native_adapter_contract_before ON COMMIT DROP AS
+    SELECT thesaurus.preparation_contract_registry() contract;
+  IF had_executor_grant THEN
+    EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH ADMIN %s, INHERIT %s, SET %s GRANTED BY %I',
+      executor_name,CASE WHEN prior_admin THEN 'TRUE' ELSE 'FALSE' END,
+      CASE WHEN prior_inherit THEN 'TRUE' ELSE 'FALSE' END,
+      CASE WHEN prior_set THEN 'TRUE' ELSE 'FALSE' END,executor_name);
+  ELSE
+    EXECUTE format('REVOKE bertel_thesaurus_publisher FROM %I GRANTED BY %I',executor_name,executor_name);
+  END IF;
+  SELECT COALESCE(jsonb_agg(to_jsonb(m) ORDER BY m.member,m.grantor),'[]') INTO memberships_after
+    FROM pg_auth_members m WHERE m.roleid='bertel_thesaurus_publisher'::regrole;
+  IF memberships_after IS DISTINCT FROM memberships_before THEN RAISE EXCEPTION 'Publisher membership was not restored after source-contract preflight';END IF;
   IF (SELECT count(*) FROM thesaurus.vocabulary)<>78 THEN
     RAISE EXCEPTION 'Expected the exact 78-domain metadata predecessor';
   END IF;
@@ -21,21 +84,6 @@ BEGIN
     SELECT domain,to_jsonb(v) row_image FROM thesaurus.vocabulary v;
   IF EXISTS(SELECT 1 FROM thesaurus.revision WHERE status<>'published') THEN
     RAISE EXCEPTION 'Resolve open editorial drafts before installing native adapters' USING ERRCODE='PT409';
-  END IF;
-  IF (SELECT count(*) FROM public.ref_iti_assoc_role)<>8
-    OR (SELECT count(*) FROM public.ref_object_relation_type)<>10
-    OR (SELECT count(*) FROM public.ref_capacity_metric)<>12
-    OR (SELECT count(*) FROM public.ref_legal_type)<>21
-    OR (SELECT count(*) FROM public.ref_review_source)<>7
-    OR (SELECT count(*) FROM public.ref_sustainability_action_group)<>76
-    OR (SELECT count(*) FROM public.ref_actor_role)<>5
-    OR (SELECT count(*) FROM public.ref_contact_role)<>6
-    OR (SELECT count(*) FROM public.ref_org_role)<>3 THEN
-    RAISE EXCEPTION 'Native dictionary row counts differ from the reviewed 148-row catalog snapshot';
-  END IF;
-  IF (SELECT count(*) FROM public.ref_sustainability_action a WHERE a.group_id IS NOT NULL)<>239
-    OR (SELECT count(*) FROM public.ref_sustainability_action a JOIN public.ref_sustainability_action_group g ON g.id=a.group_id WHERE a.category_id<>g.category_id)<>2 THEN
-    RAISE EXCEPTION 'Native group-membership snapshot differs from the reviewed 239 members / 2 cross-category edges';
   END IF;
 END
 $preflight$;
@@ -57,11 +105,11 @@ DECLARE old_check record;old_def text;
 BEGIN
   SELECT oid,pg_get_constraintdef(oid) definition INTO STRICT old_check
   FROM pg_constraint WHERE conrelid='thesaurus.source_link'::regclass AND contype='c'
-    AND pg_get_constraintdef(oid) LIKE 'CHECK (num_nonnulls(%';
+    AND conname='source_link_check';
   old_def:=old_check.definition;
-  IF (SELECT count(*) FROM pg_constraint WHERE conrelid='thesaurus.source_link'::regclass AND contype='c'
-      AND pg_get_constraintdef(oid) LIKE 'CHECK (num_nonnulls(%')<>1
-    OR old_def NOT LIKE '%sustainability_category_id%' OR old_def LIKE '%iti_assoc_role_id%' THEN
+  IF old_def IS DISTINCT FROM 'CHECK ((num_nonnulls(ref_code_id, amenity_id, classification_scheme_id, classification_value_id, language_id, commune_code, sustainability_action_id, sustainability_category_id) = 1))'
+    OR (SELECT count(*) FROM pg_constraint WHERE conrelid='thesaurus.source_link'::regclass AND contype='c'
+      AND conname='source_link_check')<>1 THEN
     RAISE EXCEPTION 'Source-link one-of predecessor changed';
   END IF;
   EXECUTE format('ALTER TABLE thesaurus.source_link DROP CONSTRAINT %I',
@@ -105,6 +153,36 @@ INSERT INTO thesaurus.vocabulary(domain,name,source_kind,is_public,is_governed,l
  ('contact_role','Rôles des contacts','contact_role',false,false,false,true,ARRAY['fr','en','es','de'],'{"fr":"Rôles des contacts","en":"Contact roles","es":"Funciones de contacto","de":"Kontaktrollen"}'),
  ('org_role','Rôles des organisations liées','org_role',false,false,false,true,ARRAY['fr','en','es','de'],'{"fr":"Rôles des organisations liées","en":"Linked organization roles","es":"Funciones de las organizaciones vinculadas","de":"Rollen verknüpfter Organisationen"}');
 
+CREATE TEMP TABLE thesaurus_native_catalog_before ON COMMIT DROP AS
+SELECT r.catalog_key,to_jsonb(r)-'label'-'updated_at' row_image FROM public.ref_catalog_registry r
+WHERE r.catalog_key=ANY(ARRAY['ref_iti_assoc_role','ref_object_relation_type','ref_capacity_metric','ref_legal_type','ref_review_source','ref_sustainability_action_group','ref_actor_role','ref_contact_role','ref_org_role']);
+UPDATE public.ref_catalog_registry r SET label=v.name
+FROM (VALUES
+  ('iti_assoc_role','ref_iti_assoc_role'),('object_relation_type','ref_object_relation_type'),
+  ('capacity_metric','ref_capacity_metric'),('legal_type','ref_legal_type'),('review_source','ref_review_source'),
+  ('sustainability_group','ref_sustainability_action_group'),('actor_role','ref_actor_role'),
+  ('contact_role','ref_contact_role'),('org_role','ref_org_role')) mapping(domain,catalog_key)
+JOIN thesaurus.vocabulary v ON v.domain=mapping.domain
+WHERE r.catalog_key=mapping.catalog_key AND r.label IS DISTINCT FROM v.name;
+DO $native_catalog_labels$
+BEGIN
+  IF (SELECT count(*) FROM thesaurus_native_catalog_before)<>9
+    OR EXISTS(SELECT 1 FROM thesaurus_native_catalog_before prior_catalog
+      JOIN public.ref_catalog_registry current_catalog USING(catalog_key)
+      WHERE prior_catalog.row_image IS DISTINCT FROM to_jsonb(current_catalog)-'label'-'updated_at')
+    OR EXISTS(SELECT 1 FROM (VALUES
+      ('iti_assoc_role','ref_iti_assoc_role'),('object_relation_type','ref_object_relation_type'),
+      ('capacity_metric','ref_capacity_metric'),('legal_type','ref_legal_type'),('review_source','ref_review_source'),
+      ('sustainability_group','ref_sustainability_action_group'),('actor_role','ref_actor_role'),
+      ('contact_role','ref_contact_role'),('org_role','ref_org_role')) mapping(domain,catalog_key)
+      JOIN thesaurus.vocabulary v ON v.domain=mapping.domain
+      LEFT JOIN public.ref_catalog_registry r ON r.catalog_key=mapping.catalog_key
+      WHERE r.catalog_key IS NULL OR r.label IS DISTINCT FROM v.name) THEN
+    RAISE EXCEPTION 'Reviewed native catalog labels missing or unrelated catalog metadata changed';
+  END IF;
+END
+$native_catalog_labels$;
+
 DO $preserved_vocabulary$
 BEGIN
   IF EXISTS(SELECT 1 FROM thesaurus_native_adapter_vocab_before prior_vocab
@@ -138,10 +216,23 @@ UNION ALL SELECT 'contact_role','contact_role',r.id::text,r.code::text,'',jsonb_
 UNION ALL SELECT 'org_role','org_role',r.id::text,r.code::text,'',jsonb_build_object('id',r.id),to_jsonb(r),NULL,NULL,NULL FROM public.ref_org_role r;
 
 DO $source_identity$
+DECLARE native_rows bigint;adapter_rows bigint;
 BEGIN
-  IF (SELECT count(*) FROM thesaurus.source_rows WHERE domain=ANY(ARRAY['iti_assoc_role','object_relation_type','capacity_metric','legal_type','review_source','sustainability_group','actor_role','contact_role','org_role']))<>148
+  SELECT (SELECT count(*) FROM public.ref_iti_assoc_role)
+    +(SELECT count(*) FROM public.ref_object_relation_type)
+    +(SELECT count(*) FROM public.ref_capacity_metric)
+    +(SELECT count(*) FROM public.ref_legal_type)
+    +(SELECT count(*) FROM public.ref_review_source)
+    +(SELECT count(*) FROM public.ref_sustainability_action_group)
+    +(SELECT count(*) FROM public.ref_actor_role)
+    +(SELECT count(*) FROM public.ref_contact_role)
+    +(SELECT count(*) FROM public.ref_org_role) INTO native_rows;
+  SELECT count(*) INTO adapter_rows FROM thesaurus.source_rows
+    WHERE domain=ANY(ARRAY['iti_assoc_role','object_relation_type','capacity_metric','legal_type','review_source','sustainability_group','actor_role','contact_role','org_role']);
+  IF adapter_rows<>native_rows
+    OR (SELECT count(DISTINCT (source_kind,source_id,domain)) FROM thesaurus.source_rows WHERE domain=ANY(ARRAY['iti_assoc_role','object_relation_type','capacity_metric','legal_type','review_source','sustainability_group','actor_role','contact_role','org_role']))<>native_rows
     OR EXISTS(SELECT 1 FROM thesaurus.source_rows s WHERE s.domain=ANY(ARRAY['iti_assoc_role','object_relation_type','capacity_metric','legal_type','review_source','sustainability_group','actor_role','contact_role','org_role']) AND (s.source_key<>jsonb_build_object('id',s.source_id::uuid) OR s.payload->>'id' IS NULL)) THEN
-    RAISE EXCEPTION 'Native source projection does not match reviewed nine-domain identity contract';
+    RAISE EXCEPTION 'Native source projection does not cover the exact current nine-table identity set';
   END IF;
 END
 $source_identity$;
@@ -340,8 +431,8 @@ BEGIN
     IF length(body)-length(replace(body,old,''))<>length(old) THEN RAISE EXCEPTION 'Native concept context creation predecessor changed';END IF;
     body:=replace(body,old,new);
   END IF;
-  old:=$old$IF NOT FOUND OR NOT v.is_public THEN RAISE EXCEPTION 'Unknown or non-public vocabulary' USING ERRCODE='PT400';END IF;$old$;
-  new:=$new$IF NOT FOUND OR (NOT v.is_public AND v.domain NOT IN('actor_role','contact_role','org_role')) THEN RAISE EXCEPTION 'Unknown or non-authorable vocabulary' USING ERRCODE='PT400';END IF;$new$;
+  old:=$old$      IF NOT FOUND OR NOT (v.is_public OR v.is_governed) THEN RAISE EXCEPTION 'Unknown vocabulary or private vocabulary not yet governed' USING ERRCODE='PT400';END IF;$old$;
+  new:=$new$      IF NOT FOUND OR NOT (v.is_public OR v.is_governed OR v.domain IN('actor_role','contact_role','org_role')) THEN RAISE EXCEPTION 'Unknown vocabulary or private vocabulary not yet governed' USING ERRCODE='PT400';END IF;$new$;
   IF strpos(body,new)=0 THEN
     IF length(body)-length(replace(body,old,''))<>length(old) THEN RAISE EXCEPTION 'Private authoring guard predecessor changed';END IF;
     body:=replace(body,old,new);
@@ -374,7 +465,7 @@ eligible AS MATERIALIZED(SELECT e.group_concept_id,e.action_concept_id FROM thes
   JOIN thesaurus.concept ac ON ac.concept_id=e.action_concept_id JOIN thesaurus.vocabulary av ON av.domain=ac.domain AND av.is_public AND av.is_governed)
 SELECT CASE current.source_kind
   WHEN 'sustainability_action' THEN COALESCE((SELECT jsonb_build_object('member_of',jsonb_build_array(group_concept_id)) FROM eligible WHERE action_concept_id=p_concept),'{}'::jsonb)
-  WHEN 'sustainability_group' THEN COALESCE((SELECT jsonb_build_object('members',jsonb_agg(action_concept_id ORDER BY action_concept_id)) FROM eligible WHERE group_concept_id=p_concept),'{}'::jsonb)
+  WHEN 'sustainability_group' THEN jsonb_build_object('members',COALESCE((SELECT jsonb_agg(action_concept_id ORDER BY action_concept_id) FROM eligible WHERE group_concept_id=p_concept),'[]'::jsonb))
   ELSE '{}'::jsonb END FROM current
 $$;
 REVOKE ALL ON FUNCTION thesaurus.native_membership_fields(uuid) FROM PUBLIC,anon,authenticated,service_role;
@@ -407,7 +498,7 @@ DO $native_group_context$
 DECLARE definition text;body text;old text;new text;
 BEGIN
   SELECT pg_get_functiondef(oid),prosrc INTO STRICT definition,body FROM pg_proc WHERE oid='thesaurus.validate_document(uuid,jsonb)'::regprocedure;
-  old:=$old$  IF p_doc->>'parent_concept_id' IS NOT NULL THEN$new$;
+  old:=$old$  IF p_doc->>'parent_concept_id' IS NOT NULL THEN$old$;
   new:=$new$  IF EXISTS(SELECT 1 FROM thesaurus.concept c WHERE c.concept_id=p_concept AND c.source_kind='sustainability_group'
     AND (NULLIF(p_doc#>>'{source_fields,category_id}','') IS NULL OR p_doc->>'parent_concept_id' IS NULL)) THEN
     errors:=errors||jsonb_build_array('Un groupe exige sa catégorie native et la révision de son concept parent.');
@@ -466,7 +557,7 @@ BEGIN
     IF length(body)-length(replace(body,old,''))<>length(old) THEN RAISE EXCEPTION 'historical source-kind predecessor changed';END IF;
     body:=replace(body,old,new);
   END IF;
-  old:=$old$  FOR f IN SELECT con.conrelid,con.conkey,con.confkey FROM pg_constraint con JOIN pg_class child_tbl ON child_tbl.oid=con.conrelid JOIN pg_namespace ns ON ns.oid=child_tbl.relnamespace WHERE con.contype='f'AND con.confrelid=p_table$new$;
+  old:=$old$  FOR f IN SELECT con.conrelid,con.conkey,con.confkey FROM pg_constraint con JOIN pg_class child_tbl ON child_tbl.oid=con.conrelid JOIN pg_namespace ns ON ns.oid=child_tbl.relnamespace WHERE con.contype='f'AND con.confrelid=p_table$old$;
   new:=$new$  IF p_table='public.ref_sustainability_action_group'::regclass THEN
     FOR child IN SELECT to_jsonb(a) FROM public.ref_sustainability_action a WHERE a.group_id=(p_row->>'id')::uuid LOOP
       IF thesaurus.row_has_historical_reference('public.ref_sustainability_action'::regclass,child,p_visited||p_table,p_depth+1) THEN RETURN true;END IF;
@@ -521,7 +612,10 @@ $native_assignment_triggers$;
 DO $native_preparation_contract$
 DECLARE contract jsonb;name text;keys text[];expected text[]:=ARRAY['code','id'];
 BEGIN
-  contract:=thesaurus.preparation_contract_registry();
+  SELECT before_install.contract INTO STRICT contract FROM thesaurus_native_adapter_contract_before before_install;
+  IF thesaurus.preparation_contract_registry() IS DISTINCT FROM contract THEN
+    RAISE EXCEPTION 'Preparation contract changed after adapter preflight; refusing to bless drift';
+  END IF;
   FOR name IN SELECT unnest(ARRAY['public.ref_iti_assoc_role','public.ref_object_relation_type','public.ref_capacity_metric','public.ref_legal_type','public.ref_review_source','public.ref_sustainability_action_group','public.ref_actor_role','public.ref_contact_role','public.ref_org_role']) LOOP
     keys:=thesaurus.preparation_plain_key_columns(name::regclass);
     IF keys IS DISTINCT FROM expected THEN RAISE EXCEPTION 'Unexpected plain immediate unique-key contract for %: %',name,keys;END IF;
@@ -558,8 +652,14 @@ $native_policy_helpers$;
 -- emitted membership target to be present and public in the new release.
 DO $native_activation$
 DECLARE definition text;body text;old_dirty text;new_dirty text;old_targets text;new_targets text;
+  original text;prior_owner oid;prior_acl aclitem[];prior_config text[];executor_name text;executor_oid oid;
+  had_executor_grant boolean;prior_admin boolean;prior_inherit boolean;prior_set boolean;
+  memberships_before jsonb;memberships_after jsonb;changed boolean:=false;
 BEGIN
   SELECT pg_get_functiondef(oid),prosrc INTO STRICT definition,body FROM pg_proc WHERE oid='thesaurus.activate(uuid[],text[],text,bigint,jsonb)'::regprocedure;
+  original:=body;
+  SELECT proowner,proacl,proconfig INTO STRICT prior_owner,prior_acl,prior_config
+    FROM pg_proc WHERE oid='thesaurus.activate(uuid[],text[],text,bigint,jsonb)'::regprocedure;
   body:=replace(body,E'\r','');
   old_dirty:=$old$document_dirty:=document_dirty||scope_dirty;$old$;
   new_dirty:=$new$document_dirty:=document_dirty||scope_dirty;
@@ -586,9 +686,56 @@ BEGIN
       RAISE EXCEPTION 'Reviewed post-metadata activation predecessor changed';
     END IF;
     body:=replace(replace(body,old_dirty,new_dirty),old_targets,new_targets);
+    changed:=true;
   END IF;
-  EXECUTE replace(definition,(SELECT prosrc FROM pg_proc WHERE oid='thesaurus.activate(uuid[],text[],text,bigint,jsonb)'::regprocedure),body);
+  IF changed THEN
+    -- Hosted PostgreSQL runs migrations as a non-superuser. Temporarily inherit
+    -- only the existing publisher capability and restore every grantor row.
+    executor_name:=current_user;executor_oid:=executor_name::regrole::oid;
+    SELECT COALESCE(jsonb_agg(to_jsonb(m) ORDER BY m.member,m.grantor),'[]') INTO memberships_before
+      FROM pg_auth_members m WHERE m.roleid='bertel_thesaurus_publisher'::regrole;
+    SELECT admin_option,inherit_option,set_option INTO prior_admin,prior_inherit,prior_set
+      FROM pg_auth_members WHERE roleid='bertel_thesaurus_publisher'::regrole AND member=executor_oid AND grantor=executor_oid;
+    had_executor_grant:=FOUND;
+    EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH ADMIN %s, INHERIT TRUE, SET FALSE GRANTED BY %I',
+      executor_name,CASE WHEN prior_admin THEN 'TRUE' ELSE 'FALSE' END,executor_name);
+    EXECUTE replace(definition,original,body);
+    IF had_executor_grant THEN
+      EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH ADMIN %s, INHERIT %s, SET %s GRANTED BY %I',
+        executor_name,CASE WHEN prior_admin THEN 'TRUE' ELSE 'FALSE' END,
+        CASE WHEN prior_inherit THEN 'TRUE' ELSE 'FALSE' END,
+        CASE WHEN prior_set THEN 'TRUE' ELSE 'FALSE' END,executor_name);
+    ELSE
+      EXECUTE format('REVOKE bertel_thesaurus_publisher FROM %I GRANTED BY %I',executor_name,executor_name);
+    END IF;
+    SELECT COALESCE(jsonb_agg(to_jsonb(m) ORDER BY m.member,m.grantor),'[]') INTO memberships_after
+      FROM pg_auth_members m WHERE m.roleid='bertel_thesaurus_publisher'::regrole;
+    IF memberships_after IS DISTINCT FROM memberships_before THEN
+      RAISE EXCEPTION 'Publisher role memberships were not restored exactly after activation patch';
+    END IF;
+  END IF;
+  IF EXISTS(SELECT 1 FROM pg_proc WHERE oid='thesaurus.activate(uuid[],text[],text,bigint,jsonb)'::regprocedure
+    AND (proowner IS DISTINCT FROM prior_owner OR proacl IS DISTINCT FROM prior_acl OR proconfig IS DISTINCT FROM prior_config OR NOT prosecdef)) THEN
+    RAISE EXCEPTION 'Activation identity, owner, ACL, security mode or execution settings changed';
+  END IF;
 END
 $native_activation$;
+
+DO $native_adapter_metadata$
+BEGIN
+  IF EXISTS(SELECT 1 FROM thesaurus_native_adapter_function_metadata_before prior
+    LEFT JOIN pg_proc current ON current.oid=prior.signature::regprocedure
+    WHERE current.oid IS NULL OR (to_jsonb(current)-'prosrc') IS DISTINCT FROM prior.metadata)
+    OR EXISTS(SELECT 1 FROM thesaurus_native_adapter_view_metadata_before prior
+      LEFT JOIN pg_class current ON current.oid='thesaurus.source_rows'::regclass
+      WHERE current.oid IS NULL OR current.oid IS DISTINCT FROM prior.oid
+        OR current.relowner IS DISTINCT FROM prior.relowner OR current.relacl IS DISTINCT FROM prior.relacl
+        OR current.reloptions IS DISTINCT FROM prior.reloptions)
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.guard_source()'::regprocedure)<>'019744a91ecedeadc998b911cf9ab778'
+    OR (SELECT md5(replace(prosrc,chr(13),'')) FROM pg_proc WHERE oid='thesaurus.guard_assignment()'::regprocedure)<>'9e7bc848a0b4f5168380108bc511ee30' THEN
+    RAISE EXCEPTION 'Existing function or source_rows view identity/metadata changed during adapter install';
+  END IF;
+END
+$native_adapter_metadata$;
 
 COMMIT;

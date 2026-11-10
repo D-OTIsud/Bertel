@@ -15,7 +15,17 @@ DECLARE expected CONSTANT text[]:=ARRAY[
     'public.ref_review_source'::regclass,'public.ref_sustainability_action_group'::regclass,
     'public.ref_actor_role'::regclass,'public.ref_contact_role'::regclass,
     'public.ref_org_role'::regclass];
+  native_rows bigint;
 BEGIN
+  SELECT (SELECT count(*) FROM public.ref_iti_assoc_role)
+    +(SELECT count(*) FROM public.ref_object_relation_type)
+    +(SELECT count(*) FROM public.ref_capacity_metric)
+    +(SELECT count(*) FROM public.ref_legal_type)
+    +(SELECT count(*) FROM public.ref_review_source)
+    +(SELECT count(*) FROM public.ref_sustainability_action_group)
+    +(SELECT count(*) FROM public.ref_actor_role)
+    +(SELECT count(*) FROM public.ref_contact_role)
+    +(SELECT count(*) FROM public.ref_org_role) INTO native_rows;
   ASSERT (SELECT count(*)=87 FROM thesaurus.vocabulary),
     'Nine reviewed domains must extend the 78 existing vocabulary rows';
   ASSERT (SELECT count(*)=78 FROM thesaurus.vocabulary WHERE domain<>ALL(expected)),
@@ -27,9 +37,17 @@ BEGIN
       OR EXISTS(SELECT 1 FROM unnest(locale) l WHERE NOT thesaurus.has_editorial_text(v.name_i18n->l))))
     AND (SELECT count(*)=cardinality(expected) FROM thesaurus.vocabulary WHERE domain=ANY(expected)),
     'New domains must use the reviewed exposure, ungoverned/nonlegacy policy and complete localized names';
-  ASSERT (SELECT count(*)=148 FROM thesaurus.source_rows WHERE domain=ANY(expected)),
-    'The nine native adapters must expose exactly the reviewed 148 rows';
-  ASSERT (SELECT count(DISTINCT (source_kind,source_id,domain))=148
+  ASSERT (SELECT count(*)=9 FROM (VALUES
+    ('iti_assoc_role','ref_iti_assoc_role'),('object_relation_type','ref_object_relation_type'),
+    ('capacity_metric','ref_capacity_metric'),('legal_type','ref_legal_type'),('review_source','ref_review_source'),
+    ('sustainability_group','ref_sustainability_action_group'),('actor_role','ref_actor_role'),
+    ('contact_role','ref_contact_role'),('org_role','ref_org_role')) mapping(domain,catalog_key)
+    JOIN thesaurus.vocabulary v ON v.domain=mapping.domain
+    JOIN public.ref_catalog_registry r ON r.catalog_key=mapping.catalog_key AND r.label=v.name),
+    'All nine native catalog cards must match their reviewed canonical French names';
+  ASSERT (SELECT count(*)=native_rows FROM thesaurus.source_rows WHERE domain=ANY(expected)),
+    'Native adapters must expose each source row exactly once';
+  ASSERT (SELECT count(DISTINCT (source_kind,source_id,domain))=native_rows
     FROM thesaurus.source_rows WHERE domain=ANY(expected)),
     'Native identity must be unique for every typed source tuple';
   ASSERT (SELECT count(*)=9 FROM unnest(expected) d
@@ -47,6 +65,9 @@ BEGIN
   ASSERT (SELECT count(*)=9 FROM pg_trigger t WHERE t.tgrelid=ANY(source_tables)
     AND t.tgname='thesaurus_source_gate' AND NOT t.tgisinternal),
     'Every native source must be blocked by the preparation source gate';
+  ASSERT (SELECT count(*)=9 FROM pg_trigger t WHERE t.tgrelid=ANY(source_tables)
+    AND t.tgname='thesaurus_prepared_truncate' AND NOT t.tgisinternal),
+    'Every native source must have the prepared TRUNCATE guard';
   ASSERT NOT EXISTS(SELECT 1 FROM thesaurus.source_link sl WHERE num_nonnulls(
     sl.ref_code_id,sl.amenity_id,sl.classification_scheme_id,sl.classification_value_id,
     sl.language_id,sl.commune_code,sl.sustainability_action_id,sl.sustainability_category_id,

@@ -2893,3 +2893,43 @@ remplacement sous rôle non superuser, la restauration des grants, les patches
 partiels et la concurrence ; ce harnais réduit ne remplace pas la pile Supabase
 complète. La revue et ses limites figurent dans
 `docs/audits/2026-11-10-thesaurus-sql-review.md`.
+
+### Neuf dictionnaires natifs et appartenances aux groupes
+
+Après la migration de métadonnées, `thesaurus_native_dictionary_adapters` ajoute
+neuf adaptateurs typés : six dictionnaires publics (`iti_assoc_role`,
+`object_relation_type`, `capacity_metric`, `legal_type`, `review_source`,
+`sustainability_group`) et trois vocabulaires privés de relations métier
+(`actor_role`, `contact_role`, `org_role`). Les 78 domaines antérieurs gardent
+leurs paramètres ; les neuf nouveaux domaines restent non gouvernés à
+l’installation. Les rôles d’autorisation et les permissions ne deviennent pas
+des concepts. La matrice exhaustive des 104 catalogues se trouve dans
+`docs/audits/2026-11-10-thesaurus-catalog-coverage.md`.
+
+La migration exige le prédécesseur exact des onze fonctions et de la vue source,
+une transaction READ COMMITTED, aucun brouillon et des verrous bornés. Elle
+vérifie le contrat de préparation avant de l’étendre et restaure exactement les
+appartenances temporaires au rôle de publication. Elle ne crée aucun concept,
+ne publie aucun contenu et ne réécrit aucun instantané historique. Le détail de
+la revue et les conditions de qualification figurent dans
+`docs/audits/2026-11-10-thesaurus-native-sql-review.md`.
+
+Après qualification complète, installer par migration native, vérifier les
+identités et sources, puis charger des propositions construites depuis les
+identités et empreintes fraîches. Le contrôle éditorial portable porte sur les
+134 entrées publiques (`node tools/thesaurus-content/validate-native-dictionaries.mjs`).
+L’option `--include-private` contrôle aussi les 14 entrées privées depuis le
+contexte opérateur local, qui ne doit pas être ajouté au dépôt. Enregistrer,
+valider, prévisualiser et publier avec la session super-administrateur existante.
+Activer les domaines publics relus par le bootstrap normal ; publier les
+révisions privées par leur circuit existant, sans exposition partenaire.
+
+Les appartenances natives des actions aux groupes restent distinctes du parent
+de catégorie. Les nouveaux documents figent `member_of` et `members` ; le
+JSON-LD utilise les prédicats Bertel correspondants. Les deux catégories peuvent
+être différentes, conformément aux FK natives. Le test frais transactionnel
+`tests/test_thesaurus_native_dictionary_publication.sql` vérifie les identités,
+une appartenance entre catégories distinctes, les deux moteurs de rendu, les
+copies d’instantanés non concernés, les écritures différées, les champs protégés
+et la non-exposition privée. Les comptes et claims de ce test sont réservés à
+la pile jetable de CI.

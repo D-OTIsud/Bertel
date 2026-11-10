@@ -26,7 +26,10 @@ avec la clé `(release_id, (concept_id::text))`, la colonne incluse `concept_id`
 et le prédicat `is_public`. Cette extension du périmètre d'observation ne signifie
 pas que les fonctions de garde sont nouvelles.
 
-Le relevé final attend aussi la migration `thesaurus_public_target_lookup_index`.
+Le relevé final attend aussi les migrations `thesaurus_public_target_lookup_index`
+et `thesaurus_admin_rpc_timeout`. Cette dernière borne le délai de la façade
+administrative à 30 secondes ; son réglage et son empreinte peuvent donc différer
+du premier relevé, sans changement attendu de ses ACL ou de son autorisation.
 Ne pas annoncer la phase 2 ni une nouvelle génération sur la seule base d'une
 validation de brouillons : attendre la confirmation de leur publication et de
 l'installation de la politique avant de capturer la preuve finale.
@@ -35,7 +38,8 @@ Pour comparer les deux observations, vérifier les identités de domaines, les
 flags `is_public`/`is_governed`, les ACL/RLS, le propriétaire et les droits du rôle
 de publication, ainsi que les empreintes du noyau `activate` et des projections
 publiques. Les changements attendus concernent les validateurs, la lecture privée
-des termes hérités, leur writer et son registre de préparation. Un autre écart
+des termes hérités, leur writer et son registre de préparation, ainsi que le
+réglage de délai de la façade administrative documenté ci-dessus. Un autre écart
 doit être expliqué ; aucune empreinte différente n'est réputée acceptable du seul
 fait qu'une migration a réussi.
 

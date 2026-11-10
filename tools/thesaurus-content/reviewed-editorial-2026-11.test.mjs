@@ -51,3 +51,39 @@ test('each proposed update has its exact field base and belongs to a reviewed id
   assert.equal(count, report.proposals); assert.equal(count, 1449); assert.equal(batches.length, 78);
   assert.equal(report.ready, true); assert.deepEqual(report.errors, []); assert.deepEqual(report.warnings, []);
 });
+
+test('all final French names use display text without long dashes or raw technical keys', () => {
+  for (const review of manifest.reviews) {
+    assert.doesNotMatch(review.result.name, /[—–_]|taxonom(?:y|ie)/iu, key(review));
+    assert.equal(review.result.preferred_labels.fr, review.result.name);
+  }
+  assert.equal(report.changed_documents.french_names, 174);
+  assert.equal(report.changed_documents.labels, 143);
+});
+
+test('the approved 16-name follow-up changes only French names and preserves former names as hidden search terms', () => {
+  const delta = validateBatch(read('french-names-delta.json'));
+  assert.equal(delta.proposals.length, 16);
+  assert.equal(new Set(delta.proposals.map((p) => p.concept_id)).size, 16);
+  const proposals = new Map(batches.flatMap((batch) => batch.proposals).map((p) => [p.concept_id, p]));
+  for (const proposal of delta.proposals) {
+    assert.deepEqual(Object.keys(proposal.changes).sort(), ['labels', 'name', 'name_i18n']);
+    assert.notEqual(proposal.base.name, proposal.changes.name);
+    assert.equal(proposal.changes.name_i18n.fr, proposal.changes.name);
+    for (const [lang, value] of Object.entries(proposal.base.name_i18n)) {
+      if (lang !== 'fr') assert.equal(proposal.changes.name_i18n[lang], value, `${key(proposal)}/${lang}`);
+    }
+    const previous = proposal.changes.labels.filter((label) => label.lang === 'fr'
+      && normalizeText(label.value) === normalizeText(proposal.base.name));
+    assert.equal(previous.length, 1, key(proposal));
+    assert.equal(previous[0].kind, 'hidden', key(proposal));
+    assert.deepEqual(proposal.changes.labels.filter((label) => label.lang !== 'fr'),
+      proposal.base.labels.filter((label) => label.lang !== 'fr'), key(proposal));
+    const correction = proposals.get(proposal.concept_id);
+    assert.ok(correction, key(proposal));
+    for (const field of ['name', 'name_i18n', 'labels']) {
+      assert.deepEqual(proposal.changes[field], correction.changes[field], `${key(proposal)}/${field}`);
+    }
+    assert.equal(indexed.get(proposal.concept_id).result.name, proposal.changes.name, key(proposal));
+  }
+});

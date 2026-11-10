@@ -5060,6 +5060,20 @@
             "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
             "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
           }
+        ],
+        "name": "Titulaire T&H — mental",
+        "name_i18n": {
+          "de": "Inhaber T&H – geistige Behinderung",
+          "en": "Tourisme & Handicap holder – intellectual disability",
+          "es": "Titular T&H – discapacidad intelectual",
+          "fr": "Titulaire T&H — mental"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap mental"
+          }
         ]
       },
       "changes": {
@@ -5075,6 +5089,25 @@
             "type": "scope",
             "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
             "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ],
+        "name": "Label Tourisme & Handicap (mental)",
+        "name_i18n": {
+          "de": "Inhaber T&H – geistige Behinderung",
+          "en": "Tourisme & Handicap holder – intellectual disability",
+          "es": "Titular T&H – discapacidad intelectual",
+          "fr": "Label Tourisme & Handicap (mental)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap mental"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Titulaire T&H — mental"
           }
         ]
       }
@@ -5098,6 +5131,20 @@
             "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
             "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
           }
+        ],
+        "name": "Titulaire T&H — auditif",
+        "name_i18n": {
+          "de": "Inhaber T&H – Hörbehinderung",
+          "en": "Tourism & Disability holder – hearing",
+          "es": "Titular T&H – auditivo",
+          "fr": "Titulaire T&H — auditif"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap auditif"
+          }
         ]
       },
       "changes": {
@@ -5113,6 +5160,25 @@
             "type": "scope",
             "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
             "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ],
+        "name": "Label Tourisme & Handicap (auditif)",
+        "name_i18n": {
+          "de": "Inhaber T&H – Hörbehinderung",
+          "en": "Tourism & Disability holder – hearing",
+          "es": "Titular T&H – auditivo",
+          "fr": "Label Tourisme & Handicap (auditif)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap auditif"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Titulaire T&H — auditif"
           }
         ]
       }
@@ -5136,6 +5202,20 @@
             "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
             "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
           }
+        ],
+        "name": "Titulaire T&H — moteur",
+        "name_i18n": {
+          "de": "Inhaber T&H – motorische Behinderung",
+          "en": "Tourism & Disability holder – motor",
+          "es": "Titular T&H – motor",
+          "fr": "Titulaire T&H — moteur"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap moteur"
+          }
         ]
       },
       "changes": {
@@ -5151,6 +5231,25 @@
             "type": "scope",
             "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
             "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ],
+        "name": "Label Tourisme & Handicap (moteur)",
+        "name_i18n": {
+          "de": "Inhaber T&H – motorische Behinderung",
+          "en": "Tourism & Disability holder – motor",
+          "es": "Titular T&H – motor",
+          "fr": "Label Tourisme & Handicap (moteur)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap moteur"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Titulaire T&H — moteur"
           }
         ]
       }
@@ -5174,6 +5273,20 @@
             "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
             "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
           }
+        ],
+        "name": "Titulaire T&H — visuel",
+        "name_i18n": {
+          "de": "Inhaber T&H – Sehbehinderung",
+          "en": "Tourism & Disability holder – visual",
+          "es": "Titular T&H – visual",
+          "fr": "Titulaire T&H — visuel"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap visuel"
+          }
         ]
       },
       "changes": {
@@ -5189,6 +5302,25 @@
             "type": "scope",
             "value": "Ce vocabulaire décrit des qualifications et leurs significations. Bertel enregistre les informations fournies par le prestataire ; il ne délivre pas les classements ou labels décrits.",
             "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ],
+        "name": "Label Tourisme & Handicap (visuel)",
+        "name_i18n": {
+          "de": "Inhaber T&H – Sehbehinderung",
+          "en": "Tourism & Disability holder – visual",
+          "es": "Titular T&H – visual",
+          "fr": "Label Tourisme & Handicap (visuel)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap visuel"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Titulaire T&H — visuel"
           }
         ]
       }

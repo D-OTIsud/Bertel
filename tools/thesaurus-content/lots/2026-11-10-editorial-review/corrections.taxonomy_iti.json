@@ -241,6 +241,50 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0274cabe-06ba-4897-bee9-e2da187027ba. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0274cabe-06ba-4897-bee9-e2da187027ba"
           }
+        ],
+        "name": "Trail",
+        "name_i18n": {
+          "de": "Trailrunning",
+          "en": "Trail running",
+          "es": "Carrera de montaña (trail)",
+          "fr": "Trail"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geländelaufstrecke"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Natural-terrain running route"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "trail route"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Recorrido de carrera por senderos"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "ruta de trail"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "course nature"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Parcours de course nature"
+          }
         ]
       },
       "changes": {
@@ -250,6 +294,55 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0274cabe-06ba-4897-bee9-e2da187027ba. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0274cabe-06ba-4897-bee9-e2da187027ba"
+          }
+        ],
+        "name": "Course à pied sur sentier",
+        "name_i18n": {
+          "de": "Trailrunning",
+          "en": "Trail running",
+          "es": "Carrera de montaña (trail)",
+          "fr": "Course à pied sur sentier"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geländelaufstrecke"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Natural-terrain running route"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "trail route"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Recorrido de carrera por senderos"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "ruta de trail"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "course nature"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Parcours de course nature"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Trail"
           }
         ]
       }

@@ -269,6 +269,35 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/23b1435b-7880-4b45-87e2-4bb6118b16f0. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/23b1435b-7880-4b45-87e2-4bb6118b16f0"
           }
+        ],
+        "name": "Remise en forme / Fitness",
+        "name_i18n": {
+          "de": "Fitness / Gesundheitstraining",
+          "en": "Fitness and wellness",
+          "es": "Puesta en forma / Fitness",
+          "fr": "Remise en forme / Fitness"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Angeleitetes Fitnesstraining"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Supervised fitness training"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Entrenamiento físico supervisado"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Entraînement physique encadré"
+          }
         ]
       },
       "changes": {
@@ -278,6 +307,40 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/23b1435b-7880-4b45-87e2-4bb6118b16f0. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/23b1435b-7880-4b45-87e2-4bb6118b16f0"
+          }
+        ],
+        "name": "Remise en forme",
+        "name_i18n": {
+          "de": "Fitness / Gesundheitstraining",
+          "en": "Fitness and wellness",
+          "es": "Puesta en forma / Fitness",
+          "fr": "Remise en forme"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Angeleitetes Fitnesstraining"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Supervised fitness training"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Entrenamiento físico supervisado"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Entraînement physique encadré"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Remise en forme / Fitness"
           }
         ]
       }
@@ -373,6 +436,35 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/86580bed-b0d1-4f6a-bb49-899be83d1758. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/86580bed-b0d1-4f6a-bb49-899be83d1758"
           }
+        ],
+        "name": "Snorkeling encadré",
+        "name_i18n": {
+          "de": "Geführtes Schnorcheln",
+          "en": "Guided snorkeling",
+          "es": "Esnórquel guiado",
+          "fr": "Snorkeling encadré"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitete Schnorcheltour"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Guided snorkelling"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Excursión de esnórquel con guía"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Randonnée palmée encadrée"
+          }
         ]
       },
       "changes": {
@@ -382,6 +474,35 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/86580bed-b0d1-4f6a-bb49-899be83d1758. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/86580bed-b0d1-4f6a-bb49-899be83d1758"
+          }
+        ],
+        "name": "Randonnée palmée encadrée",
+        "name_i18n": {
+          "de": "Geführtes Schnorcheln",
+          "en": "Guided snorkeling",
+          "es": "Esnórquel guiado",
+          "fr": "Randonnée palmée encadrée"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitete Schnorcheltour"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Guided snorkelling"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Excursión de esnórquel con guía"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Snorkeling encadré"
           }
         ]
       }

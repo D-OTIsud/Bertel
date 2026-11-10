@@ -29,7 +29,8 @@ SELECT jsonb_build_object(
    FROM supabase_migrations.schema_migrations
    WHERE name IN ('thesaurus_required_definitions','thesaurus_complete_admin_batches',
      'thesaurus_simple_business_names','thesaurus_legacy_search_term_roundtrip',
-     'thesaurus_complete_editorial_definitions','thesaurus_public_target_lookup_index')),'[]'::jsonb),
+     'thesaurus_complete_editorial_definitions','thesaurus_public_target_lookup_index',
+     'thesaurus_admin_rpc_timeout')),'[]'::jsonb),
  'publication_generation',(SELECT current_release_id FROM thesaurus.instance WHERE singleton),
  'functions',COALESCE((SELECT jsonb_agg(jsonb_build_object(
    'signature',f.oid::regprocedure::text,'schema',f.schema_name,'name',f.proname,

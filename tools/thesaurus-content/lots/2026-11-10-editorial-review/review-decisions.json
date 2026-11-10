@@ -4043,7 +4043,7 @@
       "context_key": "",
       "code": "acc_staff_cognitive_training",
       "disposition": "rewritten",
-      "reason": "Définition conservée dans les quatre langues : « Personnel formé spécifiquement à l'accompagnement des personnes en situation de handicap cognitif ou d'apprentissage. » Elle précise déjà le service, l'équipement ou sa particularité dans le contexte de cette famille ; les variantes et relations existantes correspondent à ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe.",
+      "reason": "Définition conservée dans les quatre langues : « Personnel formé spécifiquement à l'accompagnement des personnes en situation de handicap cognitif ou d'apprentissage. » Elle précise déjà le service, l'équipement ou sa particularité dans le contexte de cette famille ; les variantes et relations existantes correspondent à ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -4057,17 +4057,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Personnel formé — handicap cognitif",
+        "name": "Personnel formé au handicap cognitif",
         "preferred_labels": {
           "de": "Personal geschult für kognitive Behinderungen",
           "en": "Staff trained in cognitive disability",
           "es": "Personal formado en discapacidad cognitiva",
-          "fr": "Personnel formé — handicap cognitif"
+          "fr": "Personnel formé au handicap cognitif"
         },
         "definitions": {
           "de": "Personal, das speziell für die Begleitung von Menschen mit kognitiven oder Lernbehinderungen geschult ist.",
@@ -4085,7 +4088,7 @@
       "context_key": "",
       "code": "acc_staff_mental_training",
       "disposition": "rewritten",
-      "reason": "Définition conservée dans les quatre langues : « Personnel formé à l'accueil des visiteurs en situation de handicap psychique ou de fragilité psychiatrique. » Elle précise déjà le service, l'équipement ou sa particularité dans le contexte de cette famille ; les variantes et relations existantes correspondent à ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe.",
+      "reason": "Définition conservée dans les quatre langues : « Personnel formé à l'accueil des visiteurs en situation de handicap psychique ou de fragilité psychiatrique. » Elle précise déjà le service, l'équipement ou sa particularité dans le contexte de cette famille ; les variantes et relations existantes correspondent à ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -4099,17 +4102,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Personnel formé — santé mentale",
+        "name": "Personnel formé au handicap psychique",
         "preferred_labels": {
           "de": "Personal geschult für psychische Gesundheit",
           "en": "Staff trained in mental health",
           "es": "Personal formado en salud mental",
-          "fr": "Personnel formé — santé mentale"
+          "fr": "Personnel formé au handicap psychique"
         },
         "definitions": {
           "de": "Personal, das zur Begrüßung von Besuchern mit psychischer Behinderung oder psychiatrischer Vulnerabilität geschult ist.",
@@ -5848,7 +5854,7 @@
       "context_key": "",
       "code": "coworking_space",
       "disposition": "rewritten",
-      "reason": "Définition conservée dans les quatre langues : « Espace de travail partagé, ouvert aux clients de l'établissement. » Elle précise déjà le service, l'équipement ou sa particularité dans le contexte de cette famille ; les variantes et relations existantes correspondent à ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe.",
+      "reason": "Définition conservée dans les quatre langues : « Espace de travail partagé, ouvert aux clients de l'établissement. » Elle précise déjà le service, l'équipement ou sa particularité dans le contexte de cette famille ; les variantes et relations existantes correspondent à ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -5862,17 +5868,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Espace coworking",
+        "name": "Espace de travail partagé",
         "preferred_labels": {
           "de": "Coworking-Space",
           "en": "Coworking space",
           "es": "Espacio de coworking",
-          "fr": "Espace coworking"
+          "fr": "Espace de travail partagé"
         },
         "definitions": {
           "de": "Gemeinsam genutzter Arbeitsbereich für Gäste.",
@@ -8840,7 +8849,7 @@
       "context_key": "",
       "code": "snorkeling_gear",
       "disposition": "rewritten",
-      "reason": "Définition conservée dans les quatre langues : « Masque, tuba et palmes mis à disposition. » Elle précise déjà le service, l'équipement ou sa particularité dans le contexte de cette famille ; les variantes et relations existantes correspondent à ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe.",
+      "reason": "Définition conservée dans les quatre langues : « Masque, tuba et palmes mis à disposition. » Elle précise déjà le service, l'équipement ou sa particularité dans le contexte de cette famille ; les variantes et relations existantes correspondent à ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -8854,17 +8863,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Équipement snorkeling",
+        "name": "Équipement de randonnée palmée",
         "preferred_labels": {
           "de": "Schnorchelausrüstung",
           "en": "Snorkelling gear",
           "es": "Equipo de snorkel",
-          "fr": "Équipement snorkeling"
+          "fr": "Équipement de randonnée palmée"
         },
         "definitions": {
           "de": "Maske, Schnorchel und Flossen zur Verfügung gestellt.",
@@ -11456,7 +11468,7 @@
       "context_key": "",
       "code": "king",
       "disposition": "rewritten",
-      "reason": "Définition relue et traductions complétées ou harmonisées : Lit deux places de 180 cm de largeur, distinct du lit queen de 160 cm dans ce catalogue. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe.",
+      "reason": "Définition relue et traductions complétées ou harmonisées : Lit deux places de 180 cm de largeur, distinct du lit queen de 160 cm dans ce catalogue. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -11472,17 +11484,20 @@
       "changed_fields": [
         "description",
         "description_i18n",
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Lit king (180 cm)",
+        "name": "Lit double de 180 cm",
         "preferred_labels": {
           "de": "Kingsize-Bett (180 cm)",
           "en": "King bed (180 cm)",
           "es": "Cama king (180 cm)",
-          "fr": "Lit king (180 cm)"
+          "fr": "Lit double de 180 cm"
         },
         "definitions": {
           "de": "180 cm breites Doppelbett, das in diesem Katalog vom 160 cm breiten Queensize-Bett unterschieden wird.",
@@ -11542,7 +11557,7 @@
       "context_key": "",
       "code": "queen",
       "disposition": "rewritten",
-      "reason": "Définition relue et traductions complétées ou harmonisées : Lit deux places de 160 cm de largeur, distinct du lit double de 140 cm et du lit king de 180 cm dans ce catalogue. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe.",
+      "reason": "Définition relue et traductions complétées ou harmonisées : Lit deux places de 160 cm de largeur, distinct du lit double de 140 cm et du lit king de 180 cm dans ce catalogue. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -11558,17 +11573,20 @@
       "changed_fields": [
         "description",
         "description_i18n",
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Lit queen (160 cm)",
+        "name": "Lit double de 160 cm",
         "preferred_labels": {
           "de": "Queensize-Bett (160 cm)",
           "en": "Queen bed (160 cm)",
           "es": "Cama queen (160 cm)",
-          "fr": "Lit queen (160 cm)"
+          "fr": "Lit double de 160 cm"
         },
         "definitions": {
           "de": "160 cm breites Doppelbett, das in diesem Katalog vom 140 cm breiten Doppelbett und 180 cm breiten Kingsize-Bett unterschieden wird.",
@@ -19000,7 +19018,7 @@
       "context_key": "f2efe575-f2f0-47cf-bae3-ad26db966d57",
       "code": "granted_cognitive",
       "disposition": "rewritten",
-      "reason": "Le sens de « Titulaire T&H — mental » est déjà défini dans le référentiel parent « Tourisme & Handicap » : Label Tourisme & Handicap accordé pour la famille de handicap mental. Les quatre traductions restent cohérentes avec ce contexte qualifié. Reclasse en historique la trace de génération éditoriale, dont le texte et les URL sont conservés ; elle ne constitue pas une autorité externe.",
+      "reason": "Le sens de « Titulaire T&H — mental » est déjà défini dans le référentiel parent « Tourisme & Handicap » : Label Tourisme & Handicap accordé pour la famille de handicap mental. Les quatre traductions restent cohérentes avec ce contexte qualifié. Reclasse en historique la trace de génération éditoriale, dont le texte et les URL sont conservés ; elle ne constitue pas une autorité externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -19014,17 +19032,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Titulaire T&H — mental",
+        "name": "Label Tourisme & Handicap (mental)",
         "preferred_labels": {
           "de": "Inhaber T&H – geistige Behinderung",
           "en": "Tourisme & Handicap holder – intellectual disability",
           "es": "Titular T&H – discapacidad intelectual",
-          "fr": "Titulaire T&H — mental"
+          "fr": "Label Tourisme & Handicap (mental)"
         },
         "definitions": {
           "de": "Label Tourisme & Handicap für die Kategorie geistige Behinderung.",
@@ -19042,7 +19063,7 @@
       "context_key": "f2efe575-f2f0-47cf-bae3-ad26db966d57",
       "code": "granted_hearing",
       "disposition": "rewritten",
-      "reason": "Le sens de « Titulaire T&H — auditif » est déjà défini dans le référentiel parent « Tourisme & Handicap » : Label Tourisme & Handicap accordé pour la famille de handicap auditif. Les quatre traductions restent cohérentes avec ce contexte qualifié. Reclasse en historique la trace de génération éditoriale, dont le texte et les URL sont conservés ; elle ne constitue pas une autorité externe.",
+      "reason": "Le sens de « Titulaire T&H — auditif » est déjà défini dans le référentiel parent « Tourisme & Handicap » : Label Tourisme & Handicap accordé pour la famille de handicap auditif. Les quatre traductions restent cohérentes avec ce contexte qualifié. Reclasse en historique la trace de génération éditoriale, dont le texte et les URL sont conservés ; elle ne constitue pas une autorité externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -19056,17 +19077,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Titulaire T&H — auditif",
+        "name": "Label Tourisme & Handicap (auditif)",
         "preferred_labels": {
           "de": "Inhaber T&H – Hörbehinderung",
           "en": "Tourism & Disability holder – hearing",
           "es": "Titular T&H – auditivo",
-          "fr": "Titulaire T&H — auditif"
+          "fr": "Label Tourisme & Handicap (auditif)"
         },
         "definitions": {
           "de": "Label Tourismus & Behinderung für die Kategorie Hörbehinderung.",
@@ -19084,7 +19108,7 @@
       "context_key": "f2efe575-f2f0-47cf-bae3-ad26db966d57",
       "code": "granted_motor",
       "disposition": "rewritten",
-      "reason": "Le sens de « Titulaire T&H — moteur » est déjà défini dans le référentiel parent « Tourisme & Handicap » : Label Tourisme & Handicap accordé pour la famille de handicap moteur. Les quatre traductions restent cohérentes avec ce contexte qualifié. Reclasse en historique la trace de génération éditoriale, dont le texte et les URL sont conservés ; elle ne constitue pas une autorité externe.",
+      "reason": "Le sens de « Titulaire T&H — moteur » est déjà défini dans le référentiel parent « Tourisme & Handicap » : Label Tourisme & Handicap accordé pour la famille de handicap moteur. Les quatre traductions restent cohérentes avec ce contexte qualifié. Reclasse en historique la trace de génération éditoriale, dont le texte et les URL sont conservés ; elle ne constitue pas une autorité externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -19098,17 +19122,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Titulaire T&H — moteur",
+        "name": "Label Tourisme & Handicap (moteur)",
         "preferred_labels": {
           "de": "Inhaber T&H – motorische Behinderung",
           "en": "Tourism & Disability holder – motor",
           "es": "Titular T&H – motor",
-          "fr": "Titulaire T&H — moteur"
+          "fr": "Label Tourisme & Handicap (moteur)"
         },
         "definitions": {
           "de": "Label Tourismus & Behinderung für die Kategorie motorische Behinderung.",
@@ -19126,7 +19153,7 @@
       "context_key": "f2efe575-f2f0-47cf-bae3-ad26db966d57",
       "code": "granted_visual",
       "disposition": "rewritten",
-      "reason": "Le sens de « Titulaire T&H — visuel » est déjà défini dans le référentiel parent « Tourisme & Handicap » : Label Tourisme & Handicap accordé pour la famille de handicap visuel. Les quatre traductions restent cohérentes avec ce contexte qualifié. Reclasse en historique la trace de génération éditoriale, dont le texte et les URL sont conservés ; elle ne constitue pas une autorité externe.",
+      "reason": "Le sens de « Titulaire T&H — visuel » est déjà défini dans le référentiel parent « Tourisme & Handicap » : Label Tourisme & Handicap accordé pour la famille de handicap visuel. Les quatre traductions restent cohérentes avec ce contexte qualifié. Reclasse en historique la trace de génération éditoriale, dont le texte et les URL sont conservés ; elle ne constitue pas une autorité externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -19140,17 +19167,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Titulaire T&H — visuel",
+        "name": "Label Tourisme & Handicap (visuel)",
         "preferred_labels": {
           "de": "Inhaber T&H – Sehbehinderung",
           "en": "Tourism & Disability holder – visual",
           "es": "Titular T&H – visual",
-          "fr": "Titulaire T&H — visuel"
+          "fr": "Label Tourisme & Handicap (visuel)"
         },
         "definitions": {
           "de": "Label Tourismus & Behinderung für die Kategorie Sehbehinderung.",
@@ -29504,7 +29534,7 @@
       "context_key": "",
       "code": "snorkeling",
       "disposition": "rewritten",
-      "reason": "Précision du sens de « Snorkeling » dans le contexte « Pratiques d’itinéraire » : Découverte du milieu aquatique en nageant à la surface avec palmes, masque et tuba. Cette pratique se distingue de la plongée sous-marine en profondeur. Les quatre langues sont synchronisées ; les synonymes et relations présents restent conservés après confrontation à leurs concepts cibles. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe.",
+      "reason": "Précision du sens de « Snorkeling » dans le contexte « Pratiques d’itinéraire » : Découverte du milieu aquatique en nageant à la surface avec palmes, masque et tuba. Cette pratique se distingue de la plongée sous-marine en profondeur. Les quatre langues sont synchronisées ; les synonymes et relations présents restent conservés après confrontation à leurs concepts cibles. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -29520,17 +29550,20 @@
       "changed_fields": [
         "description",
         "description_i18n",
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Snorkeling",
+        "name": "Randonnée palmée",
         "preferred_labels": {
           "de": "Schnorcheln",
           "en": "Snorkelling",
           "es": "Snorkel",
-          "fr": "Snorkeling"
+          "fr": "Randonnée palmée"
         },
         "definitions": {
           "de": "Erkundung der Wasserwelt durch Schwimmen an der Oberfläche mit Flossen, Maske und Schnorchel. Diese Aktivität unterscheidet sich vom Tauchen in der Tiefe.",
@@ -29548,7 +29581,7 @@
       "context_key": "",
       "code": "trail",
       "disposition": "rewritten",
-      "reason": "Précision du sens de « Trail » dans le contexte « Pratiques d’itinéraire » : Pratique de la course à pied sur un itinéraire de sentiers ou de terrain naturel. Elle qualifie l’usage du parcours pour courir et se distingue de la randonnée marchée. Les quatre langues sont synchronisées ; les synonymes et relations présents restent conservés après confrontation à leurs concepts cibles. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe.",
+      "reason": "Précision du sens de « Trail » dans le contexte « Pratiques d’itinéraire » : Pratique de la course à pied sur un itinéraire de sentiers ou de terrain naturel. Elle qualifie l’usage du parcours pour courir et se distingue de la randonnée marchée. Les quatre langues sont synchronisées ; les synonymes et relations présents restent conservés après confrontation à leurs concepts cibles. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -29564,17 +29597,20 @@
       "changed_fields": [
         "description",
         "description_i18n",
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Trail",
+        "name": "Course à pied sur sentier",
         "preferred_labels": {
           "de": "Trailrunning",
           "en": "Trail running",
           "es": "Trail running",
-          "fr": "Trail"
+          "fr": "Course à pied sur sentier"
         },
         "definitions": {
           "de": "Laufen auf einer Route über Wege oder natürliches Gelände. Die Angabe beschreibt die Laufnutzung im Unterschied zum Wandern.",
@@ -32892,7 +32928,7 @@
       "context_key": "",
       "code": "paperboard",
       "disposition": "rewritten",
-      "reason": "Le fragment ne définissait pas le rôle de Paperboard dans une réunion ; la définition explicite sa fonction et les quatre traductions conservent ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe. Suppression des synonymes strictement identiques au nom après normalisation de la casse, des espaces et de la ponctuation ; les variantes de sens distinct restent conservées.",
+      "reason": "Le fragment ne définissait pas le rôle de Paperboard dans une réunion ; la définition explicite sa fonction et les quatre traductions conservent ce sens. La note de provenance de la rédaction générée est classée comme historique ; texte et références restent conservés sans prétendre validation humaine ou externe. Suppression des synonymes strictement identiques au nom après normalisation de la casse, des espaces et de la ponctuation ; les variantes de sens distinct restent conservées. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -32909,17 +32945,19 @@
         "description",
         "description_i18n",
         "notes",
-        "labels"
+        "labels",
+        "name",
+        "name_i18n"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Paperboard",
+        "name": "Tableau à feuilles mobiles",
         "preferred_labels": {
           "de": "Flipchart",
           "en": "Flipchart",
           "es": "Papelógrafo",
-          "fr": "Paperboard"
+          "fr": "Tableau à feuilles mobiles"
         },
         "definitions": {
           "de": "Tafel mit einem Block umblätterbarer Papierbögen und Markern zum Festhalten und Vorstellen von Ideen bei Besprechungen oder Workshops.",
@@ -51872,7 +51910,7 @@
       "context_key": "",
       "code": "fitness_wellness",
       "disposition": "rewritten",
-      "reason": "Définition et traductions maintenues après relecture du sens précis : Activités d'entraînement physique ou de remise en forme encadrées (cours collectifs, coaching). Les termes et relations existants sont conservés dans ce contexte ; seule la provenance générée est reclassée en historique lorsqu’elle existe. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe.",
+      "reason": "Définition et traductions maintenues après relecture du sens précis : Activités d'entraînement physique ou de remise en forme encadrées (cours collectifs, coaching). Les termes et relations existants sont conservés dans ce contexte ; seule la provenance générée est reclassée en historique lorsqu’elle existe. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -51886,17 +51924,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Remise en forme / Fitness",
+        "name": "Remise en forme",
         "preferred_labels": {
           "de": "Fitness / Gesundheitstraining",
           "en": "Fitness and wellness",
           "es": "Puesta en forma / Fitness",
-          "fr": "Remise en forme / Fitness"
+          "fr": "Remise en forme"
         },
         "definitions": {
           "de": "Angeleitete Fitness- und Konditionstrainings, z. B. Gruppenkurse und Coaching.",
@@ -52040,7 +52081,7 @@
       "context_key": "",
       "code": "guided_snorkeling",
       "disposition": "rewritten",
-      "reason": "Définition et traductions maintenues après relecture du sens précis : Sortie de snorkeling accompagnée par un encadrant, pour observer le milieu marin. Les termes et relations existants sont conservés dans ce contexte ; seule la provenance générée est reclassée en historique lorsqu’elle existe. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe.",
+      "reason": "Définition et traductions maintenues après relecture du sens précis : Sortie de snorkeling accompagnée par un encadrant, pour observer le milieu marin. Les termes et relations existants sont conservés dans ce contexte ; seule la provenance générée est reclassée en historique lorsqu’elle existe. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -52054,17 +52095,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Snorkeling encadré",
+        "name": "Randonnée palmée encadrée",
         "preferred_labels": {
           "de": "Geführtes Schnorcheln",
           "en": "Guided snorkeling",
           "es": "Esnórquel guiado",
-          "fr": "Snorkeling encadré"
+          "fr": "Randonnée palmée encadrée"
         },
         "definitions": {
           "de": "Schnorchelausflug unter Begleitung eines Guides zur Beobachtung der Meeresfauna.",
@@ -55952,7 +55996,7 @@
       "context_key": "",
       "code": "trail_running",
       "disposition": "rewritten",
-      "reason": "Définition et traductions maintenues après relecture du sens précis : Parcours de course à pied en milieu naturel, souvent avec du dénivelé. Les termes et relations existants sont conservés dans ce contexte ; seule la provenance générée est reclassée en historique lorsqu’elle existe. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe.",
+      "reason": "Définition et traductions maintenues après relecture du sens précis : Parcours de course à pied en milieu naturel, souvent avec du dénivelé. Les termes et relations existants sont conservés dans ce contexte ; seule la provenance générée est reclassée en historique lorsqu’elle existe. La note de génération locale est conservée comme historique et ne se présente plus comme une source de validation externe. Nom français simplifié conformément à la décision validée du 10 novembre ; le sens métier et les définitions sont conservés, et l’ancien nom reste une recherche cachée française.",
       "checked_fields": [
         "preferred_labels",
         "definitions",
@@ -55966,17 +56010,20 @@
         "legacy_search_terms"
       ],
       "changed_fields": [
-        "notes"
+        "notes",
+        "name",
+        "name_i18n",
+        "labels"
       ],
       "source_lifecycle": "active",
       "source_assignable": true,
       "result": {
-        "name": "Trail",
+        "name": "Course à pied sur sentier",
         "preferred_labels": {
           "de": "Trailrunning",
           "en": "Trail running",
           "es": "Carrera de montaña (trail)",
-          "fr": "Trail"
+          "fr": "Course à pied sur sentier"
         },
         "definitions": {
           "de": "Laufstrecke im Gelände, häufig mit Höhenmetern.",

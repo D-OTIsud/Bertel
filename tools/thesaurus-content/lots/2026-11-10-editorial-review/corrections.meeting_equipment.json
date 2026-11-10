@@ -164,7 +164,14 @@
             "lang": "fr",
             "value": "Tableau à feuilles mobiles"
           }
-        ]
+        ],
+        "name": "Paperboard",
+        "name_i18n": {
+          "de": "Flipchart",
+          "en": "Flipchart",
+          "es": "Papelógrafo",
+          "fr": "Paperboard"
+        }
       },
       "changes": {
         "description": "Tableau à feuilles mobiles fourni avec des marqueurs pour noter et présenter les idées pendant une réunion ou un atelier.",
@@ -189,11 +196,18 @@
             "value": "Rotafolio"
           },
           {
-            "kind": "alt",
+            "kind": "hidden",
             "lang": "fr",
-            "value": "Tableau à feuilles mobiles"
+            "value": "Paperboard"
           }
-        ]
+        ],
+        "name": "Tableau à feuilles mobiles",
+        "name_i18n": {
+          "de": "Flipchart",
+          "en": "Flipchart",
+          "es": "Papelógrafo",
+          "fr": "Tableau à feuilles mobiles"
+        }
       }
     },
     {

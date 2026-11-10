@@ -1,0 +1,1084 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-french-names-delta-16",
+  "proposals": [
+    {
+      "concept_id": "90b1df01-fcec-4892-9800-9a49daf22e86",
+      "domain": "amenity",
+      "context_key": "",
+      "code": "acc_staff_cognitive_training",
+      "base": {
+        "name": "Personnel formé — handicap cognitif",
+        "name_i18n": {
+          "de": "Personal geschult für kognitive Behinderungen",
+          "en": "Staff trained in cognitive disability",
+          "es": "Personal formado en discapacidad cognitiva",
+          "fr": "Personnel formé — handicap cognitif"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Für die Begleitung von Menschen mit kognitiven oder Lernbehinderungen geschultes Personal"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Staff trained to support people with cognitive or learning disabilities"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Personal formado para acompañar a personas con discapacidad cognitiva o de aprendizaje"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Personnel formé à l'accompagnement du handicap cognitif ou d'apprentissage"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Personnel formé au handicap cognitif",
+        "name_i18n": {
+          "de": "Personal geschult für kognitive Behinderungen",
+          "en": "Staff trained in cognitive disability",
+          "es": "Personal formado en discapacidad cognitiva",
+          "fr": "Personnel formé au handicap cognitif"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Für die Begleitung von Menschen mit kognitiven oder Lernbehinderungen geschultes Personal"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Staff trained to support people with cognitive or learning disabilities"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Personal formado para acompañar a personas con discapacidad cognitiva o de aprendizaje"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Personnel formé à l'accompagnement du handicap cognitif ou d'apprentissage"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Personnel formé — handicap cognitif"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "88e46d2f-7e64-4fec-9b3d-078525adbbf8",
+      "domain": "amenity",
+      "context_key": "",
+      "code": "acc_staff_mental_training",
+      "base": {
+        "name": "Personnel formé — santé mentale",
+        "name_i18n": {
+          "de": "Personal geschult für psychische Gesundheit",
+          "en": "Staff trained in mental health",
+          "es": "Personal formado en salud mental",
+          "fr": "Personnel formé — santé mentale"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Für den Empfang von Gästen mit psychischen Beeinträchtigungen oder besonderer psychischer Verletzlichkeit geschultes Personal"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Staff trained to welcome people with mental-health disabilities or psychiatric vulnerability"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Personal formado para acoger a personas con discapacidad psicosocial o vulnerabilidad psiquiátrica"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Personnel formé à l'accueil du handicap psychique ou de la fragilité psychiatrique"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Personnel formé au handicap psychique",
+        "name_i18n": {
+          "de": "Personal geschult für psychische Gesundheit",
+          "en": "Staff trained in mental health",
+          "es": "Personal formado en salud mental",
+          "fr": "Personnel formé au handicap psychique"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Für den Empfang von Gästen mit psychischen Beeinträchtigungen oder besonderer psychischer Verletzlichkeit geschultes Personal"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Staff trained to welcome people with mental-health disabilities or psychiatric vulnerability"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Personal formado para acoger a personas con discapacidad psicosocial o vulnerabilidad psiquiátrica"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Personnel formé à l'accueil du handicap psychique ou de la fragilité psychiatrique"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Personnel formé — santé mentale"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b5c6dcac-d71f-4a57-bc3d-5f738b7d56f8",
+      "domain": "amenity",
+      "context_key": "",
+      "code": "coworking_space",
+      "base": {
+        "name": "Espace coworking",
+        "name_i18n": {
+          "de": "Coworking-Space",
+          "en": "Coworking space",
+          "es": "Espacio de coworking",
+          "fr": "Espace coworking"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Coworking-Bereich"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Gemeinschaftlicher Arbeitsbereich"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Communal workspace"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Shared workspace"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Espacio de trabajo compartido"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Zona de trabajo compartida"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Espace de travail partagé"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lieu de travail partagé"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Espace de travail partagé",
+        "name_i18n": {
+          "de": "Coworking-Space",
+          "en": "Coworking space",
+          "es": "Espacio de coworking",
+          "fr": "Espace de travail partagé"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Coworking-Bereich"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Gemeinschaftlicher Arbeitsbereich"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Communal workspace"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Shared workspace"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Espacio de trabajo compartido"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Zona de trabajo compartida"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lieu de travail partagé"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Espace coworking"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e39bed90-349f-4bec-babb-8b4791b2458d",
+      "domain": "amenity",
+      "context_key": "",
+      "code": "snorkeling_gear",
+      "base": {
+        "name": "Équipement snorkeling",
+        "name_i18n": {
+          "de": "Schnorchelausrüstung",
+          "en": "Snorkelling gear",
+          "es": "Equipo de snorkel",
+          "fr": "Équipement snorkeling"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Ausrüstung zum Schnorcheln"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Snorkeling equipment"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Material para snorkel"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Matériel de randonnée palmée"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Équipement de randonnée palmée",
+        "name_i18n": {
+          "de": "Schnorchelausrüstung",
+          "en": "Snorkelling gear",
+          "es": "Equipo de snorkel",
+          "fr": "Équipement de randonnée palmée"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Ausrüstung zum Schnorcheln"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Snorkeling equipment"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Material para snorkel"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Matériel de randonnée palmée"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Équipement snorkeling"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6652a79d-e8fd-4d77-8f89-29ddf3616d46",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "king",
+      "base": {
+        "name": "Lit king (180 cm)",
+        "name_i18n": {
+          "de": "Kingsize-Bett (180 cm)",
+          "en": "King bed (180 cm)",
+          "es": "Cama king (180 cm)",
+          "fr": "Lit king (180 cm)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "King-Size-Bett mit 180 cm Breite"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "180 cm king-size bed"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cama king size de 180 cm"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lit king size de 180 cm"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Lit double de 180 cm",
+        "name_i18n": {
+          "de": "Kingsize-Bett (180 cm)",
+          "en": "King bed (180 cm)",
+          "es": "Cama king (180 cm)",
+          "fr": "Lit double de 180 cm"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "King-Size-Bett mit 180 cm Breite"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "180 cm king-size bed"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cama king size de 180 cm"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lit king size de 180 cm"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Lit king (180 cm)"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5e3f3408-bcaf-4b0d-adff-3a03f1257d7d",
+      "domain": "bed_type",
+      "context_key": "",
+      "code": "queen",
+      "base": {
+        "name": "Lit queen (160 cm)",
+        "name_i18n": {
+          "de": "Queensize-Bett (160 cm)",
+          "en": "Queen bed (160 cm)",
+          "es": "Cama queen (160 cm)",
+          "fr": "Lit queen (160 cm)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Queen-Size-Bett mit 160 cm Breite"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "160 cm queen-size bed"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cama queen size de 160 cm"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lit queen size de 160 cm"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Lit double de 160 cm",
+        "name_i18n": {
+          "de": "Queensize-Bett (160 cm)",
+          "en": "Queen bed (160 cm)",
+          "es": "Cama queen (160 cm)",
+          "fr": "Lit double de 160 cm"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Queen-Size-Bett mit 160 cm Breite"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "160 cm queen-size bed"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cama queen size de 160 cm"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lit queen size de 160 cm"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Lit queen (160 cm)"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c04fbc8b-351d-425a-92ef-65a6ff78a8d1",
+      "domain": "classification_value",
+      "context_key": "f2efe575-f2f0-47cf-bae3-ad26db966d57",
+      "code": "granted_cognitive",
+      "base": {
+        "name": "Titulaire T&H — mental",
+        "name_i18n": {
+          "de": "Inhaber T&H – geistige Behinderung",
+          "en": "Tourisme & Handicap holder – intellectual disability",
+          "es": "Titular T&H – discapacidad intelectual",
+          "fr": "Titulaire T&H — mental"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap mental"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Label Tourisme & Handicap (mental)",
+        "name_i18n": {
+          "de": "Inhaber T&H – geistige Behinderung",
+          "en": "Tourisme & Handicap holder – intellectual disability",
+          "es": "Titular T&H – discapacidad intelectual",
+          "fr": "Label Tourisme & Handicap (mental)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap mental"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Titulaire T&H — mental"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b21b747c-444c-40f8-8798-77468f79ae8f",
+      "domain": "classification_value",
+      "context_key": "f2efe575-f2f0-47cf-bae3-ad26db966d57",
+      "code": "granted_hearing",
+      "base": {
+        "name": "Titulaire T&H — auditif",
+        "name_i18n": {
+          "de": "Inhaber T&H – Hörbehinderung",
+          "en": "Tourism & Disability holder – hearing",
+          "es": "Titular T&H – auditivo",
+          "fr": "Titulaire T&H — auditif"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap auditif"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Label Tourisme & Handicap (auditif)",
+        "name_i18n": {
+          "de": "Inhaber T&H – Hörbehinderung",
+          "en": "Tourism & Disability holder – hearing",
+          "es": "Titular T&H – auditivo",
+          "fr": "Label Tourisme & Handicap (auditif)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap auditif"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Titulaire T&H — auditif"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "fe107bf0-7efb-4438-b1c3-cf325e4541b0",
+      "domain": "classification_value",
+      "context_key": "f2efe575-f2f0-47cf-bae3-ad26db966d57",
+      "code": "granted_motor",
+      "base": {
+        "name": "Titulaire T&H — moteur",
+        "name_i18n": {
+          "de": "Inhaber T&H – motorische Behinderung",
+          "en": "Tourism & Disability holder – motor",
+          "es": "Titular T&H – motor",
+          "fr": "Titulaire T&H — moteur"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap moteur"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Label Tourisme & Handicap (moteur)",
+        "name_i18n": {
+          "de": "Inhaber T&H – motorische Behinderung",
+          "en": "Tourism & Disability holder – motor",
+          "es": "Titular T&H – motor",
+          "fr": "Label Tourisme & Handicap (moteur)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap moteur"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Titulaire T&H — moteur"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "385f2e31-e7e4-47fb-9f1c-75e4a151faa9",
+      "domain": "classification_value",
+      "context_key": "f2efe575-f2f0-47cf-bae3-ad26db966d57",
+      "code": "granted_visual",
+      "base": {
+        "name": "Titulaire T&H — visuel",
+        "name_i18n": {
+          "de": "Inhaber T&H – Sehbehinderung",
+          "en": "Tourism & Disability holder – visual",
+          "es": "Titular T&H – visual",
+          "fr": "Titulaire T&H — visuel"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap visuel"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Label Tourisme & Handicap (visuel)",
+        "name_i18n": {
+          "de": "Inhaber T&H – Sehbehinderung",
+          "en": "Tourism & Disability holder – visual",
+          "es": "Titular T&H – visual",
+          "fr": "Label Tourisme & Handicap (visuel)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Titulaire Tourisme & Handicap — handicap visuel"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Titulaire T&H — visuel"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5bfb5e39-0369-46fb-9060-e7586dbd507b",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "snorkeling",
+      "base": {
+        "name": "Snorkeling",
+        "name_i18n": {
+          "de": "Schnorcheln",
+          "en": "Snorkelling",
+          "es": "Snorkel",
+          "fr": "Snorkeling"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Schnorchelsport"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Snorkeling"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Esnórquel"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Randonnée palmée"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Randonnée palmée",
+        "name_i18n": {
+          "de": "Schnorcheln",
+          "en": "Snorkelling",
+          "es": "Snorkel",
+          "fr": "Randonnée palmée"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Schnorchelsport"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Snorkeling"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Esnórquel"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Snorkeling"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f923d89a-ce9f-4302-a857-d49fa47b6fa4",
+      "domain": "iti_practice",
+      "context_key": "",
+      "code": "trail",
+      "base": {
+        "name": "Trail",
+        "name_i18n": {
+          "de": "Trailrunning",
+          "en": "Trail running",
+          "es": "Trail running",
+          "fr": "Trail"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geländelauf auf Wegen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Off-road running"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Carrera por senderos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Course à pied en sentier"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Course à pied sur sentier",
+        "name_i18n": {
+          "de": "Trailrunning",
+          "en": "Trail running",
+          "es": "Trail running",
+          "fr": "Course à pied sur sentier"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geländelauf auf Wegen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Off-road running"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Carrera por senderos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Course à pied en sentier"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Trail"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "32ddeb46-6e24-42ef-b9e8-545dfab41d72",
+      "domain": "meeting_equipment",
+      "context_key": "",
+      "code": "paperboard",
+      "base": {
+        "name": "Paperboard",
+        "name_i18n": {
+          "de": "Flipchart",
+          "en": "Flipchart",
+          "es": "Papelógrafo",
+          "fr": "Paperboard"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Rotafolio"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Tableau à feuilles mobiles"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Tableau à feuilles mobiles",
+        "name_i18n": {
+          "de": "Flipchart",
+          "en": "Flipchart",
+          "es": "Papelógrafo",
+          "fr": "Tableau à feuilles mobiles"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Rotafolio"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Paperboard"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "23b1435b-7880-4b45-87e2-4bb6118b16f0",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "fitness_wellness",
+      "base": {
+        "name": "Remise en forme / Fitness",
+        "name_i18n": {
+          "de": "Fitness / Gesundheitstraining",
+          "en": "Fitness and wellness",
+          "es": "Puesta en forma / Fitness",
+          "fr": "Remise en forme / Fitness"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Angeleitetes Fitnesstraining"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Supervised fitness training"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Entrenamiento físico supervisado"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Entraînement physique encadré"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Remise en forme",
+        "name_i18n": {
+          "de": "Fitness / Gesundheitstraining",
+          "en": "Fitness and wellness",
+          "es": "Puesta en forma / Fitness",
+          "fr": "Remise en forme"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Angeleitetes Fitnesstraining"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Supervised fitness training"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Entrenamiento físico supervisado"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Entraînement physique encadré"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Remise en forme / Fitness"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "86580bed-b0d1-4f6a-bb49-899be83d1758",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "guided_snorkeling",
+      "base": {
+        "name": "Snorkeling encadré",
+        "name_i18n": {
+          "de": "Geführtes Schnorcheln",
+          "en": "Guided snorkeling",
+          "es": "Esnórquel guiado",
+          "fr": "Snorkeling encadré"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitete Schnorcheltour"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Guided snorkelling"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Excursión de esnórquel con guía"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Randonnée palmée encadrée"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Randonnée palmée encadrée",
+        "name_i18n": {
+          "de": "Geführtes Schnorcheln",
+          "en": "Guided snorkeling",
+          "es": "Esnórquel guiado",
+          "fr": "Randonnée palmée encadrée"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitete Schnorcheltour"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Guided snorkelling"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Excursión de esnórquel con guía"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Snorkeling encadré"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0274cabe-06ba-4897-bee9-e2da187027ba",
+      "domain": "taxonomy_iti",
+      "context_key": "",
+      "code": "trail_running",
+      "base": {
+        "name": "Trail",
+        "name_i18n": {
+          "de": "Trailrunning",
+          "en": "Trail running",
+          "es": "Carrera de montaña (trail)",
+          "fr": "Trail"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geländelaufstrecke"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Natural-terrain running route"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "trail route"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Recorrido de carrera por senderos"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "ruta de trail"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "course nature"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Parcours de course nature"
+          }
+        ]
+      },
+      "changes": {
+        "name": "Course à pied sur sentier",
+        "name_i18n": {
+          "de": "Trailrunning",
+          "en": "Trail running",
+          "es": "Carrera de montaña (trail)",
+          "fr": "Course à pied sur sentier"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geländelaufstrecke"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Natural-terrain running route"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "trail route"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Recorrido de carrera por senderos"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "ruta de trail"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "course nature"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Parcours de course nature"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Trail"
+          }
+        ]
+      }
+    }
+  ]
+}

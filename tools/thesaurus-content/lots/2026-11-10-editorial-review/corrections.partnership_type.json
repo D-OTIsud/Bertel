@@ -1,0 +1,406 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-partnership_type-1",
+  "proposals": [
+    {
+      "concept_id": "970d338f-ca51-4396-a00b-c05bd2d1323a",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "activity_provider",
+      "base": {
+        "description": "Partenariat avec prestataires d'activités",
+        "description_i18n": {
+          "de": "Partnerschaft mit Anbietern von Aktivitäten",
+          "en": "Partnership with activity providers",
+          "es": "Colaboración con prestadores de actividades",
+          "fr": "Partenariat avec prestataires d'activités"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/970d338f-ca51-4396-a00b-c05bd2d1323a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/970d338f-ca51-4396-a00b-c05bd2d1323a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec un opérateur proposant des activités ou expériences touristiques, classée d'après la nature du partenaire.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einem Anbieter touristischer Aktivitäten oder Erlebnisse, eingeordnet nach der Tätigkeit des Partners.",
+          "en": "Partnership with an operator offering tourism activities or experiences, classified by the partner's type of activity.",
+          "es": "Colaboración con un operador que ofrece actividades o experiencias turísticas, clasificada según la actividad del colaborador.",
+          "fr": "Relation de partenariat avec un opérateur proposant des activités ou expériences touristiques, classée d'après la nature du partenaire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/970d338f-ca51-4396-a00b-c05bd2d1323a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/970d338f-ca51-4396-a00b-c05bd2d1323a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0e0a2e18-bbad-47cf-b0de-8827f8ec07f3",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "airline",
+      "base": {
+        "description": "Partenariat avec compagnies aériennes",
+        "description_i18n": {
+          "de": "Partnerschaft mit Fluggesellschaften",
+          "en": "Partnership with airlines",
+          "es": "Colaboración con aerolíneas",
+          "fr": "Partenariat avec compagnies aériennes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0e0a2e18-bbad-47cf-b0de-8827f8ec07f3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0e0a2e18-bbad-47cf-b0de-8827f8ec07f3"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec une compagnie assurant du transport aérien ; elle ne désigne pas le moyen de transport d'un client.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einer Fluggesellschaft als Luftverkehrsanbieter; sie bezeichnet nicht das Verkehrsmittel eines Gastes.",
+          "en": "Partnership with an airline providing air transport; it does not identify a customer's mode of travel.",
+          "es": "Colaboración con una compañía que presta transporte aéreo; no identifica el medio de transporte de un cliente.",
+          "fr": "Relation de partenariat avec une compagnie assurant du transport aérien ; elle ne désigne pas le moyen de transport d'un client."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0e0a2e18-bbad-47cf-b0de-8827f8ec07f3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0e0a2e18-bbad-47cf-b0de-8827f8ec07f3"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9cbaefc6-5cf5-40a1-9c1e-b3822c47ba47",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "hotel",
+      "base": {
+        "description": "Partenariat avec hôtels",
+        "description_i18n": {
+          "de": "Partnerschaft mit Hotels",
+          "en": "Partnership with hotels",
+          "es": "Colaboración con hoteles",
+          "fr": "Partenariat avec hôtels"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9cbaefc6-5cf5-40a1-9c1e-b3822c47ba47. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9cbaefc6-5cf5-40a1-9c1e-b3822c47ba47"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec un établissement hôtelier, distincte du classement en étoiles ou du palier d'adhésion de l'établissement.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einem Hotelbetrieb, getrennt von dessen Sterneklassifizierung oder Mitgliedschaftsstufe.",
+          "en": "Partnership with a hotel establishment, distinct from its star classification or membership tier.",
+          "es": "Colaboración con un establecimiento hotelero, distinta de su clasificación por estrellas o de su nivel de adhesión.",
+          "fr": "Relation de partenariat avec un établissement hôtelier, distincte du classement en étoiles ou du palier d'adhésion de l'établissement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9cbaefc6-5cf5-40a1-9c1e-b3822c47ba47. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9cbaefc6-5cf5-40a1-9c1e-b3822c47ba47"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "dffda982-b0ba-4420-be35-890c86bf7ffe",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "local_business",
+      "base": {
+        "description": "Partenariat avec entreprises locales",
+        "description_i18n": {
+          "de": "Partnerschaft mit lokalen Unternehmen",
+          "en": "Partnership with local businesses",
+          "es": "Colaboración con empresas locales",
+          "fr": "Partenariat avec entreprises locales"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dffda982-b0ba-4420-be35-890c86bf7ffe. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dffda982-b0ba-4420-be35-890c86bf7ffe"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec une entreprise implantée sur le territoire local, sans imposer une certification d'origine à ses produits.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einem im örtlichen Gebiet ansässigen Unternehmen, ohne damit eine Herkunftszertifizierung seiner Produkte zu verlangen.",
+          "en": "Partnership with a business established in the local area, without requiring origin certification for its products.",
+          "es": "Colaboración con una empresa implantada en el territorio local, sin exigir certificación de origen a sus productos.",
+          "fr": "Relation de partenariat avec une entreprise implantée sur le territoire local, sans imposer une certification d'origine à ses produits."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dffda982-b0ba-4420-be35-890c86bf7ffe. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dffda982-b0ba-4420-be35-890c86bf7ffe"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "dfb45cc6-e108-4d94-98ad-ccf40b23bba0",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "online_platform",
+      "base": {
+        "description": "Partenariat avec plateformes en ligne",
+        "description_i18n": {
+          "de": "Partnerschaft mit Online-Plattformen",
+          "en": "Partnership with online platforms",
+          "es": "Colaboración con plataformas digitales",
+          "fr": "Partenariat avec plateformes en ligne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dfb45cc6-e108-4d94-98ad-ccf40b23bba0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dfb45cc6-e108-4d94-98ad-ccf40b23bba0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec un service ou une place de marché en ligne ; elle décrit l'acteur partenaire plutôt que le canal de distribution d'une fiche.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einem Online-Dienst oder -Marktplatz; sie beschreibt den Partner und nicht den Vertriebskanal eines Eintrags.",
+          "en": "Partnership with an online service or marketplace; it describes the partner rather than a listing's distribution channel.",
+          "es": "Colaboración con un servicio o mercado en línea; describe al colaborador y no al canal de distribución de una ficha.",
+          "fr": "Relation de partenariat avec un service ou une place de marché en ligne ; elle décrit l'acteur partenaire plutôt que le canal de distribution d'une fiche."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dfb45cc6-e108-4d94-98ad-ccf40b23bba0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dfb45cc6-e108-4d94-98ad-ccf40b23bba0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "acebb5f7-18c8-4e82-b648-dc908d521765",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "restaurant",
+      "base": {
+        "description": "Partenariat avec restaurants",
+        "description_i18n": {
+          "de": "Partnerschaft mit Restaurants",
+          "en": "Partnership with restaurants",
+          "es": "Colaboración con restaurantes",
+          "fr": "Partenariat avec restaurants"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/acebb5f7-18c8-4e82-b648-dc908d521765. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/acebb5f7-18c8-4e82-b648-dc908d521765"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec un établissement de restauration, indépendamment de son type de cuisine ou d'une offre promotionnelle particulière.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einem Gastronomiebetrieb, unabhängig von dessen Küchenstil oder einem bestimmten Sonderangebot.",
+          "en": "Partnership with a food-service establishment, independently of its cuisine type or a particular promotional offer.",
+          "es": "Colaboración con un establecimiento de restauración, con independencia de su tipo de cocina o de una oferta promocional concreta.",
+          "fr": "Relation de partenariat avec un établissement de restauration, indépendamment de son type de cuisine ou d'une offre promotionnelle particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/acebb5f7-18c8-4e82-b648-dc908d521765. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/acebb5f7-18c8-4e82-b648-dc908d521765"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "445af395-f6ba-4016-afb6-5cdaa0be16c9",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "supplier",
+      "base": {
+        "description": "Partenariat avec fournisseurs",
+        "description_i18n": {
+          "de": "Partnerschaft mit Lieferanten",
+          "en": "Partnership with suppliers",
+          "es": "Colaboración con proveedores",
+          "fr": "Partenariat avec fournisseurs"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/445af395-f6ba-4016-afb6-5cdaa0be16c9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/445af395-f6ba-4016-afb6-5cdaa0be16c9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec un acteur fournissant des biens ou des services nécessaires à l'activité, à distinguer d'un prestataire proposant une expérience aux visiteurs.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einem Akteur, der für den Betrieb benötigte Waren oder Dienstleistungen liefert, im Unterschied zu einem Anbieter von Besuchererlebnissen.",
+          "en": "Partnership with an actor supplying goods or services needed for operations, distinct from a provider offering a visitor experience.",
+          "es": "Colaboración con un actor que suministra bienes o servicios necesarios para la actividad, distinto de un prestador que ofrece una experiencia a los visitantes.",
+          "fr": "Relation de partenariat avec un acteur fournissant des biens ou des services nécessaires à l'activité, à distinguer d'un prestataire proposant une expérience aux visiteurs."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/445af395-f6ba-4016-afb6-5cdaa0be16c9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/445af395-f6ba-4016-afb6-5cdaa0be16c9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "73f2e7ed-5e7f-44db-8320-fabd00e1ac27",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "tourist_office",
+      "base": {
+        "description": "Partenariat avec offices de tourisme",
+        "description_i18n": {
+          "de": "Partnerschaft mit Tourismusbüros",
+          "en": "Partnership with tourist offices",
+          "es": "Colaboración con oficinas de turismo",
+          "fr": "Partenariat avec offices de tourisme"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/73f2e7ed-5e7f-44db-8320-fabd00e1ac27. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/73f2e7ed-5e7f-44db-8320-fabd00e1ac27"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec un office de tourisme pour les échanges, l'information ou la coopération touristiques ; elle ne désigne pas un palier d'adhésion.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einem Tourismusbüro für touristischen Austausch, Information oder Zusammenarbeit; sie bezeichnet keine Mitgliedschaftsstufe.",
+          "en": "Partnership with a tourist office for tourism exchanges, information or cooperation; it does not identify a membership tier.",
+          "es": "Colaboración con una oficina de turismo para intercambios, información o cooperación turística; no identifica un nivel de adhesión.",
+          "fr": "Relation de partenariat avec un office de tourisme pour les échanges, l'information ou la coopération touristiques ; elle ne désigne pas un palier d'adhésion."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/73f2e7ed-5e7f-44db-8320-fabd00e1ac27. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/73f2e7ed-5e7f-44db-8320-fabd00e1ac27"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9add1447-4080-4d9a-9b43-5e163715744a",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "transport",
+      "base": {
+        "description": "Partenariat avec entreprises de transport",
+        "description_i18n": {
+          "de": "Partnerschaft mit Transportunternehmen",
+          "en": "Partnership with transport companies",
+          "es": "Colaboración con empresas de transporte",
+          "fr": "Partenariat avec entreprises de transport"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9add1447-4080-4d9a-9b43-5e163715744a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9add1447-4080-4d9a-9b43-5e163715744a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec une entreprise assurant le déplacement de personnes ; elle qualifie le partenaire et non une unité de facturation par trajet.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einem Unternehmen für Personenbeförderung; sie kennzeichnet den Partner und keine Abrechnungseinheit pro Fahrt.",
+          "en": "Partnership with a passenger-transport company; it identifies the partner rather than a per-journey billing unit.",
+          "es": "Colaboración con una empresa de transporte de personas; identifica al colaborador y no una unidad de facturación por trayecto.",
+          "fr": "Relation de partenariat avec une entreprise assurant le déplacement de personnes ; elle qualifie le partenaire et non une unité de facturation par trajet."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9add1447-4080-4d9a-9b43-5e163715744a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9add1447-4080-4d9a-9b43-5e163715744a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d3eb1f6a-e86c-4ee1-a9cc-8a597a954ae6",
+      "domain": "partnership_type",
+      "context_key": "",
+      "code": "travel_agency",
+      "base": {
+        "description": "Partenariat avec agences de voyage",
+        "description_i18n": {
+          "de": "Partnerschaft mit Reisebüros",
+          "en": "Partnership with travel agencies",
+          "es": "Colaboración con agencias de viaje",
+          "fr": "Partenariat avec agences de voyage"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d3eb1f6a-e86c-4ee1-a9cc-8a597a954ae6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d3eb1f6a-e86c-4ee1-a9cc-8a597a954ae6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Relation de partenariat avec une agence qui organise ou commercialise des prestations de voyage, distincte d'un simple lien de contact vers un site.",
+        "description_i18n": {
+          "de": "Partnerschaft mit einer Agentur, die Reiseleistungen organisiert oder verkauft, im Unterschied zu einem bloßen Website-Kontaktlink.",
+          "en": "Partnership with an agency organising or selling travel services, distinct from a simple website contact link.",
+          "es": "Colaboración con una agencia que organiza o comercializa servicios de viaje, distinta de un simple enlace de contacto a un sitio web.",
+          "fr": "Relation de partenariat avec une agence qui organise ou commercialise des prestations de voyage, distincte d'un simple lien de contact vers un site."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d3eb1f6a-e86c-4ee1-a9cc-8a597a954ae6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d3eb1f6a-e86c-4ee1-a9cc-8a597a954ae6"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,316 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_com-1",
+  "proposals": [
+    {
+      "concept_id": "c3b7138b-1f93-402c-822b-a8f0d053287d",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "bakery",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3b7138b-1f93-402c-822b-a8f0d053287d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3b7138b-1f93-402c-822b-a8f0d053287d"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3b7138b-1f93-402c-822b-a8f0d053287d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3b7138b-1f93-402c-822b-a8f0d053287d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "68abf45f-16a0-44e1-acd3-565f12fd5ea6",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "bookshop",
+      "base": {
+        "description": "Librairie ou maison de la presse",
+        "description_i18n": {
+          "de": "Buchhandlung oder Pressegeschäft.",
+          "en": "Bookshop or press shop.",
+          "es": "Librería o tienda de prensa.",
+          "fr": "Librairie ou maison de la presse"
+        }
+      },
+      "changes": {
+        "description": "Commerce spécialisé dans la vente de livres, pouvant aussi proposer de la presse. Il se distingue d’une bibliothèque qui met des documents à disposition sans être une librairie.",
+        "description_i18n": {
+          "de": "Geschäft mit Schwerpunkt Buchverkauf, gegebenenfalls auch Presseerzeugnissen. Es unterscheidet sich von einer Bibliothek, die Dokumente bereitstellt und keine Buchhandlung ist.",
+          "en": "Shop specialising in book sales and possibly newspapers or magazines. It differs from a library making documents available rather than operating as a bookshop.",
+          "es": "Comercio especializado en vender libros, que también puede ofrecer prensa. Se distingue de una biblioteca que pone documentos a disposición sin ser una librería.",
+          "fr": "Commerce spécialisé dans la vente de livres, pouvant aussi proposer de la presse. Il se distingue d’une bibliothèque qui met des documents à disposition sans être une librairie."
+        }
+      }
+    },
+    {
+      "concept_id": "57375195-0cf6-4040-a41d-58eef1ce34a4",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "covered_market",
+      "base": {
+        "description": "Marché couvert / halles",
+        "description_i18n": {
+          "de": "Markt in einer überdachten Halle.",
+          "en": "Market held in a covered hall or under a roof.",
+          "es": "Mercado celebrado en una nave o edificio cubierto.",
+          "fr": "Marché couvert / halles"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/57375195-0cf6-4040-a41d-58eef1ce34a4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/57375195-0cf6-4040-a41d-58eef1ce34a4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lieu de vente réunissant des étals ou commerçants sous une halle ou une couverture. Il décrit un marché comme lieu de commerce, distinct d’une édition ponctuelle de manifestation.",
+        "description_i18n": {
+          "de": "Verkaufsort mit Ständen oder Händlern in einer Halle oder unter einem Dach. Er beschreibt einen Marktort und keine einmalige Veranstaltungsausgabe.",
+          "en": "Sales place bringing together stalls or traders in a hall or under a roof. It describes a retail market location rather than a one-off event edition.",
+          "es": "Lugar de venta que reúne puestos o comerciantes en una nave o bajo cubierta. Describe un mercado como lugar de comercio, no una edición puntual de un evento.",
+          "fr": "Lieu de vente réunissant des étals ou commerçants sous une halle ou une couverture. Il décrit un marché comme lieu de commerce, distinct d’une édition ponctuelle de manifestation."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/57375195-0cf6-4040-a41d-58eef1ce34a4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/57375195-0cf6-4040-a41d-58eef1ce34a4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a649b74a-33fc-45af-aed9-9b8278bcc9eb",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "fine_grocery",
+      "base": {
+        "description": "Commerce de revente de produits alimentaires de qualité",
+        "description_i18n": {
+          "de": "Einzelhandel mit hochwertigen Lebensmitteln.",
+          "en": "Shop reselling quality food products.",
+          "es": "Comercio de reventa de productos alimentarios de calidad.",
+          "fr": "Commerce de revente de produits alimentaires de qualité"
+        }
+      },
+      "changes": {
+        "description": "Commerce revendant une sélection de produits alimentaires présentés comme fins ou gastronomiques. Cette catégorie décrit son positionnement commercial sans attribuer un label de qualité aux produits.",
+        "description_i18n": {
+          "de": "Geschäft mit einer Auswahl als Feinkost oder Gourmetprodukte angebotener Lebensmittel. Die Kategorie beschreibt die Marktpositionierung, ohne den Waren ein Qualitätssiegel zu verleihen.",
+          "en": "Shop reselling a selection of foods presented as fine or gourmet products. This category describes its commercial positioning without awarding a quality label to the products.",
+          "es": "Comercio que revende una selección de alimentos presentados como finos o gastronómicos. Describe su posicionamiento comercial sin otorgar un sello de calidad a los productos.",
+          "fr": "Commerce revendant une sélection de produits alimentaires présentés comme fins ou gastronomiques. Cette catégorie décrit son positionnement commercial sans attribuer un label de qualité aux produits."
+        }
+      }
+    },
+    {
+      "concept_id": "209c80e2-1d2b-4ee7-a60a-1d1668fd00b0",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "flea_market",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/209c80e2-1d2b-4ee7-a60a-1d1668fd00b0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/209c80e2-1d2b-4ee7-a60a-1d1668fd00b0"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/209c80e2-1d2b-4ee7-a60a-1d1668fd00b0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/209c80e2-1d2b-4ee7-a60a-1d1668fd00b0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c3cf9962-eef3-433f-aed0-fdd76dd63581",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "local_crafts",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3cf9962-eef3-433f-aed0-fdd76dd63581. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3cf9962-eef3-433f-aed0-fdd76dd63581"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3cf9962-eef3-433f-aed0-fdd76dd63581. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3cf9962-eef3-433f-aed0-fdd76dd63581"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e2d815e2-7802-4dda-94aa-8430d240d7ef",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "pharmacy",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e2d815e2-7802-4dda-94aa-8430d240d7ef. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e2d815e2-7802-4dda-94aa-8430d240d7ef"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e2d815e2-7802-4dda-94aa-8430d240d7ef. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e2d815e2-7802-4dda-94aa-8430d240d7ef"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1a12d54d-23a3-4550-b6ed-087f579f68f3",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Commerce",
+        "description_i18n": {
+          "de": "Technische Wurzel für Handelskategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for retail categories; not directly assignable.",
+          "es": "Raíz técnica de categorías comerciales; no asignable directamente.",
+          "fr": "Racine technique — Commerce"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1a12d54d-23a3-4550-b6ed-087f579f68f3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1a12d54d-23a3-4550-b6ed-087f579f68f3"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des commerces et lieux de vente destinés aux visiteurs ou au public. Les sous-catégories précisent les produits vendus ou la forme du commerce, distincts des producteurs ouverts à la visite.",
+        "description_i18n": {
+          "de": "Oberkategorie für Geschäfte und Verkaufsorte für Besucher oder die Öffentlichkeit. Unterkategorien bestimmen Waren oder Verkaufsform im Unterschied zu besuchbaren Erzeugerbetrieben.",
+          "en": "General category for retail businesses and sales places serving visitors or the public. Subcategories identify the goods sold or retail format, distinct from producers open for visits.",
+          "es": "Categoría general de comercios y lugares de venta para visitantes o público general. Las subcategorías precisan los productos o el formato comercial, distintos de los productores abiertos a visitas.",
+          "fr": "Catégorie générale des commerces et lieux de vente destinés aux visiteurs ou au public. Les sous-catégories précisent les produits vendus ou la forme du commerce, distincts des producteurs ouverts à la visite."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1a12d54d-23a3-4550-b6ed-087f579f68f3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1a12d54d-23a3-4550-b6ed-087f579f68f3"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d2fcfd7b-e63b-4dc2-bc8c-f05dae9a43d1",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "souvenir_shop",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2fcfd7b-e63b-4dc2-bc8c-f05dae9a43d1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2fcfd7b-e63b-4dc2-bc8c-f05dae9a43d1"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2fcfd7b-e63b-4dc2-bc8c-f05dae9a43d1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2fcfd7b-e63b-4dc2-bc8c-f05dae9a43d1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0c055106-2e7d-4c60-99ac-3c23527be1e4",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "supermarket",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0c055106-2e7d-4c60-99ac-3c23527be1e4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0c055106-2e7d-4c60-99ac-3c23527be1e4"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0c055106-2e7d-4c60-99ac-3c23527be1e4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0c055106-2e7d-4c60-99ac-3c23527be1e4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "040611ea-cc77-4413-944f-393780493d4f",
+      "domain": "taxonomy_com",
+      "context_key": "",
+      "code": "weekly_market",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/040611ea-cc77-4413-944f-393780493d4f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/040611ea-cc77-4413-944f-393780493d4f"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/040611ea-cc77-4413-944f-393780493d4f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/040611ea-cc77-4413-944f-393780493d4f"
+          }
+        ]
+      }
+    }
+  ]
+}

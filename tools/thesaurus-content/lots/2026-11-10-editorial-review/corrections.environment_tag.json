@@ -1,0 +1,1306 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-environment_tag-1",
+  "proposals": [
+    {
+      "concept_id": "3b663ed2-1ef2-4621-925d-d563353df385",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "anime",
+      "base": {
+        "description": "Quartier animé",
+        "description_i18n": {
+          "de": "Lebhaftes Viertel",
+          "en": "Lively neighbourhood",
+          "es": "Barrio animado",
+          "fr": "Quartier animé"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3b663ed2-1ef2-4621-925d-d563353df385. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3b663ed2-1ef2-4621-925d-d563353df385"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé dans un quartier vivant et animé ; cette indication décrit l'ambiance environnante, sans préciser une activité programmée.",
+        "description_i18n": {
+          "de": "Ort in einem lebhaften Viertel; diese Angabe beschreibt die Umgebung und keine geplante Aktivität.",
+          "en": "Site in a lively, bustling neighbourhood; this describes the surrounding atmosphere rather than a scheduled activity.",
+          "es": "Lugar situado en un barrio vivo y animado; describe el ambiente del entorno, no una actividad programada.",
+          "fr": "Site situé dans un quartier vivant et animé ; cette indication décrit l'ambiance environnante, sans préciser une activité programmée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3b663ed2-1ef2-4621-925d-d563353df385. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3b663ed2-1ef2-4621-925d-d563353df385"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "136996b4-b80a-45af-9a36-710eb6de8c98",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "bord_mer",
+      "base": {
+        "description": "Face au littoral",
+        "description_i18n": {
+          "de": "Der Küste zugewandt",
+          "en": "Facing the shoreline",
+          "es": "Frente al litoral",
+          "fr": "Face au littoral"
+        },
+        "name_i18n": {
+          "de": "Am Meer",
+          "en": "Seafront",
+          "es": "Frente al mar",
+          "fr": "Bord de mer"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "An der Küste"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "By the sea"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "A orillas del mar"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "En bord de mer"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/136996b4-b80a-45af-9a36-710eb6de8c98. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/136996b4-b80a-45af-9a36-710eb6de8c98"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site tourné vers le littoral et situé dans un cadre de bord de mer, à distinguer d'une implantation directement sur le front de mer.",
+        "description_i18n": {
+          "de": "Der Küste zugewandter Ort in Meeresnähe, zu unterscheiden von einer Lage unmittelbar am Meeresufer.",
+          "en": "Site facing the coast in a seaside setting, distinct from a location directly on the seafront.",
+          "es": "Lugar orientado al litoral en un entorno costero, distinto de una ubicación directamente en el frente marítimo.",
+          "fr": "Site tourné vers le littoral et situé dans un cadre de bord de mer, à distinguer d'une implantation directement sur le front de mer."
+        },
+        "name_i18n": {
+          "de": "Am Meer",
+          "en": "By the sea",
+          "es": "Frente al mar",
+          "fr": "Bord de mer"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "An der Küste"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "A orillas del mar"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "En bord de mer"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Seafront"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/136996b4-b80a-45af-9a36-710eb6de8c98. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/136996b4-b80a-45af-9a36-710eb6de8c98"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8b01eba7-95c6-4b47-bead-58c3b5f8f720",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "calme",
+      "base": {
+        "description": "Environnement calme",
+        "description_i18n": {
+          "de": "Ruhige Umgebung",
+          "en": "Peaceful environment",
+          "es": "Entorno tranquilo",
+          "fr": "Environnement calme"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8b01eba7-95c6-4b47-bead-58c3b5f8f720. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8b01eba7-95c6-4b47-bead-58c3b5f8f720"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cadre de séjour décrit comme paisible et peu animé, sans que cette indication garantisse une absence totale de bruit.",
+        "description_i18n": {
+          "de": "Als friedlich und ruhig beschriebene Aufenthaltsumgebung, ohne damit völlige Geräuschfreiheit zu garantieren.",
+          "en": "Stay setting described as peaceful and quiet, without guaranteeing a complete absence of noise.",
+          "es": "Entorno de estancia descrito como apacible y tranquilo, sin garantizar una ausencia total de ruido.",
+          "fr": "Cadre de séjour décrit comme paisible et peu animé, sans que cette indication garantisse une absence totale de bruit."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8b01eba7-95c6-4b47-bead-58c3b5f8f720. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8b01eba7-95c6-4b47-bead-58c3b5f8f720"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "921f2f1d-5b93-4be9-9699-6a5944db5d06",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "campagne",
+      "base": {
+        "description": "Cadre campagnard",
+        "description_i18n": {
+          "de": "Ländliche Umgebung",
+          "en": "Rural countryside setting",
+          "es": "Entorno campestre",
+          "fr": "Cadre campagnard"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/921f2f1d-5b93-4be9-9699-6a5944db5d06. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/921f2f1d-5b93-4be9-9699-6a5944db5d06"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site dans un paysage de campagne ; cette indication décrit le cadre rural, pas nécessairement une implantation dans un village ou un hameau.",
+        "description_i18n": {
+          "de": "Ort in ländlicher Landschaft; diese Angabe beschreibt die Umgebung und nicht zwingend eine Lage in einem Dorf oder Weiler.",
+          "en": "Site in a countryside landscape; this describes a rural setting rather than necessarily a location in a village or hamlet.",
+          "es": "Lugar en un paisaje de campo; describe un entorno rural, no necesariamente una ubicación en un pueblo o caserío.",
+          "fr": "Site dans un paysage de campagne ; cette indication décrit le cadre rural, pas nécessairement une implantation dans un village ou un hameau."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/921f2f1d-5b93-4be9-9699-6a5944db5d06. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/921f2f1d-5b93-4be9-9699-6a5944db5d06"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "82bd28f0-0fd0-4e08-bf4b-d16aac2dc667",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "cascade",
+      "base": {
+        "description": "Proche d'une cascade",
+        "description_i18n": {
+          "de": "In der Nähe eines Wasserfalls",
+          "en": "Near a waterfall",
+          "es": "Cerca de una cascada",
+          "fr": "Proche d'une cascade"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/82bd28f0-0fd0-4e08-bf4b-d16aac2dc667. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/82bd28f0-0fd0-4e08-bf4b-d16aac2dc667"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé à proximité d'une cascade, qui contribue au cadre de séjour ou de visite.",
+        "description_i18n": {
+          "de": "Ort in der Nähe eines Wasserfalls, der die Umgebung des Aufenthalts oder Besuchs prägt.",
+          "en": "Site near a waterfall that contributes to the setting of a stay or visit.",
+          "es": "Lugar situado cerca de una cascada que forma parte del entorno de estancia o visita.",
+          "fr": "Site situé à proximité d'une cascade, qui contribue au cadre de séjour ou de visite."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/82bd28f0-0fd0-4e08-bf4b-d16aac2dc667. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/82bd28f0-0fd0-4e08-bf4b-d16aac2dc667"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9a3fbfa6-4b71-4b91-9db4-575ba4a47e52",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "centre_ville",
+      "base": {
+        "description": "Hyper-centre urbain",
+        "description_i18n": {
+          "de": "Im innersten Stadtzentrum",
+          "en": "In the heart of the city centre",
+          "es": "Pleno centro urbano",
+          "fr": "Hyper-centre urbain"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9a3fbfa6-4b71-4b91-9db4-575ba4a47e52. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9a3fbfa6-4b71-4b91-9db4-575ba4a47e52"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site implanté dans l'hyper-centre urbain, au sein de la partie centrale de la ville.",
+        "description_i18n": {
+          "de": "Ort im innersten Stadtzentrum, innerhalb des zentralen Stadtkerns.",
+          "en": "Site located in the central urban core, within the innermost part of the city centre.",
+          "es": "Lugar ubicado en el núcleo urbano más céntrico, dentro de la parte central de la ciudad.",
+          "fr": "Site implanté dans l'hyper-centre urbain, au sein de la partie centrale de la ville."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9a3fbfa6-4b71-4b91-9db4-575ba4a47e52. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9a3fbfa6-4b71-4b91-9db4-575ba4a47e52"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c6ff4780-64ba-4b4a-9b76-dfdbf387522a",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "desert",
+      "base": {
+        "description": "Paysage désertique",
+        "description_i18n": {
+          "de": "Wüstenlandschaft",
+          "en": "Desert landscape",
+          "es": "Paisaje desértico",
+          "fr": "Paysage désertique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c6ff4780-64ba-4b4a-9b76-dfdbf387522a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c6ff4780-64ba-4b4a-9b76-dfdbf387522a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site associé à un paysage désertique ; cette indication caractérise son environnement, sans définir une activité de découverte.",
+        "description_i18n": {
+          "de": "Ort in einer Wüstenlandschaft; diese Angabe beschreibt die Umgebung und keine Erkundungsaktivität.",
+          "en": "Site associated with a desert landscape; this describes its environment rather than a discovery activity.",
+          "es": "Lugar asociado a un paisaje desértico; describe su entorno y no una actividad de descubrimiento.",
+          "fr": "Site associé à un paysage désertique ; cette indication caractérise son environnement, sans définir une activité de découverte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c6ff4780-64ba-4b4a-9b76-dfdbf387522a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c6ff4780-64ba-4b4a-9b76-dfdbf387522a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "58eafd3c-61bc-480f-aaff-eab3c60fec34",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "foret",
+      "base": {
+        "description": "En lisière de forêt",
+        "description_i18n": {
+          "de": "Am Waldrand",
+          "en": "At the edge of a forest",
+          "es": "Al borde de un bosque",
+          "fr": "En lisière de forêt"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/58eafd3c-61bc-480f-aaff-eab3c60fec34. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/58eafd3c-61bc-480f-aaff-eab3c60fec34"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site installé en lisière de forêt ; cette indication de situation n'implique pas à elle seule une vue depuis chaque chambre.",
+        "description_i18n": {
+          "de": "Ort am Waldrand; diese Lage bedeutet für sich allein keine Aussicht aus jedem Zimmer.",
+          "en": "Site at the edge of a forest; this location does not by itself imply a view from every room.",
+          "es": "Lugar situado al borde de un bosque; esta ubicación no implica por sí sola vistas desde cada habitación.",
+          "fr": "Site installé en lisière de forêt ; cette indication de situation n'implique pas à elle seule une vue depuis chaque chambre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/58eafd3c-61bc-480f-aaff-eab3c60fec34. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/58eafd3c-61bc-480f-aaff-eab3c60fec34"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c3e4474e-eb6b-4101-823b-6e7f5276c231",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "front_de_mer",
+      "base": {
+        "description": "Sur le front de mer",
+        "description_i18n": {
+          "de": "Am Meeresufer gelegen",
+          "en": "Located on the seafront",
+          "es": "Situado en el frente marítimo",
+          "fr": "Sur le front de mer"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3e4474e-eb6b-4101-823b-6e7f5276c231. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3e4474e-eb6b-4101-823b-6e7f5276c231"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site implanté directement sur le front de mer, à distinguer d'un cadre côtier situé plus en retrait.",
+        "description_i18n": {
+          "de": "Ort unmittelbar am Meeresufer, zu unterscheiden von einer weiter zurückliegenden Küstenlage.",
+          "en": "Site directly on the seafront, distinct from a coastal setting farther inland.",
+          "es": "Lugar ubicado directamente en el frente marítimo, distinto de un entorno costero más retirado.",
+          "fr": "Site implanté directement sur le front de mer, à distinguer d'un cadre côtier situé plus en retrait."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c3e4474e-eb6b-4101-823b-6e7f5276c231. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c3e4474e-eb6b-4101-823b-6e7f5276c231"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b2b798fe-f546-42b9-8b7c-0f577533bf80",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "ile",
+      "base": {
+        "description": "Situé sur une île",
+        "description_i18n": {
+          "de": "Auf einer Insel gelegen",
+          "en": "Located on an island",
+          "es": "Situado en una isla",
+          "fr": "Situé sur une île"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b2b798fe-f546-42b9-8b7c-0f577533bf80. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b2b798fe-f546-42b9-8b7c-0f577533bf80"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé sur une île ; cette indication décrit sa situation insulaire, sans préciser le moyen de transport pour y accéder.",
+        "description_i18n": {
+          "de": "Ort auf einer Insel; diese Angabe beschreibt die Insellage, ohne die Art der Anreise festzulegen.",
+          "en": "Site located on an island; this describes its island setting without specifying how to reach it.",
+          "es": "Lugar situado en una isla; describe su ubicación insular sin especificar el medio de transporte para llegar.",
+          "fr": "Site situé sur une île ; cette indication décrit sa situation insulaire, sans préciser le moyen de transport pour y accéder."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b2b798fe-f546-42b9-8b7c-0f577533bf80. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b2b798fe-f546-42b9-8b7c-0f577533bf80"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "93893311-15e7-4bac-8af8-013c6b4b4256",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "jardin",
+      "base": {
+        "description": "Avec jardin paysager",
+        "description_i18n": {
+          "de": "Mit angelegtem Garten",
+          "en": "With landscaped garden",
+          "es": "Con jardín paisajístico",
+          "fr": "Avec jardin paysager"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/93893311-15e7-4bac-8af8-013c6b4b4256. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/93893311-15e7-4bac-8af8-013c6b4b4256"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site disposant d'un jardin paysager qui participe à son cadre ; cette valeur ne décrit pas la vue propre à une chambre.",
+        "description_i18n": {
+          "de": "Ort mit einem angelegten Garten als Teil der Umgebung; dieser Wert beschreibt nicht die Aussicht eines bestimmten Zimmers.",
+          "en": "Site with a landscaped garden forming part of its setting; this value does not describe a particular room's view.",
+          "es": "Lugar con un jardín paisajístico que forma parte de su entorno; este valor no describe las vistas de una habitación concreta.",
+          "fr": "Site disposant d'un jardin paysager qui participe à son cadre ; cette valeur ne décrit pas la vue propre à une chambre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/93893311-15e7-4bac-8af8-013c6b4b4256. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/93893311-15e7-4bac-8af8-013c6b4b4256"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5b4eb3ca-4a31-49c9-b018-ccf0779db6c6",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "lagon",
+      "base": {
+        "description": "Proche du lagon",
+        "description_i18n": {
+          "de": "In der Nähe der Lagune",
+          "en": "Near the lagoon",
+          "es": "Cerca de la laguna",
+          "fr": "Proche du lagon"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5b4eb3ca-4a31-49c9-b018-ccf0779db6c6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5b4eb3ca-4a31-49c9-b018-ccf0779db6c6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé à proximité du lagon, dont la présence caractérise le cadre du séjour.",
+        "description_i18n": {
+          "de": "Ort in der Nähe der Lagune, die die Umgebung des Aufenthalts prägt.",
+          "en": "Site near the lagoon, whose presence characterises the setting of the stay.",
+          "es": "Lugar situado cerca de la laguna, cuya presencia caracteriza el entorno de la estancia.",
+          "fr": "Site situé à proximité du lagon, dont la présence caractérise le cadre du séjour."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5b4eb3ca-4a31-49c9-b018-ccf0779db6c6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5b4eb3ca-4a31-49c9-b018-ccf0779db6c6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "edbb417d-6709-4639-b787-418822e80935",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "littoral_sauvage",
+      "base": {
+        "description": "Côte sauvage et préservée",
+        "description_i18n": {
+          "de": "Wilde und unberührte Küste",
+          "en": "Wild, unspoiled coastline",
+          "es": "Costa salvaje y preservada",
+          "fr": "Côte sauvage et préservée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/edbb417d-6709-4639-b787-418822e80935. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/edbb417d-6709-4639-b787-418822e80935"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site associé à une côte décrite comme sauvage et préservée ; cette indication paysagère ne vaut pas classement en espace protégé.",
+        "description_i18n": {
+          "de": "Ort an einer als naturbelassen und unberührt beschriebenen Küste; diese Landschaftsangabe verleiht keinen Schutzgebietsstatus.",
+          "en": "Site associated with a coastline described as wild and unspoilt; this landscape description does not confer protected-area status.",
+          "es": "Lugar asociado a una costa descrita como salvaje y preservada; esta descripción paisajística no equivale a una clasificación como espacio protegido.",
+          "fr": "Site associé à une côte décrite comme sauvage et préservée ; cette indication paysagère ne vaut pas classement en espace protégé."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/edbb417d-6709-4639-b787-418822e80935. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/edbb417d-6709-4639-b787-418822e80935"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ff60f8a0-58fb-4f37-b142-659bec19a827",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "montagne",
+      "base": {
+        "description": "Zone de montagne",
+        "description_i18n": {
+          "de": "In einer Bergregion",
+          "en": "Mountain area",
+          "es": "Zona montañosa",
+          "fr": "Zone de montagne"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ff60f8a0-58fb-4f37-b142-659bec19a827. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ff60f8a0-58fb-4f37-b142-659bec19a827"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site implanté dans une zone de montagne ; la situation géographique est distincte d'une vue sur les montagnes depuis une chambre.",
+        "description_i18n": {
+          "de": "Ort in einer Bergregion; diese geografische Lage ist von einem Bergblick aus einem Zimmer zu unterscheiden.",
+          "en": "Site located in a mountain area; this geographical setting is distinct from a mountain view from a room.",
+          "es": "Lugar ubicado en una zona de montaña; esta situación geográfica es distinta de tener vistas a las montañas desde una habitación.",
+          "fr": "Site implanté dans une zone de montagne ; la situation géographique est distincte d'une vue sur les montagnes depuis une chambre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ff60f8a0-58fb-4f37-b142-659bec19a827. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ff60f8a0-58fb-4f37-b142-659bec19a827"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "13e8e575-e0fd-4a21-a2d2-c1795db39baa",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "neige",
+      "base": {
+        "description": "Destination enneigée en hiver",
+        "description_i18n": {
+          "de": "Im Winter schneebedecktes Reiseziel",
+          "en": "Snow destination in winter",
+          "es": "Destino nevado en invierno",
+          "fr": "Destination enneigée en hiver"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/13e8e575-e0fd-4a21-a2d2-c1795db39baa. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/13e8e575-e0fd-4a21-a2d2-c1795db39baa"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cadre de destination caractérisé par un enneigement hivernal, sans garantir la présence de neige à toute date de séjour.",
+        "description_i18n": {
+          "de": "Durch winterlichen Schnee geprägte Destination, ohne Schnee zu jedem Aufenthaltsdatum zu garantieren.",
+          "en": "Destination setting characterised by winter snow, without guaranteeing snow on every stay date.",
+          "es": "Entorno de destino caracterizado por nieve en invierno, sin garantizar su presencia en cualquier fecha de estancia.",
+          "fr": "Cadre de destination caractérisé par un enneigement hivernal, sans garantir la présence de neige à toute date de séjour."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/13e8e575-e0fd-4a21-a2d2-c1795db39baa. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/13e8e575-e0fd-4a21-a2d2-c1795db39baa"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "210b33e6-2d80-4055-9e09-5ec8b50be07a",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "parc_marin",
+      "base": {
+        "description": "Zone protégée marine",
+        "description_i18n": {
+          "de": "Geschütztes Meeresgebiet",
+          "en": "Protected marine area",
+          "es": "Zona marina protegida",
+          "fr": "Zone protégée marine"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/210b33e6-2d80-4055-9e09-5ec8b50be07a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/210b33e6-2d80-4055-9e09-5ec8b50be07a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Cadre de séjour associé à une zone marine protégée, à distinguer d'une simple proximité de la mer.",
+        "description_i18n": {
+          "de": "Mit einem geschützten Meeresgebiet verbundene Aufenthaltsumgebung, zu unterscheiden von bloßer Meeresnähe.",
+          "en": "Stay setting associated with a protected marine area, distinct from simply being near the sea.",
+          "es": "Entorno de estancia asociado a una zona marina protegida, distinto de la mera proximidad al mar.",
+          "fr": "Cadre de séjour associé à une zone marine protégée, à distinguer d'une simple proximité de la mer."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/210b33e6-2d80-4055-9e09-5ec8b50be07a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/210b33e6-2d80-4055-9e09-5ec8b50be07a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "28f1bea4-7dbe-410e-8f05-b304ece5d4a5",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "parc_national",
+      "base": {
+        "description": "Au sein d'un parc national",
+        "description_i18n": {
+          "de": "Innerhalb eines Nationalparks",
+          "en": "Within a national park",
+          "es": "Dentro de un parque nacional",
+          "fr": "Au sein d'un parc national"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/28f1bea4-7dbe-410e-8f05-b304ece5d4a5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/28f1bea4-7dbe-410e-8f05-b304ece5d4a5"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé au sein d'un parc national ; cette valeur décrit son implantation, pas une certification de ses prestations.",
+        "description_i18n": {
+          "de": "Ort innerhalb eines Nationalparks; dieser Wert beschreibt die Lage und keine Zertifizierung der angebotenen Leistungen.",
+          "en": "Site located within a national park; this describes its location rather than certification of its services.",
+          "es": "Lugar situado dentro de un parque nacional; describe su ubicación, no una certificación de sus prestaciones.",
+          "fr": "Site situé au sein d'un parc national ; cette valeur décrit son implantation, pas une certification de ses prestations."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/28f1bea4-7dbe-410e-8f05-b304ece5d4a5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/28f1bea4-7dbe-410e-8f05-b304ece5d4a5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7854b94a-ae64-4a48-9c27-debb5d425bf9",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "patrimoine",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7854b94a-ae64-4a48-9c27-debb5d425bf9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7854b94a-ae64-4a48-9c27-debb5d425bf9"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7854b94a-ae64-4a48-9c27-debb5d425bf9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7854b94a-ae64-4a48-9c27-debb5d425bf9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ba2c585e-eb42-454c-b5e3-e281a5120e1b",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "plage",
+      "base": {
+        "description": "Proche d'une plage",
+        "description_i18n": {
+          "de": "In der Nähe eines Strandes",
+          "en": "Near a beach",
+          "es": "Cerca de una playa",
+          "fr": "Proche d'une plage"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ba2c585e-eb42-454c-b5e3-e281a5120e1b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ba2c585e-eb42-454c-b5e3-e281a5120e1b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé à proximité d'une plage ; cette indication ne signifie pas à elle seule qu'un accès direct est aménagé depuis le site.",
+        "description_i18n": {
+          "de": "Ort in Strandnähe; diese Angabe bedeutet allein nicht, dass ein unmittelbarer Zugang vom Gelände eingerichtet ist.",
+          "en": "Site near a beach; this does not by itself mean that direct access has been provided from the site.",
+          "es": "Lugar situado cerca de una playa; esta indicación no significa por sí sola que exista un acceso directo acondicionado desde el lugar.",
+          "fr": "Site situé à proximité d'une plage ; cette indication ne signifie pas à elle seule qu'un accès direct est aménagé depuis le site."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ba2c585e-eb42-454c-b5e3-e281a5120e1b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ba2c585e-eb42-454c-b5e3-e281a5120e1b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "372d7766-e1d1-4678-9988-f5ad3228851a",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "port",
+      "base": {
+        "description": "Vue ou accès portuaire",
+        "description_i18n": {
+          "de": "Mit Blick auf den Hafen oder mit Zugang zum Hafen",
+          "en": "Harbour view or access",
+          "es": "Vista o acceso al puerto",
+          "fr": "Vue ou accès portuaire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/372d7766-e1d1-4678-9988-f5ad3228851a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/372d7766-e1d1-4678-9988-f5ad3228851a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site offrant une vue sur un port ou un accès à celui-ci ; les deux possibilités relèvent du périmètre de cette indication.",
+        "description_i18n": {
+          "de": "Ort mit Hafenblick oder Zugang zu einem Hafen; beide Möglichkeiten fallen unter diese Angabe.",
+          "en": "Site offering a harbour view or access to a harbour; either possibility falls within the scope of this indication.",
+          "es": "Lugar que ofrece vistas a un puerto o acceso a él; ambas posibilidades forman parte del alcance de esta indicación.",
+          "fr": "Site offrant une vue sur un port ou un accès à celui-ci ; les deux possibilités relèvent du périmètre de cette indication."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/372d7766-e1d1-4678-9988-f5ad3228851a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/372d7766-e1d1-4678-9988-f5ad3228851a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "86998a14-3c75-4f5b-ae0f-82a54737474d",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "quartier_historique",
+      "base": {
+        "description": "Centre ancien préservé",
+        "description_i18n": {
+          "de": "Erhaltener historischer Ortskern",
+          "en": "Preserved historic centre",
+          "es": "Centro histórico preservado",
+          "fr": "Centre ancien préservé"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/86998a14-3c75-4f5b-ae0f-82a54737474d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/86998a14-3c75-4f5b-ae0f-82a54737474d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé dans un centre ancien préservé, dont le cadre est marqué par l'histoire et le patrimoine du quartier.",
+        "description_i18n": {
+          "de": "Ort in einem erhaltenen historischen Ortskern, dessen Umgebung durch Geschichte und Erbe des Viertels geprägt ist.",
+          "en": "Site in a preserved old centre whose setting reflects the district's history and heritage.",
+          "es": "Lugar situado en un centro antiguo conservado, cuyo entorno refleja la historia y el patrimonio del barrio.",
+          "fr": "Site situé dans un centre ancien préservé, dont le cadre est marqué par l'histoire et le patrimoine du quartier."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/86998a14-3c75-4f5b-ae0f-82a54737474d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/86998a14-3c75-4f5b-ae0f-82a54737474d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4d902b2f-12bd-42c1-94e6-3b1660ed9e3f",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "riviere",
+      "base": {
+        "description": "Proche d'un cours d'eau ou d'une rivière",
+        "description_i18n": {
+          "de": "In der Nähe eines Wasserlaufs oder Flusses",
+          "en": "Near a river or stream",
+          "es": "Cerca de un río o arroyo",
+          "fr": "Proche d'un cours d'eau ou d'une rivière"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4d902b2f-12bd-42c1-94e6-3b1660ed9e3f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4d902b2f-12bd-42c1-94e6-3b1660ed9e3f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé à proximité d'un cours d'eau ou d'une rivière ; cette indication de cadre est distincte d'une vue depuis une chambre.",
+        "description_i18n": {
+          "de": "Ort in der Nähe eines Flusses oder Bachs; diese Umgebungsangabe ist von einer Aussicht aus dem Zimmer zu unterscheiden.",
+          "en": "Site near a river or stream; this setting is distinct from a view from a room.",
+          "es": "Lugar situado cerca de un río o arroyo; esta indicación del entorno es distinta de las vistas desde una habitación.",
+          "fr": "Site situé à proximité d'un cours d'eau ou d'une rivière ; cette indication de cadre est distincte d'une vue depuis une chambre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4d902b2f-12bd-42c1-94e6-3b1660ed9e3f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4d902b2f-12bd-42c1-94e6-3b1660ed9e3f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2953b256-3808-4a0a-9ef8-ca86020aa4d2",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "rural",
+      "base": {
+        "description": "Village ou hameau rural",
+        "description_i18n": {
+          "de": "Dorf oder ländlicher Weiler",
+          "en": "Village or rural hamlet",
+          "es": "Pueblo o caserío rural",
+          "fr": "Village ou hameau rural"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2953b256-3808-4a0a-9ef8-ca86020aa4d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2953b256-3808-4a0a-9ef8-ca86020aa4d2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site implanté dans un village ou un hameau rural, à distinguer d'un simple paysage de campagne sans précision sur l'habitat.",
+        "description_i18n": {
+          "de": "Ort in einem ländlichen Dorf oder Weiler, zu unterscheiden von einer Landschaftsangabe ohne Bezug zur Siedlung.",
+          "en": "Site in a rural village or hamlet, distinct from a countryside landscape with no indication of settlement.",
+          "es": "Lugar ubicado en un pueblo o caserío rural, distinto de un paisaje de campo sin indicación sobre el poblamiento.",
+          "fr": "Site implanté dans un village ou un hameau rural, à distinguer d'un simple paysage de campagne sans précision sur l'habitat."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2953b256-3808-4a0a-9ef8-ca86020aa4d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2953b256-3808-4a0a-9ef8-ca86020aa4d2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0b3e1059-ee6e-4368-89e3-a432968efacf",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "terrasse",
+      "base": {
+        "description": "Avec terrasse aménagée",
+        "description_i18n": {
+          "de": "Mit gestalteter Terrasse",
+          "en": "With a fitted-out terrace",
+          "es": "Con terraza acondicionada",
+          "fr": "Avec terrasse aménagée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0b3e1059-ee6e-4368-89e3-a432968efacf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0b3e1059-ee6e-4368-89e3-a432968efacf"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site disposant d'une terrasse aménagée qui participe au cadre de séjour ; cette valeur ne précise pas si son usage est privé ou partagé.",
+        "description_i18n": {
+          "de": "Ort mit einer gestalteten Terrasse als Teil der Aufenthaltsumgebung; dieser Wert legt keine private oder gemeinschaftliche Nutzung fest.",
+          "en": "Site with a fitted-out terrace forming part of the stay setting; this value does not specify whether its use is private or shared.",
+          "es": "Lugar con una terraza acondicionada que forma parte del entorno de estancia; este valor no especifica si su uso es privado o compartido.",
+          "fr": "Site disposant d'une terrasse aménagée qui participe au cadre de séjour ; cette valeur ne précise pas si son usage est privé ou partagé."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0b3e1059-ee6e-4368-89e3-a432968efacf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0b3e1059-ee6e-4368-89e3-a432968efacf"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9a5dc14a-b5fa-449e-bf20-b51291b32682",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "thermal",
+      "base": {
+        "description": "À proximité d'un établissement thermal",
+        "description_i18n": {
+          "de": "In der Nähe eines Thermalzentrums",
+          "en": "Near a thermal spa",
+          "es": "Cerca de un balneario",
+          "fr": "À proximité d'un établissement thermal"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9a5dc14a-b5fa-449e-bf20-b51291b32682. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9a5dc14a-b5fa-449e-bf20-b51291b32682"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé à proximité d'un établissement thermal, sans impliquer que le site fournisse lui-même des soins thermaux.",
+        "description_i18n": {
+          "de": "Ort in der Nähe eines Thermalbads, ohne damit eigene Thermalbehandlungen des Betriebs vorauszusetzen.",
+          "en": "Site near a thermal spa, without implying that the site itself provides thermal treatments.",
+          "es": "Lugar situado cerca de un establecimiento termal, sin implicar que el propio lugar preste tratamientos termales.",
+          "fr": "Site situé à proximité d'un établissement thermal, sans impliquer que le site fournisse lui-même des soins thermaux."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9a5dc14a-b5fa-449e-bf20-b51291b32682. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9a5dc14a-b5fa-449e-bf20-b51291b32682"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0bc5166e-a0a2-47b6-8c53-5bf2fd25cafd",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "urbain_creatif",
+      "base": {
+        "description": "Quartier artistique / créatif",
+        "description_i18n": {
+          "de": "Künstlerisch oder kreativ geprägtes Viertel",
+          "en": "Artistic or creative district",
+          "es": "Barrio artístico o creativo",
+          "fr": "Quartier artistique / créatif"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0bc5166e-a0a2-47b6-8c53-5bf2fd25cafd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0bc5166e-a0a2-47b6-8c53-5bf2fd25cafd"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site dans un quartier marqué par la création artistique ou les activités créatives.",
+        "description_i18n": {
+          "de": "Ort in einem Viertel, das durch künstlerisches Schaffen oder kreative Tätigkeiten geprägt ist.",
+          "en": "Site in a district characterised by artistic creation or creative activities.",
+          "es": "Lugar situado en un barrio caracterizado por la creación artística o las actividades creativas.",
+          "fr": "Site dans un quartier marqué par la création artistique ou les activités créatives."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0bc5166e-a0a2-47b6-8c53-5bf2fd25cafd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0bc5166e-a0a2-47b6-8c53-5bf2fd25cafd"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4d2f2bce-b8bb-4a10-baeb-32a765614ac2",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "vignoble",
+      "base": {
+        "description": "Au cœur d'un vignoble",
+        "description_i18n": {
+          "de": "Inmitten eines Weinbergs",
+          "en": "In the heart of a vineyard",
+          "es": "En el corazón de un viñedo",
+          "fr": "Au cœur d'un vignoble"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4d2f2bce-b8bb-4a10-baeb-32a765614ac2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4d2f2bce-b8bb-4a10-baeb-32a765614ac2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé au cœur d'un vignoble ; cette implantation ne signifie pas à elle seule qu'une dégustation est proposée.",
+        "description_i18n": {
+          "de": "Ort inmitten eines Weinbergs; diese Lage bedeutet für sich allein nicht, dass Verkostungen angeboten werden.",
+          "en": "Site in the heart of a vineyard; this location does not by itself mean that tastings are offered.",
+          "es": "Lugar situado en el corazón de un viñedo; esta ubicación no significa por sí sola que se ofrezcan degustaciones.",
+          "fr": "Site situé au cœur d'un vignoble ; cette implantation ne signifie pas à elle seule qu'une dégustation est proposée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4d2f2bce-b8bb-4a10-baeb-32a765614ac2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4d2f2bce-b8bb-4a10-baeb-32a765614ac2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c6d45bee-f273-4010-ac4c-204b8aa0e290",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "ville",
+      "base": {
+        "description": "Coeur de ville",
+        "description_i18n": {
+          "de": "Im Herzen der Stadt",
+          "en": "Town centre location",
+          "es": "En el corazón de la ciudad",
+          "fr": "Coeur de ville"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c6d45bee-f273-4010-ac4c-204b8aa0e290. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c6d45bee-f273-4010-ac4c-204b8aa0e290"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé au cœur d'une ville, dans un cadre urbain, à distinguer d'un environnement de campagne.",
+        "description_i18n": {
+          "de": "Ort im Herzen einer Stadt, in städtischer Umgebung und nicht auf dem Land.",
+          "en": "Site in the heart of a town or city, in an urban setting distinct from the countryside.",
+          "es": "Lugar situado en el corazón de una ciudad, en un entorno urbano distinto del campo.",
+          "fr": "Site situé au cœur d'une ville, dans un cadre urbain, à distinguer d'un environnement de campagne."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c6d45bee-f273-4010-ac4c-204b8aa0e290. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c6d45bee-f273-4010-ac4c-204b8aa0e290"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6f7fb935-34cc-4d4c-a469-d97258b76045",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "volcan",
+      "base": {
+        "description": "Situé au pied du Piton de la Fournaise",
+        "description_i18n": {
+          "de": "Am Fuß des Piton de la Fournaise gelegen",
+          "en": "Located at the foot of Piton de la Fournaise",
+          "es": "Situado al pie del Piton de la Fournaise",
+          "fr": "Situé au pied du Piton de la Fournaise"
+        },
+        "name_i18n": {
+          "de": "Am Fuß des Vulkans",
+          "en": "At the foot of the volcano",
+          "es": "Al pie del volcán",
+          "fr": "Au pied du volcan"
+        },
+        "name": "Au pied du volcan",
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Am Fuß des Piton de la Fournaise"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "At the foot of Piton de la Fournaise"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Al pie del Piton de la Fournaise"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Au pied du Piton de la Fournaise"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6f7fb935-34cc-4d4c-a469-d97258b76045. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6f7fb935-34cc-4d4c-a469-d97258b76045"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site situé au pied du Piton de la Fournaise ; le volcan concerné est celui indiqué par cette valeur, pas tout site volcanique.",
+        "description_i18n": {
+          "de": "Ort am Fuß des Piton de la Fournaise; dieser Wert bezieht sich auf diesen benannten Vulkan und nicht auf beliebige Vulkanorte.",
+          "en": "Site at the foot of Piton de la Fournaise; this value concerns that named volcano rather than any volcanic site.",
+          "es": "Lugar situado al pie del Piton de la Fournaise; este valor se refiere a ese volcán y no a cualquier lugar volcánico.",
+          "fr": "Site situé au pied du Piton de la Fournaise ; le volcan concerné est celui indiqué par cette valeur, pas tout site volcanique."
+        },
+        "name_i18n": {
+          "de": "Am Fuß des Piton de la Fournaise",
+          "en": "At the foot of Piton de la Fournaise",
+          "es": "Al pie del Piton de la Fournaise",
+          "fr": "Au pied du Piton de la Fournaise"
+        },
+        "name": "Au pied du Piton de la Fournaise",
+        "labels": [
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Am Fuß des Vulkans"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "At the foot of the volcano"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Al pie del volcán"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Au pied du volcan"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6f7fb935-34cc-4d4c-a469-d97258b76045. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6f7fb935-34cc-4d4c-a469-d97258b76045"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9da84ed9-2375-489a-8e02-88ee969c29c8",
+      "domain": "environment_tag",
+      "context_key": "",
+      "code": "vue_panoramique",
+      "base": {
+        "description": "Vue panoramique exceptionnelle",
+        "description_i18n": {
+          "de": "Außergewöhnlicher Panoramablick",
+          "en": "Exceptional panoramic view",
+          "es": "Vista panorámica excepcional",
+          "fr": "Vue panoramique exceptionnelle"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9da84ed9-2375-489a-8e02-88ee969c29c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9da84ed9-2375-489a-8e02-88ee969c29c8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site offrant une vue d'ensemble étendue sur le paysage environnant, sans préciser à lui seul le panorama visible depuis chaque chambre.",
+        "description_i18n": {
+          "de": "Ort mit weitem Überblick über die umgebende Landschaft, ohne damit die Aussicht aus jedem einzelnen Zimmer festzulegen.",
+          "en": "Site offering a wide overall view of the surrounding landscape, without specifying the panorama visible from each room.",
+          "es": "Lugar que ofrece una vista amplia del paisaje circundante, sin precisar por sí solo el panorama visible desde cada habitación.",
+          "fr": "Site offrant une vue d'ensemble étendue sur le paysage environnant, sans préciser à lui seul le panorama visible depuis chaque chambre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9da84ed9-2375-489a-8e02-88ee969c29c8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9da84ed9-2375-489a-8e02-88ee969c29c8"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-accommodation_family-1",
+  "proposals": [
+    {
+      "concept_id": "0590cc5c-2e86-41fb-8bd3-0265d1ece18f",
+      "domain": "accommodation_family",
+      "context_key": "",
+      "code": "aires_haltes_plein_air",
+      "base": {
+        "description_i18n": {
+          "fr": "Lieux autorisant une halte ou une nuitée de plein air sans constituer un terrain de camping."
+        },
+        "name_i18n": {
+          "fr": "Aires et haltes de plein air"
+        }
+      },
+      "changes": {
+        "description_i18n": {
+          "fr": "Lieux autorisant une halte ou une nuitée de plein air sans constituer un terrain de camping.",
+          "en": "Places permitting an outdoor stop or overnight stay without constituting a campsite.",
+          "es": "Lugares que permiten una parada o una pernoctación al aire libre sin constituir un camping.",
+          "de": "Orte, die einen Halt oder eine Übernachtung im Freien ermöglichen, ohne einen Campingplatz zu bilden."
+        },
+        "name_i18n": {
+          "fr": "Aires et haltes de plein air",
+          "en": "Outdoor stopping and overnight areas",
+          "es": "Áreas y paradas al aire libre",
+          "de": "Halte- und Übernachtungsplätze im Freien"
+        }
+      }
+    },
+    {
+      "concept_id": "bc6fcac0-232a-455f-8c12-a1f5c3fd3a97",
+      "domain": "accommodation_family",
+      "context_key": "",
+      "code": "campings_terrains",
+      "base": {
+        "description_i18n": {
+          "fr": "Terrains organisés pour le camping ou les hébergements légers, qu'ils soient classés, déclarés, naturels, à la ferme ou chez l'habitant, ainsi que les parcs résidentiels de loisirs."
+        },
+        "name_i18n": {
+          "fr": "Campings et terrains"
+        }
+      },
+      "changes": {
+        "description_i18n": {
+          "fr": "Terrains organisés pour le camping ou les hébergements légers, qu'ils soient classés, déclarés, naturels, à la ferme ou chez l'habitant, ainsi que les parcs résidentiels de loisirs.",
+          "en": "Sites organised for camping or lightweight accommodation, whether classified, declared, natural, on a farm or at a private home, together with residential leisure parks.",
+          "es": "Terrenos organizados para acampada o alojamientos ligeros, ya sean clasificados, declarados, naturales, en una granja o en una vivienda particular, así como parques residenciales de ocio.",
+          "de": "Für Camping oder leichte Unterkünfte eingerichtete Gelände, ob klassifiziert, angemeldet, naturnah, auf einem Bauernhof oder bei Privatpersonen, sowie Freizeitwohnparks."
+        },
+        "name_i18n": {
+          "fr": "Campings et terrains",
+          "en": "Campsites and camping grounds",
+          "es": "Campings y terrenos de acampada",
+          "de": "Campingplätze und Campinggelände"
+        }
+      }
+    },
+    {
+      "concept_id": "28087cd8-b886-4c7b-8083-bfa4f2437948",
+      "domain": "accommodation_family",
+      "context_key": "",
+      "code": "collectif",
+      "base": {
+        "description": "Hébergement orienté vers l'accueil de groupes : auberge collective, gîte de groupe, refuge et gîte d'étape, résidence de tourisme. Sens DATAtourisme — NE PAS confondre avec « hébergement collectif touristique » au sens Insee, qui englobe hôtels et campings.",
+        "description_i18n": {
+          "fr": "Hébergement orienté vers l'accueil de groupes : auberge collective, gîte de groupe, refuge et gîte d'étape, résidence de tourisme. Sens DATAtourisme — NE PAS confondre avec « hébergement collectif touristique » au sens Insee, qui englobe hôtels et campings."
+        },
+        "name_i18n": {
+          "fr": "Hébergement collectif"
+        }
+      },
+      "changes": {
+        "description": "Hébergement orienté vers l'accueil de groupes : auberge collective, gîte de groupe, refuge et gîte d'étape, résidence de tourisme. Cette famille suit le sens retenu par DATAtourisme, distinct du regroupement statistique Insee qui inclut aussi hôtels et campings.",
+        "description_i18n": {
+          "fr": "Hébergement orienté vers l'accueil de groupes : auberge collective, gîte de groupe, refuge et gîte d'étape, résidence de tourisme. Cette famille suit le sens retenu par DATAtourisme, distinct du regroupement statistique Insee qui inclut aussi hôtels et campings.",
+          "en": "Accommodation oriented towards groups: collective hostels, group holiday accommodation, refuges, stopover lodges and tourism residences. This family follows the meaning used by DATAtourisme, distinct from the Insee statistical grouping that also includes hotels and campsites.",
+          "es": "Alojamiento orientado a grupos: albergues colectivos, alojamientos para grupos, refugios, alojamientos de etapa y residencias turísticas. Esta familia sigue el sentido de DATAtourisme, distinto de la agrupación estadística del Insee que incluye también hoteles y campings.",
+          "de": "Auf Gruppen ausgerichtete Unterkünfte: Gemeinschaftsherbergen, Gruppenunterkünfte, Schutz- und Etappenhütten sowie touristische Residenzen. Diese Gruppe folgt dem Verständnis von DATAtourisme und unterscheidet sich von der statistischen Insee-Gruppe, die auch Hotels und Campingplätze umfasst."
+        },
+        "name_i18n": {
+          "fr": "Hébergement collectif",
+          "en": "Group accommodation",
+          "es": "Alojamiento colectivo",
+          "de": "Gruppenunterkünfte"
+        }
+      }
+    },
+    {
+      "concept_id": "903c91f3-1cf6-40c1-a9e6-338eac32404d",
+      "domain": "accommodation_family",
+      "context_key": "",
+      "code": "hotellerie",
+      "base": {
+        "description": "Établissements hôteliers : hôtels et hôtels-restaurants.",
+        "description_i18n": {
+          "fr": "Établissements hôteliers : hôtels et hôtels-restaurants."
+        },
+        "name_i18n": {
+          "fr": "Hôtellerie"
+        }
+      },
+      "changes": {
+        "description": "Établissements hôteliers proposant des chambres aux voyageurs, qu'il s'agisse d'hôtels seuls ou d'hôtels-restaurants.",
+        "description_i18n": {
+          "fr": "Établissements hôteliers proposant des chambres aux voyageurs, qu'il s'agisse d'hôtels seuls ou d'hôtels-restaurants.",
+          "en": "Hotel establishments offering rooms to travellers, either hotels alone or hotels with restaurants.",
+          "es": "Establecimientos hoteleros que ofrecen habitaciones a viajeros, ya sean hoteles sin restaurante u hoteles-restaurantes.",
+          "de": "Hotelbetriebe, die Reisenden Zimmer anbieten, als reine Hotels oder Hotels mit Restaurant."
+        },
+        "name_i18n": {
+          "fr": "Hôtellerie",
+          "en": "Hotels",
+          "es": "Hotelería",
+          "de": "Hotellerie"
+        }
+      }
+    },
+    {
+      "concept_id": "03951cbe-f922-44f2-ac23-23164be2efec",
+      "domain": "accommodation_family",
+      "context_key": "",
+      "code": "locatif",
+      "base": {
+        "description": "Hébergement non hôtelier loué à une clientèle de passage : chambres d'hôtes et meublés de tourisme.",
+        "description_i18n": {
+          "fr": "Hébergement non hôtelier loué à une clientèle de passage : chambres d'hôtes et meublés de tourisme."
+        },
+        "name_i18n": {
+          "fr": "Hébergement locatif"
+        }
+      },
+      "changes": {
+        "description": "Hébergement non hôtelier loué à une clientèle de passage, comprenant les chambres d'hôtes et les meublés de tourisme.",
+        "description_i18n": {
+          "fr": "Hébergement non hôtelier loué à une clientèle de passage, comprenant les chambres d'hôtes et les meublés de tourisme.",
+          "en": "Non-hotel accommodation rented to temporary visitors, including rooms in a host's home and furnished holiday rentals.",
+          "es": "Alojamiento no hotelero alquilado a visitantes de paso, que incluye habitaciones en casa de anfitriones y alojamientos turísticos amueblados.",
+          "de": "Nicht als Hotel betriebene Unterkünfte für vorübergehende Gäste, einschließlich Gästezimmern bei Gastgebern und möblierten Ferienunterkünften."
+        },
+        "name_i18n": {
+          "fr": "Hébergement locatif",
+          "en": "Rental accommodation",
+          "es": "Alojamiento de alquiler",
+          "de": "Mietunterkünfte"
+        }
+      }
+    },
+    {
+      "concept_id": "3126e1cc-d208-40f1-8190-1ac80fa17d1a",
+      "domain": "accommodation_family",
+      "context_key": "",
+      "code": "plein_air",
+      "base": {
+        "description": "Terrains et aires d'accueil de plein air : campings classés ou non, camping à la ferme, aires naturelles, aires camping-car.",
+        "description_i18n": {
+          "fr": "Terrains et aires d'accueil de plein air : campings classés ou non, camping à la ferme, aires naturelles, aires camping-car."
+        },
+        "name_i18n": {
+          "fr": "Hôtellerie de plein air"
+        }
+      },
+      "changes": {
+        "description": "Terrains et aires d'accueil de plein air : campings classés ou non, camping à la ferme, aires naturelles et aires de camping-cars.",
+        "description_i18n": {
+          "fr": "Terrains et aires d'accueil de plein air : campings classés ou non, camping à la ferme, aires naturelles et aires de camping-cars.",
+          "en": "Outdoor accommodation sites and stopping areas: classified or unclassified campsites, farm camping, natural camping areas and motorhome areas.",
+          "es": "Terrenos y áreas de acogida al aire libre: campings clasificados o no, camping en granjas, áreas naturales y áreas para autocaravanas.",
+          "de": "Gelände und Stellbereiche für Aufenthalte im Freien: klassifizierte oder nicht klassifizierte Campingplätze, Camping auf Bauernhöfen, naturnahe Plätze und Wohnmobilstellplätze."
+        },
+        "name_i18n": {
+          "fr": "Hôtellerie de plein air",
+          "en": "Outdoor accommodation",
+          "es": "Alojamiento al aire libre",
+          "de": "Freiluftunterkünfte"
+        }
+      }
+    }
+  ]
+}

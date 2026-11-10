@@ -1,0 +1,927 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-contact_kind-1",
+  "proposals": [
+    {
+      "concept_id": "cdd0cc13-ac3b-4286-b1fd-3b7aec2864be",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "address",
+      "base": {
+        "description": "Adresse postale du prestataire / de l'acteur",
+        "description_i18n": {
+          "de": "Postanschrift des Anbieters, der betreffenden Person oder Organisation.",
+          "en": "Postal address of the provider, person or organisation concerned.",
+          "es": "Dirección postal del prestador, de la persona o de la organización correspondiente.",
+          "fr": "Adresse postale du prestataire / de l'acteur"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cdd0cc13-ac3b-4286-b1fd-3b7aec2864be. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cdd0cc13-ac3b-4286-b1fd-3b7aec2864be"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Coordonnée postale permettant de situer un établissement ou d'adresser un courrier à un acteur ; elle est distincte d'un lien de contact numérique.",
+        "description_i18n": {
+          "de": "Postalische Kontaktdaten zum Auffinden eines Betriebs oder zum Versand von Briefpost an einen Akteur, im Unterschied zu einem digitalen Kontaktlink.",
+          "en": "Postal contact details used to locate an establishment or send mail to an actor, distinct from a digital contact link.",
+          "es": "Datos postales que permiten localizar un establecimiento o enviar correspondencia a un actor, distintos de un enlace de contacto digital.",
+          "fr": "Coordonnée postale permettant de situer un établissement ou d'adresser un courrier à un acteur ; elle est distincte d'un lien de contact numérique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cdd0cc13-ac3b-4286-b1fd-3b7aec2864be. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cdd0cc13-ac3b-4286-b1fd-3b7aec2864be"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "923f7e21-77c9-45c1-8482-e69d875f0077",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "booking_engine",
+      "base": {
+        "description": "Lien vers un moteur de réservation en ligne",
+        "description_i18n": {
+          "de": "Link zu einem Online-Buchungssystem",
+          "en": "Link to an online booking engine",
+          "es": "Enlace a un motor de reservas en línea",
+          "fr": "Lien vers un moteur de réservation en ligne"
+        },
+        "name": "Plateforme de réservation",
+        "name_i18n": {
+          "de": "Buchungssystem",
+          "en": "Booking engine",
+          "es": "Motor de reservas",
+          "fr": "Plateforme de réservation"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Online-Buchungssystem"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Online booking engine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Sistema de reservas en línea"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Moteur de réservation en ligne"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/923f7e21-77c9-45c1-8482-e69d875f0077. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/923f7e21-77c9-45c1-8482-e69d875f0077"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lien de contact ouvrant un outil permettant de consulter les disponibilités ou de réserver une prestation ; il identifie une destination de réservation sur la fiche.",
+        "description_i18n": {
+          "de": "Kontaktlink zu einem Werkzeug zur Verfügbarkeitsabfrage oder Leistungsbuchung; er bezeichnet ein Buchungsziel im Eintrag.",
+          "en": "Contact link opening a tool for checking availability or booking a service; it identifies a booking destination on the listing.",
+          "es": "Enlace de contacto que abre una herramienta para consultar disponibilidad o reservar una prestación; identifica un destino de reserva en la ficha.",
+          "fr": "Lien de contact ouvrant un outil permettant de consulter les disponibilités ou de réserver une prestation ; il identifie une destination de réservation sur la fiche."
+        },
+        "name": "Moteur de réservation",
+        "name_i18n": {
+          "de": "Buchungssystem",
+          "en": "Booking engine",
+          "es": "Motor de reservas",
+          "fr": "Moteur de réservation"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Online-Buchungssystem"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Online booking engine"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Sistema de reservas en línea"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Moteur de réservation en ligne"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Plateforme de réservation"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/923f7e21-77c9-45c1-8482-e69d875f0077. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/923f7e21-77c9-45c1-8482-e69d875f0077"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d2dd8f23-54bb-476f-837b-e4c6cd7b3d33",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "email",
+      "base": {
+        "description": "Adresse électronique principale",
+        "description_i18n": {
+          "de": "Primäre E-Mail-Adresse",
+          "en": "Primary email address",
+          "es": "Dirección de correo electrónico principal",
+          "fr": "Adresse électronique principale"
+        },
+        "name": "Email",
+        "name_i18n": {
+          "de": "E-Mail",
+          "en": "Email",
+          "es": "Correo electrónico",
+          "fr": "Email"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "E-Mail-Adresse"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Electronic mail"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Email address"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Dirección de correo electrónico"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Adresse électronique"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Courriel"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2dd8f23-54bb-476f-837b-e4c6cd7b3d33. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2dd8f23-54bb-476f-837b-e4c6cd7b3d33"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Adresse de courrier électronique permettant d'écrire à l'établissement ou à l'acteur ; elle décrit un moyen de contact, sans imposer qu'il soit le contact principal.",
+        "description_i18n": {
+          "de": "E-Mail-Adresse zum Anschreiben eines Betriebs oder Akteurs; sie beschreibt einen Kontaktweg, ohne diesen zwingend als Hauptkontakt festzulegen.",
+          "en": "Email address used to write to an establishment or actor; it describes a contact method without requiring it to be the primary one.",
+          "es": "Dirección de correo electrónico para escribir al establecimiento o al actor; describe un medio de contacto sin exigir que sea el principal.",
+          "fr": "Adresse de courrier électronique permettant d'écrire à l'établissement ou à l'acteur ; elle décrit un moyen de contact, sans imposer qu'il soit le contact principal."
+        },
+        "name": "Courriel",
+        "name_i18n": {
+          "de": "E-Mail",
+          "en": "Email",
+          "es": "Correo electrónico",
+          "fr": "Courriel"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "E-Mail-Adresse"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Electronic mail"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Email address"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Dirección de correo electrónico"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Adresse électronique"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Email"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d2dd8f23-54bb-476f-837b-e4c6cd7b3d33. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d2dd8f23-54bb-476f-837b-e4c6cd7b3d33"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6d5aae24-a3f0-4431-baa6-d0d629d32881",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "fax",
+      "base": {
+        "description": "Numéro de fax de réception",
+        "description_i18n": {
+          "de": "Empfangs-Faxnummer",
+          "en": "Reception fax number",
+          "es": "Número de fax de recepción",
+          "fr": "Numéro de fax de réception"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6d5aae24-a3f0-4431-baa6-d0d629d32881. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6d5aae24-a3f0-4431-baa6-d0d629d32881"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Numéro auquel un établissement ou un acteur peut recevoir une télécopie, distinct d'un numéro destiné aux appels vocaux.",
+        "description_i18n": {
+          "de": "Nummer für den Empfang von Faxnachrichten durch einen Betrieb oder Akteur, im Unterschied zu einer Rufnummer für Sprachgespräche.",
+          "en": "Number at which an establishment or actor can receive a fax, distinct from a number intended for voice calls.",
+          "es": "Número en el que un establecimiento o actor puede recibir un fax, distinto de un número destinado a llamadas de voz.",
+          "fr": "Numéro auquel un établissement ou un acteur peut recevoir une télécopie, distinct d'un numéro destiné aux appels vocaux."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6d5aae24-a3f0-4431-baa6-d0d629d32881. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6d5aae24-a3f0-4431-baa6-d0d629d32881"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3b389d0d-c22d-4bc1-97ba-d19815a4ba70",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "line",
+      "base": {
+        "description": "Identifiant LINE",
+        "description_i18n": {
+          "de": "LINE-ID",
+          "en": "LINE ID",
+          "es": "Identificador de LINE",
+          "fr": "Identifiant LINE"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3b389d0d-c22d-4bc1-97ba-d19815a4ba70. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3b389d0d-c22d-4bc1-97ba-d19815a4ba70"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Identifiant ou lien permettant de contacter un établissement ou un acteur au moyen de la messagerie LINE.",
+        "description_i18n": {
+          "de": "Kennung oder Link zur Kontaktaufnahme mit einem Betrieb oder Akteur über den Nachrichtendienst LINE.",
+          "en": "Identifier or link for contacting an establishment or actor through the LINE messaging service.",
+          "es": "Identificador o enlace para contactar con un establecimiento o actor mediante la mensajería LINE.",
+          "fr": "Identifiant ou lien permettant de contacter un établissement ou un acteur au moyen de la messagerie LINE."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3b389d0d-c22d-4bc1-97ba-d19815a4ba70. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3b389d0d-c22d-4bc1-97ba-d19815a4ba70"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "70c30b1b-c5c0-44cb-a9b5-b95ea902dda3",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "messenger",
+      "base": {
+        "description": "Lien Facebook Messenger",
+        "description_i18n": {
+          "de": "Facebook-Messenger-Link",
+          "en": "Facebook Messenger link",
+          "es": "Enlace de Facebook Messenger",
+          "fr": "Lien Facebook Messenger"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/70c30b1b-c5c0-44cb-a9b5-b95ea902dda3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/70c30b1b-c5c0-44cb-a9b5-b95ea902dda3"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lien ou identifiant de contact par la messagerie Messenger ; il oriente vers une conversation plutôt que vers une page de présentation sur un réseau social.",
+        "description_i18n": {
+          "de": "Kontaktlink oder Kennung für Messenger, der zu einer Unterhaltung und nicht zu einer Vorstellungsseite in einem sozialen Netzwerk führt.",
+          "en": "Contact link or identifier for Messenger, directing users to a conversation rather than a social-media presentation page.",
+          "es": "Enlace o identificador de contacto por Messenger, que dirige a una conversación en lugar de a una página de presentación en una red social.",
+          "fr": "Lien ou identifiant de contact par la messagerie Messenger ; il oriente vers une conversation plutôt que vers une page de présentation sur un réseau social."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/70c30b1b-c5c0-44cb-a9b5-b95ea902dda3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/70c30b1b-c5c0-44cb-a9b5-b95ea902dda3"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "79223c78-2e20-42fb-9fc0-72607df799df",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "mobile",
+      "base": {
+        "description": "Numéro de portable pour joindre l'établissement",
+        "description_i18n": {
+          "de": "Mobilnummer zur Kontaktaufnahme mit dem Betrieb",
+          "en": "Mobile number for contacting the property",
+          "es": "Número de móvil para contactar el establecimiento",
+          "fr": "Numéro de portable pour joindre l'établissement"
+        },
+        "name": "Mobile",
+        "name_i18n": {
+          "de": "Mobil",
+          "en": "Mobile",
+          "es": "Móvil",
+          "fr": "Mobile"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Handynummer"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Mobiltelefon"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Cell phone"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Mobile phone"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Teléfono móvil"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Téléphone portable"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/79223c78-2e20-42fb-9fc0-72607df799df. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/79223c78-2e20-42fb-9fc0-72607df799df"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Numéro de téléphone mobile renseigné pour joindre l'établissement ou l'acteur ; son utilisation pour les SMS ou une messagerie peut être précisée séparément.",
+        "description_i18n": {
+          "de": "Mobiltelefonnummer zur Kontaktaufnahme mit einem Betrieb oder Akteur; die Nutzung für SMS oder einen Nachrichtendienst kann gesondert angegeben werden.",
+          "en": "Mobile telephone number for contacting an establishment or actor; use for SMS or messaging can be specified separately.",
+          "es": "Número de teléfono móvil para contactar con el establecimiento o el actor; su uso para SMS o mensajería puede indicarse por separado.",
+          "fr": "Numéro de téléphone mobile renseigné pour joindre l'établissement ou l'acteur ; son utilisation pour les SMS ou une messagerie peut être précisée séparément."
+        },
+        "name": "Téléphone mobile",
+        "name_i18n": {
+          "de": "Mobiltelefon",
+          "en": "Mobile phone",
+          "es": "Teléfono móvil",
+          "fr": "Téléphone mobile"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Handynummer"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Cell phone"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Téléphone portable"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Mobil"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Mobile"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Móvil"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Mobile"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/79223c78-2e20-42fb-9fc0-72607df799df. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/79223c78-2e20-42fb-9fc0-72607df799df"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "da9ded54-1d1b-4845-bbb6-06584c7f6374",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "phone",
+      "base": {
+        "description": "Numéro de téléphone fixe de l'accueil",
+        "description_i18n": {
+          "de": "Festnetznummer der Rezeption",
+          "en": "Front desk landline number",
+          "es": "Número de teléfono fijo de recepción",
+          "fr": "Numéro de téléphone fixe de l'accueil"
+        },
+        "name": "Téléphone",
+        "name_i18n": {
+          "de": "Telefon",
+          "en": "Phone",
+          "es": "Teléfono",
+          "fr": "Téléphone"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Festnetztelefon"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Landline phone"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Teléfono fijo"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Téléphone fixe"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/da9ded54-1d1b-4845-bbb6-06584c7f6374. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/da9ded54-1d1b-4845-bbb6-06584c7f6374"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Numéro de téléphone fixe renseigné pour appeler l'établissement ou l'acteur, distinct du numéro de téléphone mobile.",
+        "description_i18n": {
+          "de": "Festnetznummer für Anrufe bei einem Betrieb oder Akteur, im Unterschied zur Mobiltelefonnummer.",
+          "en": "Landline telephone number for calling an establishment or actor, distinct from the mobile telephone number.",
+          "es": "Número de teléfono fijo para llamar al establecimiento o al actor, distinto del número de teléfono móvil.",
+          "fr": "Numéro de téléphone fixe renseigné pour appeler l'établissement ou l'acteur, distinct du numéro de téléphone mobile."
+        },
+        "name": "Téléphone fixe",
+        "name_i18n": {
+          "de": "Festnetztelefon",
+          "en": "Landline phone",
+          "es": "Teléfono fijo",
+          "fr": "Téléphone fixe"
+        },
+        "labels": [
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Telefon"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Phone"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Teléfono"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Téléphone"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/da9ded54-1d1b-4845-bbb6-06584c7f6374. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/da9ded54-1d1b-4845-bbb6-06584c7f6374"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6d86f7f2-3c38-45aa-bd8e-9b41570b3337",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "skype",
+      "base": {
+        "description": "Identifiant Skype",
+        "description_i18n": {
+          "de": "Skype-ID",
+          "en": "Skype ID",
+          "es": "Identificador de Skype",
+          "fr": "Identifiant Skype"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6d86f7f2-3c38-45aa-bd8e-9b41570b3337. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6d86f7f2-3c38-45aa-bd8e-9b41570b3337"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Identifiant ou lien Skype enregistré comme coordonnée d'un établissement ou d'un acteur ; il permet d'identifier ce canal dans les données de contact.",
+        "description_i18n": {
+          "de": "Als Kontaktdatum eines Betriebs oder Akteurs gespeicherte Skype-Kennung oder ein entsprechender Link zur Kennzeichnung dieses Kontaktkanals.",
+          "en": "Skype identifier or link recorded as an establishment's or actor's contact detail, identifying this channel in the contact data.",
+          "es": "Identificador o enlace de Skype registrado como dato de contacto de un establecimiento o actor, que identifica este canal en los datos de contacto.",
+          "fr": "Identifiant ou lien Skype enregistré comme coordonnée d'un établissement ou d'un acteur ; il permet d'identifier ce canal dans les données de contact."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6d86f7f2-3c38-45aa-bd8e-9b41570b3337. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6d86f7f2-3c38-45aa-bd8e-9b41570b3337"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d1318185-b28c-4330-8dd8-4ee7d8fea03b",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "sms",
+      "base": {
+        "description": "Numéro dédié aux SMS",
+        "description_i18n": {
+          "de": "Nummer für SMS",
+          "en": "Number dedicated to SMS",
+          "es": "Número dedicado a SMS",
+          "fr": "Numéro dédié aux SMS"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d1318185-b28c-4330-8dd8-4ee7d8fea03b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d1318185-b28c-4330-8dd8-4ee7d8fea03b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Numéro de contact indiqué pour l'envoi de messages texte SMS, même lorsqu'un autre numéro est utilisé pour les appels.",
+        "description_i18n": {
+          "de": "Für SMS-Kurznachrichten angegebene Kontaktnummer, auch wenn für Anrufe eine andere Nummer verwendet wird.",
+          "en": "Contact number specified for sending SMS text messages, even when a different number is used for calls.",
+          "es": "Número de contacto indicado para enviar mensajes de texto SMS, aunque se utilice otro número para las llamadas.",
+          "fr": "Numéro de contact indiqué pour l'envoi de messages texte SMS, même lorsqu'un autre numéro est utilisé pour les appels."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d1318185-b28c-4330-8dd8-4ee7d8fea03b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d1318185-b28c-4330-8dd8-4ee7d8fea03b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3fb26d97-386f-497e-9153-cd11817402ed",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "telegram",
+      "base": {
+        "description": "Compte Telegram pour les notifications",
+        "description_i18n": {
+          "de": "Telegram-Konto für Benachrichtigungen",
+          "en": "Telegram account for notifications",
+          "es": "Cuenta de Telegram para notificaciones",
+          "fr": "Compte Telegram pour les notifications"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3fb26d97-386f-497e-9153-cd11817402ed. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3fb26d97-386f-497e-9153-cd11817402ed"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Compte, identifiant ou lien Telegram indiqué par un établissement ou un acteur pour les échanges ou messages sur cette messagerie.",
+        "description_i18n": {
+          "de": "Von einem Betrieb oder Akteur angegebenes Telegram-Konto, eine Kennung oder ein Link für den Austausch über diesen Nachrichtendienst.",
+          "en": "Telegram account, identifier or link provided by an establishment or actor for exchanges or messages through that service.",
+          "es": "Cuenta, identificador o enlace de Telegram indicado por un establecimiento o actor para intercambios o mensajes en esa mensajería.",
+          "fr": "Compte, identifiant ou lien Telegram indiqué par un établissement ou un acteur pour les échanges ou messages sur cette messagerie."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3fb26d97-386f-497e-9153-cd11817402ed. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3fb26d97-386f-497e-9153-cd11817402ed"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "74dc501b-0a43-4a36-b6cb-c9d60b129d98",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "viber",
+      "base": {
+        "description": "Contact Viber",
+        "description_i18n": {
+          "de": "Viber-Kontakt",
+          "en": "Viber contact",
+          "es": "Contacto de Viber",
+          "fr": "Contact Viber"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/74dc501b-0a43-4a36-b6cb-c9d60b129d98. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/74dc501b-0a43-4a36-b6cb-c9d60b129d98"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Identifiant, numéro ou lien permettant de joindre un établissement ou un acteur par la messagerie Viber.",
+        "description_i18n": {
+          "de": "Kennung, Nummer oder Link zur Kontaktaufnahme mit einem Betrieb oder Akteur über Viber.",
+          "en": "Identifier, number or link for reaching an establishment or actor through Viber messaging.",
+          "es": "Identificador, número o enlace que permite contactar con un establecimiento o actor mediante Viber.",
+          "fr": "Identifiant, numéro ou lien permettant de joindre un établissement ou un acteur par la messagerie Viber."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/74dc501b-0a43-4a36-b6cb-c9d60b129d98. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/74dc501b-0a43-4a36-b6cb-c9d60b129d98"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "16c33f64-5098-482e-9447-48035d70223e",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "website",
+      "base": {
+        "description": "URL du site officiel",
+        "description_i18n": {
+          "de": "URL der offiziellen Website",
+          "en": "Official website URL",
+          "es": "URL del sitio oficial",
+          "fr": "URL du site officiel"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/16c33f64-5098-482e-9447-48035d70223e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/16c33f64-5098-482e-9447-48035d70223e"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Internetauftritt"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Web site"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Página web"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Site internet"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Adresse du site web de l'établissement ou de l'acteur, destinée à présenter son activité ; un lien de réservation peut être renseigné comme contact distinct.",
+        "description_i18n": {
+          "de": "Adresse der Website eines Betriebs oder Akteurs zur Darstellung seiner Tätigkeit; ein Buchungslink kann als gesonderter Kontakt erfasst werden.",
+          "en": "Address of the establishment's or actor's website presenting its activity; a booking link may be recorded as a separate contact.",
+          "es": "Dirección del sitio web del establecimiento o actor que presenta su actividad; un enlace de reserva puede registrarse como contacto independiente.",
+          "fr": "Adresse du site web de l'établissement ou de l'acteur, destinée à présenter son activité ; un lien de réservation peut être renseigné comme contact distinct."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/16c33f64-5098-482e-9447-48035d70223e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/16c33f64-5098-482e-9447-48035d70223e"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Internetauftritt"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Página web"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Site internet"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "06bb41b7-387e-4d8e-a0b3-4c2804f1bad2",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "wechat",
+      "base": {
+        "description": "Identifiant WeChat de contact, utile pour les personnes qui utilisent WeChat",
+        "description_i18n": {
+          "de": "WeChat-ID zur Kontaktaufnahme, nützlich für Personen, die WeChat nutzen",
+          "en": "WeChat contact ID, useful for people who use WeChat",
+          "es": "Identificador de WeChat de contacto, útil para quienes usan WeChat",
+          "fr": "Identifiant WeChat de contact, utile pour les personnes qui utilisent WeChat"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/06bb41b7-387e-4d8e-a0b3-4c2804f1bad2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/06bb41b7-387e-4d8e-a0b3-4c2804f1bad2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Identifiant ou lien de contact WeChat communiqué par un établissement ou un acteur pour les échanges sur cette messagerie.",
+        "description_i18n": {
+          "de": "Von einem Betrieb oder Akteur mitgeteilte WeChat-Kennung oder ein Kontaktlink für den Austausch über diesen Nachrichtendienst.",
+          "en": "WeChat contact identifier or link supplied by an establishment or actor for exchanges through that messaging service.",
+          "es": "Identificador o enlace de contacto de WeChat facilitado por un establecimiento o actor para intercambios en esa mensajería.",
+          "fr": "Identifiant ou lien de contact WeChat communiqué par un établissement ou un acteur pour les échanges sur cette messagerie."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/06bb41b7-387e-4d8e-a0b3-4c2804f1bad2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/06bb41b7-387e-4d8e-a0b3-4c2804f1bad2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3183d005-7b71-49fc-8464-fb40b650e434",
+      "domain": "contact_kind",
+      "context_key": "",
+      "code": "whatsapp",
+      "base": {
+        "description": "Contact WhatsApp Business",
+        "description_i18n": {
+          "de": "WhatsApp-Business-Kontakt",
+          "en": "WhatsApp Business contact",
+          "es": "Contacto de WhatsApp Business",
+          "fr": "Contact WhatsApp Business"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3183d005-7b71-49fc-8464-fb40b650e434. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3183d005-7b71-49fc-8464-fb40b650e434"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Numéro ou lien de contact permettant d'échanger avec un établissement ou un acteur sur WhatsApp, qu'il utilise ou non l'offre Business.",
+        "description_i18n": {
+          "de": "Kontaktnummer oder Link für den Nachrichtenaustausch mit einem Betrieb oder Akteur über WhatsApp, unabhängig von der Nutzung des Business-Angebots.",
+          "en": "Contact number or link for exchanging messages with an establishment or actor on WhatsApp, whether or not it uses the Business offering.",
+          "es": "Número o enlace de contacto para intercambiar mensajes con un establecimiento o actor en WhatsApp, utilice o no la modalidad Business.",
+          "fr": "Numéro ou lien de contact permettant d'échanger avec un établissement ou un acteur sur WhatsApp, qu'il utilise ou non l'offre Business."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3183d005-7b71-49fc-8464-fb40b650e434. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3183d005-7b71-49fc-8464-fb40b650e434"
+          }
+        ]
+      }
+    }
+  ]
+}

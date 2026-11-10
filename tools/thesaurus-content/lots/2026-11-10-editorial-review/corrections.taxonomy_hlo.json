@@ -1,0 +1,629 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_hlo-1",
+  "proposals": [
+    {
+      "concept_id": "0e2b18eb-a32f-414c-9f81-6de2a189d651",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "auberge",
+      "base": {
+        "description": "Auberge",
+        "description_i18n": {
+          "fr": "Auberge"
+        },
+        "name_i18n": {
+          "fr": "Auberge"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie d’hébergement en auberge, conservée dans les fiches historiques. Elle décrit ici l’accueil avec hébergement, à distinguer de l’auberge classée parmi les restaurants.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie d’hébergement en auberge, conservée dans les fiches historiques. Elle décrit ici l’accueil avec hébergement, à distinguer de l’auberge classée parmi les restaurants.",
+          "en": "Former hostel accommodation category retained in historical listings. It describes lodging here, rather than an inn classified among restaurants.",
+          "es": "Antigua categoría de alojamiento en albergue, conservada en fichas históricas. Aquí describe alojamiento, no una posada clasificada entre restaurantes.",
+          "de": "Frühere Kategorie für Herbergsunterkünfte, die in historischen Einträgen erhalten bleibt. Gemeint ist hier Beherbergung und kein unter Restaurants geführtes Gasthaus."
+        },
+        "name_i18n": {
+          "fr": "Auberge",
+          "en": "Hostel (historical)",
+          "es": "Albergue (histórico)",
+          "de": "Herberge (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "d188925b-e866-432a-a837-1fc5f83a2e3f",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "auberge_collective",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d188925b-e866-432a-a837-1fc5f83a2e3f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d188925b-e866-432a-a837-1fc5f83a2e3f"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d188925b-e866-432a-a837-1fc5f83a2e3f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d188925b-e866-432a-a837-1fc5f83a2e3f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3a459cda-062a-4aa9-93c2-0b96021d5b05",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "bungalow_chalet",
+      "base": {
+        "description": "Bungalow & Chalet",
+        "description_i18n": {
+          "fr": "Bungalow & Chalet"
+        },
+        "name_i18n": {
+          "fr": "Bungalow & Chalet"
+        },
+        "name": "Bungalow & Chalet"
+      },
+      "changes": {
+        "description": "Ancien regroupement de locations meublées sous les appellations bungalow et chalet. Il décrit une forme de logement de vacances et reste conservé pour interpréter les fiches historiques.",
+        "description_i18n": {
+          "fr": "Ancien regroupement de locations meublées sous les appellations bungalow et chalet. Il décrit une forme de logement de vacances et reste conservé pour interpréter les fiches historiques.",
+          "en": "Former grouping of furnished rentals described as bungalows or chalets. It identifies a holiday dwelling form and remains available for interpreting historical listings.",
+          "es": "Antigua agrupación de alquileres amueblados denominados bungalós o chalés. Describe una forma de vivienda vacacional y se conserva para interpretar fichas históricas.",
+          "de": "Frühere Zusammenfassung möblierter Ferienvermietungen als Bungalows oder Chalets. Sie beschreibt eine Unterkunftsform und bleibt zur Einordnung historischer Einträge erhalten."
+        },
+        "name_i18n": {
+          "fr": "Bungalows et chalets",
+          "en": "Bungalows and chalets",
+          "es": "Bungalós y chalés",
+          "de": "Bungalows und Chalets"
+        },
+        "name": "Bungalows et chalets"
+      }
+    },
+    {
+      "concept_id": "b8c2c9ca-a409-40f1-86b8-0499d79a7f9a",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "chambre",
+      "base": {
+        "description": "chambre",
+        "description_i18n": {
+          "fr": "chambre"
+        },
+        "name_i18n": {
+          "fr": "Chambre"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie désignant une chambre proposée en location dans le catalogue des hébergements. Elle ne précisait pas à elle seule si cette offre relevait d’une chambre d’hôtes ou d’une autre forme d’accueil.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie désignant une chambre proposée en location dans le catalogue des hébergements. Elle ne précisait pas à elle seule si cette offre relevait d’une chambre d’hôtes ou d’une autre forme d’accueil.",
+          "en": "Former category for a room offered for rent in the accommodation catalogue. It did not independently establish whether the offer was a hosted bed-and-breakfast room or another accommodation form.",
+          "es": "Antigua categoría de una habitación ofrecida en alquiler en el catálogo de alojamientos. No precisaba por sí sola si era una habitación en casa del anfitrión u otra forma de acogida.",
+          "de": "Frühere Kategorie für ein zur Vermietung angebotenes Zimmer im Unterkunftskatalog. Sie legte allein nicht fest, ob es sich um ein Gästezimmer bei Gastgebern oder eine andere Unterkunftsform handelte."
+        },
+        "name_i18n": {
+          "fr": "Chambre",
+          "en": "Room (historical)",
+          "es": "Habitación (histórica)",
+          "de": "Zimmer (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "f814f493-3bd5-4869-a932-d5badc366bb9",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "chambre_d_hotes",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f814f493-3bd5-4869-a932-d5badc366bb9. Sources externes réellement consultées : https://entreprendre.service-public.gouv.fr/vosdroits/F17452.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f814f493-3bd5-4869-a932-d5badc366bb9 ; https://entreprendre.service-public.gouv.fr/vosdroits/F17452"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f814f493-3bd5-4869-a932-d5badc366bb9. Sources externes réellement consultées : https://entreprendre.service-public.gouv.fr/vosdroits/F17452.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f814f493-3bd5-4869-a932-d5badc366bb9 ; https://entreprendre.service-public.gouv.fr/vosdroits/F17452"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d899ec5f-f315-40eb-9ebc-1fdcb9bb8009",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "cottage",
+      "base": {
+        "description": "cottage",
+        "description_i18n": {
+          "fr": "cottage"
+        },
+        "name_i18n": {
+          "fr": "Cottage"
+        },
+        "name": "Cottage",
+        "labels": []
+      },
+      "changes": {
+        "description": "Ancienne catégorie de maisonnette de vacances meublée, enregistrée sous l’appellation cottage. Elle reste une description historique de la forme du logement, sans constituer un classement.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de maisonnette de vacances meublée, enregistrée sous l’appellation cottage. Elle reste une description historique de la forme du logement, sans constituer un classement.",
+          "en": "Former category for a small furnished holiday house recorded as a cottage. It remains a historical description of the dwelling form rather than an official rating.",
+          "es": "Antigua categoría de pequeña casa de vacaciones amueblada, registrada como cottage. Sigue siendo una descripción histórica de la forma de alojamiento, no una clasificación oficial.",
+          "de": "Frühere Kategorie für ein kleines möbliertes Ferienhaus, das als Cottage erfasst wurde. Sie beschreibt historisch die Unterkunftsform und keine amtliche Klassifizierung."
+        },
+        "name_i18n": {
+          "fr": "Maisonnette de vacances",
+          "en": "Cottage",
+          "es": "Casita de vacaciones",
+          "de": "Ferienhäuschen"
+        },
+        "name": "Maisonnette de vacances",
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Cottage"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "549704de-11e4-4e86-8f7f-bcec8a1e465a",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "gite_d_etape_et_de_randonnee",
+      "base": {
+        "description": "Gîte d'étape et de randonnée",
+        "description_i18n": {
+          "fr": "Gîte d'étape et de randonnée"
+        },
+        "name_i18n": {
+          "fr": "Gîte d'étape et de randonnée"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de gîte accueillant les marcheurs à une étape de leur randonnée. Elle est conservée dans l’historique et se distingue d’une simple location meublée commercialisée sous le nom gîte.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de gîte accueillant les marcheurs à une étape de leur randonnée. Elle est conservée dans l’historique et se distingue d’une simple location meublée commercialisée sous le nom gîte.",
+          "en": "Former category for accommodation welcoming walkers at a stage of a hiking journey. It remains historical and differs from an ordinary furnished rental marketed as a gîte.",
+          "es": "Antigua categoría de alojamiento que recibe caminantes durante una etapa de su ruta. Se conserva en el historial y se distingue de un simple alquiler amueblado comercializado como gîte.",
+          "de": "Frühere Kategorie für eine Unterkunft für Wandernde an einer Etappe. Sie bleibt historisch erhalten und unterscheidet sich von einer bloß als Gîte vermarkteten möblierten Ferienvermietung."
+        },
+        "name_i18n": {
+          "fr": "Gîte d'étape et de randonnée",
+          "en": "Hiking stage accommodation",
+          "es": "Albergue de etapa y senderismo",
+          "de": "Wander- und Etappenunterkunft"
+        }
+      }
+    },
+    {
+      "concept_id": "bca9f664-4955-4697-b2ee-40136a3dd7db",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "gite_de_groupe",
+      "base": {
+        "name_i18n": {
+          "de": "Gruppen-Gîte",
+          "en": "Group gîte",
+          "es": "Gîte de grupo",
+          "fr": "Gîte"
+        },
+        "name": "Gîte",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bca9f664-4955-4697-b2ee-40136a3dd7db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bca9f664-4955-4697-b2ee-40136a3dd7db"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Gruppenunterkunft"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "group accommodation"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Group lodging"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "alojamiento de grupo"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Alojamiento para grupos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "gîte de groupe"
+          }
+        ]
+      },
+      "changes": {
+        "name_i18n": {
+          "de": "Gruppen-Gîte",
+          "en": "Group gîte",
+          "es": "Gîte de grupo",
+          "fr": "Gîte de groupe"
+        },
+        "name": "Gîte de groupe",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bca9f664-4955-4697-b2ee-40136a3dd7db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bca9f664-4955-4697-b2ee-40136a3dd7db"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Gruppenunterkunft"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "group accommodation"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Group lodging"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "alojamiento de grupo"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Alojamiento para grupos"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c48c9bc4-4ea1-4f41-b5ba-1201ad2f1165",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "gite_de_randonnee",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c48c9bc4-4ea1-4f41-b5ba-1201ad2f1165. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c48c9bc4-4ea1-4f41-b5ba-1201ad2f1165"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c48c9bc4-4ea1-4f41-b5ba-1201ad2f1165. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c48c9bc4-4ea1-4f41-b5ba-1201ad2f1165"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8b3db08c-8afe-41e4-be30-6ca566e1066c",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "gite_villa",
+      "base": {
+        "description": "Gîte & Villa",
+        "description_i18n": {
+          "fr": "Gîte & Villa"
+        },
+        "name_i18n": {
+          "fr": "Gîte & Villa"
+        },
+        "name": "Gîte & Villa"
+      },
+      "changes": {
+        "description": "Ancien regroupement de locations de maisons ou de villas meublées, incluant l’appellation commerciale gîte. Il est conservé pour lire les anciennes fiches sans transformer automatiquement ces locations en hébergements collectifs.",
+        "description_i18n": {
+          "fr": "Ancien regroupement de locations de maisons ou de villas meublées, incluant l’appellation commerciale gîte. Il est conservé pour lire les anciennes fiches sans transformer automatiquement ces locations en hébergements collectifs.",
+          "en": "Former grouping of furnished house or villa rentals, including the commercial name gîte. It is retained for older listings without automatically treating those rentals as collective accommodation.",
+          "es": "Antigua agrupación de alquileres de casas o villas amuebladas, incluida la denominación comercial gîte. Se conserva para fichas antiguas sin convertirlas automáticamente en alojamientos colectivos.",
+          "de": "Frühere Zusammenfassung möblierter Haus- oder Villenvermietungen einschließlich der Handelsbezeichnung Gîte. Sie bleibt für alte Einträge erhalten, ohne diese Vermietungen automatisch als Gemeinschaftsunterkünfte einzuordnen."
+        },
+        "name_i18n": {
+          "fr": "Gîtes et villas",
+          "en": "Gîtes and villas",
+          "es": "Gîtes y villas",
+          "de": "Gîtes und Villen"
+        },
+        "name": "Gîtes et villas"
+      }
+    },
+    {
+      "concept_id": "9317fb5c-5812-454b-a765-40c1b6423929",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "hebergement_collectif",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9317fb5c-5812-454b-a765-40c1b6423929. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9317fb5c-5812-454b-a765-40c1b6423929"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9317fb5c-5812-454b-a765-40c1b6423929. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9317fb5c-5812-454b-a765-40c1b6423929"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aa63dc7d-95f2-46c3-9b19-c570b55c2185",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "hebergement_locatif",
+      "base": {
+        "description": "Hébergement non hôtelier loué à une clientèle de passage.",
+        "description_i18n": {
+          "de": "Unterkunft ohne Hotelstatus, an Durchreisende vermietet.",
+          "en": "Non-hotel accommodation rented to visitors passing through.",
+          "es": "Alojamiento no hotelero alquilado a clientes de paso.",
+          "fr": "Hébergement non hôtelier loué à une clientèle de passage."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aa63dc7d-95f2-46c3-9b19-c570b55c2185. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aa63dc7d-95f2-46c3-9b19-c570b55c2185"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Hébergement non hôtelier proposé à la location pour des séjours temporaires. Cette catégorie décrit la forme d’accueil et non un niveau de classement ou une durée unique de séjour.",
+        "description_i18n": {
+          "de": "Nicht als Hotel geführte Unterkunft zur Vermietung für vorübergehende Aufenthalte. Die Kategorie beschreibt die Unterkunftsform und keinen Klassifizierungsgrad oder eine einheitliche Aufenthaltsdauer.",
+          "en": "Non-hotel accommodation offered for rent for temporary stays. This category describes the accommodation form rather than a rating level or a single stay duration.",
+          "es": "Alojamiento no hotelero ofrecido en alquiler para estancias temporales. Describe la forma de acogida, no un nivel de clasificación ni una duración única de estancia.",
+          "fr": "Hébergement non hôtelier proposé à la location pour des séjours temporaires. Cette catégorie décrit la forme d’accueil et non un niveau de classement ou une durée unique de séjour."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aa63dc7d-95f2-46c3-9b19-c570b55c2185. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aa63dc7d-95f2-46c3-9b19-c570b55c2185"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4a2ac349-e3eb-4550-8773-33fb163c2144",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "location_saisonniere",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4a2ac349-e3eb-4550-8773-33fb163c2144. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4a2ac349-e3eb-4550-8773-33fb163c2144"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Möblierte Ferienvermietung"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Furnished vacation rental"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "holiday let"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Alquiler turístico amueblado"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "alquiler vacacional"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "gîte"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Location meublée de tourisme"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4a2ac349-e3eb-4550-8773-33fb163c2144. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4a2ac349-e3eb-4550-8773-33fb163c2144"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Möblierte Ferienvermietung"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Furnished vacation rental"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "holiday let"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Alquiler turístico amueblado"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "alquiler vacacional"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "gîte"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Location meublée de tourisme"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3bb1e9de-ba44-49c0-ae6b-72fed97e40e3",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "rez_de_chaussee_d_une_maison",
+      "base": {
+        "description": "Rez de chaussée d'une maison",
+        "description_i18n": {
+          "fr": "Rez de chaussée d'une maison"
+        },
+        "name_i18n": {
+          "fr": "Rez de chaussée d'une maison"
+        },
+        "name": "Rez de chaussée d'une maison"
+      },
+      "changes": {
+        "description": "Ancienne catégorie de location située au rez-de-chaussée d’une maison. Elle décrivait la position du logement dans le bâtiment, sans déterminer à elle seule les espaces partagés ou le mode d’accueil.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de location située au rez-de-chaussée d’une maison. Elle décrivait la position du logement dans le bâtiment, sans déterminer à elle seule les espaces partagés ou le mode d’accueil.",
+          "en": "Former category for a rental on the ground floor of a house. It described the dwelling’s position within the building without independently determining shared spaces or hosting arrangements.",
+          "es": "Antigua categoría de alquiler situado en la planta baja de una casa. Describía su posición en el edificio sin determinar por sí sola los espacios compartidos o la forma de acogida.",
+          "de": "Frühere Kategorie für eine Vermietung im Erdgeschoss eines Hauses. Sie bezeichnete die Lage im Gebäude, ohne allein gemeinschaftliche Räume oder die Art des Empfangs festzulegen."
+        },
+        "name_i18n": {
+          "fr": "Rez-de-chaussée d’une maison",
+          "en": "Ground floor of a house",
+          "es": "Planta baja de una casa",
+          "de": "Erdgeschoss eines Hauses"
+        },
+        "name": "Rez-de-chaussée d’une maison"
+      }
+    },
+    {
+      "concept_id": "ce08d380-5719-4e03-927c-86f05743f641",
+      "domain": "taxonomy_hlo",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Gîte & meublé",
+        "description_i18n": {
+          "de": "Technische Wurzel für Gîtes und möblierte Unterkünfte; nicht direkt zuweisbar.",
+          "en": "Technical root for gîtes and furnished rentals; not directly assignable.",
+          "es": "Raíz técnica de gîtes y alojamientos amueblados; no asignable directamente.",
+          "fr": "Racine technique — Gîte & meublé"
+        },
+        "name_i18n": {
+          "de": "Gîtes & möblierte Unterkünfte",
+          "en": "Gîtes & furnished rentals",
+          "es": "Gîtes y alojamientos amueblados",
+          "fr": "Gîte & meublé"
+        },
+        "name": "Gîte & meublé",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ce08d380-5719-4e03-927c-86f05743f641. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ce08d380-5719-4e03-927c-86f05743f641"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des locations meublées, chambres d’hôtes et hébergements collectifs accueillant une clientèle de passage. Les sous-catégories distinguent notamment le logement privatif, l’accueil chez l’habitant et l’hébergement de groupes.",
+        "description_i18n": {
+          "de": "Oberkategorie für möblierte Ferienvermietungen, Gästezimmer im Haus der Gastgeber und Gemeinschaftsunterkünfte für vorübergehende Gäste. Unterkategorien unterscheiden private Einheiten, Gastgeberunterkünfte und Gruppenunterkünfte.",
+          "en": "General category for furnished rentals, guest rooms in a host’s home and collective accommodation for temporary visitors. Subcategories distinguish private units, hosted stays and group accommodation.",
+          "es": "Categoría general de alquileres amueblados, habitaciones en casa del anfitrión y alojamientos colectivos para una clientela de paso. Las subcategorías distinguen alojamiento privado, acogida en casa y alojamiento de grupos.",
+          "fr": "Catégorie générale des locations meublées, chambres d’hôtes et hébergements collectifs accueillant une clientèle de passage. Les sous-catégories distinguent notamment le logement privatif, l’accueil chez l’habitant et l’hébergement de groupes."
+        },
+        "name_i18n": {
+          "de": "Ferienvermietungen und Gemeinschaftsunterkünfte",
+          "en": "Rentals and collective accommodation",
+          "es": "Alquileres y alojamientos colectivos",
+          "fr": "Locations et hébergements collectifs"
+        },
+        "name": "Locations et hébergements collectifs",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ce08d380-5719-4e03-927c-86f05743f641. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ce08d380-5719-4e03-927c-86f05743f641"
+          }
+        ]
+      }
+    }
+  ]
+}

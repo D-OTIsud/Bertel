@@ -121,3 +121,15 @@ La cohérence des lectures repose sur les snapshots et les clés de génération
 détection périodique dans l'interface ; elle ne dépend pas de la réception du signal.
 Le script de proposition de contenu crée seulement des brouillons et n'a donc pas
 d'événement de publication à drainer.
+
+Les `legacy_search_terms` sont des recherches héritées privées, distinctes des
+synonymes éditoriaux. L'espace admin retourne leur tableau exact pour les comparaisons
+de base et les conflits. Un champ omis conserve les termes ; `[]` propose leur effacement.
+Enregistrer ou valider un brouillon ne les modifie pas en source : seule la publication
+ordinaire les persiste et recalcule les alias natifs des catalogues `ref_code` avec
+les libellés éditoriaux français.
+Les snapshots et réponses publics du thésaurus excluent ce champ. La migration
+`20261110072416_thesaurus_legacy_search_term_roundtrip.sql` conserve le noyau
+`activate` et ses contrôles d'authentification ; elle vérifie l'ancien contrat de préparation
+puis actualise uniquement l'empreinte du writer `apply_source`, sans réinitialiser les
+autres empreintes ni élargir les droits.

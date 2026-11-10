@@ -1,0 +1,1106 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_loi-1",
+  "proposals": [
+    {
+      "concept_id": "93404bbe-f11b-4ff8-97b3-a99132107f8a",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "art",
+      "base": {
+        "description": "Art",
+        "description_i18n": {
+          "fr": "Art"
+        },
+        "name_i18n": {
+          "fr": "Art"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de loisirs consacrés à la création ou à la découverte artistique. Elle est conservée dans les fiches historiques, sans désigner à elle seule un lieu ou une séance précise.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de loisirs consacrés à la création ou à la découverte artistique. Elle est conservée dans les fiches historiques, sans désigner à elle seule un lieu ou une séance précise.",
+          "en": "Former category for leisure involving artistic creation or discovery. It is retained in historical listings without independently identifying a specific venue or session.",
+          "es": "Antigua categoría de ocio relacionado con la creación o el descubrimiento artístico. Se conserva en fichas históricas sin identificar por sí sola un lugar o sesión concretos.",
+          "de": "Frühere Freizeitkategorie für künstlerisches Schaffen oder Entdecken. Sie bleibt in historischen Einträgen erhalten, ohne allein einen bestimmten Ort oder Kurs zu bezeichnen."
+        },
+        "name_i18n": {
+          "fr": "Art",
+          "en": "Art (historical)",
+          "es": "Arte (histórico)",
+          "de": "Kunst (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "a8226a46-9b27-4dd0-837f-926a5b276657",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "art_artisanat",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a8226a46-9b27-4dd0-837f-926a5b276657. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a8226a46-9b27-4dd0-837f-926a5b276657"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a8226a46-9b27-4dd0-837f-926a5b276657. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a8226a46-9b27-4dd0-837f-926a5b276657"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "71c529b8-9a5e-4005-b8d1-d8f66f32d330",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "artisanat",
+      "base": {
+        "description": "Artisanat",
+        "description_i18n": {
+          "fr": "Artisanat"
+        },
+        "name_i18n": {
+          "fr": "Artisanat"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de découverte des métiers et savoir-faire artisanaux. Elle reste conservée pour interpréter les anciennes fiches, distincte d’un commerce de revente d’objets.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de découverte des métiers et savoir-faire artisanaux. Elle reste conservée pour interpréter les anciennes fiches, distincte d’un commerce de revente d’objets.",
+          "en": "Former category for discovering craft trades and skills. It remains available for interpreting older listings, distinct from a shop reselling goods.",
+          "es": "Antigua categoría de descubrimiento de oficios y saberes artesanales. Se conserva para interpretar fichas antiguas, distinta de un comercio de reventa.",
+          "de": "Frühere Kategorie zur Entdeckung handwerklicher Berufe und Fertigkeiten. Sie bleibt zur Einordnung alter Einträge erhalten und unterscheidet sich vom bloßen Warenverkauf."
+        },
+        "name_i18n": {
+          "fr": "Artisanat",
+          "en": "Crafts (historical)",
+          "es": "Artesanía (histórica)",
+          "de": "Handwerk (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "d721b37c-cf1e-41a0-98a7-e271bcf8042e",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "artisanat_bijoux",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d721b37c-cf1e-41a0-98a7-e271bcf8042e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d721b37c-cf1e-41a0-98a7-e271bcf8042e"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d721b37c-cf1e-41a0-98a7-e271bcf8042e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d721b37c-cf1e-41a0-98a7-e271bcf8042e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "dda2be65-9aee-4790-a021-26dfdc2eb535",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "atelier",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dda2be65-9aee-4790-a021-26dfdc2eb535. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dda2be65-9aee-4790-a021-26dfdc2eb535"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dda2be65-9aee-4790-a021-26dfdc2eb535. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dda2be65-9aee-4790-a021-26dfdc2eb535"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "feadcf88-7360-4e43-84d3-eb3d978f4816",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "atelier_cuisine",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/feadcf88-7360-4e43-84d3-eb3d978f4816. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/feadcf88-7360-4e43-84d3-eb3d978f4816"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/feadcf88-7360-4e43-84d3-eb3d978f4816. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/feadcf88-7360-4e43-84d3-eb3d978f4816"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9328ed91-56a7-420e-8cad-3f2858633013",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "atelier_poterie_et_ceramique",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9328ed91-56a7-420e-8cad-3f2858633013. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9328ed91-56a7-420e-8cad-3f2858633013"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9328ed91-56a7-420e-8cad-3f2858633013. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9328ed91-56a7-420e-8cad-3f2858633013"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2d06a112-398e-45c6-8367-ad0f810e2420",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "casino",
+      "base": {
+        "description": "Établissement de jeux ouvert au public",
+        "description_i18n": {
+          "de": "Öffentlich zugängliche Spielbank.",
+          "en": "Gaming establishment open to the public.",
+          "es": "Establecimiento de juegos abierto al público.",
+          "fr": "Établissement de jeux ouvert au public"
+        }
+      },
+      "changes": {
+        "description": "Établissement de loisirs proposant des jeux d’argent au public. La catégorie décrit le lieu et ne constitue pas une information sur ses jeux disponibles, ses horaires ou ses conditions d’entrée.",
+        "description_i18n": {
+          "de": "Freizeiteinrichtung mit Glücksspielangebot für das Publikum. Die Kategorie bezeichnet den Ort und nicht verfügbare Spiele, Öffnungszeiten oder Eintrittsbedingungen.",
+          "en": "Leisure establishment offering gambling to the public. This category describes the venue rather than available games, hours or admission conditions.",
+          "es": "Establecimiento de ocio que ofrece juegos de azar con dinero al público. Describe el lugar, no los juegos disponibles, horarios o condiciones de acceso.",
+          "fr": "Établissement de loisirs proposant des jeux d’argent au public. La catégorie décrit le lieu et ne constitue pas une information sur ses jeux disponibles, ses horaires ou ses conditions d’entrée."
+        }
+      }
+    },
+    {
+      "concept_id": "8b38dc85-1b76-431d-b8d4-064fd8dddd6d",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "centre_d_equitation",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8b38dc85-1b76-431d-b8d4-064fd8dddd6d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8b38dc85-1b76-431d-b8d4-064fd8dddd6d"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8b38dc85-1b76-431d-b8d4-064fd8dddd6d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8b38dc85-1b76-431d-b8d4-064fd8dddd6d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "02da024a-0a68-48cd-ad24-05c8f98a9124",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "chocolatier",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/02da024a-0a68-48cd-ad24-05c8f98a9124. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/02da024a-0a68-48cd-ad24-05c8f98a9124"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/02da024a-0a68-48cd-ad24-05c8f98a9124. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/02da024a-0a68-48cd-ad24-05c8f98a9124"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8a156486-7b98-421a-bae9-614ea4fe61ef",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "cinema",
+      "base": {
+        "description": "Salle de cinéma ouverte au public",
+        "description_i18n": {
+          "de": "Öffentlich zugängliches Kino.",
+          "en": "Cinema open to the public.",
+          "es": "Sala de cine abierta al público.",
+          "fr": "Salle de cinéma ouverte au public"
+        }
+      },
+      "changes": {
+        "description": "Lieu permanent équipé pour projeter des films au public. Cette catégorie décrit la salle ou l’établissement, distinct d’une séance ou d’un festival de cinéma daté.",
+        "description_i18n": {
+          "de": "Dauerhafter Ort für öffentliche Filmvorführungen. Die Kategorie bezeichnet das Kino und keine einzelne Vorstellung oder ein terminiertes Filmfestival.",
+          "en": "Permanent venue equipped for public film screenings. This category describes the cinema rather than a particular screening or dated film festival.",
+          "es": "Lugar permanente acondicionado para proyectar películas al público. Describe la sala o establecimiento, no una sesión o festival de cine con fecha.",
+          "fr": "Lieu permanent équipé pour projeter des films au public. Cette catégorie décrit la salle ou l’établissement, distinct d’une séance ou d’un festival de cinéma daté."
+        }
+      }
+    },
+    {
+      "concept_id": "a3b71410-8745-4715-b695-075dda380eda",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "conference_venue",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a3b71410-8745-4715-b695-075dda380eda. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a3b71410-8745-4715-b695-075dda380eda"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a3b71410-8745-4715-b695-075dda380eda. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a3b71410-8745-4715-b695-075dda380eda"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3815e9f6-054c-409d-8262-7ddc82a112e4",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "dessin",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3815e9f6-054c-409d-8262-7ddc82a112e4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3815e9f6-054c-409d-8262-7ddc82a112e4"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3815e9f6-054c-409d-8262-7ddc82a112e4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3815e9f6-054c-409d-8262-7ddc82a112e4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e11b59d2-654d-468c-930b-cf0d2a778ca9",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "divertissement",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e11b59d2-654d-468c-930b-cf0d2a778ca9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e11b59d2-654d-468c-930b-cf0d2a778ca9"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e11b59d2-654d-468c-930b-cf0d2a778ca9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e11b59d2-654d-468c-930b-cf0d2a778ca9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a3ea5530-4054-47bf-b392-4c6b27a16eb3",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "golf",
+      "base": {
+        "description": "Parcours de golf ou practice ouvert au public",
+        "description_i18n": {
+          "de": "Öffentlich zugänglicher Golfplatz oder Golfübungsanlage.",
+          "en": "Golf course or driving range open to the public.",
+          "es": "Campo de golf o campo de prácticas abierto al público.",
+          "fr": "Parcours de golf ou practice ouvert au public"
+        }
+      },
+      "changes": {
+        "description": "Lieu proposant un parcours de golf ou une zone d’entraînement de type practice au public. Il se distingue d’un événement sportif ou d’un cours de golf donné à une date précise.",
+        "description_i18n": {
+          "de": "Ort mit öffentlich angebotenem Golfplatz oder einer Golfübungsanlage. Er unterscheidet sich von einer Sportveranstaltung oder einer Golfstunde zu einem bestimmten Termin.",
+          "en": "Venue offering a golf course or driving range to the public. It differs from a sports event or a golf lesson on a specific date.",
+          "es": "Lugar que ofrece al público un campo de golf o zona de prácticas. Se distingue de un evento deportivo o de una clase de golf en una fecha concreta.",
+          "fr": "Lieu proposant un parcours de golf ou une zone d’entraînement de type practice au public. Il se distingue d’un événement sportif ou d’un cours de golf donné à une date précise."
+        }
+      }
+    },
+    {
+      "concept_id": "6de5cf6d-42d4-4aa1-b7ba-c8cc894a0cb8",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "guide_accompagnateur_touristique",
+      "base": {
+        "description": "Guide Accompagnateur Touristique",
+        "description_i18n": {
+          "fr": "Guide Accompagnateur Touristique"
+        },
+        "name_i18n": {
+          "fr": "Guide Accompagnateur Touristique"
+        },
+        "name": "Guide Accompagnateur Touristique"
+      },
+      "changes": {
+        "description": "Ancienne catégorie de loisirs décrivant une prestation de guide ou d’accompagnement touristique, rattachée au regroupement Terre. Elle est conservée dans l’historique et ne désigne pas un diplôme attribué par Bertel.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de loisirs décrivant une prestation de guide ou d’accompagnement touristique, rattachée au regroupement Terre. Elle est conservée dans l’historique et ne désigne pas un diplôme attribué par Bertel.",
+          "en": "Former leisure category describing a tourist guide or escort service under the Terre grouping. It remains historical and does not represent a qualification awarded by Bertel.",
+          "es": "Antigua categoría de ocio para una prestación de guía o acompañamiento turístico dentro de la agrupación Terre. Se conserva en el historial y no designa un título otorgado por Bertel.",
+          "de": "Frühere Freizeitkategorie für touristische Führungs- oder Begleitleistungen unter der Gruppe Terre. Sie bleibt historisch erhalten und bezeichnet keinen von Bertel vergebenen Abschluss."
+        },
+        "name_i18n": {
+          "fr": "Guide accompagnateur touristique",
+          "en": "Tourist guide and escort",
+          "es": "Guía acompañante turístico",
+          "de": "Touristische Führung und Begleitung"
+        },
+        "name": "Guide accompagnateur touristique"
+      }
+    },
+    {
+      "concept_id": "8e152ff2-50fd-4ec2-82fd-87759c097eed",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "horticulture",
+      "base": {
+        "description": "Horticulture",
+        "description_i18n": {
+          "fr": "Horticulture"
+        },
+        "name_i18n": {
+          "fr": "Horticulture"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de découverte de la culture des plantes et des jardins, rangée dans le patrimoine naturel. Elle décrit un thème d’offre historique, distinct d’un simple commerce de plantes.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de découverte de la culture des plantes et des jardins, rangée dans le patrimoine naturel. Elle décrit un thème d’offre historique, distinct d’un simple commerce de plantes.",
+          "en": "Former discovery category for growing plants and gardens, placed under natural heritage. It describes a historical offer theme rather than a plant shop alone.",
+          "es": "Antigua categoría de descubrimiento del cultivo de plantas y jardines, incluida en patrimonio natural. Describe un tema de oferta histórica, no una simple tienda de plantas.",
+          "de": "Frühere Entdeckungskategorie zum Pflanzen- und Gartenbau unter Naturerbe. Sie bezeichnet ein historisches Angebotsthema und kein bloßes Pflanzengeschäft."
+        },
+        "name_i18n": {
+          "fr": "Horticulture",
+          "en": "Horticulture",
+          "es": "Horticultura",
+          "de": "Gartenbau"
+        }
+      }
+    },
+    {
+      "concept_id": "abc52217-c0d4-4847-9461-8d649c468da4",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "massage_institute",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/abc52217-c0d4-4847-9461-8d649c468da4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/abc52217-c0d4-4847-9461-8d649c468da4"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/abc52217-c0d4-4847-9461-8d649c468da4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/abc52217-c0d4-4847-9461-8d649c468da4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "01282574-c199-46af-a001-bd538259006b",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "paintball",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/01282574-c199-46af-a001-bd538259006b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/01282574-c199-46af-a001-bd538259006b"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/01282574-c199-46af-a001-bd538259006b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/01282574-c199-46af-a001-bd538259006b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "87cfc419-8932-484f-9780-ca8444716c21",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "parc_jardin",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/87cfc419-8932-484f-9780-ca8444716c21. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/87cfc419-8932-484f-9780-ca8444716c21"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/87cfc419-8932-484f-9780-ca8444716c21. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/87cfc419-8932-484f-9780-ca8444716c21"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "78f5d492-4aa1-43ef-8781-918ccb3d905f",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "patrimoine_agricole",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/78f5d492-4aa1-43ef-8781-918ccb3d905f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/78f5d492-4aa1-43ef-8781-918ccb3d905f"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/78f5d492-4aa1-43ef-8781-918ccb3d905f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/78f5d492-4aa1-43ef-8781-918ccb3d905f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "57c0ce07-c0c9-4483-bf38-c156ef712616",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "patrimoine_culturel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/57c0ce07-c0c9-4483-bf38-c156ef712616. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/57c0ce07-c0c9-4483-bf38-c156ef712616"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Regionales Kulturerbe"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "heritage"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Local cultural heritage"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Herencia cultural local"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Héritage culturel local"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "patrimoine"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/57c0ce07-c0c9-4483-bf38-c156ef712616. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/57c0ce07-c0c9-4483-bf38-c156ef712616"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Regionales Kulturerbe"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "heritage"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Local cultural heritage"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Herencia cultural local"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Héritage culturel local"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "patrimoine"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ffad7903-0b51-431c-b4bd-cd2468ae2281",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "patrimoine_naturel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ffad7903-0b51-431c-b4bd-cd2468ae2281. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ffad7903-0b51-431c-b4bd-cd2468ae2281"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ffad7903-0b51-431c-b4bd-cd2468ae2281. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ffad7903-0b51-431c-b4bd-cd2468ae2281"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "679173cf-5f02-4db1-8967-532d641c4740",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "randonnee_pedestre",
+      "base": {
+        "description": "Randonnée pédestre",
+        "description_i18n": {
+          "fr": "Randonnée pédestre"
+        },
+        "name_i18n": {
+          "fr": "Randonnée pédestre"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de loisirs décrivant une découverte à pied du milieu naturel. Elle est conservée dans les fiches historiques et ne remplace pas la description actuelle d’un itinéraire ou d’une sortie guidée.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de loisirs décrivant une découverte à pied du milieu naturel. Elle est conservée dans les fiches historiques et ne remplace pas la description actuelle d’un itinéraire ou d’une sortie guidée.",
+          "en": "Former leisure category describing exploration of a natural environment on foot. It remains in historical listings and does not replace a current itinerary or guided outing description.",
+          "es": "Antigua categoría de ocio para descubrir a pie el medio natural. Se conserva en fichas históricas y no sustituye la descripción actual de un itinerario o salida guiada.",
+          "de": "Frühere Freizeitkategorie zur Erkundung der Natur zu Fuß. Sie bleibt in historischen Einträgen erhalten und ersetzt keine aktuelle Routen- oder Führungsbeschreibung."
+        },
+        "name_i18n": {
+          "fr": "Randonnée pédestre",
+          "en": "Hiking (historical)",
+          "es": "Senderismo (histórico)",
+          "de": "Wandern (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "a271e36a-db5d-4050-a010-dd969994360d",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "restauration_traditionnelle",
+      "base": {
+        "description": "Restauration traditionnelle",
+        "description_i18n": {
+          "fr": "Restauration traditionnelle"
+        },
+        "name_i18n": {
+          "fr": "Restauration traditionnelle"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de loisirs associant la restauration traditionnelle à la découverte du patrimoine culturel. Elle est conservée pour lire les anciennes fiches sans créer une affectation actuelle dans les catégories de restauration.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de loisirs associant la restauration traditionnelle à la découverte du patrimoine culturel. Elle est conservée pour lire les anciennes fiches sans créer une affectation actuelle dans les catégories de restauration.",
+          "en": "Former leisure category linking traditional food service with cultural heritage discovery. It is retained for older listings without creating a current assignment in food-service categories.",
+          "es": "Antigua categoría de ocio que vinculaba la restauración tradicional al descubrimiento del patrimonio cultural. Se conserva para fichas antiguas sin crear una asignación actual en categorías de restauración.",
+          "de": "Frühere Freizeitkategorie, die traditionelle Gastronomie mit Kulturerbe-Erkundung verband. Sie bleibt für alte Einträge erhalten, ohne eine aktuelle Zuordnung zu Gastronomiekategorien anzulegen."
+        },
+        "name_i18n": {
+          "fr": "Restauration traditionnelle",
+          "en": "Traditional food service (historical)",
+          "es": "Restauración tradicional (histórica)",
+          "de": "Traditionelle Gastronomie (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "a8d85fe7-4050-4b88-ba5e-47a88b69c82c",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Loisir",
+        "description_i18n": {
+          "de": "Technische Wurzel für Freizeitkategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for leisure categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de ocio; no asignable directamente.",
+          "fr": "Racine technique — Loisir"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a8d85fe7-4050-4b88-ba5e-47a88b69c82c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a8d85fe7-4050-4b88-ba5e-47a88b69c82c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des lieux et offres de loisirs, de détente, de visite ou de découverte. Ses sous-catégories couvrent des pratiques et des lieux, distincts d’une simple liste de sports.",
+        "description_i18n": {
+          "de": "Oberkategorie für Freizeit-, Erholungs-, Besuchs- und Entdeckungsorte oder Angebote. Die Unterkategorien umfassen Tätigkeiten und Orte und sind keine reine Sportartenliste.",
+          "en": "General category for leisure, relaxation, visit and discovery venues or offers. Its subcategories cover activities and places rather than merely listing sports.",
+          "es": "Categoría general de lugares y ofertas de ocio, descanso, visita o descubrimiento. Sus subcategorías abarcan prácticas y lugares, no solo una lista de deportes.",
+          "fr": "Catégorie générale des lieux et offres de loisirs, de détente, de visite ou de découverte. Ses sous-catégories couvrent des pratiques et des lieux, distincts d’une simple liste de sports."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a8d85fe7-4050-4b88-ba5e-47a88b69c82c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a8d85fe7-4050-4b88-ba5e-47a88b69c82c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2724f597-c745-43f3-adad-f2822ad30a75",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "spa_hammam",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2724f597-c745-43f3-adad-f2822ad30a75. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2724f597-c745-43f3-adad-f2822ad30a75"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2724f597-c745-43f3-adad-f2822ad30a75. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2724f597-c745-43f3-adad-f2822ad30a75"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bbc539c4-883b-4fb5-bd82-fb208992d373",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "speleologie_tunnels_de_lave",
+      "base": {
+        "description": "Spéléologie / tunnels de lave",
+        "description_i18n": {
+          "fr": "Spéléologie / tunnels de lave"
+        },
+        "name_i18n": {
+          "fr": "Spéléologie / tunnels de lave"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de loisirs consacrés à la découverte de cavités souterraines et de tunnels de lave. Elle est conservée dans l’historique, sans indiquer à elle seule les modalités d’encadrement d’une offre actuelle.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de loisirs consacrés à la découverte de cavités souterraines et de tunnels de lave. Elle est conservée dans l’historique, sans indiquer à elle seule les modalités d’encadrement d’une offre actuelle.",
+          "en": "Former leisure category for discovering underground cavities and lava tubes. It remains historical without independently specifying how a current offer is supervised.",
+          "es": "Antigua categoría de ocio para descubrir cavidades subterráneas y tubos de lava. Se conserva en el historial sin precisar por sí sola el acompañamiento de una oferta actual.",
+          "de": "Frühere Freizeitkategorie zur Erkundung unterirdischer Hohlräume und Lavaröhren. Sie bleibt historisch erhalten, ohne allein die Begleitung eines aktuellen Angebots festzulegen."
+        },
+        "name_i18n": {
+          "fr": "Spéléologie / tunnels de lave",
+          "en": "Caving and lava tubes",
+          "es": "Espeleología y tubos de lava",
+          "de": "Höhlenbegehungen und Lavaröhren"
+        }
+      }
+    },
+    {
+      "concept_id": "2323e4b8-3127-4094-850f-6cd36ccfca82",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "terre",
+      "base": {
+        "description": "Terre",
+        "description_i18n": {
+          "fr": "Terre"
+        },
+        "name_i18n": {
+          "fr": "Terre"
+        }
+      },
+      "changes": {
+        "description": "Ancien regroupement du catalogue de loisirs, sous lequel était notamment classé le guide accompagnateur touristique. Cette définition décrit son rôle dans les fiches historiques plutôt qu’un type de sol ou une nouvelle catégorie de site naturel.",
+        "description_i18n": {
+          "fr": "Ancien regroupement du catalogue de loisirs, sous lequel était notamment classé le guide accompagnateur touristique. Cette définition décrit son rôle dans les fiches historiques plutôt qu’un type de sol ou une nouvelle catégorie de site naturel.",
+          "en": "Former leisure-catalogue grouping under which tourist guide and escort services were notably classified. This defines its historical listing role rather than a soil type or new natural-site category.",
+          "es": "Antigua agrupación del catálogo de ocio en la que se clasificaba, entre otros, al guía acompañante turístico. Describe su función histórica, no un tipo de suelo ni una nueva categoría de sitio natural.",
+          "de": "Frühere Gruppe des Freizeitkatalogs, unter der insbesondere touristische Führungs- und Begleitleistungen eingeordnet wurden. Die Definition beschreibt die historische Rolle und keine Bodenart oder neue Naturstättenkategorie."
+        },
+        "name_i18n": {
+          "fr": "Terre",
+          "en": "Land-based leisure (historical grouping)",
+          "es": "Ocio terrestre (agrupación histórica)",
+          "de": "Freizeit an Land (historische Gruppe)"
+        }
+      }
+    },
+    {
+      "concept_id": "5788757d-7574-4cf4-b32f-6058f91bd39c",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "terroir",
+      "base": {
+        "description": "Terroir",
+        "description_i18n": {
+          "fr": "Terroir"
+        },
+        "name_i18n": {
+          "fr": "Terroir"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de loisirs autour des produits, pratiques et savoir-faire liés à un territoire. Elle reste conservée dans les anciennes fiches et ne constitue pas un label d’origine des produits.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de loisirs autour des produits, pratiques et savoir-faire liés à un territoire. Elle reste conservée dans les anciennes fiches et ne constitue pas un label d’origine des produits.",
+          "en": "Former leisure category centred on products, practices and skills associated with an area. It remains in older listings and is not a product-origin label.",
+          "es": "Antigua categoría de ocio en torno a productos, prácticas y saberes vinculados a un territorio. Se conserva en fichas antiguas y no constituye un sello de origen.",
+          "de": "Frühere Freizeitkategorie zu Produkten, Praktiken und Fertigkeiten einer Region. Sie bleibt in alten Einträgen erhalten und ist kein Herkunftssiegel für Produkte."
+        },
+        "name_i18n": {
+          "fr": "Terroir",
+          "en": "Regional products and skills",
+          "es": "Productos y saberes del territorio",
+          "de": "Regionale Produkte und Fertigkeiten"
+        }
+      }
+    },
+    {
+      "concept_id": "7581b1cb-9307-43a9-be4d-343c838da19d",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "theatre_ou_salle_de_spectacle",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7581b1cb-9307-43a9-be4d-343c838da19d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7581b1cb-9307-43a9-be4d-343c838da19d"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7581b1cb-9307-43a9-be4d-343c838da19d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7581b1cb-9307-43a9-be4d-343c838da19d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8a229aa6-6839-4c5a-94dd-58648cae9da6",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "thermal_baths",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8a229aa6-6839-4c5a-94dd-58648cae9da6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8a229aa6-6839-4c5a-94dd-58648cae9da6"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8a229aa6-6839-4c5a-94dd-58648cae9da6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8a229aa6-6839-4c5a-94dd-58648cae9da6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c51655f2-d230-414b-9dbd-f44f134e65c4",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "v_t_t_autres_cycles",
+      "base": {
+        "description": "V.T.T. - Autres cycles",
+        "description_i18n": {
+          "fr": "V.T.T. - Autres cycles"
+        },
+        "name_i18n": {
+          "fr": "V.T.T. - Autres cycles"
+        },
+        "name": "V.T.T. - Autres cycles"
+      },
+      "changes": {
+        "description": "Ancienne catégorie de loisirs liés au vélo tout terrain et aux autres cycles. Elle est conservée dans l’historique sans préciser à elle seule s’il s’agissait d’une location, d’une sortie ou d’un autre service.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de loisirs liés au vélo tout terrain et aux autres cycles. Elle est conservée dans l’historique sans préciser à elle seule s’il s’agissait d’une location, d’une sortie ou d’un autre service.",
+          "en": "Former leisure category relating to mountain bikes and other cycles. It remains historical without independently specifying rental, an outing or another service.",
+          "es": "Antigua categoría de ocio vinculada a bicicletas de montaña y otros ciclos. Se conserva en el historial sin precisar por sí sola si era alquiler, salida u otro servicio.",
+          "de": "Frühere Freizeitkategorie zu Mountainbikes und anderen Fahrrädern. Sie bleibt historisch erhalten, ohne allein Vermietung, Ausfahrt oder andere Dienstleistungen festzulegen."
+        },
+        "name_i18n": {
+          "fr": "VTT et autres cycles",
+          "en": "Mountain bikes and other cycles",
+          "es": "Bicicletas de montaña y otros ciclos",
+          "de": "Mountainbikes und andere Fahrräder"
+        },
+        "name": "VTT et autres cycles"
+      }
+    },
+    {
+      "concept_id": "ebdefebb-4102-4392-9bfc-499b61bcf47b",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "visite_guidee",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ebdefebb-4102-4392-9bfc-499b61bcf47b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ebdefebb-4102-4392-9bfc-499b61bcf47b"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geführte Besichtigung des Agrarerbes"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Guided agricultural-heritage visit"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "guided tour"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Visita acompañada al patrimonio agrícola"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "visita con guía"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "visite accompagnée"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Visite accompagnée d'un patrimoine agricole"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ebdefebb-4102-4392-9bfc-499b61bcf47b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ebdefebb-4102-4392-9bfc-499b61bcf47b"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geführte Besichtigung des Agrarerbes"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Guided agricultural-heritage visit"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "guided tour"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Visita acompañada al patrimonio agrícola"
+          },
+          {
+            "kind": "hidden",
+            "lang": "es",
+            "value": "visita con guía"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "visite accompagnée"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Visite accompagnée d'un patrimoine agricole"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c268b1ab-e2b8-4a81-8bf1-e21ab5187fc3",
+      "domain": "taxonomy_loi",
+      "context_key": "",
+      "code": "wellness",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c268b1ab-e2b8-4a81-8bf1-e21ab5187fc3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c268b1ab-e2b8-4a81-8bf1-e21ab5187fc3"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c268b1ab-e2b8-4a81-8bf1-e21ab5187fc3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c268b1ab-e2b8-4a81-8bf1-e21ab5187fc3"
+          }
+        ]
+      }
+    }
+  ]
+}

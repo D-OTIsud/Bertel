@@ -1,0 +1,406 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-service_type-1",
+  "proposals": [
+    {
+      "concept_id": "6e5895e5-148f-4b78-9e8b-83224f3936ac",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "accommodation",
+      "base": {
+        "description": "Service d'hébergement",
+        "description_i18n": {
+          "de": "Unterkunftsangebot",
+          "en": "Accommodation service",
+          "es": "Servicio de alojamiento",
+          "fr": "Service d'hébergement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6e5895e5-148f-4b78-9e8b-83224f3936ac. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6e5895e5-148f-4b78-9e8b-83224f3936ac"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prestation mettant un logement ou un couchage à disposition d'un voyageur pour une ou plusieurs nuitées.",
+        "description_i18n": {
+          "de": "Leistung, die Reisenden für eine oder mehrere Nächte eine Unterkunft oder einen Schlafplatz bereitstellt.",
+          "en": "Service making accommodation or a sleeping place available to a traveller for one or more nights.",
+          "es": "Prestación que pone un alojamiento o una cama a disposición de un viajero para una o varias noches.",
+          "fr": "Prestation mettant un logement ou un couchage à disposition d'un voyageur pour une ou plusieurs nuitées."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6e5895e5-148f-4b78-9e8b-83224f3936ac. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6e5895e5-148f-4b78-9e8b-83224f3936ac"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "fb4f3a86-67a3-4d0e-a25f-ee1a68e29f61",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "concierge",
+      "base": {
+        "description": "Service de conciergerie",
+        "description_i18n": {
+          "de": "Concierge-Service für Gäste",
+          "en": "Concierge service",
+          "es": "Servicio de conserjería",
+          "fr": "Service de conciergerie"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fb4f3a86-67a3-4d0e-a25f-ee1a68e29f61. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fb4f3a86-67a3-4d0e-a25f-ee1a68e29f61"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Service d'assistance personnalisée aux visiteurs pour organiser des réservations, obtenir des renseignements ou effectuer des démarches liées au séjour.",
+        "description_i18n": {
+          "de": "Persönliche Unterstützung für Gäste bei Reservierungen, Auskünften oder organisatorischen Anliegen rund um ihren Aufenthalt.",
+          "en": "Personal assistance for visitors with bookings, information or arrangements relating to their stay.",
+          "es": "Servicio de asistencia personalizada a visitantes para gestionar reservas, obtener información o realizar gestiones relacionadas con la estancia.",
+          "fr": "Service d'assistance personnalisée aux visiteurs pour organiser des réservations, obtenir des renseignements ou effectuer des démarches liées au séjour."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fb4f3a86-67a3-4d0e-a25f-ee1a68e29f61. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fb4f3a86-67a3-4d0e-a25f-ee1a68e29f61"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "200577f5-2e31-494c-8da1-27a15a4eec18",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "event_planning",
+      "base": {
+        "description": "Service d'organisation d'événements",
+        "description_i18n": {
+          "de": "Eventplanungsservice",
+          "en": "Event planning service",
+          "es": "Servicio de organización de eventos",
+          "fr": "Service d'organisation d'événements"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/200577f5-2e31-494c-8da1-27a15a4eec18. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/200577f5-2e31-494c-8da1-27a15a4eec18"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prestation de préparation et de coordination d'un événement, portant sur son organisation et les intervenants ou moyens nécessaires.",
+        "description_i18n": {
+          "de": "Leistung zur Vorbereitung und Koordination einer Veranstaltung, einschließlich Organisation und benötigter Mitwirkender oder Mittel.",
+          "en": "Service preparing and coordinating an event, covering its organisation and the participants or resources required.",
+          "es": "Prestación de preparación y coordinación de un evento, que abarca su organización y los participantes o medios necesarios.",
+          "fr": "Prestation de préparation et de coordination d'un événement, portant sur son organisation et les intervenants ou moyens nécessaires."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/200577f5-2e31-494c-8da1-27a15a4eec18. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/200577f5-2e31-494c-8da1-27a15a4eec18"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "59719492-fabb-429a-9d15-287a34354c93",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "insurance",
+      "base": {
+        "description": "Service d'assurance",
+        "description_i18n": {
+          "de": "Versicherungsservice",
+          "en": "Insurance service",
+          "es": "Servicio de seguros",
+          "fr": "Service d'assurance"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/59719492-fabb-429a-9d15-287a34354c93. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/59719492-fabb-429a-9d15-287a34354c93"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Service proposant une couverture de risques déterminés par un contrat d'assurance ; le type de service ne précise pas à lui seul les garanties souscrites.",
+        "description_i18n": {
+          "de": "Dienstleistung mit Versicherungsschutz für vertraglich festgelegte Risiken; die Art der Leistung allein legt den abgeschlossenen Deckungsumfang nicht fest.",
+          "en": "Service offering cover for risks defined by an insurance contract; the service type alone does not specify the cover taken out.",
+          "es": "Servicio que ofrece cobertura para riesgos definidos por un contrato de seguro; el tipo de servicio por sí solo no especifica las garantías contratadas.",
+          "fr": "Service proposant une couverture de risques déterminés par un contrat d'assurance ; le type de service ne précise pas à lui seul les garanties souscrites."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/59719492-fabb-429a-9d15-287a34354c93. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/59719492-fabb-429a-9d15-287a34354c93"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e3ca6eb7-8ae2-4792-88a9-50a0367cb06b",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "restaurant",
+      "base": {
+        "description": "Service de restauration",
+        "description_i18n": {
+          "de": "Verpflegungsservice",
+          "en": "Food service",
+          "es": "Servicio de restauración",
+          "fr": "Service de restauration"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e3ca6eb7-8ae2-4792-88a9-50a0367cb06b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e3ca6eb7-8ae2-4792-88a9-50a0367cb06b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prestation de préparation et de fourniture de repas aux clients, distincte de la simple mise à disposition d'un espace pour cuisiner.",
+        "description_i18n": {
+          "de": "Leistung zur Zubereitung und Bereitstellung von Mahlzeiten für Gäste; von der bloßen Bereitstellung eines Kochbereichs zu unterscheiden.",
+          "en": "Service preparing and providing meals for customers, distinct from simply making a cooking space available.",
+          "es": "Prestación de preparación y suministro de comidas a los clientes, distinta de la mera disponibilidad de un espacio para cocinar.",
+          "fr": "Prestation de préparation et de fourniture de repas aux clients, distincte de la simple mise à disposition d'un espace pour cuisiner."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e3ca6eb7-8ae2-4792-88a9-50a0367cb06b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e3ca6eb7-8ae2-4792-88a9-50a0367cb06b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d67f8e4d-5a94-4a42-af36-fa5f4a04af7a",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "security",
+      "base": {
+        "description": "Service de sécurité",
+        "description_i18n": {
+          "de": "Sicherheitsdienst",
+          "en": "Security service",
+          "es": "Servicio de seguridad",
+          "fr": "Service de sécurité"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d67f8e4d-5a94-4a42-af36-fa5f4a04af7a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d67f8e4d-5a94-4a42-af36-fa5f4a04af7a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Service de surveillance ou de protection des personnes et des lieux, dont le périmètre et les horaires dépendent de la prestation décrite.",
+        "description_i18n": {
+          "de": "Dienstleistung zur Überwachung oder zum Schutz von Menschen und Orten, deren Umfang und Zeiten vom beschriebenen Angebot abhängen.",
+          "en": "Service monitoring or protecting people and premises, whose scope and hours depend on the service described.",
+          "es": "Servicio de vigilancia o protección de personas y lugares, cuyo alcance y horarios dependen de la prestación descrita.",
+          "fr": "Service de surveillance ou de protection des personnes et des lieux, dont le périmètre et les horaires dépendent de la prestation décrite."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d67f8e4d-5a94-4a42-af36-fa5f4a04af7a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d67f8e4d-5a94-4a42-af36-fa5f4a04af7a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d681eca6-c90d-4b78-ad53-493b2f26a12e",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "spa",
+      "base": {
+        "description": "Service de spa",
+        "description_i18n": {
+          "de": "Spa-Service",
+          "en": "Spa service",
+          "es": "Servicio de spa",
+          "fr": "Service de spa"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d681eca6-c90d-4b78-ad53-493b2f26a12e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d681eca6-c90d-4b78-ad53-493b2f26a12e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prestation de bien-être et de détente proposée dans un espace de spa, distincte de la seule présence d'un bain à remous.",
+        "description_i18n": {
+          "de": "Wellness- und Entspannungsleistung in einem Spa-Bereich; vom bloßen Vorhandensein eines Whirlpools zu unterscheiden.",
+          "en": "Wellness and relaxation service provided in a spa area, distinct from the mere presence of a whirlpool bath.",
+          "es": "Prestación de bienestar y relajación ofrecida en un espacio de spa, distinta de la mera presencia de una bañera de hidromasaje.",
+          "fr": "Prestation de bien-être et de détente proposée dans un espace de spa, distincte de la seule présence d'un bain à remous."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d681eca6-c90d-4b78-ad53-493b2f26a12e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d681eca6-c90d-4b78-ad53-493b2f26a12e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "252de186-d5b7-41f4-a8f9-6d4668ff50f8",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "tour_guide",
+      "base": {
+        "description": "Service de guide touristique",
+        "description_i18n": {
+          "de": "Touristische Führung durch einen Guide.",
+          "en": "Tour guiding service",
+          "es": "Servicio de guía turístico",
+          "fr": "Service de guide touristique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/252de186-d5b7-41f4-a8f9-6d4668ff50f8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/252de186-d5b7-41f4-a8f9-6d4668ff50f8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Service d'accompagnement de visiteurs par un guide qui présente et explique les lieux parcourus ou visités.",
+        "description_i18n": {
+          "de": "Begleitung von Gästen durch eine Führungsperson, die die durchquerten oder besuchten Orte vorstellt und erläutert.",
+          "en": "Service accompanying visitors with a guide who presents and explains the places travelled through or visited.",
+          "es": "Servicio de acompañamiento de visitantes por un guía que presenta y explica los lugares recorridos o visitados.",
+          "fr": "Service d'accompagnement de visiteurs par un guide qui présente et explique les lieux parcourus ou visités."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/252de186-d5b7-41f4-a8f9-6d4668ff50f8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/252de186-d5b7-41f4-a8f9-6d4668ff50f8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "63d1b54f-6f35-4903-8994-d301a8201b51",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "translation",
+      "base": {
+        "description": "Service de traduction",
+        "description_i18n": {
+          "de": "Übersetzungsservice",
+          "en": "Translation service",
+          "es": "Servicio de traducción",
+          "fr": "Service de traduction"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/63d1b54f-6f35-4903-8994-d301a8201b51. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/63d1b54f-6f35-4903-8994-d301a8201b51"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Service qui transpose un contenu d'une langue vers une autre pour en permettre la compréhension par son destinataire.",
+        "description_i18n": {
+          "de": "Dienstleistung zur Übertragung von Inhalten aus einer Sprache in eine andere, damit die Empfänger sie verstehen können.",
+          "en": "Service rendering content from one language into another so its recipient can understand it.",
+          "es": "Servicio que traslada un contenido de un idioma a otro para que su destinatario pueda comprenderlo.",
+          "fr": "Service qui transpose un contenu d'une langue vers une autre pour en permettre la compréhension par son destinataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/63d1b54f-6f35-4903-8994-d301a8201b51. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/63d1b54f-6f35-4903-8994-d301a8201b51"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e3bdb506-f750-4068-8ce4-05a42abb2506",
+      "domain": "service_type",
+      "context_key": "",
+      "code": "transport",
+      "base": {
+        "description": "Service de transport",
+        "description_i18n": {
+          "de": "Transportservice",
+          "en": "Transport service",
+          "es": "Servicio de transporte",
+          "fr": "Service de transport"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e3bdb506-f750-4068-8ce4-05a42abb2506. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e3bdb506-f750-4068-8ce4-05a42abb2506"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Service assurant le déplacement de voyageurs d'un lieu à un autre, distinct de la seule location d'un véhicule sans conducteur.",
+        "description_i18n": {
+          "de": "Dienstleistung zur Beförderung von Reisenden von einem Ort zu einem anderen; vom bloßen Fahrzeugverleih ohne Fahrer zu unterscheiden.",
+          "en": "Service moving travellers from one place to another, distinct from vehicle rental without a driver alone.",
+          "es": "Servicio que desplaza viajeros de un lugar a otro, distinto del mero alquiler de un vehículo sin conductor.",
+          "fr": "Service assurant le déplacement de voyageurs d'un lieu à un autre, distinct de la seule location d'un véhicule sans conducteur."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e3bdb506-f750-4068-8ce4-05a42abb2506. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e3bdb506-f750-4068-8ce4-05a42abb2506"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-document_type-1",
+  "proposals": [
+    {
+      "concept_id": "3c2b0752-7b01-4bb7-8886-d24581f7f45b",
+      "domain": "document_type",
+      "context_key": "",
+      "code": "brochure",
+      "base": {
+        "description": "Brochure ou dépliant",
+        "description_i18n": {
+          "de": "Broschüre oder Faltblatt",
+          "en": "Brochure or leaflet",
+          "es": "Folleto o díptico",
+          "fr": "Brochure ou dépliant"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3c2b0752-7b01-4bb7-8886-d24581f7f45b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3c2b0752-7b01-4bb7-8886-d24581f7f45b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Document de présentation d'un établissement, d'une activité ou d'une offre touristique, destiné à informer le public ; il peut prendre la forme d'un dépliant.",
+        "description_i18n": {
+          "de": "Informationsdokument über einen Betrieb, eine Aktivität oder ein touristisches Angebot für die Öffentlichkeit; es kann als Faltblatt gestaltet sein.",
+          "en": "Presentation document describing an establishment, activity or tourism offer for public information; it may take the form of a leaflet.",
+          "es": "Documento de presentación de un establecimiento, una actividad o una oferta turística destinado a informar al público; puede tener forma de folleto.",
+          "fr": "Document de présentation d'un établissement, d'une activité ou d'une offre touristique, destiné à informer le public ; il peut prendre la forme d'un dépliant."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3c2b0752-7b01-4bb7-8886-d24581f7f45b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3c2b0752-7b01-4bb7-8886-d24581f7f45b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a669c95f-4106-42fd-84ae-510ac36da24c",
+      "domain": "document_type",
+      "context_key": "",
+      "code": "carte",
+      "base": {
+        "description": "Carte ou menu téléchargeable d'un restaurant",
+        "description_i18n": {
+          "de": "Herunterladbare Speisekarte eines Restaurants",
+          "en": "Downloadable restaurant menu or menu card",
+          "es": "Carta o menú descargable de un restaurante",
+          "fr": "Carte ou menu téléchargeable d'un restaurant"
+        },
+        "name": "Carte / menu (PDF)",
+        "name_i18n": {
+          "de": "Speisekarte (PDF)",
+          "en": "Menu (PDF)",
+          "es": "Carta / menú (PDF)",
+          "fr": "Carte / menu (PDF)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Herunterladbare Speisekarte (PDF)"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Downloadable menu (PDF)"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Menú descargable (PDF)"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Menu téléchargeable (PDF)"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a669c95f-4106-42fd-84ae-510ac36da24c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a669c95f-4106-42fd-84ae-510ac36da24c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Document présentant les plats, boissons ou formules proposés par un restaurant ; ce type décrit le contenu de la pièce jointe, indépendamment de son format de fichier.",
+        "description_i18n": {
+          "de": "Dokument mit den Speisen, Getränken oder Menüs eines Restaurants; dieser Typ beschreibt den Inhalt des Anhangs unabhängig vom Dateiformat.",
+          "en": "Document listing a restaurant's dishes, drinks or set menus; this type describes the attachment's content independently of its file format.",
+          "es": "Documento que presenta los platos, bebidas o menús de un restaurante; el tipo describe el contenido del archivo adjunto con independencia de su formato.",
+          "fr": "Document présentant les plats, boissons ou formules proposés par un restaurant ; ce type décrit le contenu de la pièce jointe, indépendamment de son format de fichier."
+        },
+        "name": "Carte / menu",
+        "name_i18n": {
+          "de": "Speise- / Getränkekarte",
+          "en": "Menu / drinks list",
+          "es": "Carta / menú",
+          "fr": "Carte / menu"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Herunterladbare Speisekarte (PDF)"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Downloadable menu (PDF)"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Menú descargable (PDF)"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Menu téléchargeable (PDF)"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Speisekarte (PDF)"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Menu (PDF)"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Carta / menú (PDF)"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Carte / menu (PDF)"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a669c95f-4106-42fd-84ae-510ac36da24c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a669c95f-4106-42fd-84ae-510ac36da24c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4758ebaf-e711-4e49-b36d-dfbfa0fe32c9",
+      "domain": "document_type",
+      "context_key": "",
+      "code": "certificat",
+      "base": {
+        "description": "Certificat ou attestation",
+        "description_i18n": {
+          "de": "Zertifikat oder Bescheinigung",
+          "en": "Certificate or attestation",
+          "es": "Certificado o constancia",
+          "fr": "Certificat ou attestation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4758ebaf-e711-4e49-b36d-dfbfa0fe32c9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4758ebaf-e711-4e49-b36d-dfbfa0fe32c9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Pièce attestant un fait, une qualité ou une situation concernant la fiche ou l'acteur auquel elle est rattachée ; sa portée dépend de son émetteur et de son contenu.",
+        "description_i18n": {
+          "de": "Dokument, das einen Sachverhalt, eine Eigenschaft oder einen Status des zugeordneten Eintrags oder Akteurs bestätigt; seine Aussagekraft ergibt sich aus Aussteller und Inhalt.",
+          "en": "Document attesting a fact, qualification or situation concerning its linked listing or actor; its scope depends on its issuer and content.",
+          "es": "Documento que acredita un hecho, una cualidad o una situación de la ficha o del actor al que está vinculado; su alcance depende del emisor y del contenido.",
+          "fr": "Pièce attestant un fait, une qualité ou une situation concernant la fiche ou l'acteur auquel elle est rattachée ; sa portée dépend de son émetteur et de son contenu."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4758ebaf-e711-4e49-b36d-dfbfa0fe32c9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4758ebaf-e711-4e49-b36d-dfbfa0fe32c9"
+          }
+        ]
+      }
+    }
+  ]
+}

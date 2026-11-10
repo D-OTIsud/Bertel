@@ -1,0 +1,366 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-accommodation_type-1",
+  "proposals": [
+    {
+      "concept_id": "982f15ba-0be1-4bfb-a890-b0e7976420e3",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "apartment",
+      "base": {
+        "description": "Appartement de tourisme",
+        "description_i18n": {
+          "en": "Tourist apartment",
+          "es": "Apartamento turístico",
+          "fr": "Appartement de tourisme"
+        },
+        "name_i18n": {
+          "en": "Apartment",
+          "es": "Apartamento",
+          "fr": "Appartement"
+        }
+      },
+      "changes": {
+        "description": "Logement touristique autonome situé dans un immeuble, proposé à la location pour un séjour.",
+        "description_i18n": {
+          "en": "Self-contained tourist accommodation in a building, offered for rental for a stay.",
+          "es": "Alojamiento turístico independiente situado en un edificio y ofrecido en alquiler para una estancia.",
+          "fr": "Logement touristique autonome situé dans un immeuble, proposé à la location pour un séjour.",
+          "de": "Abgeschlossene Ferienunterkunft in einem Gebäude, die für einen Aufenthalt vermietet wird."
+        },
+        "name_i18n": {
+          "en": "Apartment",
+          "es": "Apartamento",
+          "fr": "Appartement",
+          "de": "Ferienwohnung"
+        }
+      }
+    },
+    {
+      "concept_id": "dfd4d00e-355c-4a06-a1db-37a28e0779f8",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "boutique_hotel",
+      "base": {
+        "description": "Hôtel boutique de charme",
+        "description_i18n": {
+          "en": "Charming boutique hotel",
+          "es": "Hotel boutique con encanto",
+          "fr": "Hôtel boutique de charme"
+        },
+        "name_i18n": {
+          "en": "Boutique hotel",
+          "es": "Hotel boutique",
+          "fr": "Hôtel boutique"
+        }
+      },
+      "changes": {
+        "description": "Établissement hôtelier mettant en avant son caractère et une décoration personnalisée plutôt qu'une offre standardisée.",
+        "description_i18n": {
+          "en": "Hotel emphasising its character and individual decor rather than a standardised offering.",
+          "es": "Establecimiento hotelero que destaca su carácter y una decoración personalizada frente a una oferta estandarizada.",
+          "fr": "Établissement hôtelier mettant en avant son caractère et une décoration personnalisée plutôt qu'une offre standardisée.",
+          "de": "Hotelbetrieb, der seinen eigenen Charakter und eine individuelle Gestaltung gegenüber einem standardisierten Angebot hervorhebt."
+        },
+        "name_i18n": {
+          "en": "Boutique hotel",
+          "es": "Hotel boutique",
+          "fr": "Hôtel boutique",
+          "de": "Boutique-Hotel"
+        }
+      }
+    },
+    {
+      "concept_id": "45c0dd62-42db-4a30-b7cd-5b30bcfbbfbc",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "camping",
+      "base": {
+        "description": "Camping",
+        "description_i18n": {
+          "en": "Campground",
+          "es": "Camping",
+          "fr": "Camping"
+        },
+        "name_i18n": {
+          "en": "Camping",
+          "es": "Camping",
+          "fr": "Camping"
+        }
+      },
+      "changes": {
+        "description": "Terrain aménagé pour accueillir des séjours en tente, caravane, camping-car ou hébergement de plein air.",
+        "description_i18n": {
+          "en": "Ground arranged to accommodate stays in tents, caravans, motorhomes or outdoor accommodation.",
+          "es": "Terreno acondicionado para estancias en tiendas, caravanas, autocaravanas o alojamientos al aire libre.",
+          "fr": "Terrain aménagé pour accueillir des séjours en tente, caravane, camping-car ou hébergement de plein air.",
+          "de": "Gelände für Aufenthalte in Zelten, Wohnwagen, Wohnmobilen oder Freiluftunterkünften."
+        },
+        "name_i18n": {
+          "en": "Camping",
+          "es": "Camping",
+          "fr": "Camping",
+          "de": "Campingplatz"
+        }
+      }
+    },
+    {
+      "concept_id": "79c60b2e-b3df-46ad-b431-4cb3159ed8c1",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "gite",
+      "base": {
+        "description": "Gîte rural ou urbain",
+        "description_i18n": {
+          "en": "Rural or urban holiday cottage",
+          "es": "Gîte rural o urbano",
+          "fr": "Gîte rural ou urbain"
+        },
+        "name_i18n": {
+          "en": "Holiday cottage",
+          "es": "Gîte",
+          "fr": "Gîte"
+        }
+      },
+      "changes": {
+        "description": "Logement meublé proposé pour un séjour autonome, en milieu rural ou urbain, à distinguer d'une chambre chez l'habitant.",
+        "description_i18n": {
+          "en": "Furnished accommodation offered for an independent stay in a rural or urban setting, distinct from a room in a host's home.",
+          "es": "Alojamiento amueblado para una estancia autónoma en un entorno rural o urbano, distinto de una habitación en casa del anfitrión.",
+          "fr": "Logement meublé proposé pour un séjour autonome, en milieu rural ou urbain, à distinguer d'une chambre chez l'habitant.",
+          "de": "Möblierte Unterkunft für einen eigenständigen Aufenthalt auf dem Land oder in der Stadt; von einem Gästezimmer im Haus des Gastgebers zu unterscheiden."
+        },
+        "name_i18n": {
+          "en": "Holiday cottage",
+          "es": "Gîte",
+          "fr": "Gîte",
+          "de": "Ferienunterkunft"
+        }
+      }
+    },
+    {
+      "concept_id": "afb2d487-bdc5-4ebf-92c6-55042be28861",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "glamping",
+      "base": {
+        "description": "Camping de luxe",
+        "description_i18n": {
+          "en": "Luxury camping",
+          "es": "Camping de lujo",
+          "fr": "Camping de luxe"
+        },
+        "name_i18n": {
+          "en": "Glamping",
+          "es": "Glamping",
+          "fr": "Glamping"
+        },
+        "name": "Glamping",
+        "labels": []
+      },
+      "changes": {
+        "description": "Forme de camping qui propose un confort et des aménagements haut de gamme, tout en conservant le cadre d'un séjour de plein air.",
+        "description_i18n": {
+          "en": "Form of camping offering high-end comfort and facilities while retaining an outdoor holiday setting.",
+          "es": "Modalidad de camping que ofrece confort e instalaciones de alta gama manteniendo el entorno de una estancia al aire libre.",
+          "fr": "Forme de camping qui propose un confort et des aménagements haut de gamme, tout en conservant le cadre d'un séjour de plein air.",
+          "de": "Campingform mit gehobenem Komfort und entsprechender Ausstattung, die den Rahmen eines Aufenthalts im Freien beibehält."
+        },
+        "name_i18n": {
+          "en": "Glamping",
+          "es": "Glamping",
+          "fr": "Camping de luxe",
+          "de": "Glamping"
+        },
+        "name": "Camping de luxe",
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "alt",
+            "value": "Glamping"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5d683df7-a7dc-4dae-aed4-81ff303e8b9b",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "guesthouse",
+      "base": {
+        "description": "Chambre d'hôtes",
+        "description_i18n": {
+          "en": "Guesthouse accommodation",
+          "es": "Casa de huéspedes",
+          "fr": "Chambre d'hôtes"
+        },
+        "name_i18n": {
+          "en": "Bed and breakfast",
+          "es": "Casa de huéspedes",
+          "fr": "Chambre d'hôtes"
+        }
+      },
+      "changes": {
+        "description": "Chambre touristique proposée chez un hôte, à distinguer de la location autonome d'un logement entier.",
+        "description_i18n": {
+          "en": "Guest room offered in a host's home, distinct from the independent rental of an entire property.",
+          "es": "Habitación turística ofrecida en casa de un anfitrión, distinta del alquiler autónomo de una vivienda completa.",
+          "fr": "Chambre touristique proposée chez un hôte, à distinguer de la location autonome d'un logement entier.",
+          "de": "Touristisch angebotenes Gästezimmer bei einem Gastgeber; von der eigenständigen Anmietung einer ganzen Unterkunft zu unterscheiden."
+        },
+        "name_i18n": {
+          "en": "Bed and breakfast",
+          "es": "Casa de huéspedes",
+          "fr": "Chambre d'hôtes",
+          "de": "Gästezimmer bei Gastgebern"
+        }
+      }
+    },
+    {
+      "concept_id": "85e0a967-ae76-4aaf-b7bb-665ea286c4ff",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "hotel",
+      "base": {
+        "description": "Hôtel classique",
+        "description_i18n": {
+          "en": "Classic hotel",
+          "es": "Hotel clásico",
+          "fr": "Hôtel classique"
+        },
+        "name_i18n": {
+          "en": "Hotel",
+          "es": "Hotel",
+          "fr": "Hôtel"
+        }
+      },
+      "changes": {
+        "description": "Établissement proposant des chambres aux voyageurs et des services hôteliers pendant leur séjour.",
+        "description_i18n": {
+          "en": "Establishment providing rooms for travellers and hotel services during their stay.",
+          "es": "Establecimiento que ofrece habitaciones a viajeros y servicios hoteleros durante su estancia.",
+          "fr": "Établissement proposant des chambres aux voyageurs et des services hôteliers pendant leur séjour.",
+          "de": "Betrieb, der Reisenden Zimmer und während des Aufenthalts Hoteldienstleistungen anbietet."
+        },
+        "name_i18n": {
+          "en": "Hotel",
+          "es": "Hotel",
+          "fr": "Hôtel",
+          "de": "Hotel"
+        }
+      }
+    },
+    {
+      "concept_id": "18b6c72f-1d26-4f06-8cb1-c5ff71bb6d06",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "luxury_hotel",
+      "base": {
+        "description": "Hôtel haut de gamme",
+        "description_i18n": {
+          "en": "High-end hotel",
+          "es": "Hotel de alta gama",
+          "fr": "Hôtel haut de gamme"
+        },
+        "name_i18n": {
+          "en": "Luxury hotel",
+          "es": "Hotel de lujo",
+          "fr": "Hôtel de luxe"
+        }
+      },
+      "changes": {
+        "description": "Établissement hôtelier positionné sur une offre haut de gamme par son confort et ses prestations ; cette désignation n'attribue pas à elle seule un classement officiel.",
+        "description_i18n": {
+          "en": "Hotel positioned at the high end through its comfort and services; this designation does not by itself award an official rating.",
+          "es": "Establecimiento hotelero de alta gama por su confort y prestaciones; esta denominación no atribuye por sí sola una clasificación oficial.",
+          "fr": "Établissement hôtelier positionné sur une offre haut de gamme par son confort et ses prestations ; cette désignation n'attribue pas à elle seule un classement officiel.",
+          "de": "Hotelbetrieb mit gehobenem Komfort und Leistungsangebot; diese Bezeichnung verleiht für sich allein keine amtliche Klassifizierung."
+        },
+        "name_i18n": {
+          "en": "Luxury hotel",
+          "es": "Hotel de lujo",
+          "fr": "Hôtel de luxe",
+          "de": "Luxushotel"
+        }
+      }
+    },
+    {
+      "concept_id": "1bc97fe7-8abf-4be9-be8c-fe9b3f06c73a",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "resort",
+      "base": {
+        "description": "Complexe hôtelier",
+        "description_i18n": {
+          "en": "Hotel resort complex",
+          "es": "Complejo hotelero resort",
+          "fr": "Complexe hôtelier"
+        },
+        "name_i18n": {
+          "en": "Resort",
+          "es": "Resort",
+          "fr": "Résort"
+        },
+        "name": "Résort",
+        "labels": []
+      },
+      "changes": {
+        "description": "Complexe hôtelier réunissant hébergement et plusieurs services ou espaces de loisirs sur un même site.",
+        "description_i18n": {
+          "en": "Hotel complex bringing together accommodation and several services or leisure areas on one site.",
+          "es": "Complejo hotelero que reúne alojamiento y varios servicios o espacios de ocio en un mismo lugar.",
+          "fr": "Complexe hôtelier réunissant hébergement et plusieurs services ou espaces de loisirs sur un même site.",
+          "de": "Hotelanlage, die Unterkunft und mehrere Dienstleistungen oder Freizeitbereiche an einem Standort vereint."
+        },
+        "name_i18n": {
+          "en": "Resort",
+          "es": "Resort",
+          "fr": "Complexe hôtelier",
+          "de": "Ferienresort"
+        },
+        "name": "Complexe hôtelier",
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "alt",
+            "value": "Résort"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "686a5858-7809-45ed-90b6-a03becd21d5a",
+      "domain": "accommodation_type",
+      "context_key": "",
+      "code": "villa",
+      "base": {
+        "description": "Villa de location",
+        "description_i18n": {
+          "en": "Rental villa",
+          "es": "Villa de alquiler",
+          "fr": "Villa de location"
+        },
+        "name_i18n": {
+          "en": "Villa",
+          "es": "Villa",
+          "fr": "Villa"
+        }
+      },
+      "changes": {
+        "description": "Maison individuelle proposée à la location pour le séjour touristique de ses occupants.",
+        "description_i18n": {
+          "en": "Individual house offered for rental for its occupants' holiday stay.",
+          "es": "Casa individual ofrecida en alquiler para la estancia turística de sus ocupantes.",
+          "fr": "Maison individuelle proposée à la location pour le séjour touristique de ses occupants.",
+          "de": "Einzelhaus, das Gästen für einen Ferienaufenthalt zur Miete angeboten wird."
+        },
+        "name_i18n": {
+          "en": "Villa",
+          "es": "Villa",
+          "fr": "Villa",
+          "de": "Ferienvilla"
+        }
+      }
+    }
+  ]
+}

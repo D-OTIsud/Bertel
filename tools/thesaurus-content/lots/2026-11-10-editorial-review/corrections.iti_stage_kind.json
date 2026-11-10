@@ -1,0 +1,326 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-iti_stage_kind-1",
+  "proposals": [
+    {
+      "concept_id": "dd554490-973f-4503-910f-b40ed4f03406",
+      "domain": "iti_stage_kind",
+      "context_key": "",
+      "code": "arrivee",
+      "base": {
+        "description": "Point d'arrivée",
+        "description_i18n": {
+          "de": "Ankunftspunkt",
+          "en": "Arrival point",
+          "es": "Punto de llegada",
+          "fr": "Point d'arrivée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dd554490-973f-4503-910f-b40ed4f03406. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dd554490-973f-4503-910f-b40ed4f03406"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Point où se termine l’itinéraire décrit. Il repère l’arrivée du parcours, qui peut coïncider avec son départ lorsqu’il forme une boucle.",
+        "description_i18n": {
+          "de": "Punkt, an dem die beschriebene Route endet. Er kennzeichnet das Ziel, das bei einem Rundweg mit dem Start zusammenfallen kann.",
+          "en": "Point where the described itinerary ends. It marks the finish, which may coincide with the start on a circular route.",
+          "es": "Punto en el que termina el itinerario descrito. Señala la llegada, que puede coincidir con la salida en un recorrido circular.",
+          "fr": "Point où se termine l’itinéraire décrit. Il repère l’arrivée du parcours, qui peut coïncider avec son départ lorsqu’il forme une boucle."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dd554490-973f-4503-910f-b40ed4f03406. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dd554490-973f-4503-910f-b40ed4f03406"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "eb302473-7eeb-4025-96b9-bd45ed1c45bb",
+      "domain": "iti_stage_kind",
+      "context_key": "",
+      "code": "depart",
+      "base": {
+        "description": "Point de départ",
+        "description_i18n": {
+          "de": "Startpunkt",
+          "en": "Departure point",
+          "es": "Punto de salida",
+          "fr": "Point de départ"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/eb302473-7eeb-4025-96b9-bd45ed1c45bb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/eb302473-7eeb-4025-96b9-bd45ed1c45bb"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Point à partir duquel commence l’itinéraire décrit. Il sert de repère initial pour ordonner les étapes du parcours.",
+        "description_i18n": {
+          "de": "Punkt, an dem die beschriebene Route beginnt. Er dient als Ausgangspunkt für die Reihenfolge der Etappen.",
+          "en": "Point from which the described itinerary starts. It provides the initial reference for ordering the route’s stages.",
+          "es": "Punto desde el que comienza el itinerario descrito. Sirve de referencia inicial para ordenar sus etapas.",
+          "fr": "Point à partir duquel commence l’itinéraire décrit. Il sert de repère initial pour ordonner les étapes du parcours."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/eb302473-7eeb-4025-96b9-bd45ed1c45bb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/eb302473-7eeb-4025-96b9-bd45ed1c45bb"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "66468cf7-728e-41ba-872d-5c2ac5f289d2",
+      "domain": "iti_stage_kind",
+      "context_key": "",
+      "code": "etape",
+      "base": {
+        "description": "Étape du parcours",
+        "description_i18n": {
+          "de": "Etappe der Strecke",
+          "en": "Stage of the route",
+          "es": "Etapa del recorrido",
+          "fr": "Étape du parcours"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/66468cf7-728e-41ba-872d-5c2ac5f289d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/66468cf7-728e-41ba-872d-5c2ac5f289d2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Point ou étape intermédiaire du parcours, entre son départ et son arrivée. Ce repère aide à décomposer et présenter la progression de l’itinéraire.",
+        "description_i18n": {
+          "de": "Zwischenpunkt oder Etappe zwischen Start und Ziel. Er hilft, den Verlauf der Route zu gliedern und darzustellen.",
+          "en": "Intermediate point or stage between the route’s start and finish. It helps divide and present progress along the itinerary.",
+          "es": "Punto o etapa intermedia entre la salida y la llegada. Ayuda a dividir y presentar la progresión del itinerario.",
+          "fr": "Point ou étape intermédiaire du parcours, entre son départ et son arrivée. Ce repère aide à décomposer et présenter la progression de l’itinéraire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/66468cf7-728e-41ba-872d-5c2ac5f289d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/66468cf7-728e-41ba-872d-5c2ac5f289d2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e1a7ad39-061f-4f54-85a4-0884b55c3838",
+      "domain": "iti_stage_kind",
+      "context_key": "",
+      "code": "panorama",
+      "base": {
+        "description": "Point de vue",
+        "description_i18n": {
+          "de": "Ort mit weitem Ausblick",
+          "en": "Scenic viewpoint",
+          "es": "Lugar con vista panorámica",
+          "fr": "Point de vue"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e1a7ad39-061f-4f54-85a4-0884b55c3838. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e1a7ad39-061f-4f54-85a4-0884b55c3838"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Point d’un itinéraire identifié pour la vue sur le paysage. Il décrit un intérêt visuel du parcours, sans désigner nécessairement une étape de repos.",
+        "description_i18n": {
+          "de": "Punkt einer Route, der wegen seines Landschaftsausblicks erfasst wird. Er beschreibt einen Aussichtspunkt, ohne zwingend einen Rastplatz zu bezeichnen.",
+          "en": "Point on an itinerary identified for its landscape view. It records scenic interest without necessarily indicating a rest stop.",
+          "es": "Punto de un itinerario señalado por sus vistas del paisaje. Describe un interés visual sin implicar necesariamente una parada de descanso.",
+          "fr": "Point d’un itinéraire identifié pour la vue sur le paysage. Il décrit un intérêt visuel du parcours, sans désigner nécessairement une étape de repos."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e1a7ad39-061f-4f54-85a4-0884b55c3838. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e1a7ad39-061f-4f54-85a4-0884b55c3838"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b2eaf435-5e94-4302-b936-840a2e909acd",
+      "domain": "iti_stage_kind",
+      "context_key": "",
+      "code": "parking",
+      "base": {
+        "description": "Stationnement",
+        "description_i18n": {
+          "de": "Parkmöglichkeit",
+          "en": "Parking area",
+          "es": "Zona de aparcamiento",
+          "fr": "Stationnement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b2eaf435-5e94-4302-b936-840a2e909acd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b2eaf435-5e94-4302-b936-840a2e909acd"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Point d’itinéraire correspondant à une zone de stationnement associée au parcours. Sa présence ne précise pas à elle seule la capacité ou les conditions d’accès.",
+        "description_i18n": {
+          "de": "Routenpunkt, der einen zur Strecke gehörenden Parkplatz bezeichnet. Die Angabe allein bestimmt weder Kapazität noch Zugangsbedingungen.",
+          "en": "Itinerary point corresponding to a parking area associated with the route. Its presence alone does not specify capacity or access conditions.",
+          "es": "Punto del itinerario correspondiente a una zona de aparcamiento asociada al recorrido. Su presencia no precisa por sí sola la capacidad ni las condiciones de acceso.",
+          "fr": "Point d’itinéraire correspondant à une zone de stationnement associée au parcours. Sa présence ne précise pas à elle seule la capacité ou les conditions d’accès."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b2eaf435-5e94-4302-b936-840a2e909acd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b2eaf435-5e94-4302-b936-840a2e909acd"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0c27a2b1-950a-48f3-8e80-710143912828",
+      "domain": "iti_stage_kind",
+      "context_key": "",
+      "code": "point_eau",
+      "base": {
+        "description": "Source / ravitaillement en eau",
+        "description_i18n": {
+          "de": "Wasserquelle oder Wasserauffüllstelle",
+          "en": "Water source or refill point",
+          "es": "Fuente o punto de recarga de agua",
+          "fr": "Source / ravitaillement en eau"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0c27a2b1-950a-48f3-8e80-710143912828. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0c27a2b1-950a-48f3-8e80-710143912828"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Point du parcours où une source ou un approvisionnement en eau est signalé. Le repère seul ne garantit ni la potabilité ni la disponibilité au moment du passage.",
+        "description_i18n": {
+          "de": "Punkt der Strecke, an dem eine Wasserquelle oder Wasserversorgung angegeben ist. Die Markierung allein gewährleistet weder Trinkwasserqualität noch Verfügbarkeit zum Zeitpunkt des Vorbeikommens.",
+          "en": "Route point where a water source or supply is recorded. The marker alone guarantees neither drinking-water quality nor availability at the time of passage.",
+          "es": "Punto del recorrido en el que se indica una fuente o un suministro de agua. El marcador por sí solo no garantiza su potabilidad ni su disponibilidad al pasar.",
+          "fr": "Point du parcours où une source ou un approvisionnement en eau est signalé. Le repère seul ne garantit ni la potabilité ni la disponibilité au moment du passage."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0c27a2b1-950a-48f3-8e80-710143912828. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0c27a2b1-950a-48f3-8e80-710143912828"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1b2916e0-b116-4afe-adbd-ce5b4139016e",
+      "domain": "iti_stage_kind",
+      "context_key": "",
+      "code": "point_interet",
+      "base": {
+        "description": "Lieu remarquable situé le long de l'itinéraire",
+        "description_i18n": {
+          "de": "Bemerkenswerter Ort entlang der Strecke",
+          "en": "Notable place along the route",
+          "es": "Lugar destacado a lo largo de la ruta",
+          "fr": "Lieu remarquable situé le long de l'itinéraire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1b2916e0-b116-4afe-adbd-ce5b4139016e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1b2916e0-b116-4afe-adbd-ce5b4139016e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lieu remarquable repéré le long de l’itinéraire pour enrichir sa découverte. Il peut être décrit comme point d’intérêt sans constituer le départ, l’arrivée ou une étape technique.",
+        "description_i18n": {
+          "de": "Bemerkenswerter Ort entlang einer Route, der die Erkundung ergänzt. Er muss weder Start, Ziel noch eine technische Etappe sein.",
+          "en": "Notable place marked along an itinerary to enrich the visit. It need not be the start, finish or a technical stage.",
+          "es": "Lugar destacado señalado a lo largo del itinerario para enriquecer su descubrimiento. No tiene por qué ser la salida, la llegada ni una etapa técnica.",
+          "fr": "Lieu remarquable repéré le long de l’itinéraire pour enrichir sa découverte. Il peut être décrit comme point d’intérêt sans constituer le départ, l’arrivée ou une étape technique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1b2916e0-b116-4afe-adbd-ce5b4139016e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1b2916e0-b116-4afe-adbd-ce5b4139016e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ec828a22-475b-45fb-bb39-d7d583731a55",
+      "domain": "iti_stage_kind",
+      "context_key": "",
+      "code": "ravitaillement",
+      "base": {
+        "description": "Point de ravitaillement",
+        "description_i18n": {
+          "de": "Versorgungspunkt auf der Strecke",
+          "en": "Point along the route where food and drink can be obtained",
+          "es": "Punto de avituallamiento en el recorrido",
+          "fr": "Point de ravitaillement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ec828a22-475b-45fb-bb39-d7d583731a55. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ec828a22-475b-45fb-bb39-d7d583731a55"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Point du parcours où un approvisionnement, notamment en nourriture ou en boissons, est indiqué. Il se distingue d’un point signalant uniquement de l’eau.",
+        "description_i18n": {
+          "de": "Punkt der Strecke, an dem Versorgung, insbesondere mit Lebensmitteln oder Getränken, angegeben ist. Er unterscheidet sich von einer reinen Wasserstelle.",
+          "en": "Route point where supplies, particularly food or drinks, are indicated. This differs from a point marking water alone.",
+          "es": "Punto del recorrido en el que se indica avituallamiento, en particular alimentos o bebidas. Se distingue de un punto que solo señala agua.",
+          "fr": "Point du parcours où un approvisionnement, notamment en nourriture ou en boissons, est indiqué. Il se distingue d’un point signalant uniquement de l’eau."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ec828a22-475b-45fb-bb39-d7d583731a55. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ec828a22-475b-45fb-bb39-d7d583731a55"
+          }
+        ]
+      }
+    }
+  ]
+}

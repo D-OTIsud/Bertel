@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION thesaurus.normalize_editorial_text(p_text text)
 RETURNS text LANGUAGE sql IMMUTABLE SECURITY INVOKER
 SET search_path=pg_catalog AS $normalize$
   SELECT lower(regexp_replace(normalize(COALESCE(p_text,''),NFKC),
-    U&'[[:punct:][:space:]\00A0\1680\2000-\200B\2028\2029\202F\205F\3000\FEFF]+','','g'))
+    U&'[[:punct:][:space:]\00A0\1680\2000-\200B\2028\2029\202F\205F\3000\00AD\0600-\0605\061C\06DD\070F\0890-\0891\08E2\180E\200B-\200F\202A-\202E\2060-\2064\2066-\206F\FEFF\FFF9-\FFFB\+0110BD\+0110CD\+013430-\+01343F\+01BCA0-\+01BCA3\+01D173-\+01D17A\+0E0001\+0E0020-\+0E007F]+','','g'))
 $normalize$;
 REVOKE ALL ON FUNCTION thesaurus.normalize_editorial_text(text) FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION thesaurus.normalize_editorial_text(text) TO bertel_thesaurus_publisher;

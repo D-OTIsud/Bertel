@@ -1,0 +1,286 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-iti_open_status-1",
+  "proposals": [
+    {
+      "concept_id": "ada313fd-f185-45e0-8035-5506f13386a6",
+      "domain": "iti_open_status",
+      "context_key": "",
+      "code": "archived",
+      "base": {
+        "description": "Sentier archivé par décision humaine",
+        "description_i18n": {
+          "de": "Wanderweg durch manuelle Entscheidung archiviert",
+          "en": "Trail archived by a human decision",
+          "es": "Sendero archivado por decisión humana",
+          "fr": "Sentier archivé par décision humaine"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ada313fd-f185-45e0-8035-5506f13386a6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ada313fd-f185-45e0-8035-5506f13386a6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Sentier retiré du suivi courant par une décision humaine d’archivage. Cet état conserve sa trace dans le référentiel sans annoncer son ouverture.",
+        "description_i18n": {
+          "de": "Weg, der durch eine menschliche Archivierungsentscheidung aus der laufenden Beobachtung genommen wurde. Sein Datensatz bleibt erhalten, ohne ihn als offen auszuweisen.",
+          "en": "Trail removed from current monitoring through a human archiving decision. Its record is retained without indicating that it is open.",
+          "es": "Sendero retirado del seguimiento habitual por una decisión humana de archivo. Se conserva su registro sin anunciar su apertura.",
+          "fr": "Sentier retiré du suivi courant par une décision humaine d’archivage. Cet état conserve sa trace dans le référentiel sans annoncer son ouverture."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ada313fd-f185-45e0-8035-5506f13386a6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ada313fd-f185-45e0-8035-5506f13386a6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "80f7b015-5577-488d-bd8e-8c6bdff6cd5c",
+      "domain": "iti_open_status",
+      "context_key": "",
+      "code": "closed",
+      "base": {
+        "description": "Itinéraire fermé",
+        "description_i18n": {
+          "de": "Wanderweg gesperrt",
+          "en": "Trail closed",
+          "es": "Sendero cerrado",
+          "fr": "Itinéraire fermé"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/80f7b015-5577-488d-bd8e-8c6bdff6cd5c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/80f7b015-5577-488d-bd8e-8c6bdff6cd5c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Itinéraire ou sentier signalé comme fermé dans l’état d’ouverture enregistré. Ce statut se distingue d’un état inconnu ou d’une fermeture partielle.",
+        "description_i18n": {
+          "de": "Route oder Weg, der im erfassten Öffnungsstatus als gesperrt ausgewiesen wird. Dies unterscheidet sich von unbekanntem Status oder einer Teilsperrung.",
+          "en": "Route or trail recorded as closed in its opening status. This differs from an unknown status or a partial closure.",
+          "es": "Itinerario o sendero registrado como cerrado. Este estado se distingue de un estado desconocido o de un cierre parcial.",
+          "fr": "Itinéraire ou sentier signalé comme fermé dans l’état d’ouverture enregistré. Ce statut se distingue d’un état inconnu ou d’une fermeture partielle."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/80f7b015-5577-488d-bd8e-8c6bdff6cd5c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/80f7b015-5577-488d-bd8e-8c6bdff6cd5c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1e53e877-10e6-4f7f-9d4c-d11812d161fd",
+      "domain": "iti_open_status",
+      "context_key": "",
+      "code": "not_managed",
+      "base": {
+        "description": "Hors gestion de la source (état non garanti — jamais traduit en ouvert)",
+        "description_i18n": {
+          "de": "Nicht von der Quelle verwaltet (Status nicht garantiert; niemals als offen angezeigt)",
+          "en": "Not managed by the source (status not guaranteed; never shown as open)",
+          "es": "Fuera de gestión de la fuente (estado no garantizado; nunca se muestra como abierto)",
+          "fr": "Hors gestion de la source (état non garanti — jamais traduit en ouvert)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1e53e877-10e6-4f7f-9d4c-d11812d161fd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1e53e877-10e6-4f7f-9d4c-d11812d161fd"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Sentier situé hors du périmètre de gestion de la source interrogée. L’absence de suivi par cette source ne vaut ni ouverture ni garantie de praticabilité.",
+        "description_i18n": {
+          "de": "Weg außerhalb des Verwaltungsbereichs der abgefragten Quelle. Fehlende Betreuung durch diese Quelle bedeutet weder Öffnung noch gewährleistete Begehbarkeit.",
+          "en": "Trail outside the queried source’s management scope. Lack of monitoring by that source establishes neither opening nor passability.",
+          "es": "Sendero situado fuera del ámbito de gestión de la fuente consultada. La falta de seguimiento por esa fuente no implica apertura ni garantiza la transitabilidad.",
+          "fr": "Sentier situé hors du périmètre de gestion de la source interrogée. L’absence de suivi par cette source ne vaut ni ouverture ni garantie de praticabilité."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1e53e877-10e6-4f7f-9d4c-d11812d161fd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1e53e877-10e6-4f7f-9d4c-d11812d161fd"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b28b9bcd-6e6a-46b9-9159-666116212ec0",
+      "domain": "iti_open_status",
+      "context_key": "",
+      "code": "open",
+      "base": {
+        "description": "Itinéraire ouvert",
+        "description_i18n": {
+          "de": "Wanderweg offen",
+          "en": "Trail open",
+          "es": "Sendero abierto",
+          "fr": "Itinéraire ouvert"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b28b9bcd-6e6a-46b9-9159-666116212ec0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b28b9bcd-6e6a-46b9-9159-666116212ec0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Itinéraire ou sentier signalé comme ouvert dans l’état enregistré. Cette information d’ouverture ne remplace pas les conditions et consignes propres au parcours.",
+        "description_i18n": {
+          "de": "Route oder Weg, der im erfassten Status als offen ausgewiesen ist. Diese Angabe ersetzt nicht die Bedingungen und Hinweise zur jeweiligen Strecke.",
+          "en": "Route or trail marked as open in the recorded status. This opening information does not replace route-specific conditions or instructions.",
+          "es": "Itinerario o sendero indicado como abierto en el estado registrado. Esta información no sustituye las condiciones e instrucciones propias del recorrido.",
+          "fr": "Itinéraire ou sentier signalé comme ouvert dans l’état enregistré. Cette information d’ouverture ne remplace pas les conditions et consignes propres au parcours."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b28b9bcd-6e6a-46b9-9159-666116212ec0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b28b9bcd-6e6a-46b9-9159-666116212ec0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "155cad45-c136-4fb7-813b-a18092210776",
+      "domain": "iti_open_status",
+      "context_key": "",
+      "code": "partially_closed",
+      "base": {
+        "description": "Itinéraire partiellement fermé",
+        "description_i18n": {
+          "de": "Wanderweg teilweise gesperrt",
+          "en": "Trail partially closed",
+          "es": "Sendero parcialmente cerrado",
+          "fr": "Itinéraire partiellement fermé"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/155cad45-c136-4fb7-813b-a18092210776. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/155cad45-c136-4fb7-813b-a18092210776"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Itinéraire dont une partie est signalée fermée. Ce statut ne permet pas de présenter l’ensemble du parcours comme intégralement ouvert.",
+        "description_i18n": {
+          "de": "Route, bei der ein Abschnitt als gesperrt gemeldet ist. Die gesamte Strecke darf daher nicht als vollständig offen dargestellt werden.",
+          "en": "Route with a section recorded as closed. The route as a whole must not be presented as fully open.",
+          "es": "Itinerario con una parte indicada como cerrada. Este estado no permite presentar todo el recorrido como plenamente abierto.",
+          "fr": "Itinéraire dont une partie est signalée fermée. Ce statut ne permet pas de présenter l’ensemble du parcours comme intégralement ouvert."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/155cad45-c136-4fb7-813b-a18092210776. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/155cad45-c136-4fb7-813b-a18092210776"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4610f1e8-78c6-48e6-90e1-de222ad44991",
+      "domain": "iti_open_status",
+      "context_key": "",
+      "code": "unknown",
+      "base": {
+        "description": "État inconnu, non renseigné ou valeur source non reconnue",
+        "description_i18n": {
+          "de": "Unbekannter Status, nicht erfasst oder nicht erkannter Quellwert",
+          "en": "Unknown status, not recorded, or unrecognised source value",
+          "es": "Estado desconocido, no informado o valor de origen no reconocido",
+          "fr": "État inconnu, non renseigné ou valeur source non reconnue"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4610f1e8-78c6-48e6-90e1-de222ad44991. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4610f1e8-78c6-48e6-90e1-de222ad44991"
+          }
+        ]
+      },
+      "changes": {
+        "description": "État d’ouverture non déterminé, absent ou issu d’une valeur source non reconnue. Cette absence d’information ne doit pas être assimilée à une ouverture.",
+        "description_i18n": {
+          "de": "Nicht bestimmter oder fehlender Öffnungsstatus oder ein nicht erkannter Quellwert. Fehlende Information ist nicht mit einer Öffnung gleichzusetzen.",
+          "en": "Opening status that is undetermined, missing or based on an unrecognised source value. Missing information must not be treated as an open status.",
+          "es": "Estado de apertura no determinado, ausente o procedente de un valor de origen no reconocido. La falta de información no equivale a una apertura.",
+          "fr": "État d’ouverture non déterminé, absent ou issu d’une valeur source non reconnue. Cette absence d’information ne doit pas être assimilée à une ouverture."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4610f1e8-78c6-48e6-90e1-de222ad44991. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4610f1e8-78c6-48e6-90e1-de222ad44991"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d58a51c7-7b33-4a1e-ace0-26eda049cd51",
+      "domain": "iti_open_status",
+      "context_key": "",
+      "code": "warning",
+      "base": {
+        "description": "Praticabilité à surveiller",
+        "description_i18n": {
+          "de": "Begehbarkeit beobachten",
+          "en": "Passability to be monitored",
+          "es": "Transitabilidad a vigilar",
+          "fr": "Praticabilité à surveiller"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d58a51c7-7b33-4a1e-ace0-26eda049cd51. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d58a51c7-7b33-4a1e-ace0-26eda049cd51"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Itinéraire dont les conditions de praticabilité appellent une vigilance particulière. Ce signalement se distingue d’une fermeture déclarée.",
+        "description_i18n": {
+          "de": "Route, deren Begehbarkeit besondere Vorsicht erfordert. Dieser Hinweis unterscheidet sich von einer gemeldeten Sperrung.",
+          "en": "Route whose passability conditions call for particular caution. This advisory differs from a declared closure.",
+          "es": "Itinerario cuyas condiciones de transitabilidad requieren especial precaución. Este aviso se distingue de un cierre declarado.",
+          "fr": "Itinéraire dont les conditions de praticabilité appellent une vigilance particulière. Ce signalement se distingue d’une fermeture déclarée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d58a51c7-7b33-4a1e-ace0-26eda049cd51. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d58a51c7-7b33-4a1e-ace0-26eda049cd51"
+          }
+        ]
+      }
+    }
+  ]
+}

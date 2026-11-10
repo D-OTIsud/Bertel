@@ -10,8 +10,9 @@ ALTER TABLE thesaurus.vocabulary
 CREATE OR REPLACE FUNCTION thesaurus.has_editorial_text(p_value jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE SECURITY INVOKER
 SET search_path=pg_catalog AS $text$
+  -- Whitespace and Unicode format controls (Cf) alone contain no editorial text.
   SELECT COALESCE(jsonb_typeof(p_value)='string' AND (p_value#>>'{}') ~
-    U&'[^[:space:]\00A0\1680\2000-\200B\2028\2029\202F\205F\3000\FEFF]',false)
+    U&'[^[:space:]\00A0\1680\2000-\200B\2028\2029\202F\205F\3000\00AD\0600-\0605\061C\06DD\070F\0890-\0891\08E2\180E\200B-\200F\202A-\202E\2060-\2064\2066-\206F\FEFF\FFF9-\FFFB\+0110BD\+0110CD\+013430-\+01343F\+01BCA0-\+01BCA3\+01D173-\+01D17A\+0E0001\+0E0020-\+0E007F]',false)
 $text$;
 
 -- The same check serves editable documents and the complete release snapshot.

@@ -1,0 +1,343 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-activity_type-1",
+  "proposals": [
+    {
+      "concept_id": "79b2c137-ef58-49a0-932f-0e7451165081",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "bird_watching",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/79b2c137-ef58-49a0-932f-0e7451165081. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/79b2c137-ef58-49a0-932f-0e7451165081"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Vögel beobachten"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Birding"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Birdwatching"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Avistamiento de aves"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Observation ornithologique"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/79b2c137-ef58-49a0-932f-0e7451165081. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/79b2c137-ef58-49a0-932f-0e7451165081"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Vögel beobachten"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Birding"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Avistamiento de aves"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Observation ornithologique"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d7c2a965-af33-4a50-8fae-cf6229b16115",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "cooking_class",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d7c2a965-af33-4a50-8fae-cf6229b16115. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d7c2a965-af33-4a50-8fae-cf6229b16115"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d7c2a965-af33-4a50-8fae-cf6229b16115. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d7c2a965-af33-4a50-8fae-cf6229b16115"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "211d4c31-314c-40d3-be35-a6ff6126269a",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "diving",
+      "base": {
+        "description": "Plongée sous-marine",
+        "description_i18n": {
+          "de": "Aktivität des Tauchens unter Wasser.",
+          "en": "Underwater diving activity.",
+          "es": "Actividad de inmersión bajo el agua.",
+          "fr": "Plongée sous-marine"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/211d4c31-314c-40d3-be35-a6ff6126269a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/211d4c31-314c-40d3-be35-a6ff6126269a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Activité d'immersion sous la surface de l'eau en milieu marin, à distinguer de la simple observation en surface avec masque et tuba.",
+        "description_i18n": {
+          "de": "Aktivität des Untertauchens unter die Wasseroberfläche im Meer; vom Beobachten an der Oberfläche mit Maske und Schnorchel zu unterscheiden.",
+          "en": "Activity involving immersion below the water's surface in a marine environment, distinct from observing from the surface with a mask and snorkel.",
+          "es": "Actividad de inmersión bajo la superficie del agua en un medio marino, distinta de la observación desde la superficie con máscara y tubo.",
+          "fr": "Activité d'immersion sous la surface de l'eau en milieu marin, à distinguer de la simple observation en surface avec masque et tuba."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/211d4c31-314c-40d3-be35-a6ff6126269a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/211d4c31-314c-40d3-be35-a6ff6126269a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0665d3e4-90f6-4110-adb5-f5d57059ad68",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "guided_tour",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0665d3e4-90f6-4110-adb5-f5d57059ad68. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0665d3e4-90f6-4110-adb5-f5d57059ad68"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0665d3e4-90f6-4110-adb5-f5d57059ad68. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0665d3e4-90f6-4110-adb5-f5d57059ad68"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "978c88d3-45cb-4a20-9fa4-5897558d9c1e",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "hiking",
+      "base": {
+        "description": "Randonnée pédestre",
+        "description_i18n": {
+          "de": "Aktivität des Wanderns zu Fuß.",
+          "en": "Walking and hiking activity on foot.",
+          "es": "Actividad de senderismo a pie.",
+          "fr": "Randonnée pédestre"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/978c88d3-45cb-4a20-9fa4-5897558d9c1e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/978c88d3-45cb-4a20-9fa4-5897558d9c1e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Activité consistant à parcourir à pied un itinéraire pour découvrir les paysages et les lieux traversés ; cette valeur désigne la pratique, pas un sentier particulier.",
+        "description_i18n": {
+          "de": "Aktivität, bei der ein Weg zu Fuß zurückgelegt wird, um Landschaften und Orte entlang der Strecke zu entdecken; bezeichnet die Tätigkeit und keinen bestimmten Wanderweg.",
+          "en": "Activity of following a route on foot to discover landscapes and places along the way; this value denotes the activity rather than a particular trail.",
+          "es": "Actividad que consiste en recorrer a pie un itinerario para descubrir paisajes y lugares del recorrido; este valor designa la práctica, no un sendero concreto.",
+          "fr": "Activité consistant à parcourir à pied un itinéraire pour découvrir les paysages et les lieux traversés ; cette valeur désigne la pratique, pas un sentier particulier."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/978c88d3-45cb-4a20-9fa4-5897558d9c1e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/978c88d3-45cb-4a20-9fa4-5897558d9c1e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c19f3b3e-a559-4822-b548-3d72a0924704",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "museum_visit",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c19f3b3e-a559-4822-b548-3d72a0924704. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c19f3b3e-a559-4822-b548-3d72a0924704"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c19f3b3e-a559-4822-b548-3d72a0924704. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c19f3b3e-a559-4822-b548-3d72a0924704"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9530d5b6-26e0-434b-bc85-c8dff289b67d",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "paragliding",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9530d5b6-26e0-434b-bc85-c8dff289b67d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9530d5b6-26e0-434b-bc85-c8dff289b67d"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9530d5b6-26e0-434b-bc85-c8dff289b67d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9530d5b6-26e0-434b-bc85-c8dff289b67d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "faf50f56-458d-438d-83d7-549b170013e6",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "spa_treatment",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/faf50f56-458d-438d-83d7-549b170013e6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/faf50f56-458d-438d-83d7-549b170013e6"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/faf50f56-458d-438d-83d7-549b170013e6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/faf50f56-458d-438d-83d7-549b170013e6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e485b117-279e-451b-9fdb-6188b14a6203",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "surfing",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e485b117-279e-451b-9fdb-6188b14a6203. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e485b117-279e-451b-9fdb-6188b14a6203"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e485b117-279e-451b-9fdb-6188b14a6203. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e485b117-279e-451b-9fdb-6188b14a6203"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aca54199-2dd6-42e8-a292-483f8c4fb491",
+      "domain": "activity_type",
+      "context_key": "",
+      "code": "wine_tasting",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aca54199-2dd6-42e8-a292-483f8c4fb491. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aca54199-2dd6-42e8-a292-483f8c4fb491"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aca54199-2dd6-42e8-a292-483f8c4fb491. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aca54199-2dd6-42e8-a292-483f8c4fb491"
+          }
+        ]
+      }
+    }
+  ]
+}

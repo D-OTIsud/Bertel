@@ -1,0 +1,246 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-distribution_channel-1",
+  "proposals": [
+    {
+      "concept_id": "58a0aceb-be08-44de-9e8a-da5ee35acca5",
+      "domain": "distribution_channel",
+      "context_key": "",
+      "code": "abritel",
+      "base": {
+        "description": "Plateforme de location de vacances Abritel / Vrbo",
+        "description_i18n": {
+          "fr": "Plateforme de location de vacances Abritel / Vrbo"
+        },
+        "name_i18n": {
+          "fr": "Abritel"
+        }
+      },
+      "changes": {
+        "description": "Canal de diffusion ou de réservation d'hébergements de vacances sur Abritel ; il permet de renseigner la présence de l'offre sur cette plateforme.",
+        "description_i18n": {
+          "fr": "Canal de diffusion ou de réservation d'hébergements de vacances sur Abritel ; il permet de renseigner la présence de l'offre sur cette plateforme.",
+          "en": "Distribution or booking channel for holiday accommodation on Abritel, used to record an offer's presence on that platform.",
+          "es": "Canal de difusión o reserva de alojamientos vacacionales en Abritel, utilizado para indicar la presencia de una oferta en esa plataforma.",
+          "de": "Vertriebs- oder Buchungskanal für Ferienunterkünfte auf Abritel zur Erfassung der Präsenz eines Angebots auf dieser Plattform."
+        },
+        "name_i18n": {
+          "fr": "Abritel",
+          "en": "Abritel",
+          "es": "Abritel",
+          "de": "Abritel"
+        }
+      }
+    },
+    {
+      "concept_id": "e117dc5f-367b-45ed-a51b-a72f68a6f4b9",
+      "domain": "distribution_channel",
+      "context_key": "",
+      "code": "airbnb",
+      "base": {
+        "description": "Plateforme de location courte durée Airbnb",
+        "description_i18n": {
+          "fr": "Plateforme de location courte durée Airbnb"
+        },
+        "name_i18n": {
+          "fr": "Airbnb"
+        }
+      },
+      "changes": {
+        "description": "Canal de diffusion ou de réservation sur Airbnb, renseigné pour identifier la présence d'une offre sur cette plateforme plutôt qu'un réseau social.",
+        "description_i18n": {
+          "fr": "Canal de diffusion ou de réservation sur Airbnb, renseigné pour identifier la présence d'une offre sur cette plateforme plutôt qu'un réseau social.",
+          "en": "Distribution or booking channel on Airbnb, recorded to identify an offer's presence on that platform rather than a social network.",
+          "es": "Canal de difusión o reserva en Airbnb, registrado para identificar la presencia de una oferta en esa plataforma y no en una red social.",
+          "de": "Vertriebs- oder Buchungskanal auf Airbnb zur Kennzeichnung der Angebotspräsenz auf dieser Plattform und nicht in einem sozialen Netzwerk."
+        },
+        "name_i18n": {
+          "fr": "Airbnb",
+          "en": "Airbnb",
+          "es": "Airbnb",
+          "de": "Airbnb"
+        }
+      }
+    },
+    {
+      "concept_id": "29ace27d-6695-4676-85cb-3b971ada2dfd",
+      "domain": "distribution_channel",
+      "context_key": "",
+      "code": "booking",
+      "base": {
+        "description": "Plateforme de réservation hôtelière Booking.com",
+        "description_i18n": {
+          "fr": "Plateforme de réservation hôtelière Booking.com"
+        },
+        "name_i18n": {
+          "fr": "Booking.com"
+        }
+      },
+      "changes": {
+        "description": "Canal de diffusion ou de réservation d'hébergements sur Booking.com, utilisé pour indiquer où l'offre est commercialisée.",
+        "description_i18n": {
+          "fr": "Canal de diffusion ou de réservation d'hébergements sur Booking.com, utilisé pour indiquer où l'offre est commercialisée.",
+          "en": "Accommodation distribution or booking channel on Booking.com, used to indicate where the offer is marketed.",
+          "es": "Canal de difusión o reserva de alojamientos en Booking.com, utilizado para indicar dónde se comercializa la oferta.",
+          "de": "Vertriebs- oder Buchungskanal für Unterkünfte auf Booking.com zur Angabe, wo das Angebot vermarktet wird."
+        },
+        "name_i18n": {
+          "fr": "Booking.com",
+          "en": "Booking.com",
+          "es": "Booking.com",
+          "de": "Booking.com"
+        }
+      }
+    },
+    {
+      "concept_id": "7d1e9743-c45d-4dac-a373-75671621f439",
+      "domain": "distribution_channel",
+      "context_key": "",
+      "code": "expedia",
+      "base": {
+        "description": "Agence de voyage en ligne Expedia",
+        "description_i18n": {
+          "fr": "Agence de voyage en ligne Expedia"
+        },
+        "name_i18n": {
+          "fr": "Expedia"
+        }
+      },
+      "changes": {
+        "description": "Canal de commercialisation ou de réservation de prestations de voyage sur Expedia, déclaré dans les informations de distribution de l'offre.",
+        "description_i18n": {
+          "fr": "Canal de commercialisation ou de réservation de prestations de voyage sur Expedia, déclaré dans les informations de distribution de l'offre.",
+          "en": "Travel-service sales or booking channel on Expedia, recorded in the offer's distribution information.",
+          "es": "Canal de comercialización o reserva de servicios de viaje en Expedia, registrado en la información de distribución de la oferta.",
+          "de": "Verkaufs- oder Buchungskanal für Reiseleistungen auf Expedia, der in den Vertriebsangaben des Angebots erfasst wird."
+        },
+        "name_i18n": {
+          "fr": "Expedia",
+          "en": "Expedia",
+          "es": "Expedia",
+          "de": "Expedia"
+        }
+      }
+    },
+    {
+      "concept_id": "6b2d2581-fa18-4dbc-85ab-4d246cb52b9f",
+      "domain": "distribution_channel",
+      "context_key": "",
+      "code": "getyourguide",
+      "base": {
+        "description": "Plateforme de réservation d'activités GetYourGuide",
+        "description_i18n": {
+          "fr": "Plateforme de réservation d'activités GetYourGuide"
+        },
+        "name_i18n": {
+          "fr": "GetYourGuide"
+        }
+      },
+      "changes": {
+        "description": "Canal de commercialisation ou de réservation d'activités et de visites sur GetYourGuide ; il renseigne la distribution de l'offre d'expérience.",
+        "description_i18n": {
+          "fr": "Canal de commercialisation ou de réservation d'activités et de visites sur GetYourGuide ; il renseigne la distribution de l'offre d'expérience.",
+          "en": "Sales or booking channel for activities and tours on GetYourGuide, identifying the distribution of an experience offer.",
+          "es": "Canal de comercialización o reserva de actividades y visitas en GetYourGuide, que identifica la distribución de una experiencia.",
+          "de": "Verkaufs- oder Buchungskanal für Aktivitäten und Führungen auf GetYourGuide zur Kennzeichnung des Vertriebs eines Erlebnisangebots."
+        },
+        "name_i18n": {
+          "fr": "GetYourGuide",
+          "en": "GetYourGuide",
+          "es": "GetYourGuide",
+          "de": "GetYourGuide"
+        }
+      }
+    },
+    {
+      "concept_id": "e583d89f-3095-4a19-8080-7c1bd3ad5ed6",
+      "domain": "distribution_channel",
+      "context_key": "",
+      "code": "leboncoin",
+      "base": {
+        "description": "Annonces de location sur Leboncoin",
+        "description_i18n": {
+          "fr": "Annonces de location sur Leboncoin"
+        },
+        "name_i18n": {
+          "fr": "Leboncoin"
+        }
+      },
+      "changes": {
+        "description": "Canal de diffusion d'annonces de l'offre sur Leboncoin, notamment pour des locations ; sa présence n'indique pas à elle seule une réservation intégrée.",
+        "description_i18n": {
+          "fr": "Canal de diffusion d'annonces de l'offre sur Leboncoin, notamment pour des locations ; sa présence n'indique pas à elle seule une réservation intégrée.",
+          "en": "Channel for advertising the offer on Leboncoin, notably for rentals; its presence does not itself indicate integrated booking.",
+          "es": "Canal de publicación de anuncios de la oferta en Leboncoin, especialmente para alquileres; su presencia no indica por sí sola una reserva integrada.",
+          "de": "Kanal für Angebotsanzeigen auf Leboncoin, insbesondere für Vermietungen; die Präsenz allein bedeutet keine integrierte Buchungsmöglichkeit."
+        },
+        "name_i18n": {
+          "fr": "Leboncoin",
+          "en": "Leboncoin",
+          "es": "Leboncoin",
+          "de": "Leboncoin"
+        }
+      }
+    },
+    {
+      "concept_id": "1d9b0dcb-1980-4f70-a13f-c17d0fd7ab6d",
+      "domain": "distribution_channel",
+      "context_key": "",
+      "code": "thefork",
+      "base": {
+        "description": "Plateforme de réservation de restaurants TheFork",
+        "description_i18n": {
+          "fr": "Plateforme de réservation de restaurants TheFork"
+        },
+        "name_i18n": {
+          "fr": "TheFork"
+        }
+      },
+      "changes": {
+        "description": "Canal de visibilité ou de réservation de tables de restaurant sur TheFork, distinct du site propre du restaurant.",
+        "description_i18n": {
+          "fr": "Canal de visibilité ou de réservation de tables de restaurant sur TheFork, distinct du site propre du restaurant.",
+          "en": "Restaurant visibility or table-booking channel on TheFork, distinct from the restaurant's own website.",
+          "es": "Canal de visibilidad o reserva de mesas de restaurante en TheFork, distinto del sitio propio del restaurante.",
+          "de": "Kanal für die Sichtbarkeit eines Restaurants oder Tischreservierungen auf TheFork, getrennt von der eigenen Restaurantwebsite."
+        },
+        "name_i18n": {
+          "fr": "TheFork",
+          "en": "TheFork",
+          "es": "TheFork",
+          "de": "TheFork"
+        }
+      }
+    },
+    {
+      "concept_id": "8f2e005a-59ab-47f0-aded-281a4011691c",
+      "domain": "distribution_channel",
+      "context_key": "",
+      "code": "viator",
+      "base": {
+        "description": "Plateforme de réservation d'activités Viator",
+        "description_i18n": {
+          "fr": "Plateforme de réservation d'activités Viator"
+        },
+        "name_i18n": {
+          "fr": "Viator"
+        }
+      },
+      "changes": {
+        "description": "Canal de commercialisation ou de réservation de visites et d'activités sur Viator, renseigné dans la distribution de l'offre touristique.",
+        "description_i18n": {
+          "fr": "Canal de commercialisation ou de réservation de visites et d'activités sur Viator, renseigné dans la distribution de l'offre touristique.",
+          "en": "Sales or booking channel for tours and activities on Viator, recorded in the tourism offer's distribution details.",
+          "es": "Canal de comercialización o reserva de visitas y actividades en Viator, registrado en la distribución de la oferta turística.",
+          "de": "Verkaufs- oder Buchungskanal für Führungen und Aktivitäten auf Viator, erfasst in den Vertriebsangaben des touristischen Angebots."
+        },
+        "name_i18n": {
+          "fr": "Viator",
+          "en": "Viator",
+          "es": "Viator",
+          "de": "Viator"
+        }
+      }
+    }
+  ]
+}

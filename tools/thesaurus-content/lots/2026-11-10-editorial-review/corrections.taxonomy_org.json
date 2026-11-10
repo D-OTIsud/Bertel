@@ -1,0 +1,260 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_org-1",
+  "proposals": [
+    {
+      "concept_id": "0bed34e2-0827-4513-9f3b-448d30ba1733",
+      "domain": "taxonomy_org",
+      "context_key": "",
+      "code": "autocar_compagnie",
+      "base": {
+        "description": "Autocar (compagnie)",
+        "description_i18n": {
+          "fr": "Autocar (compagnie)"
+        },
+        "name_i18n": {
+          "fr": "Autocar (compagnie)"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie d’organisation pour les compagnies de transport par autocar. Elle est conservée dans l’historique, distincte de la description actuelle d’un service de transport.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie d’organisation pour les compagnies de transport par autocar. Elle est conservée dans l’historique, distincte de la description actuelle d’un service de transport.",
+          "en": "Former organisation category for coach transport companies. It remains historical, distinct from a current transport-service description.",
+          "es": "Antigua categoría de organización para compañías de transporte en autocar. Se conserva en el historial, distinta de la descripción actual de un servicio de transporte.",
+          "de": "Frühere Organisationskategorie für Reisebusunternehmen. Sie bleibt historisch erhalten und unterscheidet sich von der aktuellen Beschreibung einer Beförderungsleistung."
+        },
+        "name_i18n": {
+          "fr": "Autocar (compagnie)",
+          "en": "Coach company (historical)",
+          "es": "Compañía de autocares (histórica)",
+          "de": "Reisebusunternehmen (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "1be83cf3-a691-4887-817e-da297a629efd",
+      "domain": "taxonomy_org",
+      "context_key": "",
+      "code": "excursion_touristique",
+      "base": {
+        "description": "Excursion touristique",
+        "description_i18n": {
+          "fr": "Excursion touristique"
+        },
+        "name_i18n": {
+          "fr": "Excursion touristique"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie d’organisation rattachée aux compagnies d’autocar pour leurs excursions touristiques. Elle reste historique et ne décrit pas une édition datée d’excursion particulière.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie d’organisation rattachée aux compagnies d’autocar pour leurs excursions touristiques. Elle reste historique et ne décrit pas une édition datée d’excursion particulière.",
+          "en": "Former organisation category under coach companies for their sightseeing excursions. It remains historical rather than describing a dated individual excursion.",
+          "es": "Antigua categoría de organización dependiente de las compañías de autocar para sus excursiones turísticas. Se conserva en el historial y no describe una excursión concreta con fecha.",
+          "de": "Frühere Organisationskategorie unter Reisebusunternehmen für deren touristische Ausflüge. Sie bleibt historisch erhalten und bezeichnet keine einzelne terminierte Ausfahrt."
+        },
+        "name_i18n": {
+          "fr": "Excursion touristique",
+          "en": "Coach excursion (historical)",
+          "es": "Excursión en autocar (histórica)",
+          "de": "Busausflug (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "ca1d27b5-9235-4f42-b00d-f676e9eb61b2",
+      "domain": "taxonomy_org",
+      "context_key": "",
+      "code": "location_de_voiture_avec_chauffeur",
+      "base": {
+        "description": "Location de voiture avec chauffeur",
+        "description_i18n": {
+          "fr": "Location de voiture avec chauffeur"
+        },
+        "name_i18n": {
+          "fr": "Location de voiture avec chauffeur"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie d’organisation proposant une voiture avec chauffeur pour transporter des clients. Elle est conservée dans les fiches historiques sans réaffecter automatiquement leurs prestations actuelles.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie d’organisation proposant une voiture avec chauffeur pour transporter des clients. Elle est conservée dans les fiches historiques sans réaffecter automatiquement leurs prestations actuelles.",
+          "en": "Former organisation category offering a car with a driver to transport customers. It is retained in historical listings without automatically reassigning current services.",
+          "es": "Antigua categoría de organización que ofrecía un coche con conductor para transportar clientes. Se conserva en fichas históricas sin reasignar automáticamente las prestaciones actuales.",
+          "de": "Frühere Organisationskategorie mit Angebot eines Fahrzeugs samt Fahrer zur Kundenbeförderung. Sie bleibt in historischen Einträgen erhalten, ohne aktuelle Leistungen automatisch neu zuzuordnen."
+        },
+        "name_i18n": {
+          "fr": "Location de voiture avec chauffeur",
+          "en": "Car hire with driver (historical)",
+          "es": "Alquiler de coche con conductor (histórico)",
+          "de": "Mietwagen mit Fahrer (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "37b1c064-d097-4ebf-af87-4ae12c22344f",
+      "domain": "taxonomy_org",
+      "context_key": "",
+      "code": "massage_bien_etre",
+      "base": {
+        "description": "Massage bien - être",
+        "description_i18n": {
+          "fr": "Massage bien - être"
+        },
+        "name_i18n": {
+          "fr": "Massage bien - être"
+        },
+        "name": "Massage bien - être"
+      },
+      "changes": {
+        "description": "Ancienne catégorie d’organisation liée aux massages et prestations de détente. Elle reste conservée dans l’historique et ne constitue pas une qualification médicale de la structure.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie d’organisation liée aux massages et prestations de détente. Elle reste conservée dans l’historique et ne constitue pas une qualification médicale de la structure.",
+          "en": "Former organisation category associated with massage and relaxation services. It remains historical and is not a medical qualification of the organisation.",
+          "es": "Antigua categoría de organización vinculada a masajes y prestaciones de relajación. Se conserva en el historial y no constituye una cualificación médica de la entidad.",
+          "de": "Frühere Organisationskategorie zu Massage- und Entspannungsleistungen. Sie bleibt historisch erhalten und begründet keine medizinische Qualifikation der Einrichtung."
+        },
+        "name_i18n": {
+          "fr": "Massage et bien-être",
+          "en": "Massage and wellness (historical)",
+          "es": "Masaje y bienestar (histórico)",
+          "de": "Massage und Wellness (historisch)"
+        },
+        "name": "Massage et bien-être"
+      }
+    },
+    {
+      "concept_id": "20cef806-b6fd-448b-945b-3252011ab929",
+      "domain": "taxonomy_org",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Organisation",
+        "description_i18n": {
+          "de": "Technische Wurzel für Organisationskategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for organisation categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de organizaciones; no asignable directamente.",
+          "fr": "Racine technique — Organisation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/20cef806-b6fd-448b-945b-3252011ab929. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/20cef806-b6fd-448b-945b-3252011ab929"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des organisations représentées par une fiche, indépendamment d’une offre touristique particulière. Les anciennes sous-catégories conservées pour l’historique ne décrivent pas à elles seules les services actuels de l’organisation.",
+        "description_i18n": {
+          "de": "Oberkategorie für in einem Eintrag dargestellte Organisationen, unabhängig von einem bestimmten touristischen Angebot. Historische Unterkategorien beschreiben nicht allein die aktuellen Leistungen der Organisation.",
+          "en": "General category for organisations represented by a listing, independently of a particular tourism offer. Historical subcategories do not independently describe the organisation’s current services.",
+          "es": "Categoría general de organizaciones representadas por una ficha, independientemente de una oferta turística concreta. Las subcategorías históricas no describen por sí solas sus servicios actuales.",
+          "fr": "Catégorie générale des organisations représentées par une fiche, indépendamment d’une offre touristique particulière. Les anciennes sous-catégories conservées pour l’historique ne décrivent pas à elles seules les services actuels de l’organisation."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/20cef806-b6fd-448b-945b-3252011ab929. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/20cef806-b6fd-448b-945b-3252011ab929"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "416b7841-0ea6-4da1-b076-3a5260da04c0",
+      "domain": "taxonomy_org",
+      "context_key": "",
+      "code": "services",
+      "base": {
+        "description": "Services",
+        "description_i18n": {
+          "fr": "Services"
+        },
+        "name_i18n": {
+          "fr": "Services"
+        }
+      },
+      "changes": {
+        "description": "Ancien regroupement d’organisations de services, comprenant notamment des activités de transport, de cycles et de bien-être. Il sert à interpréter les fiches historiques et non à déterminer seul les services actuels.",
+        "description_i18n": {
+          "fr": "Ancien regroupement d’organisations de services, comprenant notamment des activités de transport, de cycles et de bien-être. Il sert à interpréter les fiches historiques et non à déterminer seul les services actuels.",
+          "en": "Former grouping of service organisations, including transport, cycle-related and wellness activities. It helps interpret historical listings rather than independently determining current services.",
+          "es": "Antigua agrupación de organizaciones de servicios, incluidas actividades de transporte, ciclos y bienestar. Sirve para interpretar fichas históricas, no para determinar por sí sola los servicios actuales.",
+          "de": "Frühere Gruppe von Dienstleistungsorganisationen, unter anderem zu Beförderung, Fahrrädern und Wellness. Sie dient der Einordnung historischer Einträge und bestimmt nicht allein aktuelle Leistungen."
+        },
+        "name_i18n": {
+          "fr": "Services",
+          "en": "Services (historical grouping)",
+          "es": "Servicios (agrupación histórica)",
+          "de": "Dienstleistungen (historische Gruppe)"
+        }
+      }
+    },
+    {
+      "concept_id": "01744214-8aef-4a93-b074-64e6b68679f1",
+      "domain": "taxonomy_org",
+      "context_key": "",
+      "code": "v_t_t_autres_cycles",
+      "base": {
+        "description": "V.T.T. - Autres cycles",
+        "description_i18n": {
+          "fr": "V.T.T. - Autres cycles"
+        },
+        "name_i18n": {
+          "fr": "V.T.T. - Autres cycles"
+        },
+        "name": "V.T.T. - Autres cycles"
+      },
+      "changes": {
+        "description": "Ancienne catégorie d’organisation liée au vélo tout terrain et aux autres cycles. Elle reste historique et ne précise pas à elle seule la nature exacte de la prestation proposée.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie d’organisation liée au vélo tout terrain et aux autres cycles. Elle reste historique et ne précise pas à elle seule la nature exacte de la prestation proposée.",
+          "en": "Former organisation category associated with mountain bikes and other cycles. It remains historical and does not independently specify the exact service offered.",
+          "es": "Antigua categoría de organización vinculada a bicicletas de montaña y otros ciclos. Se conserva en el historial y no precisa por sí sola la prestación exacta ofrecida.",
+          "de": "Frühere Organisationskategorie zu Mountainbikes und anderen Fahrrädern. Sie bleibt historisch erhalten und legt die genaue angebotene Leistung nicht allein fest."
+        },
+        "name_i18n": {
+          "fr": "VTT et autres cycles",
+          "en": "Mountain bikes and other cycles",
+          "es": "Bicicletas de montaña y otros ciclos",
+          "de": "Mountainbikes und andere Fahrräder"
+        },
+        "name": "VTT et autres cycles"
+      }
+    },
+    {
+      "concept_id": "3736adda-61d6-4e6e-ab14-442b405844f2",
+      "domain": "taxonomy_org",
+      "context_key": "",
+      "code": "vtc",
+      "base": {
+        "description": "VTC",
+        "description_i18n": {
+          "fr": "VTC"
+        },
+        "name_i18n": {
+          "fr": "VTC"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie d’organisation liée aux voitures de transport avec chauffeur, dans le regroupement des services. Elle est conservée dans l’historique et ne désigne pas ici un vélo tout chemin.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie d’organisation liée aux voitures de transport avec chauffeur, dans le regroupement des services. Elle est conservée dans l’historique et ne désigne pas ici un vélo tout chemin.",
+          "en": "Former organisation category for chauffeur-driven passenger transport vehicles within the services grouping. It remains historical; VTC does not mean a hybrid bicycle here.",
+          "es": "Antigua categoría de organización vinculada a vehículos de transporte con conductor dentro del grupo de servicios. Se conserva en el historial; VTC no designa aquí una bicicleta híbrida.",
+          "de": "Frühere Organisationskategorie für Personentransportfahrzeuge mit Fahrer innerhalb der Dienstleistungsgruppe. Sie bleibt historisch erhalten; VTC bezeichnet hier kein Trekkingfahrrad."
+        },
+        "name_i18n": {
+          "fr": "VTC",
+          "en": "Chauffeur-driven transport (historical)",
+          "es": "Transporte con conductor (histórico)",
+          "de": "Personenbeförderung mit Fahrer (historisch)"
+        }
+      }
+    }
+  ]
+}

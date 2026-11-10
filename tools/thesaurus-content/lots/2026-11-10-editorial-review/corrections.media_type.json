@@ -1,0 +1,446 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-media_type-1",
+  "proposals": [
+    {
+      "concept_id": "b7427a40-f6db-4d96-abd5-a3a5cee0a691",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "audio",
+      "base": {
+        "description": "Fichiers audio et podcasts",
+        "description_i18n": {
+          "de": "Audiodateien und Podcasts",
+          "en": "Audio files and podcasts",
+          "es": "Archivos de audio y pódcasts",
+          "fr": "Fichiers audio et podcasts"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b7427a40-f6db-4d96-abd5-a3a5cee0a691. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b7427a40-f6db-4d96-abd5-a3a5cee0a691"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Média sonore tel qu’un enregistrement ou un podcast, utilisé pour écouter un contenu lié à la fiche. Il se distingue des médias contenant une séquence d’images animées.",
+        "description_i18n": {
+          "de": "Tonmedium wie eine Aufnahme oder ein Podcast zum Anhören von Inhalten eines Eintrags. Es unterscheidet sich von Medien mit bewegten Bildern.",
+          "en": "Sound media such as a recording or podcast, used to listen to content associated with a listing. It differs from media containing moving images.",
+          "es": "Medio sonoro, como una grabación o un pódcast, para escuchar contenido asociado a la ficha. Se distingue de los medios con imágenes en movimiento.",
+          "fr": "Média sonore tel qu’un enregistrement ou un podcast, utilisé pour écouter un contenu lié à la fiche. Il se distingue des médias contenant une séquence d’images animées."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b7427a40-f6db-4d96-abd5-a3a5cee0a691. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b7427a40-f6db-4d96-abd5-a3a5cee0a691"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "15aec93d-8fcc-4340-9541-fde75ef99919",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "brochure_pdf",
+      "base": {
+        "description": "Brochures téléchargeables",
+        "description_i18n": {
+          "de": "Herunterladbare Broschüren",
+          "en": "Downloadable brochures",
+          "es": "Folletos descargables",
+          "fr": "Brochures téléchargeables"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/15aec93d-8fcc-4340-9541-fde75ef99919. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/15aec93d-8fcc-4340-9541-fde75ef99919"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Brochure mise à disposition sous la forme d’un fichier PDF à consulter ou télécharger. Elle décrit un document de présentation, distinct d’une simple photographie.",
+        "description_i18n": {
+          "de": "Als PDF-Datei zum Lesen oder Herunterladen bereitgestellte Broschüre. Sie bezeichnet eine Präsentationsunterlage und kein gewöhnliches Foto.",
+          "en": "Brochure provided as a PDF file for viewing or download. It identifies a presentation document rather than an ordinary photograph.",
+          "es": "Folleto disponible como archivo PDF para consultar o descargar. Identifica un documento de presentación y no una simple fotografía.",
+          "fr": "Brochure mise à disposition sous la forme d’un fichier PDF à consulter ou télécharger. Elle décrit un document de présentation, distinct d’une simple photographie."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/15aec93d-8fcc-4340-9541-fde75ef99919. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/15aec93d-8fcc-4340-9541-fde75ef99919"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aeb2a204-3631-497b-b129-f821a90356e3",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "brochure_print",
+      "base": {
+        "description": "Brochures physiques numérisées",
+        "description_i18n": {
+          "de": "Digitalisierte gedruckte Broschüren",
+          "en": "Digitised printed brochures",
+          "es": "Folletos impresos digitalizados",
+          "fr": "Brochures physiques numérisées"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aeb2a204-3631-497b-b129-f821a90356e3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aeb2a204-3631-497b-b129-f821a90356e3"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Média reproduisant une brochure conçue pour l’impression, notamment sa version numérisée. Il conserve la nature de brochure papier même lorsqu’un fichier en donne accès.",
+        "description_i18n": {
+          "de": "Medium, das eine für den Druck konzipierte Broschüre wiedergibt, einschließlich einer digitalisierten Fassung. Es bleibt eine Druckbroschüre, auch wenn eine Datei den Zugriff ermöglicht.",
+          "en": "Media reproducing a brochure designed for print, including a digitised version. It retains its printed-brochure nature even when accessed through a file.",
+          "es": "Medio que reproduce un folleto concebido para impresión, incluida su versión digitalizada. Conserva su naturaleza de folleto impreso aunque se acceda mediante un archivo.",
+          "fr": "Média reproduisant une brochure conçue pour l’impression, notamment sa version numérisée. Il conserve la nature de brochure papier même lorsqu’un fichier en donne accès."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/aeb2a204-3631-497b-b129-f821a90356e3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/aeb2a204-3631-497b-b129-f821a90356e3"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "765cb79a-c54c-4a9e-b786-211185fd1976",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "logo",
+      "base": {
+        "description": "Logotypes officiels",
+        "description_i18n": {
+          "de": "Offizielle Logos",
+          "en": "Official logos",
+          "es": "Logotipos oficiales",
+          "fr": "Logotypes officiels"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/765cb79a-c54c-4a9e-b786-211185fd1976. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/765cb79a-c54c-4a9e-b786-211185fd1976"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Signe graphique identifiant une structure, une marque ou un service, associé à la fiche. Sa fonction d’identification le distingue d’une photographie illustrative.",
+        "description_i18n": {
+          "de": "Grafisches Zeichen zur Identifikation einer Organisation, Marke oder Leistung eines Eintrags. Diese Funktion unterscheidet es von einem illustrierenden Foto.",
+          "en": "Graphic sign identifying an organisation, brand or service associated with a listing. Its identifying function distinguishes it from an illustrative photograph.",
+          "es": "Signo gráfico que identifica una entidad, marca o servicio asociado a la ficha. Su función identificativa lo distingue de una fotografía ilustrativa.",
+          "fr": "Signe graphique identifiant une structure, une marque ou un service, associé à la fiche. Sa fonction d’identification le distingue d’une photographie illustrative."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/765cb79a-c54c-4a9e-b786-211185fd1976. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/765cb79a-c54c-4a9e-b786-211185fd1976"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "32fa80b3-bfa7-4de8-97cc-8703bfa83390",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "photo",
+      "base": {
+        "description": "Photographies officielles",
+        "description_i18n": {
+          "de": "Offizielle Fotos",
+          "en": "Official photographs",
+          "es": "Fotografías oficiales",
+          "fr": "Photographies officielles"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/32fa80b3-bfa7-4de8-97cc-8703bfa83390. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/32fa80b3-bfa7-4de8-97cc-8703bfa83390"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Image fixe issue d’une prise de vue photographique, utilisée pour illustrer une fiche. Ce type ne détermine pas à lui seul son caractère officiel, son auteur ou ses droits de publication.",
+        "description_i18n": {
+          "de": "Durch Fotografie entstandenes Standbild zur Illustration eines Eintrags. Dieser Typ allein bestimmt weder offiziellen Charakter noch Urheberschaft oder Veröffentlichungsrechte.",
+          "en": "Still image produced through photography and used to illustrate a listing. This type alone determines neither official status, authorship nor publication rights.",
+          "es": "Imagen fija obtenida mediante fotografía para ilustrar una ficha. El tipo por sí solo no determina su carácter oficial, autoría ni derechos de publicación.",
+          "fr": "Image fixe issue d’une prise de vue photographique, utilisée pour illustrer une fiche. Ce type ne détermine pas à lui seul son caractère officiel, son auteur ou ses droits de publication."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/32fa80b3-bfa7-4de8-97cc-8703bfa83390. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/32fa80b3-bfa7-4de8-97cc-8703bfa83390"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3a644401-cbd8-4ecf-8270-e8e7824e6a09",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "plan",
+      "base": {
+        "description": "Plan ou carte statique",
+        "description_i18n": {
+          "de": "Statischer Plan oder statische Karte",
+          "en": "Static map or plan",
+          "es": "Plano o mapa estático",
+          "fr": "Plan ou carte statique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3a644401-cbd8-4ecf-8270-e8e7824e6a09. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3a644401-cbd8-4ecf-8270-e8e7824e6a09"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Document visuel statique représentant l’organisation d’un lieu ou le repérage géographique. Ce type décrit un plan ou une carte et ne constitue pas une géométrie d’itinéraire éditable.",
+        "description_i18n": {
+          "de": "Statisches Bilddokument zur Anordnung eines Ortes oder geografischen Orientierung. Es bezeichnet einen Plan oder eine Karte und keine bearbeitbare Routengeometrie.",
+          "en": "Static visual document showing a place’s layout or geographic orientation. It identifies a plan or map rather than editable itinerary geometry.",
+          "es": "Documento visual estático que representa la organización de un lugar o la orientación geográfica. Identifica un plano o mapa, no una geometría editable de itinerario.",
+          "fr": "Document visuel statique représentant l’organisation d’un lieu ou le repérage géographique. Ce type décrit un plan ou une carte et ne constitue pas une géométrie d’itinéraire éditable."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3a644401-cbd8-4ecf-8270-e8e7824e6a09. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3a644401-cbd8-4ecf-8270-e8e7824e6a09"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "beb58a29-bab6-411e-aca0-fb33ee47ff80",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "press_kit",
+      "base": {
+        "description": "Dossiers médias et communiqués",
+        "description_i18n": {
+          "de": "Pressemappen und Pressemitteilungen",
+          "en": "Media kits and press releases",
+          "es": "Dossiers de prensa y comunicados",
+          "fr": "Dossiers médias et communiqués"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/beb58a29-bab6-411e-aca0-fb33ee47ff80. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/beb58a29-bab6-411e-aca0-fb33ee47ff80"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ensemble documentaire destiné à présenter une structure, une offre ou un événement aux médias. Il peut regrouper des informations de presse et des éléments de communication.",
+        "description_i18n": {
+          "de": "Unterlagensammlung zur Vorstellung einer Organisation, eines Angebots oder einer Veranstaltung gegenüber Medien. Sie kann Presseinformationen und Kommunikationsmaterial enthalten.",
+          "en": "Document set presenting an organisation, offer or event to the media. It may bring together press information and communication materials.",
+          "es": "Conjunto documental para presentar una entidad, oferta o evento a los medios. Puede reunir información de prensa y materiales de comunicación.",
+          "fr": "Ensemble documentaire destiné à présenter une structure, une offre ou un événement aux médias. Il peut regrouper des informations de presse et des éléments de communication."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/beb58a29-bab6-411e-aca0-fb33ee47ff80. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/beb58a29-bab6-411e-aca0-fb33ee47ff80"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ef6fe635-c3a6-449a-8a43-c552581480d7",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "vector",
+      "base": {
+        "description": "Fichiers vectoriels (SVG, PDF)",
+        "description_i18n": {
+          "de": "Vektordateien (SVG, PDF)",
+          "en": "Vector files (SVG, PDF)",
+          "es": "Archivos vectoriales (SVG, PDF)",
+          "fr": "Fichiers vectoriels (SVG, PDF)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ef6fe635-c3a6-449a-8a43-c552581480d7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ef6fe635-c3a6-449a-8a43-c552581480d7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Média graphique représenté par des formes vectorielles plutôt que seulement par des pixels. Ce type sert notamment aux visuels et logos destinés à être redimensionnés.",
+        "description_i18n": {
+          "de": "Grafikmedium aus Vektorformen statt ausschließlich aus Pixeln. Es dient insbesondere für skalierbare Grafiken und Logos.",
+          "en": "Graphic media represented by vector shapes rather than pixels alone. It is used particularly for visuals and logos intended to be resized.",
+          "es": "Medio gráfico representado mediante formas vectoriales y no solo píxeles. Se usa especialmente para imágenes y logotipos que deben cambiar de tamaño.",
+          "fr": "Média graphique représenté par des formes vectorielles plutôt que seulement par des pixels. Ce type sert notamment aux visuels et logos destinés à être redimensionnés."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ef6fe635-c3a6-449a-8a43-c552581480d7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ef6fe635-c3a6-449a-8a43-c552581480d7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0b491973-255c-4c17-aaa5-a7b9bd0465a6",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "video",
+      "base": {
+        "description": "Vidéos de présentation",
+        "description_i18n": {
+          "de": "Präsentationsvideos",
+          "en": "Presentation videos",
+          "es": "Vídeos de presentación",
+          "fr": "Vidéos de présentation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0b491973-255c-4c17-aaa5-a7b9bd0465a6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0b491973-255c-4c17-aaa5-a7b9bd0465a6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Média constitué d’une séquence d’images animées, avec ou sans son, pour présenter une fiche ou un sujet. Il se distingue d’une photographie fixe.",
+        "description_i18n": {
+          "de": "Medium mit einer Folge bewegter Bilder, mit oder ohne Ton, zur Darstellung eines Eintrags oder Themas. Es unterscheidet sich von einem Standfoto.",
+          "en": "Media consisting of a sequence of moving images, with or without sound, presenting a listing or subject. It differs from a still photograph.",
+          "es": "Medio formado por una secuencia de imágenes en movimiento, con o sin sonido, para presentar una ficha o un tema. Se distingue de una fotografía fija.",
+          "fr": "Média constitué d’une séquence d’images animées, avec ou sans son, pour présenter une fiche ou un sujet. Il se distingue d’une photographie fixe."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0b491973-255c-4c17-aaa5-a7b9bd0465a6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0b491973-255c-4c17-aaa5-a7b9bd0465a6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "efd0eb01-3c76-4d21-ada0-6e1dfaa373ed",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "virtual_tour",
+      "base": {
+        "description": "Visites 360° ou immersives",
+        "description_i18n": {
+          "de": "360°- oder immersive virtuelle Rundgänge",
+          "en": "360° or immersive virtual tours",
+          "es": "Visitas virtuales 360° o inmersivas",
+          "fr": "Visites 360° ou immersives"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/efd0eb01-3c76-4d21-ada0-6e1dfaa373ed. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/efd0eb01-3c76-4d21-ada0-6e1dfaa373ed"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présentation immersive permettant de découvrir à distance un lieu, notamment par des vues à 360 degrés. Elle décrit le dispositif de visite et ne remplace pas une visite sur place.",
+        "description_i18n": {
+          "de": "Immersive Darstellung zur Erkundung eines Ortes aus der Ferne, insbesondere durch 360-Grad-Ansichten. Sie bezeichnet das Besichtigungserlebnis und ersetzt keinen Besuch vor Ort.",
+          "en": "Immersive presentation allowing remote exploration of a place, particularly through 360-degree views. It describes a viewing experience rather than an on-site visit.",
+          "es": "Presentación inmersiva que permite descubrir un lugar a distancia, especialmente con vistas de 360 grados. Describe el dispositivo de visita y no sustituye una visita presencial.",
+          "fr": "Présentation immersive permettant de découvrir à distance un lieu, notamment par des vues à 360 degrés. Elle décrit le dispositif de visite et ne remplace pas une visite sur place."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/efd0eb01-3c76-4d21-ada0-6e1dfaa373ed. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/efd0eb01-3c76-4d21-ada0-6e1dfaa373ed"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5645efab-0a8c-4ff0-b457-8648e4c0430c",
+      "domain": "media_type",
+      "context_key": "",
+      "code": "webcam",
+      "base": {
+        "description": "Flux webcam en direct",
+        "description_i18n": {
+          "de": "Live-Webcam-Stream",
+          "en": "Live webcam feed",
+          "es": "Transmisión en vivo de webcam",
+          "fr": "Flux webcam en direct"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5645efab-0a8c-4ff0-b457-8648e4c0430c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5645efab-0a8c-4ff0-b457-8648e4c0430c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Média donnant accès au flux d’une caméra diffusant des images d’un lieu en direct. Il se distingue d’une vidéo enregistrée proposée pour une lecture ultérieure.",
+        "description_i18n": {
+          "de": "Medium mit Zugang zu einem Kamerastream, der Livebilder eines Ortes zeigt. Es unterscheidet sich von einem aufgezeichneten Video zum späteren Abspielen.",
+          "en": "Media providing access to a camera feed showing live images of a place. It differs from a recorded video offered for later playback.",
+          "es": "Medio que da acceso al flujo de una cámara con imágenes en directo de un lugar. Se distingue de un vídeo grabado para reproducirse posteriormente.",
+          "fr": "Média donnant accès au flux d’une caméra diffusant des images d’un lieu en direct. Il se distingue d’une vidéo enregistrée proposée pour une lecture ultérieure."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5645efab-0a8c-4ff0-b457-8648e4c0430c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5645efab-0a8c-4ff0-b457-8648e4c0430c"
+          }
+        ]
+      }
+    }
+  ]
+}

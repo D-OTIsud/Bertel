@@ -1,0 +1,957 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_res-1",
+  "proposals": [
+    {
+      "concept_id": "2830c44e-7228-4c5a-ad1b-c19167de746a",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "atelier_cuisine",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2830c44e-7228-4c5a-ad1b-c19167de746a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2830c44e-7228-4c5a-ad1b-c19167de746a"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2830c44e-7228-4c5a-ad1b-c19167de746a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2830c44e-7228-4c5a-ad1b-c19167de746a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2b3f4f7d-9ab8-4d58-ae1e-5bc43fca731d",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "auberge",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2b3f4f7d-9ab8-4d58-ae1e-5bc43fca731d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2b3f4f7d-9ab8-4d58-ae1e-5bc43fca731d"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2b3f4f7d-9ab8-4d58-ae1e-5bc43fca731d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2b3f4f7d-9ab8-4d58-ae1e-5bc43fca731d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "04da0ba8-54fb-491f-82dc-9eb60d9a11db",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "auberge_de_campagne",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/04da0ba8-54fb-491f-82dc-9eb60d9a11db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/04da0ba8-54fb-491f-82dc-9eb60d9a11db"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/04da0ba8-54fb-491f-82dc-9eb60d9a11db. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/04da0ba8-54fb-491f-82dc-9eb60d9a11db"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3d139bc3-cdf5-4c6f-ba39-cb110eaeeb0e",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "autre_type_de_restauration",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3d139bc3-cdf5-4c6f-ba39-cb110eaeeb0e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3d139bc3-cdf5-4c6f-ba39-cb110eaeeb0e"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3d139bc3-cdf5-4c6f-ba39-cb110eaeeb0e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3d139bc3-cdf5-4c6f-ba39-cb110eaeeb0e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "130adf78-8307-44c7-818c-35d080564e23",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "bar_a_jus",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/130adf78-8307-44c7-818c-35d080564e23. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/130adf78-8307-44c7-818c-35d080564e23"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/130adf78-8307-44c7-818c-35d080564e23. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/130adf78-8307-44c7-818c-35d080564e23"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3103ab1c-c6e2-4208-87a7-f1774c518656",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "boulangerie_patisserie",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3103ab1c-c6e2-4208-87a7-f1774c518656. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3103ab1c-c6e2-4208-87a7-f1774c518656"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3103ab1c-c6e2-4208-87a7-f1774c518656. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3103ab1c-c6e2-4208-87a7-f1774c518656"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "80fdfb2a-805e-442e-9734-be1faff4622a",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "brasserie",
+      "base": {
+        "description": "Restaurant de type brasserie, à service continu ou carte traditionnelle",
+        "description_i18n": {
+          "de": "Restaurant im Brasserie-Stil mit durchgehendem Service oder traditioneller Speisekarte.",
+          "en": "Brasserie-style restaurant, with continuous service or a traditional menu.",
+          "es": "Restaurante de tipo brasserie, con servicio continuo o carta tradicional.",
+          "fr": "Restaurant de type brasserie, à service continu ou carte traditionnelle"
+        }
+      },
+      "changes": {
+        "description": "Restaurant proposant une carte de type brasserie, notamment des repas traditionnels ou un service continu selon son offre. Dans ce catalogue, le mot désigne la restauration et non le lieu de fabrication de bière.",
+        "description_i18n": {
+          "de": "Restaurant mit einer Brasserie-Speisekarte, etwa traditionellen Speisen oder durchgehendem Service je nach Angebot. Der Begriff bezeichnet hier Gastronomie und keine Bierherstellung.",
+          "en": "Restaurant offering brasserie-style dining, including traditional meals or continuous service depending on its offer. Here the word identifies food service rather than beer production.",
+          "es": "Restaurante con una carta de tipo brasserie, por ejemplo comidas tradicionales o servicio continuo según su oferta. Aquí la palabra designa restauración, no producción de cerveza.",
+          "fr": "Restaurant proposant une carte de type brasserie, notamment des repas traditionnels ou un service continu selon son offre. Dans ce catalogue, le mot désigne la restauration et non le lieu de fabrication de bière."
+        }
+      }
+    },
+    {
+      "concept_id": "863748a2-bc53-4588-84d6-e68c09c6155b",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "chambre_d_hote",
+      "base": {
+        "description": "Chambre d'hôte",
+        "description_i18n": {
+          "fr": "Chambre d'hôte"
+        },
+        "name_i18n": {
+          "fr": "Chambre d'hôte"
+        },
+        "name": "Chambre d'hôte"
+      },
+      "changes": {
+        "description": "Ancienne catégorie décrivant l’accueil en chambre d’hôtes, historiquement rangée dans la restauration sous Table d’hôtes. Elle conserve l’ancienne affectation sans transformer une offre de repas en hébergement actuel.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie décrivant l’accueil en chambre d’hôtes, historiquement rangée dans la restauration sous Table d’hôtes. Elle conserve l’ancienne affectation sans transformer une offre de repas en hébergement actuel.",
+          "en": "Former category describing hosted guest-room accommodation, historically placed under Table d’hôtes in food services. It preserves the old assignment without turning a meal offer into current lodging.",
+          "es": "Antigua categoría de alojamiento en casa del anfitrión, históricamente incluida en restauración bajo Mesa de huéspedes. Conserva la asignación antigua sin convertir una oferta de comidas en alojamiento actual.",
+          "de": "Frühere Kategorie für Gästezimmer bei Gastgebern, historisch unter Table d’hôtes in der Gastronomie eingeordnet. Sie erhält die alte Zuordnung, ohne ein Speiseangebot in eine aktuelle Unterkunft umzuwandeln."
+        },
+        "name_i18n": {
+          "fr": "Chambre d’hôtes (ancienne catégorie)",
+          "en": "Hosted guest room (former category)",
+          "es": "Habitación de huéspedes (antigua categoría)",
+          "de": "Gästezimmer bei Gastgebern (frühere Kategorie)"
+        },
+        "name": "Chambre d’hôtes (ancienne catégorie)"
+      }
+    },
+    {
+      "concept_id": "dda04625-e3c4-4984-84a3-6210b44648ed",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "chef_a_domicile",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dda04625-e3c4-4984-84a3-6210b44648ed. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dda04625-e3c4-4984-84a3-6210b44648ed"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/dda04625-e3c4-4984-84a3-6210b44648ed. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/dda04625-e3c4-4984-84a3-6210b44648ed"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b9253f18-58c8-42bd-a5d3-79ebdb22d6c7",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "creperie",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b9253f18-58c8-42bd-a5d3-79ebdb22d6c7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b9253f18-58c8-42bd-a5d3-79ebdb22d6c7"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b9253f18-58c8-42bd-a5d3-79ebdb22d6c7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b9253f18-58c8-42bd-a5d3-79ebdb22d6c7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "75702942-cb65-4636-8664-ce4d8acf70b8",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "fast_food",
+      "base": {
+        "description": "Restauration rapide sur place ou à emporter",
+        "description_i18n": {
+          "de": "Schnellgastronomie zum Verzehr vor Ort oder zum Mitnehmen.",
+          "en": "Fast food, eat-in or takeaway.",
+          "es": "Comida rápida para consumir en el local o para llevar.",
+          "fr": "Restauration rapide sur place ou à emporter"
+        }
+      },
+      "changes": {
+        "description": "Restauration organisée pour préparer et servir rapidement des repas, consommés sur place ou à emporter. La catégorie décrit la forme de service plutôt qu’un style de cuisine ou une qualité nutritionnelle.",
+        "description_i18n": {
+          "de": "Gastronomie mit zügiger Zubereitung und Ausgabe von Mahlzeiten zum Verzehr vor Ort oder zum Mitnehmen. Die Kategorie beschreibt die Bedienungsform und keine Küchenrichtung oder Ernährungsqualität.",
+          "en": "Food service organised to prepare and serve meals quickly, for dining in or takeaway. This category describes the service format rather than a cuisine style or nutritional quality.",
+          "es": "Restauración organizada para preparar y servir comidas rápidamente, para consumir en el local o llevar. Describe la forma de servicio, no un estilo de cocina o calidad nutricional.",
+          "fr": "Restauration organisée pour préparer et servir rapidement des repas, consommés sur place ou à emporter. La catégorie décrit la forme de service plutôt qu’un style de cuisine ou une qualité nutritionnelle."
+        }
+      }
+    },
+    {
+      "concept_id": "f79f0406-bde9-4f31-ac28-71cd0dbc2fe2",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "ferme_auberge",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f79f0406-bde9-4f31-ac28-71cd0dbc2fe2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f79f0406-bde9-4f31-ac28-71cd0dbc2fe2"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f79f0406-bde9-4f31-ac28-71cd0dbc2fe2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f79f0406-bde9-4f31-ac28-71cd0dbc2fe2"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c313bbcf-0149-4741-89fa-75e9afeb3a1e",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "fine_dining",
+      "base": {
+        "description": "Restaurant de cuisine gastronomique",
+        "description_i18n": {
+          "de": "Restaurant mit gehobener gastronomischer Küche.",
+          "en": "Restaurant serving fine cuisine.",
+          "es": "Restaurante de cocina gastronómica.",
+          "fr": "Restaurant de cuisine gastronomique"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Gastronomisches Spitzenrestaurant"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Gastronomic restaurant"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Restaurante de alta cocina"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Restaurant de cuisine gastronomique"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Restaurant mettant en avant une cuisine élaborée et une expérience gastronomique. Ce positionnement ne constitue pas à lui seul un label, une distinction de guide ou un nombre d’étoiles.",
+        "description_i18n": {
+          "de": "Restaurant mit Schwerpunkt auf anspruchsvoller Küche und gastronomischem Erlebnis. Diese Ausrichtung begründet für sich allein kein Label, keine Auszeichnung eines Führers und keine Sternezahl.",
+          "en": "Restaurant emphasising elaborate cuisine and a gastronomic experience. This positioning does not itself constitute a label, guide award or star rating.",
+          "es": "Restaurante que destaca una cocina elaborada y una experiencia gastronómica. Este posicionamiento no constituye por sí solo un sello, distinción de guía o número de estrellas.",
+          "fr": "Restaurant mettant en avant une cuisine élaborée et une expérience gastronomique. Ce positionnement ne constitue pas à lui seul un label, une distinction de guide ou un nombre d’étoiles."
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Restaurant mit gehobener Küche"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Gastronomic restaurant"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Restaurante de alta cocina"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Restaurant de cuisine gastronomique"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "85389771-7dc1-48fa-8ddf-51b4e052ca62",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "food_truck",
+      "base": {
+        "name_i18n": {
+          "de": "Food-Truck",
+          "en": "Food truck",
+          "es": "Food truck",
+          "fr": "Food-truck"
+        },
+        "name": "Food-truck",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/85389771-7dc1-48fa-8ddf-51b4e052ca62. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/85389771-7dc1-48fa-8ddf-51b4e052ca62"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Imbisswagen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "mobile kitchen"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Camión de comida"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Camion-restaurant"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "restauration mobile"
+          }
+        ]
+      },
+      "changes": {
+        "name_i18n": {
+          "de": "Imbisswagen",
+          "en": "Food truck",
+          "es": "Camión restaurante",
+          "fr": "Camion-restaurant"
+        },
+        "name": "Camion-restaurant",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/85389771-7dc1-48fa-8ddf-51b4e052ca62. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/85389771-7dc1-48fa-8ddf-51b4e052ca62"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "mobile kitchen"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Camión de comida"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "restauration mobile"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Food-truck"
+          },
+          {
+            "lang": "de",
+            "kind": "alt",
+            "value": "Food-Truck"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6d89b5ef-ed47-4803-bd1f-35216af7af53",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "gato_pei",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6d89b5ef-ed47-4803-bd1f-35216af7af53. Sources externes réellement consultées : https://www.artisanat974.re/actualites/concours-gato-pei-2024/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6d89b5ef-ed47-4803-bd1f-35216af7af53 ; https://www.artisanat974.re/actualites/concours-gato-pei-2024/"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6d89b5ef-ed47-4803-bd1f-35216af7af53. Sources externes réellement consultées : https://www.artisanat974.re/actualites/concours-gato-pei-2024/.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6d89b5ef-ed47-4803-bd1f-35216af7af53 ; https://www.artisanat974.re/actualites/concours-gato-pei-2024/"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1827a80f-9616-4225-ae91-7c16d2f4ce47",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "glacier",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1827a80f-9616-4225-ae91-7c16d2f4ce47. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1827a80f-9616-4225-ae91-7c16d2f4ce47"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1827a80f-9616-4225-ae91-7c16d2f4ce47. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1827a80f-9616-4225-ae91-7c16d2f4ce47"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "33b25de5-4ea3-4252-9ae5-ac9e41112544",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "jus_de_fruits_frais",
+      "base": {
+        "description": "Offre de restauration proposant des jus de fruits frais.",
+        "description_i18n": {
+          "de": "Gastronomieangebot mit frischen Fruchtsäften.",
+          "en": "Food service offering fresh fruit juices.",
+          "es": "Servicio de restauración que ofrece zumos de frutas frescas.",
+          "fr": "Offre de restauration proposant des jus de fruits frais."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/33b25de5-4ea3-4252-9ae5-ac9e41112544. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/33b25de5-4ea3-4252-9ae5-ac9e41112544"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre centrée sur la préparation ou le service de jus obtenus à partir de fruits frais. Elle décrit une proposition de boissons, distincte de la catégorie d’établissement Bar à jus.",
+        "description_i18n": {
+          "de": "Angebot mit Schwerpunkt auf Zubereitung oder Ausschank von Säften aus frischen Früchten. Es bezeichnet ein Getränkeangebot und nicht die Betriebskategorie Saftbar.",
+          "en": "Offer focused on preparing or serving juices made from fresh fruit. It describes a drinks offering rather than the establishment category Juice bar.",
+          "es": "Oferta centrada en preparar o servir zumos obtenidos de frutas frescas. Describe una propuesta de bebidas, distinta de la categoría de establecimiento Bar de zumos.",
+          "fr": "Offre centrée sur la préparation ou le service de jus obtenus à partir de fruits frais. Elle décrit une proposition de boissons, distincte de la catégorie d’établissement Bar à jus."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/33b25de5-4ea3-4252-9ae5-ac9e41112544. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/33b25de5-4ea3-4252-9ae5-ac9e41112544"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "899e522a-8bb2-497f-8e85-6039e44a0fe5",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "pizzeria",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/899e522a-8bb2-497f-8e85-6039e44a0fe5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/899e522a-8bb2-497f-8e85-6039e44a0fe5"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/899e522a-8bb2-497f-8e85-6039e44a0fe5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/899e522a-8bb2-497f-8e85-6039e44a0fe5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6f0a7ae2-840f-4112-8598-4d1ea28e7f93",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "restaurant",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6f0a7ae2-840f-4112-8598-4d1ea28e7f93. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6f0a7ae2-840f-4112-8598-4d1ea28e7f93"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6f0a7ae2-840f-4112-8598-4d1ea28e7f93. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6f0a7ae2-840f-4112-8598-4d1ea28e7f93"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "034bca74-282c-4cb1-acc4-a7561fdc250a",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "restaurant_de_l_hotel",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/034bca74-282c-4cb1-acc4-a7561fdc250a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/034bca74-282c-4cb1-acc4-a7561fdc250a"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/034bca74-282c-4cb1-acc4-a7561fdc250a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/034bca74-282c-4cb1-acc4-a7561fdc250a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8348bbae-d84e-4231-8b87-01cf42acf404",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "restauration_traditionnelle",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8348bbae-d84e-4231-8b87-01cf42acf404. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8348bbae-d84e-4231-8b87-01cf42acf404"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8348bbae-d84e-4231-8b87-01cf42acf404. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8348bbae-d84e-4231-8b87-01cf42acf404"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bc8b110c-9ea7-4fe5-ba82-a1142457e9b7",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Restaurant",
+        "description_i18n": {
+          "de": "Technische Wurzel für Gastronomiekategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for food service categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de restauración; no asignable directamente.",
+          "fr": "Racine technique — Restaurant"
+        },
+        "name_i18n": {
+          "de": "Restaurants",
+          "en": "Restaurants",
+          "es": "Restaurantes",
+          "fr": "Restaurant"
+        },
+        "name": "Restaurant",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bc8b110c-9ea7-4fe5-ba82-a1142457e9b7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bc8b110c-9ea7-4fe5-ba82-a1142457e9b7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des établissements et prestations de restauration, sur place, à emporter, livrés ou liés à un événement. Les sous-catégories précisent la forme de restauration, distincte des catégories de cuisine et de menu.",
+        "description_i18n": {
+          "de": "Oberkategorie für Gastronomiebetriebe und Verpflegungsleistungen vor Ort, zum Mitnehmen, als Lieferung oder für Veranstaltungen. Unterkategorien bestimmen die Leistungsform und keine Küchen- oder Menükategorie.",
+          "en": "General category for food-service establishments and services, including dining in, takeaway, delivery or event catering. Subcategories identify the service format rather than cuisine or menu categories.",
+          "es": "Categoría general de establecimientos y prestaciones de restauración, en el local, para llevar, a domicilio o para eventos. Las subcategorías precisan la forma de servicio, distinta de las categorías de cocina y menú.",
+          "fr": "Catégorie générale des établissements et prestations de restauration, sur place, à emporter, livrés ou liés à un événement. Les sous-catégories précisent la forme de restauration, distincte des catégories de cuisine et de menu."
+        },
+        "name_i18n": {
+          "de": "Gastronomie",
+          "en": "Food services",
+          "es": "Restauración",
+          "fr": "Restauration"
+        },
+        "name": "Restauration",
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bc8b110c-9ea7-4fe5-ba82-a1142457e9b7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bc8b110c-9ea7-4fe5-ba82-a1142457e9b7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a7d22d57-054a-4884-9ab1-5a497fb034e6",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "salle_de_reception",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a7d22d57-054a-4884-9ab1-5a497fb034e6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a7d22d57-054a-4884-9ab1-5a497fb034e6"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a7d22d57-054a-4884-9ab1-5a497fb034e6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a7d22d57-054a-4884-9ab1-5a497fb034e6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2e366849-cccf-432d-84de-48e57640b01d",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "salon_de_the",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2e366849-cccf-432d-84de-48e57640b01d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2e366849-cccf-432d-84de-48e57640b01d"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Teehaus mit Gebäckangebot"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Tearoom"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Establecimiento de té y repostería"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Établissement de thé et pâtisseries"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2e366849-cccf-432d-84de-48e57640b01d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2e366849-cccf-432d-84de-48e57640b01d"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Teehaus mit Gebäckangebot"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Establecimiento de té y repostería"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Établissement de thé et pâtisseries"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "838a20ae-cb7e-4166-8fce-0595560b1310",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "service_de_livraison",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/838a20ae-cb7e-4166-8fce-0595560b1310. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/838a20ae-cb7e-4166-8fce-0595560b1310"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/838a20ae-cb7e-4166-8fce-0595560b1310. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/838a20ae-cb7e-4166-8fce-0595560b1310"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a05f282d-341e-40c2-afbd-122167fb3b85",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "snack_bar",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a05f282d-341e-40c2-afbd-122167fb3b85. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a05f282d-341e-40c2-afbd-122167fb3b85"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a05f282d-341e-40c2-afbd-122167fb3b85. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a05f282d-341e-40c2-afbd-122167fb3b85"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "72428050-70b9-4948-bd8e-1994e1b8ea83",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "table_d_hote",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/72428050-70b9-4948-bd8e-1994e1b8ea83. Sources externes réellement consultées : https://entreprendre.service-public.gouv.fr/vosdroits/F17452.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/72428050-70b9-4948-bd8e-1994e1b8ea83 ; https://entreprendre.service-public.gouv.fr/vosdroits/F17452"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/72428050-70b9-4948-bd8e-1994e1b8ea83. Sources externes réellement consultées : https://entreprendre.service-public.gouv.fr/vosdroits/F17452.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/72428050-70b9-4948-bd8e-1994e1b8ea83 ; https://entreprendre.service-public.gouv.fr/vosdroits/F17452"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f7980240-2606-44b2-8932-c7cf18b0f121",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "table_d_hotes",
+      "base": {
+        "description": "Table d'hôtes",
+        "description_i18n": {
+          "fr": "Table d'hôtes"
+        },
+        "name_i18n": {
+          "fr": "Table d'hôtes"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de repas proposés aux hôtes d’un hébergement sous l’appellation table d’hôtes. Elle reste conservée dans les fiches historiques, distincte d’un restaurant ouvert à une clientèle générale.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de repas proposés aux hôtes d’un hébergement sous l’appellation table d’hôtes. Elle reste conservée dans les fiches historiques, distincte d’un restaurant ouvert à une clientèle générale.",
+          "en": "Former category for meals offered to accommodation guests under the table d’hôtes designation. It remains in historical listings, distinct from a restaurant serving the general public.",
+          "es": "Antigua categoría de comidas ofrecidas a huéspedes de un alojamiento bajo la denominación mesa de huéspedes. Se conserva en fichas históricas, distinta de un restaurante para el público general.",
+          "de": "Frühere Kategorie für Mahlzeiten für Unterkunftsgäste unter der Bezeichnung Table d’hôtes. Sie bleibt in historischen Einträgen erhalten und unterscheidet sich von einem Restaurant für allgemeines Publikum."
+        },
+        "name_i18n": {
+          "fr": "Table d'hôtes",
+          "en": "Guest table (historical)",
+          "es": "Mesa de huéspedes (histórica)",
+          "de": "Gästetisch (historisch)"
+        }
+      }
+    },
+    {
+      "concept_id": "04535e84-82ee-4ffb-a17f-799153f7f95a",
+      "domain": "taxonomy_res",
+      "context_key": "",
+      "code": "traiteur",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/04535e84-82ee-4ffb-a17f-799153f7f95a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/04535e84-82ee-4ffb-a17f-799153f7f95a"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/04535e84-82ee-4ffb-a17f-799153f7f95a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/04535e84-82ee-4ffb-a17f-799153f7f95a"
+          }
+        ]
+      }
+    }
+  ]
+}

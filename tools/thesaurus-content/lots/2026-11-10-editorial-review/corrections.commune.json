@@ -1,0 +1,966 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-commune-1",
+  "proposals": [
+    {
+      "concept_id": "2f32a3fa-9ddb-4834-b06c-af4d117460c8",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97401",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97401)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97401)",
+          "en": "Commune in La Réunion (INSEE code 97401)",
+          "es": "Municipio de La Reunión (código INSEE 97401)",
+          "fr": "Commune de La Réunion (code INSEE 97401)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2f32a3fa-9ddb-4834-b06c-af4d117460c8. Sources externes réellement consultées : https://www.insee.fr/fr/metadonnees/geographie/commune/97401-avirons.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2f32a3fa-9ddb-4834-b06c-af4d117460c8 ; https://www.insee.fr/fr/metadonnees/geographie/commune/97401-avirons"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Les Avirons, identifiée par le code INSEE 97401. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Les Avirons, gekennzeichnet durch den INSEE-Code 97401. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Les Avirons, identified by INSEE code 97401. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Les Avirons, identificado por el código INSEE 97401. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Les Avirons, identifiée par le code INSEE 97401. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2f32a3fa-9ddb-4834-b06c-af4d117460c8. Sources externes réellement consultées : https://www.insee.fr/fr/metadonnees/geographie/commune/97401-avirons.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2f32a3fa-9ddb-4834-b06c-af4d117460c8 ; https://www.insee.fr/fr/metadonnees/geographie/commune/97401-avirons"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2fb3484c-9e30-4099-beb2-32ffaef854f3",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97402",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97402)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97402)",
+          "en": "Commune in La Réunion (INSEE code 97402)",
+          "es": "Municipio de La Reunión (código INSEE 97402)",
+          "fr": "Commune de La Réunion (code INSEE 97402)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2fb3484c-9e30-4099-beb2-32ffaef854f3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2fb3484c-9e30-4099-beb2-32ffaef854f3"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Bras-Panon, identifiée par le code INSEE 97402. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Bras-Panon, gekennzeichnet durch den INSEE-Code 97402. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Bras-Panon, identified by INSEE code 97402. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Bras-Panon, identificado por el código INSEE 97402. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Bras-Panon, identifiée par le code INSEE 97402. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2fb3484c-9e30-4099-beb2-32ffaef854f3. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2fb3484c-9e30-4099-beb2-32ffaef854f3"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "119d4f0d-a26b-4b9b-ac80-d02ce8f7d739",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97403",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97403)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97403)",
+          "en": "Commune in La Réunion (INSEE code 97403)",
+          "es": "Municipio de La Reunión (código INSEE 97403)",
+          "fr": "Commune de La Réunion (code INSEE 97403)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/119d4f0d-a26b-4b9b-ac80-d02ce8f7d739. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/119d4f0d-a26b-4b9b-ac80-d02ce8f7d739"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Entre-Deux, identifiée par le code INSEE 97403. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Entre-Deux, gekennzeichnet durch den INSEE-Code 97403. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Entre-Deux, identified by INSEE code 97403. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Entre-Deux, identificado por el código INSEE 97403. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Entre-Deux, identifiée par le code INSEE 97403. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/119d4f0d-a26b-4b9b-ac80-d02ce8f7d739. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/119d4f0d-a26b-4b9b-ac80-d02ce8f7d739"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "413dea0d-fe82-4e45-ba32-bff49a456b27",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97404",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97404)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97404)",
+          "en": "Commune in La Réunion (INSEE code 97404)",
+          "es": "Municipio de La Reunión (código INSEE 97404)",
+          "fr": "Commune de La Réunion (code INSEE 97404)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/413dea0d-fe82-4e45-ba32-bff49a456b27. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/413dea0d-fe82-4e45-ba32-bff49a456b27"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée L'Étang-Salé, identifiée par le code INSEE 97404. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens L'Étang-Salé, gekennzeichnet durch den INSEE-Code 97404. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named L'Étang-Salé, identified by INSEE code 97404. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado L'Étang-Salé, identificado por el código INSEE 97404. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée L'Étang-Salé, identifiée par le code INSEE 97404. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/413dea0d-fe82-4e45-ba32-bff49a456b27. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/413dea0d-fe82-4e45-ba32-bff49a456b27"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "42465f20-e848-4883-9004-e8bf67020340",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97405",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97405)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97405)",
+          "en": "Commune in La Réunion (INSEE code 97405)",
+          "es": "Municipio de La Reunión (código INSEE 97405)",
+          "fr": "Commune de La Réunion (code INSEE 97405)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/42465f20-e848-4883-9004-e8bf67020340. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/42465f20-e848-4883-9004-e8bf67020340"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Petite-Île, identifiée par le code INSEE 97405. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Petite-Île, gekennzeichnet durch den INSEE-Code 97405. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Petite-Île, identified by INSEE code 97405. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Petite-Île, identificado por el código INSEE 97405. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Petite-Île, identifiée par le code INSEE 97405. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/42465f20-e848-4883-9004-e8bf67020340. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/42465f20-e848-4883-9004-e8bf67020340"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d37f6aa7-befd-4844-8c7a-38a93854fc18",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97406",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97406)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97406)",
+          "en": "Commune in La Réunion (INSEE code 97406)",
+          "es": "Municipio de La Reunión (código INSEE 97406)",
+          "fr": "Commune de La Réunion (code INSEE 97406)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d37f6aa7-befd-4844-8c7a-38a93854fc18. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d37f6aa7-befd-4844-8c7a-38a93854fc18"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée La Plaine-des-Palmistes, identifiée par le code INSEE 97406. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens La Plaine-des-Palmistes, gekennzeichnet durch den INSEE-Code 97406. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named La Plaine-des-Palmistes, identified by INSEE code 97406. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado La Plaine-des-Palmistes, identificado por el código INSEE 97406. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée La Plaine-des-Palmistes, identifiée par le code INSEE 97406. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d37f6aa7-befd-4844-8c7a-38a93854fc18. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d37f6aa7-befd-4844-8c7a-38a93854fc18"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "80df4973-f8c0-431c-b132-8c9e89fadd67",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97407",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97407)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97407)",
+          "en": "Commune in La Réunion (INSEE code 97407)",
+          "es": "Municipio de La Reunión (código INSEE 97407)",
+          "fr": "Commune de La Réunion (code INSEE 97407)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/80df4973-f8c0-431c-b132-8c9e89fadd67. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/80df4973-f8c0-431c-b132-8c9e89fadd67"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Le Port, identifiée par le code INSEE 97407. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Le Port, gekennzeichnet durch den INSEE-Code 97407. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Le Port, identified by INSEE code 97407. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Le Port, identificado por el código INSEE 97407. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Le Port, identifiée par le code INSEE 97407. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/80df4973-f8c0-431c-b132-8c9e89fadd67. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/80df4973-f8c0-431c-b132-8c9e89fadd67"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9101ab6a-9ec4-4bc5-8efe-bd8586506897",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97408",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97408)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97408)",
+          "en": "Commune in La Réunion (INSEE code 97408)",
+          "es": "Municipio de La Reunión (código INSEE 97408)",
+          "fr": "Commune de La Réunion (code INSEE 97408)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9101ab6a-9ec4-4bc5-8efe-bd8586506897. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9101ab6a-9ec4-4bc5-8efe-bd8586506897"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée La Possession, identifiée par le code INSEE 97408. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens La Possession, gekennzeichnet durch den INSEE-Code 97408. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named La Possession, identified by INSEE code 97408. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado La Possession, identificado por el código INSEE 97408. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée La Possession, identifiée par le code INSEE 97408. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9101ab6a-9ec4-4bc5-8efe-bd8586506897. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9101ab6a-9ec4-4bc5-8efe-bd8586506897"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "54f5de94-915a-4afc-9a4e-27a55314e8e6",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97409",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97409)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97409)",
+          "en": "Commune in La Réunion (INSEE code 97409)",
+          "es": "Municipio de La Reunión (código INSEE 97409)",
+          "fr": "Commune de La Réunion (code INSEE 97409)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/54f5de94-915a-4afc-9a4e-27a55314e8e6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/54f5de94-915a-4afc-9a4e-27a55314e8e6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Saint-André, identifiée par le code INSEE 97409. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Saint-André, gekennzeichnet durch den INSEE-Code 97409. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Saint-André, identified by INSEE code 97409. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Saint-André, identificado por el código INSEE 97409. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Saint-André, identifiée par le code INSEE 97409. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/54f5de94-915a-4afc-9a4e-27a55314e8e6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/54f5de94-915a-4afc-9a4e-27a55314e8e6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4a792810-6806-4503-80b4-ff1331598f3f",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97410",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97410)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97410)",
+          "en": "Commune in La Réunion (INSEE code 97410)",
+          "es": "Municipio de La Reunión (código INSEE 97410)",
+          "fr": "Commune de La Réunion (code INSEE 97410)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4a792810-6806-4503-80b4-ff1331598f3f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4a792810-6806-4503-80b4-ff1331598f3f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Saint-Benoît, identifiée par le code INSEE 97410. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Saint-Benoît, gekennzeichnet durch den INSEE-Code 97410. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Saint-Benoît, identified by INSEE code 97410. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Saint-Benoît, identificado por el código INSEE 97410. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Saint-Benoît, identifiée par le code INSEE 97410. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4a792810-6806-4503-80b4-ff1331598f3f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4a792810-6806-4503-80b4-ff1331598f3f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "11965757-6b83-4960-bfe1-200ff50a9a37",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97411",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97411)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97411)",
+          "en": "Commune in La Réunion (INSEE code 97411)",
+          "es": "Municipio de La Reunión (código INSEE 97411)",
+          "fr": "Commune de La Réunion (code INSEE 97411)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/11965757-6b83-4960-bfe1-200ff50a9a37. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/11965757-6b83-4960-bfe1-200ff50a9a37"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Saint-Denis, identifiée par le code INSEE 97411. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Saint-Denis, gekennzeichnet durch den INSEE-Code 97411. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Saint-Denis, identified by INSEE code 97411. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Saint-Denis, identificado por el código INSEE 97411. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Saint-Denis, identifiée par le code INSEE 97411. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/11965757-6b83-4960-bfe1-200ff50a9a37. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/11965757-6b83-4960-bfe1-200ff50a9a37"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8a6d1a3f-8b49-4d88-a738-195961dea0e5",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97412",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97412)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97412)",
+          "en": "Commune in La Réunion (INSEE code 97412)",
+          "es": "Municipio de La Reunión (código INSEE 97412)",
+          "fr": "Commune de La Réunion (code INSEE 97412)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8a6d1a3f-8b49-4d88-a738-195961dea0e5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8a6d1a3f-8b49-4d88-a738-195961dea0e5"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Saint-Joseph, identifiée par le code INSEE 97412. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Saint-Joseph, gekennzeichnet durch den INSEE-Code 97412. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Saint-Joseph, identified by INSEE code 97412. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Saint-Joseph, identificado por el código INSEE 97412. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Saint-Joseph, identifiée par le code INSEE 97412. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8a6d1a3f-8b49-4d88-a738-195961dea0e5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8a6d1a3f-8b49-4d88-a738-195961dea0e5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bbfe6b76-6f52-4f2f-9eea-a6bcb7fa2506",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97413",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97413)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97413)",
+          "en": "Commune in La Réunion (INSEE code 97413)",
+          "es": "Municipio de La Reunión (código INSEE 97413)",
+          "fr": "Commune de La Réunion (code INSEE 97413)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bbfe6b76-6f52-4f2f-9eea-a6bcb7fa2506. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bbfe6b76-6f52-4f2f-9eea-a6bcb7fa2506"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Saint-Leu, identifiée par le code INSEE 97413. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Saint-Leu, gekennzeichnet durch den INSEE-Code 97413. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Saint-Leu, identified by INSEE code 97413. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Saint-Leu, identificado por el código INSEE 97413. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Saint-Leu, identifiée par le code INSEE 97413. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bbfe6b76-6f52-4f2f-9eea-a6bcb7fa2506. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bbfe6b76-6f52-4f2f-9eea-a6bcb7fa2506"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "80d3a2da-ff23-44ec-8eae-66ad8cfe13a8",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97414",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97414)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97414)",
+          "en": "Commune in La Réunion (INSEE code 97414)",
+          "es": "Municipio de La Reunión (código INSEE 97414)",
+          "fr": "Commune de La Réunion (code INSEE 97414)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/80d3a2da-ff23-44ec-8eae-66ad8cfe13a8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/80d3a2da-ff23-44ec-8eae-66ad8cfe13a8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Saint-Louis, identifiée par le code INSEE 97414. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Saint-Louis, gekennzeichnet durch den INSEE-Code 97414. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Saint-Louis, identified by INSEE code 97414. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Saint-Louis, identificado por el código INSEE 97414. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Saint-Louis, identifiée par le code INSEE 97414. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/80d3a2da-ff23-44ec-8eae-66ad8cfe13a8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/80d3a2da-ff23-44ec-8eae-66ad8cfe13a8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "31639d03-3074-453c-a020-b97f9a49c96f",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97415",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97415)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97415)",
+          "en": "Commune in La Réunion (INSEE code 97415)",
+          "es": "Municipio de La Reunión (código INSEE 97415)",
+          "fr": "Commune de La Réunion (code INSEE 97415)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/31639d03-3074-453c-a020-b97f9a49c96f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/31639d03-3074-453c-a020-b97f9a49c96f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Saint-Paul, identifiée par le code INSEE 97415. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Saint-Paul, gekennzeichnet durch den INSEE-Code 97415. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Saint-Paul, identified by INSEE code 97415. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Saint-Paul, identificado por el código INSEE 97415. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Saint-Paul, identifiée par le code INSEE 97415. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/31639d03-3074-453c-a020-b97f9a49c96f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/31639d03-3074-453c-a020-b97f9a49c96f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9fbb6468-b296-4425-9de3-4574d9958626",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97416",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97416)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97416)",
+          "en": "Commune in La Réunion (INSEE code 97416)",
+          "es": "Municipio de La Reunión (código INSEE 97416)",
+          "fr": "Commune de La Réunion (code INSEE 97416)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9fbb6468-b296-4425-9de3-4574d9958626. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9fbb6468-b296-4425-9de3-4574d9958626"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Saint-Pierre, identifiée par le code INSEE 97416. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Saint-Pierre, gekennzeichnet durch den INSEE-Code 97416. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Saint-Pierre, identified by INSEE code 97416. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Saint-Pierre, identificado por el código INSEE 97416. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Saint-Pierre, identifiée par le code INSEE 97416. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9fbb6468-b296-4425-9de3-4574d9958626. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9fbb6468-b296-4425-9de3-4574d9958626"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5897e2be-194f-4a4f-a06f-a963afa623b6",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97417",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97417)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97417)",
+          "en": "Commune in La Réunion (INSEE code 97417)",
+          "es": "Municipio de La Reunión (código INSEE 97417)",
+          "fr": "Commune de La Réunion (code INSEE 97417)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5897e2be-194f-4a4f-a06f-a963afa623b6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5897e2be-194f-4a4f-a06f-a963afa623b6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Saint-Philippe, identifiée par le code INSEE 97417. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Saint-Philippe, gekennzeichnet durch den INSEE-Code 97417. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Saint-Philippe, identified by INSEE code 97417. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Saint-Philippe, identificado por el código INSEE 97417. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Saint-Philippe, identifiée par le code INSEE 97417. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5897e2be-194f-4a4f-a06f-a963afa623b6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5897e2be-194f-4a4f-a06f-a963afa623b6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e8951f9e-84bc-40e7-a9e0-fbecf80aa2ee",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97418",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97418)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97418)",
+          "en": "Commune in La Réunion (INSEE code 97418)",
+          "es": "Municipio de La Reunión (código INSEE 97418)",
+          "fr": "Commune de La Réunion (code INSEE 97418)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e8951f9e-84bc-40e7-a9e0-fbecf80aa2ee. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e8951f9e-84bc-40e7-a9e0-fbecf80aa2ee"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Sainte-Marie, identifiée par le code INSEE 97418. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Sainte-Marie, gekennzeichnet durch den INSEE-Code 97418. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Sainte-Marie, identified by INSEE code 97418. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Sainte-Marie, identificado por el código INSEE 97418. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Sainte-Marie, identifiée par le code INSEE 97418. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e8951f9e-84bc-40e7-a9e0-fbecf80aa2ee. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e8951f9e-84bc-40e7-a9e0-fbecf80aa2ee"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ffa18d67-79d1-4769-afb9-81a676b0f8c7",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97419",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97419)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97419)",
+          "en": "Commune in La Réunion (INSEE code 97419)",
+          "es": "Municipio de La Reunión (código INSEE 97419)",
+          "fr": "Commune de La Réunion (code INSEE 97419)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ffa18d67-79d1-4769-afb9-81a676b0f8c7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ffa18d67-79d1-4769-afb9-81a676b0f8c7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Sainte-Rose, identifiée par le code INSEE 97419. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Sainte-Rose, gekennzeichnet durch den INSEE-Code 97419. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Sainte-Rose, identified by INSEE code 97419. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Sainte-Rose, identificado por el código INSEE 97419. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Sainte-Rose, identifiée par le code INSEE 97419. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ffa18d67-79d1-4769-afb9-81a676b0f8c7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ffa18d67-79d1-4769-afb9-81a676b0f8c7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6c876a31-dd38-48bf-9dd1-99b2d9195113",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97420",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97420)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97420)",
+          "en": "Commune in La Réunion (INSEE code 97420)",
+          "es": "Municipio de La Reunión (código INSEE 97420)",
+          "fr": "Commune de La Réunion (code INSEE 97420)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6c876a31-dd38-48bf-9dd1-99b2d9195113. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6c876a31-dd38-48bf-9dd1-99b2d9195113"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Sainte-Suzanne, identifiée par le code INSEE 97420. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Sainte-Suzanne, gekennzeichnet durch den INSEE-Code 97420. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Sainte-Suzanne, identified by INSEE code 97420. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Sainte-Suzanne, identificado por el código INSEE 97420. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Sainte-Suzanne, identifiée par le code INSEE 97420. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6c876a31-dd38-48bf-9dd1-99b2d9195113. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6c876a31-dd38-48bf-9dd1-99b2d9195113"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f8507967-58d8-491b-b689-1cb9e8f64ada",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97421",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97421)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97421)",
+          "en": "Commune in La Réunion (INSEE code 97421)",
+          "es": "Municipio de La Reunión (código INSEE 97421)",
+          "fr": "Commune de La Réunion (code INSEE 97421)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f8507967-58d8-491b-b689-1cb9e8f64ada. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f8507967-58d8-491b-b689-1cb9e8f64ada"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Salazie, identifiée par le code INSEE 97421. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Salazie, gekennzeichnet durch den INSEE-Code 97421. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Salazie, identified by INSEE code 97421. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Salazie, identificado por el código INSEE 97421. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Salazie, identifiée par le code INSEE 97421. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f8507967-58d8-491b-b689-1cb9e8f64ada. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f8507967-58d8-491b-b689-1cb9e8f64ada"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7105dfa3-4691-4cdd-85a0-99b1a10b92a1",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97422",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97422)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97422)",
+          "en": "Commune in La Réunion (INSEE code 97422)",
+          "es": "Municipio de La Reunión (código INSEE 97422)",
+          "fr": "Commune de La Réunion (code INSEE 97422)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7105dfa3-4691-4cdd-85a0-99b1a10b92a1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7105dfa3-4691-4cdd-85a0-99b1a10b92a1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Le Tampon, identifiée par le code INSEE 97422. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Le Tampon, gekennzeichnet durch den INSEE-Code 97422. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Le Tampon, identified by INSEE code 97422. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Le Tampon, identificado por el código INSEE 97422. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Le Tampon, identifiée par le code INSEE 97422. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7105dfa3-4691-4cdd-85a0-99b1a10b92a1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7105dfa3-4691-4cdd-85a0-99b1a10b92a1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2173c17c-8415-48f7-a899-d2cc5be6eeb8",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97423",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97423)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97423)",
+          "en": "Commune in La Réunion (INSEE code 97423)",
+          "es": "Municipio de La Reunión (código INSEE 97423)",
+          "fr": "Commune de La Réunion (code INSEE 97423)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2173c17c-8415-48f7-a899-d2cc5be6eeb8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2173c17c-8415-48f7-a899-d2cc5be6eeb8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Les Trois-Bassins, identifiée par le code INSEE 97423. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Les Trois-Bassins, gekennzeichnet durch den INSEE-Code 97423. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Les Trois-Bassins, identified by INSEE code 97423. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Les Trois-Bassins, identificado por el código INSEE 97423. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Les Trois-Bassins, identifiée par le code INSEE 97423. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2173c17c-8415-48f7-a899-d2cc5be6eeb8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2173c17c-8415-48f7-a899-d2cc5be6eeb8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b33757c0-79a5-455b-9d01-c59f12177383",
+      "domain": "commune",
+      "context_key": "",
+      "code": "97424",
+      "base": {
+        "description": "Commune de La Réunion (code INSEE 97424)",
+        "description_i18n": {
+          "de": "Gemeinde auf La Réunion (INSEE-Code 97424)",
+          "en": "Commune in La Réunion (INSEE code 97424)",
+          "es": "Municipio de La Reunión (código INSEE 97424)",
+          "fr": "Commune de La Réunion (code INSEE 97424)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b33757c0-79a5-455b-9d01-c59f12177383. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b33757c0-79a5-455b-9d01-c59f12177383"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Commune de La Réunion nommée Cilaos, identifiée par le code INSEE 97424. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique.",
+        "description_i18n": {
+          "de": "Gemeinde auf Réunion namens Cilaos, gekennzeichnet durch den INSEE-Code 97424. Sie dient der räumlichen Zuordnung von Orten, Versorgungsgebieten und Wegen und bezeichnet keine touristische Kategorie.",
+          "en": "Municipality of Réunion named Cilaos, identified by INSEE code 97424. It is used to associate places, service areas and trails with an administrative area, rather than a tourism category.",
+          "es": "Municipio de La Reunión denominado Cilaos, identificado por el código INSEE 97424. Sirve para vincular lugares, zonas atendidas y senderos con un territorio administrativo, no con una categoría turística.",
+          "fr": "Commune de La Réunion nommée Cilaos, identifiée par le code INSEE 97424. Elle sert au rattachement territorial des lieux, zones desservies et sentiers, distinct d’une catégorie touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b33757c0-79a5-455b-9d01-c59f12177383. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b33757c0-79a5-455b-9d01-c59f12177383"
+          }
+        ]
+      }
+    }
+  ]
+}

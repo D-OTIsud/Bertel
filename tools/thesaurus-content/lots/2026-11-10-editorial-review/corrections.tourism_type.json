@@ -1,0 +1,364 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-tourism_type-1",
+  "proposals": [
+    {
+      "concept_id": "02b8af00-9c32-4ef7-98cd-f149b66c37b4",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "adventure",
+      "base": {
+        "description": "Tourisme d'aventure et sports extrêmes",
+        "description_i18n": {
+          "de": "Abenteuer- und Extremsporttourismus",
+          "en": "Adventure and extreme sports tourism",
+          "es": "Turismo de aventura y deportes extremos",
+          "fr": "Tourisme d'aventure et sports extrêmes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/02b8af00-9c32-4ef7-98cd-f149b66c37b4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/02b8af00-9c32-4ef7-98cd-f149b66c37b4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Voyages motivés par des activités d'aventure ou des sports extrêmes, avec recherche d'exploration ou de sensations.",
+        "description_i18n": {
+          "de": "Reisen, die durch Abenteueraktivitäten oder Extremsport und den Wunsch nach Erkundung oder besonderen Erlebnissen motiviert sind.",
+          "en": "Travel motivated by adventure activities or extreme sports, with an interest in exploration or thrills.",
+          "es": "Viajes motivados por actividades de aventura o deportes extremos, con interés por la exploración o las sensaciones.",
+          "fr": "Voyages motivés par des activités d'aventure ou des sports extrêmes, avec recherche d'exploration ou de sensations."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/02b8af00-9c32-4ef7-98cd-f149b66c37b4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/02b8af00-9c32-4ef7-98cd-f149b66c37b4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "120d1f69-47bd-4c56-87b3-aab939c7fd23",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "business",
+      "base": {
+        "description": "Tourisme professionnel",
+        "description_i18n": {
+          "de": "Berufliche Geschäftsreisen",
+          "en": "Professional business travel",
+          "es": "Turismo profesional",
+          "fr": "Tourisme professionnel"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/120d1f69-47bd-4c56-87b3-aab939c7fd23. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/120d1f69-47bd-4c56-87b3-aab939c7fd23"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Déplacements dont le motif principal est professionnel, comme une réunion, un congrès ou une activité d'entreprise.",
+        "description_i18n": {
+          "de": "Reisen mit überwiegend beruflichem Anlass, etwa einer Besprechung, einem Kongress oder einer Firmenaktivität.",
+          "en": "Travel whose main purpose is professional, such as a meeting, conference or company activity.",
+          "es": "Desplazamientos cuyo motivo principal es profesional, como una reunión, un congreso o una actividad de empresa.",
+          "fr": "Déplacements dont le motif principal est professionnel, comme une réunion, un congrès ou une activité d'entreprise."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/120d1f69-47bd-4c56-87b3-aab939c7fd23. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/120d1f69-47bd-4c56-87b3-aab939c7fd23"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6649ef91-6ffa-4313-ab45-1605e788bc8a",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "cultural",
+      "base": {
+        "description": "Tourisme axé sur la culture",
+        "description_i18n": {
+          "de": "Kulturorientierter Tourismus",
+          "en": "Culture-focused tourism",
+          "es": "Turismo enfocado en la cultura",
+          "fr": "Tourisme axé sur la culture"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6649ef91-6ffa-4313-ab45-1605e788bc8a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6649ef91-6ffa-4313-ab45-1605e788bc8a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Voyages motivés par la découverte de la culture, des arts, de l'histoire ou du patrimoine d'un territoire.",
+        "description_i18n": {
+          "de": "Reisen zur Entdeckung der Kultur, Kunst, Geschichte oder des Erbes einer Region.",
+          "en": "Travel motivated by discovering an area's culture, arts, history or heritage.",
+          "es": "Viajes motivados por descubrir la cultura, las artes, la historia o el patrimonio de un territorio.",
+          "fr": "Voyages motivés par la découverte de la culture, des arts, de l'histoire ou du patrimoine d'un territoire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6649ef91-6ffa-4313-ab45-1605e788bc8a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6649ef91-6ffa-4313-ab45-1605e788bc8a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6cc3ba45-f396-4c17-9777-9780a3ef5a7c",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "eco",
+      "base": {
+        "description": "Tourisme respectueux de l'environnement",
+        "description_i18n": {
+          "de": "Umweltverträglicher Tourismus",
+          "en": "Environmentally responsible tourism",
+          "es": "Turismo respetuoso con el medio ambiente",
+          "fr": "Tourisme respectueux de l'environnement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6cc3ba45-f396-4c17-9777-9780a3ef5a7c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6cc3ba45-f396-4c17-9777-9780a3ef5a7c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Forme de tourisme qui cherche à limiter les impacts sur l'environnement ; cette orientation ne constitue pas à elle seule une certification de l'offre.",
+        "description_i18n": {
+          "de": "Tourismusform, die Umweltauswirkungen begrenzen will; diese Ausrichtung stellt allein keine Zertifizierung des Angebots dar.",
+          "en": "Form of tourism seeking to limit environmental impacts; this orientation does not by itself certify the offering.",
+          "es": "Forma de turismo que busca limitar los impactos ambientales; esta orientación no constituye por sí sola una certificación de la oferta.",
+          "fr": "Forme de tourisme qui cherche à limiter les impacts sur l'environnement ; cette orientation ne constitue pas à elle seule une certification de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6cc3ba45-f396-4c17-9777-9780a3ef5a7c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6cc3ba45-f396-4c17-9777-9780a3ef5a7c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ef046026-2450-47eb-9892-baab46792209",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "gastronomy",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ef046026-2450-47eb-9892-baab46792209. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ef046026-2450-47eb-9892-baab46792209"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ef046026-2450-47eb-9892-baab46792209. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ef046026-2450-47eb-9892-baab46792209"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c1237dcb-20e0-4861-a770-785b487c92a4",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "leisure",
+      "base": {
+        "description": "Tourisme de détente et loisirs",
+        "description_i18n": {
+          "de": "Erholungs- und Freizeittourismus",
+          "en": "Relaxation and leisure tourism",
+          "es": "Turismo de descanso y ocio",
+          "fr": "Tourisme de détente et loisirs"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c1237dcb-20e0-4861-a770-785b487c92a4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c1237dcb-20e0-4861-a770-785b487c92a4"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Voyages effectués pour le temps libre, le repos ou les loisirs, à distinguer des déplacements dont le motif principal est professionnel.",
+        "description_i18n": {
+          "de": "Reisen zur Freizeitgestaltung, Erholung oder Unterhaltung; von Reisen mit überwiegend beruflichem Anlass zu unterscheiden.",
+          "en": "Travel undertaken for free time, rest or recreation, distinct from travel whose main purpose is professional.",
+          "es": "Viajes realizados por tiempo libre, descanso u ocio, distintos de los desplazamientos cuyo motivo principal es profesional.",
+          "fr": "Voyages effectués pour le temps libre, le repos ou les loisirs, à distinguer des déplacements dont le motif principal est professionnel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c1237dcb-20e0-4861-a770-785b487c92a4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c1237dcb-20e0-4861-a770-785b487c92a4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "162206f4-c8d9-4470-813e-f3c4d6d0f79b",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "nature",
+      "base": {
+        "description": "Tourisme axé sur la nature",
+        "description_i18n": {
+          "de": "Naturorientierter Tourismus",
+          "en": "Nature-focused tourism",
+          "es": "Turismo centrado en la naturaleza",
+          "fr": "Tourisme axé sur la nature"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/162206f4-c8d9-4470-813e-f3c4d6d0f79b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/162206f4-c8d9-4470-813e-f3c4d6d0f79b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Voyages motivés par la découverte et l'observation des paysages, des milieux naturels, de la faune ou de la flore.",
+        "description_i18n": {
+          "de": "Reisen zur Entdeckung und Beobachtung von Landschaften, Naturräumen, Tieren oder Pflanzen.",
+          "en": "Travel motivated by discovering and observing landscapes, natural environments, wildlife or plants.",
+          "es": "Viajes motivados por descubrir y observar paisajes, entornos naturales, fauna o flora.",
+          "fr": "Voyages motivés par la découverte et l'observation des paysages, des milieux naturels, de la faune ou de la flore."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/162206f4-c8d9-4470-813e-f3c4d6d0f79b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/162206f4-c8d9-4470-813e-f3c4d6d0f79b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c46d8320-36d8-47e1-83c5-be738afce5e1",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "rural",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c46d8320-36d8-47e1-83c5-be738afce5e1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c46d8320-36d8-47e1-83c5-be738afce5e1"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c46d8320-36d8-47e1-83c5-be738afce5e1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c46d8320-36d8-47e1-83c5-be738afce5e1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9ea0395e-537f-4cbd-81de-9318078eee22",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "sports",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9ea0395e-537f-4cbd-81de-9318078eee22. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9ea0395e-537f-4cbd-81de-9318078eee22"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9ea0395e-537f-4cbd-81de-9318078eee22. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9ea0395e-537f-4cbd-81de-9318078eee22"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3c203525-287d-417b-9c93-545f2283c71c",
+      "domain": "tourism_type",
+      "context_key": "",
+      "code": "wellness",
+      "base": {
+        "description": "Tourisme spa et bien-être",
+        "description_i18n": {
+          "de": "Spa- und Wellness-Tourismus",
+          "en": "Spa and wellness tourism",
+          "es": "Turismo de spa y bienestar",
+          "fr": "Tourisme spa et bien-être"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3c203525-287d-417b-9c93-545f2283c71c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3c203525-287d-417b-9c93-545f2283c71c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Voyages motivés par la détente et les prestations de bien-être, notamment les soins et activités proposés dans un spa.",
+        "description_i18n": {
+          "de": "Reisen zur Entspannung und Nutzung von Wellnessangeboten, insbesondere Behandlungen und Aktivitäten in einem Spa.",
+          "en": "Travel motivated by relaxation and wellness services, including treatments and activities offered in a spa.",
+          "es": "Viajes motivados por la relajación y las prestaciones de bienestar, incluidos tratamientos y actividades ofrecidos en un spa.",
+          "fr": "Voyages motivés par la détente et les prestations de bien-être, notamment les soins et activités proposés dans un spa."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3c203525-287d-417b-9c93-545f2283c71c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3c203525-287d-417b-9c93-545f2283c71c"
+          }
+        ]
+      }
+    }
+  ]
+}

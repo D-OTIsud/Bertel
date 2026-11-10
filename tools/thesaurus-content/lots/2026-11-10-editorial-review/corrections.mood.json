@@ -1,0 +1,346 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-mood-1",
+  "proposals": [
+    {
+      "concept_id": "0c88661f-80db-46ed-8ad7-b7b7c9b21609",
+      "domain": "mood",
+      "context_key": "",
+      "code": "aventure",
+      "base": {
+        "description": "Ambiance aventure & sensations",
+        "description_i18n": {
+          "en": "Adventure and thrills ambiance",
+          "es": "Ambiente de aventura y sensaciones",
+          "fr": "Ambiance aventure & sensations"
+        },
+        "name_i18n": {
+          "en": "Adventure",
+          "es": "Aventura",
+          "fr": "Aventure"
+        }
+      },
+      "changes": {
+        "description": "Ambiance touristique mettant en avant l'exploration, l'aventure et les sensations recherchées pendant le séjour.",
+        "description_i18n": {
+          "en": "Tourism atmosphere emphasising exploration, adventure and thrills sought during a stay.",
+          "es": "Ambiente turístico que destaca la exploración, la aventura y las sensaciones buscadas durante la estancia.",
+          "fr": "Ambiance touristique mettant en avant l'exploration, l'aventure et les sensations recherchées pendant le séjour.",
+          "de": "Touristische Atmosphäre, die Erkundung, Abenteuer und besondere Erlebnisse während des Aufenthalts hervorhebt."
+        },
+        "name_i18n": {
+          "en": "Adventure",
+          "es": "Aventura",
+          "fr": "Aventure",
+          "de": "Abenteuer"
+        }
+      }
+    },
+    {
+      "concept_id": "e7700b67-8854-4e63-aa66-3b790e017ec0",
+      "domain": "mood",
+      "context_key": "",
+      "code": "bien_etre",
+      "base": {
+        "description": "Ambiance détente & spa",
+        "description_i18n": {
+          "en": "Wellness and spa ambiance",
+          "es": "Ambiente de bienestar y spa",
+          "fr": "Ambiance détente & spa"
+        },
+        "name_i18n": {
+          "en": "Wellness",
+          "es": "Bienestar",
+          "fr": "Bien-être"
+        }
+      },
+      "changes": {
+        "description": "Ambiance de séjour centrée sur le bien-être et l'univers du spa, sans désigner à elle seule une prestation de soin précise.",
+        "description_i18n": {
+          "en": "Holiday atmosphere centred on wellbeing and the spa experience, without itself identifying a particular treatment.",
+          "es": "Ambiente de estancia centrado en el bienestar y el entorno del spa, sin designar por sí solo un tratamiento concreto.",
+          "fr": "Ambiance de séjour centrée sur le bien-être et l'univers du spa, sans désigner à elle seule une prestation de soin précise.",
+          "de": "Auf Wohlbefinden und die Spa-Erfahrung ausgerichtete Aufenthaltsatmosphäre, ohne damit eine bestimmte Behandlung zu bezeichnen."
+        },
+        "name_i18n": {
+          "en": "Wellness",
+          "es": "Bienestar",
+          "fr": "Bien-être",
+          "de": "Wellness"
+        }
+      }
+    },
+    {
+      "concept_id": "30920bbb-bb76-4f90-9a2a-919c3c5db9a4",
+      "domain": "mood",
+      "context_key": "",
+      "code": "culturel",
+      "base": {
+        "description": "Ambiance culturelle et patrimoniale",
+        "description_i18n": {
+          "en": "Cultural and heritage ambiance",
+          "es": "Ambiente cultural y patrimonial",
+          "fr": "Ambiance culturelle et patrimoniale"
+        },
+        "name_i18n": {
+          "en": "Cultural",
+          "es": "Cultural",
+          "fr": "Culturel"
+        }
+      },
+      "changes": {
+        "description": "Ambiance touristique associée à la découverte culturelle et patrimoniale des lieux visités.",
+        "description_i18n": {
+          "en": "Tourism atmosphere associated with discovering the culture and heritage of the places visited.",
+          "es": "Ambiente turístico asociado al descubrimiento de la cultura y el patrimonio de los lugares visitados.",
+          "fr": "Ambiance touristique associée à la découverte culturelle et patrimoniale des lieux visités.",
+          "de": "Touristische Atmosphäre im Zusammenhang mit der Entdeckung von Kultur und Erbe der besuchten Orte."
+        },
+        "name_i18n": {
+          "en": "Cultural",
+          "es": "Cultural",
+          "fr": "Culturel",
+          "de": "Kulturell"
+        }
+      }
+    },
+    {
+      "concept_id": "17a15442-36d7-4b55-aaad-682d85dc4fe9",
+      "domain": "mood",
+      "context_key": "",
+      "code": "detente",
+      "base": {
+        "description": "Ambiance détente & bien-être",
+        "description_i18n": {
+          "en": "Relaxation and wellness ambiance",
+          "es": "Ambiente de relajación y bienestar",
+          "fr": "Ambiance détente & bien-être"
+        },
+        "name_i18n": {
+          "en": "Relaxation",
+          "es": "Relajación",
+          "fr": "Détente"
+        }
+      },
+      "changes": {
+        "description": "Ambiance de séjour privilégiant le repos et le relâchement, sans impliquer nécessairement la présence d'un spa.",
+        "description_i18n": {
+          "en": "Holiday atmosphere favouring rest and relaxation, without necessarily implying the presence of a spa.",
+          "es": "Ambiente de estancia que favorece el descanso y la relajación, sin implicar necesariamente la presencia de un spa.",
+          "fr": "Ambiance de séjour privilégiant le repos et le relâchement, sans impliquer nécessairement la présence d'un spa.",
+          "de": "Auf Ruhe und Entspannung ausgerichtete Aufenthaltsatmosphäre, die nicht zwingend einen Spa voraussetzt."
+        },
+        "name_i18n": {
+          "en": "Relaxation",
+          "es": "Relajación",
+          "fr": "Détente",
+          "de": "Entspannung"
+        }
+      }
+    },
+    {
+      "concept_id": "c5205447-22d8-4500-a01c-9280ac785194",
+      "domain": "mood",
+      "context_key": "",
+      "code": "famille",
+      "base": {
+        "description": "Ambiance familiale",
+        "description_i18n": {
+          "en": "Family-friendly ambiance",
+          "es": "Ambiente familiar",
+          "fr": "Ambiance familiale"
+        },
+        "name_i18n": {
+          "en": "Family",
+          "es": "Familiar",
+          "fr": "Famille"
+        }
+      },
+      "changes": {
+        "description": "Ambiance adaptée à un séjour partagé en famille ; elle décrit l'expérience des visiteurs, pas le mode de propriété d'un hôtel.",
+        "description_i18n": {
+          "en": "Atmosphere suited to a stay shared as a family; it describes the visitor experience rather than hotel ownership.",
+          "es": "Ambiente adecuado para una estancia compartida en familia; describe la experiencia de los visitantes, no la propiedad de un hotel.",
+          "fr": "Ambiance adaptée à un séjour partagé en famille ; elle décrit l'expérience des visiteurs, pas le mode de propriété d'un hôtel.",
+          "de": "Atmosphäre für einen gemeinsamen Familienaufenthalt; sie beschreibt das Gästeerlebnis und nicht die Eigentumsverhältnisse eines Hotels."
+        },
+        "name_i18n": {
+          "en": "Family",
+          "es": "Familiar",
+          "fr": "Famille",
+          "de": "Familienfreundlich"
+        }
+      }
+    },
+    {
+      "concept_id": "dd3e5397-fc20-49cf-ba96-05889e9a7c79",
+      "domain": "mood",
+      "context_key": "",
+      "code": "festif",
+      "base": {
+        "description": "Ambiance festive / nocturne",
+        "description_i18n": {
+          "en": "Festive or nightlife ambiance",
+          "es": "Ambiente festivo o nocturno",
+          "fr": "Ambiance festive / nocturne"
+        },
+        "name_i18n": {
+          "en": "Festive",
+          "es": "Festivo",
+          "fr": "Festif"
+        }
+      },
+      "changes": {
+        "description": "Ambiance tournée vers la fête, les animations et la vie nocturne proposées ou présentes dans le cadre du séjour.",
+        "description_i18n": {
+          "en": "Atmosphere oriented towards celebrations, entertainment and nightlife offered or present during a stay.",
+          "es": "Ambiente orientado a la fiesta, la animación y la vida nocturna ofrecidas o presentes durante la estancia.",
+          "fr": "Ambiance tournée vers la fête, les animations et la vie nocturne proposées ou présentes dans le cadre du séjour.",
+          "de": "Auf Feiern, Unterhaltung und Nachtleben während des Aufenthalts ausgerichtete Atmosphäre."
+        },
+        "name_i18n": {
+          "en": "Festive",
+          "es": "Festivo",
+          "fr": "Festif",
+          "de": "Festlich"
+        }
+      }
+    },
+    {
+      "concept_id": "2b9f5dd3-23b1-4561-8488-40498d891ffa",
+      "domain": "mood",
+      "context_key": "",
+      "code": "gourmand",
+      "base": {
+        "description": "Ambiance gastronomique",
+        "description_i18n": {
+          "en": "Gastronomic ambiance",
+          "es": "Ambiente gastronómico",
+          "fr": "Ambiance gastronomique"
+        },
+        "name_i18n": {
+          "en": "Foodie",
+          "es": "Gastronómico",
+          "fr": "Gourmand"
+        }
+      },
+      "changes": {
+        "description": "Ambiance de séjour mettant la cuisine, les dégustations et la découverte des saveurs au premier plan.",
+        "description_i18n": {
+          "en": "Holiday atmosphere placing cooking, tastings and the discovery of flavours at the forefront.",
+          "es": "Ambiente de estancia que da protagonismo a la cocina, las degustaciones y el descubrimiento de sabores.",
+          "fr": "Ambiance de séjour mettant la cuisine, les dégustations et la découverte des saveurs au premier plan.",
+          "de": "Aufenthaltsatmosphäre, bei der Küche, Verkostungen und die Entdeckung von Geschmackserlebnissen im Mittelpunkt stehen."
+        },
+        "name_i18n": {
+          "en": "Foodie",
+          "es": "Gastronómico",
+          "fr": "Gourmand",
+          "de": "Kulinarisch"
+        }
+      }
+    },
+    {
+      "concept_id": "1fa8c629-08f8-4535-bb31-39cf2f223b30",
+      "domain": "mood",
+      "context_key": "",
+      "code": "nature",
+      "base": {
+        "description": "Ambiance nature & grand air",
+        "description_i18n": {
+          "en": "Nature and outdoors ambiance",
+          "es": "Ambiente de naturaleza y aire libre",
+          "fr": "Ambiance nature & grand air"
+        },
+        "name_i18n": {
+          "en": "Nature",
+          "es": "Naturaleza",
+          "fr": "Nature"
+        }
+      },
+      "changes": {
+        "description": "Ambiance de séjour associée aux espaces naturels et au grand air, distincte d'une qualification environnementale certifiée.",
+        "description_i18n": {
+          "en": "Holiday atmosphere associated with natural spaces and the outdoors, distinct from certified environmental credentials.",
+          "es": "Ambiente de estancia asociado a los espacios naturales y al aire libre, distinto de una acreditación ambiental certificada.",
+          "fr": "Ambiance de séjour associée aux espaces naturels et au grand air, distincte d'une qualification environnementale certifiée.",
+          "de": "Mit Naturräumen und Aufenthalt im Freien verbundene Atmosphäre; von einer zertifizierten Umweltqualifikation zu unterscheiden."
+        },
+        "name_i18n": {
+          "en": "Nature",
+          "es": "Naturaleza",
+          "fr": "Nature",
+          "de": "Natur"
+        }
+      }
+    },
+    {
+      "concept_id": "c61fa871-0605-4985-9a66-b50d3819552b",
+      "domain": "mood",
+      "context_key": "",
+      "code": "romantique",
+      "base": {
+        "description": "Ambiance romantique",
+        "description_i18n": {
+          "en": "Romantic ambiance",
+          "es": "Ambiente romántico",
+          "fr": "Ambiance romantique"
+        },
+        "name_i18n": {
+          "en": "Romantic",
+          "es": "Romántico",
+          "fr": "Romantique"
+        }
+      },
+      "changes": {
+        "description": "Ambiance de séjour privilégiant l'intimité et les moments à deux recherchés par les visiteurs.",
+        "description_i18n": {
+          "en": "Holiday atmosphere favouring intimacy and time together as a couple sought by visitors.",
+          "es": "Ambiente de estancia que favorece la intimidad y los momentos en pareja buscados por los visitantes.",
+          "fr": "Ambiance de séjour privilégiant l'intimité et les moments à deux recherchés par les visiteurs.",
+          "de": "Aufenthaltsatmosphäre, die die von Gästen gesuchte Vertrautheit und Zeit zu zweit begünstigt."
+        },
+        "name_i18n": {
+          "en": "Romantic",
+          "es": "Romántico",
+          "fr": "Romantique",
+          "de": "Romantisch"
+        }
+      }
+    },
+    {
+      "concept_id": "3a0d56f4-506b-4fa7-947d-0b478a5218f6",
+      "domain": "mood",
+      "context_key": "",
+      "code": "sportif",
+      "base": {
+        "description": "Ambiance sportive et active",
+        "description_i18n": {
+          "en": "Sports and active ambiance",
+          "es": "Ambiente deportivo y activo",
+          "fr": "Ambiance sportive et active"
+        },
+        "name_i18n": {
+          "en": "Sporty",
+          "es": "Deportivo",
+          "fr": "Sportif"
+        }
+      },
+      "changes": {
+        "description": "Ambiance de séjour valorisant le mouvement, l'activité physique et une expérience active des loisirs.",
+        "description_i18n": {
+          "en": "Holiday atmosphere emphasising movement, physical activity and an active approach to recreation.",
+          "es": "Ambiente de estancia que destaca el movimiento, la actividad física y una experiencia activa del ocio.",
+          "fr": "Ambiance de séjour valorisant le mouvement, l'activité physique et une expérience active des loisirs.",
+          "de": "Aufenthaltsatmosphäre, die Bewegung, körperliche Aktivität und aktive Freizeitgestaltung hervorhebt."
+        },
+        "name_i18n": {
+          "en": "Sporty",
+          "es": "Deportivo",
+          "fr": "Sportif",
+          "de": "Sportlich"
+        }
+      }
+    }
+  ]
+}

@@ -142,6 +142,12 @@ WITH added AS (
  RETURNING release_id
 ) INSERT INTO _admin_batch_release SELECT release_id FROM added;
 GRANT SELECT ON _admin_batch_release TO bertel_thesaurus_publisher;
+-- Test-only membership follows the existing prepared-publication fixture and
+-- is rolled back together with every fixture row. No migration grants SET.
+DO $publisher_fixture_membership$
+BEGIN
+  EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH INHERIT FALSE, SET TRUE',current_user);
+END $publisher_fixture_membership$;
 SET LOCAL ROLE bertel_thesaurus_publisher;
 INSERT INTO thesaurus.release_concept(release_id,concept_id,domain,is_public,document,checksum)
 SELECT release_id,'b7ba0000-0000-4000-8000-000000000002','test_admin_batch_private',false,

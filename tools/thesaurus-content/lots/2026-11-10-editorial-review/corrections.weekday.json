@@ -1,0 +1,286 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-weekday-1",
+  "proposals": [
+    {
+      "concept_id": "4e1daee6-f37c-450e-8dc0-8a9af5930cbc",
+      "domain": "weekday",
+      "context_key": "",
+      "code": "friday",
+      "base": {
+        "description": "Jour de la semaine (vendredi)",
+        "description_i18n": {
+          "de": "Wochentag (Freitag)",
+          "en": "Day of the week (Friday)",
+          "es": "Día de la semana (viernes)",
+          "fr": "Jour de la semaine (vendredi)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4e1daee6-f37c-450e-8dc0-8a9af5930cbc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4e1daee6-f37c-450e-8dc0-8a9af5930cbc"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Vendredi est le jour numéro 5 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière.",
+        "description_i18n": {
+          "de": "Freitag ist Tag 5 der am Montag beginnenden Woche. In strukturierten Öffnungszeiten bezeichnet er den wiederkehrenden Tag der Zeitfenster und kein bestimmtes Datum.",
+          "en": "Friday is day 5 of the week starting on Monday. In structured opening hours it identifies the recurring day to which time slots apply, rather than a particular date.",
+          "es": "Viernes es el día número 5 de la semana que empieza el lunes. En los horarios estructurados identifica el día recurrente al que se aplican las franjas, no una fecha concreta.",
+          "fr": "Vendredi est le jour numéro 5 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4e1daee6-f37c-450e-8dc0-8a9af5930cbc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4e1daee6-f37c-450e-8dc0-8a9af5930cbc"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b99489ab-19ee-49a4-b843-528534d68bb0",
+      "domain": "weekday",
+      "context_key": "",
+      "code": "monday",
+      "base": {
+        "description": "Jour de la semaine (lundi)",
+        "description_i18n": {
+          "de": "Wochentag (Montag)",
+          "en": "Day of the week (Monday)",
+          "es": "Día de la semana (lunes)",
+          "fr": "Jour de la semaine (lundi)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b99489ab-19ee-49a4-b843-528534d68bb0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b99489ab-19ee-49a4-b843-528534d68bb0"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lundi est le jour numéro 1 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière.",
+        "description_i18n": {
+          "de": "Montag ist Tag 1 der am Montag beginnenden Woche. In strukturierten Öffnungszeiten bezeichnet er den wiederkehrenden Tag der Zeitfenster und kein bestimmtes Datum.",
+          "en": "Monday is day 1 of the week starting on Monday. In structured opening hours it identifies the recurring day to which time slots apply, rather than a particular date.",
+          "es": "Lunes es el día número 1 de la semana que empieza el lunes. En los horarios estructurados identifica el día recurrente al que se aplican las franjas, no una fecha concreta.",
+          "fr": "Lundi est le jour numéro 1 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b99489ab-19ee-49a4-b843-528534d68bb0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b99489ab-19ee-49a4-b843-528534d68bb0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e1d1a807-2003-4eb2-ad06-61c117c81cb8",
+      "domain": "weekday",
+      "context_key": "",
+      "code": "saturday",
+      "base": {
+        "description": "Jour de la semaine (samedi)",
+        "description_i18n": {
+          "de": "Wochentag (Samstag)",
+          "en": "Day of the week (Saturday)",
+          "es": "Día de la semana (sábado)",
+          "fr": "Jour de la semaine (samedi)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e1d1a807-2003-4eb2-ad06-61c117c81cb8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e1d1a807-2003-4eb2-ad06-61c117c81cb8"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Samedi est le jour numéro 6 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière.",
+        "description_i18n": {
+          "de": "Samstag ist Tag 6 der am Montag beginnenden Woche. In strukturierten Öffnungszeiten bezeichnet er den wiederkehrenden Tag der Zeitfenster und kein bestimmtes Datum.",
+          "en": "Saturday is day 6 of the week starting on Monday. In structured opening hours it identifies the recurring day to which time slots apply, rather than a particular date.",
+          "es": "Sábado es el día número 6 de la semana que empieza el lunes. En los horarios estructurados identifica el día recurrente al que se aplican las franjas, no una fecha concreta.",
+          "fr": "Samedi est le jour numéro 6 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e1d1a807-2003-4eb2-ad06-61c117c81cb8. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e1d1a807-2003-4eb2-ad06-61c117c81cb8"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2f6e9d1b-1960-4648-8bb4-7794e8338ae7",
+      "domain": "weekday",
+      "context_key": "",
+      "code": "sunday",
+      "base": {
+        "description": "Jour de la semaine (dimanche)",
+        "description_i18n": {
+          "de": "Wochentag (Sonntag)",
+          "en": "Day of the week (Sunday)",
+          "es": "Día de la semana (domingo)",
+          "fr": "Jour de la semaine (dimanche)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2f6e9d1b-1960-4648-8bb4-7794e8338ae7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2f6e9d1b-1960-4648-8bb4-7794e8338ae7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Dimanche est le jour numéro 7 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière.",
+        "description_i18n": {
+          "de": "Sonntag ist Tag 7 der am Montag beginnenden Woche. In strukturierten Öffnungszeiten bezeichnet er den wiederkehrenden Tag der Zeitfenster und kein bestimmtes Datum.",
+          "en": "Sunday is day 7 of the week starting on Monday. In structured opening hours it identifies the recurring day to which time slots apply, rather than a particular date.",
+          "es": "Domingo es el día número 7 de la semana que empieza el lunes. En los horarios estructurados identifica el día recurrente al que se aplican las franjas, no una fecha concreta.",
+          "fr": "Dimanche est le jour numéro 7 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2f6e9d1b-1960-4648-8bb4-7794e8338ae7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2f6e9d1b-1960-4648-8bb4-7794e8338ae7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b829d9a9-444e-42b2-bd8e-6a55a79e972d",
+      "domain": "weekday",
+      "context_key": "",
+      "code": "thursday",
+      "base": {
+        "description": "Jour de la semaine (jeudi)",
+        "description_i18n": {
+          "de": "Wochentag (Donnerstag)",
+          "en": "Day of the week (Thursday)",
+          "es": "Día de la semana (jueves)",
+          "fr": "Jour de la semaine (jeudi)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b829d9a9-444e-42b2-bd8e-6a55a79e972d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b829d9a9-444e-42b2-bd8e-6a55a79e972d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Jeudi est le jour numéro 4 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière.",
+        "description_i18n": {
+          "de": "Donnerstag ist Tag 4 der am Montag beginnenden Woche. In strukturierten Öffnungszeiten bezeichnet er den wiederkehrenden Tag der Zeitfenster und kein bestimmtes Datum.",
+          "en": "Thursday is day 4 of the week starting on Monday. In structured opening hours it identifies the recurring day to which time slots apply, rather than a particular date.",
+          "es": "Jueves es el día número 4 de la semana que empieza el lunes. En los horarios estructurados identifica el día recurrente al que se aplican las franjas, no una fecha concreta.",
+          "fr": "Jeudi est le jour numéro 4 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b829d9a9-444e-42b2-bd8e-6a55a79e972d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b829d9a9-444e-42b2-bd8e-6a55a79e972d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a8aa64b6-520c-45d5-9a49-1f2d0875a549",
+      "domain": "weekday",
+      "context_key": "",
+      "code": "tuesday",
+      "base": {
+        "description": "Jour de la semaine (mardi)",
+        "description_i18n": {
+          "de": "Wochentag (Dienstag)",
+          "en": "Day of the week (Tuesday)",
+          "es": "Día de la semana (martes)",
+          "fr": "Jour de la semaine (mardi)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a8aa64b6-520c-45d5-9a49-1f2d0875a549. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a8aa64b6-520c-45d5-9a49-1f2d0875a549"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mardi est le jour numéro 2 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière.",
+        "description_i18n": {
+          "de": "Dienstag ist Tag 2 der am Montag beginnenden Woche. In strukturierten Öffnungszeiten bezeichnet er den wiederkehrenden Tag der Zeitfenster und kein bestimmtes Datum.",
+          "en": "Tuesday is day 2 of the week starting on Monday. In structured opening hours it identifies the recurring day to which time slots apply, rather than a particular date.",
+          "es": "Martes es el día número 2 de la semana que empieza el lunes. En los horarios estructurados identifica el día recurrente al que se aplican las franjas, no una fecha concreta.",
+          "fr": "Mardi est le jour numéro 2 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a8aa64b6-520c-45d5-9a49-1f2d0875a549. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a8aa64b6-520c-45d5-9a49-1f2d0875a549"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5d501ff2-34c9-44f3-be1d-5994037d05e2",
+      "domain": "weekday",
+      "context_key": "",
+      "code": "wednesday",
+      "base": {
+        "description": "Jour de la semaine (mercredi)",
+        "description_i18n": {
+          "de": "Wochentag (Mittwoch)",
+          "en": "Day of the week (Wednesday)",
+          "es": "Día de la semana (miércoles)",
+          "fr": "Jour de la semaine (mercredi)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5d501ff2-34c9-44f3-be1d-5994037d05e2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5d501ff2-34c9-44f3-be1d-5994037d05e2"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mercredi est le jour numéro 3 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière.",
+        "description_i18n": {
+          "de": "Mittwoch ist Tag 3 der am Montag beginnenden Woche. In strukturierten Öffnungszeiten bezeichnet er den wiederkehrenden Tag der Zeitfenster und kein bestimmtes Datum.",
+          "en": "Wednesday is day 3 of the week starting on Monday. In structured opening hours it identifies the recurring day to which time slots apply, rather than a particular date.",
+          "es": "Miércoles es el día número 3 de la semana que empieza el lunes. En los horarios estructurados identifica el día recurrente al que se aplican las franjas, no una fecha concreta.",
+          "fr": "Mercredi est le jour numéro 3 de la semaine commencée le lundi. Dans les horaires structurés, il désigne le jour récurrent auquel s’appliquent les créneaux, distinct d’une date particulière."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5d501ff2-34c9-44f3-be1d-5994037d05e2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5d501ff2-34c9-44f3-be1d-5994037d05e2"
+          }
+        ]
+      }
+    }
+  ]
+}

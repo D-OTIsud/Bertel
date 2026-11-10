@@ -841,6 +841,10 @@ COMMIT;
 \ir thesaurus_simple_business_names.sql
 \ir tests/test_thesaurus_simple_business_names.sql
 
+\echo '== Private legacy search terms: complete editorial roundtrip =='
+\ir thesaurus_legacy_search_term_roundtrip.sql
+\ir tests/test_thesaurus_legacy_search_term_roundtrip.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

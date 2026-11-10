@@ -1,0 +1,118 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-membership_tier-1",
+  "proposals": [
+    {
+      "concept_id": "ba44cf28-795a-4dd7-880f-1f28b3f9e81f",
+      "domain": "membership_tier",
+      "context_key": "",
+      "code": "charte_gratuit",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Charte (gratuit)"
+        }
+      },
+      "changes": {
+        "description": "Palier d'adhésion gratuit fondé sur la charte d'engagement de l'office ; il identifie une formule d'adhésion et ne décrit pas son état de validation.",
+        "description_i18n": {
+          "fr": "Palier d'adhésion gratuit fondé sur la charte d'engagement de l'office ; il identifie une formule d'adhésion et ne décrit pas son état de validation.",
+          "en": "Free membership tier based on the tourist office's commitment charter; it identifies a membership plan rather than its validation status.",
+          "es": "Nivel de adhesión gratuito basado en la carta de compromiso de la oficina de turismo; identifica una modalidad de adhesión, no su estado de validación.",
+          "de": "Kostenlose Mitgliedschaftsstufe auf Grundlage der Verpflichtungscharta des Tourismusbüros; sie bezeichnet ein Mitgliedschaftsmodell und nicht dessen Prüfstatus."
+        },
+        "name_i18n": {
+          "fr": "Charte (gratuit)",
+          "en": "Charter (free)",
+          "es": "Carta de compromiso (gratuita)",
+          "de": "Charta (kostenlos)"
+        }
+      }
+    },
+    {
+      "concept_id": "58ee07df-ebe7-4a1d-a5d0-ca01f65b4f5f",
+      "domain": "membership_tier",
+      "context_key": "",
+      "code": "membre",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Membre"
+        }
+      },
+      "changes": {
+        "description": "Palier d'adhésion dénommé « Membre », utilisé pour distinguer cette formule des paliers gratuit, premium et partenaire ; ses prestations dépendent de l'offre d'adhésion.",
+        "description_i18n": {
+          "fr": "Palier d'adhésion dénommé « Membre », utilisé pour distinguer cette formule des paliers gratuit, premium et partenaire ; ses prestations dépendent de l'offre d'adhésion.",
+          "en": "Membership tier named Member, distinguishing this plan from the free, premium and partner tiers; its benefits depend on the membership offer.",
+          "es": "Nivel de adhesión denominado Miembro, que distingue esta modalidad de los niveles gratuito, prémium y colaborador; sus prestaciones dependen de la oferta de adhesión.",
+          "de": "Mitgliedschaftsstufe mit der Bezeichnung Mitglied, die dieses Modell von der kostenlosen, der Premium- und der Partnerstufe abgrenzt; die Leistungen ergeben sich aus dem Mitgliedschaftsangebot."
+        },
+        "name_i18n": {
+          "fr": "Membre",
+          "en": "Member",
+          "es": "Miembro",
+          "de": "Mitglied"
+        }
+      }
+    },
+    {
+      "concept_id": "30eaef8d-ec4f-48c0-b362-c3fc76652e13",
+      "domain": "membership_tier",
+      "context_key": "",
+      "code": "membre_premium",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Membre Premium"
+        }
+      },
+      "changes": {
+        "description": "Palier d'adhésion dénommé « Membre Premium », distinct du palier Membre ; le libellé n'impose à lui seul aucune prestation ni aucun tarif particulier.",
+        "description_i18n": {
+          "fr": "Palier d'adhésion dénommé « Membre Premium », distinct du palier Membre ; le libellé n'impose à lui seul aucune prestation ni aucun tarif particulier.",
+          "en": "Membership tier named Premium Member, distinct from the Member tier; the name alone does not prescribe specific benefits or fees.",
+          "es": "Nivel de adhesión denominado Miembro prémium, distinto del nivel Miembro; la denominación por sí sola no fija prestaciones ni cuotas concretas.",
+          "de": "Mitgliedschaftsstufe mit der Bezeichnung Premium-Mitglied, die von der Stufe Mitglied unterschieden wird; die Bezeichnung allein legt weder bestimmte Leistungen noch Beiträge fest."
+        },
+        "name_i18n": {
+          "fr": "Membre Premium",
+          "en": "Premium member",
+          "es": "Miembro prémium",
+          "de": "Premium-Mitglied"
+        }
+      }
+    },
+    {
+      "concept_id": "0c153ea9-3f71-46be-9d2c-fa18feb1aef3",
+      "domain": "membership_tier",
+      "context_key": "",
+      "code": "partenaire",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Partenaire"
+        }
+      },
+      "changes": {
+        "description": "Palier d'adhésion dénommé « Partenaire » ; il classe une formule d'adhésion et se distingue du type de partenariat ou d'une offre promotionnelle partenaire.",
+        "description_i18n": {
+          "fr": "Palier d'adhésion dénommé « Partenaire » ; il classe une formule d'adhésion et se distingue du type de partenariat ou d'une offre promotionnelle partenaire.",
+          "en": "Membership tier named Partner; it classifies a membership plan and is distinct from a partnership type or a partner promotional offer.",
+          "es": "Nivel de adhesión denominado Colaborador; clasifica una modalidad de adhesión y se distingue del tipo de colaboración o de una oferta promocional de un colaborador.",
+          "de": "Mitgliedschaftsstufe mit der Bezeichnung Partner; sie ordnet ein Mitgliedschaftsmodell ein und ist von einer Partnerschaftsart oder einem Partner-Sonderangebot zu unterscheiden."
+        },
+        "name_i18n": {
+          "fr": "Partenaire",
+          "en": "Partner",
+          "es": "Colaborador",
+          "de": "Partner"
+        }
+      }
+    }
+  ]
+}

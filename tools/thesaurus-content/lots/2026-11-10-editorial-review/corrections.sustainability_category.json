@@ -1,0 +1,366 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-sustainability_category-1",
+  "proposals": [
+    {
+      "concept_id": "af0c63c2-46b8-4f91-94dd-8493f686df1d",
+      "domain": "sustainability_category",
+      "context_key": "",
+      "code": "CAT_BIO",
+      "base": {
+        "description": "Protection des milieux, biodiversité, qualité de l'eau et réduction des pollutions.",
+        "description_i18n": {
+          "de": "Schutz der Naturräume und der Biodiversität, Erhalt der Wasserqualität und Verringerung von Verschmutzung.",
+          "en": "Protection of natural environments, biodiversity, water quality and pollution reduction.",
+          "es": "Protección de los entornos naturales, la biodiversidad, la calidad del agua y la reducción de la contaminación.",
+          "fr": "Protection des milieux, biodiversité, qualité de l'eau et réduction des pollutions."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/af0c63c2-46b8-4f91-94dd-8493f686df1d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/af0c63c2-46b8-4f91-94dd-8493f686df1d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie regroupant les actions déclarées de protection de la biodiversité et des milieux naturels, de préservation de la qualité de l'eau et de réduction des pollutions.",
+        "description_i18n": {
+          "de": "Kategorie für angegebene Maßnahmen zum Schutz der biologischen Vielfalt und der Naturräume, zur Erhaltung der Wasserqualität und zur Verringerung von Verschmutzung.",
+          "en": "Category grouping declared actions to protect biodiversity and natural environments, preserve water quality and reduce pollution.",
+          "es": "Categoría que agrupa las acciones declaradas de protección de la biodiversidad y los entornos naturales, conservación de la calidad del agua y reducción de la contaminación.",
+          "fr": "Catégorie regroupant les actions déclarées de protection de la biodiversité et des milieux naturels, de préservation de la qualité de l'eau et de réduction des pollutions."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/af0c63c2-46b8-4f91-94dd-8493f686df1d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/af0c63c2-46b8-4f91-94dd-8493f686df1d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "61425acb-af38-45e4-8a50-051b242548f3",
+      "domain": "sustainability_category",
+      "context_key": "",
+      "code": "CAT_ENERGY",
+      "base": {
+        "description": "Mesure, réduction et décarbonation de l'énergie et des impacts climatiques.",
+        "description_i18n": {
+          "de": "Messung und Verringerung des Energieverbrauchs und der Klimawirkungen sowie Dekarbonisierung der Energieversorgung.",
+          "en": "Measurement, reduction and decarbonisation of energy and climate impacts.",
+          "es": "Medición, reducción y descarbonización de la energía y de los impactos climáticos.",
+          "fr": "Mesure, réduction et décarbonation de l'énergie et des impacts climatiques."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/61425acb-af38-45e4-8a50-051b242548f3. Sources externes réellement consultées : https://www.ecologie.gouv.fr/presse/decret-bilan-emissions-gaz-effet-serre-beges.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/61425acb-af38-45e4-8a50-051b242548f3 ; https://www.ecologie.gouv.fr/presse/decret-bilan-emissions-gaz-effet-serre-beges"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie regroupant le suivi et la réduction des consommations d'énergie ainsi que les actions déclarées de décarbonation et de limitation des effets sur le climat.",
+        "description_i18n": {
+          "de": "Kategorie für die Erfassung und Verringerung des Energieverbrauchs sowie angegebene Maßnahmen zur Dekarbonisierung und Begrenzung der Klimawirkungen.",
+          "en": "Category grouping energy consumption monitoring and reduction together with declared actions to decarbonise and limit climate impacts.",
+          "es": "Categoría que agrupa el seguimiento y la reducción del consumo energético y las acciones declaradas de descarbonización y limitación de los impactos climáticos.",
+          "fr": "Catégorie regroupant le suivi et la réduction des consommations d'énergie ainsi que les actions déclarées de décarbonation et de limitation des effets sur le climat."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/61425acb-af38-45e4-8a50-051b242548f3. Sources externes réellement consultées : https://www.ecologie.gouv.fr/presse/decret-bilan-emissions-gaz-effet-serre-beges.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/61425acb-af38-45e4-8a50-051b242548f3 ; https://www.ecologie.gouv.fr/presse/decret-bilan-emissions-gaz-effet-serre-beges"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "39e9d736-c24d-4461-acae-dc7e44deadb1",
+      "domain": "sustainability_category",
+      "context_key": "",
+      "code": "CAT_GOV",
+      "base": {
+        "description": "Pilotage, conformité, transparence, stratégie et dialogue.",
+        "description_i18n": {
+          "de": "Steuerung, Compliance, Transparenz, Strategie und Dialog.",
+          "en": "Steering, compliance, transparency, strategy and dialogue.",
+          "es": "Gestión, cumplimiento, transparencia, estrategia y diálogo.",
+          "fr": "Pilotage, conformité, transparence, stratégie et dialogue."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/39e9d736-c24d-4461-acae-dc7e44deadb1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/39e9d736-c24d-4461-acae-dc7e44deadb1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie regroupant l'organisation de la démarche de durabilité : stratégie, pilotage, suivi de la conformité, transparence et dialogue avec les parties prenantes.",
+        "description_i18n": {
+          "de": "Kategorie für die Organisation der Nachhaltigkeitsarbeit: Strategie, Steuerung, Überwachung der Regelkonformität, Transparenz und Dialog mit den Beteiligten.",
+          "en": "Category grouping the organisation of sustainability work: strategy, management, compliance monitoring, transparency and dialogue with stakeholders.",
+          "es": "Categoría que agrupa la organización del trabajo de sostenibilidad: estrategia, gestión, seguimiento del cumplimiento, transparencia y diálogo con las partes interesadas.",
+          "fr": "Catégorie regroupant l'organisation de la démarche de durabilité : stratégie, pilotage, suivi de la conformité, transparence et dialogue avec les parties prenantes."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/39e9d736-c24d-4461-acae-dc7e44deadb1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/39e9d736-c24d-4461-acae-dc7e44deadb1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cc055b39-9dde-466e-85eb-c09ae036b596",
+      "domain": "sustainability_category",
+      "context_key": "",
+      "code": "CAT_MOBILITY",
+      "base": {
+        "description": "Accès sans voiture, vélo, recharge électrique et mobilités durables.",
+        "description_i18n": {
+          "de": "Autofreier Zugang, Radfahren, Ladeinfrastruktur für Elektrofahrzeuge und weitere nachhaltige Mobilität.",
+          "en": "Car-free access, cycling, electric vehicle charging and other sustainable mobility.",
+          "es": "Acceso sin coche, bicicleta, recarga eléctrica y otras formas de movilidad sostenible.",
+          "fr": "Accès sans voiture, vélo, recharge électrique et mobilités durables."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cc055b39-9dde-466e-85eb-c09ae036b596. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cc055b39-9dde-466e-85eb-c09ae036b596"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie regroupant les moyens déclarés de faciliter les déplacements durables des visiteurs et du personnel : accès sans voiture, vélo et recharge des véhicules électriques notamment.",
+        "description_i18n": {
+          "de": "Kategorie für angegebene Möglichkeiten einer nachhaltigeren Mobilität von Gästen und Personal, insbesondere autofreie Anreise, Radverkehr und Laden von Elektrofahrzeugen.",
+          "en": "Category grouping declared ways to facilitate sustainable travel for visitors and staff, including car-free access, cycling and electric vehicle charging.",
+          "es": "Categoría que agrupa los medios declarados para facilitar los desplazamientos sostenibles de visitantes y personal, como el acceso sin coche, la bicicleta y la recarga de vehículos eléctricos.",
+          "fr": "Catégorie regroupant les moyens déclarés de faciliter les déplacements durables des visiteurs et du personnel : accès sans voiture, vélo et recharge des véhicules électriques notamment."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cc055b39-9dde-466e-85eb-c09ae036b596. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cc055b39-9dde-466e-85eb-c09ae036b596"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c4e8971d-6cc8-451b-acc3-96680ae9682e",
+      "domain": "sustainability_category",
+      "context_key": "",
+      "code": "CAT_PROC",
+      "base": {
+        "description": "Achats responsables, restauration durable, local, bio et saison.",
+        "description_i18n": {
+          "de": "Verantwortungsvoller Einkauf, nachhaltige Gastronomie, regionale, biologische und saisonale Produkte.",
+          "en": "Responsible purchasing, sustainable catering, local, organic and seasonal products.",
+          "es": "Compras responsables, restauración sostenible, productos locales, ecológicos y de temporada.",
+          "fr": "Achats responsables, restauration durable, local, bio et saison."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c4e8971d-6cc8-451b-acc3-96680ae9682e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c4e8971d-6cc8-451b-acc3-96680ae9682e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie regroupant les pratiques déclarées d'achat et de restauration responsables, dont l'approvisionnement en produits locaux, biologiques ou de saison.",
+        "description_i18n": {
+          "de": "Kategorie für angegebene verantwortungsvolle Einkaufs- und Gastronomiepraktiken, darunter die Beschaffung regionaler, biologischer oder saisonaler Produkte.",
+          "en": "Category grouping declared responsible purchasing and catering practices, including the sourcing of local, organic or seasonal products.",
+          "es": "Categoría que agrupa las prácticas declaradas de compra y restauración responsables, incluido el abastecimiento de productos locales, ecológicos o de temporada.",
+          "fr": "Catégorie regroupant les pratiques déclarées d'achat et de restauration responsables, dont l'approvisionnement en produits locaux, biologiques ou de saison."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c4e8971d-6cc8-451b-acc3-96680ae9682e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c4e8971d-6cc8-451b-acc3-96680ae9682e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c662fd32-7ea5-4968-bb29-086bfe9f10a7",
+      "domain": "sustainability_category",
+      "context_key": "",
+      "code": "CAT_SOCIAL",
+      "base": {
+        "description": "Conditions de travail, formation, satisfaction client et inclusion.",
+        "description_i18n": {
+          "de": "Arbeitsbedingungen, Weiterbildung, Kundenzufriedenheit und Inklusion.",
+          "en": "Working conditions, training, customer satisfaction and inclusion.",
+          "es": "Condiciones de trabajo, formación, satisfacción del cliente e inclusión.",
+          "fr": "Conditions de travail, formation, satisfaction client et inclusion."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c662fd32-7ea5-4968-bb29-086bfe9f10a7. Sources externes réellement consultées : https://www.iso.org/standard/42546.html.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c662fd32-7ea5-4968-bb29-086bfe9f10a7 ; https://www.iso.org/standard/42546.html"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie regroupant les actions déclarées relatives aux conditions de travail, à la formation, à l'inclusion et à la qualité du service rendu aux clients.",
+        "description_i18n": {
+          "de": "Kategorie für angegebene Maßnahmen zu Arbeitsbedingungen, Weiterbildung, Inklusion und Qualität der Dienstleistungen für die Gäste.",
+          "en": "Category grouping declared actions concerning working conditions, training, inclusion and the quality of service provided to customers.",
+          "es": "Categoría que agrupa las acciones declaradas relativas a las condiciones de trabajo, la formación, la inclusión y la calidad del servicio prestado a los clientes.",
+          "fr": "Catégorie regroupant les actions déclarées relatives aux conditions de travail, à la formation, à l'inclusion et à la qualité du service rendu aux clients."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c662fd32-7ea5-4968-bb29-086bfe9f10a7. Sources externes réellement consultées : https://www.iso.org/standard/42546.html.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c662fd32-7ea5-4968-bb29-086bfe9f10a7 ; https://www.iso.org/standard/42546.html"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0663cef2-9576-4834-be71-f34ce68f5c57",
+      "domain": "sustainability_category",
+      "context_key": "",
+      "code": "CAT_TERR",
+      "base": {
+        "description": "Ancrage territorial, retombées locales, indicateurs de destination et gouvernance territoriale.",
+        "description_i18n": {
+          "de": "Verankerung im Gebiet, lokale Vorteile, Destinationsindikatoren und regionale Steuerung.",
+          "en": "Territorial anchoring, local benefits, destination indicators and territorial governance.",
+          "es": "Anclaje territorial, beneficios locales, indicadores de destino y gobernanza territorial.",
+          "fr": "Ancrage territorial, retombées locales, indicateurs de destination et gouvernance territoriale."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0663cef2-9576-4834-be71-f34ce68f5c57. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0663cef2-9576-4834-be71-f34ce68f5c57"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie regroupant l'ancrage de l'activité touristique dans son territoire, ses retombées locales et le suivi ou la gouvernance de la destination.",
+        "description_i18n": {
+          "de": "Kategorie für die lokale Verankerung touristischer Aktivitäten, ihre Vorteile für die Region sowie die Beobachtung oder Steuerung der Destination.",
+          "en": "Category grouping the integration of tourism activity into its local area, its local benefits, and destination monitoring or governance.",
+          "es": "Categoría que agrupa el arraigo de la actividad turística en su territorio, sus beneficios locales y el seguimiento o la gobernanza del destino.",
+          "fr": "Catégorie regroupant l'ancrage de l'activité touristique dans son territoire, ses retombées locales et le suivi ou la gouvernance de la destination."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0663cef2-9576-4834-be71-f34ce68f5c57. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0663cef2-9576-4834-be71-f34ce68f5c57"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "953eee7d-f491-4d3e-9f8f-a2ede53dff0d",
+      "domain": "sustainability_category",
+      "context_key": "",
+      "code": "CAT_WASTE",
+      "base": {
+        "description": "Prévention, tri, valorisation et économie circulaire.",
+        "description_i18n": {
+          "de": "Vermeidung, Trennung, Verwertung und Kreislaufwirtschaft.",
+          "en": "Prevention, sorting, recovery and circular economy.",
+          "es": "Prevención, separación, valorización y economía circular.",
+          "fr": "Prévention, tri, valorisation et économie circulaire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/953eee7d-f491-4d3e-9f8f-a2ede53dff0d. Sources externes réellement consultées : https://www.legifrance.gouv.fr/eli/loi/2020/2/10/TREP1902395L/jo/texte.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/953eee7d-f491-4d3e-9f8f-a2ede53dff0d ; https://www.legifrance.gouv.fr/eli/loi/2020/2/10/TREP1902395L/jo/texte"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie regroupant les actions déclarées pour éviter la production de déchets, les trier, les valoriser et prolonger l'usage des ressources dans une logique d'économie circulaire.",
+        "description_i18n": {
+          "de": "Kategorie für angegebene Maßnahmen zur Abfallvermeidung, Abfalltrennung und Verwertung sowie zur längeren Nutzung von Ressourcen im Sinne der Kreislaufwirtschaft.",
+          "en": "Category grouping declared actions to prevent waste, sort and recover it, and extend resource use through a circular economy approach.",
+          "es": "Categoría que agrupa las acciones declaradas para prevenir residuos, separarlos y valorizarlos, y prolongar el uso de los recursos mediante la economía circular.",
+          "fr": "Catégorie regroupant les actions déclarées pour éviter la production de déchets, les trier, les valoriser et prolonger l'usage des ressources dans une logique d'économie circulaire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/953eee7d-f491-4d3e-9f8f-a2ede53dff0d. Sources externes réellement consultées : https://www.legifrance.gouv.fr/eli/loi/2020/2/10/TREP1902395L/jo/texte.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/953eee7d-f491-4d3e-9f8f-a2ede53dff0d ; https://www.legifrance.gouv.fr/eli/loi/2020/2/10/TREP1902395L/jo/texte"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e6e0b9ec-efbd-4b50-ae1c-3929726d26cf",
+      "domain": "sustainability_category",
+      "context_key": "",
+      "code": "CAT_WATER",
+      "base": {
+        "description": "Sobriété, suivi, équipements économes et gestion de l'eau.",
+        "description_i18n": {
+          "de": "Wassersparsamkeit, Überwachung, effiziente Ausstattung und Wassermanagement.",
+          "en": "Water efficiency, monitoring, efficient equipment and water management.",
+          "es": "Sobriedad, seguimiento, equipamientos eficientes y gestión del agua.",
+          "fr": "Sobriété, suivi, équipements économes et gestion de l'eau."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e6e0b9ec-efbd-4b50-ae1c-3929726d26cf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e6e0b9ec-efbd-4b50-ae1c-3929726d26cf"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie regroupant le suivi et la réduction des consommations d'eau, les équipements économes et la gestion de l'eau et de l'assainissement dans l'activité touristique.",
+        "description_i18n": {
+          "de": "Kategorie für die Erfassung und Verringerung des Wasserverbrauchs, wassersparende Ausstattung sowie Wasser- und Abwassermanagement im Tourismusbetrieb.",
+          "en": "Category grouping water consumption monitoring and reduction, water-saving equipment, and water and wastewater management in tourism operations.",
+          "es": "Categoría que agrupa el seguimiento y la reducción del consumo de agua, los equipos de ahorro y la gestión del agua y el saneamiento en la actividad turística.",
+          "fr": "Catégorie regroupant le suivi et la réduction des consommations d'eau, les équipements économes et la gestion de l'eau et de l'assainissement dans l'activité touristique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e6e0b9ec-efbd-4b50-ae1c-3929726d26cf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e6e0b9ec-efbd-4b50-ae1c-3929726d26cf"
+          }
+        ]
+      }
+    }
+  ]
+}

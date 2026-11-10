@@ -1,0 +1,976 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_act-1",
+  "proposals": [
+    {
+      "concept_id": "72e659e0-d813-4937-8b6d-7f46bdf3a388",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "boat_excursion",
+      "base": {
+        "description": "Sorties en mer, croisières côtières, observation",
+        "description_i18n": {
+          "de": "Ausflüge auf See, Küstenkreuzfahrten und Beobachtungsfahrten.",
+          "en": "Sea outings, coastal cruises and observation trips.",
+          "es": "Salidas al mar, cruceros costeros y excursiones de observación.",
+          "fr": "Sorties en mer, croisières côtières, observation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/72e659e0-d813-4937-8b6d-7f46bdf3a388. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/72e659e0-d813-4937-8b6d-7f46bdf3a388"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Sortie touristique encadrée en bateau, pour découvrir le littoral, naviguer en croisière côtière ou observer le milieu marin. Elle décrit une prestation proposée aux visiteurs et non un simple mode de transport.",
+        "description_i18n": {
+          "de": "Begleiteter touristischer Bootsausflug zur Küstenerkundung, Küstenkreuzfahrt oder Beobachtung der Meeresumwelt. Er bezeichnet ein Besucherangebot und nicht nur ein Verkehrsmittel.",
+          "en": "Guided tourist boat outing to discover the coast, take a coastal cruise or observe the marine environment. It describes a visitor service rather than a transport mode alone.",
+          "es": "Salida turística guiada en barco para descubrir la costa, realizar un crucero costero u observar el medio marino. Describe una prestación para visitantes, no solo un medio de transporte.",
+          "fr": "Sortie touristique encadrée en bateau, pour découvrir le littoral, naviguer en croisière côtière ou observer le milieu marin. Elle décrit une prestation proposée aux visiteurs et non un simple mode de transport."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/72e659e0-d813-4937-8b6d-7f46bdf3a388. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/72e659e0-d813-4937-8b6d-7f46bdf3a388"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "14bfcc6d-ab85-4e48-a115-6873a780bd14",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "canyoning",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/14bfcc6d-ab85-4e48-a115-6873a780bd14. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/14bfcc6d-ab85-4e48-a115-6873a780bd14"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/14bfcc6d-ab85-4e48-a115-6873a780bd14. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/14bfcc6d-ab85-4e48-a115-6873a780bd14"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "40897685-f873-4eca-9ba4-d8b706154d46",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "caving",
+      "base": {
+        "description": "Visites guidées de tunnels de lave, spéléologie encadrée",
+        "description_i18n": {
+          "de": "Geführte Besuche von Lavaröhren und begleitete Höhlenbefahrungen.",
+          "en": "Guided visits to lava tubes and supervised caving.",
+          "es": "Visitas guiadas a tubos de lava y espeleología acompañada.",
+          "fr": "Visites guidées de tunnels de lave, spéléologie encadrée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/40897685-f873-4eca-9ba4-d8b706154d46. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/40897685-f873-4eca-9ba4-d8b706154d46"
+          }
+        ],
+        "name_i18n": {
+          "de": "Höhlenforschung / Lavaröhren",
+          "en": "Caving / lava tubes",
+          "es": "Espeleología / Tubos de lava",
+          "fr": "Spéléologie / Tunnels de lave"
+        }
+      },
+      "changes": {
+        "description": "Activité encadrée de découverte des cavités souterraines, notamment les tunnels de lave. Elle décrit une visite ou une progression accompagnée, distincte du site géologique lui-même.",
+        "description_i18n": {
+          "de": "Begleitete Erkundung unterirdischer Hohlräume, insbesondere von Lavaröhren. Sie bezeichnet die geführte Besichtigung oder Begehung und nicht die geologische Stätte selbst.",
+          "en": "Supervised exploration of underground cavities, particularly lava tubes. It describes an accompanied visit or traversal rather than the geological site itself.",
+          "es": "Actividad guiada de descubrimiento de cavidades subterráneas, especialmente tubos de lava. Describe una visita o progresión acompañada, no el propio sitio geológico.",
+          "fr": "Activité encadrée de découverte des cavités souterraines, notamment les tunnels de lave. Elle décrit une visite ou une progression accompagnée, distincte du site géologique lui-même."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/40897685-f873-4eca-9ba4-d8b706154d46. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/40897685-f873-4eca-9ba4-d8b706154d46"
+          }
+        ],
+        "name_i18n": {
+          "de": "Höhlenbegehung / Lavaröhren",
+          "en": "Caving / lava tubes",
+          "es": "Espeleología / Tubos de lava",
+          "fr": "Spéléologie / Tunnels de lave"
+        }
+      }
+    },
+    {
+      "concept_id": "b80386fc-92b5-4849-a01a-bd0b511c46f0",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "craft_workshop",
+      "base": {
+        "description": "Ateliers artisanaux ouverts au public (poterie, céramique…)",
+        "description_i18n": {
+          "de": "Für die Öffentlichkeit zugängliche Handwerkskurse, z. B. Töpfern oder Keramik.",
+          "en": "Craft workshops open to the public, such as pottery or ceramics.",
+          "es": "Talleres artesanales abiertos al público (alfarería, cerámica…).",
+          "fr": "Ateliers artisanaux ouverts au public (poterie, céramique…)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b80386fc-92b5-4849-a01a-bd0b511c46f0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b80386fc-92b5-4849-a01a-bd0b511c46f0"
+          }
+        ],
+        "name_i18n": {
+          "de": "Kreativ- / Handwerkswerkstatt",
+          "en": "Craft workshop",
+          "es": "Taller artesanal / creativo",
+          "fr": "Atelier créatif / artisanal"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Öffentlich zugängliche Handwerkswerkstatt"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Craft workshop open to visitors"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Taller artesanal abierto al público"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Atelier artisanal ouvert au public"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Atelier animé au cours duquel le public découvre ou pratique un savoir-faire créatif ou artisanal, par exemple la poterie. La catégorie décrit la séance proposée plutôt que la boutique vendant des créations.",
+        "description_i18n": {
+          "de": "Angeleiteter Workshop zum Kennenlernen oder Ausüben kreativer oder handwerklicher Fertigkeiten, etwa Töpfern. Die Kategorie bezeichnet den Kurs und kein Geschäft für handwerkliche Erzeugnisse.",
+          "en": "Led workshop in which the public discovers or practises a creative or craft skill, such as pottery. This category describes the session rather than a shop selling crafted goods.",
+          "es": "Taller dirigido en el que el público descubre o practica un saber hacer creativo o artesanal, como la alfarería. Describe la sesión ofrecida, no una tienda de creaciones.",
+          "fr": "Atelier animé au cours duquel le public découvre ou pratique un savoir-faire créatif ou artisanal, par exemple la poterie. La catégorie décrit la séance proposée plutôt que la boutique vendant des créations."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b80386fc-92b5-4849-a01a-bd0b511c46f0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b80386fc-92b5-4849-a01a-bd0b511c46f0"
+          }
+        ],
+        "name_i18n": {
+          "de": "Kreativ- / Handwerkskurs",
+          "en": "Craft workshop",
+          "es": "Taller artesanal / creativo",
+          "fr": "Atelier créatif / artisanal"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Öffentlich zugänglicher Handwerkskurs"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Craft workshop open to visitors"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Taller artesanal abierto al público"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Atelier artisanal ouvert au public"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "452bc653-f6e6-4a97-90a1-95ae9ffe191c",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "fishing",
+      "base": {
+        "description": "Pêche de loisir encadrée (parc de pêche, fédération)",
+        "description_i18n": {
+          "de": "Geführtes Freizeitangeln, z. B. in einem Angelpark oder über einen Verband.",
+          "en": "Guided recreational fishing, for example at a fishing park or through a federation.",
+          "es": "Pesca recreativa guiada, por ejemplo en un parque de pesca o a través de una federación.",
+          "fr": "Pêche de loisir encadrée (parc de pêche, fédération)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/452bc653-f6e6-4a97-90a1-95ae9ffe191c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/452bc653-f6e6-4a97-90a1-95ae9ffe191c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Activité de pêche amateur proposée avec un encadrement, notamment dans un parc de pêche ou par une structure organisatrice. Elle se distingue de la vente de poissons ou d’une activité professionnelle de pêche.",
+        "description_i18n": {
+          "de": "Betreutes Freizeitangeln, etwa in einem Angelpark oder über einen Veranstalter. Es unterscheidet sich vom Fischverkauf oder gewerblicher Fischerei.",
+          "en": "Recreational fishing offered with supervision, for example at a fishing park or through an organiser. It differs from selling fish or commercial fishing.",
+          "es": "Actividad de pesca recreativa ofrecida con acompañamiento, por ejemplo en un parque de pesca o por una entidad organizadora. Se distingue de la venta de pescado o de la pesca profesional.",
+          "fr": "Activité de pêche amateur proposée avec un encadrement, notamment dans un parc de pêche ou par une structure organisatrice. Elle se distingue de la vente de poissons ou d’une activité professionnelle de pêche."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/452bc653-f6e6-4a97-90a1-95ae9ffe191c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/452bc653-f6e6-4a97-90a1-95ae9ffe191c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "23b1435b-7880-4b45-87e2-4bb6118b16f0",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "fitness_wellness",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/23b1435b-7880-4b45-87e2-4bb6118b16f0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/23b1435b-7880-4b45-87e2-4bb6118b16f0"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/23b1435b-7880-4b45-87e2-4bb6118b16f0. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/23b1435b-7880-4b45-87e2-4bb6118b16f0"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5c09dfe3-ca90-48ff-b40a-f330fb906c5a",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "guided_climbing",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5c09dfe3-ca90-48ff-b40a-f330fb906c5a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5c09dfe3-ca90-48ff-b40a-f330fb906c5a"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5c09dfe3-ca90-48ff-b40a-f330fb906c5a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5c09dfe3-ca90-48ff-b40a-f330fb906c5a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8a7e28f1-f392-4d21-9015-05f4e2c798a9",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "guided_hiking",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8a7e28f1-f392-4d21-9015-05f4e2c798a9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8a7e28f1-f392-4d21-9015-05f4e2c798a9"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8a7e28f1-f392-4d21-9015-05f4e2c798a9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8a7e28f1-f392-4d21-9015-05f4e2c798a9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "62917835-ee98-4e74-906c-43b73d5ea91a",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "guided_mountain_biking",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/62917835-ee98-4e74-906c-43b73d5ea91a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/62917835-ee98-4e74-906c-43b73d5ea91a"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/62917835-ee98-4e74-906c-43b73d5ea91a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/62917835-ee98-4e74-906c-43b73d5ea91a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "86580bed-b0d1-4f6a-bb49-899be83d1758",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "guided_snorkeling",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/86580bed-b0d1-4f6a-bb49-899be83d1758. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/86580bed-b0d1-4f6a-bb49-899be83d1758"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/86580bed-b0d1-4f6a-bb49-899be83d1758. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/86580bed-b0d1-4f6a-bb49-899be83d1758"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8dd2c9de-3171-49cc-a516-dcf9376233fc",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "guided_tour",
+      "base": {
+        "description": "Guides, accompagnateurs et visites guidées (hors randonnée montagne)",
+        "description_i18n": {
+          "de": "Guides, Reisebegleitung und Führungen (ohne Bergwanderungen).",
+          "en": "Guides, tour escorts and guided visits (excluding mountain hiking).",
+          "es": "Guías, acompañantes y visitas guiadas (excepto senderismo de montaña).",
+          "fr": "Guides, accompagnateurs et visites guidées (hors randonnée montagne)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8dd2c9de-3171-49cc-a516-dcf9376233fc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8dd2c9de-3171-49cc-a516-dcf9376233fc"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prestation de visite ou d’accompagnement permettant de découvrir un lieu et ses explications avec un guide. Les randonnées de montagne sont décrites dans leur catégorie dédiée.",
+        "description_i18n": {
+          "de": "Führungs- oder Begleitleistung zur Erkundung eines Ortes mit Erläuterungen eines Guides. Bergwanderungen werden in ihrer eigenen Kategorie beschrieben.",
+          "en": "Tour or escort service for discovering a place with a guide’s explanations. Mountain hikes are described in their dedicated category.",
+          "es": "Prestación de visita o acompañamiento para descubrir un lugar con las explicaciones de un guía. Las rutas de montaña se describen en su categoría específica.",
+          "fr": "Prestation de visite ou d’accompagnement permettant de découvrir un lieu et ses explications avec un guide. Les randonnées de montagne sont décrites dans leur catégorie dédiée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8dd2c9de-3171-49cc-a516-dcf9376233fc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8dd2c9de-3171-49cc-a516-dcf9376233fc"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "25d49fe2-5d7d-423b-922c-d10984167482",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "horse_riding",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/25d49fe2-5d7d-423b-922c-d10984167482. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/25d49fe2-5d7d-423b-922c-d10984167482"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitete Reitaktivitäten"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "horseback riding"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Supervised riding activities"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Actividades ecuestres guiadas"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "paseo a caballo"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Activités équestres encadrées"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "balade à cheval"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/25d49fe2-5d7d-423b-922c-d10984167482. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/25d49fe2-5d7d-423b-922c-d10984167482"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitete Reitaktivitäten"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "horseback riding"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Supervised riding activities"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Actividades ecuestres guiadas"
+          },
+          {
+            "kind": "hidden",
+            "lang": "es",
+            "value": "paseo a caballo"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Activités équestres encadrées"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "balade à cheval"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a8b0662c-a676-42c3-97d4-d1d2f1bb67c1",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "kayaking_paddleboarding",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a8b0662c-a676-42c3-97d4-d1d2f1bb67c1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a8b0662c-a676-42c3-97d4-d1d2f1bb67c1"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitete Kajak- oder SUP-Touren"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Guided kayak or paddleboard outings"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "SUP"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "piragüismo"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Salidas guiadas en kayak o paddle surf"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Sorties encadrées en kayak ou paddle"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "stand up paddle"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "SUP"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a8b0662c-a676-42c3-97d4-d1d2f1bb67c1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a8b0662c-a676-42c3-97d4-d1d2f1bb67c1"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitete Kajak- oder SUP-Touren"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Guided kayak or paddleboard outings"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "SUP"
+          },
+          {
+            "kind": "hidden",
+            "lang": "es",
+            "value": "piragüismo"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Salidas guiadas en kayak o paddle surf"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Sorties encadrées en kayak ou paddle"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "stand up paddle"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "SUP"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8fef07e1-ca17-4595-ad9d-466b153b9ea4",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "motorized_excursion",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8fef07e1-ca17-4595-ad9d-466b153b9ea4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8fef07e1-ca17-4595-ad9d-466b153b9ea4"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8fef07e1-ca17-4595-ad9d-466b153b9ea4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8fef07e1-ca17-4595-ad9d-466b153b9ea4"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d71bd930-ef80-41a1-b126-55a76208116f",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "nature_discovery",
+      "base": {
+        "description": "Visites guidées de fermes et d'exploitations, sorties nature, sensibilisation à l'environnement, sylvothérapie",
+        "description_i18n": {
+          "de": "Geführte Besuche von Höfen und Betrieben, Naturexkursionen, Umweltbildung und Waldtherapie (Sylvotherapie).",
+          "en": "Guided visits to farms and holdings, nature outings, environmental awareness and forest bathing (sylvotherapy).",
+          "es": "Visitas guiadas a granjas y explotaciones, salidas de naturaleza, sensibilización ambiental y silvoterapia.",
+          "fr": "Visites guidées de fermes et d'exploitations, sorties nature, sensibilisation à l'environnement, sylvothérapie"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d71bd930-ef80-41a1-b126-55a76208116f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d71bd930-ef80-41a1-b126-55a76208116f"
+          }
+        ],
+        "name_i18n": {
+          "de": "Natur- und Hofentdeckung",
+          "en": "Nature & farm discovery",
+          "es": "Descubrimiento de la naturaleza y del terruño",
+          "fr": "Découverte nature & terroir"
+        }
+      },
+      "changes": {
+        "description": "Sortie ou visite accompagnée consacrée à la nature, aux fermes, aux productions locales ou à la sensibilisation environnementale. Elle peut inclure une découverte sensorielle de la forêt sans impliquer une promesse de soin.",
+        "description_i18n": {
+          "de": "Begleiteter Ausflug oder Besuch zu Natur, Höfen, regionaler Erzeugung oder Umweltbewusstsein. Dazu kann eine sinnliche Walderkundung gehören, ohne ein Heilversprechen zu geben.",
+          "en": "Guided outing or visit focused on nature, farms, local production or environmental awareness. It may include sensory exploration of a forest without implying a health-treatment promise.",
+          "es": "Salida o visita acompañada centrada en la naturaleza, las granjas, la producción local o la sensibilización ambiental. Puede incluir una experiencia sensorial del bosque sin implicar una promesa de tratamiento.",
+          "fr": "Sortie ou visite accompagnée consacrée à la nature, aux fermes, aux productions locales ou à la sensibilisation environnementale. Elle peut inclure une découverte sensorielle de la forêt sans impliquer une promesse de soin."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d71bd930-ef80-41a1-b126-55a76208116f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d71bd930-ef80-41a1-b126-55a76208116f"
+          }
+        ],
+        "name_i18n": {
+          "de": "Natur- und Regionalerkundung",
+          "en": "Nature & farm discovery",
+          "es": "Descubrimiento de la naturaleza y del terruño",
+          "fr": "Découverte nature & terroir"
+        }
+      }
+    },
+    {
+      "concept_id": "e96e393e-48be-4c31-b709-19f7a8b3e1ff",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "other_guided_activity",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e96e393e-48be-4c31-b709-19f7a8b3e1ff. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e96e393e-48be-4c31-b709-19f7a8b3e1ff"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e96e393e-48be-4c31-b709-19f7a8b3e1ff. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e96e393e-48be-4c31-b709-19f7a8b3e1ff"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2ce74766-4f78-48b8-8bdf-da91f4506242",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "paragliding",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2ce74766-4f78-48b8-8bdf-da91f4506242. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2ce74766-4f78-48b8-8bdf-da91f4506242"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2ce74766-4f78-48b8-8bdf-da91f4506242. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2ce74766-4f78-48b8-8bdf-da91f4506242"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a3b82020-e662-4e9f-b4ab-fbd9154f0727",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Activité encadrée",
+        "description_i18n": {
+          "de": "Technische Wurzel für begleitete Aktivitäten; nicht direkt zuweisbar.",
+          "en": "Technical root for guided activities; not directly assignable.",
+          "es": "Raíz técnica de actividades guiadas; no asignable directamente.",
+          "fr": "Racine technique — Activité encadrée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a3b82020-e662-4e9f-b4ab-fbd9154f0727. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a3b82020-e662-4e9f-b4ab-fbd9154f0727"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des offres d’activités proposées avec un guide, un moniteur ou un autre encadrant. Ses sous-catégories décrivent les prestations, et non les structures qui les organisent.",
+        "description_i18n": {
+          "de": "Oberkategorie für Aktivitäten mit Guide, Trainer oder anderer Begleitung. Ihre Unterkategorien beschreiben Leistungen und nicht die anbietenden Einrichtungen.",
+          "en": "General category for activities offered with a guide, instructor or other supervisor. Its subcategories describe services rather than the organisations delivering them.",
+          "es": "Categoría general de actividades ofrecidas con un guía, monitor u otro acompañante. Sus subcategorías describen prestaciones, no las entidades que las organizan.",
+          "fr": "Catégorie générale des offres d’activités proposées avec un guide, un moniteur ou un autre encadrant. Ses sous-catégories décrivent les prestations, et non les structures qui les organisent."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a3b82020-e662-4e9f-b4ab-fbd9154f0727. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a3b82020-e662-4e9f-b4ab-fbd9154f0727"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "84018903-a5c9-43c9-afd3-c403ac979c85",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "scuba_diving",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/84018903-a5c9-43c9-afd3-c403ac979c85. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/84018903-a5c9-43c9-afd3-c403ac979c85"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitetes Gerätetauchen"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Tauchen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "diving"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Supervised scuba diving"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Buceo con instructor"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "plongée"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Plongée encadrée"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/84018903-a5c9-43c9-afd3-c403ac979c85. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/84018903-a5c9-43c9-afd3-c403ac979c85"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Begleitetes Gerätetauchen"
+          },
+          {
+            "kind": "hidden",
+            "lang": "de",
+            "value": "Tauchen"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "diving"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Supervised scuba diving"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Buceo con instructor"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "plongée"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Plongée encadrée"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b57c215e-bcf4-432c-9730-a5e3250a8c16",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "surf_lessons",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b57c215e-bcf4-432c-9730-a5e3250a8c16. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b57c215e-bcf4-432c-9730-a5e3250a8c16"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b57c215e-bcf4-432c-9730-a5e3250a8c16. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b57c215e-bcf4-432c-9730-a5e3250a8c16"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7aae1b7a-f104-4476-bc3c-a64749fa9a9d",
+      "domain": "taxonomy_act",
+      "context_key": "",
+      "code": "wellness_massage",
+      "base": {
+        "description": "Massages, soins du corps, spa, yoga, réflexologie",
+        "description_i18n": {
+          "de": "Massagen, Körperpflege, Spa, Yoga und Reflexologie.",
+          "en": "Massages, body care, spa, yoga and reflexology.",
+          "es": "Masajes, cuidados corporales, spa, yoga y reflexología.",
+          "fr": "Massages, soins du corps, spa, yoga, réflexologie"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7aae1b7a-f104-4476-bc3c-a64749fa9a9d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7aae1b7a-f104-4476-bc3c-a64749fa9a9d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Prestation accompagnée de détente et de bien-être, par exemple massage, soin du corps, yoga ou spa. Elle décrit l’activité proposée et non un diagnostic ni une garantie thérapeutique.",
+        "description_i18n": {
+          "de": "Begleitete Entspannungs- und Wellnessleistung, etwa Massage, Körperpflege, Yoga oder Spa. Sie bezeichnet das Angebot und keine Diagnose oder Heilgarantie.",
+          "en": "Led relaxation and wellness service, such as massage, body care, yoga or spa. It describes the activity offered rather than a diagnosis or therapeutic guarantee.",
+          "es": "Prestación acompañada de relajación y bienestar, como masaje, cuidado corporal, yoga o spa. Describe la actividad ofrecida, no un diagnóstico ni una garantía terapéutica.",
+          "fr": "Prestation accompagnée de détente et de bien-être, par exemple massage, soin du corps, yoga ou spa. Elle décrit l’activité proposée et non un diagnostic ni une garantie thérapeutique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7aae1b7a-f104-4476-bc3c-a64749fa9a9d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7aae1b7a-f104-4476-bc3c-a64749fa9a9d"
+          }
+        ]
+      }
+    }
+  ]
+}

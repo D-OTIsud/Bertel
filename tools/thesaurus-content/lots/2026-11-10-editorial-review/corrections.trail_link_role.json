@@ -1,0 +1,186 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-trail_link_role-1",
+  "proposals": [
+    {
+      "concept_id": "6a054531-caf6-4e98-8e1b-0f54ef1ccea5",
+      "domain": "trail_link_role",
+      "context_key": "",
+      "code": "crosses",
+      "base": {
+        "description": "Le sentier traverse ou dessert l'objet (ex. aire d'accueil)",
+        "description_i18n": {
+          "fr": "Le sentier traverse ou dessert l'objet (ex. aire d'accueil)"
+        },
+        "name_i18n": {
+          "fr": "Traverse"
+        }
+      },
+      "changes": {
+        "description": "Rôle d’un lien indiquant que le sentier traverse ou dessert le lieu décrit par la fiche, par exemple une aire d’accueil. Il qualifie leur relation spatiale sans identifier automatiquement un point de départ.",
+        "description_i18n": {
+          "fr": "Rôle d’un lien indiquant que le sentier traverse ou dessert le lieu décrit par la fiche, par exemple une aire d’accueil. Il qualifie leur relation spatiale sans identifier automatiquement un point de départ.",
+          "en": "Link role indicating that the trail passes through or serves the place described by a listing, such as a visitor area. It describes their spatial relationship without automatically identifying a starting point.",
+          "es": "Función de un enlace que indica que el sendero atraviesa o da servicio al lugar de la ficha, por ejemplo un área de acogida. Describe su relación espacial sin identificar automáticamente un punto de salida.",
+          "de": "Rolle einer Verknüpfung, bei der der Weg den im Eintrag beschriebenen Ort durchquert oder erschließt, etwa einen Besucherbereich. Sie beschreibt die räumliche Beziehung und nicht automatisch einen Startpunkt."
+        },
+        "name_i18n": {
+          "fr": "Traverse",
+          "en": "Passes through or serves",
+          "es": "Atraviesa o da servicio",
+          "de": "Durchquert oder erschließt"
+        }
+      }
+    },
+    {
+      "concept_id": "b8bf9bab-6b1e-4085-a704-77748e44ea42",
+      "domain": "trail_link_role",
+      "context_key": "",
+      "code": "itinerary_uses",
+      "base": {
+        "description": "Le sentier compose un itinéraire ITI éditorial",
+        "description_i18n": {
+          "fr": "Le sentier compose un itinéraire ITI éditorial"
+        },
+        "name_i18n": {
+          "fr": "Utilisé par un itinéraire"
+        }
+      },
+      "changes": {
+        "description": "Rôle d’un lien indiquant qu’un itinéraire éditorial utilise ce sentier dans sa composition. Le sentier du référentiel et la fiche d’itinéraire restent deux entités distinctes.",
+        "description_i18n": {
+          "fr": "Rôle d’un lien indiquant qu’un itinéraire éditorial utilise ce sentier dans sa composition. Le sentier du référentiel et la fiche d’itinéraire restent deux entités distinctes.",
+          "en": "Link role indicating that an editorial itinerary uses the trail as part of its composition. The reference trail and itinerary listing remain distinct entities.",
+          "es": "Función de un enlace que indica que un itinerario editorial utiliza este sendero en su composición. El sendero de referencia y la ficha del itinerario siguen siendo entidades distintas.",
+          "de": "Rolle einer Verknüpfung, bei der eine redaktionelle Route den Weg in ihren Verlauf einbezieht. Referenzweg und Routeneintrag bleiben getrennte Einheiten."
+        },
+        "name_i18n": {
+          "fr": "Utilisé par un itinéraire",
+          "en": "Used by an itinerary",
+          "es": "Utilizado por un itinerario",
+          "de": "Von einer Route genutzt"
+        }
+      }
+    },
+    {
+      "concept_id": "3c569a49-3e97-4b6d-8b48-f048e09f99a3",
+      "domain": "trail_link_role",
+      "context_key": "",
+      "code": "parking",
+      "base": {
+        "description": "L'objet est un stationnement associé au sentier",
+        "description_i18n": {
+          "fr": "L'objet est un stationnement associé au sentier"
+        },
+        "name_i18n": {
+          "fr": "Parking"
+        }
+      },
+      "changes": {
+        "description": "Rôle d’un lien associant le sentier à une fiche de stationnement utile pour son accès. Il décrit le lien avec le parking plutôt que la géométrie du sentier.",
+        "description_i18n": {
+          "fr": "Rôle d’un lien associant le sentier à une fiche de stationnement utile pour son accès. Il décrit le lien avec le parking plutôt que la géométrie du sentier.",
+          "en": "Link role associating a trail with a parking listing useful for accessing it. It describes the parking relationship rather than the trail’s geometry.",
+          "es": "Función de un enlace que asocia el sendero a una ficha de aparcamiento útil para acceder a él. Describe ese vínculo y no la geometría del sendero.",
+          "de": "Rolle einer Verknüpfung zwischen einem Weg und einem für seinen Zugang nützlichen Parkplatzeintrag. Sie beschreibt die Parkplatzbeziehung und nicht die Weggeometrie."
+        },
+        "name_i18n": {
+          "fr": "Parking",
+          "en": "Associated parking",
+          "es": "Aparcamiento asociado",
+          "de": "Zugehöriger Parkplatz"
+        }
+      }
+    },
+    {
+      "concept_id": "d7bf8857-e9c7-48ed-b53b-f924682f38fe",
+      "domain": "trail_link_role",
+      "context_key": "",
+      "code": "poi_nearby",
+      "base": {
+        "description": "L'objet est un point d'intérêt proche du sentier",
+        "description_i18n": {
+          "fr": "L'objet est un point d'intérêt proche du sentier"
+        },
+        "name_i18n": {
+          "fr": "Point d'intérêt à proximité"
+        }
+      },
+      "changes": {
+        "description": "Rôle d’un lien indiquant qu’une fiche décrit un point d’intérêt situé près du sentier. La proximité ne signifie pas que le parcours passe obligatoirement par ce lieu.",
+        "description_i18n": {
+          "fr": "Rôle d’un lien indiquant qu’une fiche décrit un point d’intérêt situé près du sentier. La proximité ne signifie pas que le parcours passe obligatoirement par ce lieu.",
+          "en": "Link role indicating that a listing describes a point of interest near the trail. Proximity does not mean the route necessarily passes through that place.",
+          "es": "Función de un enlace que indica que una ficha describe un punto de interés cercano al sendero. La proximidad no implica que el recorrido pase necesariamente por él.",
+          "de": "Rolle einer Verknüpfung zu einem interessanten Ort in der Nähe des Weges. Nähe bedeutet nicht, dass die Strecke zwingend durch diesen Ort führt."
+        },
+        "name_i18n": {
+          "fr": "Point d'intérêt à proximité",
+          "en": "Nearby point of interest",
+          "es": "Punto de interés cercano",
+          "de": "Interessanter Ort in der Nähe"
+        }
+      }
+    },
+    {
+      "concept_id": "017a21cc-1da6-446a-b8a9-b835f6be87ad",
+      "domain": "trail_link_role",
+      "context_key": "",
+      "code": "segment_of",
+      "base": {
+        "description": "Le sentier est un tronçon d'un itinéraire ITI plus large",
+        "description_i18n": {
+          "fr": "Le sentier est un tronçon d'un itinéraire ITI plus large"
+        },
+        "name_i18n": {
+          "fr": "Tronçon de"
+        }
+      },
+      "changes": {
+        "description": "Rôle d’un lien indiquant que le sentier constitue un tronçon d’un itinéraire plus large. Il précise une relation de partie à ensemble, distincte d’un simple voisinage.",
+        "description_i18n": {
+          "fr": "Rôle d’un lien indiquant que le sentier constitue un tronçon d’un itinéraire plus large. Il précise une relation de partie à ensemble, distincte d’un simple voisinage.",
+          "en": "Link role indicating that the trail forms a section of a larger itinerary. It specifies a part-to-whole relationship rather than mere proximity.",
+          "es": "Función de un enlace que indica que el sendero constituye un tramo de un itinerario mayor. Precisa una relación de parte a conjunto, distinta de la mera proximidad.",
+          "de": "Rolle einer Verknüpfung, bei der der Weg einen Abschnitt einer größeren Route bildet. Sie bezeichnet eine Teil-Ganzes-Beziehung und keine bloße Nähe."
+        },
+        "name_i18n": {
+          "fr": "Tronçon de",
+          "en": "Section of",
+          "es": "Tramo de",
+          "de": "Abschnitt von"
+        }
+      }
+    },
+    {
+      "concept_id": "54cfd74f-8f67-48dd-802b-bfa2b8d4721c",
+      "domain": "trail_link_role",
+      "context_key": "",
+      "code": "starts_at",
+      "base": {
+        "description": "L'objet est le point de départ du sentier",
+        "description_i18n": {
+          "fr": "L'objet est le point de départ du sentier"
+        },
+        "name_i18n": {
+          "fr": "Point de départ"
+        }
+      },
+      "changes": {
+        "description": "Rôle d’un lien indiquant que le lieu décrit par la fiche est le point de départ du sentier. Il décrit la relation entre les deux enregistrements, distincte d’une étape quelconque du parcours.",
+        "description_i18n": {
+          "fr": "Rôle d’un lien indiquant que le lieu décrit par la fiche est le point de départ du sentier. Il décrit la relation entre les deux enregistrements, distincte d’une étape quelconque du parcours.",
+          "en": "Link role indicating that the place described by a listing is the trail’s starting point. It describes the relationship between the records rather than an arbitrary stage along the route.",
+          "es": "Función de un enlace que indica que el lugar de la ficha es el punto de salida del sendero. Describe la relación entre registros y no una etapa cualquiera del recorrido.",
+          "de": "Rolle einer Verknüpfung, bei der der im Eintrag beschriebene Ort den Startpunkt des Weges bildet. Sie beschreibt die Beziehung der Datensätze und keine beliebige Etappe."
+        },
+        "name_i18n": {
+          "fr": "Point de départ",
+          "en": "Starting point",
+          "es": "Punto de salida",
+          "de": "Startpunkt"
+        }
+      }
+    }
+  ]
+}

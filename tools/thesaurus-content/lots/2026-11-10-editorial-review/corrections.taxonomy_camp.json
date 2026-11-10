@@ -1,0 +1,102 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_camp-1",
+  "proposals": [
+    {
+      "concept_id": "57ef6225-4d61-4f79-9973-c722c9ca2131",
+      "domain": "taxonomy_camp",
+      "context_key": "",
+      "code": "camping",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/57ef6225-4d61-4f79-9973-c722c9ca2131. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/57ef6225-4d61-4f79-9973-c722c9ca2131 ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/57ef6225-4d61-4f79-9973-c722c9ca2131. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/57ef6225-4d61-4f79-9973-c722c9ca2131 ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "00ab4a46-8937-4014-8910-1d159a5db43b",
+      "domain": "taxonomy_camp",
+      "context_key": "",
+      "code": "camping_chez_l_habitant",
+      "base": {
+        "description": "Camping chez l'habitant",
+        "description_i18n": {
+          "fr": "Camping chez l'habitant"
+        },
+        "name_i18n": {
+          "fr": "Camping chez l'habitant"
+        }
+      },
+      "changes": {
+        "description": "Ancienne catégorie de camping installé chez un particulier, conservée pour comprendre les fiches historiques. Elle décrivait l’accueil de campeurs chez l’habitant et non une chambre louée dans la maison.",
+        "description_i18n": {
+          "fr": "Ancienne catégorie de camping installé chez un particulier, conservée pour comprendre les fiches historiques. Elle décrivait l’accueil de campeurs chez l’habitant et non une chambre louée dans la maison.",
+          "en": "Former category for camping at a private home, retained to interpret historical listings. It described hosting campers rather than renting a room inside the house.",
+          "es": "Antigua categoría de camping en casa de un particular, conservada para interpretar fichas históricas. Describía la acogida de campistas y no una habitación alquilada dentro de la casa.",
+          "de": "Frühere Kategorie für Camping bei Privatpersonen, zur Einordnung historischer Einträge erhalten. Sie bezeichnete die Aufnahme von Campern und keine Zimmervermietung im Haus."
+        },
+        "name_i18n": {
+          "fr": "Camping chez l'habitant",
+          "en": "Camping at a private home",
+          "es": "Camping en casa particular",
+          "de": "Camping bei Privatpersonen"
+        }
+      }
+    },
+    {
+      "concept_id": "da938e64-2075-4bd9-b6d3-f17c2c2dd716",
+      "domain": "taxonomy_camp",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Camping",
+        "description_i18n": {
+          "de": "Technische Wurzel für Campingkategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for campsite categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de camping; no asignable directamente.",
+          "fr": "Racine technique — Camping"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/da938e64-2075-4bd9-b6d3-f17c2c2dd716. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/da938e64-2075-4bd9-b6d3-f17c2c2dd716"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des terrains de camping accueillant une clientèle de passage. Les sous-catégories précisent la nature du terrain ; son classement éventuel reste une information distincte.",
+        "description_i18n": {
+          "de": "Oberkategorie für Campingplätze für vorübergehende Gäste. Die Unterkategorien bestimmen die Art des Platzes; eine etwaige Klassifizierung bleibt eine getrennte Angabe.",
+          "en": "General category for campsites welcoming temporary visitors. Subcategories describe the site’s nature; any official rating remains separate information.",
+          "es": "Categoría general de campings que reciben a una clientela de paso. Las subcategorías precisan la naturaleza del terreno; su clasificación sigue siendo un dato distinto.",
+          "fr": "Catégorie générale des terrains de camping accueillant une clientèle de passage. Les sous-catégories précisent la nature du terrain ; son classement éventuel reste une information distincte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/da938e64-2075-4bd9-b6d3-f17c2c2dd716. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/da938e64-2075-4bd9-b6d3-f17c2c2dd716"
+          }
+        ]
+      }
+    }
+  ]
+}

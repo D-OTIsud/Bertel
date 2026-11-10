@@ -1,0 +1,1202 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-media_tag-1",
+  "proposals": [
+    {
+      "concept_id": "bc69857a-4564-43f7-9da5-456bb2b9f406",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "activite",
+      "base": {
+        "description": "Sports, loisirs, animations",
+        "description_i18n": {
+          "de": "Sport, Freizeitaktivitäten und Unterhaltungsangebote",
+          "en": "Sports, leisure activities and entertainment",
+          "es": "Deportes, ocio y animación",
+          "fr": "Sports, loisirs, animations"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bc69857a-4564-43f7-9da5-456bb2b9f406. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bc69857a-4564-43f7-9da5-456bb2b9f406"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette de contenu pour un média montrant des activités sportives, de loisirs ou d’animation. Elle facilite le classement des images selon ce qu’elles représentent.",
+        "description_i18n": {
+          "de": "Inhaltskennzeichnung für Medien mit Sport-, Freizeit- oder Unterhaltungsaktivitäten. Sie erleichtert die Einordnung nach dem dargestellten Motiv.",
+          "en": "Content tag for media showing sports, leisure or entertainment activities. It helps organise images by their subject.",
+          "es": "Etiqueta de contenido para medios que muestran actividades deportivas, de ocio o de animación. Facilita su clasificación por lo que representan.",
+          "fr": "Étiquette de contenu pour un média montrant des activités sportives, de loisirs ou d’animation. Elle facilite le classement des images selon ce qu’elles représentent."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bc69857a-4564-43f7-9da5-456bb2b9f406. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bc69857a-4564-43f7-9da5-456bb2b9f406"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "24e6747d-0f4d-4a1b-911b-72af4ef12b88",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "archive",
+      "base": {
+        "description": "Ancienne photo obsolète à ne plus afficher",
+        "description_i18n": {
+          "de": "Veraltetes Foto, das nicht mehr angezeigt werden soll",
+          "en": "Old, obsolete photo that should no longer be displayed",
+          "es": "Foto antigua y obsoleta que ya no debe mostrarse",
+          "fr": "Ancienne photo obsolète à ne plus afficher"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/24e6747d-0f4d-4a1b-911b-72af4ef12b88. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/24e6747d-0f4d-4a1b-911b-72af4ef12b88"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette éditoriale signalant un média ancien ou obsolète à écarter des présentations courantes. Elle ne retire pas automatiquement ses autorisations de visibilité ou de publication.",
+        "description_i18n": {
+          "de": "Redaktionelle Kennzeichnung alter oder überholter Medien, die nicht mehr in aktuellen Darstellungen verwendet werden sollen. Sie ändert Sichtbarkeit oder Veröffentlichungsrechte nicht automatisch.",
+          "en": "Editorial tag marking old or obsolete media to exclude from current presentations. It does not automatically change visibility or publication permissions.",
+          "es": "Etiqueta editorial que señala un medio antiguo u obsoleto que debe excluirse de las presentaciones actuales. No modifica automáticamente los permisos de visibilidad o publicación.",
+          "fr": "Étiquette éditoriale signalant un média ancien ou obsolète à écarter des présentations courantes. Elle ne retire pas automatiquement ses autorisations de visibilité ou de publication."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/24e6747d-0f4d-4a1b-911b-72af4ef12b88. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/24e6747d-0f4d-4a1b-911b-72af4ef12b88"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1427ce30-112c-4a47-b4b2-119335ffe1fb",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "brouillon",
+      "base": {
+        "description": "Photo non validée ou en attente de validation",
+        "description_i18n": {
+          "de": "Nicht freigegebenes Foto oder Foto, dessen Freigabe noch aussteht",
+          "en": "Photo that has not been approved or is awaiting approval",
+          "es": "Foto no validada o pendiente de validación",
+          "fr": "Photo non validée ou en attente de validation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1427ce30-112c-4a47-b4b2-119335ffe1fb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1427ce30-112c-4a47-b4b2-119335ffe1fb"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette indiquant qu’un média est en préparation ou en attente de validation éditoriale. Elle décrit son usage de travail sans remplacer son état de publication réel.",
+        "description_i18n": {
+          "de": "Kennzeichnung eines Mediums in Vorbereitung oder vor redaktioneller Freigabe. Sie beschreibt den Arbeitsstand, ohne den tatsächlichen Veröffentlichungsstatus zu ersetzen.",
+          "en": "Tag indicating media being prepared or awaiting editorial approval. It describes working use without replacing the actual publication status.",
+          "es": "Etiqueta que indica un medio en preparación o pendiente de validación editorial. Describe su uso de trabajo sin sustituir su estado real de publicación.",
+          "fr": "Étiquette indiquant qu’un média est en préparation ou en attente de validation éditoriale. Elle décrit son usage de travail sans remplacer son état de publication réel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1427ce30-112c-4a47-b4b2-119335ffe1fb. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1427ce30-112c-4a47-b4b2-119335ffe1fb"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5f8f74a5-ea0b-4ac5-8f28-8ef9ed6f122b",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "chambre",
+      "base": {
+        "description": "Chambres d'hébergement",
+        "description_i18n": {
+          "de": "Zimmer in Unterkünften",
+          "en": "Bedrooms in accommodation properties",
+          "es": "Habitaciones de alojamientos",
+          "fr": "Chambres d'hébergement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5f8f74a5-ea0b-4ac5-8f28-8ef9ed6f122b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5f8f74a5-ea0b-4ac5-8f28-8ef9ed6f122b"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les médias représentant une chambre d’hébergement. Elle classe le sujet illustré et se distingue du type de fichier ou du type commercial de chambre.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Medien, die ein Gästezimmer darstellen. Sie ordnet das Motiv ein, nicht den Dateityp oder die vermarktete Zimmerkategorie.",
+          "en": "Tag for media depicting an accommodation bedroom. It classifies the subject rather than the file type or commercial room category.",
+          "es": "Etiqueta para medios que representan una habitación de alojamiento. Clasifica el tema ilustrado, no el tipo de archivo ni la categoría comercial de habitación.",
+          "fr": "Étiquette pour les médias représentant une chambre d’hébergement. Elle classe le sujet illustré et se distingue du type de fichier ou du type commercial de chambre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5f8f74a5-ea0b-4ac5-8f28-8ef9ed6f122b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5f8f74a5-ea0b-4ac5-8f28-8ef9ed6f122b"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "766ecdd0-6f58-45d2-bb68-d089b21a63d2",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "contributeur",
+      "base": {
+        "description": "Contribution utilisateur ou partenaire",
+        "description_i18n": {
+          "de": "Beitrag eines Nutzers oder Partners",
+          "en": "User or partner contribution",
+          "es": "Aportación de un usuario o socio",
+          "fr": "Contribution utilisateur ou partenaire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/766ecdd0-6f58-45d2-bb68-d089b21a63d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/766ecdd0-6f58-45d2-bb68-d089b21a63d2"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette de provenance indiquant qu’un média a été fourni par un utilisateur ou un partenaire. Elle ne constitue pas à elle seule une autorisation de réutilisation.",
+        "description_i18n": {
+          "de": "Herkunftskennzeichnung für ein von einem Nutzer oder Partner bereitgestelltes Medium. Sie stellt für sich allein keine Erlaubnis zur Weiterverwendung dar.",
+          "en": "Provenance tag indicating media supplied by a user or partner. It is not, by itself, permission to reuse the media.",
+          "es": "Etiqueta de procedencia que indica un medio aportado por un usuario o socio. No constituye por sí sola una autorización de reutilización.",
+          "fr": "Étiquette de provenance indiquant qu’un média a été fourni par un utilisateur ou un partenaire. Elle ne constitue pas à elle seule une autorisation de réutilisation."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/766ecdd0-6f58-45d2-bb68-d089b21a63d2. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/766ecdd0-6f58-45d2-bb68-d089b21a63d2"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c6a0169d-7ac7-4c28-a5ac-cf2d9b833053",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "cuisine",
+      "base": {
+        "description": "Photos culinaires et gastronomiques",
+        "description_i18n": {
+          "de": "Kulinarische und gastronomische Fotos",
+          "en": "Culinary and gastronomic photos",
+          "es": "Fotografías culinarias y gastronómicas",
+          "fr": "Photos culinaires et gastronomiques"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c6a0169d-7ac7-4c28-a5ac-cf2d9b833053. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c6a0169d-7ac7-4c28-a5ac-cf2d9b833053"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les médias représentant des plats, préparations culinaires ou sujets gastronomiques. Elle décrit le contenu illustré plutôt qu’une catégorie de menu.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Medien mit Gerichten, Speisenzubereitung oder Gastronomie. Sie beschreibt den Bildinhalt und keine Menükategorie.",
+          "en": "Tag for media depicting dishes, food preparation or gastronomy. It describes the illustrated content rather than a menu category.",
+          "es": "Etiqueta para medios que representan platos, preparaciones culinarias o gastronomía. Describe el contenido ilustrado y no una categoría de menú.",
+          "fr": "Étiquette pour les médias représentant des plats, préparations culinaires ou sujets gastronomiques. Elle décrit le contenu illustré plutôt qu’une catégorie de menu."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c6a0169d-7ac7-4c28-a5ac-cf2d9b833053. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c6a0169d-7ac7-4c28-a5ac-cf2d9b833053"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "72100990-94d3-4571-b8ee-452bf063bc46",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "document",
+      "base": {
+        "description": "Document administratif ou certificat",
+        "description_i18n": {
+          "de": "Verwaltungsdokument oder Zertifikat",
+          "en": "Administrative document or certificate",
+          "es": "Documento administrativo o certificado",
+          "fr": "Document administratif ou certificat"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/72100990-94d3-4571-b8ee-452bf063bc46. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/72100990-94d3-4571-b8ee-452bf063bc46"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour un média contenant une pièce administrative ou un certificat. Elle permet de le repérer sans attester la validité de la pièce ni modifier ses règles d’accès.",
+        "description_i18n": {
+          "de": "Kennzeichnung eines Mediums mit Verwaltungsunterlagen oder einem Zertifikat. Sie erleichtert das Auffinden, ohne deren Gültigkeit zu bestätigen oder Zugriffsregeln zu ändern.",
+          "en": "Tag for media containing an administrative record or certificate. It helps identify the document without verifying its validity or changing access rules.",
+          "es": "Etiqueta para un medio que contiene un documento administrativo o certificado. Permite localizarlo sin acreditar su validez ni modificar las reglas de acceso.",
+          "fr": "Étiquette pour un média contenant une pièce administrative ou un certificat. Elle permet de le repérer sans attester la validité de la pièce ni modifier ses règles d’accès."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/72100990-94d3-4571-b8ee-452bf063bc46. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/72100990-94d3-4571-b8ee-452bf063bc46"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2af77368-979b-4839-ba0a-f2585ebd8cfd",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "equipement",
+      "base": {
+        "description": "Installations et équipements",
+        "description_i18n": {
+          "de": "Einrichtungen und Ausstattung",
+          "en": "Facilities and equipment",
+          "es": "Instalaciones y equipamiento",
+          "fr": "Installations et équipements"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2af77368-979b-4839-ba0a-f2585ebd8cfd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2af77368-979b-4839-ba0a-f2585ebd8cfd"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les médias montrant des installations ou équipements d’un lieu. Elle décrit le sujet représenté sans prouver qu’un équipement est actuellement disponible.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Medien mit Einrichtungen oder Ausstattung eines Ortes. Sie beschreibt das Motiv, ohne deren aktuelle Verfügbarkeit zu belegen.",
+          "en": "Tag for media showing a location’s facilities or equipment. It describes the subject without proving current equipment availability.",
+          "es": "Etiqueta para medios que muestran instalaciones o equipamiento de un lugar. Describe lo representado sin demostrar su disponibilidad actual.",
+          "fr": "Étiquette pour les médias montrant des installations ou équipements d’un lieu. Elle décrit le sujet représenté sans prouver qu’un équipement est actuellement disponible."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2af77368-979b-4839-ba0a-f2585ebd8cfd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2af77368-979b-4839-ba0a-f2585ebd8cfd"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b52e2d16-06c5-4abd-8450-5db05fd77b4d",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "evenement",
+      "base": {
+        "description": "Événements spéciaux et manifestations",
+        "description_i18n": {
+          "de": "Besondere Veranstaltungen und Events",
+          "en": "Special events and gatherings",
+          "es": "Eventos especiales y actos",
+          "fr": "Événements spéciaux et manifestations"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b52e2d16-06c5-4abd-8450-5db05fd77b4d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b52e2d16-06c5-4abd-8450-5db05fd77b4d"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les médias illustrant une manifestation ou un événement. Elle aide à classer le contenu sans indiquer à elle seule la date ou le statut de l’événement.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Medien zu einer Veranstaltung. Sie ordnet den Inhalt ein, ohne allein Termin oder Status der Veranstaltung anzugeben.",
+          "en": "Tag for media illustrating an event or gathering. It classifies the content without independently specifying the event’s date or status.",
+          "es": "Etiqueta para medios que ilustran una manifestación o evento. Clasifica el contenido sin indicar por sí sola su fecha o estado.",
+          "fr": "Étiquette pour les médias illustrant une manifestation ou un événement. Elle aide à classer le contenu sans indiquer à elle seule la date ou le statut de l’événement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b52e2d16-06c5-4abd-8450-5db05fd77b4d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b52e2d16-06c5-4abd-8450-5db05fd77b4d"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e9e1c07b-c1ce-48d4-80c8-ad7b8610b548",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "facade",
+      "base": {
+        "description": "Vue extérieure du bâtiment",
+        "description_i18n": {
+          "de": "Außenansicht des Gebäudes",
+          "en": "Exterior view of the building",
+          "es": "Vista exterior del edificio",
+          "fr": "Vue extérieure du bâtiment"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e9e1c07b-c1ce-48d4-80c8-ad7b8610b548. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e9e1c07b-c1ce-48d4-80c8-ad7b8610b548"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les vues de façade et de l’extérieur d’un bâtiment. Elle se distingue des vues intérieures et des paysages environnants.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Ansichten der Fassade und des Außenbereichs eines Gebäudes. Sie unterscheidet sich von Innenansichten und umgebenden Landschaften.",
+          "en": "Tag for views of a building’s façade and exterior. It differs from interior views and surrounding landscapes.",
+          "es": "Etiqueta para vistas de la fachada y el exterior de un edificio. Se distingue de las vistas interiores y de los paisajes del entorno.",
+          "fr": "Étiquette pour les vues de façade et de l’extérieur d’un bâtiment. Elle se distingue des vues intérieures et des paysages environnants."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e9e1c07b-c1ce-48d4-80c8-ad7b8610b548. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e9e1c07b-c1ce-48d4-80c8-ad7b8610b548"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "430bdd75-6624-49f0-b5eb-de900d157e2c",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "interieur",
+      "base": {
+        "description": "Vues intérieures générales",
+        "description_i18n": {
+          "de": "Allgemeine Innenansichten",
+          "en": "General interior views",
+          "es": "Vistas generales del interior",
+          "fr": "Vues intérieures générales"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/430bdd75-6624-49f0-b5eb-de900d157e2c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/430bdd75-6624-49f0-b5eb-de900d157e2c"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les vues de l’intérieur d’un bâtiment ou d’un établissement. Elle sert au classement visuel général lorsque le sujet n’est pas seulement sa façade extérieure.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Innenansichten eines Gebäudes oder Betriebs. Sie dient der allgemeinen Motivzuordnung im Unterschied zu Außenansichten der Fassade.",
+          "en": "Tag for interior views of a building or establishment. It supports general visual organisation, distinct from exterior façade views.",
+          "es": "Etiqueta para vistas interiores de un edificio o establecimiento. Sirve para la clasificación visual general, distinta de las vistas exteriores de la fachada.",
+          "fr": "Étiquette pour les vues de l’intérieur d’un bâtiment ou d’un établissement. Elle sert au classement visuel général lorsque le sujet n’est pas seulement sa façade extérieure."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/430bdd75-6624-49f0-b5eb-de900d157e2c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/430bdd75-6624-49f0-b5eb-de900d157e2c"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4c096288-090e-4467-822b-93a9c3b3c923",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "interne",
+      "base": {
+        "description": "Réservé à un usage interne uniquement",
+        "description_i18n": {
+          "de": "Ausschließlich für die interne Nutzung bestimmt",
+          "en": "Reserved exclusively for internal use",
+          "es": "Reservado exclusivamente para uso interno",
+          "fr": "Réservé à un usage interne uniquement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4c096288-090e-4467-822b-93a9c3b3c923. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4c096288-090e-4467-822b-93a9c3b3c923"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette éditoriale indiquant qu’un média est destiné au travail interne. Les restrictions d’accès doivent être portées par les champs de visibilité et les autorisations, séparément de cette étiquette.",
+        "description_i18n": {
+          "de": "Redaktionelle Kennzeichnung eines für interne Arbeit bestimmten Mediums. Zugriffsbeschränkungen müssen unabhängig davon über Sichtbarkeitsfelder und Berechtigungen festgelegt werden.",
+          "en": "Editorial tag indicating media intended for internal work. Access restrictions must be carried by visibility fields and permissions, separately from this tag.",
+          "es": "Etiqueta editorial que indica un medio destinado al trabajo interno. Las restricciones de acceso deben definirse en los campos de visibilidad y los permisos, por separado.",
+          "fr": "Étiquette éditoriale indiquant qu’un média est destiné au travail interne. Les restrictions d’accès doivent être portées par les champs de visibilité et les autorisations, séparément de cette étiquette."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4c096288-090e-4467-822b-93a9c3b3c923. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4c096288-090e-4467-822b-93a9c3b3c923"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "45bf0b1d-24a9-4d90-b862-3992f616153d",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "officiel",
+      "base": {
+        "description": "Photo officielle validée",
+        "description_i18n": {
+          "de": "Freigegebenes offizielles Foto",
+          "en": "Approved official photo",
+          "es": "Foto oficial validada",
+          "fr": "Photo officielle validée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/45bf0b1d-24a9-4d90-b862-3992f616153d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/45bf0b1d-24a9-4d90-b862-3992f616153d"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour un média retenu comme représentation officielle de l’établissement ou du sujet. Elle exprime un choix éditorial sans constituer une preuve de droits de diffusion.",
+        "description_i18n": {
+          "de": "Kennzeichnung eines als offizielle Darstellung des Betriebs oder Themas ausgewählten Mediums. Sie drückt eine redaktionelle Auswahl aus und keinen Nachweis von Verbreitungsrechten.",
+          "en": "Tag for media selected as an official representation of the establishment or subject. It records an editorial choice rather than proof of distribution rights.",
+          "es": "Etiqueta para un medio elegido como representación oficial del establecimiento o tema. Expresa una elección editorial, no una prueba de derechos de difusión.",
+          "fr": "Étiquette pour un média retenu comme représentation officielle de l’établissement ou du sujet. Elle exprime un choix éditorial sans constituer une preuve de droits de diffusion."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/45bf0b1d-24a9-4d90-b862-3992f616153d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/45bf0b1d-24a9-4d90-b862-3992f616153d"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "e83d60d5-d6c6-4d17-ae42-95daf82906ea",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "parking",
+      "base": {
+        "description": "Zone de stationnement",
+        "description_i18n": {
+          "de": "Parkfläche",
+          "en": "Parking area",
+          "es": "Zona de aparcamiento",
+          "fr": "Zone de stationnement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e83d60d5-d6c6-4d17-ae42-95daf82906ea. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e83d60d5-d6c6-4d17-ae42-95daf82906ea"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les médias représentant un espace de stationnement. Elle décrit le sujet de l’image, sans garantir une place disponible ni préciser les conditions de stationnement.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Medien, die eine Parkfläche zeigen. Sie beschreibt das Motiv, ohne einen Stellplatz zu garantieren oder Parkbedingungen festzulegen.",
+          "en": "Tag for media depicting a parking area. It describes the image subject without guaranteeing a space or specifying parking conditions.",
+          "es": "Etiqueta para medios que representan una zona de aparcamiento. Describe el tema de la imagen sin garantizar una plaza ni precisar las condiciones de estacionamiento.",
+          "fr": "Étiquette pour les médias représentant un espace de stationnement. Elle décrit le sujet de l’image, sans garantir une place disponible ni préciser les conditions de stationnement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e83d60d5-d6c6-4d17-ae42-95daf82906ea. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e83d60d5-d6c6-4d17-ae42-95daf82906ea"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "32b47455-b7c1-4214-be31-8a061df8d91c",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "paysage",
+      "base": {
+        "description": "Vue panoramique et environnement",
+        "description_i18n": {
+          "de": "Panoramablick und Umgebung",
+          "en": "Panoramic view and surroundings",
+          "es": "Vista panorámica y entorno",
+          "fr": "Vue panoramique et environnement"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/32b47455-b7c1-4214-be31-8a061df8d91c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/32b47455-b7c1-4214-be31-8a061df8d91c"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les vues du paysage et de l’environnement d’un lieu. Elle se distingue des vues centrées sur l’intérieur ou la façade d’un bâtiment.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Landschafts- und Umgebungsansichten eines Ortes. Sie unterscheidet sich von auf Innenräume oder Gebäudefassaden konzentrierten Bildern.",
+          "en": "Tag for landscape and surrounding-environment views. It differs from images focused on a building’s interior or façade.",
+          "es": "Etiqueta para vistas del paisaje y del entorno de un lugar. Se distingue de las imágenes centradas en el interior o la fachada de un edificio.",
+          "fr": "Étiquette pour les vues du paysage et de l’environnement d’un lieu. Elle se distingue des vues centrées sur l’intérieur ou la façade d’un bâtiment."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/32b47455-b7c1-4214-be31-8a061df8d91c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/32b47455-b7c1-4214-be31-8a061df8d91c"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3c8ac2b1-dbd7-4d53-89d9-f76e2790896a",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "personnel",
+      "base": {
+        "description": "Photo représentant le personnel de l’établissement.",
+        "description_i18n": {
+          "de": "Foto mit Mitarbeitenden des Betriebs.",
+          "en": "Photo showing the establishment’s staff.",
+          "es": "Foto que muestra al personal del establecimiento.",
+          "fr": "Photo représentant le personnel de l’établissement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3c8ac2b1-dbd7-4d53-89d9-f76e2790896a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3c8ac2b1-dbd7-4d53-89d9-f76e2790896a"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour un média représentant les membres du personnel d’un établissement. Le mot désigne ici l’équipe représentée et non le caractère privé du média.",
+        "description_i18n": {
+          "de": "Kennzeichnung eines Mediums mit Mitarbeitenden eines Betriebs. Der Begriff bezeichnet hier das dargestellte Team und nicht den privaten Charakter des Mediums.",
+          "en": "Tag for media showing members of an establishment’s staff. Here, the term refers to the team depicted, not to private media.",
+          "es": "Etiqueta para un medio que representa a miembros del personal de un establecimiento. El término designa al equipo representado, no el carácter privado del medio.",
+          "fr": "Étiquette pour un média représentant les membres du personnel d’un établissement. Le mot désigne ici l’équipe représentée et non le caractère privé du média."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3c8ac2b1-dbd7-4d53-89d9-f76e2790896a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3c8ac2b1-dbd7-4d53-89d9-f76e2790896a"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "38179495-f3a8-4163-abc0-e959a84754f6",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "piscine",
+      "base": {
+        "description": "Piscine, spa, espace wellness",
+        "description_i18n": {
+          "de": "Pool, Spa und Wellnessbereich",
+          "en": "Swimming pool, spa and wellness area",
+          "es": "Piscina, spa y zona de bienestar",
+          "fr": "Piscine, spa, espace wellness"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/38179495-f3a8-4163-abc0-e959a84754f6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/38179495-f3a8-4163-abc0-e959a84754f6"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les médias montrant une piscine, un spa ou un espace de bien-être. Elle regroupe ces sujets visuels sans préciser les prestations effectivement incluses.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Medien mit Pool, Spa oder Wellnessbereich. Sie fasst diese Bildthemen zusammen, ohne die tatsächlich enthaltenen Leistungen festzulegen.",
+          "en": "Tag for media showing a pool, spa or wellness area. It groups these visual subjects without specifying which services are included.",
+          "es": "Etiqueta para medios que muestran una piscina, un spa o una zona de bienestar. Agrupa estos temas visuales sin precisar las prestaciones incluidas.",
+          "fr": "Étiquette pour les médias montrant une piscine, un spa ou un espace de bien-être. Elle regroupe ces sujets visuels sans préciser les prestations effectivement incluses."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/38179495-f3a8-4163-abc0-e959a84754f6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/38179495-f3a8-4163-abc0-e959a84754f6"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "695d6735-3349-40de-8878-492db04a714c",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "plan_carte",
+      "base": {
+        "description": "Plans, schémas, cartes",
+        "description_i18n": {
+          "de": "Pläne, Schaubilder und Karten",
+          "en": "Plans, diagrams and maps",
+          "es": "Planos, esquemas y mapas",
+          "fr": "Plans, schémas, cartes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/695d6735-3349-40de-8878-492db04a714c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/695d6735-3349-40de-8878-492db04a714c"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour un média présentant un plan, une carte ou un schéma de repérage. Elle décrit le contenu représenté, indépendamment du format technique du fichier.",
+        "description_i18n": {
+          "de": "Kennzeichnung eines Mediums mit Plan, Karte oder Orientierungsskizze. Sie beschreibt den Inhalt unabhängig vom technischen Dateiformat.",
+          "en": "Tag for media presenting a plan, map or orientation diagram. It describes the content independently of the file’s technical format.",
+          "es": "Etiqueta para un medio que presenta un plano, mapa o esquema de orientación. Describe su contenido con independencia del formato técnico del archivo.",
+          "fr": "Étiquette pour un média présentant un plan, une carte ou un schéma de repérage. Elle décrit le contenu représenté, indépendamment du format technique du fichier."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/695d6735-3349-40de-8878-492db04a714c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/695d6735-3349-40de-8878-492db04a714c"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7ba0ef55-d33c-416c-a754-e2d086806392",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "prefere",
+      "base": {
+        "description": "Photo à mettre en avant en priorité",
+        "description_i18n": {
+          "de": "Foto, das bevorzugt hervorgehoben werden soll",
+          "en": "Photo to prioritize for prominent display",
+          "es": "Foto que debe destacarse con prioridad",
+          "fr": "Photo à mettre en avant en priorité"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7ba0ef55-d33c-416c-a754-e2d086806392. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7ba0ef55-d33c-416c-a754-e2d086806392"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette signalant un média que l’équipe souhaite mettre en avant en priorité. Elle exprime une préférence éditoriale, distincte du champ qui détermine effectivement le média principal.",
+        "description_i18n": {
+          "de": "Kennzeichnung eines Mediums, das das Team bevorzugt hervorheben möchte. Sie bezeichnet eine redaktionelle Präferenz und unterscheidet sich vom Feld, das das Hauptmedium tatsächlich bestimmt.",
+          "en": "Tag marking media that the team wishes to feature first. It expresses an editorial preference, distinct from the field that actually determines the main media item.",
+          "es": "Etiqueta que señala un medio que el equipo desea destacar prioritariamente. Expresa una preferencia editorial, distinta del campo que determina el medio principal.",
+          "fr": "Étiquette signalant un média que l’équipe souhaite mettre en avant en priorité. Elle exprime une préférence éditoriale, distincte du champ qui détermine effectivement le média principal."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7ba0ef55-d33c-416c-a754-e2d086806392. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7ba0ef55-d33c-416c-a754-e2d086806392"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "eeb385ee-d395-43ab-a64f-434b7da69dcd",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "professionnel",
+      "base": {
+        "description": "Photo réalisée par un photographe professionnel.",
+        "description_i18n": {
+          "de": "Von einem professionellen Fotografen aufgenommenes Foto.",
+          "en": "Photo taken by a professional photographer.",
+          "es": "Foto realizada por un fotógrafo profesional.",
+          "fr": "Photo réalisée par un photographe professionnel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/eeb385ee-d395-43ab-a64f-434b7da69dcd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/eeb385ee-d395-43ab-a64f-434b7da69dcd"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette de provenance pour une photo réalisée par un photographe professionnel. Elle ne détermine ni la visibilité de l’image ni les droits accordés pour son utilisation.",
+        "description_i18n": {
+          "de": "Herkunftskennzeichnung eines von einem Berufsfotografen aufgenommenen Fotos. Sie bestimmt weder Sichtbarkeit noch eingeräumte Nutzungsrechte.",
+          "en": "Provenance tag for a photograph taken by a professional photographer. It determines neither image visibility nor the rights granted for use.",
+          "es": "Etiqueta de procedencia para una foto realizada por un fotógrafo profesional. No determina la visibilidad de la imagen ni los derechos concedidos para utilizarla.",
+          "fr": "Étiquette de provenance pour une photo réalisée par un photographe professionnel. Elle ne détermine ni la visibilité de l’image ni les droits accordés pour son utilisation."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/eeb385ee-d395-43ab-a64f-434b7da69dcd. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/eeb385ee-d395-43ab-a64f-434b7da69dcd"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "416ca9cf-f234-428d-956a-4a73627dc5be",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "restaurant",
+      "base": {
+        "description": "Salle de restaurant et espace repas",
+        "description_i18n": {
+          "de": "Gastraum des Restaurants und Essbereich",
+          "en": "Restaurant dining room and eating area",
+          "es": "Comedor del restaurante y zona de comidas",
+          "fr": "Salle de restaurant et espace repas"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/416ca9cf-f234-428d-956a-4a73627dc5be. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/416ca9cf-f234-428d-956a-4a73627dc5be"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les médias montrant une salle de restaurant ou un espace repas. Elle se distingue des images centrées sur les plats eux-mêmes.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Medien mit Restaurantgastraum oder Essbereich. Sie unterscheidet sich von Bildern, die sich auf die Speisen selbst konzentrieren.",
+          "en": "Tag for media showing a restaurant dining room or eating area. It differs from images focused on the dishes themselves.",
+          "es": "Etiqueta para medios que muestran el comedor de un restaurante o una zona de comidas. Se distingue de las imágenes centradas en los propios platos.",
+          "fr": "Étiquette pour les médias montrant une salle de restaurant ou un espace repas. Elle se distingue des images centrées sur les plats eux-mêmes."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/416ca9cf-f234-428d-956a-4a73627dc5be. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/416ca9cf-f234-428d-956a-4a73627dc5be"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "1446d6f6-6d0e-49a9-be36-3bee70fbab96",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "reunion",
+      "base": {
+        "description": "Espaces professionnels et salles de conférence",
+        "description_i18n": {
+          "de": "Geschäftsräume und Konferenzräume",
+          "en": "Business spaces and conference rooms",
+          "es": "Espacios profesionales y salas de conferencias",
+          "fr": "Espaces professionnels et salles de conférence"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1446d6f6-6d0e-49a9-be36-3bee70fbab96. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1446d6f6-6d0e-49a9-be36-3bee70fbab96"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les médias présentant une salle de réunion, de conférence ou un espace professionnel comparable. Elle décrit le lieu illustré et non les équipements qui y seraient garantis.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Medien mit Besprechungsraum, Konferenzraum oder vergleichbarer Geschäftsfläche. Sie beschreibt den dargestellten Ort, ohne Ausstattung zu gewährleisten.",
+          "en": "Tag for media presenting a meeting room, conference room or comparable business space. It describes the venue depicted rather than guaranteeing equipment.",
+          "es": "Etiqueta para medios que presentan una sala de reuniones, de conferencias o un espacio profesional comparable. Describe el lugar ilustrado sin garantizar su equipamiento.",
+          "fr": "Étiquette pour les médias présentant une salle de réunion, de conférence ou un espace professionnel comparable. Elle décrit le lieu illustré et non les équipements qui y seraient garantis."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1446d6f6-6d0e-49a9-be36-3bee70fbab96. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1446d6f6-6d0e-49a9-be36-3bee70fbab96"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d0267e3d-7c6c-4de8-a155-3a9c2b2cf078",
+      "domain": "media_tag",
+      "context_key": "",
+      "code": "salle_bain",
+      "base": {
+        "description": "Salles de bain",
+        "description_i18n": {
+          "de": "Ansichten von Badezimmern",
+          "en": "Views of bathrooms",
+          "es": "Vistas de cuartos de baño",
+          "fr": "Salles de bain"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d0267e3d-7c6c-4de8-a155-3a9c2b2cf078. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d0267e3d-7c6c-4de8-a155-3a9c2b2cf078"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Étiquette pour les médias représentant une salle de bain ou ses installations. Elle permet de repérer ces vues parmi les autres images de l’hébergement.",
+        "description_i18n": {
+          "de": "Kennzeichnung für Medien mit einem Badezimmer oder dessen Einrichtungen. Sie erleichtert das Auffinden dieser Ansichten unter den übrigen Unterkunftsbildern.",
+          "en": "Tag for media depicting a bathroom or its fittings. It helps locate these views among other accommodation images.",
+          "es": "Etiqueta para medios que representan un cuarto de baño o sus instalaciones. Permite localizar estas vistas entre las demás imágenes del alojamiento.",
+          "fr": "Étiquette pour les médias représentant une salle de bain ou ses installations. Elle permet de repérer ces vues parmi les autres images de l’hébergement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d0267e3d-7c6c-4de8-a155-3a9c2b2cf078. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d0267e3d-7c6c-4de8-a155-3a9c2b2cf078"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Étiquette descriptive du contenu ou de la provenance du média. Les autorisations, la visibilité et les droits de publication sont gérés séparément.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    }
+  ]
+}

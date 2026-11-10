@@ -1,0 +1,622 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-allergen-1",
+  "proposals": [
+    {
+      "concept_id": "74894092-db0f-4f55-bf25-8213b483b7a3",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "celery",
+      "base": {
+        "description": "Contient du céleri",
+        "description_i18n": {
+          "de": "Enthält Sellerie",
+          "en": "Contains celery",
+          "es": "Contiene apio",
+          "fr": "Contient du céleri"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/74894092-db0f-4f55-bf25-8213b483b7a3. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/74894092-db0f-4f55-bf25-8213b483b7a3 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Allergène renseigné lorsque le plat contient du céleri ou des ingrédients qui en dérivent, par exemple dans une garniture, un bouillon ou un assaisonnement.",
+        "description_i18n": {
+          "de": "Erfasstes Allergen, wenn ein Gericht Sellerie oder daraus gewonnene Zutaten enthält, etwa in Beilagen, Brühen oder Würzmitteln.",
+          "en": "Allergen recorded when a dish contains celery or ingredients derived from it, for example in a garnish, stock or seasoning.",
+          "es": "Alérgeno registrado cuando el plato contiene apio o ingredientes derivados, por ejemplo en una guarnición, un caldo o un condimento.",
+          "fr": "Allergène renseigné lorsque le plat contient du céleri ou des ingrédients qui en dérivent, par exemple dans une garniture, un bouillon ou un assaisonnement."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/74894092-db0f-4f55-bf25-8213b483b7a3. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/74894092-db0f-4f55-bf25-8213b483b7a3 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bfd3ec9a-33e6-4e44-9c65-48b227eb2d8a",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "crustaceans",
+      "base": {
+        "description": "Contient des crustacés",
+        "description_i18n": {
+          "de": "Enthält Krebstiere",
+          "en": "Contains crustaceans",
+          "es": "Contiene crustáceos",
+          "fr": "Contient des crustacés"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bfd3ec9a-33e6-4e44-9c65-48b227eb2d8a. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bfd3ec9a-33e6-4e44-9c65-48b227eb2d8a ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille d'allergènes correspondant aux crustacés, tels que crevettes, crabes ou langoustes, et à leurs ingrédients dérivés ; elle est distincte des mollusques.",
+        "description_i18n": {
+          "de": "Allergenfamilie für Krebstiere wie Garnelen, Krabben oder Langusten und daraus gewonnene Zutaten, getrennt von Weichtieren.",
+          "en": "Allergen family covering crustaceans such as shrimp, crabs or spiny lobsters and ingredients derived from them, distinct from molluscs.",
+          "es": "Familia de alérgenos correspondiente a crustáceos como gambas, cangrejos o langostas y sus ingredientes derivados, distinta de los moluscos.",
+          "fr": "Famille d'allergènes correspondant aux crustacés, tels que crevettes, crabes ou langoustes, et à leurs ingrédients dérivés ; elle est distincte des mollusques."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bfd3ec9a-33e6-4e44-9c65-48b227eb2d8a. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bfd3ec9a-33e6-4e44-9c65-48b227eb2d8a ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bf3eaf52-4521-4a81-b061-5339e89a4c8e",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "dairy",
+      "base": {
+        "description": "Contient du lait",
+        "description_i18n": {
+          "de": "Enthält Milch",
+          "en": "Contains milk",
+          "es": "Contiene leche",
+          "fr": "Contient du lait"
+        },
+        "name_i18n": {
+          "de": "Milch",
+          "en": "Milk",
+          "es": "Lácteos",
+          "fr": "Lait"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Milchprodukte"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Dairy"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Leche"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Produits laitiers"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bf3eaf52-4521-4a81-b061-5339e89a4c8e. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bf3eaf52-4521-4a81-b061-5339e89a4c8e ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Allergène correspondant au lait et aux ingrédients à base de lait présents dans un plat, comme crème, fromage ou beurre ; il est distinct de la seule teneur en lactose.",
+        "description_i18n": {
+          "de": "Allergen für Milch und milchhaltige Zutaten eines Gerichts, etwa Sahne, Käse oder Butter, getrennt vom bloßen Laktosegehalt.",
+          "en": "Allergen covering milk and milk-based ingredients present in a dish, such as cream, cheese or butter, distinct from lactose content alone.",
+          "es": "Alérgeno correspondiente a la leche y los ingredientes lácteos de un plato, como nata, queso o mantequilla, distinto del mero contenido en lactosa.",
+          "fr": "Allergène correspondant au lait et aux ingrédients à base de lait présents dans un plat, comme crème, fromage ou beurre ; il est distinct de la seule teneur en lactose."
+        },
+        "name_i18n": {
+          "de": "Milch",
+          "en": "Milk",
+          "es": "Leche",
+          "fr": "Lait"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Milchprodukte"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Dairy"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Produits laitiers"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Lácteos"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bf3eaf52-4521-4a81-b061-5339e89a4c8e. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bf3eaf52-4521-4a81-b061-5339e89a4c8e ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "011f015b-b35a-4f60-b200-c688ad8a5d12",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "eggs",
+      "base": {
+        "description": "Contient des œufs",
+        "description_i18n": {
+          "de": "Enthält Eier",
+          "en": "Contains eggs",
+          "es": "Contiene huevos",
+          "fr": "Contient des œufs"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/011f015b-b35a-4f60-b200-c688ad8a5d12. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/011f015b-b35a-4f60-b200-c688ad8a5d12 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Allergène renseigné pour la présence d'œufs ou d'ingrédients à base d'œufs dans un plat, notamment dans certaines sauces, pâtes ou pâtisseries.",
+        "description_i18n": {
+          "de": "Erfasstes Allergen für Eier oder eihaltige Zutaten eines Gerichts, beispielsweise in bestimmten Saucen, Teigen oder Backwaren.",
+          "en": "Allergen recorded for eggs or egg-based ingredients in a dish, including in certain sauces, doughs or pastries.",
+          "es": "Alérgeno registrado por la presencia de huevos o ingredientes a base de huevo en un plato, entre otros en algunas salsas, masas o preparaciones de pastelería.",
+          "fr": "Allergène renseigné pour la présence d'œufs ou d'ingrédients à base d'œufs dans un plat, notamment dans certaines sauces, pâtes ou pâtisseries."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/011f015b-b35a-4f60-b200-c688ad8a5d12. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/011f015b-b35a-4f60-b200-c688ad8a5d12 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ff37fbc6-14ba-4a9a-98fb-ed9672eaa5f4",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "fish",
+      "base": {
+        "description": "Contient du poisson",
+        "description_i18n": {
+          "de": "Enthält Fisch",
+          "en": "Contains fish",
+          "es": "Contiene pescado",
+          "fr": "Contient du poisson"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ff37fbc6-14ba-4a9a-98fb-ed9672eaa5f4. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ff37fbc6-14ba-4a9a-98fb-ed9672eaa5f4 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Allergène correspondant au poisson et aux ingrédients qui en dérivent dans la préparation, distinct des familles crustacés et mollusques.",
+        "description_i18n": {
+          "de": "Allergen für Fisch und daraus gewonnene Zutaten einer Zubereitung, getrennt von den Familien der Krebstiere und Weichtiere.",
+          "en": "Allergen covering fish and fish-derived ingredients in a preparation, distinct from the crustacean and mollusc families.",
+          "es": "Alérgeno correspondiente al pescado y sus ingredientes derivados en la preparación, distinto de las familias de crustáceos y moluscos.",
+          "fr": "Allergène correspondant au poisson et aux ingrédients qui en dérivent dans la préparation, distinct des familles crustacés et mollusques."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ff37fbc6-14ba-4a9a-98fb-ed9672eaa5f4. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ff37fbc6-14ba-4a9a-98fb-ed9672eaa5f4 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "059d10e1-0ecd-4d0c-8e7c-c986c0c3b574",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "gluten",
+      "base": {
+        "description": "Contient du gluten",
+        "description_i18n": {
+          "de": "Enthält Gluten",
+          "en": "Contains gluten",
+          "es": "Contiene gluten",
+          "fr": "Contient du gluten"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/059d10e1-0ecd-4d0c-8e7c-c986c0c3b574. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/059d10e1-0ecd-4d0c-8e7c-c986c0c3b574 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Présence déclarée de gluten dans le plat, notamment par des céréales ou des préparations qui en contiennent ; cette donnée sur les allergènes est distincte d'une mention d'offre sans gluten.",
+        "description_i18n": {
+          "de": "Angegebener Glutengehalt eines Gerichts, insbesondere durch glutenhaltige Getreide oder Zubereitungen; diese Allergenangabe ist von der Angebotsbezeichnung glutenfrei zu unterscheiden.",
+          "en": "Declared gluten presence in a dish, notably through cereals or preparations containing it; this allergen information is distinct from a gluten-free offer description.",
+          "es": "Presencia declarada de gluten en el plato, especialmente mediante cereales o preparaciones que lo contienen; este dato de alérgenos es distinto de una mención de oferta sin gluten.",
+          "fr": "Présence déclarée de gluten dans le plat, notamment par des céréales ou des préparations qui en contiennent ; cette donnée sur les allergènes est distincte d'une mention d'offre sans gluten."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/059d10e1-0ecd-4d0c-8e7c-c986c0c3b574. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/059d10e1-0ecd-4d0c-8e7c-c986c0c3b574 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ad85be67-3961-456f-9848-a08132141e2f",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "lupin",
+      "base": {
+        "description": "Contient du lupin",
+        "description_i18n": {
+          "de": "Enthält Lupinen",
+          "en": "Contains lupin",
+          "es": "Contiene altramuces",
+          "fr": "Contient du lupin"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ad85be67-3961-456f-9848-a08132141e2f. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ad85be67-3961-456f-9848-a08132141e2f ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Allergène correspondant aux graines de lupin et à leurs ingrédients dérivés, tels que la farine de lupin utilisée dans certaines préparations.",
+        "description_i18n": {
+          "de": "Allergen für Lupinensamen und daraus gewonnene Zutaten, etwa das in manchen Zubereitungen verwendete Lupinenmehl.",
+          "en": "Allergen covering lupin seeds and ingredients derived from them, such as lupin flour used in some preparations.",
+          "es": "Alérgeno correspondiente a las semillas de altramuz y sus ingredientes derivados, como la harina de altramuz utilizada en algunas preparaciones.",
+          "fr": "Allergène correspondant aux graines de lupin et à leurs ingrédients dérivés, tels que la farine de lupin utilisée dans certaines préparations."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ad85be67-3961-456f-9848-a08132141e2f. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ad85be67-3961-456f-9848-a08132141e2f ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "82350206-965f-45cf-93f0-1236c261294d",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "molluscs",
+      "base": {
+        "description": "Contient des mollusques",
+        "description_i18n": {
+          "de": "Enthält Weichtiere",
+          "en": "Contains molluscs",
+          "es": "Contiene moluscos",
+          "fr": "Contient des mollusques"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/82350206-965f-45cf-93f0-1236c261294d. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/82350206-965f-45cf-93f0-1236c261294d ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille d'allergènes correspondant aux mollusques, tels que moules, huîtres, calamars ou escargots, et à leurs ingrédients dérivés, distincte des crustacés.",
+        "description_i18n": {
+          "de": "Allergenfamilie für Weichtiere wie Muscheln, Austern, Kalmare oder Schnecken und daraus gewonnene Zutaten, getrennt von Krebstieren.",
+          "en": "Allergen family covering molluscs such as mussels, oysters, squid or snails and ingredients derived from them, distinct from crustaceans.",
+          "es": "Familia de alérgenos correspondiente a moluscos como mejillones, ostras, calamares o caracoles y sus ingredientes derivados, distinta de los crustáceos.",
+          "fr": "Famille d'allergènes correspondant aux mollusques, tels que moules, huîtres, calamars ou escargots, et à leurs ingrédients dérivés, distincte des crustacés."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/82350206-965f-45cf-93f0-1236c261294d. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/82350206-965f-45cf-93f0-1236c261294d ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "65cb6121-6aa1-4765-9a36-4f9219375ad0",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "mustard",
+      "base": {
+        "description": "Contient de la moutarde",
+        "description_i18n": {
+          "de": "Enthält Senf",
+          "en": "Contains mustard",
+          "es": "Contiene mostaza",
+          "fr": "Contient de la moutarde"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/65cb6121-6aa1-4765-9a36-4f9219375ad0. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/65cb6121-6aa1-4765-9a36-4f9219375ad0 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Allergène renseigné pour la présence de graines de moutarde ou de préparations qui en contiennent, notamment sauces, condiments et assaisonnements.",
+        "description_i18n": {
+          "de": "Erfasstes Allergen für Senfsamen oder Zubereitungen, die diese enthalten, etwa Saucen, Würzmittel und Dressings.",
+          "en": "Allergen recorded for mustard seeds or preparations containing them, including sauces, condiments and dressings.",
+          "es": "Alérgeno registrado por la presencia de semillas de mostaza o preparaciones que las contienen, incluidas salsas, condimentos y aderezos.",
+          "fr": "Allergène renseigné pour la présence de graines de moutarde ou de préparations qui en contiennent, notamment sauces, condiments et assaisonnements."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/65cb6121-6aa1-4765-9a36-4f9219375ad0. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/65cb6121-6aa1-4765-9a36-4f9219375ad0 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6c6cd909-3780-419c-868e-b6f97c5bf746",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "nuts",
+      "base": {
+        "description": "Contient des fruits à coque",
+        "description_i18n": {
+          "de": "Enthält Schalenfrüchte",
+          "en": "Contains tree nuts",
+          "es": "Contiene frutos de cáscara",
+          "fr": "Contient des fruits à coque"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6c6cd909-3780-419c-868e-b6f97c5bf746. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II ; https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6c6cd909-3780-419c-868e-b6f97c5bf746 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II ; https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Famille d'allergènes correspondant aux fruits à coque, tels qu'amandes, noisettes, noix ou pistaches, et à leurs ingrédients dérivés ; les arachides sont renseignées séparément.",
+        "description_i18n": {
+          "de": "Allergenfamilie für Schalenfrüchte wie Mandeln, Haselnüsse, Walnüsse oder Pistazien und daraus gewonnene Zutaten; Erdnüsse werden gesondert erfasst.",
+          "en": "Allergen family covering tree nuts such as almonds, hazelnuts, walnuts or pistachios and derived ingredients; peanuts are recorded separately.",
+          "es": "Familia de alérgenos correspondiente a frutos de cáscara como almendras, avellanas, nueces o pistachos y sus derivados; los cacahuetes se registran por separado.",
+          "fr": "Famille d'allergènes correspondant aux fruits à coque, tels qu'amandes, noisettes, noix ou pistaches, et à leurs ingrédients dérivés ; les arachides sont renseignées séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6c6cd909-3780-419c-868e-b6f97c5bf746. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II ; https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6c6cd909-3780-419c-868e-b6f97c5bf746 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II ; https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX%3A32011R1169"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "642d1b63-7263-4380-b9b0-9efac932c626",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "peanuts",
+      "base": {
+        "description": "Contient des arachides",
+        "description_i18n": {
+          "de": "Enthält Erdnüsse",
+          "en": "Contains peanuts",
+          "es": "Contiene cacahuetes",
+          "fr": "Contient des arachides"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/642d1b63-7263-4380-b9b0-9efac932c626. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/642d1b63-7263-4380-b9b0-9efac932c626 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Allergène correspondant aux arachides et aux ingrédients qui en dérivent dans le plat ; il se renseigne séparément des fruits à coque.",
+        "description_i18n": {
+          "de": "Allergen für Erdnüsse und daraus gewonnene Zutaten eines Gerichts, getrennt von Schalenfrüchten erfasst.",
+          "en": "Allergen covering peanuts and peanut-derived ingredients in a dish, recorded separately from tree nuts.",
+          "es": "Alérgeno correspondiente a los cacahuetes y sus ingredientes derivados en el plato, registrado por separado de los frutos de cáscara.",
+          "fr": "Allergène correspondant aux arachides et aux ingrédients qui en dérivent dans le plat ; il se renseigne séparément des fruits à coque."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/642d1b63-7263-4380-b9b0-9efac932c626. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/642d1b63-7263-4380-b9b0-9efac932c626 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ebe47d2b-242e-4a04-bbcf-23e6dbf01890",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "sesame",
+      "base": {
+        "description": "Contient du sésame",
+        "description_i18n": {
+          "de": "Enthält Sesam",
+          "en": "Contains sesame",
+          "es": "Contiene sésamo",
+          "fr": "Contient du sésame"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ebe47d2b-242e-4a04-bbcf-23e6dbf01890. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ebe47d2b-242e-4a04-bbcf-23e6dbf01890 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Allergène renseigné pour les graines de sésame ou les ingrédients qui en dérivent, par exemple une pâte de sésame utilisée dans la préparation.",
+        "description_i18n": {
+          "de": "Erfasstes Allergen für Sesamsamen oder daraus gewonnene Zutaten, beispielsweise in einer Zubereitung verwendete Sesampaste.",
+          "en": "Allergen recorded for sesame seeds or derived ingredients, such as sesame paste used in a preparation.",
+          "es": "Alérgeno registrado por semillas de sésamo o ingredientes derivados, por ejemplo una pasta de sésamo utilizada en la preparación.",
+          "fr": "Allergène renseigné pour les graines de sésame ou les ingrédients qui en dérivent, par exemple une pâte de sésame utilisée dans la préparation."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ebe47d2b-242e-4a04-bbcf-23e6dbf01890. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ebe47d2b-242e-4a04-bbcf-23e6dbf01890 ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8aa30f9a-f995-41f6-a523-088a0474a36b",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "soy",
+      "base": {
+        "description": "Contient du soja",
+        "description_i18n": {
+          "de": "Enthält Soja",
+          "en": "Contains soy",
+          "es": "Contiene soja",
+          "fr": "Contient du soja"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8aa30f9a-f995-41f6-a523-088a0474a36b. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8aa30f9a-f995-41f6-a523-088a0474a36b ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Allergène correspondant au soja et aux ingrédients à base de soja présents dans le plat, notamment certaines sauces ou préparations végétales.",
+        "description_i18n": {
+          "de": "Allergen für Soja und sojahaltige Zutaten eines Gerichts, etwa bestimmte Saucen oder pflanzliche Zubereitungen.",
+          "en": "Allergen covering soy and soy-based ingredients present in a dish, including certain sauces or plant-based preparations.",
+          "es": "Alérgeno correspondiente a la soja y los ingredientes a base de soja presentes en el plato, incluidas algunas salsas o preparaciones vegetales.",
+          "fr": "Allergène correspondant au soja et aux ingrédients à base de soja présents dans le plat, notamment certaines sauces ou préparations végétales."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8aa30f9a-f995-41f6-a523-088a0474a36b. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8aa30f9a-f995-41f6-a523-088a0474a36b ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "54c85ad3-3615-45b0-bd37-a8bf5e532d6e",
+      "domain": "allergen",
+      "context_key": "",
+      "code": "sulphites",
+      "base": {
+        "description": "Contient des sulfites",
+        "description_i18n": {
+          "de": "Enthält Sulfite",
+          "en": "Contains sulphites",
+          "es": "Contiene sulfitos",
+          "fr": "Contient des sulfites"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/54c85ad3-3615-45b0-bd37-a8bf5e532d6e. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/54c85ad3-3615-45b0-bd37-a8bf5e532d6e ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Substances à base de sulfites déclarées dans les ingrédients du plat ou de la boisson, notamment lorsqu'elles sont utilisées pour la conservation ; elles se renseignent comme allergènes.",
+        "description_i18n": {
+          "de": "In den Zutaten eines Gerichts oder Getränks angegebene Sulfite, insbesondere zur Konservierung, die als Allergene erfasst werden.",
+          "en": "Sulphite substances declared in a dish's or drink's ingredients, notably when used for preservation, and recorded as allergens.",
+          "es": "Sustancias a base de sulfitos declaradas en los ingredientes del plato o bebida, especialmente cuando se utilizan para la conservación, y registradas como alérgenos.",
+          "fr": "Substances à base de sulfites déclarées dans les ingrédients du plat ou de la boisson, notamment lorsqu'elles sont utilisées pour la conservation ; elles se renseignent comme allergènes."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/54c85ad3-3615-45b0-bd37-a8bf5e532d6e. Sources externes réellement consultées : https://www.legislation.gov.uk/eur/2011/1169/annex/II.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/54c85ad3-3615-45b0-bd37-a8bf5e532d6e ; https://www.legislation.gov.uk/eur/2011/1169/annex/II"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,574 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_hpa-1",
+  "proposals": [
+    {
+      "concept_id": "868ffa84-81c0-40bd-b623-46ef49aea0ad",
+      "domain": "taxonomy_hpa",
+      "context_key": "",
+      "code": "bivouac_area",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/868ffa84-81c0-40bd-b623-46ef49aea0ad. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/868ffa84-81c0-40bd-b623-46ef49aea0ad"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Ausgewiesener Biwakplatz"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Biwak"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Designated bivouac site"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Lugar autorizado de vivac"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "vivac"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "bivouac"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Emplacement de bivouac autorisé"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/868ffa84-81c0-40bd-b623-46ef49aea0ad. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/868ffa84-81c0-40bd-b623-46ef49aea0ad"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Ausgewiesener Biwakplatz"
+          },
+          {
+            "kind": "hidden",
+            "lang": "de",
+            "value": "Biwak"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Designated bivouac site"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Lugar autorizado de vivac"
+          },
+          {
+            "kind": "hidden",
+            "lang": "es",
+            "value": "vivac"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "bivouac"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Emplacement de bivouac autorisé"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "cb0c6ad9-f68a-4c3e-bbcf-f64b766b935d",
+      "domain": "taxonomy_hpa",
+      "context_key": "",
+      "code": "declared_campground",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cb0c6ad9-f68a-4c3e-bbcf-f64b766b935d. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cb0c6ad9-f68a-4c3e-bbcf-f64b766b935d ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cb0c6ad9-f68a-4c3e-bbcf-f64b766b935d. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cb0c6ad9-f68a-4c3e-bbcf-f64b766b935d ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4acee75c-f225-4eaf-9b07-9103846487b6",
+      "domain": "taxonomy_hpa",
+      "context_key": "",
+      "code": "farm_camping",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4acee75c-f225-4eaf-9b07-9103846487b6. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4acee75c-f225-4eaf-9b07-9103846487b6 ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4acee75c-f225-4eaf-9b07-9103846487b6. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4acee75c-f225-4eaf-9b07-9103846487b6 ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ffbf26d2-5a4f-498f-b0f3-b7b86824d533",
+      "domain": "taxonomy_hpa",
+      "context_key": "",
+      "code": "homestay_camping",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ffbf26d2-5a4f-498f-b0f3-b7b86824d533. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ffbf26d2-5a4f-498f-b0f3-b7b86824d533 ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ffbf26d2-5a4f-498f-b0f3-b7b86824d533. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ffbf26d2-5a4f-498f-b0f3-b7b86824d533 ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-declares"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "322ed1b0-82ef-4ef8-8601-e5a9b197ddcf",
+      "domain": "taxonomy_hpa",
+      "context_key": "",
+      "code": "motorhome_area",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/322ed1b0-82ef-4ef8-8601-e5a9b197ddcf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/322ed1b0-82ef-4ef8-8601-e5a9b197ddcf"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Wohnmobilplatz zum Parken und Übernachten"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Motorhome parking and overnight area"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "motorhome parking area"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Área de estacionamiento y pernocta de autocaravanas"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "área para autocaravanas"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "aire camping-car"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Aire de stationnement et nuitée pour camping-cars"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/322ed1b0-82ef-4ef8-8601-e5a9b197ddcf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/322ed1b0-82ef-4ef8-8601-e5a9b197ddcf"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Wohnmobilplatz zum Parken und Übernachten"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Motorhome parking and overnight area"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "motorhome parking area"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Área de estacionamiento y pernocta de autocaravanas"
+          },
+          {
+            "kind": "hidden",
+            "lang": "es",
+            "value": "área para autocaravanas"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "aire camping-car"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Aire de stationnement et nuitée pour camping-cars"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4f67ae9b-30bc-4eb5-8dee-e431b513b127",
+      "domain": "taxonomy_hpa",
+      "context_key": "",
+      "code": "motorhome_night_stop",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4f67ae9b-30bc-4eb5-8dee-e431b513b127. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4f67ae9b-30bc-4eb5-8dee-e431b513b127"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Nächtlicher Zwischenstopp für Wohnmobil oder Van"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Motorhome or campervan night stop"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "overnight stop"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Parada de pernocta para autocaravana o furgoneta"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "parada nocturna"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Étape de nuit pour camping-car ou van"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "halte camping-car"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4f67ae9b-30bc-4eb5-8dee-e431b513b127. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4f67ae9b-30bc-4eb5-8dee-e431b513b127"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Nächtlicher Zwischenstopp für Wohnmobil oder Van"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Motorhome or campervan night stop"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "overnight stop"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Parada de pernocta para autocaravana o furgoneta"
+          },
+          {
+            "kind": "hidden",
+            "lang": "es",
+            "value": "parada nocturna"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Étape de nuit pour camping-car ou van"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "halte camping-car"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "79a28273-7432-4348-8aba-287eac185ddf",
+      "domain": "taxonomy_hpa",
+      "context_key": "",
+      "code": "natural_camp_area",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/79a28273-7432-4348-8aba-287eac185ddf. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/79a28273-7432-4348-8aba-287eac185ddf ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "natural campsite"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "área natural"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "aire naturelle"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/79a28273-7432-4348-8aba-287eac185ddf. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/79a28273-7432-4348-8aba-287eac185ddf ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "natural campsite"
+          },
+          {
+            "kind": "hidden",
+            "lang": "es",
+            "value": "área natural"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "aire naturelle"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "119d8bb0-604b-4bd5-852a-5e7773cf4d23",
+      "domain": "taxonomy_hpa",
+      "context_key": "",
+      "code": "residential_leisure_park",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/119d8bb0-604b-4bd5-852a-5e7773cf4d23. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/119d8bb0-604b-4bd5-852a-5e7773cf4d23 ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Touristisch betriebener Freizeit-Residenzpark"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "residential park"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Tourist residential leisure park"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Parque residencial de ocio turístico"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "PRL"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "PRL touristique sous régime hôtelier"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/119d8bb0-604b-4bd5-852a-5e7773cf4d23. Sources externes réellement consultées : https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/119d8bb0-604b-4bd5-852a-5e7773cf4d23 ; https://www.entreprises.gouv.fr/espace-entreprises/s-informer-sur-la-reglementation/les-terrains-de-camping-amenages-et-parcs"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Touristisch betriebener Freizeit-Residenzpark"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "residential park"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Tourist residential leisure park"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Parque residencial de ocio turístico"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "PRL"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "PRL touristique sous régime hôtelier"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "adaa90ab-d547-4d29-844a-fc864e2c21ec",
+      "domain": "taxonomy_hpa",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Hôtellerie de plein air",
+        "description_i18n": {
+          "de": "Technische Wurzel für Unterkünfte im Freien; nicht direkt zuweisbar.",
+          "en": "Technical root for open-air accommodation categories; not directly assignable.",
+          "es": "Raíz técnica de alojamientos al aire libre; no asignable directamente.",
+          "fr": "Racine technique — Hôtellerie de plein air"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/adaa90ab-d547-4d29-844a-fc864e2c21ec. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/adaa90ab-d547-4d29-844a-fc864e2c21ec"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des hébergements et emplacements de plein air, notamment campings, bivouacs et accueils de camping-cars. Les sous-catégories distinguent les formes d’accueil ; les services et classements se renseignent séparément.",
+        "description_i18n": {
+          "de": "Oberkategorie für Unterkünfte und Stellplätze im Freien, darunter Campingplätze, Biwakplätze und Wohnmobilaufenthalte. Unterkategorien unterscheiden die Unterkunftsformen; Leistungen und Klassifizierungen werden getrennt erfasst.",
+          "en": "General category for outdoor accommodation and pitches, including campsites, bivouacs and motorhome stays. Subcategories distinguish hosting types; services and ratings are specified separately.",
+          "es": "Categoría general de alojamientos y parcelas al aire libre, incluidos campings, vivacs y acogida de autocaravanas. Las subcategorías distinguen las formas de acogida; servicios y clasificaciones se indican aparte.",
+          "fr": "Catégorie générale des hébergements et emplacements de plein air, notamment campings, bivouacs et accueils de camping-cars. Les sous-catégories distinguent les formes d’accueil ; les services et classements se renseignent séparément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/adaa90ab-d547-4d29-844a-fc864e2c21ec. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/adaa90ab-d547-4d29-844a-fc864e2c21ec"
+          }
+        ]
+      }
+    }
+  ]
+}

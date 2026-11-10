@@ -371,6 +371,8 @@ Les dates de validité proposées pour certains catalogues sont distinctes de l'
 
 Pour la revue périodique d'un domaine, examiner les termes que les agents ne retrouvent pas, les doublons apparents, les définitions ambiguës, les traductions manquantes, les parents incohérents et les fiches à reprendre. Noter pour chaque décision le besoin, la solution retenue, les sources utiles et les personnes ayant relu.
 
+La [revue intégrale du 10 novembre 2026](audits/2026-11-10-thesaurus-editorial-completeness.md) et ses lots versionnés donnent un exemple de suivi par domaine et par concept. Leur contrôle automatique de complétude accompagne la décision éditoriale ; il ne remplace pas la vérification du sens.
+
 ### Fiche de préparation d'un changement
 
 | Point à renseigner | Question |

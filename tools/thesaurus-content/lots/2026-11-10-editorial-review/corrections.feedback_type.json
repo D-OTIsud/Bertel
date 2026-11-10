@@ -1,0 +1,379 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-feedback_type-1",
+  "proposals": [
+    {
+      "concept_id": "c3693caf-4a99-4221-bd8d-3dd83cdaf369",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "complaint",
+      "base": {
+        "description": "Réclamation",
+        "description_i18n": {
+          "en": "Customer complaint",
+          "es": "Reclamación de cliente",
+          "fr": "Réclamation"
+        },
+        "name_i18n": {
+          "en": "Complaint",
+          "es": "Reclamación",
+          "fr": "Réclamation"
+        }
+      },
+      "changes": {
+        "description": "Retour exprimant une insatisfaction et une demande de prise en compte ou de correction, distinct d'une simple note d'évaluation.",
+        "description_i18n": {
+          "en": "Feedback expressing dissatisfaction and requesting consideration or correction, distinct from a simple rating.",
+          "es": "Comentario que expresa insatisfacción y solicita atención o corrección, distinto de una simple puntuación.",
+          "fr": "Retour exprimant une insatisfaction et une demande de prise en compte ou de correction, distinct d'une simple note d'évaluation.",
+          "de": "Rückmeldung, die Unzufriedenheit ausdrückt und eine Prüfung oder Korrektur verlangt, im Unterschied zu einer bloßen Bewertungspunktzahl."
+        },
+        "name_i18n": {
+          "en": "Complaint",
+          "es": "Reclamación",
+          "fr": "Réclamation",
+          "de": "Beschwerde"
+        }
+      }
+    },
+    {
+      "concept_id": "680f50d5-df87-4cd2-b7be-7bb65d39db80",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "compliment",
+      "base": {
+        "description": "Compliment",
+        "description_i18n": {
+          "en": "Compliment",
+          "es": "Felicitación",
+          "fr": "Compliment"
+        },
+        "name_i18n": {
+          "en": "Compliment",
+          "es": "Felicitación",
+          "fr": "Compliment"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Retour exprimant un remerciement ou une appréciation favorable sur l'accueil, une prestation ou l'expérience vécue.",
+        "description_i18n": {
+          "en": "Feedback expressing thanks or favourable appreciation of the welcome, a service or the experience received.",
+          "es": "Comentario que expresa agradecimiento o una valoración favorable de la acogida, una prestación o la experiencia vivida.",
+          "fr": "Retour exprimant un remerciement ou une appréciation favorable sur l'accueil, une prestation ou l'expérience vécue.",
+          "de": "Rückmeldung mit Dank oder positiver Würdigung des Empfangs, einer Leistung oder des Erlebnisses."
+        },
+        "name_i18n": {
+          "en": "Compliment",
+          "es": "Elogio",
+          "fr": "Compliment",
+          "de": "Lob"
+        },
+        "labels": [
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Felicitación"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7b9b1315-98e5-4e9e-b5fd-d9e9d1e42774",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "email",
+      "base": {
+        "description": "Retour par email",
+        "description_i18n": {
+          "en": "Feedback via email",
+          "es": "Comentario por correo electrónico",
+          "fr": "Retour par email"
+        },
+        "name": "Email",
+        "name_i18n": {
+          "en": "Email",
+          "es": "Correo electrónico",
+          "fr": "Email"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Retour reçu par courrier électronique ; cette catégorie décrit le canal du retour, indépendamment de son caractère positif ou négatif.",
+        "description_i18n": {
+          "en": "Feedback received by email; this category identifies the feedback channel regardless of its positive or negative nature.",
+          "es": "Comentario recibido por correo electrónico; esta categoría identifica el canal del comentario con independencia de su carácter positivo o negativo.",
+          "fr": "Retour reçu par courrier électronique ; cette catégorie décrit le canal du retour, indépendamment de son caractère positif ou négatif.",
+          "de": "Per E-Mail eingegangene Rückmeldung; diese Kategorie beschreibt den Eingangskanal unabhängig von einer positiven oder negativen Aussage."
+        },
+        "name": "Courriel",
+        "name_i18n": {
+          "en": "Email",
+          "es": "Correo electrónico",
+          "fr": "Courriel",
+          "de": "E-Mail"
+        },
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Email"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "803d4d74-61d4-4ec7-aa3f-969b8c169bb4",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "online_review",
+      "base": {
+        "description": "Avis en ligne",
+        "description_i18n": {
+          "en": "Online customer review",
+          "es": "Opinión en línea",
+          "fr": "Avis en ligne"
+        },
+        "name_i18n": {
+          "en": "Online review",
+          "es": "Reseña en línea",
+          "fr": "Avis en ligne"
+        }
+      },
+      "changes": {
+        "description": "Appréciation publiée sur un site ou une plateforme d'avis en ligne, pouvant comporter un commentaire et une note.",
+        "description_i18n": {
+          "en": "Assessment published on a website or online review platform, which may include a comment and a rating.",
+          "es": "Valoración publicada en un sitio web o una plataforma de reseñas en línea, que puede incluir un comentario y una puntuación.",
+          "fr": "Appréciation publiée sur un site ou une plateforme d'avis en ligne, pouvant comporter un commentaire et une note.",
+          "de": "Auf einer Website oder Online-Bewertungsplattform veröffentlichte Einschätzung, die einen Kommentar und eine Punktbewertung enthalten kann."
+        },
+        "name_i18n": {
+          "en": "Online review",
+          "es": "Reseña en línea",
+          "fr": "Avis en ligne",
+          "de": "Online-Bewertung"
+        }
+      }
+    },
+    {
+      "concept_id": "8fbb1740-0bfb-4517-a9ee-599e5e08ae49",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "rating",
+      "base": {
+        "description": "Note d'évaluation",
+        "description_i18n": {
+          "en": "Rating score",
+          "es": "Puntuación",
+          "fr": "Note d'évaluation"
+        },
+        "name": "Note",
+        "name_i18n": {
+          "en": "Rating",
+          "es": "Calificación",
+          "fr": "Note"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Évaluation exprimée sous forme de note ou de score ; elle se distingue du commentaire rédigé et du classement officiel d'un établissement.",
+        "description_i18n": {
+          "en": "Assessment expressed as a rating or score, distinct from a written comment and from an establishment's official classification.",
+          "es": "Evaluación expresada mediante una nota o puntuación, distinta de un comentario escrito y de la clasificación oficial de un establecimiento.",
+          "fr": "Évaluation exprimée sous forme de note ou de score ; elle se distingue du commentaire rédigé et du classement officiel d'un établissement.",
+          "de": "In einer Note oder Punktzahl ausgedrückte Bewertung, im Unterschied zu einem schriftlichen Kommentar und einer offiziellen Betriebsklassifizierung."
+        },
+        "name": "Note d'évaluation",
+        "name_i18n": {
+          "en": "Rating",
+          "es": "Puntuación",
+          "fr": "Note d'évaluation",
+          "de": "Bewertungsnote"
+        },
+        "labels": [
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Calificación"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Note"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d1210e2f-886d-46af-80e8-3b1c4df6de69",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "satisfaction_survey",
+      "base": {
+        "description": "Enquête de satisfaction",
+        "description_i18n": {
+          "en": "Customer satisfaction survey",
+          "es": "Encuesta de satisfacción de clientes",
+          "fr": "Enquête de satisfaction"
+        },
+        "name_i18n": {
+          "en": "Satisfaction survey",
+          "es": "Encuesta de satisfacción",
+          "fr": "Enquête de satisfaction"
+        }
+      },
+      "changes": {
+        "description": "Retour recueilli au moyen d'un questionnaire destiné à apprécier la satisfaction concernant l'accueil, une prestation ou une expérience.",
+        "description_i18n": {
+          "en": "Feedback collected through a questionnaire assessing satisfaction with the welcome, a service or an experience.",
+          "es": "Comentario recogido mediante un cuestionario destinado a evaluar la satisfacción con la acogida, una prestación o una experiencia.",
+          "fr": "Retour recueilli au moyen d'un questionnaire destiné à apprécier la satisfaction concernant l'accueil, une prestation ou une expérience.",
+          "de": "Mit einem Fragebogen erhobene Rückmeldung zur Zufriedenheit mit dem Empfang, einer Leistung oder einem Erlebnis."
+        },
+        "name_i18n": {
+          "en": "Satisfaction survey",
+          "es": "Encuesta de satisfacción",
+          "fr": "Enquête de satisfaction",
+          "de": "Zufriedenheitsbefragung"
+        }
+      }
+    },
+    {
+      "concept_id": "5a128f8c-341d-4059-8af9-dd5798f7e999",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "social_media",
+      "base": {
+        "description": "Retour via réseaux sociaux",
+        "description_i18n": {
+          "en": "Feedback via social media",
+          "es": "Comentario en redes sociales",
+          "fr": "Retour via réseaux sociaux"
+        },
+        "name_i18n": {
+          "en": "Social media",
+          "es": "Redes sociales",
+          "fr": "Réseaux sociaux"
+        }
+      },
+      "changes": {
+        "description": "Retour formulé sur un réseau social, par publication, commentaire ou message ; la catégorie identifie le canal sans présumer du sentiment exprimé.",
+        "description_i18n": {
+          "en": "Feedback provided on social media through a post, comment or message; the category identifies the channel without assuming the sentiment expressed.",
+          "es": "Comentario formulado en una red social mediante una publicación, un comentario o un mensaje; la categoría identifica el canal sin presuponer el sentimiento expresado.",
+          "fr": "Retour formulé sur un réseau social, par publication, commentaire ou message ; la catégorie identifie le canal sans présumer du sentiment exprimé.",
+          "de": "Über ein soziales Netzwerk als Beitrag, Kommentar oder Nachricht gegebene Rückmeldung; die Kategorie beschreibt den Kanal, ohne die Stimmung vorwegzunehmen."
+        },
+        "name_i18n": {
+          "en": "Social media",
+          "es": "Redes sociales",
+          "fr": "Réseaux sociaux",
+          "de": "Soziale Medien"
+        }
+      }
+    },
+    {
+      "concept_id": "048fc806-32af-4bb3-8d6a-b7c923b3e7dd",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "suggestion",
+      "base": {
+        "description": "Suggestion d'amélioration",
+        "description_i18n": {
+          "en": "Improvement suggestion",
+          "es": "Sugerencia de mejora",
+          "fr": "Suggestion d'amélioration"
+        },
+        "name_i18n": {
+          "en": "Suggestion",
+          "es": "Sugerencia",
+          "fr": "Suggestion"
+        }
+      },
+      "changes": {
+        "description": "Proposition formulée par un interlocuteur pour améliorer une prestation, un accueil ou un fonctionnement, sans être nécessairement une réclamation.",
+        "description_i18n": {
+          "en": "Proposal made by a contact to improve a service, reception or operation, without necessarily constituting a complaint.",
+          "es": "Propuesta de un interlocutor para mejorar una prestación, una acogida o un funcionamiento, sin constituir necesariamente una reclamación.",
+          "fr": "Proposition formulée par un interlocuteur pour améliorer une prestation, un accueil ou un fonctionnement, sans être nécessairement une réclamation.",
+          "de": "Vorschlag eines Gesprächspartners zur Verbesserung einer Leistung, des Empfangs oder eines Ablaufs, der nicht zwangsläufig eine Beschwerde darstellt."
+        },
+        "name_i18n": {
+          "en": "Suggestion",
+          "es": "Sugerencia",
+          "fr": "Suggestion",
+          "de": "Vorschlag"
+        }
+      }
+    },
+    {
+      "concept_id": "5eabaf8c-4e3e-4bf7-9ad2-3c9cd15c538c",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "testimonial",
+      "base": {
+        "description": "Témoignage client",
+        "description_i18n": {
+          "en": "Customer testimonial",
+          "es": "Testimonio de cliente",
+          "fr": "Témoignage client"
+        },
+        "name_i18n": {
+          "en": "Testimonial",
+          "es": "Testimonio",
+          "fr": "Témoignage"
+        }
+      },
+      "changes": {
+        "description": "Récit ou appréciation d'un client relatant son expérience ; il ne constitue pas à lui seul une autorisation de publication.",
+        "description_i18n": {
+          "en": "A customer's account or appreciation of their experience; it does not in itself provide permission to publish it.",
+          "es": "Relato o valoración de un cliente sobre su experiencia; por sí solo no constituye una autorización de publicación.",
+          "fr": "Récit ou appréciation d'un client relatant son expérience ; il ne constitue pas à lui seul une autorisation de publication.",
+          "de": "Erfahrungsbericht oder Einschätzung eines Kunden; daraus allein ergibt sich keine Erlaubnis zur Veröffentlichung."
+        },
+        "name_i18n": {
+          "en": "Testimonial",
+          "es": "Testimonio",
+          "fr": "Témoignage",
+          "de": "Erfahrungsbericht"
+        }
+      }
+    },
+    {
+      "concept_id": "114915f4-30d9-4aef-909a-1afef1e5b188",
+      "domain": "feedback_type",
+      "context_key": "",
+      "code": "verbal_feedback",
+      "base": {
+        "description": "Commentaire verbal",
+        "description_i18n": {
+          "en": "In-person comment",
+          "es": "Comentario verbal",
+          "fr": "Commentaire verbal"
+        },
+        "name_i18n": {
+          "en": "Verbal feedback",
+          "es": "Comentario verbal",
+          "fr": "Commentaire verbal"
+        }
+      },
+      "changes": {
+        "description": "Retour communiqué oralement, par exemple à l'accueil ou par téléphone, puis identifié comme tel dans le suivi des échanges.",
+        "description_i18n": {
+          "en": "Feedback communicated orally, for example at reception or by telephone, and identified as such in interaction records.",
+          "es": "Comentario comunicado oralmente, por ejemplo en la recepción o por teléfono, e identificado como tal en el seguimiento de los intercambios.",
+          "fr": "Retour communiqué oralement, par exemple à l'accueil ou par téléphone, puis identifié comme tel dans le suivi des échanges.",
+          "de": "Mündlich übermittelte Rückmeldung, etwa am Empfang oder telefonisch, die bei der Gesprächsdokumentation entsprechend gekennzeichnet wird."
+        },
+        "name_i18n": {
+          "en": "Verbal feedback",
+          "es": "Comentario verbal",
+          "fr": "Commentaire verbal",
+          "de": "Mündliche Rückmeldung"
+        }
+      }
+    }
+  ]
+}

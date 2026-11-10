@@ -22,6 +22,14 @@ BEGIN
   ASSERT jsonb_array_length(thesaurus.definition_errors(labels,
     jsonb_set(defs,'{fr}',to_jsonb(U&'  UNE\00A0\00C9TOILE !!!  '::text)),languages))>0,
     'Case, Unicode whitespace and punctuation cannot disguise a copied label';
+  ASSERT NOT thesaurus.has_editorial_text(to_jsonb(U&'\2060\200D'::text)),
+    'Invisible Unicode format controls alone must not count as editorial text';
+  ASSERT jsonb_array_length(thesaurus.definition_errors(labels,
+    jsonb_set(defs,'{de}',to_jsonb(U&'\2060\200D'::text)),languages))>0,
+    'Required translated definitions must reject format-control-only text';
+  ASSERT jsonb_array_length(thesaurus.definition_errors(labels,
+    jsonb_set(defs,'{en}',to_jsonb(U&'O\2060ne st\200Dar'::text)),languages))>0,
+    'Format controls cannot disguise a copied preferred label';
   FOREACH bad IN ARRAY ARRAY['TODO','TBD','À compléter','N/A','—','...'] LOOP
     ASSERT jsonb_array_length(thesaurus.definition_errors(labels,
       jsonb_set(defs,'{de}',to_jsonb(bad)),languages))>0,

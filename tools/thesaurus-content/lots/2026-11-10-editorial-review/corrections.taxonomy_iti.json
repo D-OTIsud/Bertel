@@ -1,0 +1,258 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_iti-1",
+  "proposals": [
+    {
+      "concept_id": "1d34d574-7cc0-43a1-ae8f-d3d96f299c1d",
+      "domain": "taxonomy_iti",
+      "context_key": "",
+      "code": "coastal_path",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1d34d574-7cc0-43a1-ae8f-d3d96f299c1d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1d34d574-7cc0-43a1-ae8f-d3d96f299c1d"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/1d34d574-7cc0-43a1-ae8f-d3d96f299c1d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/1d34d574-7cc0-43a1-ae8f-d3d96f299c1d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "8ba0016f-ad79-4c9b-a8ed-aca4b2fcf696",
+      "domain": "taxonomy_iti",
+      "context_key": "",
+      "code": "hiking",
+      "base": {
+        "description": "Itinéraire de randonnée à pied",
+        "description_i18n": {
+          "de": "Wanderroute zu Fuß.",
+          "en": "Hiking route on foot.",
+          "es": "Itinerario de senderismo a pie.",
+          "fr": "Itinéraire de randonnée à pied"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8ba0016f-ad79-4c9b-a8ed-aca4b2fcf696. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8ba0016f-ad79-4c9b-a8ed-aca4b2fcf696"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Parcours décrit pour être découvert en marchant à pied. La catégorie désigne l’itinéraire lui-même, distinct d’une prestation de randonnée accompagnée et de son niveau de difficulté.",
+        "description_i18n": {
+          "de": "Zur Erkundung zu Fuß beschriebene Strecke. Die Kategorie bezeichnet die Route selbst und keine geführte Wanderleistung oder deren Schwierigkeitsgrad.",
+          "en": "Route described for exploration on foot. This category identifies the itinerary itself rather than a guided hiking service or its difficulty level.",
+          "es": "Recorrido descrito para descubrirlo caminando a pie. Identifica el propio itinerario, no una prestación de senderismo guiado ni su nivel de dificultad.",
+          "fr": "Parcours décrit pour être découvert en marchant à pied. La catégorie désigne l’itinéraire lui-même, distinct d’une prestation de randonnée accompagnée et de son niveau de difficulté."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/8ba0016f-ad79-4c9b-a8ed-aca4b2fcf696. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/8ba0016f-ad79-4c9b-a8ed-aca4b2fcf696"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0f0c23b6-bc47-428d-b66c-f4344ca7a18d",
+      "domain": "taxonomy_iti",
+      "context_key": "",
+      "code": "interpretive_trail",
+      "base": {
+        "description": "Sentier thématique, botanique, pédagogique",
+        "description_i18n": {
+          "de": "Themenpfad zur Vermittlung von Pflanzen, Natur oder Kulturerbe.",
+          "en": "Themed trail for learning about plants, nature or heritage.",
+          "es": "Sendero temático para conocer plantas, naturaleza o patrimonio.",
+          "fr": "Sentier thématique, botanique, pédagogique"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0f0c23b6-bc47-428d-b66c-f4344ca7a18d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0f0c23b6-bc47-428d-b66c-f4344ca7a18d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Parcours thématique destiné à faire comprendre la végétation, la nature ou le patrimoine au fil de la découverte. Il se distingue d’un sentier décrit uniquement pour le déplacement ou la pratique sportive.",
+        "description_i18n": {
+          "de": "Themenroute zum Verständnis von Pflanzenwelt, Natur oder Kulturerbe während der Erkundung. Sie unterscheidet sich von einem nur zur Fortbewegung oder Sportausübung beschriebenen Weg.",
+          "en": "Themed route intended to explain vegetation, nature or heritage during exploration. It differs from a trail described solely for travel or sport.",
+          "es": "Recorrido temático destinado a comprender la vegetación, naturaleza o patrimonio durante la visita. Se distingue de un sendero descrito solo para desplazamiento o deporte.",
+          "fr": "Parcours thématique destiné à faire comprendre la végétation, la nature ou le patrimoine au fil de la découverte. Il se distingue d’un sentier décrit uniquement pour le déplacement ou la pratique sportive."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0f0c23b6-bc47-428d-b66c-f4344ca7a18d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0f0c23b6-bc47-428d-b66c-f4344ca7a18d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "30a7d0a6-d8bf-4c9b-a145-790b653f0d99",
+      "domain": "taxonomy_iti",
+      "context_key": "",
+      "code": "mountain_biking",
+      "base": {
+        "description": "Itinéraire ou circuit VTT",
+        "description_i18n": {
+          "de": "Mountainbike-Strecke oder -Rundkurs.",
+          "en": "Mountain bike route or loop.",
+          "es": "Itinerario o circuito de bicicleta de montaña.",
+          "fr": "Itinéraire ou circuit VTT"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/30a7d0a6-d8bf-4c9b-a145-790b653f0d99. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/30a7d0a6-d8bf-4c9b-a145-790b653f0d99"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Parcours destiné au vélo tout terrain, sur des chemins, pistes ou sentiers. La catégorie décrit la pratique du parcours, distincte d’un service de location de vélo ou d’une sortie encadrée.",
+        "description_i18n": {
+          "de": "Route für Mountainbikes auf Wegen, Pisten oder Pfaden. Sie beschreibt die Routennutzung und keinen Fahrradverleih oder eine geführte Ausfahrt.",
+          "en": "Route intended for mountain biking on tracks, paths or trails. It describes the itinerary activity rather than bicycle rental or a guided outing.",
+          "es": "Recorrido destinado a bicicleta de montaña por pistas, caminos o senderos. Describe la práctica del itinerario, no un servicio de alquiler o salida guiada.",
+          "fr": "Parcours destiné au vélo tout terrain, sur des chemins, pistes ou sentiers. La catégorie décrit la pratique du parcours, distincte d’un service de location de vélo ou d’une sortie encadrée."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/30a7d0a6-d8bf-4c9b-a145-790b653f0d99. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/30a7d0a6-d8bf-4c9b-a145-790b653f0d99"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "fd5c9c7b-0750-4c99-93d8-06a491e5630e",
+      "domain": "taxonomy_iti",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Itinéraire",
+        "description_i18n": {
+          "de": "Technische Wurzel für Routen und Wege; nicht direkt zuweisbar.",
+          "en": "Technical root for routes and trails; not directly assignable.",
+          "es": "Raíz técnica de itinerarios y rutas; no asignable directamente.",
+          "fr": "Racine technique — Itinéraire"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fd5c9c7b-0750-4c99-93d8-06a491e5630e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fd5c9c7b-0750-4c99-93d8-06a491e5630e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des parcours décrits pour la découverte d’un territoire, à pied, à vélo ou par un autre mode adapté. Elle classe l’itinéraire éditorial, distinct d’une activité encadrée ou du statut d’un sentier.",
+        "description_i18n": {
+          "de": "Oberkategorie für beschriebene Entdeckungsrouten zu Fuß, per Fahrrad oder mit einer anderen geeigneten Fortbewegung. Sie klassifiziert eine redaktionelle Route und keine geführte Aktivität oder den Öffnungsstatus eines Weges.",
+          "en": "General category for routes described for discovering an area on foot, by bicycle or another suitable mode. It classifies an editorial itinerary rather than a guided activity or a trail’s opening status.",
+          "es": "Categoría general de recorridos descritos para descubrir un territorio a pie, en bicicleta u otro medio adecuado. Clasifica el itinerario editorial, no una actividad guiada ni el estado de un sendero.",
+          "fr": "Catégorie générale des parcours décrits pour la découverte d’un territoire, à pied, à vélo ou par un autre mode adapté. Elle classe l’itinéraire éditorial, distinct d’une activité encadrée ou du statut d’un sentier."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fd5c9c7b-0750-4c99-93d8-06a491e5630e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fd5c9c7b-0750-4c99-93d8-06a491e5630e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b497b0d3-f647-404a-a836-30ce0f7d048b",
+      "domain": "taxonomy_iti",
+      "context_key": "",
+      "code": "scenic_drive",
+      "base": {
+        "description": "Route scénique (voiture, moto)",
+        "description_i18n": {
+          "de": "Landschaftlich reizvolle Strecke für Auto oder Motorrad.",
+          "en": "Scenic route for cars or motorcycles.",
+          "es": "Ruta escénica en coche o moto.",
+          "fr": "Route scénique (voiture, moto)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b497b0d3-f647-404a-a836-30ce0f7d048b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b497b0d3-f647-404a-a836-30ce0f7d048b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Parcours routier proposé pour découvrir les paysages et les lieux d’un territoire en voiture ou à moto. Il décrit une route touristique, distincte d’un transport ou d’une excursion vendue par un prestataire.",
+        "description_i18n": {
+          "de": "Straßenroute zur Erkundung von Landschaften und Orten einer Region mit Auto oder Motorrad. Sie bezeichnet eine touristische Strecke und keine Beförderungsleistung oder verkaufte Ausfahrt.",
+          "en": "Road route offered for discovering an area’s scenery and places by car or motorcycle. It describes a touring route rather than transport or an operator-sold excursion.",
+          "es": "Recorrido por carretera para descubrir paisajes y lugares de un territorio en coche o moto. Describe una ruta turística, no un transporte o excursión vendidos por un prestador.",
+          "fr": "Parcours routier proposé pour découvrir les paysages et les lieux d’un territoire en voiture ou à moto. Il décrit une route touristique, distincte d’un transport ou d’une excursion vendue par un prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b497b0d3-f647-404a-a836-30ce0f7d048b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b497b0d3-f647-404a-a836-30ce0f7d048b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0274cabe-06ba-4897-bee9-e2da187027ba",
+      "domain": "taxonomy_iti",
+      "context_key": "",
+      "code": "trail_running",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0274cabe-06ba-4897-bee9-e2da187027ba. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0274cabe-06ba-4897-bee9-e2da187027ba"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0274cabe-06ba-4897-bee9-e2da187027ba. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0274cabe-06ba-4897-bee9-e2da187027ba"
+          }
+        ]
+      }
+    }
+  ]
+}

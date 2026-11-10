@@ -1,0 +1,346 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_prd-1",
+  "proposals": [
+    {
+      "concept_id": "421837b1-534a-410b-8302-1ae5cbe9a5cc",
+      "domain": "taxonomy_prd",
+      "context_key": "",
+      "code": "agrotourisme",
+      "base": {
+        "description": "Accueil et activités agritouristiques à la ferme",
+        "description_i18n": {
+          "de": "Gastfreundschaft und Aktivitäten auf einem landwirtschaftlichen Betrieb.",
+          "en": "Visitor hosting and activities on a working farm.",
+          "es": "Acogida y actividades turísticas en una explotación agrícola.",
+          "fr": "Accueil et activités agritouristiques à la ferme"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/421837b1-534a-410b-8302-1ae5cbe9a5cc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/421837b1-534a-410b-8302-1ae5cbe9a5cc"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Accueil touristique associé à une exploitation agricole, pour découvrir son activité et ses savoir-faire. La catégorie décrit l’offre d’accueil à la ferme, distincte d’un simple commerce revendant ses produits.",
+        "description_i18n": {
+          "de": "Touristischer Empfang auf einem landwirtschaftlichen Betrieb zur Entdeckung seiner Tätigkeiten und Fertigkeiten. Gemeint ist das Besucherangebot des Hofes und kein bloßer Wiederverkauf seiner Waren.",
+          "en": "Tourism hosting associated with a farm to discover its activities and skills. It describes farm visitor hosting rather than a shop merely reselling its products.",
+          "es": "Acogida turística vinculada a una explotación agrícola para descubrir su actividad y saberes. Describe la oferta de acogida en la granja, no un comercio que solo revende sus productos.",
+          "fr": "Accueil touristique associé à une exploitation agricole, pour découvrir son activité et ses savoir-faire. La catégorie décrit l’offre d’accueil à la ferme, distincte d’un simple commerce revendant ses produits."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/421837b1-534a-410b-8302-1ae5cbe9a5cc. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/421837b1-534a-410b-8302-1ae5cbe9a5cc"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "65adccc8-164f-48b5-85be-5380db35c49c",
+      "domain": "taxonomy_prd",
+      "context_key": "",
+      "code": "apiculture",
+      "base": {
+        "description": "Production apicole ouverte au public",
+        "description_i18n": {
+          "de": "Bienenhaltung, für Besucher geöffnet.",
+          "en": "Beekeeping operation open to visitors.",
+          "es": "Explotación apícola abierta al público.",
+          "fr": "Production apicole ouverte au public"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/65adccc8-164f-48b5-85be-5380db35c49c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/65adccc8-164f-48b5-85be-5380db35c49c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Exploitation élevant des abeilles ou produisant des produits de la ruche et accueillant le public pour les découvrir. Elle se distingue d’un commerce qui revend simplement du miel.",
+        "description_i18n": {
+          "de": "Betrieb mit Bienenhaltung oder Erzeugnissen aus dem Bienenstock und Besuchsangebot. Er unterscheidet sich von einem Geschäft, das lediglich Honig weiterverkauft.",
+          "en": "Operation keeping bees or producing hive products and welcoming the public to discover them. It differs from a shop merely reselling honey.",
+          "es": "Explotación que cría abejas o produce productos de la colmena y recibe al público para descubrirlos. Se distingue de un comercio que solo revende miel.",
+          "fr": "Exploitation élevant des abeilles ou produisant des produits de la ruche et accueillant le public pour les découvrir. Elle se distingue d’un commerce qui revend simplement du miel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/65adccc8-164f-48b5-85be-5380db35c49c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/65adccc8-164f-48b5-85be-5380db35c49c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "93f69dc5-0b61-473c-bfa8-57ebb70fab75",
+      "domain": "taxonomy_prd",
+      "context_key": "",
+      "code": "distillerie_brasserie",
+      "base": {
+        "description": "Production de boissons ouverte à la visite ou à la dégustation",
+        "description_i18n": {
+          "de": "Getränkeherstellung, für Besuche oder Verkostungen geöffnet.",
+          "en": "Beverage production open for visits or tastings.",
+          "es": "Producción de bebidas abierta a visitas o catas.",
+          "fr": "Production de boissons ouverte à la visite ou à la dégustation"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/93f69dc5-0b61-473c-bfa8-57ebb70fab75. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/93f69dc5-0b61-473c-bfa8-57ebb70fab75"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lieu de production de boissons, notamment distillerie, brasserie ou rhumerie, ouvert à la visite ou à la dégustation. Il se distingue d’un bar qui sert des boissons sans présenter leur fabrication.",
+        "description_i18n": {
+          "de": "Produktionsstätte für Getränke, etwa Destillerie, Brauerei oder Rumbrennerei, mit Besuchen oder Verkostungen. Sie unterscheidet sich von einer Bar, die Getränke ohne Herstellungseinblick ausschenkt.",
+          "en": "Beverage-production site, including a distillery, brewery or rum producer, open for visits or tastings. It differs from a bar serving drinks without presenting their manufacture.",
+          "es": "Lugar de producción de bebidas, como destilería, cervecería o ronería, abierto a visitas o degustaciones. Se distingue de un bar que sirve bebidas sin mostrar su fabricación.",
+          "fr": "Lieu de production de boissons, notamment distillerie, brasserie ou rhumerie, ouvert à la visite ou à la dégustation. Il se distingue d’un bar qui sert des boissons sans présenter leur fabrication."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/93f69dc5-0b61-473c-bfa8-57ebb70fab75. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/93f69dc5-0b61-473c-bfa8-57ebb70fab75"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "fa2f8cb2-81c3-4da1-96e1-14978fde5a10",
+      "domain": "taxonomy_prd",
+      "context_key": "",
+      "code": "exploitation_agricole",
+      "base": {
+        "description": "Exploitation agricole accueillant du public",
+        "description_i18n": {
+          "de": "Landwirtschaftlicher Betrieb, der Besucher empfängt.",
+          "en": "Working farm that receives visitors.",
+          "es": "Explotación agrícola que recibe visitantes.",
+          "fr": "Exploitation agricole accueillant du public"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fa2f8cb2-81c3-4da1-96e1-14978fde5a10. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fa2f8cb2-81c3-4da1-96e1-14978fde5a10"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Ferme ou exploitation réalisant une production agricole et accueillant des visiteurs. La catégorie décrit le lieu de production ouvert au public, distinct de la seule vente de produits en magasin.",
+        "description_i18n": {
+          "de": "Landwirtschaftlicher Erzeugerbetrieb, der Besucher empfängt. Die Kategorie bezeichnet den besuchbaren Produktionsort und nicht nur Warenverkauf im Laden.",
+          "en": "Farm or agricultural operation producing agricultural goods and welcoming visitors. It describes a production site open to the public rather than retail sales alone.",
+          "es": "Granja o explotación que realiza producción agrícola y recibe visitantes. Describe el lugar de producción abierto al público, no solo la venta de productos en tienda.",
+          "fr": "Ferme ou exploitation réalisant une production agricole et accueillant des visiteurs. La catégorie décrit le lieu de production ouvert au public, distinct de la seule vente de produits en magasin."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fa2f8cb2-81c3-4da1-96e1-14978fde5a10. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fa2f8cb2-81c3-4da1-96e1-14978fde5a10"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7396454e-6afa-4242-a54f-a39a2ac413df",
+      "domain": "taxonomy_prd",
+      "context_key": "",
+      "code": "plantation",
+      "base": {
+        "description": "Plantation ouverte à la visite (thé, vanille, café, épices…)",
+        "description_i18n": {
+          "de": "Plantage, für Besucher geöffnet, z. B. für Tee, Vanille, Kaffee oder Gewürze.",
+          "en": "Plantation open to visitors, for example for tea, vanilla, coffee or spices.",
+          "es": "Plantación abierta a visitas, por ejemplo de té, vainilla, café o especias.",
+          "fr": "Plantation ouverte à la visite (thé, vanille, café, épices…)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7396454e-6afa-4242-a54f-a39a2ac413df. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7396454e-6afa-4242-a54f-a39a2ac413df"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Exploitation consacrée à des cultures plantées, par exemple thé, vanille, café ou épices, et ouverte à la visite. Elle décrit un lieu de production à découvrir, distinct d’un jardin d’agrément.",
+        "description_i18n": {
+          "de": "Betrieb für angebaute Kulturen wie Tee, Vanille, Kaffee oder Gewürze mit Besuchsmöglichkeit. Er bezeichnet einen erkundbaren Produktionsort und keinen Ziergarten.",
+          "en": "Farm devoted to planted crops, such as tea, vanilla, coffee or spices, and open to visitors. It describes a production site to discover rather than an ornamental garden.",
+          "es": "Explotación dedicada a cultivos plantados, como té, vainilla, café o especias, y abierta a visitas. Describe un lugar de producción por descubrir, no un jardín ornamental.",
+          "fr": "Exploitation consacrée à des cultures plantées, par exemple thé, vanille, café ou épices, et ouverte à la visite. Elle décrit un lieu de production à découvrir, distinct d’un jardin d’agrément."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7396454e-6afa-4242-a54f-a39a2ac413df. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7396454e-6afa-4242-a54f-a39a2ac413df"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "f4a57b00-1305-439f-91f4-b79b4faaebc7",
+      "domain": "taxonomy_prd",
+      "context_key": "",
+      "code": "produits_terroir",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f4a57b00-1305-439f-91f4-b79b4faaebc7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f4a57b00-1305-439f-91f4-b79b4faaebc7"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Direktvermarktung"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Handwerkliche Regionalprodukte im Direktverkauf"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "direct sales"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Local craft produce sold directly"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Producción artesanal local en venta directa"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "venta directa"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Production artisanale locale en vente directe"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f4a57b00-1305-439f-91f4-b79b4faaebc7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f4a57b00-1305-439f-91f4-b79b4faaebc7"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "hidden",
+            "lang": "de",
+            "value": "Direktvermarktung"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Handwerkliche Regionalprodukte im Direktverkauf"
+          },
+          {
+            "kind": "hidden",
+            "lang": "en",
+            "value": "direct sales"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Local craft produce sold directly"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Producción artesanal local en venta directa"
+          },
+          {
+            "kind": "hidden",
+            "lang": "es",
+            "value": "venta directa"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Production artisanale locale en vente directe"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "eae250ea-08cf-454f-a431-9ca94738216e",
+      "domain": "taxonomy_prd",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Producteur",
+        "description_i18n": {
+          "de": "Technische Wurzel für Erzeugerkategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for producer categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de productores; no asignable directamente.",
+          "fr": "Racine technique — Producteur"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/eae250ea-08cf-454f-a431-9ca94738216e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/eae250ea-08cf-454f-a431-9ca94738216e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des producteurs et ateliers de savoir-faire accueillant le public pour une visite, une dégustation, une activité ou une vente directe. Elle distingue la production et sa découverte de la simple revente en commerce.",
+        "description_i18n": {
+          "de": "Oberkategorie für Erzeugerbetriebe und Handwerksstätten mit Besuchen, Verkostungen, Aktivitäten oder Direktverkauf für das Publikum. Sie unterscheidet Produktion und deren Erkundung vom bloßen Einzelhandel.",
+          "en": "General category for producers and craft workshops welcoming the public for visits, tastings, activities or direct sales. It distinguishes production and its discovery from retail resale alone.",
+          "es": "Categoría general de productores y talleres de saber hacer que reciben al público para visitas, degustaciones, actividades o venta directa. Distingue la producción y su descubrimiento de la simple reventa comercial.",
+          "fr": "Catégorie générale des producteurs et ateliers de savoir-faire accueillant le public pour une visite, une dégustation, une activité ou une vente directe. Elle distingue la production et sa découverte de la simple revente en commerce."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/eae250ea-08cf-454f-a431-9ca94738216e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/eae250ea-08cf-454f-a431-9ca94738216e"
+          }
+        ]
+      }
+    }
+  ]
+}

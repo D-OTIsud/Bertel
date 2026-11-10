@@ -2774,7 +2774,8 @@ Sur une installation existante, l'ordre de livraison est explicite :
    obligatoire pour tous les domaines. Les concepts et les publications existants
    restent inchangés ; chaque nouvelle publication contrôle tout son instantané.
 2. Appliquer `20261110063223_thesaurus_complete_admin_batches.sql`, puis
-   `20261110063550_thesaurus_simple_business_names.sql`. Livrer le client associé.
+   `20261110063550_thesaurus_simple_business_names.sql` et
+   `20261110072416_thesaurus_legacy_search_term_roundtrip.sql`. Livrer le client associé.
    Les noms courts couvrent les 78 domaines, sans « taxonomie » dans les intitulés.
    L'administration peut relire les listes internes ; les lecteurs publics
    conservent leur filtre de visibilité. Les opérations par lots réutilisent les
@@ -2793,7 +2794,8 @@ Sur une installation existante, l'ordre de livraison est explicite :
 
 Les miroirs frais sont, dans cet ordre après `thesaurus_business_domain_names.sql` :
 `thesaurus_required_definitions.sql`, `thesaurus_complete_editorial_definitions.sql`,
-`thesaurus_complete_admin_batches.sql`, `thesaurus_simple_business_names.sql`.
+`thesaurus_complete_admin_batches.sql`, `thesaurus_simple_business_names.sql`,
+`thesaurus_legacy_search_term_roundtrip.sql`.
 Le driver `ci_fresh_apply.sql` les charge chacun avec son test homonyme sous
 `tests/`. Sur base vierge sans publication active, la politique complète peut
 être installée avant l'enrichissement ; le premier contenu publié doit la respecter.
@@ -2803,3 +2805,10 @@ ils sont réservés à la pile jetable de CI, jamais à la production. Les aides
 ajoutées ne sont pas des points d'entrée privilégiés ; le noyau d'activation et
 les contrôles d'autorité de publication restent en place. Le succès de la CI
 ne constitue pas une preuve d'application ou de publication sur la cible.
+
+Le correctif des recherches héritées expose leur tableau dans l'espace privé et
+persiste la proposition uniquement pendant la publication ordinaire : omission
+conserve, tableau vide efface. Le recalcul des alias utilise la valeur publiée.
+Le champ reste exclu des documents publics. Le registre de préparation vérifie
+l'ancienne empreinte du writer avant d'actualiser uniquement cette entrée ; les
+autres fonctions, le noyau d'activation et ses droits restent inchangés.

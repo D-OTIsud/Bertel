@@ -1,0 +1,524 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-promotion_type-1",
+  "proposals": [
+    {
+      "concept_id": "ca56388e-495b-4ae9-b5d8-a445abb013ea",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "early_booking",
+      "base": {
+        "description": "Réduction pour réservation anticipée",
+        "description_i18n": {
+          "de": "Frühbucherrabatt",
+          "en": "Early booking discount",
+          "es": "Descuento por reserva anticipada",
+          "fr": "Réduction pour réservation anticipée"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ca56388e-495b-4ae9-b5d8-a445abb013ea. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ca56388e-495b-4ae9-b5d8-a445abb013ea"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion liée à une réservation effectuée suffisamment en amont de la prestation, selon le délai et les avantages annoncés par le prestataire.",
+        "description_i18n": {
+          "de": "Aktion für eine ausreichend früh vor der Leistung vorgenommene Buchung nach den vom Anbieter angegebenen Fristen und Vorteilen.",
+          "en": "Promotion linked to booking sufficiently ahead of the service, according to the timing and benefits stated by the provider.",
+          "es": "Promoción vinculada a una reserva realizada con suficiente antelación a la prestación, según el plazo y las ventajas indicados por el prestador.",
+          "fr": "Promotion liée à une réservation effectuée suffisamment en amont de la prestation, selon le délai et les avantages annoncés par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ca56388e-495b-4ae9-b5d8-a445abb013ea. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ca56388e-495b-4ae9-b5d8-a445abb013ea"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "20e667d0-de74-4a59-bce0-246df2f91c82",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "family",
+      "base": {
+        "description": "Promotion famille",
+        "description_i18n": {
+          "de": "Familienangebot",
+          "en": "Family promotion",
+          "es": "Promoción para familias",
+          "fr": "Promotion famille"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/20e667d0-de74-4a59-bce0-246df2f91c82. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/20e667d0-de74-4a59-bce0-246df2f91c82"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion destinée aux familles pour une prestation ou un séjour ; la composition du groupe familial et l'avantage accordé sont décrits dans l'offre.",
+        "description_i18n": {
+          "de": "Aktion für Familien bei einer Leistung oder einem Aufenthalt; die Zusammensetzung der Familie und der Vorteil werden im Angebot beschrieben.",
+          "en": "Promotion intended for families for a service or stay; the family-group composition and benefit are described in the offer.",
+          "es": "Promoción destinada a familias para una prestación o estancia; la oferta describe la composición del grupo familiar y la ventaja concedida.",
+          "fr": "Promotion destinée aux familles pour une prestation ou un séjour ; la composition du groupe familial et l'avantage accordé sont décrits dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/20e667d0-de74-4a59-bce0-246df2f91c82. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/20e667d0-de74-4a59-bce0-246df2f91c82"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "029302f0-fe36-456d-89ad-2d66f87129ce",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "flash_sale",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/029302f0-fe36-456d-89ad-2d66f87129ce. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/029302f0-fe36-456d-89ad-2d66f87129ce"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/029302f0-fe36-456d-89ad-2d66f87129ce. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/029302f0-fe36-456d-89ad-2d66f87129ce"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "fe2aae40-e73e-447c-8cb5-fd7853dded2b",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "group_discount",
+      "base": {
+        "description": "Réduction pour groupes",
+        "description_i18n": {
+          "de": "Rabatt für Gruppen",
+          "en": "Group discount",
+          "es": "Descuento para grupos",
+          "fr": "Réduction pour groupes"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fe2aae40-e73e-447c-8cb5-fd7853dded2b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fe2aae40-e73e-447c-8cb5-fd7853dded2b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion accordant un avantage tarifaire à un groupe, selon un effectif et des conditions précisés ; elle ne fixe pas un nombre minimal universel de participants.",
+        "description_i18n": {
+          "de": "Aktion mit einem Preisvorteil für eine Gruppe unter angegebenen Größen- und Teilnahmebedingungen; sie legt keine allgemein gültige Mindestgröße fest.",
+          "en": "Promotion giving a pricing benefit to a group under specified size and conditions; it sets no universal minimum number of participants.",
+          "es": "Promoción que concede una ventaja de precio a un grupo según un tamaño y unas condiciones indicados; no fija un mínimo universal de participantes.",
+          "fr": "Promotion accordant un avantage tarifaire à un groupe, selon un effectif et des conditions précisés ; elle ne fixe pas un nombre minimal universel de participants."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/fe2aae40-e73e-447c-8cb5-fd7853dded2b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/fe2aae40-e73e-447c-8cb5-fd7853dded2b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ee7b598f-674d-4ae4-a6a0-07ce1fb1a33b",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "holiday",
+      "base": {
+        "description": "Offre vacances et jours fériés",
+        "description_i18n": {
+          "de": "Angebot für Ferienzeiten und Feiertage",
+          "en": "Offer for holiday periods and public holidays",
+          "es": "Oferta para vacaciones y días festivos",
+          "fr": "Offre vacances et jours fériés"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ee7b598f-674d-4ae4-a6a0-07ce1fb1a33b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ee7b598f-674d-4ae4-a6a0-07ce1fb1a33b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion rattachée à une période de vacances ou à des jours fériés, dont les dates d'application sont annoncées dans l'offre.",
+        "description_i18n": {
+          "de": "An Ferien oder Feiertage gebundene Aktion mit den im Angebot angegebenen Geltungsdaten.",
+          "en": "Promotion linked to a holiday period or public holidays, with application dates stated in the offer.",
+          "es": "Promoción vinculada a un periodo de vacaciones o días festivos, con fechas de aplicación indicadas en la oferta.",
+          "fr": "Promotion rattachée à une période de vacances ou à des jours fériés, dont les dates d'application sont annoncées dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ee7b598f-674d-4ae4-a6a0-07ce1fb1a33b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ee7b598f-674d-4ae4-a6a0-07ce1fb1a33b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "21f1ad27-e28d-4ee3-92c3-953f21642ce6",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "last_minute",
+      "base": {
+        "description": "Offre de dernière minute",
+        "description_i18n": {
+          "de": "Last-Minute-Angebot",
+          "en": "Last-minute offer",
+          "es": "Oferta de última hora",
+          "fr": "Offre de dernière minute"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/21f1ad27-e28d-4ee3-92c3-953f21642ce6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/21f1ad27-e28d-4ee3-92c3-953f21642ce6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion proposée à proximité de la date de réalisation de la prestation ou du séjour, selon les disponibilités et conditions annoncées.",
+        "description_i18n": {
+          "de": "Kurz vor dem Leistungs- oder Aufenthaltstermin angebotenes Sonderangebot nach den angegebenen Verfügbarkeiten und Bedingungen.",
+          "en": "Promotion offered close to the service or stay date, according to the stated availability and conditions.",
+          "es": "Promoción ofrecida cerca de la fecha de la prestación o estancia, según la disponibilidad y las condiciones anunciadas.",
+          "fr": "Promotion proposée à proximité de la date de réalisation de la prestation ou du séjour, selon les disponibilités et conditions annoncées."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/21f1ad27-e28d-4ee3-92c3-953f21642ce6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/21f1ad27-e28d-4ee3-92c3-953f21642ce6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "3a92f114-50c0-4bd7-b009-1cb7a2fda2d7",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "long_stay",
+      "base": {
+        "description": "Réduction pour séjours longs",
+        "description_i18n": {
+          "de": "Rabatt für längere Aufenthalte",
+          "en": "Discount for long stays",
+          "es": "Descuento para estancias largas",
+          "fr": "Réduction pour séjours longs"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3a92f114-50c0-4bd7-b009-1cb7a2fda2d7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3a92f114-50c0-4bd7-b009-1cb7a2fda2d7"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion liée à une durée de séjour prolongée, donnant accès à l'avantage annoncé lorsque la durée prévue par l'offre est atteinte.",
+        "description_i18n": {
+          "de": "An einen längeren Aufenthalt gebundene Aktion mit dem angegebenen Vorteil bei Erreichen der im Angebot festgelegten Dauer.",
+          "en": "Promotion linked to a longer stay, granting the stated benefit when the duration specified in the offer is met.",
+          "es": "Promoción vinculada a una estancia prolongada, que concede la ventaja anunciada al alcanzar la duración prevista en la oferta.",
+          "fr": "Promotion liée à une durée de séjour prolongée, donnant accès à l'avantage annoncé lorsque la durée prévue par l'offre est atteinte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/3a92f114-50c0-4bd7-b009-1cb7a2fda2d7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/3a92f114-50c0-4bd7-b009-1cb7a2fda2d7"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ca949079-9010-4e18-87f1-61aa213859ee",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "loyalty",
+      "base": {
+        "description": "Promotion fidélité",
+        "description_i18n": {
+          "de": "Treueangebot",
+          "en": "Loyalty promotion",
+          "es": "Promoción de fidelidad",
+          "fr": "Promotion fidélité"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ca949079-9010-4e18-87f1-61aa213859ee. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ca949079-9010-4e18-87f1-61aa213859ee"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion destinée à reconnaître la fidélité d'un client, par exemple ses séjours ou achats répétés, selon les conditions définies par le prestataire.",
+        "description_i18n": {
+          "de": "Aktion zur Anerkennung der Kundentreue, etwa bei wiederholten Aufenthalten oder Käufen, nach den Bedingungen des Anbieters.",
+          "en": "Promotion recognising customer loyalty, for example repeated stays or purchases, according to the provider's conditions.",
+          "es": "Promoción que reconoce la fidelidad de un cliente, por ejemplo mediante estancias o compras repetidas, según las condiciones del prestador.",
+          "fr": "Promotion destinée à reconnaître la fidélité d'un client, par exemple ses séjours ou achats répétés, selon les conditions définies par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ca949079-9010-4e18-87f1-61aa213859ee. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ca949079-9010-4e18-87f1-61aa213859ee"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b8f400d7-0fe6-4945-a1de-a7bb737097c5",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "package",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b8f400d7-0fe6-4945-a1de-a7bb737097c5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b8f400d7-0fe6-4945-a1de-a7bb737097c5"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b8f400d7-0fe6-4945-a1de-a7bb737097c5. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b8f400d7-0fe6-4945-a1de-a7bb737097c5"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "0ef112c9-d717-4fa6-b669-0330ccd943b9",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "partner",
+      "base": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0ef112c9-d717-4fa6-b669-0330ccd943b9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0ef112c9-d717-4fa6-b669-0330ccd943b9"
+          }
+        ]
+      },
+      "changes": {
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/0ef112c9-d717-4fa6-b669-0330ccd943b9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/0ef112c9-d717-4fa6-b669-0330ccd943b9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "843c5e38-a9fe-4eea-ae6a-91aa2250b45a",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "seasonal",
+      "base": {
+        "description": "Promotion saisonnière",
+        "description_i18n": {
+          "de": "Saisonales Sonderangebot",
+          "en": "Seasonal promotion",
+          "es": "Promoción estacional",
+          "fr": "Promotion saisonnière"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/843c5e38-a9fe-4eea-ae6a-91aa2250b45a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/843c5e38-a9fe-4eea-ae6a-91aa2250b45a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion rattachée à une saison commerciale ou touristique déterminée, distincte de ses dates exactes de validité qui sont précisées dans l'offre.",
+        "description_i18n": {
+          "de": "An eine bestimmte Geschäfts- oder Tourismussaison gebundene Aktion; die genauen Geltungsdaten werden gesondert im Angebot angegeben.",
+          "en": "Promotion linked to a defined commercial or tourism season, distinct from the exact validity dates specified in the offer.",
+          "es": "Promoción vinculada a una temporada comercial o turística determinada, distinta de sus fechas exactas de validez indicadas en la oferta.",
+          "fr": "Promotion rattachée à une saison commerciale ou touristique déterminée, distincte de ses dates exactes de validité qui sont précisées dans l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/843c5e38-a9fe-4eea-ae6a-91aa2250b45a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/843c5e38-a9fe-4eea-ae6a-91aa2250b45a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4dcc3bbe-d297-4494-942c-2f3935eb450d",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "senior",
+      "base": {
+        "description": "Promotion seniors",
+        "description_i18n": {
+          "de": "Sonderangebot für Senioren",
+          "en": "Senior promotion",
+          "es": "Promoción para seniors",
+          "fr": "Promotion seniors"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4dcc3bbe-d297-4494-942c-2f3935eb450d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4dcc3bbe-d297-4494-942c-2f3935eb450d"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion destinée aux personnes appartenant au public senior selon les conditions d'âge et d'accès annoncées par le prestataire.",
+        "description_i18n": {
+          "de": "Aktion für ältere Gäste nach den vom Anbieter angegebenen Alters- und Zugangsbedingungen.",
+          "en": "Promotion intended for senior customers under the age and access conditions stated by the provider.",
+          "es": "Promoción destinada al público sénior según las condiciones de edad y acceso indicadas por el prestador.",
+          "fr": "Promotion destinée aux personnes appartenant au public senior selon les conditions d'âge et d'accès annoncées par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4dcc3bbe-d297-4494-942c-2f3935eb450d. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4dcc3bbe-d297-4494-942c-2f3935eb450d"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "837ed361-2fc0-4714-b27e-88ec82162424",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "student",
+      "base": {
+        "description": "Promotion étudiants",
+        "description_i18n": {
+          "de": "Angebot für Studierende",
+          "en": "Student promotion",
+          "es": "Promoción para estudiantes",
+          "fr": "Promotion étudiants"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/837ed361-2fc0-4714-b27e-88ec82162424. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/837ed361-2fc0-4714-b27e-88ec82162424"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion destinée aux personnes ayant le statut d'étudiant, avec un avantage et d'éventuels justificatifs précisés par l'offre.",
+        "description_i18n": {
+          "de": "Aktion für Personen mit Studierendenstatus; Vorteil und gegebenenfalls erforderliche Nachweise stehen im Angebot.",
+          "en": "Promotion intended for people with student status, with the benefit and any evidence requirements specified in the offer.",
+          "es": "Promoción destinada a personas con condición de estudiante, con la ventaja y los posibles justificantes indicados en la oferta.",
+          "fr": "Promotion destinée aux personnes ayant le statut d'étudiant, avec un avantage et d'éventuels justificatifs précisés par l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/837ed361-2fc0-4714-b27e-88ec82162424. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/837ed361-2fc0-4714-b27e-88ec82162424"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "71c423ee-9285-4774-937d-91049230b25e",
+      "domain": "promotion_type",
+      "context_key": "",
+      "code": "weekend",
+      "base": {
+        "description": "Offre week-end",
+        "description_i18n": {
+          "de": "Wochenendangebot",
+          "en": "Weekend offer",
+          "es": "Oferta de fin de semana",
+          "fr": "Offre week-end"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/71c423ee-9285-4774-937d-91049230b25e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/71c423ee-9285-4774-937d-91049230b25e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Promotion concernant une prestation ou un séjour durant les jours de fin de semaine retenus dans l'offre, sans imposer une durée identique à tous les prestataires.",
+        "description_i18n": {
+          "de": "Aktion für eine Leistung oder einen Aufenthalt an den im Angebot festgelegten Wochenendtagen, ohne allen Anbietern dieselbe Dauer vorzugeben.",
+          "en": "Promotion concerning a service or stay on the weekend days specified in the offer, without imposing the same duration on every provider.",
+          "es": "Promoción para una prestación o estancia durante los días de fin de semana definidos en la oferta, sin imponer la misma duración a todos los prestadores.",
+          "fr": "Promotion concernant une prestation ou un séjour durant les jours de fin de semaine retenus dans l'offre, sans imposer une durée identique à tous les prestataires."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/71c423ee-9285-4774-937d-91049230b25e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/71c423ee-9285-4774-937d-91049230b25e"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,566 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_pna-1",
+  "proposals": [
+    {
+      "concept_id": "2cba3e8a-b49d-437c-bad8-1c22c74139ef",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "beach",
+      "base": {
+        "description": "Plage (sable, galets)",
+        "description_i18n": {
+          "de": "Strand mit Sand oder Kieseln.",
+          "en": "Beach with sand or pebbles.",
+          "es": "Playa de arena o de guijarros.",
+          "fr": "Plage (sable, galets)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2cba3e8a-b49d-437c-bad8-1c22c74139ef. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2cba3e8a-b49d-437c-bad8-1c22c74139ef"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site de bord d’eau formé notamment de sable ou de galets, présenté comme plage. La catégorie décrit le lieu naturel sans déterminer à elle seule les conditions ou l’autorisation de baignade.",
+        "description_i18n": {
+          "de": "Uferbereich insbesondere aus Sand oder Kieseln, der als Strand dargestellt wird. Die Kategorie bezeichnet den Naturort, ohne allein Badebedingungen oder Badeerlaubnis festzulegen.",
+          "en": "Waterside site formed particularly of sand or pebbles and presented as a beach. This category describes the natural place without independently determining bathing conditions or permission.",
+          "es": "Lugar a orillas del agua formado especialmente por arena o guijarros, presentado como playa. Describe el sitio natural sin determinar por sí solo las condiciones o autorización de baño.",
+          "fr": "Site de bord d’eau formé notamment de sable ou de galets, présenté comme plage. La catégorie décrit le lieu naturel sans déterminer à elle seule les conditions ou l’autorisation de baignade."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2cba3e8a-b49d-437c-bad8-1c22c74139ef. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2cba3e8a-b49d-437c-bad8-1c22c74139ef"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "38ef0aa2-21b6-4d8a-bc8c-d92477e355e1",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "cirque_peak",
+      "base": {
+        "description": "Cirque, piton, sommet ou rempart remarquable",
+        "description_i18n": {
+          "de": "Bemerkenswerter Talkessel, Berggipfel oder steile Felswand.",
+          "en": "Notable cirque, peak, summit or rampart.",
+          "es": "Circo, pico, cima o muralla destacada.",
+          "fr": "Cirque, piton, sommet ou rempart remarquable"
+        }
+      },
+      "changes": {
+        "description": "Relief remarquable de type cirque, piton, sommet ou rempart, décrit pour la découverte de son paysage. Il se distingue d’un itinéraire qui permet éventuellement de le parcourir.",
+        "description_i18n": {
+          "de": "Bemerkenswerte Geländeform wie Talkessel, Gipfel oder steile Felswand zur Landschaftserkundung. Sie unterscheidet sich von einer Route, die gegebenenfalls durch sie führt.",
+          "en": "Notable landform such as a cirque, peak, summit or steep escarpment, described for landscape discovery. It differs from an itinerary that may pass through it.",
+          "es": "Relieve destacado, como circo, pico, cima o escarpe, descrito para descubrir su paisaje. Se distingue de un itinerario que permita recorrerlo.",
+          "fr": "Relief remarquable de type cirque, piton, sommet ou rempart, décrit pour la découverte de son paysage. Il se distingue d’un itinéraire qui permet éventuellement de le parcourir."
+        }
+      }
+    },
+    {
+      "concept_id": "b62a21c9-3bfe-4e03-b1ca-3dbd7a5ce9c9",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "coastline",
+      "base": {
+        "description": "Cap, falaise, souffleur, côte sauvage",
+        "description_i18n": {
+          "de": "Kap, Steilküste, natürliches Blasloch an der Küste oder wilde Küste.",
+          "en": "Headland, cliff, blowhole or wild coast.",
+          "es": "Cabo, acantilado, bufadero o costa salvaje.",
+          "fr": "Cap, falaise, souffleur, côte sauvage"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b62a21c9-3bfe-4e03-b1ca-3dbd7a5ce9c9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b62a21c9-3bfe-4e03-b1ca-3dbd7a5ce9c9"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Portion du littoral signalée pour ses formes ou paysages, comme un cap, une falaise ou un souffleur. La catégorie décrit le site côtier, distinct d’un sentier qui le longe.",
+        "description_i18n": {
+          "de": "Küstenabschnitt mit bemerkenswerten Formen oder Landschaften, etwa Kap, Steilküste oder natürlichem Blasloch. Die Kategorie bezeichnet den Küstenort und keinen parallel verlaufenden Weg.",
+          "en": "Section of coastline noted for its features or scenery, such as a headland, cliff or blowhole. It describes the coastal site rather than a path following it.",
+          "es": "Tramo del litoral destacado por sus formas o paisajes, como cabo, acantilado o bufadero. Describe el sitio costero, no un sendero que lo bordea.",
+          "fr": "Portion du littoral signalée pour ses formes ou paysages, comme un cap, une falaise ou un souffleur. La catégorie décrit le site côtier, distinct d’un sentier qui le longe."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b62a21c9-3bfe-4e03-b1ca-3dbd7a5ce9c9. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b62a21c9-3bfe-4e03-b1ca-3dbd7a5ce9c9"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "9ac1fd05-139a-4c85-ac33-4b9426ca215f",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "forest",
+      "base": {
+        "description": "Forêt, espace boisé remarquable",
+        "description_i18n": {
+          "de": "Bemerkenswerter Wald oder Waldgebiet.",
+          "en": "Notable forest or wooded area.",
+          "es": "Bosque o espacio arbolado destacado.",
+          "fr": "Forêt, espace boisé remarquable"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9ac1fd05-139a-4c85-ac33-4b9426ca215f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9ac1fd05-139a-4c85-ac33-4b9426ca215f"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Espace boisé présenté pour son intérêt naturel ou paysager et sa découverte. Il décrit la forêt comme site, distinct d’une sortie guidée ou d’un parcours de randonnée qui s’y déroule.",
+        "description_i18n": {
+          "de": "Waldgebiet von natürlichem oder landschaftlichem Interesse zur Erkundung. Die Angabe bezeichnet den Wald als Ort und keine dort stattfindende Führung oder Wanderroute.",
+          "en": "Wooded area presented for its natural or scenic interest and discovery. It describes the forest as a site rather than a guided outing or hiking route within it.",
+          "es": "Espacio arbolado presentado por su interés natural o paisajístico. Describe el bosque como sitio, no una salida guiada o ruta de senderismo que se desarrolla en él.",
+          "fr": "Espace boisé présenté pour son intérêt naturel ou paysager et sa découverte. Il décrit la forêt comme site, distinct d’une sortie guidée ou d’un parcours de randonnée qui s’y déroule."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/9ac1fd05-139a-4c85-ac33-4b9426ca215f. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/9ac1fd05-139a-4c85-ac33-4b9426ca215f"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a05e4e16-797a-465c-b369-f8b6140790e1",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "geological_site",
+      "base": {
+        "description": "Curiosité géologique (hyaloclastite, orgues, tunnels de lave non encadrés)",
+        "description_i18n": {
+          "de": "Geologische Besonderheit, z. B. Hyaloklastite, Basaltsäulen oder unbegleitete Lavaröhren.",
+          "en": "Geological feature such as hyaloclastite, columnar basalt or unsupervised lava tunnels.",
+          "es": "Curiosidad geológica, como hialoclastitas, basaltos columnares o tubos de lava sin guía.",
+          "fr": "Curiosité géologique (hyaloclastite, orgues, tunnels de lave non encadrés)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a05e4e16-797a-465c-b369-f8b6140790e1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a05e4e16-797a-465c-b369-f8b6140790e1"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Formation ou lieu remarquable par sa géologie, par exemple des orgues basaltiques ou un tunnel de lave. La catégorie décrit le site ; une visite encadrée constitue une offre d’activité distincte.",
+        "description_i18n": {
+          "de": "Geologisch bemerkenswerte Formation oder Stätte, etwa Basaltsäulen oder eine Lavaröhre. Die Kategorie bezeichnet den Ort; eine Führung ist ein eigenes Aktivitätsangebot.",
+          "en": "Formation or place notable for its geology, such as basalt columns or a lava tube. This category describes the site; a guided visit is a distinct activity offer.",
+          "es": "Formación o lugar destacado por su geología, como columnas de basalto o un tubo de lava. Describe el sitio; una visita guiada constituye una oferta de actividad distinta.",
+          "fr": "Formation ou lieu remarquable par sa géologie, par exemple des orgues basaltiques ou un tunnel de lave. La catégorie décrit le site ; une visite encadrée constitue une offre d’activité distincte."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a05e4e16-797a-465c-b369-f8b6140790e1. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a05e4e16-797a-465c-b369-f8b6140790e1"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2bb146a3-f44f-46d1-894c-9d35d3d2d79e",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "lagoon_reef",
+      "base": {
+        "description": "Lagon, récif corallien ou plateau récifal",
+        "description_i18n": {
+          "de": "Lagune, Korallenriff oder Riffplattform.",
+          "en": "Lagoon, coral reef or reef flat.",
+          "es": "Laguna, arrecife de coral o plataforma arrecifal.",
+          "fr": "Lagon, récif corallien ou plateau récifal"
+        }
+      },
+      "changes": {
+        "description": "Milieu côtier constitué d’un lagon, d’un récif corallien ou d’un plateau récifal. Il est décrit comme site naturel, distinct d’une activité de plongée ou de snorkeling proposée dans ce milieu.",
+        "description_i18n": {
+          "de": "Küstenraum mit Lagune, Korallenriff oder Riffplattform. Er wird als Naturort beschrieben und nicht als dort angebotenes Tauch- oder Schnorchelangebot.",
+          "en": "Coastal environment comprising a lagoon, coral reef or reef flat. It is described as a natural site rather than a diving or snorkelling activity offered there.",
+          "es": "Medio costero formado por una laguna, arrecife coralino o plataforma arrecifal. Se describe como sitio natural, no como actividad de buceo o esnórquel ofrecida allí.",
+          "fr": "Milieu côtier constitué d’un lagon, d’un récif corallien ou d’un plateau récifal. Il est décrit comme site naturel, distinct d’une activité de plongée ou de snorkeling proposée dans ce milieu."
+        }
+      }
+    },
+    {
+      "concept_id": "95827025-20f3-4729-a316-4e97101d690c",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "natural_pool",
+      "base": {
+        "description": "Bassin, piscine naturelle, lagon",
+        "description_i18n": {
+          "de": "Becken, Naturpool oder Lagune.",
+          "en": "Basin, natural swimming pool or lagoon.",
+          "es": "Poza, piscina natural o laguna.",
+          "fr": "Bassin, piscine naturelle, lagon"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/95827025-20f3-4729-a316-4e97101d690c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/95827025-20f3-4729-a316-4e97101d690c"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Bassin ou plan d’eau naturel présenté pour son caractère de lieu de baignade ou de piscine naturelle. La catégorie ne fixe pas à elle seule la praticabilité, la surveillance ni l’autorisation de baignade.",
+        "description_i18n": {
+          "de": "Natürliches Becken oder Gewässer, das als Badeort oder Naturpool dargestellt wird. Die Kategorie allein legt weder Nutzbarkeit, Aufsicht noch Badeerlaubnis fest.",
+          "en": "Natural basin or body of water presented as a bathing place or natural pool. The category alone establishes neither usability, supervision nor bathing permission.",
+          "es": "Poza o masa de agua natural presentada como lugar de baño o piscina natural. La categoría no determina por sí sola la practicabilidad, vigilancia ni autorización de baño.",
+          "fr": "Bassin ou plan d’eau naturel présenté pour son caractère de lieu de baignade ou de piscine naturelle. La catégorie ne fixe pas à elle seule la praticabilité, la surveillance ni l’autorisation de baignade."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/95827025-20f3-4729-a316-4e97101d690c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/95827025-20f3-4729-a316-4e97101d690c"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "014562a0-5b75-4576-a0ea-3854ef24b9c9",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "nature_reserve",
+      "base": {
+        "description": "Réserve naturelle terrestre ou marine, ou espace protégé ouvert au public",
+        "description_i18n": {
+          "de": "Naturschutzgebiet an Land oder im Meer oder anderer öffentlich zugänglicher geschützter Naturraum.",
+          "en": "Terrestrial or marine nature reserve, or protected area open to the public.",
+          "es": "Reserva natural terrestre o marina, o espacio protegido abierto al público.",
+          "fr": "Réserve naturelle terrestre ou marine, ou espace protégé ouvert au public"
+        }
+      },
+      "changes": {
+        "description": "Espace naturel terrestre ou marin présenté comme réserve naturelle ou autre espace protégé ouvert à la découverte. La protection et les modalités d’accès se décrivent selon le site, séparément de son nom de catégorie.",
+        "description_i18n": {
+          "de": "Naturraum an Land oder im Meer, der als Naturschutzgebiet oder anderer geschützter Entdeckungsraum dargestellt wird. Schutz und Zugang werden ortsspezifisch und getrennt vom Kategorienamen beschrieben.",
+          "en": "Land or marine natural area presented as a nature reserve or another protected space open for discovery. Protection and access arrangements are described for the specific site, separately from its category name.",
+          "es": "Espacio natural terrestre o marino presentado como reserva natural u otro espacio protegido abierto al descubrimiento. La protección y el acceso se describen según el sitio, por separado de su nombre de categoría.",
+          "fr": "Espace naturel terrestre ou marin présenté comme réserve naturelle ou autre espace protégé ouvert à la découverte. La protection et les modalités d’accès se décrivent selon le site, séparément de son nom de catégorie."
+        }
+      }
+    },
+    {
+      "concept_id": "61f37113-3565-41ca-b2a1-066edd309c72",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "ravine",
+      "base": {
+        "description": "Ravine, rivière ou vallée encaissée",
+        "description_i18n": {
+          "de": "Schlucht, Fluss oder tief eingeschnittenes Tal.",
+          "en": "Ravine, river or deeply incised valley.",
+          "es": "Barranco, río o valle encajonado.",
+          "fr": "Ravine, rivière ou vallée encaissée"
+        }
+      },
+      "changes": {
+        "description": "Site correspondant à une ravine, un cours d’eau ou une vallée encaissée, présenté pour son paysage naturel. Ce classement ne décrit pas à lui seul un parcours de canyoning ou de randonnée.",
+        "description_i18n": {
+          "de": "Ort mit Schlucht, Wasserlauf oder tief eingeschnittenem Tal von landschaftlichem Interesse. Die Kategorie allein beschreibt keine Canyoning- oder Wanderroute.",
+          "en": "Site corresponding to a ravine, watercourse or deeply incised valley, presented for its natural scenery. This classification alone does not describe a canyoning or hiking route.",
+          "es": "Sitio correspondiente a un barranco, curso de agua o valle encajonado, presentado por su paisaje natural. La clasificación no describe por sí sola un recorrido de barranquismo o senderismo.",
+          "fr": "Site correspondant à une ravine, un cours d’eau ou une vallée encaissée, présenté pour son paysage naturel. Ce classement ne décrit pas à lui seul un parcours de canyoning ou de randonnée."
+        }
+      }
+    },
+    {
+      "concept_id": "6689469d-336a-472c-919a-bbbebe188d19",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "remarkable_tree",
+      "base": {
+        "description": "Arbre remarquable ou vétéran",
+        "description_i18n": {
+          "de": "Bemerkenswerter oder Veteranenbaum.",
+          "en": "Notable or veteran tree.",
+          "es": "Árbol singular o veterano.",
+          "fr": "Arbre remarquable ou vétéran"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6689469d-336a-472c-919a-bbbebe188d19. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6689469d-336a-472c-919a-bbbebe188d19"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Arbre signalé comme remarquable ou ancien, présenté pour son intérêt naturel, paysager ou historique. La catégorie ne constitue pas à elle seule l’attribution d’un label à cet arbre.",
+        "description_i18n": {
+          "de": "Als bemerkenswert oder alt gekennzeichneter Baum mit natürlichem, landschaftlichem oder historischem Interesse. Die Kategorie verleiht dem Baum für sich allein kein Label.",
+          "en": "Tree identified as notable or old and presented for natural, scenic or historical interest. The category does not itself award a label to the tree.",
+          "es": "Árbol señalado como singular o antiguo, presentado por su interés natural, paisajístico o histórico. La categoría no otorga por sí sola un sello al árbol.",
+          "fr": "Arbre signalé comme remarquable ou ancien, présenté pour son intérêt naturel, paysager ou historique. La catégorie ne constitue pas à elle seule l’attribution d’un label à cet arbre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6689469d-336a-472c-919a-bbbebe188d19. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6689469d-336a-472c-919a-bbbebe188d19"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "6a5ef6ab-5d42-4227-b0de-a2f8550e457a",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Site naturel",
+        "description_i18n": {
+          "de": "Technische Wurzel für Naturstätten; nicht direkt zuweisbar.",
+          "en": "Technical root for natural site categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de sitios naturales; no asignable directamente.",
+          "fr": "Racine technique — Site naturel"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6a5ef6ab-5d42-4227-b0de-a2f8550e457a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6a5ef6ab-5d42-4227-b0de-a2f8550e457a"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des sites et paysages naturels proposés à la découverte. Les sous-catégories précisent leur caractère naturel ; elles ne constituent pas toutes un statut de protection ou une autorisation d’accès.",
+        "description_i18n": {
+          "de": "Oberkategorie für Naturstätten und Landschaften zur Erkundung. Unterkategorien beschreiben natürliche Merkmale; nicht jede begründet einen Schutzstatus oder eine Zugangserlaubnis.",
+          "en": "General category for natural sites and landscapes presented for discovery. Subcategories specify natural features; not every category establishes protected status or access permission.",
+          "es": "Categoría general de sitios y paisajes naturales propuestos para su descubrimiento. Las subcategorías precisan su carácter natural; no todas constituyen un estatuto de protección ni una autorización de acceso.",
+          "fr": "Catégorie générale des sites et paysages naturels proposés à la découverte. Les sous-catégories précisent leur caractère naturel ; elles ne constituent pas toutes un statut de protection ou une autorisation d’accès."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6a5ef6ab-5d42-4227-b0de-a2f8550e457a. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6a5ef6ab-5d42-4227-b0de-a2f8550e457a"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2a853891-5a86-4f0d-88a7-75b006034294",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "viewpoint",
+      "base": {
+        "description": "Belvédère, point de vue aménagé",
+        "description_i18n": {
+          "de": "Eingerichteter Aussichtspunkt.",
+          "en": "Developed viewpoint or lookout.",
+          "es": "Mirador o punto de vista acondicionado.",
+          "fr": "Belvédère, point de vue aménagé"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2a853891-5a86-4f0d-88a7-75b006034294. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2a853891-5a86-4f0d-88a7-75b006034294"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Eingerichteter Aussichtsort"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Developed lookout"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "lookout"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Punto panorámico acondicionado"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Belvédère aménagé"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "panorama"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Lieu identifié ou aménagé pour observer un panorama et découvrir le paysage. Il décrit le site d’observation, distinct d’un média montrant ce panorama ou d’un simple point d’étape.",
+        "description_i18n": {
+          "de": "Ausgewiesener oder eingerichteter Ort zur Betrachtung eines Panoramas. Er bezeichnet den Aussichtsort und kein Bild davon oder einen bloßen Etappenpunkt.",
+          "en": "Place identified or arranged for viewing a panorama and discovering scenery. It describes the viewing site rather than an image of it or a generic itinerary stage.",
+          "es": "Lugar identificado o acondicionado para observar un panorama y descubrir el paisaje. Describe el sitio de observación, no una imagen de él ni una simple etapa de itinerario.",
+          "fr": "Lieu identifié ou aménagé pour observer un panorama et découvrir le paysage. Il décrit le site d’observation, distinct d’un média montrant ce panorama ou d’un simple point d’étape."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/2a853891-5a86-4f0d-88a7-75b006034294. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/2a853891-5a86-4f0d-88a7-75b006034294"
+          }
+        ],
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Eingerichteter Aussichtsort"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Developed lookout"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "lookout"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Punto panorámico acondicionado"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Belvédère aménagé"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "panorama"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "4ff38bc8-0994-4935-8113-bdef02f23a7e",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "volcanic_site",
+      "base": {
+        "description": "Coulées, cratères, paysages volcaniques",
+        "description_i18n": {
+          "de": "Lavaströme, Krater und vulkanische Landschaften.",
+          "en": "Lava flows, craters and volcanic landscapes.",
+          "es": "Coladas, cráteres y paisajes volcánicos.",
+          "fr": "Coulées, cratères, paysages volcaniques"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4ff38bc8-0994-4935-8113-bdef02f23a7e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4ff38bc8-0994-4935-8113-bdef02f23a7e"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site dont l’intérêt naturel est lié au volcanisme, comme un cratère, une coulée de lave ou un paysage volcanique. Il décrit le lieu et non une sortie accompagnée ou l’état d’ouverture d’un itinéraire.",
+        "description_i18n": {
+          "de": "Naturstätte mit Bezug zum Vulkanismus, etwa Krater, Lavastrom oder Vulkanlandschaft. Sie bezeichnet den Ort und keine geführte Ausfahrt oder den Öffnungsstatus einer Route.",
+          "en": "Site whose natural interest relates to volcanism, such as a crater, lava flow or volcanic landscape. It describes the place rather than a guided outing or an itinerary’s opening status.",
+          "es": "Sitio cuyo interés natural se vincula al volcanismo, como cráter, colada de lava o paisaje volcánico. Describe el lugar, no una salida guiada ni el estado de apertura de una ruta.",
+          "fr": "Site dont l’intérêt naturel est lié au volcanisme, comme un cratère, une coulée de lave ou un paysage volcanique. Il décrit le lieu et non une sortie accompagnée ou l’état d’ouverture d’un itinéraire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/4ff38bc8-0994-4935-8113-bdef02f23a7e. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/4ff38bc8-0994-4935-8113-bdef02f23a7e"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "adefcd5e-5bc1-4cfa-9efb-9e5b00e26221",
+      "domain": "taxonomy_pna",
+      "context_key": "",
+      "code": "waterfall",
+      "base": {
+        "description": "Cascade, chute d'eau",
+        "description_i18n": {
+          "de": "Wasserfall oder Kaskade.",
+          "en": "Waterfall or cascade.",
+          "es": "Salto de agua o cascada.",
+          "fr": "Cascade, chute d'eau"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/adefcd5e-5bc1-4cfa-9efb-9e5b00e26221. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/adefcd5e-5bc1-4cfa-9efb-9e5b00e26221"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Site naturel où un cours d’eau franchit une rupture de pente en formant une chute. La catégorie décrit la cascade comme lieu de découverte et ne garantit pas les conditions de baignade ou d’accès.",
+        "description_i18n": {
+          "de": "Naturort, an dem ein Wasserlauf über eine Geländestufe fällt. Die Kategorie bezeichnet den Wasserfall als Entdeckungsort, ohne Bade- oder Zugangsbedingungen zu gewährleisten.",
+          "en": "Natural site where a watercourse drops over a break in slope. It describes the waterfall as a discovery place without guaranteeing bathing or access conditions.",
+          "es": "Sitio natural donde un curso de agua salva un desnivel formando una caída. Describe la cascada como lugar de descubrimiento sin garantizar las condiciones de baño o acceso.",
+          "fr": "Site naturel où un cours d’eau franchit une rupture de pente en formant une chute. La catégorie décrit la cascade comme lieu de découverte et ne garantit pas les conditions de baignade ou d’accès."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/adefcd5e-5bc1-4cfa-9efb-9e5b00e26221. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/adefcd5e-5bc1-4cfa-9efb-9e5b00e26221"
+          }
+        ]
+      }
+    }
+  ]
+}

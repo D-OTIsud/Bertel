@@ -1,0 +1,387 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-client_type-1",
+  "proposals": [
+    {
+      "concept_id": "f6657470-e108-49c5-89e1-df8f60e5c577",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "accessible",
+      "base": {
+        "description": "Client avec handicap",
+        "description_i18n": {
+          "en": "Guest with disabilities",
+          "es": "Cliente con discapacidad",
+          "fr": "Client avec handicap"
+        },
+        "name": "Personne à mobilité réduite",
+        "name_i18n": {
+          "en": "Guest with reduced mobility",
+          "es": "Persona con movilidad reducida",
+          "fr": "Personne à mobilité réduite"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Profil de voyageur en situation de handicap dont les besoins d'accueil ou d'accessibilité peuvent concerner différentes formes de handicap ; il ne constitue pas un tarif adapté.",
+        "description_i18n": {
+          "en": "Traveller profile involving a disability and reception or accessibility needs that may relate to different forms of disability; it does not designate an adapted rate.",
+          "es": "Perfil de viajero con discapacidad cuyas necesidades de acogida o accesibilidad pueden corresponder a distintas formas de discapacidad; no designa una tarifa adaptada.",
+          "fr": "Profil de voyageur en situation de handicap dont les besoins d'accueil ou d'accessibilité peuvent concerner différentes formes de handicap ; il ne constitue pas un tarif adapté.",
+          "de": "Reisendenprofil mit Behinderung und möglichen Anforderungen an Empfang oder Barrierefreiheit bei unterschiedlichen Behinderungsformen; es bezeichnet keinen besonderen Tarif."
+        },
+        "name": "Voyageur en situation de handicap",
+        "name_i18n": {
+          "en": "Traveller with a disability",
+          "es": "Viajero con discapacidad",
+          "fr": "Voyageur en situation de handicap",
+          "de": "Reisender mit Behinderung"
+        },
+        "labels": [
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Guest with reduced mobility"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Persona con movilidad reducida"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Personne à mobilité réduite"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b25592d7-d161-440a-9798-cfd80632e96f",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "budget_traveler",
+      "base": {
+        "description": "Voyageur économique",
+        "description_i18n": {
+          "en": "Budget-conscious traveller",
+          "es": "Viajero con presupuesto ajustado",
+          "fr": "Voyageur économique"
+        },
+        "name_i18n": {
+          "en": "Budget traveller",
+          "es": "Viajero económico",
+          "fr": "Voyageur économique"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Profil de voyageur qui privilégie la maîtrise de son budget et les offres économiques pour son séjour, sans définir un seuil de dépense.",
+        "description_i18n": {
+          "en": "Traveller profile prioritising budget control and affordable offers for the stay, without setting a spending threshold.",
+          "es": "Perfil de viajero que prioriza el control del presupuesto y las ofertas económicas para su estancia, sin fijar un umbral de gasto.",
+          "fr": "Profil de voyageur qui privilégie la maîtrise de son budget et les offres économiques pour son séjour, sans définir un seuil de dépense.",
+          "de": "Reisendenprofil, bei dem Budgetkontrolle und preisgünstige Angebote für den Aufenthalt im Vordergrund stehen, ohne eine Ausgabengrenze festzulegen."
+        },
+        "name_i18n": {
+          "en": "Budget traveller",
+          "es": "Viajero de presupuesto ajustado",
+          "fr": "Voyageur économique",
+          "de": "Preisbewusster Reisender"
+        },
+        "labels": [
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Viajero económico"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "2f7fa4e5-7164-4443-83c9-f5e442992562",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "business_traveler",
+      "base": {
+        "description": "Voyageur professionnel",
+        "description_i18n": {
+          "en": "Professional traveller",
+          "es": "Viajero profesional",
+          "fr": "Voyageur professionnel"
+        },
+        "name_i18n": {
+          "en": "Business traveller",
+          "es": "Viajero de negocios",
+          "fr": "Voyageur d'affaires"
+        }
+      },
+      "changes": {
+        "description": "Voyageur dont le déplacement répond à un motif professionnel, par opposition à un séjour motivé principalement par les loisirs.",
+        "description_i18n": {
+          "en": "Traveller whose trip serves a professional purpose, as opposed to a stay primarily motivated by leisure.",
+          "es": "Viajero cuyo desplazamiento responde a un motivo profesional, frente a una estancia motivada principalmente por el ocio.",
+          "fr": "Voyageur dont le déplacement répond à un motif professionnel, par opposition à un séjour motivé principalement par les loisirs.",
+          "de": "Reisender, dessen Reise einem beruflichen Zweck dient, im Unterschied zu einem hauptsächlich freizeitbezogenen Aufenthalt."
+        },
+        "name_i18n": {
+          "en": "Business traveller",
+          "es": "Viajero de negocios",
+          "fr": "Voyageur d'affaires",
+          "de": "Geschäftsreisender"
+        }
+      }
+    },
+    {
+      "concept_id": "077bc4c1-84f8-40ce-ad2c-7c4529988307",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "couple",
+      "base": {
+        "description": "Couple en voyage",
+        "description_i18n": {
+          "en": "Travelling couple",
+          "es": "Pareja de viaje",
+          "fr": "Couple en voyage"
+        },
+        "name_i18n": {
+          "en": "Couple",
+          "es": "Pareja",
+          "fr": "Couple"
+        }
+      },
+      "changes": {
+        "description": "Profil de clientèle correspondant à deux personnes voyageant en couple ; il décrit la composition du voyage et non une formule tarifaire pour deux.",
+        "description_i18n": {
+          "en": "Customer profile for two people travelling as a couple; it describes the travelling party rather than a two-person pricing plan.",
+          "es": "Perfil de clientela formado por dos personas que viajan en pareja; describe la composición del viaje, no una modalidad tarifaria para dos.",
+          "fr": "Profil de clientèle correspondant à deux personnes voyageant en couple ; il décrit la composition du voyage et non une formule tarifaire pour deux.",
+          "de": "Gästeprofil für zwei Personen, die als Paar reisen; es beschreibt die Reisegruppe und kein Preisangebot für zwei Personen."
+        },
+        "name_i18n": {
+          "en": "Couple",
+          "es": "Pareja",
+          "fr": "Couple",
+          "de": "Paar"
+        }
+      }
+    },
+    {
+      "concept_id": "5cdebcc4-0b17-42b2-8391-93d481952d21",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "family",
+      "base": {
+        "description": "Famille avec enfants",
+        "description_i18n": {
+          "en": "Family with children",
+          "es": "Familia con niños",
+          "fr": "Famille avec enfants"
+        },
+        "name_i18n": {
+          "en": "Family",
+          "es": "Familia",
+          "fr": "Famille"
+        }
+      },
+      "changes": {
+        "description": "Profil de clientèle composé d'une famille voyageant avec des enfants, sans fixer leur nombre ni une limite d'âge.",
+        "description_i18n": {
+          "en": "Customer profile comprising a family travelling with children, without fixing their number or an age limit.",
+          "es": "Perfil de clientela compuesto por una familia que viaja con niños, sin fijar su número ni un límite de edad.",
+          "fr": "Profil de clientèle composé d'une famille voyageant avec des enfants, sans fixer leur nombre ni une limite d'âge.",
+          "de": "Gästeprofil einer Familie, die mit Kindern reist, ohne deren Anzahl oder eine Altersgrenze festzulegen."
+        },
+        "name_i18n": {
+          "en": "Family",
+          "es": "Familia",
+          "fr": "Famille",
+          "de": "Familie"
+        }
+      }
+    },
+    {
+      "concept_id": "1968e8a2-b696-4298-bcba-d76ffb787b5f",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "group",
+      "base": {
+        "description": "Groupe de voyageurs",
+        "description_i18n": {
+          "en": "Group of travellers",
+          "es": "Grupo de viajeros",
+          "fr": "Groupe de voyageurs"
+        },
+        "name_i18n": {
+          "en": "Group",
+          "es": "Grupo",
+          "fr": "Groupe"
+        }
+      },
+      "changes": {
+        "description": "Ensemble de personnes voyageant collectivement, identifié comme profil de clientèle ; les éventuelles conditions d'un tarif de groupe sont distinctes.",
+        "description_i18n": {
+          "en": "People travelling together as a collective party, identified as a customer profile; any group-rate conditions are separate.",
+          "es": "Conjunto de personas que viajan colectivamente, identificado como perfil de clientela; las posibles condiciones de una tarifa de grupo son distintas.",
+          "fr": "Ensemble de personnes voyageant collectivement, identifié comme profil de clientèle ; les éventuelles conditions d'un tarif de groupe sont distinctes.",
+          "de": "Gemeinsam reisende Personengruppe als Gästeprofil; mögliche Bedingungen für einen Gruppentarif sind davon getrennt."
+        },
+        "name_i18n": {
+          "en": "Group",
+          "es": "Grupo",
+          "fr": "Groupe",
+          "de": "Gruppe"
+        }
+      }
+    },
+    {
+      "concept_id": "a3327896-9c4a-4b9e-adf9-b978f46f7854",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "individual",
+      "base": {
+        "description": "Voyageur seul",
+        "description_i18n": {
+          "en": "Solo traveller",
+          "es": "Viajero en solitario",
+          "fr": "Voyageur seul"
+        },
+        "name_i18n": {
+          "en": "Solo traveller",
+          "es": "Viajero individual",
+          "fr": "Touriste individuel"
+        }
+      },
+      "changes": {
+        "description": "Profil de voyageur se déplaçant seul, distinct d'un couple, d'une famille ou d'un groupe organisé.",
+        "description_i18n": {
+          "en": "Traveller profile for a person travelling alone, distinct from a couple, family or organised group.",
+          "es": "Perfil de una persona que viaja sola, distinto de una pareja, una familia o un grupo organizado.",
+          "fr": "Profil de voyageur se déplaçant seul, distinct d'un couple, d'une famille ou d'un groupe organisé.",
+          "de": "Profil einer allein reisenden Person, im Unterschied zu einem Paar, einer Familie oder einer organisierten Gruppe."
+        },
+        "name_i18n": {
+          "en": "Solo traveller",
+          "es": "Viajero individual",
+          "fr": "Touriste individuel",
+          "de": "Alleinreisender"
+        }
+      }
+    },
+    {
+      "concept_id": "4f92f020-260d-448c-b9bc-224c2ae60197",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "luxury_traveler",
+      "base": {
+        "description": "Voyageur haut de gamme",
+        "description_i18n": {
+          "en": "High-end traveller",
+          "es": "Viajero de alta gama",
+          "fr": "Voyageur haut de gamme"
+        },
+        "name_i18n": {
+          "en": "Luxury traveller",
+          "es": "Viajero de lujo",
+          "fr": "Voyageur de luxe"
+        }
+      },
+      "changes": {
+        "description": "Profil de voyageur recherchant des prestations haut de gamme et un niveau de confort ou de service élevé ; ce profil ne vaut pas classement de l'établissement.",
+        "description_i18n": {
+          "en": "Traveller profile seeking high-end services and a high level of comfort or service; this profile is not an establishment rating.",
+          "es": "Perfil de viajero que busca prestaciones de alta gama y un nivel elevado de comodidad o servicio; este perfil no equivale a una clasificación del establecimiento.",
+          "fr": "Profil de voyageur recherchant des prestations haut de gamme et un niveau de confort ou de service élevé ; ce profil ne vaut pas classement de l'établissement.",
+          "de": "Reisendenprofil mit Interesse an hochwertigen Leistungen sowie hohem Komfort- oder Serviceniveau; es ist keine Einstufung des Betriebs."
+        },
+        "name_i18n": {
+          "en": "Luxury traveller",
+          "es": "Viajero de lujo",
+          "fr": "Voyageur de luxe",
+          "de": "Luxusreisender"
+        }
+      }
+    },
+    {
+      "concept_id": "f1c8d4a5-3eff-40e3-a22b-dbe59b4c06d4",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "senior",
+      "base": {
+        "description": "Voyageur senior",
+        "description_i18n": {
+          "en": "Senior traveller",
+          "es": "Viajero senior",
+          "fr": "Voyageur senior"
+        },
+        "name_i18n": {
+          "en": "Senior",
+          "es": "Senior",
+          "fr": "Senior"
+        },
+        "labels": []
+      },
+      "changes": {
+        "description": "Profil de clientèle désigné comme senior pour décrire les publics accueillis ; l'âge retenu et l'existence d'un tarif spécifique ne sont pas définis par ce terme.",
+        "description_i18n": {
+          "en": "Customer profile described as senior to identify the audiences served; the relevant age and any special rate are not defined by this term.",
+          "es": "Perfil de clientela denominado sénior para describir los públicos atendidos; el término no fija una edad ni la existencia de una tarifa específica.",
+          "fr": "Profil de clientèle désigné comme senior pour décrire les publics accueillis ; l'âge retenu et l'existence d'un tarif spécifique ne sont pas définis par ce terme.",
+          "de": "Als Senior bezeichnetes Gästeprofil zur Beschreibung der angesprochenen Zielgruppen; das maßgebliche Alter und ein besonderer Tarif werden dadurch nicht festgelegt."
+        },
+        "name_i18n": {
+          "en": "Senior traveller",
+          "es": "Viajero sénior",
+          "fr": "Senior",
+          "de": "Älterer Reisender"
+        },
+        "labels": [
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Senior"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Senior"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "47464bdf-b463-41db-96f3-26d0dee6c9ff",
+      "domain": "client_type",
+      "context_key": "",
+      "code": "student",
+      "base": {
+        "description": "Voyageur étudiant",
+        "description_i18n": {
+          "en": "Student traveller",
+          "es": "Viajero estudiante",
+          "fr": "Voyageur étudiant"
+        },
+        "name_i18n": {
+          "en": "Student",
+          "es": "Estudiante",
+          "fr": "Étudiant"
+        }
+      },
+      "changes": {
+        "description": "Profil de voyageur ayant le statut d'étudiant ; il décrit la clientèle et ne garantit pas l'existence d'une réduction étudiante.",
+        "description_i18n": {
+          "en": "Traveller profile with student status; it describes the clientele and does not guarantee a student discount.",
+          "es": "Perfil de viajero con condición de estudiante; describe la clientela y no garantiza un descuento para estudiantes.",
+          "fr": "Profil de voyageur ayant le statut d'étudiant ; il décrit la clientèle et ne garantit pas l'existence d'une réduction étudiante.",
+          "de": "Reisendenprofil mit Studierendenstatus; es beschreibt die Zielgruppe und begründet keinen Anspruch auf einen Studierendenrabatt."
+        },
+        "name_i18n": {
+          "en": "Student",
+          "es": "Estudiante",
+          "fr": "Étudiant",
+          "de": "Studierender"
+        }
+      }
+    }
+  ]
+}

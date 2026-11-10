@@ -1,0 +1,206 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-taxonomy_vil-1",
+  "proposals": [
+    {
+      "concept_id": "576545a0-553d-4c0c-bd82-b7a29dc36a0b",
+      "domain": "taxonomy_vil",
+      "context_key": "",
+      "code": "character_village",
+      "base": {
+        "description": "Bourg ou village remarquable",
+        "description_i18n": {
+          "de": "Bemerkenswerter Ort oder Dorf.",
+          "en": "Notable town or village.",
+          "es": "Pueblo o villa notable.",
+          "fr": "Bourg ou village remarquable"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/576545a0-553d-4c0c-bd82-b7a29dc36a0b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/576545a0-553d-4c0c-bd82-b7a29dc36a0b"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Bourg ou village présenté pour le caractère remarquable de son cadre, de son architecture ou de son patrimoine. Cette catégorie descriptive ne constitue pas à elle seule un label officiel.",
+        "description_i18n": {
+          "de": "Ort oder Dorf mit bemerkenswertem Umfeld, Architektur oder Kulturerbe. Diese beschreibende Kategorie begründet für sich allein kein amtliches Label.",
+          "en": "Town or village presented for the notable character of its setting, architecture or heritage. This descriptive category is not itself an official label.",
+          "es": "Núcleo o pueblo presentado por el carácter destacado de su entorno, arquitectura o patrimonio. Esta categoría descriptiva no constituye por sí sola un sello oficial.",
+          "fr": "Bourg ou village présenté pour le caractère remarquable de son cadre, de son architecture ou de son patrimoine. Cette catégorie descriptive ne constitue pas à elle seule un label officiel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/576545a0-553d-4c0c-bd82-b7a29dc36a0b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/576545a0-553d-4c0c-bd82-b7a29dc36a0b"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "d8d69d8c-0c86-4a46-bb4f-698e1fbcfcdf",
+      "domain": "taxonomy_vil",
+      "context_key": "",
+      "code": "creole_village",
+      "base": {
+        "description": "Village de caractère créole",
+        "description_i18n": {
+          "de": "Dorf mit kreolischem Charakter.",
+          "en": "Village with Creole character.",
+          "es": "Pueblo de carácter criollo.",
+          "fr": "Village de caractère créole"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d8d69d8c-0c86-4a46-bb4f-698e1fbcfcdf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d8d69d8c-0c86-4a46-bb4f-698e1fbcfcdf"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Village présenté pour son caractère créole, notamment son cadre bâti et son identité culturelle. La catégorie se distingue de l’attribution éventuelle d’un label de réseau tel que Villages Créoles.",
+        "description_i18n": {
+          "de": "Dorf mit kreolischem Charakter, insbesondere in Baubestand und kultureller Identität. Die Kategorie unterscheidet sich von einer etwaigen Vergabe eines Netzwerklabels wie Villages Créoles.",
+          "en": "Village presented for its Creole character, particularly its built setting and cultural identity. It differs from any award of a network label such as Villages Créoles.",
+          "es": "Pueblo presentado por su carácter criollo, especialmente su entorno construido e identidad cultural. Se distingue de la posible concesión de un sello de red como Villages Créoles.",
+          "fr": "Village présenté pour son caractère créole, notamment son cadre bâti et son identité culturelle. La catégorie se distingue de l’attribution éventuelle d’un label de réseau tel que Villages Créoles."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/d8d69d8c-0c86-4a46-bb4f-698e1fbcfcdf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/d8d69d8c-0c86-4a46-bb4f-698e1fbcfcdf"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "c48ed61b-2826-46e7-9194-fc130f9f47d6",
+      "domain": "taxonomy_vil",
+      "context_key": "",
+      "code": "islet",
+      "base": {
+        "description": "Îlet habité (cirques, vallées)",
+        "description_i18n": {
+          "de": "Bewohnter Weiler in einem Talkessel oder Tal, typisch für La Réunion.",
+          "en": "Inhabited hamlet in a cirque or valley, typical of La Réunion.",
+          "es": "Pequeño núcleo habitado en un circo o valle, típico de La Reunión.",
+          "fr": "Îlet habité (cirques, vallées)"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c48ed61b-2826-46e7-9194-fc130f9f47d6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c48ed61b-2826-46e7-9194-fc130f9f47d6"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Petit noyau habité, souvent situé dans un cirque ou une vallée de La Réunion, appelé îlet. Le terme désigne ici un hameau et non une petite île maritime.",
+        "description_i18n": {
+          "de": "Kleine bewohnte Siedlung, häufig in einem Talkessel oder Tal auf Réunion, als Îlet bezeichnet. Gemeint ist ein Weiler und keine kleine Meeresinsel.",
+          "en": "Small inhabited settlement, often in a cirque or valley of Réunion, called an îlet. Here the term means a hamlet rather than a small sea island.",
+          "es": "Pequeño núcleo habitado, a menudo en un circo o valle de La Reunión, denominado îlet. Aquí designa una aldea, no una pequeña isla marítima.",
+          "fr": "Petit noyau habité, souvent situé dans un cirque ou une vallée de La Réunion, appelé îlet. Le terme désigne ici un hameau et non une petite île maritime."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/c48ed61b-2826-46e7-9194-fc130f9f47d6. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/c48ed61b-2826-46e7-9194-fc130f9f47d6"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "019eaa24-71de-427f-9490-15a2694e8389",
+      "domain": "taxonomy_vil",
+      "context_key": "",
+      "code": "root",
+      "base": {
+        "description": "Racine technique — Ville",
+        "description_i18n": {
+          "de": "Technische Wurzel für Stadt- und Dorfkategorien; nicht direkt zuweisbar.",
+          "en": "Technical root for town and village categories; not directly assignable.",
+          "es": "Raíz técnica de categorías de localidades; no asignable directamente.",
+          "fr": "Racine technique — Ville"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/019eaa24-71de-427f-9490-15a2694e8389. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/019eaa24-71de-427f-9490-15a2694e8389"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Catégorie générale des villes, bourgs, villages et îlets présentés comme lieux de découverte. Ces catégories décrivent le caractère d’une localité, distinct de son identification administrative par un code communal.",
+        "description_i18n": {
+          "de": "Oberkategorie für Städte, Ortszentren, Dörfer und bewohnte Îlets als Entdeckungsorte. Sie beschreibt den Charakter einer Ortschaft und nicht deren administrative Gemeindekennung.",
+          "en": "General category for towns, centres, villages and inhabited îlets presented as places to discover. These categories describe a locality’s character rather than its administrative municipality code.",
+          "es": "Categoría general de ciudades, núcleos, pueblos e îlets habitados presentados para su descubrimiento. Describe el carácter de una localidad, no su identificación administrativa por un código municipal.",
+          "fr": "Catégorie générale des villes, bourgs, villages et îlets présentés comme lieux de découverte. Ces catégories décrivent le caractère d’une localité, distinct de son identification administrative par un code communal."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/019eaa24-71de-427f-9490-15a2694e8389. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/019eaa24-71de-427f-9490-15a2694e8389"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "584143ce-cb62-4c10-8e7f-4d631bd914bf",
+      "domain": "taxonomy_vil",
+      "context_key": "",
+      "code": "town_center",
+      "base": {
+        "description": "Centre urbain, chef-lieu",
+        "description_i18n": {
+          "de": "Stadtzentrum oder Hauptort einer Gemeinde.",
+          "en": "Urban centre or administrative seat of a municipality.",
+          "es": "Centro urbano o cabecera municipal.",
+          "fr": "Centre urbain, chef-lieu"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/584143ce-cb62-4c10-8e7f-4d631bd914bf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/584143ce-cb62-4c10-8e7f-4d631bd914bf"
+          }
+        ]
+      },
+      "changes": {
+        "description": "Partie centrale d’une ville ou d’un bourg, notamment son chef-lieu et ses principaux lieux de vie. La catégorie décrit un centre urbain à découvrir, distinct de l’ensemble du territoire communal.",
+        "description_i18n": {
+          "de": "Zentraler Bereich einer Stadt oder Ortschaft, etwa Hauptort und wichtige Lebensräume. Die Kategorie beschreibt ein zu erkundendes Ortszentrum und nicht das gesamte Gemeindegebiet.",
+          "en": "Central part of a town or settlement, including its administrative centre and main activity areas. It describes a town centre to discover rather than the whole municipal territory.",
+          "es": "Parte central de una ciudad o núcleo, incluida su cabecera y principales lugares de vida. Describe un centro urbano por descubrir, no todo el territorio municipal.",
+          "fr": "Partie centrale d’une ville ou d’un bourg, notamment son chef-lieu et ses principaux lieux de vie. La catégorie décrit un centre urbain à découvrir, distinct de l’ensemble du territoire communal."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/584143ce-cb62-4c10-8e7f-4d631bd914bf. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/584143ce-cb62-4c10-8e7f-4d631bd914bf"
+          }
+        ]
+      }
+    }
+  ]
+}

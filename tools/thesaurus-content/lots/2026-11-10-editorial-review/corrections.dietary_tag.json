@@ -1,0 +1,766 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-dietary_tag-1",
+  "proposals": [
+    {
+      "concept_id": "cb64ccaa-a967-4f9f-b418-7bce42f37ba7",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "flexitarian",
+      "base": {
+        "description": "Consommation modérée de viande",
+        "description_i18n": {
+          "de": "Moderater Fleischkonsum",
+          "en": "Moderate meat consumption",
+          "es": "Consumo moderado de carne",
+          "fr": "Consommation modérée de viande"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cb64ccaa-a967-4f9f-b418-7bce42f37ba7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cb64ccaa-a967-4f9f-b418-7bce42f37ba7"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre présentée comme adaptée à une alimentation principalement végétale avec une consommation occasionnelle de viande ou de poisson, selon les plats décrits par le prestataire.",
+        "description_i18n": {
+          "de": "Als geeignet für eine überwiegend pflanzliche Ernährung mit gelegentlichem Fleisch- oder Fischverzehr dargestelltes Angebot nach den vom Anbieter beschriebenen Gerichten.",
+          "en": "Offer presented as suitable for a mainly plant-based diet with occasional meat or fish consumption, according to the dishes described by the provider.",
+          "es": "Oferta presentada como adecuada para una alimentación principalmente vegetal con consumo ocasional de carne o pescado, según los platos descritos por el prestador.",
+          "fr": "Offre présentée comme adaptée à une alimentation principalement végétale avec une consommation occasionnelle de viande ou de poisson, selon les plats décrits par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/cb64ccaa-a967-4f9f-b418-7bce42f37ba7. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/cb64ccaa-a967-4f9f-b418-7bce42f37ba7"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "ff64cc4b-3e08-484a-9666-2ae3213b430e",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "gluten_free",
+      "base": {
+        "description": "Mention « sans gluten » applicable à une denrée dont la teneur en gluten ne dépasse pas 20 mg/kg ; l’absence d’ingrédients contenant du gluten ne suffit pas à elle seule.",
+        "description_i18n": {
+          "de": "Angabe „glutenfrei“ für Lebensmittel mit höchstens 20 mg/kg Gluten; das bloße Fehlen glutenhaltiger Zutaten genügt nicht.",
+          "en": "Gluten-free statement for food containing no more than 20 mg/kg of gluten; the absence of gluten-containing ingredients alone is insufficient.",
+          "es": "Mención «sin gluten» para un alimento que no contiene más de 20 mg/kg de gluten; la ausencia de ingredientes con gluten no basta por sí sola.",
+          "fr": "Mention « sans gluten » applicable à une denrée dont la teneur en gluten ne dépasse pas 20 mg/kg ; l’absence d’ingrédients contenant du gluten ne suffit pas à elle seule."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ff64cc4b-3e08-484a-9666-2ae3213b430e. Sources externes réellement consultées : https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=CELEX%3A32014R0828.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ff64cc4b-3e08-484a-9666-2ae3213b430e ; https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=CELEX%3A32014R0828"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mention « sans gluten » déclarée pour l'offre ; elle désigne une denrée ne dépassant pas 20 mg/kg de gluten, sans que le seul choix d'ingrédients sans gluten suffise à décrire sa teneur finale.",
+        "description_i18n": {
+          "de": "Für das Angebot angegebene Bezeichnung glutenfrei für ein Lebensmittel mit höchstens 20 mg/kg Gluten; die Wahl glutenfreier Zutaten allein bestimmt nicht den endgültigen Glutengehalt.",
+          "en": "Provider-declared gluten-free description for the offer, meaning food containing no more than 20 mg/kg of gluten; choosing gluten-free ingredients alone does not establish its final gluten content.",
+          "es": "Mención sin gluten declarada para la oferta, que designa un alimento con un máximo de 20 mg/kg de gluten; elegir ingredientes sin gluten no determina por sí solo el contenido final.",
+          "fr": "Mention « sans gluten » déclarée pour l'offre ; elle désigne une denrée ne dépassant pas 20 mg/kg de gluten, sans que le seul choix d'ingrédients sans gluten suffise à décrire sa teneur finale."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/ff64cc4b-3e08-484a-9666-2ae3213b430e. Sources externes réellement consultées : https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=CELEX%3A32014R0828.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/ff64cc4b-3e08-484a-9666-2ae3213b430e ; https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=CELEX%3A32014R0828"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a4d85f09-a16a-4a40-9a48-2e37058b3234",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "halal",
+      "base": {
+        "description": "Conforme aux règles alimentaires islamiques",
+        "description_i18n": {
+          "de": "Entspricht den islamischen Speisevorschriften",
+          "en": "Complies with Islamic dietary rules",
+          "es": "Cumple las normas alimentarias islámicas",
+          "fr": "Conforme aux règles alimentaires islamiques"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a4d85f09-a16a-4a40-9a48-2e37058b3234. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a4d85f09-a16a-4a40-9a48-2e37058b3234"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre que le prestataire présente comme conforme aux règles alimentaires islamiques ; cette donnée décrit sa déclaration et ne constitue pas une certification délivrée par Bertel.",
+        "description_i18n": {
+          "de": "Vom Anbieter als den islamischen Speiseregeln entsprechend dargestelltes Angebot; der Eintrag erfasst diese Angabe und ist keine von Bertel erteilte Zertifizierung.",
+          "en": "Offer presented by the provider as complying with Islamic dietary rules; the entry records that declaration rather than certification issued by Bertel.",
+          "es": "Oferta que el prestador presenta como conforme a las normas alimentarias islámicas; el dato recoge su declaración y no una certificación emitida por Bertel.",
+          "fr": "Offre que le prestataire présente comme conforme aux règles alimentaires islamiques ; cette donnée décrit sa déclaration et ne constitue pas une certification délivrée par Bertel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a4d85f09-a16a-4a40-9a48-2e37058b3234. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a4d85f09-a16a-4a40-9a48-2e37058b3234"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "5404f58f-82d0-4142-9e50-fd7fd9c8c7c4",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "kosher",
+      "base": {
+        "description": "Conforme aux règles alimentaires juives",
+        "description_i18n": {
+          "de": "Entspricht den jüdischen Speisevorschriften",
+          "en": "Complies with Jewish dietary rules",
+          "es": "Cumple las normas alimentarias judías",
+          "fr": "Conforme aux règles alimentaires juives"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5404f58f-82d0-4142-9e50-fd7fd9c8c7c4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5404f58f-82d0-4142-9e50-fd7fd9c8c7c4"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre que le prestataire présente comme conforme aux règles alimentaires juives ; une éventuelle certification est distincte de cette déclaration de l'offre.",
+        "description_i18n": {
+          "de": "Vom Anbieter als den jüdischen Speiseregeln entsprechend dargestelltes Angebot; eine mögliche Zertifizierung ist von dieser Angebotsangabe zu unterscheiden.",
+          "en": "Offer presented by the provider as complying with Jewish dietary rules; any certification is separate from this offer declaration.",
+          "es": "Oferta que el prestador presenta como conforme a las normas alimentarias judías; una posible certificación es distinta de esta declaración de la oferta.",
+          "fr": "Offre que le prestataire présente comme conforme aux règles alimentaires juives ; une éventuelle certification est distincte de cette déclaration de l'offre."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5404f58f-82d0-4142-9e50-fd7fd9c8c7c4. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5404f58f-82d0-4142-9e50-fd7fd9c8c7c4"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "7c85a59d-715c-4efe-a03e-c6d8c05b6a02",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "lactose_free",
+      "base": {
+        "description": "Sans lactose ; ne pas confondre avec sans produits laitiers",
+        "description_i18n": {
+          "de": "Ohne Laktose; nicht gleichbedeutend mit milchfrei",
+          "en": "Without lactose; not the same as dairy-free",
+          "es": "Sin lactosa; no equivale a sin productos lácteos",
+          "fr": "Sans lactose ; ne pas confondre avec sans produits laitiers"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7c85a59d-715c-4efe-a03e-c6d8c05b6a02. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7c85a59d-715c-4efe-a03e-c6d8c05b6a02"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre déclarée sans lactose, sucre présent dans le lait ; cette mention se distingue de l'absence de lait ou de tous les produits laitiers.",
+        "description_i18n": {
+          "de": "Als laktosefrei angegebenes Angebot, bezogen auf den Milchzucker; dies ist von der Abwesenheit von Milch oder sämtlichen Milchprodukten zu unterscheiden.",
+          "en": "Offer declared lactose-free, referring to the sugar found in milk; this differs from the absence of milk or all dairy products.",
+          "es": "Oferta declarada sin lactosa, el azúcar presente en la leche; esta mención se distingue de la ausencia de leche o de todos los productos lácteos.",
+          "fr": "Offre déclarée sans lactose, sucre présent dans le lait ; cette mention se distingue de l'absence de lait ou de tous les produits laitiers."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/7c85a59d-715c-4efe-a03e-c6d8c05b6a02. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/7c85a59d-715c-4efe-a03e-c6d8c05b6a02"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bae104f1-8cf5-4d62-b0f0-659895fdba19",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "local",
+      "base": {
+        "description": "Produits locaux de La Réunion",
+        "description_i18n": {
+          "de": "Lokale Produkte aus La Réunion",
+          "en": "Local products from La Réunion",
+          "es": "Productos locales de La Reunión",
+          "fr": "Produits locaux de La Réunion"
+        },
+        "name": "Local",
+        "name_i18n": {
+          "de": "Lokal",
+          "en": "Local",
+          "es": "Local",
+          "fr": "Local"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Regionale Produkte aus La Réunion"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Local products from Réunion"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Productos locales de La Reunión"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Produits locaux réunionnais"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bae104f1-8cf5-4d62-b0f0-659895fdba19. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bae104f1-8cf5-4d62-b0f0-659895fdba19"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre mettant en avant des produits locaux de La Réunion selon les indications du prestataire ; la provenance des produits est distincte de la seule localisation du vendeur.",
+        "description_i18n": {
+          "de": "Angebot mit regionalen Produkten aus Réunion nach den Angaben des Anbieters; die Herkunft der Produkte ist vom bloßen Standort des Verkäufers zu unterscheiden.",
+          "en": "Offer highlighting local products from Réunion according to the provider's information; the products' provenance is distinct from the seller's location alone.",
+          "es": "Oferta que destaca productos locales de Reunión según la información del prestador; la procedencia de los productos es distinta de la mera ubicación del vendedor.",
+          "fr": "Offre mettant en avant des produits locaux de La Réunion selon les indications du prestataire ; la provenance des produits est distincte de la seule localisation du vendeur."
+        },
+        "name": "Produits locaux",
+        "name_i18n": {
+          "de": "Regionale Produkte",
+          "en": "Local products",
+          "es": "Productos locales",
+          "fr": "Produits locaux"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Regionale Produkte aus La Réunion"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Local products from Réunion"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Productos locales de La Reunión"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Produits locaux réunionnais"
+          },
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Lokal"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "Local"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Local"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Local"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bae104f1-8cf5-4d62-b0f0-659895fdba19. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bae104f1-8cf5-4d62-b0f0-659895fdba19"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "bdc5a0f6-6a64-430f-bf6f-6a8c8fa5bc79",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "low_carb",
+      "base": {
+        "description": "Réduit en glucides",
+        "description_i18n": {
+          "de": "Reduzierter Kohlenhydratgehalt",
+          "en": "Reduced carbohydrate content",
+          "es": "Contenido reducido de carbohidratos",
+          "fr": "Réduit en glucides"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bdc5a0f6-6a64-430f-bf6f-6a8c8fa5bc79. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bdc5a0f6-6a64-430f-bf6f-6a8c8fa5bc79"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre présentée par le prestataire comme faible en glucides ; la qualification reprend les caractéristiques annoncées pour les plats concernés, sans fixer un seuil propre à Bertel.",
+        "description_i18n": {
+          "de": "Vom Anbieter als kohlenhydratarm dargestelltes Angebot; die Einordnung übernimmt die angegebenen Eigenschaften der betreffenden Gerichte, ohne einen eigenen Bertel-Grenzwert festzulegen.",
+          "en": "Offer presented by the provider as low in carbohydrates; the classification reflects the stated characteristics of the dishes concerned without imposing a Bertel-specific threshold.",
+          "es": "Oferta presentada por el prestador como baja en carbohidratos; la clasificación recoge las características anunciadas para los platos correspondientes sin fijar un umbral propio de Bertel.",
+          "fr": "Offre présentée par le prestataire comme faible en glucides ; la qualification reprend les caractéristiques annoncées pour les plats concernés, sans fixer un seuil propre à Bertel."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/bdc5a0f6-6a64-430f-bf6f-6a8c8fa5bc79. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/bdc5a0f6-6a64-430f-bf6f-6a8c8fa5bc79"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "574365a8-e751-41f6-9203-4ce3c872d195",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "organic",
+      "base": {
+        "description": "Produits biologiques",
+        "description_i18n": {
+          "de": "Bio-Produkte",
+          "en": "Organic products",
+          "es": "Productos ecológicos",
+          "fr": "Produits biologiques"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/574365a8-e751-41f6-9203-4ce3c872d195. Sources externes réellement consultées : https://agriculture.ec.europa.eu/farming/organic-farming/legislation_fr.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/574365a8-e751-41f6-9203-4ce3c872d195 ; https://agriculture.ec.europa.eu/farming/organic-farming/legislation_fr"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre mettant en avant l'utilisation de produits biologiques d'après la déclaration du prestataire ; elle ne signifie pas que toute son activité dispose d'une certification biologique.",
+        "description_i18n": {
+          "de": "Angebot mit hervorgehobener Verwendung von Bioprodukten nach Angabe des Anbieters; daraus folgt keine Bio-Zertifizierung seiner gesamten Tätigkeit.",
+          "en": "Offer highlighting the use of organic products according to the provider's declaration; it does not mean that the provider's entire activity holds organic certification.",
+          "es": "Oferta que destaca el uso de productos ecológicos según la declaración del prestador; no significa que toda su actividad posea certificación ecológica.",
+          "fr": "Offre mettant en avant l'utilisation de produits biologiques d'après la déclaration du prestataire ; elle ne signifie pas que toute son activité dispose d'une certification biologique."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/574365a8-e751-41f6-9203-4ce3c872d195. Sources externes réellement consultées : https://agriculture.ec.europa.eu/farming/organic-farming/legislation_fr.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/574365a8-e751-41f6-9203-4ce3c872d195 ; https://agriculture.ec.europa.eu/farming/organic-farming/legislation_fr"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "05d3a24d-c418-41f2-8fec-0a6e5ee9040b",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "pescatarian",
+      "base": {
+        "description": "Avec poisson mais sans viande",
+        "description_i18n": {
+          "de": "Mit Fisch, aber ohne Fleisch",
+          "en": "Includes fish but no meat",
+          "es": "Incluye pescado pero no carne",
+          "fr": "Avec poisson mais sans viande"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/05d3a24d-c418-41f2-8fec-0a6e5ee9040b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/05d3a24d-c418-41f2-8fec-0a6e5ee9040b"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Offre adaptée à une alimentation sans viande pouvant inclure du poisson, selon les ingrédients des plats annoncés par le prestataire.",
+        "description_i18n": {
+          "de": "Angebot für eine Ernährung ohne Fleisch, aber gegebenenfalls mit Fisch, entsprechend den vom Anbieter genannten Zutaten der Gerichte.",
+          "en": "Offer suitable for a diet excluding meat but potentially including fish, according to the dish ingredients stated by the provider.",
+          "es": "Oferta adecuada para una alimentación sin carne que puede incluir pescado, según los ingredientes de los platos anunciados por el prestador.",
+          "fr": "Offre adaptée à une alimentation sans viande pouvant inclure du poisson, selon les ingrédients des plats annoncés par le prestataire."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/05d3a24d-c418-41f2-8fec-0a6e5ee9040b. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/05d3a24d-c418-41f2-8fec-0a6e5ee9040b"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "a7345d24-7ef3-43de-9fa7-87561ac896bb",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "sugar_free",
+      "base": {
+        "description": "Sans sucres ajoutés ni denrées ajoutées pour leur pouvoir sucrant ; des sucres naturellement présents peuvent subsister.",
+        "description_i18n": {
+          "de": "Ohne zugesetzten Zucker oder wegen ihrer Süßwirkung zugesetzte Lebensmittel; natürlich vorkommender Zucker kann enthalten sein.",
+          "en": "No added sugars or foods added for their sweetening properties; naturally occurring sugars may remain.",
+          "es": "Sin azúcares añadidos ni alimentos añadidos por sus propiedades endulzantes; puede haber azúcares naturalmente presentes.",
+          "fr": "Sans sucres ajoutés ni denrées ajoutées pour leur pouvoir sucrant ; des sucres naturellement présents peuvent subsister."
+        },
+        "name": "Sans sucre ajouté",
+        "name_i18n": {
+          "de": "Ohne zugesetzten Zucker",
+          "en": "No added sugar",
+          "es": "Sin azúcar añadido",
+          "fr": "Sans sucre ajouté"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Ohne Zuckerzusatz"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "No added sugars"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Sin azúcares añadidos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Sans sucres ajoutés"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a7345d24-7ef3-43de-9fa7-87561ac896bb. Sources externes réellement consultées : https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/allegations-nutritionnelles-et-de-sante-ne-vous-faites-pas-avoir.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a7345d24-7ef3-43de-9fa7-87561ac896bb ; https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/allegations-nutritionnelles-et-de-sante-ne-vous-faites-pas-avoir"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Mention déclarée « sans sucres ajoutés » pour une préparation sans ajout de sucres ni d'ingrédients utilisés pour leur pouvoir sucrant ; des sucres naturellement présents peuvent subsister.",
+        "description_i18n": {
+          "de": "Angegebene Bezeichnung ohne Zuckerzusatz für eine Zubereitung ohne zugesetzten Zucker oder wegen ihrer Süßwirkung verwendete Zutaten; natürlich vorkommender Zucker kann vorhanden sein.",
+          "en": "Provider-declared no-added-sugars description for a preparation without added sugars or ingredients used for their sweetening properties; naturally occurring sugars may remain.",
+          "es": "Mención declarada sin azúcares añadidos para una preparación sin añadir azúcares ni ingredientes por su poder edulcorante; puede contener azúcares naturalmente presentes.",
+          "fr": "Mention déclarée « sans sucres ajoutés » pour une préparation sans ajout de sucres ni d'ingrédients utilisés pour leur pouvoir sucrant ; des sucres naturellement présents peuvent subsister."
+        },
+        "name": "Sans sucres ajoutés",
+        "name_i18n": {
+          "de": "Ohne Zuckerzusatz",
+          "en": "No added sugars",
+          "es": "Sin azúcares añadidos",
+          "fr": "Sans sucres ajoutés"
+        },
+        "labels": [
+          {
+            "lang": "de",
+            "kind": "hidden",
+            "value": "Ohne zugesetzten Zucker"
+          },
+          {
+            "lang": "en",
+            "kind": "hidden",
+            "value": "No added sugar"
+          },
+          {
+            "lang": "es",
+            "kind": "hidden",
+            "value": "Sin azúcar añadido"
+          },
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Sans sucre ajouté"
+          }
+        ],
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/a7345d24-7ef3-43de-9fa7-87561ac896bb. Sources externes réellement consultées : https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/allegations-nutritionnelles-et-de-sante-ne-vous-faites-pas-avoir.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/a7345d24-7ef3-43de-9fa7-87561ac896bb ; https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/allegations-nutritionnelles-et-de-sante-ne-vous-faites-pas-avoir"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "732a7f36-3a23-46b8-af59-a33d5d20a781",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "vegan",
+      "base": {
+        "description": "Sans produits d'origine animale",
+        "description_i18n": {
+          "de": "Ohne tierische Produkte",
+          "en": "No animal products",
+          "es": "Sin productos de origen animal",
+          "fr": "Sans produits d'origine animale"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/732a7f36-3a23-46b8-af59-a33d5d20a781. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/732a7f36-3a23-46b8-af59-a33d5d20a781"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Plat ou offre préparé sans ingrédients d'origine animale selon les indications du prestataire, distinct d'une offre végétarienne pouvant comprendre œufs ou produits laitiers.",
+        "description_i18n": {
+          "de": "Nach Angabe des Anbieters ohne tierische Zutaten zubereitetes Gericht oder Angebot, getrennt von vegetarischen Angeboten, die Eier oder Milchprodukte enthalten können.",
+          "en": "Dish or offer prepared without animal-derived ingredients according to the provider's information, distinct from vegetarian offers that may include eggs or dairy products.",
+          "es": "Plato u oferta preparado sin ingredientes de origen animal según la información del prestador, distinto de una oferta vegetariana que puede incluir huevos o lácteos.",
+          "fr": "Plat ou offre préparé sans ingrédients d'origine animale selon les indications du prestataire, distinct d'une offre végétarienne pouvant comprendre œufs ou produits laitiers."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/732a7f36-3a23-46b8-af59-a33d5d20a781. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/732a7f36-3a23-46b8-af59-a33d5d20a781"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "b2a372f2-84c0-4b34-9e02-4c675496ca2c",
+      "domain": "dietary_tag",
+      "context_key": "",
+      "code": "vegetarian",
+      "base": {
+        "description": "Sans viande ni poisson",
+        "description_i18n": {
+          "de": "Ohne Fleisch und Fisch",
+          "en": "No meat or fish",
+          "es": "Sin carne ni pescado",
+          "fr": "Sans viande ni poisson"
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "source",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b2a372f2-84c0-4b34-9e02-4c675496ca2c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b2a372f2-84c0-4b34-9e02-4c675496ca2c"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      },
+      "changes": {
+        "description": "Plat ou offre sans viande ni poisson selon les indications du prestataire ; des œufs ou produits laitiers peuvent être présents, contrairement à une offre végane.",
+        "description_i18n": {
+          "de": "Nach Angabe des Anbieters ohne Fleisch und Fisch zubereitetes Gericht oder Angebot; anders als bei veganen Angeboten können Eier oder Milchprodukte enthalten sein.",
+          "en": "Dish or offer without meat or fish according to the provider's information; eggs or dairy products may be present, unlike a vegan offer.",
+          "es": "Plato u oferta sin carne ni pescado según la información del prestador; puede contener huevos o lácteos, a diferencia de una oferta vegana.",
+          "fr": "Plat ou offre sans viande ni poisson selon les indications du prestataire ; des œufs ou produits laitiers peuvent être présents, contrairement à une offre végane."
+        },
+        "notes": [
+          {
+            "lang": "fr",
+            "type": "history",
+            "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b2a372f2-84c0-4b34-9e02-4c675496ca2c. Aucune source externe consultée pour cette proposition.",
+            "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b2a372f2-84c0-4b34-9e02-4c675496ca2c"
+          },
+          {
+            "lang": "fr",
+            "type": "scope",
+            "value": "Information déclarée par le prestataire et enregistrée comme telle. Bertel ne certifie pas cette déclaration et ne lui attribue pas de label. Les critères d’un éventuel label relèvent de son organisme propriétaire.",
+            "source": "Décision métier du responsable du catalogue, 9 novembre 2026."
+          }
+        ]
+      }
+    }
+  ]
+}

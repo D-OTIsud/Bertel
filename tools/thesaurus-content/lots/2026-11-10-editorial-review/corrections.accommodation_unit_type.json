@@ -1,0 +1,674 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-accommodation_unit_type-1",
+  "proposals": [
+    {
+      "concept_id": "a95c856c-20af-4773-acaf-e4e292626aa6",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "apartment",
+      "base": {
+        "description_i18n": {
+          "fr": "Logement indépendant situé dans un bâtiment comprenant un ou plusieurs logements."
+        },
+        "name_i18n": {
+          "fr": "Appartement"
+        }
+      },
+      "changes": {
+        "description_i18n": {
+          "fr": "Logement indépendant situé dans un bâtiment comprenant un ou plusieurs logements.",
+          "en": "Self-contained unit in a building containing one or more dwellings.",
+          "es": "Alojamiento independiente situado en un edificio con una o varias viviendas.",
+          "de": "Abgeschlossene Wohneinheit in einem Gebäude mit einer oder mehreren Wohnungen."
+        },
+        "name_i18n": {
+          "fr": "Appartement",
+          "en": "Apartment",
+          "es": "Apartamento",
+          "de": "Wohnung"
+        }
+      }
+    },
+    {
+      "concept_id": "ec579008-7ab0-4a08-9e30-f47ec26b894a",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "bare_pitch",
+      "base": {
+        "description_i18n": {
+          "fr": "Emplacement sans hébergement fourni, destiné à la tente, la caravane ou le camping-car du visiteur."
+        },
+        "name_i18n": {
+          "fr": "Emplacement nu"
+        }
+      },
+      "changes": {
+        "description_i18n": {
+          "fr": "Emplacement sans hébergement fourni, destiné à la tente, la caravane ou le camping-car du visiteur.",
+          "en": "Pitch without supplied accommodation, intended for the visitor's own tent, caravan or motorhome.",
+          "es": "Parcela sin alojamiento proporcionado, destinada a la tienda, caravana o autocaravana del visitante.",
+          "de": "Stellplatz ohne bereitgestellte Unterkunft für das eigene Zelt, den Wohnwagen oder das Wohnmobil des Gastes."
+        },
+        "name_i18n": {
+          "fr": "Emplacement nu",
+          "en": "Bare pitch",
+          "es": "Parcela sin alojamiento",
+          "de": "Stellplatz ohne Unterkunft"
+        }
+      }
+    },
+    {
+      "concept_id": "80e615a4-997b-450e-acd5-efdfbd232140",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "boat",
+      "base": {
+        "description": "Bateau, péniche ou autre unité flottante proposée comme logement.",
+        "description_i18n": {
+          "fr": "Bateau, péniche ou autre unité flottante proposée comme logement."
+        },
+        "name_i18n": {
+          "fr": "Péniche / bateau"
+        }
+      },
+      "changes": {
+        "description": "Bateau, péniche ou autre unité flottante proposée comme logement pour le séjour, et non comme simple moyen de transport.",
+        "description_i18n": {
+          "fr": "Bateau, péniche ou autre unité flottante proposée comme logement pour le séjour, et non comme simple moyen de transport.",
+          "en": "Boat, barge or other floating unit offered as accommodation for a stay rather than simply as transport.",
+          "es": "Barco, barcaza u otra unidad flotante ofrecida como alojamiento para la estancia y no como mero medio de transporte.",
+          "de": "Boot, Binnenschiff oder andere schwimmende Einheit, die als Unterkunft und nicht lediglich als Verkehrsmittel angeboten wird."
+        },
+        "name_i18n": {
+          "fr": "Péniche / bateau",
+          "en": "Barge / boat",
+          "es": "Barcaza / barco",
+          "de": "Binnenschiff / Boot"
+        }
+      }
+    },
+    {
+      "concept_id": "1a1ff05c-d333-48b8-b542-af97f68ef57e",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "bubble",
+      "base": {
+        "description": "Unité transparente ou semi-transparente, généralement gonflable.",
+        "description_i18n": {
+          "fr": "Unité transparente ou semi-transparente, généralement gonflable."
+        },
+        "name_i18n": {
+          "fr": "Bulle"
+        }
+      },
+      "changes": {
+        "description": "Unité de séjour transparente ou semi-transparente, généralement gonflable, permettant de dormir dans une structure en forme de bulle.",
+        "description_i18n": {
+          "fr": "Unité de séjour transparente ou semi-transparente, généralement gonflable, permettant de dormir dans une structure en forme de bulle.",
+          "en": "Transparent or semi-transparent accommodation unit, generally inflatable, allowing guests to sleep in a bubble-shaped structure.",
+          "es": "Unidad de estancia transparente o semitransparente, generalmente hinchable, que permite dormir en una estructura en forma de burbuja.",
+          "de": "Transparente oder halbtransparente, meist aufblasbare Unterkunftseinheit zum Schlafen in einer blasenförmigen Konstruktion."
+        },
+        "name_i18n": {
+          "fr": "Bulle",
+          "en": "Bubble accommodation",
+          "es": "Burbuja",
+          "de": "Blasenunterkunft"
+        }
+      }
+    },
+    {
+      "concept_id": "019b32f7-7566-44e6-a671-2ddbeb913b8f",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "bungalow",
+      "base": {
+        "description_i18n": {
+          "fr": "Petite construction indépendante de plain-pied utilisée comme logement."
+        },
+        "name_i18n": {
+          "fr": "Bungalow"
+        }
+      },
+      "changes": {
+        "description_i18n": {
+          "fr": "Petite construction indépendante de plain-pied utilisée comme logement.",
+          "en": "Small detached single-storey building used as accommodation.",
+          "es": "Pequeña construcción independiente de una sola planta utilizada como alojamiento.",
+          "de": "Kleines freistehendes, eingeschossiges Gebäude, das als Unterkunft dient."
+        },
+        "name_i18n": {
+          "fr": "Bungalow",
+          "en": "Bungalow",
+          "es": "Bungaló",
+          "de": "Bungalow"
+        }
+      }
+    },
+    {
+      "concept_id": "d8fee8ea-b7e3-4b23-ba0c-a8d84b2ff66b",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "cabin",
+      "base": {
+        "description": "Cabane au sol, perchée ou flottante proposée comme logement.",
+        "description_i18n": {
+          "fr": "Cabane au sol, perchée ou flottante proposée comme logement."
+        },
+        "name_i18n": {
+          "fr": "Cabane"
+        }
+      },
+      "changes": {
+        "description": "Cabane aménagée comme logement, qu'elle soit installée au sol, perchée ou flottante.",
+        "description_i18n": {
+          "fr": "Cabane aménagée comme logement, qu'elle soit installée au sol, perchée ou flottante.",
+          "en": "Cabin fitted out as accommodation, whether on the ground, elevated or floating.",
+          "es": "Cabaña acondicionada como alojamiento, ya sea en el suelo, elevada o flotante.",
+          "de": "Als Unterkunft eingerichtete Hütte, ob ebenerdig, erhöht oder schwimmend."
+        },
+        "name_i18n": {
+          "fr": "Cabane",
+          "en": "Cabin",
+          "es": "Cabaña",
+          "de": "Hütte"
+        }
+      }
+    },
+    {
+      "concept_id": "0915bda9-b19e-4edf-aa56-cfd404c32a1a",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "caravan",
+      "base": {
+        "description": "Roulotte ou caravane fixe aménagée et proposée comme logement.",
+        "description_i18n": {
+          "fr": "Roulotte ou caravane fixe aménagée et proposée comme logement."
+        },
+        "name_i18n": {
+          "fr": "Roulotte"
+        },
+        "name": "Roulotte",
+        "labels": []
+      },
+      "changes": {
+        "description": "Roulotte ou caravane installée de façon fixe, aménagée et proposée comme logement.",
+        "description_i18n": {
+          "fr": "Roulotte ou caravane installée de façon fixe, aménagée et proposée comme logement.",
+          "en": "Caravan or wagon installed in a fixed position, fitted out and offered as accommodation.",
+          "es": "Caravana o carromato instalado de forma fija, acondicionado y ofrecido como alojamiento.",
+          "de": "Fest aufgestellter, eingerichteter Wohn- oder Zirkuswagen, der als Unterkunft angeboten wird."
+        },
+        "name_i18n": {
+          "fr": "Roulotte / caravane fixe",
+          "en": "Stationary caravan / wagon",
+          "es": "Caravana fija / carromato",
+          "de": "Fest aufgestellter Wohn- oder Zirkuswagen"
+        },
+        "name": "Roulotte / caravane fixe",
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "hidden",
+            "value": "Roulotte"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "aa1c1b64-b119-4f9e-acae-435e2f520381",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "chalet",
+      "base": {
+        "description": "Construction indépendante de type chalet.",
+        "description_i18n": {
+          "fr": "Construction indépendante de type chalet."
+        },
+        "name_i18n": {
+          "fr": "Chalet"
+        }
+      },
+      "changes": {
+        "description": "Construction indépendante à l'architecture de chalet, proposée comme unité de séjour.",
+        "description_i18n": {
+          "fr": "Construction indépendante à l'architecture de chalet, proposée comme unité de séjour.",
+          "en": "Detached building with chalet-style architecture offered as a unit for a stay.",
+          "es": "Construcción independiente de arquitectura de chalet ofrecida como unidad de estancia.",
+          "de": "Freistehendes Gebäude in Chalet-Bauweise, das als Unterkunftseinheit angeboten wird."
+        },
+        "name_i18n": {
+          "fr": "Chalet",
+          "en": "Chalet",
+          "es": "Chalet",
+          "de": "Chalet"
+        }
+      }
+    },
+    {
+      "concept_id": "a7ed3ea2-e331-4641-b04f-82b113212c1c",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "dome",
+      "base": {
+        "description": "Dôme géodésique ou structure arrondie rigide proposée comme logement.",
+        "description_i18n": {
+          "fr": "Dôme géodésique ou structure arrondie rigide proposée comme logement."
+        },
+        "name_i18n": {
+          "fr": "Dôme"
+        }
+      },
+      "changes": {
+        "description": "Dôme géodésique ou structure arrondie rigide aménagée et proposée comme logement.",
+        "description_i18n": {
+          "fr": "Dôme géodésique ou structure arrondie rigide aménagée et proposée comme logement.",
+          "en": "Geodesic dome or rigid rounded structure fitted out and offered as accommodation.",
+          "es": "Cúpula geodésica o estructura redondeada rígida acondicionada y ofrecida como alojamiento.",
+          "de": "Geodätische Kuppel oder starre Rundkonstruktion, die eingerichtet und als Unterkunft angeboten wird."
+        },
+        "name_i18n": {
+          "fr": "Dôme",
+          "en": "Dome",
+          "es": "Cúpula",
+          "de": "Kuppel"
+        }
+      }
+    },
+    {
+      "concept_id": "9c3be7d2-c19c-407f-bf7a-12a907446e3e",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "dormitory",
+      "base": {
+        "description_i18n": {
+          "fr": "Pièce de couchage collective proposant plusieurs lits ou couchettes."
+        },
+        "name_i18n": {
+          "fr": "Dortoir"
+        }
+      },
+      "changes": {
+        "description_i18n": {
+          "fr": "Pièce de couchage collective proposant plusieurs lits ou couchettes.",
+          "en": "Shared sleeping room offering several beds or bunks.",
+          "es": "Habitación de descanso colectiva con varias camas o literas.",
+          "de": "Gemeinschaftlicher Schlafraum mit mehreren Betten oder Schlafkojen."
+        },
+        "name_i18n": {
+          "fr": "Dortoir",
+          "en": "Dormitory",
+          "es": "Dormitorio colectivo",
+          "de": "Schlafsaal"
+        }
+      }
+    },
+    {
+      "concept_id": "eb68c0ab-79c9-4227-9da5-b09951b006e2",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "equipped_pitch",
+      "base": {
+        "description": "Emplacement de plein air équipé pour l’accueil du visiteur ou de son véhicule de loisirs.",
+        "description_i18n": {
+          "fr": "Emplacement de plein air équipé pour l’accueil du visiteur ou de son véhicule de loisirs."
+        },
+        "name_i18n": {
+          "fr": "Emplacement équipé"
+        }
+      },
+      "changes": {
+        "description": "Emplacement de plein air équipé pour l'accueil du visiteur ou de son véhicule de loisirs ; cette valeur ne précise pas à elle seule la liste des équipements.",
+        "description_i18n": {
+          "fr": "Emplacement de plein air équipé pour l'accueil du visiteur ou de son véhicule de loisirs ; cette valeur ne précise pas à elle seule la liste des équipements.",
+          "en": "Outdoor pitch equipped to receive the visitor or their leisure vehicle; this value alone does not specify the equipment provided.",
+          "es": "Parcela al aire libre equipada para recibir al visitante o su vehículo de ocio; este valor por sí solo no especifica los equipos disponibles.",
+          "de": "Ausgestatteter Stellplatz im Freien für Gäste oder ihr Freizeitfahrzeug; dieser Wert allein legt die vorhandene Ausstattung nicht fest."
+        },
+        "name_i18n": {
+          "fr": "Emplacement équipé",
+          "en": "Equipped pitch",
+          "es": "Parcela equipada",
+          "de": "Ausgestatteter Stellplatz"
+        }
+      }
+    },
+    {
+      "concept_id": "f1117e46-43db-4ab3-b759-9eb74454e5dd",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "furnished_tent",
+      "base": {
+        "description": "Tente déjà installée et équipée pour le séjour.",
+        "description_i18n": {
+          "fr": "Tente déjà installée et équipée pour le séjour."
+        },
+        "name_i18n": {
+          "fr": "Tente aménagée"
+        }
+      },
+      "changes": {
+        "description": "Tente déjà installée et équipée pour le séjour, à distinguer d'un emplacement où le visiteur apporte sa propre tente.",
+        "description_i18n": {
+          "fr": "Tente déjà installée et équipée pour le séjour, à distinguer d'un emplacement où le visiteur apporte sa propre tente.",
+          "en": "Tent already erected and equipped for the stay, distinct from a pitch where visitors bring their own tent.",
+          "es": "Tienda ya instalada y equipada para la estancia, distinta de una parcela donde el visitante lleva su propia tienda.",
+          "de": "Bereits aufgestelltes und für den Aufenthalt ausgestattetes Zelt; von einem Platz für das eigene Zelt des Gastes zu unterscheiden."
+        },
+        "name_i18n": {
+          "fr": "Tente aménagée",
+          "en": "Furnished tent",
+          "es": "Tienda equipada",
+          "de": "Ausgestattetes Zelt"
+        }
+      }
+    },
+    {
+      "concept_id": "e3b8a27d-0510-4671-8d88-28f433c69b85",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "house_villa",
+      "base": {
+        "description": "Maison, villa, gîte entier ou cottage proposé comme logement.",
+        "description_i18n": {
+          "fr": "Maison, villa, gîte entier ou cottage proposé comme logement."
+        },
+        "name_i18n": {
+          "fr": "Maison / villa"
+        }
+      },
+      "changes": {
+        "description": "Maison, villa, gîte entier ou cottage proposé comme logement complet pour le séjour.",
+        "description_i18n": {
+          "fr": "Maison, villa, gîte entier ou cottage proposé comme logement complet pour le séjour.",
+          "en": "House, villa, entire holiday home or cottage offered as a complete accommodation unit for a stay.",
+          "es": "Casa, villa, alojamiento rural completo o cottage ofrecido como vivienda completa para la estancia.",
+          "de": "Haus, Villa, vollständiges Ferienhaus oder Cottage, das als ganze Unterkunft für einen Aufenthalt angeboten wird."
+        },
+        "name_i18n": {
+          "fr": "Maison / villa",
+          "en": "House / villa",
+          "es": "Casa / villa",
+          "de": "Haus / Villa"
+        }
+      }
+    },
+    {
+      "concept_id": "90dbdee5-1792-4ff1-a570-b27726f9d511",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "lodge",
+      "base": {
+        "description": "Unité de type lodge, éventuellement toilée.",
+        "description_i18n": {
+          "fr": "Unité de type lodge, éventuellement toilée."
+        },
+        "name_i18n": {
+          "fr": "Lodge"
+        }
+      },
+      "changes": {
+        "description": "Unité individuelle de séjour de type lodge, qui peut être construite en dur ou comporter une structure toilée.",
+        "description_i18n": {
+          "fr": "Unité individuelle de séjour de type lodge, qui peut être construite en dur ou comporter une structure toilée.",
+          "en": "Individual lodge-style accommodation unit, which may be solidly built or include a canvas structure.",
+          "es": "Unidad de estancia individual de tipo lodge, que puede ser de construcción sólida o incluir una estructura de lona.",
+          "de": "Einzelne Unterkunftseinheit nach Lodge-Art, die fest gebaut sein oder eine Zeltkonstruktion enthalten kann."
+        },
+        "name_i18n": {
+          "fr": "Lodge",
+          "en": "Lodge",
+          "es": "Lodge",
+          "de": "Lodge"
+        }
+      }
+    },
+    {
+      "concept_id": "73b3f385-f42c-4b10-837d-46e5c47f8cc7",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "mobile_home",
+      "base": {
+        "description_i18n": {
+          "fr": "Résidence mobile installée sur un terrain de camping ou un parc résidentiel de loisirs."
+        },
+        "name_i18n": {
+          "fr": "Mobil-home"
+        }
+      },
+      "changes": {
+        "description_i18n": {
+          "fr": "Résidence mobile installée sur un terrain de camping ou un parc résidentiel de loisirs.",
+          "en": "Mobile accommodation unit installed on a campsite or in a residential leisure park.",
+          "es": "Residencia móvil instalada en un camping o un parque residencial de ocio.",
+          "de": "Mobile Wohneinheit, die auf einem Campingplatz oder in einem Freizeitwohnpark aufgestellt ist."
+        },
+        "name_i18n": {
+          "fr": "Mobil-home",
+          "en": "Mobile home",
+          "es": "Casa móvil",
+          "de": "Mobilheim"
+        }
+      }
+    },
+    {
+      "concept_id": "e82d4317-1e76-4301-bb63-1150a392583e",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "other",
+      "base": {
+        "description": "Autre type de logement ne correspondant à aucun choix proposé.",
+        "description_i18n": {
+          "fr": "Autre type de logement ne correspondant à aucun choix proposé."
+        },
+        "name_i18n": {
+          "fr": "Autre"
+        }
+      },
+      "changes": {
+        "description": "Type d'unité d'hébergement qui ne correspond à aucun des choix plus précis proposés dans ce catalogue.",
+        "description_i18n": {
+          "fr": "Type d'unité d'hébergement qui ne correspond à aucun des choix plus précis proposés dans ce catalogue.",
+          "en": "Accommodation unit type that does not match any of the more specific choices in this catalogue.",
+          "es": "Tipo de unidad de alojamiento que no corresponde a ninguna de las opciones más precisas de este catálogo.",
+          "de": "Art einer Unterkunftseinheit, die keiner der genaueren Auswahlmöglichkeiten dieses Katalogs entspricht."
+        },
+        "name_i18n": {
+          "fr": "Autre",
+          "en": "Other",
+          "es": "Otro",
+          "de": "Sonstige"
+        }
+      }
+    },
+    {
+      "concept_id": "d8101193-468e-476b-a454-94d0695074ab",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "room",
+      "base": {
+        "description": "Chambre proposée comme unité de couchage, sans préjuger de la nature de l’établissement.",
+        "description_i18n": {
+          "fr": "Chambre proposée comme unité de couchage, sans préjuger de la nature de l’établissement."
+        },
+        "name_i18n": {
+          "fr": "Chambre"
+        }
+      },
+      "changes": {
+        "description": "Chambre proposée comme unité de couchage, sans préjuger de la nature de l'établissement.",
+        "description_i18n": {
+          "fr": "Chambre proposée comme unité de couchage, sans préjuger de la nature de l'établissement.",
+          "en": "Room offered as a sleeping unit, without determining the type of establishment.",
+          "es": "Habitación ofrecida como unidad de descanso, sin determinar la naturaleza del establecimiento.",
+          "de": "Als Schlafeinheit angebotenes Zimmer, ohne damit die Art des Betriebs festzulegen."
+        },
+        "name_i18n": {
+          "fr": "Chambre",
+          "en": "Room",
+          "es": "Habitación",
+          "de": "Zimmer"
+        }
+      }
+    },
+    {
+      "concept_id": "e24cde5d-c91a-47b0-ab2a-10794c7c3252",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "studio",
+      "base": {
+        "description_i18n": {
+          "fr": "Logement autonome dont la pièce principale réunit séjour et couchage."
+        },
+        "name_i18n": {
+          "fr": "Studio"
+        }
+      },
+      "changes": {
+        "description_i18n": {
+          "fr": "Logement autonome dont la pièce principale réunit séjour et couchage.",
+          "en": "Self-contained accommodation whose main room combines living and sleeping space.",
+          "es": "Alojamiento autónomo cuya habitación principal reúne sala de estar y zona de descanso.",
+          "de": "Abgeschlossene Unterkunft, deren Hauptraum Wohnen und Schlafen verbindet."
+        },
+        "name_i18n": {
+          "fr": "Studio",
+          "en": "Studio",
+          "es": "Estudio",
+          "de": "Studio"
+        }
+      }
+    },
+    {
+      "concept_id": "b7f6991c-0cf8-4842-a128-09cfbfb4d54c",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "tiny_house",
+      "base": {
+        "description": "Petite maison autonome et compacte proposée comme logement.",
+        "description_i18n": {
+          "fr": "Petite maison autonome et compacte proposée comme logement."
+        },
+        "name_i18n": {
+          "fr": "Tiny house"
+        },
+        "name": "Tiny house",
+        "labels": []
+      },
+      "changes": {
+        "description": "Petite maison autonome et compacte proposée comme logement, sans seuil de surface fixé par cette valeur.",
+        "description_i18n": {
+          "fr": "Petite maison autonome et compacte proposée comme logement, sans seuil de surface fixé par cette valeur.",
+          "en": "Small, self-contained compact house offered as accommodation, without a floor-area threshold set by this value.",
+          "es": "Casa pequeña, autónoma y compacta ofrecida como alojamiento, sin umbral de superficie fijado por este valor.",
+          "de": "Kleines, eigenständiges und kompaktes Haus, das als Unterkunft angeboten wird; dieser Wert legt keine Flächengrenze fest."
+        },
+        "name_i18n": {
+          "fr": "Micro-maison",
+          "en": "Tiny house",
+          "es": "Minicasa",
+          "de": "Tiny House"
+        },
+        "name": "Micro-maison",
+        "labels": [
+          {
+            "lang": "fr",
+            "kind": "alt",
+            "value": "Tiny house"
+          }
+        ]
+      }
+    },
+    {
+      "concept_id": "afb03894-123b-4c77-bb37-32f9e23213a7",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "tipi",
+      "base": {
+        "description": "Habitat conique inspiré du tipi, proposé comme logement.",
+        "description_i18n": {
+          "fr": "Habitat conique inspiré du tipi, proposé comme logement."
+        },
+        "name_i18n": {
+          "fr": "Tipi"
+        }
+      },
+      "changes": {
+        "description": "Habitat conique inspiré du tipi, proposé comme logement pour le séjour.",
+        "description_i18n": {
+          "fr": "Habitat conique inspiré du tipi, proposé comme logement pour le séjour.",
+          "en": "Conical dwelling inspired by a tipi, offered as accommodation for a stay.",
+          "es": "Habitáculo cónico inspirado en el tipi y ofrecido como alojamiento para la estancia.",
+          "de": "Vom Tipi inspirierte kegelförmige Behausung, die als Unterkunft angeboten wird."
+        },
+        "name_i18n": {
+          "fr": "Tipi",
+          "en": "Tipi",
+          "es": "Tipi",
+          "de": "Tipi"
+        }
+      }
+    },
+    {
+      "concept_id": "a78cc0a0-d9f0-4e39-95b3-9aad82f1ffe8",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "unusual_outdoor_unit",
+      "base": {
+        "description": "Logement insolite dont la forme n’est pas couverte par un choix plus précis.",
+        "description_i18n": {
+          "fr": "Logement insolite dont la forme n’est pas couverte par un choix plus précis."
+        },
+        "name_i18n": {
+          "fr": "Insolite"
+        }
+      },
+      "changes": {
+        "description": "Logement insolite dont la forme n'est couverte par aucun type d'unité plus précis proposé dans ce catalogue.",
+        "description_i18n": {
+          "fr": "Logement insolite dont la forme n'est couverte par aucun type d'unité plus précis proposé dans ce catalogue.",
+          "en": "Unusual accommodation whose form is not covered by a more specific unit type in this catalogue.",
+          "es": "Alojamiento singular cuya forma no está cubierta por un tipo de unidad más preciso en este catálogo.",
+          "de": "Außergewöhnliche Unterkunft, deren Bauform keiner genaueren Art von Unterkunftseinheit dieses Katalogs zugeordnet werden kann."
+        },
+        "name_i18n": {
+          "fr": "Insolite",
+          "en": "Unusual accommodation",
+          "es": "Alojamiento singular",
+          "de": "Außergewöhnliche Unterkunft"
+        }
+      }
+    },
+    {
+      "concept_id": "f6309701-9d1b-4d13-9e48-4e888a0e185a",
+      "domain": "accommodation_unit_type",
+      "context_key": "",
+      "code": "yurt",
+      "base": {
+        "description": "Habitat circulaire de type yourte proposé comme logement.",
+        "description_i18n": {
+          "fr": "Habitat circulaire de type yourte proposé comme logement."
+        },
+        "name_i18n": {
+          "fr": "Yourte"
+        }
+      },
+      "changes": {
+        "description": "Habitat circulaire de type yourte proposé comme logement pour le séjour.",
+        "description_i18n": {
+          "fr": "Habitat circulaire de type yourte proposé comme logement pour le séjour.",
+          "en": "Circular yurt-style dwelling offered as accommodation for a stay.",
+          "es": "Habitáculo circular de tipo yurta ofrecido como alojamiento para la estancia.",
+          "de": "Runde Behausung nach Art einer Jurte, die als Unterkunft angeboten wird."
+        },
+        "name_i18n": {
+          "fr": "Yourte",
+          "en": "Yurt",
+          "es": "Yurta",
+          "de": "Jurte"
+        }
+      }
+    }
+  ]
+}

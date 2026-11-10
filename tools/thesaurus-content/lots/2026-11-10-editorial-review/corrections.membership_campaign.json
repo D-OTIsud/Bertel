@@ -1,0 +1,90 @@
+{
+  "format_version": 1,
+  "batch_id": "bertel-editorial-2026-11-membership_campaign-1",
+  "proposals": [
+    {
+      "concept_id": "51256925-7afc-400e-9315-be27bfa5c1a5",
+      "domain": "membership_campaign",
+      "context_key": "",
+      "code": "adhesion_2025",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Adhésion 2025"
+        }
+      },
+      "changes": {
+        "description": "Campagne d'adhésion identifiée par le millésime 2025, permettant de rattacher une adhésion à cette campagne sans en déduire son statut actuel.",
+        "description_i18n": {
+          "fr": "Campagne d'adhésion identifiée par le millésime 2025, permettant de rattacher une adhésion à cette campagne sans en déduire son statut actuel.",
+          "en": "Membership campaign identified by the year 2025, used to associate a membership with that campaign without determining its current status.",
+          "es": "Campaña de adhesión identificada con el año 2025, que permite vincular una adhesión a esa campaña sin determinar su estado actual.",
+          "de": "Mit dem Jahr 2025 bezeichnete Mitgliedschaftskampagne, der eine Mitgliedschaft zugeordnet wird, ohne daraus deren aktuellen Status abzuleiten."
+        },
+        "name_i18n": {
+          "fr": "Adhésion 2025",
+          "en": "2025 membership",
+          "es": "Adhesión 2025",
+          "de": "Mitgliedschaft 2025"
+        }
+      }
+    },
+    {
+      "concept_id": "9f3fc15e-279c-47dd-97c2-8d79b3fbb9d7",
+      "domain": "membership_campaign",
+      "context_key": "",
+      "code": "adhesion_2026",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Adhésion 2026"
+        }
+      },
+      "changes": {
+        "description": "Campagne d'adhésion identifiée par le millésime 2026, distincte de la campagne 2025 et du palier d'adhésion choisi.",
+        "description_i18n": {
+          "fr": "Campagne d'adhésion identifiée par le millésime 2026, distincte de la campagne 2025 et du palier d'adhésion choisi.",
+          "en": "Membership campaign identified by the year 2026, distinct from the 2025 campaign and from the selected membership tier.",
+          "es": "Campaña de adhesión identificada con el año 2026, distinta de la campaña de 2025 y del nivel de adhesión elegido.",
+          "de": "Mit dem Jahr 2026 bezeichnete Mitgliedschaftskampagne, die von der Kampagne 2025 und der gewählten Mitgliedschaftsstufe zu unterscheiden ist."
+        },
+        "name_i18n": {
+          "fr": "Adhésion 2026",
+          "en": "2026 membership",
+          "es": "Adhesión 2026",
+          "de": "Mitgliedschaft 2026"
+        }
+      }
+    },
+    {
+      "concept_id": "e51282a9-e221-41f2-a34b-ead54184ffae",
+      "domain": "membership_campaign",
+      "context_key": "",
+      "code": "charte",
+      "base": {
+        "description": null,
+        "description_i18n": {},
+        "name_i18n": {
+          "fr": "Charte d'engagement"
+        }
+      },
+      "changes": {
+        "description": "Campagne d'adhésion rattachée à la charte d'engagement, identifiée indépendamment des campagnes annuelles et du palier d'adhésion.",
+        "description_i18n": {
+          "fr": "Campagne d'adhésion rattachée à la charte d'engagement, identifiée indépendamment des campagnes annuelles et du palier d'adhésion.",
+          "en": "Membership campaign associated with the commitment charter, identified independently of annual campaigns and the membership tier.",
+          "es": "Campaña de adhesión vinculada a la carta de compromiso, identificada con independencia de las campañas anuales y del nivel de adhesión.",
+          "de": "Der Verpflichtungscharta zugeordnete Mitgliedschaftskampagne, die unabhängig von Jahreskampagnen und Mitgliedschaftsstufe geführt wird."
+        },
+        "name_i18n": {
+          "fr": "Charte d'engagement",
+          "en": "Commitment charter",
+          "es": "Carta de compromiso",
+          "de": "Verpflichtungscharta"
+        }
+      }
+    }
+  ]
+}

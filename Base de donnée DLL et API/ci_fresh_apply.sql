@@ -857,6 +857,10 @@ COMMIT;
 \ir thesaurus_domain_metadata_localization.sql
 \ir tests/test_thesaurus_domain_metadata_localization.sql
 
+\echo '== Native dictionaries: six scoped public adapters and three private role adapters =='
+\ir thesaurus_native_dictionary_adapters.sql
+\ir tests/test_thesaurus_native_dictionary_adapters.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

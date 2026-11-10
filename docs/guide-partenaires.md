@@ -87,7 +87,7 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 |---|---|---|
 | 400 | `invalid_object_id` / `bad_request` | Paramètre malformé (id hors format, `since` non ISO 8601, code `types` inconnu) |
 | 401 | `unauthorized` | Clé absente, invalide, révoquée ou expirée |
-| 404 | `not_found` | Fiche inconnue **ou non publiée** (indistinguable, par conception) ; en bêta `selection_id`, sélection inconnue |
+| 404 | `not_found` | Fiche inconnue **ou non publiée** (indistinguable, par conception) ; avec `selection_id`, sélection inconnue ou suspendue |
 | 429 | `rate_limited` | Limite de débit atteinte — respecter `Retry-After` |
 | 500 / 502 | `server_misconfigured` / `upstream_error` | Erreur côté Bertel — réessayer plus tard avec backoff |
 | 503 | `selection_unavailable` / `selection_membership_unavailable` | Registre de sélection indisponible, ou calcul des appartenances indisponible avec `include_selection_ids=true` ; conserver le dernier état synchronisé avec succès |
@@ -104,8 +104,8 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | `page_size` | int 1–200 | 50 | Nombre de fiches par page (borné à **100** en `view=full`) |
 | `view` | `card` \| `full` | `card` | `full` = fiche complète par objet (voir §3.1.1) |
 | `track` | `gpx` \| `kml` | — | En `view=full` : ajoute le blob GPX/KML des itinéraires |
-| `selection_id` | string | — | Bêta : identifiant permanent d'une sélection OTI du Sud, par exemple `1006` pour Terroir et artisanat ; voir §3.1.2 |
-| `include_selection_ids` | bool | `false` | Option à confirmer avec l'OTI : `true` ajoute les identifiants des sélections actives à chaque fiche du flux général ; incompatible avec `selection_id`, même à `false` ; voir §3.1.3 |
+| `selection_id` | string | — | Identifiant numérique permanent d'une sélection OTI du Sud, transmis comme chaîne, par exemple `1006` pour Terroir et artisanat ; voir §3.1.2 |
+| `include_selection_ids` | bool | `false` | `true` ajoute les identifiants des sélections actives à chaque fiche du flux général ; incompatible avec `selection_id`, même à `false` ; voir §3.1.3 |
 | `types` | csv | tous | Filtre par types de fiche (codes ci-dessous) |
 | `taxonomy` | csv | — | Codes qualifiés `taxonomy_hlo:appartement`, avec descendants selon la hiérarchie publiée |
 | `include_equivalent_predecessors` | bool | `false` | Avec `taxonomy` uniquement : inclut les prédécesseurs déclarés exactement équivalents ; aucun élargissement implicite après une scission |
@@ -162,9 +162,11 @@ curl -H "Authorization: Bearer bk_live_…" \
   "https://VOTRE_DOMAINE/api/public/objects?view=full&page_size=100&track=gpx"
 ```
 
-#### 3.1.2 Sélections OTI du Sud — `selection_id` (bêta)
+#### 3.1.2 Sélections OTI du Sud — `selection_id`
 
-Cette extension bêta utilise le même endpoint et la même clé partenaire. **Confirmez son activation avec l'OTI avant de l'utiliser** : la documentation de ce contrat n'atteste pas son déploiement. Les sélections sont gérées dans les Paramètres de Bertel par les administrateurs de leur organisation et les super-administrateurs. Un identifiant est permanent : le renommage, la modification des critères et la suspension ne le remplacent pas.
+Le paramètre `selection_id` permet de demander une sélection enregistrée dans Bertel, avec le même endpoint et la même clé partenaire. Les sélections sont gérées dans les Paramètres de Bertel par les administrateurs de leur organisation et les super-administrateurs. Un identifiant est permanent : le renommage, la modification des critères et la suspension ne le remplacent pas.
+
+Les identifiants attribués par Bertel sont des entiers positifs transmis comme chaînes décimales, jusqu'à 19 chiffres. Recopiez l'identifiant de la sélection tel quel ; ce n'est ni son nom ni un UUID. Les quinze identifiants initiaux ci-dessous ne constituent pas une liste fermée : de nouvelles sélections peuvent être créées dans Bertel.
 
 ```bash
 curl -H "Authorization: Bearer bk_live_…" \
@@ -212,13 +214,11 @@ Le contenu de chaque fiche dans `data` conserve le contrat existant. Trois méta
 }
 ```
 
-Cet exemple illustre une page vide, pas un volume de production. `selection_revision` identifie la révision enregistrée de la sélection (révision `1` pour les définitions initiales de la bêta). Elle ne constitue ni une version des fiches ni un instantané de leurs appartenances. L'appartenance est recalculée à chaque page à partir des données et projections courantes de Bertel. Conservez le même `selection_id`, la même clé partenaire et les mêmes options pendant toute la pagination ; après une rotation de clé, une modification des critères ou un changement de sélection, repartez sans curseur. Un curseur incompatible est refusé.
+Cet exemple illustre une page vide, pas un volume de production. `selection_revision` identifie la révision enregistrée de la sélection (révision `1` pour les définitions initiales). Elle ne constitue ni une version des fiches ni un instantané de leurs appartenances. L'appartenance est recalculée à chaque page à partir des données et projections courantes de Bertel. Conservez le même `selection_id`, la même clé partenaire et les mêmes options pendant toute la pagination ; après une rotation de clé, une modification des critères ou un changement de sélection, repartez sans curseur. Un curseur incompatible est refusé.
 
 Pour synchroniser une sélection, parcourez toutes ses pages et mettez les fiches à jour par `id`. **Rapprochez les appartenances seulement après un parcours entièrement réussi jusqu'à `next_cursor=null`.** Une erreur, un délai dépassé ou un curseur refusé ne signifie pas que la sélection est vide : conservez les appartenances précédentes tant que le parcours n'a pas abouti. Une fiche peut appartenir à plusieurs sélections ; sa sortie d'une sélection ne supprime pas ses autres appartenances. Le flux `/objects/deletions` ne signale pas ces sorties.
 
 #### 3.1.3 Appartenances dans le flux général — `include_selection_ids`
-
-**Confirmez l'activation de cette option avec l'OTI avant de l'utiliser.** Cette documentation décrit le contrat ; elle n'atteste pas son déploiement.
 
 Pour recevoir les appartenances sans parcourir séparément chaque sélection, ajoutez `include_selection_ids=true` à `GET /objects`, avec la même clé partenaire utilisée côté serveur :
 

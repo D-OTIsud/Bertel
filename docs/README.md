@@ -4,6 +4,15 @@ Documentation complète de l'API Bertel v3.0 avec interface moderne et collectio
 
 > **Note** : Cette documentation fait partie du projet [Bertel](../README.md).
 
+## Guide métier du thésaurus
+
+Le [guide d'entretien du thésaurus](guide-metier-thesaurus.md) décrit la rédaction des
+concepts et traductions FR/EN/ES/DE, le choix des synonymes et des relations sémantiques,
+la validation, la prévisualisation, la publication et la reprise des fiches historiques.
+Il s'adresse aux responsables du vocabulaire et se consulte également dans la
+[page du thésaurus](thesaurus.html). Le [guide partenaires](guide-partenaires.md)
+décrit sa consultation et sa synchronisation par API.
+
 ## 🚀 Déploiement
 
 ### Avec Coolify
@@ -35,6 +44,7 @@ docker run -p 8080:80 bertel-api-docs
 - `index.html` - Documentation principale
 - `partenaires.html` - **Espace partenaires** : page publique qui rend `guide-partenaires.md` côté client (via `partenaires-render.js`) — l'URL à communiquer aux prestataires externes avec leur clé API
 - `guide-partenaires.md` - Guide partenaires de l'API publique `/api/public/*` (**source unique** : modifier ce fichier met à jour la page au prochain déploiement ; auto-check : `node partenaires-render.check.js`)
+- `guide-metier-thesaurus.md` - Source canonique du guide métier du thésaurus ; sa version publique adapte les liens internes pour la consultation dans `thesaurus.html`
 - `SQL_ROLLOUT_RUNBOOK.md` - Runbook équipe pour installation, mise à jour SQL, refresh MV et rollback
 - `SUPABASE_SETUP.md` - Configuration Supabase/PostgREST du schéma `api`
 - `Bertel_API_v3.postman_collection.json` - Collection Postman
@@ -110,6 +120,12 @@ les champs proviennent directement de ces tables ou vues. Pour une vision exhaus
 
 ## 📝 Maintenance
 
+- Guide métier du thésaurus : modifier `guide-metier-thesaurus.md`, puis exécuter
+  `node docs/thesaurus-render.js --write` depuis la racine du projet. Versionner
+  également le fichier `thesaurus.html` généré. Vérifier avec
+  `node docs/thesaurus-render.check.js` et `node docs/partenaires-render.check.js`.
+  Seule la page HTML est copiée dans l'image publique ; le générateur adapte les
+  ancres et les références internes au dépôt sans publier ces documents.
 - Mise à jour de la documentation : Modifier `index.html`
 - Redéploiement automatique via Coolify
 - Collection Postman : Mettre à jour les fichiers JSON

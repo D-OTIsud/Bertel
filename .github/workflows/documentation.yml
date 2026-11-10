@@ -1,0 +1,34 @@
+name: Documentation
+
+on:
+  push:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/documentation.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/documentation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-site:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check the partner guide and API contract
+        run: node docs/partenaires-render.check.js
+      - name: Check the complete static thesaurus guide
+        run: node docs/thesaurus-render.check.js
+      - name: Build the documentation image with its explicit public file list
+        run: docker build --tag bertel-documentation-ci ./docs

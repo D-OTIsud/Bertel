@@ -6,7 +6,7 @@ FROM nginx:alpine
 # Ajouter un fichier au site = l'ajouter ici volontairement.
 
 # Pages HTML (toutes liées depuis index.html)
-COPY index.html partenaires.html openapi.html api-db-reference.html /usr/share/nginx/html/
+COPY index.html partenaires.html thesaurus.html openapi.html api-db-reference.html /usr/share/nginx/html/
 
 # Espace partenaires : la page rend guide-partenaires.md côté client (source unique)
 COPY partenaires-render.js guide-partenaires.md /usr/share/nginx/html/

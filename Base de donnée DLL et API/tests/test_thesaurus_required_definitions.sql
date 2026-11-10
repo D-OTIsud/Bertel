@@ -90,6 +90,12 @@ GRANT SELECT ON _definition_policy_releases TO bertel_thesaurus_publisher;
 
 -- Exercise the actual immutable-release trigger, not just its assertion helper.
 -- The first row models a copied older snapshot with its missing EN definition.
+-- Production deliberately revokes SET. Borrow it only in this rolled-back,
+-- disposable fixture, as in test_thesaurus_prepared_publication.sql.
+DO $publisher_fixture_membership$
+BEGIN
+  EXECUTE format('GRANT bertel_thesaurus_publisher TO %I WITH INHERIT FALSE, SET TRUE',current_user);
+END $publisher_fixture_membership$;
 SET LOCAL ROLE bertel_thesaurus_publisher;
 INSERT INTO thesaurus.release_concept(release_id,concept_id,domain,is_public,document,checksum)
 SELECT release_id,'b7df0000-0000-4000-8000-000000000002','test_definition_policy',false,

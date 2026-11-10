@@ -77,7 +77,7 @@ export function ThesaurusBatchImport({ open, onOpenChange, domains, onSaved }: {
     {revisions.length > 0 && <button type="button" className="primary-button" disabled={Boolean(busy) || drafts.length === 0 || uncertain} onClick={() => void validate()}>{busy === 'validate' ? 'Validation…' : 'Valider les brouillons du lot'}</button>}
   </>}>
     <p>Collez le lot de corrections, puis analysez ses différences avec les valeurs courantes. Les brouillons existants sont préservés. La création et la validation ne publient aucun contenu.</p>
-    <label htmlFor="thesaurus-import-json">Lot de corrections (JSON)<textarea id="thesaurus-import-json" rows={9} value={text} disabled={Boolean(busy) || revisions.length > 0 || uncertain} onChange={(event) => { setText(event.target.value); setAnalysis(null); setBatch(null); setError(null); setNotice(null); }} /></label>
+    <div className="thesaurus"><label htmlFor="thesaurus-import-json">Lot de corrections (JSON)<textarea id="thesaurus-import-json" rows={9} value={text} disabled={Boolean(busy) || revisions.length > 0 || uncertain} onChange={(event) => { setText(event.target.value); setAnalysis(null); setBatch(null); setError(null); setNotice(null); }} /></label></div>
     <button type="button" className="ghost-button" disabled={Boolean(busy) || !text.trim() || revisions.length > 0 || uncertain} onClick={() => void analyse()}>{busy === 'analyse' ? 'Analyse…' : 'Analyser le lot'}</button>
     {busy && progress && <p role="status">{busy === 'create' ? 'Création' : 'Validation'} : {progress.completed} / {progress.total} réponses confirmées.</p>}
     {error && <p role="alert" className="inline-alert inline-alert--danger">{error}</p>}

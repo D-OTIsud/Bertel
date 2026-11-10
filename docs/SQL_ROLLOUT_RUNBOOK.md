@@ -2770,11 +2770,11 @@ des données éditoriales et l’absence de toute écriture au deuxième passage
 
 Sur une installation existante, l'ordre de livraison est explicite :
 
-1. Appliquer `20261110062206_thesaurus_required_definitions.sql` : définition
+1. Appliquer `20261110075054_thesaurus_required_definitions.sql` : définition
    obligatoire pour tous les domaines. Les concepts et les publications existants
    restent inchangés ; chaque nouvelle publication contrôle tout son instantané.
-2. Appliquer `20261110063223_thesaurus_complete_admin_batches.sql`, puis
-   `20261110063550_thesaurus_simple_business_names.sql` et
+2. Appliquer `20261110075103_thesaurus_complete_admin_batches.sql`, puis
+   `20261110075111_thesaurus_simple_business_names.sql` et
    `20261110072416_thesaurus_legacy_search_term_roundtrip.sql`. Livrer le client associé.
    Les noms courts couvrent les 78 domaines, sans « taxonomie » dans les intitulés.
    L'administration peut relire les listes internes ; les lecteurs publics

@@ -54,7 +54,7 @@ BEGIN
   WHERE domain='document_type' AND code='brochure';
   ASSERT cid IS NOT NULL,'Document-type fixture must exist';
   PERFORM api.thesaurus_admin('configure_instance',
-    '{"base_uri":"https://example.invalid/api/public/thesaurus/concepts/","license":"fixture-only"}');
+    '{"base_uri":"https://example.invalid/api/public/thesaurus/concepts/","license":"fixture-only","attribution":"Disposable legacy-search contract fixture"}');
   doc:=thesaurus.concept_document(cid);
   ASSERT doc->'legacy_search_terms'='["Ancien terme témoin"]'::jsonb,
     'Admin document must expose canonical legacy search terms';

@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { ThesaurusBatchImport } from './ThesaurusBatchImport';
 import * as service from '../../services/thesaurus-admin';
 import { parseThesaurusContentBatch } from '../../lib/thesaurus-content-batch';
@@ -21,6 +23,17 @@ describe('approved private import flow', () => {
     mock.analyseThesaurusImport.mockResolvedValue(analysis);
     mock.importThesaurusCorrections.mockResolvedValue({ analysis, revisions: [revision] });
     mock.validateThesaurusImport.mockResolvedValue({ revisions: [{ ...revision, version: 2, status: 'validated' }] });
+  });
+  it('keeps the JSON field full-width and styled after the dialog is portalled outside the admin view', () => {
+    const stylesheet = document.createElement('style');
+    stylesheet.textContent = readFileSync(resolve(__dirname, '../../styles/29-thesaurus.css'), 'utf8');
+    document.head.append(stylesheet);
+    try {
+      setup();
+      const field = screen.getByLabelText('Lot de corrections (JSON)');
+      expect(window.getComputedStyle(field).width).toBe('100%');
+      expect(window.getComputedStyle(field.closest('label')!).display).toBe('flex');
+    } finally { stylesheet.remove(); }
   });
   it('requires analysis, creation, and separate validation and never publishes automatically', async () => {
     const { onSaved } = setup();

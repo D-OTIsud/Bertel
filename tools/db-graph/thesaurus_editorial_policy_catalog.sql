@@ -39,6 +39,7 @@ SELECT jsonb_build_object(
    'security_definer',f.prosecdef,'volatility',f.provolatile,'settings',f.proconfig,
    'definition_md5',md5(pg_get_functiondef(f.oid)),
    'body_md5',md5(replace(f.prosrc,chr(13),'')),
+   'prosrc_md5',md5(f.prosrc),
    'execute_roles',(SELECT COALESCE(jsonb_agg(CASE WHEN a.grantee=0 THEN 'PUBLIC'
      ELSE pg_get_userbyid(a.grantee)::text END ORDER BY a.grantee),'[]'::jsonb)
      FROM aclexplode(COALESCE(f.proacl,acldefault('f',f.proowner))) a

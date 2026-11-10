@@ -2785,12 +2785,20 @@ Sur une installation existante, l'ordre de livraison est explicite :
    ni réactiver les valeurs historiques. Les empreintes fraîches sont lues après
    les changements de politique et de noms, avant de créer les brouillons.
 4. Seulement lorsque tout le corpus est prêt, appliquer
-   `20261110062210_thesaurus_complete_editorial_definitions.sql`. Son contrôle
+   `20261110095723_thesaurus_complete_editorial_definitions.sql`. Son contrôle
    préalable refuse une base existante encore incomplète. FR/EN/ES/DE deviennent
    obligatoires ; une définition vide, provisoire ou identique au nom est refusée.
    Une langue supplémentaire présente exige également nom et définition.
 5. Publier les métadonnées par le circuit authentifié, puis contrôler le manifeste,
    le corpus entier, les lecteurs publics et l'absence de brouillons oubliés.
+
+L'installation de la phase 2 a été confirmée le 10 novembre 2026 sous la version
+native `20261110095723`, après les 1 449 corrections et la publication 24. Le
+contrôle d'exploitation confirme la définition obligatoire et FR/EN/ES/DE pour
+les 78 domaines, avec leurs valeurs par défaut et contraintes renforcées. Le
+corps du noyau d'activation conserve son empreinte MD5
+`985839358c6e0d68eb7db280f42bb6ed`. Le reçu de livraison suit séparément la
+publication qui expose ces métadonnées dans le manifeste courant.
 
 Les miroirs frais sont, dans cet ordre après `thesaurus_business_domain_names.sql` :
 `thesaurus_required_definitions.sql`, `thesaurus_complete_editorial_definitions.sql`,

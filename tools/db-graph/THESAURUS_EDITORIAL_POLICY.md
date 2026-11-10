@@ -28,8 +28,14 @@ pas que les fonctions de garde sont nouvelles.
 
 Le relevé final attend aussi les migrations `thesaurus_public_target_lookup_index`
 et `thesaurus_admin_rpc_timeout`. Cette dernière borne le délai de la façade
-administrative à 30 secondes ; son réglage et son empreinte peuvent donc différer
-du premier relevé, sans changement attendu de ses ACL ou de son autorisation.
+administrative à 30 secondes par un réglage `SET`. Seule l'empreinte
+`definition_md5` peut changer de ce fait : le DDL restitué inclut ce réglage.
+Le corps `prosrc` de `api.thesaurus_admin(text,jsonb)` doit rester strictement
+identique à la phase 1, avec `body_md5 = 74693eebd27b41db9afc57237c95ff28`.
+La capture finale relève aussi `prosrc_md5`, sans normalisation, qui doit avoir
+cette même valeur pour la façade. Ses ACL, propriétaire et autorisation doivent
+être conservés. Un changement du corps ne peut jamais être justifié par la seule
+modification de `proconfig`.
 Ne pas annoncer la phase 2 ni une nouvelle génération sur la seule base d'une
 validation de brouillons : attendre la confirmation de leur publication et de
 l'installation de la politique avant de capturer la preuve finale.

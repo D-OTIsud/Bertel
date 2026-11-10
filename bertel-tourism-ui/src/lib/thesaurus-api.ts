@@ -3,6 +3,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { admitPartner, logPartnerCall } from './partner-auth';
 import { callPublicRpc, PUBLIC_API_CONTRACT_VERSION, publicHeaders } from './public-api';
+import { THESAURUS_VOCABULARY_LABELS } from './thesaurus-vocabulary-labels';
 
 export type ThesaurusAction = 'manifest' | 'release' | 'concepts' | 'concept' | 'changes' | 'export' | 'resolve';
 export interface ThesaurusTarget {
@@ -138,6 +139,37 @@ function localized(values: Record<string, string>, requested: string): { value: 
   const candidates = [requested, requested.toLowerCase(), requested.split('-')[0], 'fr', ...Object.keys(values).sort()];
   for (const lang of candidates) if (values[lang]) return { value: values[lang], lang };
   return { value: null, lang: null };
+}
+
+/** Localize metadata in the HTTP representation without rewriting a published manifest. */
+function publicThesaurusManifest(value: unknown, requestedLang: string): JsonObject {
+  const source = object(value);
+  if (!source) throw new Error('invalid_snapshot');
+  const result = { ...source };
+  if (source.domains !== undefined) {
+    if (!Array.isArray(source.domains)) throw new Error('invalid_snapshot');
+    result.domains = source.domains.map((value) => {
+      const vocabulary = object(value);
+      if (!vocabulary || typeof vocabulary.domain !== 'string'
+        || typeof vocabulary.name !== 'string' || !vocabulary.name.trim()) throw new Error('invalid_snapshot');
+      const standard = Object.hasOwn(THESAURUS_VOCABULARY_LABELS, vocabulary.domain)
+        ? THESAURUS_VOCABULARY_LABELS[vocabulary.domain] : undefined;
+      // A custom or historical title must never inherit an unrelated standard translation.
+      const names = {
+        ...(standard?.fr.includes(vocabulary.name) ? { en: standard.en } : {}),
+        ...stringMap(vocabulary.name_i18n),
+        fr: vocabulary.name,
+      };
+      const selected = localized(names, requestedLang);
+      return { ...vocabulary, name: selected.value, name_i18n: names,
+        requested_lang: requestedLang, effective_lang: selected.lang };
+    });
+  }
+  if (source.releases !== undefined) {
+    if (!Array.isArray(source.releases)) throw new Error('invalid_snapshot');
+    result.releases = source.releases.map((release) => publicThesaurusManifest(release, requestedLang));
+  }
+  return result;
 }
 
 /** Explicit public projection: new private fields added to a snapshot never leak by default. */
@@ -327,7 +359,9 @@ export async function handleThesaurusRequest(req: NextRequest, target: Thesaurus
     as_of: rpcMeta.as_of ?? null };
   let data: unknown = body.data;
   try {
-    if (target.action === 'concept' || target.action === 'resolve') {
+    if (target.action === 'manifest' || target.action === 'release') {
+      data = publicThesaurusManifest(data, query.lang);
+    } else if (target.action === 'concept' || target.action === 'resolve') {
       if (data === null) return fail(404, 'not_found');
       data = publicThesaurusConcept(data, query.lang);
     } else if (target.action === 'concepts' || target.action === 'export') {

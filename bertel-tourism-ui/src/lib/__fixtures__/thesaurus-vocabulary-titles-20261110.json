@@ -1,0 +1,266 @@
+[
+  {
+    "domain": "accommodation_type",
+    "name": "Types d’hébergement historiques"
+  },
+  {
+    "domain": "activity_type",
+    "name": "Types d’activité"
+  },
+  {
+    "domain": "allergen",
+    "name": "Allergènes"
+  },
+  {
+    "domain": "amenity",
+    "name": "Équipements et services"
+  },
+  {
+    "domain": "amenity_family",
+    "name": "Familles d’équipements et services"
+  },
+  {
+    "domain": "assistance_type",
+    "name": "Types d’assistance"
+  },
+  {
+    "domain": "bed_type",
+    "name": "Types de lit"
+  },
+  {
+    "domain": "classification_scheme",
+    "name": "Labels et classements"
+  },
+  {
+    "domain": "classification_value",
+    "name": "Valeurs des labels et classements"
+  },
+  {
+    "domain": "commune",
+    "name": "Communes"
+  },
+  {
+    "domain": "contact_kind",
+    "name": "Moyens de contact"
+  },
+  {
+    "domain": "cuisine_type",
+    "name": "Types de cuisine"
+  },
+  {
+    "domain": "destination_type",
+    "name": "Types de destination"
+  },
+  {
+    "domain": "dietary_tag",
+    "name": "Régimes alimentaires"
+  },
+  {
+    "domain": "document_type",
+    "name": "Types de document"
+  },
+  {
+    "domain": "environment_tag",
+    "name": "Cadre et environnement"
+  },
+  {
+    "domain": "event_type",
+    "name": "Types d’événement"
+  },
+  {
+    "domain": "insurance_type",
+    "name": "Types d’assurance"
+  },
+  {
+    "domain": "iti_difficulty",
+    "name": "Difficulté des itinéraires"
+  },
+  {
+    "domain": "iti_open_status",
+    "name": "Statut des sentiers"
+  },
+  {
+    "domain": "iti_practice",
+    "name": "Pratiques d’itinéraire"
+  },
+  {
+    "domain": "iti_stage_kind",
+    "name": "Étapes d’itinéraire"
+  },
+  {
+    "domain": "language",
+    "name": "Langues"
+  },
+  {
+    "domain": "language_level",
+    "name": "Maîtrise des langues"
+  },
+  {
+    "domain": "media_tag",
+    "name": "Mots-clés des médias"
+  },
+  {
+    "domain": "media_type",
+    "name": "Types de médias"
+  },
+  {
+    "domain": "meeting_equipment",
+    "name": "Équipements de réunion"
+  },
+  {
+    "domain": "menu_category",
+    "name": "Catégories de menu"
+  },
+  {
+    "domain": "opening_period_type",
+    "name": "Saisons d’ouverture"
+  },
+  {
+    "domain": "opening_schedule_type",
+    "name": "Modes d’ouverture"
+  },
+  {
+    "domain": "package_type",
+    "name": "Types de forfait"
+  },
+  {
+    "domain": "partnership_type",
+    "name": "Types de partenariat"
+  },
+  {
+    "domain": "payment_method",
+    "name": "Moyens de paiement"
+  },
+  {
+    "domain": "price_kind",
+    "name": "Publics tarifaires"
+  },
+  {
+    "domain": "price_type",
+    "name": "Types de tarif"
+  },
+  {
+    "domain": "price_unit",
+    "name": "Unités tarifaires"
+  },
+  {
+    "domain": "promotion_type",
+    "name": "Types de promotion"
+  },
+  {
+    "domain": "room_type",
+    "name": "Types de chambre"
+  },
+  {
+    "domain": "season_type",
+    "name": "Saisons et périodes"
+  },
+  {
+    "domain": "service_type",
+    "name": "Types de service"
+  },
+  {
+    "domain": "social_network",
+    "name": "Réseaux sociaux"
+  },
+  {
+    "domain": "sustainability_action",
+    "name": "Actions de durabilité"
+  },
+  {
+    "domain": "sustainability_category",
+    "name": "Catégories d’actions de durabilité"
+  },
+  {
+    "domain": "taxonomy_act",
+    "name": "Activités encadrées"
+  },
+  {
+    "domain": "taxonomy_asc",
+    "name": "Activités sportives et culturelles"
+  },
+  {
+    "domain": "taxonomy_camp",
+    "name": "Campings"
+  },
+  {
+    "domain": "taxonomy_com",
+    "name": "Commerces"
+  },
+  {
+    "domain": "taxonomy_fma",
+    "name": "Fêtes et manifestations"
+  },
+  {
+    "domain": "taxonomy_hlo",
+    "name": "Hébergements locatifs et collectifs"
+  },
+  {
+    "domain": "taxonomy_hot",
+    "name": "Hôtellerie"
+  },
+  {
+    "domain": "taxonomy_hpa",
+    "name": "Hébergements de plein air"
+  },
+  {
+    "domain": "taxonomy_iti",
+    "name": "Itinéraires"
+  },
+  {
+    "domain": "taxonomy_loi",
+    "name": "Loisirs et découvertes"
+  },
+  {
+    "domain": "taxonomy_org",
+    "name": "Organisations"
+  },
+  {
+    "domain": "taxonomy_pcu",
+    "name": "Patrimoine culturel"
+  },
+  {
+    "domain": "taxonomy_pna",
+    "name": "Sites naturels"
+  },
+  {
+    "domain": "taxonomy_prd",
+    "name": "Producteurs"
+  },
+  {
+    "domain": "taxonomy_psv",
+    "name": "Prestataires de services"
+  },
+  {
+    "domain": "taxonomy_res",
+    "name": "Restauration"
+  },
+  {
+    "domain": "taxonomy_rva",
+    "name": "Résidences et villages de vacances"
+  },
+  {
+    "domain": "taxonomy_spu",
+    "name": "Services publics"
+  },
+  {
+    "domain": "taxonomy_vil",
+    "name": "Villes et villages"
+  },
+  {
+    "domain": "tourism_type",
+    "name": "Types de tourisme"
+  },
+  {
+    "domain": "transport_type",
+    "name": "Types de transport"
+  },
+  {
+    "domain": "view_type",
+    "name": "Types de vue"
+  },
+  {
+    "domain": "weekday",
+    "name": "Jours de la semaine"
+  }
+]

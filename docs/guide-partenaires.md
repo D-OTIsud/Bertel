@@ -359,6 +359,35 @@ Ces routes utilisent la même clé partenaire et le même quota que les fiches. 
 
 `contract_version` décrit le contrat HTTP ; `release_id` et `vocabulary_release` identifient les données. Le numéro de publication n'est pas un numéro de version du logiciel Bertel. Une publication conserve ses libellés, relations, états et dates : elle ne change pas parce que la date du jour ou le vocabulaire courant change.
 
+Pour découvrir les noms des vocabulaires en anglais :
+
+```bash
+curl -H "Authorization: Bearer bk_live_…" \
+  "https://VOTRE_DOMAINE/api/public/thesaurus?lang=en"
+```
+
+`lang` localise `name` dans chaque entrée de `data.domains`, ainsi que dans `data.releases[].domains`. La même règle s'applique au manifeste d'une publication précise, `/thesaurus/releases/{releaseId}?lang=en`. Exemple d'entrée de domaine :
+
+```json
+{
+  "domain": "activity_type",
+  "name": "Activity types",
+  "name_i18n": {
+    "fr": "Types d’activité",
+    "en": "Activity types"
+  },
+  "requested_lang": "en",
+  "effective_lang": "en",
+  "source_kind": "ref_code",
+  "require_definition": false,
+  "required_languages": ["fr"]
+}
+```
+
+`name_i18n` contient les traductions de métadonnées disponibles. Le catalogue de traduction couvre les titres français standards et les alias identiques au domaine. Un titre personnalisé ou inconnu reste en français, sauf si le manifeste porte sa propre traduction `name_i18n`, qui a priorité. En français, le titre stocké dans le manifeste fait autorité. Le serveur canonicalise la locale BCP 47 dans `requested_lang`, puis essaie la locale demandée, sa variante en minuscules, sa langue de base, le français et enfin une autre traduction disponible. Ainsi, `lang=en-GB` peut produire `effective_lang: "en"` ; une traduction absente utilise un repli explicite. `required_languages: ["fr"]` exige le français pour la publication éditoriale : ce champ ne choisit pas la langue de réponse et ne liste pas les traductions disponibles.
+
+Cette localisation conserve les identifiants de publication, `as_of`, les `checksum` stockés et les règles éditoriales. L'`ETag` identifie la représentation HTTP localisée. Les noms des vocabulaires et les traductions des concepts sont indépendants : pour lire les libellés anglais réellement publiés des concepts, appelez `/thesaurus/releases/{releaseId}/concepts?lang=en` et vérifiez leur `effective_lang` et leur `definition_lang`.
+
 Pour les listes de concepts et de changements :
 
 | Paramètre | Description |

@@ -654,7 +654,7 @@
         ],
         "operationId": "getThesaurus",
         "summary": "Découvrir les vocabulaires et la publication courante",
-        "description": "Surface de lecture partenaire. Une publication fixe ses valeurs/dates ; les concepts dépréciés et retirés restent résolvables. Aucun scope supplémentaire n’est exigé.",
+        "description": "Surface de lecture partenaire. Une publication fixe ses valeurs/dates ; les concepts dépréciés et retirés restent résolvables. Aucun scope supplémentaire n’est exigé. lang localise le nom des vocabulaires dans data.domains et dans data.releases[].domains ; name_i18n conserve les traductions de métadonnées disponibles et requested_lang/effective_lang rendent le repli explicite. required_languages reste une règle de publication, indépendante de la langue de réponse. Les identifiants, as_of et checksums stockés sont conservés ; l’ETag identifie la représentation HTTP localisée.",
         "parameters": [
           {
             "name": "domains",
@@ -676,7 +676,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Langue BCP 47 du nom des vocabulaires dans data.domains et data.releases[].domains. requested_lang est canonicalisée ; effective_lang indique la langue réellement utilisée. Résolution : locale demandée, variante en minuscules, langue de base, fr, puis autre traduction disponible. name_i18n contient les traductions de métadonnées disponibles ; required_languages reste inchangé. Les traductions des concepts sont indépendantes.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -807,7 +807,7 @@
         ],
         "operationId": "getThesaurusRelease",
         "summary": "Lire le manifeste d’une publication",
-        "description": "Le manifeste contient le périmètre, as_of, previous_release_id, empreinte, provenance, licence effective et attribution.",
+        "description": "Le manifeste contient le périmètre, as_of, previous_release_id, empreinte, provenance, licence effective et attribution. lang localise le nom des vocabulaires de data.domains, avec name_i18n et requested_lang/effective_lang. La projection conserve les identifiants, as_of, checksums stockés et règles required_languages ; l’ETag identifie la représentation HTTP localisée.",
         "parameters": [
           {
             "name": "releaseId",
@@ -840,7 +840,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Langue BCP 47 demandée ; fallback explicite dans effective_lang/definition_lang. Les traductions publiées restent toutes disponibles.",
+            "description": "Langue BCP 47 du nom des vocabulaires de data.domains. requested_lang est canonicalisée ; effective_lang indique la langue réellement utilisée. Résolution : locale demandée, variante en minuscules, langue de base, fr, puis autre traduction disponible. name_i18n contient les traductions de métadonnées disponibles ; required_languages reste inchangé. Les traductions des concepts sont indépendantes.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -2248,6 +2248,36 @@
           }
         }
       },
+      "ThesaurusVocabulary": {
+        "type": "object",
+        "description": "Métadonnées d’un vocabulaire dans un manifeste localisé. Le catalogue de traductions couvre les titres français standards et les alias identiques au domaine. Un titre personnalisé ou inconnu conserve son français en l’absence de traduction name_i18n publiée. Les traductions publiées ont priorité ; en français, le titre stocké dans le manifeste fait autorité. Ces traductions de métadonnées ne traduisent pas les concepts.",
+        "required": ["domain", "name", "name_i18n", "requested_lang", "effective_lang"],
+        "properties": {
+          "domain": { "type": "string", "example": "activity_type" },
+          "name": { "type": "string", "description": "Titre résolu dans effective_lang.", "example": "Activity types" },
+          "name_i18n": { "type": "object", "description": "Traductions de métadonnées disponibles, dont le titre français stocké dans le manifeste.", "additionalProperties": { "type": "string" }, "example": { "fr": "Types d’activité", "en": "Activity types" } },
+          "requested_lang": { "type": "string", "description": "Locale BCP 47 canonicalisée demandée par le partenaire.", "example": "en" },
+          "effective_lang": { "type": ["string", "null"], "description": "Langue réellement utilisée pour name ; null si aucun titre n’est disponible.", "example": "en" },
+          "source_kind": { "type": "string", "example": "ref_code" },
+          "require_definition": { "type": "boolean" },
+          "required_languages": { "type": "array", "description": "Langues exigées pour la publication éditoriale ; ni la langue de réponse, ni l’inventaire des traductions disponibles.", "items": { "type": "string" }, "example": ["fr"] }
+        },
+        "additionalProperties": true,
+        "example": { "domain": "activity_type", "name": "Activity types", "name_i18n": { "fr": "Types d’activité", "en": "Activity types" }, "requested_lang": "en", "effective_lang": "en", "source_kind": "ref_code", "require_definition": false, "required_languages": ["fr"] }
+      },
+      "ThesaurusManifest": {
+        "type": "object",
+        "description": "Manifeste de publication : domaines, date, empreinte, provenance, licence et attribution. La localisation est une projection HTTP ; les identifiants, as_of et checksums stockés restent inchangés.",
+        "properties": {
+          "release_id": { "type": "integer", "minimum": 1 },
+          "previous_release_id": { "type": ["integer", "null"] },
+          "as_of": { "type": "string", "format": "date-time" },
+          "checksum": { "type": "string", "description": "Empreinte stockée de la publication ; utiliser l’ETag pour la représentation HTTP localisée." },
+          "domains": { "type": "array", "items": { "$ref": "#/components/schemas/ThesaurusVocabulary" } },
+          "releases": { "type": "array", "description": "Présent à la découverte : manifestes récents dont les domaines utilisent la même langue demandée.", "items": { "$ref": "#/components/schemas/ThesaurusManifest" } }
+        },
+        "additionalProperties": true
+      },
       "ThesaurusEnvelope": {
         "type": "object",
         "required": [
@@ -2326,8 +2356,7 @@
                 }
               },
               {
-                "type": "object",
-                "description": "Manifeste de publication : domaines, date, empreinte, provenance, licence et attribution."
+                "$ref": "#/components/schemas/ThesaurusManifest"
               }
             ]
           }

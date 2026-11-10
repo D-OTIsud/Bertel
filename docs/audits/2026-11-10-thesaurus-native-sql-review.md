@@ -53,8 +53,8 @@ No existing database, archived harness or production connection was used.
 
 ## Corrected candidate reread
 
-Migration and standalone mirror are byte-identical, SHA-256
-`d44ed53cb13facdbb25cd4485264706318e8d79976668b379126ce3c843d1956`.
+Migration and standalone mirror at commit `f1ac9120` are byte-identical, SHA-256
+`fb8cb2b0f1e8b787e0c7685d7663ecc3fbf4707ad4c87955b9c04a864d65f05e`.
 The reviewer re-read the actual corrected SQL. It now pins eleven normalized
 function predecessors plus the view, preserves all twelve existing function
 metadata snapshots and the view metadata, validates the old preparation contract
@@ -65,6 +65,7 @@ compared with the complete PostgreSQL canonical definition before replacement.
 Catalog timestamp triggers remain enabled normally; only label/timestamp are
 excluded from the nonlabel-metadata comparison. No concrete code blocker remains
 in this candidate, subject to actual full fresh/publication runtime qualification.
+The integration candidate also replaces a reserved catalog alias found by root.
 
 The root also identified production-only row/edge count assertions that reject
 legitimate fresh seeds. Keep exact production evidence in deployment preflight;
@@ -117,3 +118,37 @@ consumer tables, retaining their old FK arms.
 The separately completed reduced metadata PostgreSQL 17 proof establishes the
 post-metadata activation prerequisite `5f62e21e531d4de49c8931f0456f5051` reported
 by root. It does not itself qualify this larger native-adapter migration.
+
+## Ordinary production content/publication sequence
+
+After installation and its read-only postflight, use the genuine authenticated
+platform-superuser session for `api.thesaurus_admin`. An ordinary `workspace`
+request with `read_only:false`, `include_internal:true`, `include_revisions:false`
+and `page_size:1` synchronizes source identities/typed links without changing any
+native content, localization overlay, governance or release. This seed request
+matters: the proposal CLI deliberately uses read-only workspace requests and the
+adapter migration deliberately creates no canonical concepts.
+
+Load each new domain through read-only workspace, match reviewed native UUIDs to
+the exact typed source tuple and canonical concept UUID, and bind fresh source
+fingerprints. Save all 148 private drafts and validate them using ordinary batches
+of at most 100, preserving version/conflict preconditions and existing drafts.
+Preview the complete set, then publish all 148 together with the exact validated
+revision versions, preview fingerprint, current expected release and a unique
+idempotency key. No direct native UPDATE or synthetic user claim is needed.
+
+The existing `publish` action calls `activate(ids,NULL,...)`. Activation validates
+each revision, automatically governs every represented domain, applies native
+descriptive text and required localization overlays, then validates the complete
+new snapshot before commit. Therefore one ordinary publication can introduce all
+134 public dictionary concepts and freeze the 14 private role concepts privately.
+An explicit bootstrap is unnecessary. Bootstrap calls `activate('{}',domains,...)`
+and does not combine supplied revision IDs; using it before content publication
+would fail the required-definition checks or publish unenriched source content.
+
+The first publication's `changed_count` includes additional frozen relationship
+changes on existing member-action/category documents. It is not simply 148.
+Compare the old 1,477 labels/definitions separately from additive membership and
+category `narrower` metadata. Verify every native membership, both cross-category
+edges, private-role exclusion, unchanged unrelated documents, immutable earlier
+releases, exact source-field preservation and normal outbox completion afterward.

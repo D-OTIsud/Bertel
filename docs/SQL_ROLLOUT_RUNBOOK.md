@@ -2921,8 +2921,15 @@ identités et empreintes fraîches. Le contrôle éditorial portable porte sur l
 L’option `--include-private` contrôle aussi les 14 entrées privées depuis le
 contexte opérateur local, qui ne doit pas être ajouté au dépôt. Enregistrer,
 valider, prévisualiser et publier avec la session super-administrateur existante.
-Activer les domaines publics relus par le bootstrap normal ; publier les
-révisions privées par leur circuit existant, sans exposition partenaire.
+Une première lecture authentifiée de l’espace sans `read_only:true` synchronise
+les identités canoniques, sans publier de contenu. L’import des 148 propositions,
+leur validation par groupes de 100 au plus, puis une prévisualisation commune
+précèdent la publication atomique des 148 révisions avec versions attendues,
+empreinte de prévisualisation, publication attendue et clé d’idempotence. La
+publication normale gouverne les neuf domaines représentés ; les trois privés
+gardent `is_public=false`. Ne pas faire de bootstrap avant cet enrichissement :
+les définitions et traductions natives incomplètes seraient refusées. Aucun
+jeton de session n’est extrait de l’administration.
 
 Les appartenances natives des actions aux groupes restent distinctes du parent
 de catégorie. Les nouveaux documents figent `member_of` et `members` ; le

@@ -12,7 +12,7 @@ const unit = { ...nature, id: 'old-unit', domain: 'accommodation_unit_type', cod
 const catalogs: ReferenceCatalogs = {
   vocabularyRelease: 4,
   refCodeByDomain: { taxonomy_hot: [nature, positioning], accommodation_unit_type: [unit] },
-  tables: { ref_code_domain_registry: [{ domain: 'taxonomy_hot', name: 'Hôtellerie', object_type: 'HOT', is_taxonomy: true, is_active: true }] },
+  tables: { ref_code_domain_registry: [{ domain: 'taxonomy_hot', name: 'Taxonomie HOT', object_type: 'HOT', is_taxonomy: true, is_active: true }] },
 };
 const empty = (): ObjectWorkspaceTaxonomyModule => ({ domains: [], unitTypes: { options: [], selectedCodes: [], unavailableReason: null }, unavailableReason: null });
 
@@ -51,6 +51,7 @@ beforeEach(() => jest.clearAllMocks());
 it('loads inactive selected taxonomy, units and positionings from the same release snapshot', async () => {
   const { from } = mockDatabase();
   const loaded = await getObjectWorkspaceTaxonomyModule('o1', empty(), catalogs, 'HOT');
+  expect(loaded.domains[0]).toMatchObject({ domain: 'taxonomy_hot', label: 'Hôtels', objectType: 'HOT' });
   expect(loaded.domains[0].assignment).toMatchObject({ nodeId: nature.id, label: nature.name });
   expect(loaded.domains[0].nodes[0]).toMatchObject({ isAssignable: false, isActive: false });
   expect(loaded.unitTypes.selectedCodes).toEqual([unit.code]);

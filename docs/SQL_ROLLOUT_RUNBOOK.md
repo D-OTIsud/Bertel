@@ -2742,3 +2742,26 @@ leur état de départ non confirmé nécessitent encore la validation dédiée.
 La recette HTTP intégrée sur pile jetable reste distincte des doubles Jest
 et des témoins PostgreSQL réduits ; aucun appel fournisseur ou déploiement
 n’est attesté par ce raccord fermé.
+
+### Noms métier des vocabulaires du thésaurus
+
+Le manifeste frais applique `thesaurus_business_domain_names.sql` après les seeds
+et le modèle éditorial, puis son test dédié, avant le rafraîchissement final des
+vues matérialisées. La migration d’upgrade correspondante est
+`20261110045904_thesaurus_business_domain_names.sql` ; les deux corps sont identiques.
+Le dictionnaire relu couvre les 78 domaines connus, en tenant compte de leur usage :
+« Commerces », « Catégories de menu », « Types de forfait », « Publics tarifaires »,
+« Ambiances touristiques », et « Niveaux et mentions des labels et classements ».
+
+La correction porte sur les noms des vocabulaires, le registre des domaines et
+les libellés des catalogues. Elle complète les 19 libellés de catégories absents
+du registre éditorial, dans leur famille effective « À classer ». Leur accès
+reste déterminé par le contrôle structurel existant ; aucun droit n’est ajouté.
+Les identifiants, langues exigées, définitions obligatoires, statuts d’activation,
+concepts, brouillons et publications existantes restent inchangés.
+
+Les noms d’un manifeste déjà publié restent historiques. Une nouvelle publication
+par le circuit existant est nécessaire pour présenter les nouveaux noms dans le
+manifeste courant ; la migration ne réécrit aucune version publiée. Le test frais
+contrôle les noms métier, l’accès effectif de tous les catalogues, la conservation
+des données éditoriales et l’absence de toute écriture au deuxième passage.

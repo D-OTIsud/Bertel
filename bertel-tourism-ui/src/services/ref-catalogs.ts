@@ -6,6 +6,7 @@
 // erreur = Error(error.message)).
 
 import { getSupabaseClient } from '../lib/supabase';
+import { getReferenceCatalogLabel } from '../lib/thesaurus-domain-labels';
 import type { CatalogColumn, CatalogFk } from '../features/settings/catalog-fields';
 
 // `kind`/`access` sont contraints côté SQL (CHECK chk_ref_catalog_access ; `kind` ne peut
@@ -58,7 +59,7 @@ export async function listRefCatalogs(): Promise<RefCatalogSummary[]> {
   return ((data as Array<Record<string, unknown>>) ?? []).map((c) => ({
     catalogKey: String(c.catalog_key),
     kind: String(c.kind) as RefCatalogKind,
-    label: String(c.label),
+    label: getReferenceCatalogLabel(String(c.catalog_key), c.label == null ? null : String(c.label)),
     family: String(c.family),
     usedIn: c.used_in == null ? null : String(c.used_in),
     access: String(c.access) as RefCatalogAccess,
@@ -128,7 +129,7 @@ export async function getRefCatalog(catalogKey: string): Promise<RefCatalogDetai
   return {
     catalogKey: String(d.catalog_key),
     kind: String(d.kind) as RefCatalogKind,
-    label: String(d.label),
+    label: getReferenceCatalogLabel(String(d.catalog_key), d.label == null ? null : String(d.label)),
     family: String(d.family),
     usedIn: d.used_in == null ? null : String(d.used_in),
     access: String(d.access) as RefCatalogAccess,

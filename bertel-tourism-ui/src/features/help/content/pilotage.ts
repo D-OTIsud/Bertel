@@ -28,7 +28,7 @@ Ces vues aident à repérer les trous de contenu et les fiches à remettre à jo
     keywords: ['filtre', 'période', 'dashboard', 'périmètre', 'commune', 'type'],
     routes: ['/dashboard'],
     related: ['dashboard-comprendre', 'explorer-filtres'],
-    answer: `Oui. Le Dashboard dispose d'une **barre latérale de filtres** calquée sur l'Explorer : types d'objets, communes, taxonomies, facettes spécifiques selon le type sélectionné, etc.
+    answer: `Oui. Le Dashboard dispose d'une **barre latérale de filtres** calquée sur l'Explorer : types d'objets, communes, catégories métier, facettes spécifiques selon le type sélectionné, etc.
 
 Vous pouvez aussi restreindre une **période de mise à jour** (dates de dernière modification). **Tous les widgets du Dashboard** (scorecards, tableaux, graphiques) partagent ces mêmes filtres — changer le périmètre met à jour l'ensemble de la page d'un coup.`,
   },

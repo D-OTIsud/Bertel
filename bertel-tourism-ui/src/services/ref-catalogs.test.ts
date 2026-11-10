@@ -78,6 +78,35 @@ describe('listRefCatalogs', () => {
     }]);
   });
 
+  it('uses the same business names as the thesaurus without changing catalogue keys', async () => {
+    const cases = [
+      ['ref_code:taxonomy_com', 'Taxonomie COM', 'Commerces'],
+      ['ref_code:package_type', 'package_type', 'Types de forfait'],
+      ['ref_code:menu_category', 'menu_category', 'Catégories de menu'],
+      ['ref_classification_scheme', 'Référentiels de classement', 'Labels et classements'],
+      ['ref_classification_value', 'Valeurs de classement', 'Niveaux et mentions des labels et classements'],
+      ['ref_code:price_kind', 'price_kind', 'Publics tarifaires'],
+      ['ref_code:contact_kind', 'contact_kind', 'Moyens de contact'],
+      ['ref_code:mood', 'mood', 'Ambiances touristiques'],
+      ['ref_code:media_tag', 'media_tag', 'Mots-clés des médias'],
+      ['ref_custom', 'Catalogue adapté', 'Catalogue adapté'],
+    ];
+    const rpc = jest.fn().mockResolvedValue({
+      data: cases.map(([catalogKey, label]) => ({
+        catalog_key: catalogKey, label, kind: catalogKey.startsWith('ref_code:') ? 'ref_code_domain' : 'table',
+        family: 'Famille métier', access: 'readonly', n_values: 2,
+      })),
+      error: null,
+    });
+    mockedGetSupabaseClient.mockReturnValue(clientWithRpc(rpc));
+
+    const result = await listRefCatalogs();
+
+    expect(result.map(({ catalogKey, label }) => [catalogKey, label])).toEqual(cases.map(([key, , expected]) => [key, expected]));
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(result.every((item) => item.access === 'readonly' && item.nValues === 2)).toBe(true);
+  });
+
   it('rend un tableau vide quand data est null', async () => {
     const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
     mockedGetSupabaseClient.mockReturnValue(clientWithRpc(rpc));
@@ -103,6 +132,28 @@ describe('getRefCatalog', () => {
     await getRefCatalog('ref_amenity');
 
     expect(rpc).toHaveBeenCalledWith('get_ref_catalog', { p_catalog_key: 'ref_amenity' });
+  });
+
+  it.each([
+    ['ref_code:taxonomy_com', 'Taxonomie COM', 'Commerces'],
+    ['ref_code:package_type', 'package_type', 'Types de forfait'],
+    ['ref_code:menu_category', 'menu_category', 'Catégories de menu'],
+    ['ref_classification_scheme', 'Référentiels de classement', 'Labels et classements'],
+    ['ref_classification_value', 'Valeurs de classement', 'Niveaux et mentions des labels et classements'],
+    ['ref_code:price_kind', 'price_kind', 'Publics tarifaires'],
+  ])('names catalogue %s consistently in its detail without rewriting row or relation identities', async (catalogKey, storedLabel, expectedLabel) => {
+    const rpc = jest.fn().mockResolvedValue({
+      data: { ...validDetailPayload, catalog_key: catalogKey, label: storedLabel }, error: null,
+    });
+    mockedGetSupabaseClient.mockReturnValue(clientWithRpc(rpc));
+
+    const result = await getRefCatalog(catalogKey);
+
+    expect(result.label).toBe(expectedLabel);
+    expect(result.catalogKey).toBe(catalogKey);
+    expect(result.rows).toEqual(validDetailPayload.rows);
+    expect(result.fks).toEqual([{ column: 'family_id', target: 'ref_code:amenity_family' }]);
+    expect(rpc).toHaveBeenCalledWith('get_ref_catalog', { p_catalog_key: catalogKey });
   });
 
   it('extrait primary_key_columns en primaryKeyColumns: string[], dans l ordre', async () => {

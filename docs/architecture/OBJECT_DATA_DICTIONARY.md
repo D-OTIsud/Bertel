@@ -501,7 +501,7 @@ Key locked codes (V5 canonical, 2026-03-21):
 
 ### Panel C5 — Pricing (`object_price`, `object_price_period`, `object_discount`, `promotion`, `promotion_object`, `promotion_usage`)
 
-**Concept:** A multi-layer pricing model: base prices by kind/unit, time-limited periods, group discounts, and promotional codes.
+**Concept:** A multi-layer pricing model: prices distinguish the beneficiary audience, tariff type and billing unit, with time-limited periods, group discounts and promotional codes.
 
 **Business Purpose:** Powers the pricing section of listings, feeds the `cached_min_price` aggregate, and supports complex seasonal/age-based tariff structures required by tourism distribution standards.
 
@@ -510,18 +510,22 @@ Key locked codes (V5 canonical, 2026-03-21):
 | Field | Type | Required | Purpose |
 |-------|------|----------|---------|
 | `object_id` | `TEXT` (FK) | Yes | Parent object. |
-| `kind_id` | `UUID` (FK → `ref_code_price_kind`) | Yes | Price category (adult admission, child, half-board, night, etc.). |
+| `kind_id` | `UUID` (FK → `ref_code_price_kind`) | Yes | Beneficiary audience — **Publics tarifaires**: adult, child, group, subscriber, person with a disability, etc. The editor asks “Pour qui ?”. |
 | `unit_id` | `UUID` (FK → `ref_code_price_unit`) | No | Unit of the price (per person, per night, per group, etc.). |
 | `amount` | `NUMERIC(12,2)` | No | Minimum or base price. Must be ≥ 0. |
 | `amount_max` | `NUMERIC(12,2)` | No | Maximum price (for ranges). Must be ≥ `amount`. |
 | `currency` | `CHAR(3)` | Yes | ISO 4217 currency code. Default: `EUR`. |
-| `season_code` | `TEXT` | No | Season qualifier (low, high, shoulder). |
-| `indication_code` | `TEXT` | No | Price qualifier (from, starting at, indicative, etc.). |
+| `season_code` | `TEXT` | No | Optional season/period code from `season_type` — **Saisons et périodes**; distinct from the validity dates. |
+| `indication_code` | `TEXT` | No | Tariff type from `price_type` — **Types de tarif**: principal, option, menu, pack, abonnement, taxe, caution or devis. Persisted as text, without an FK to the catalog. |
 | `age_min_enfant` / `age_max_enfant` | `SMALLINT` | No | Age range for the "child" price tier. |
 | `age_min_junior` / `age_max_junior` | `SMALLINT` | No | Age range for the "junior" price tier. |
 | `valid_from` / `valid_to` | `DATE` | No | Validity dates for this price. |
 | `conditions` | `TEXT` | No | Free-text conditions or notes. |
 | `source` | `TEXT` | No | Origin of the price data (import, manual, API). |
+
+The editor keeps three separate axes: **Publics tarifaires** (`price_kind`, “Pour qui ?”), **Types de tarif** (`price_type`, “Type de tarif”) and **Unités tarifaires** (`price_unit`, “Par”). A night is a billing unit, not a beneficiary. Half-board or a packaged stay belongs to the offer context; it is not a beneficiary category. The separate `package_type` catalog describes types of package, while the billing unit “par forfait” describes how a price is expressed. A disability beneficiary is not restricted to reduced mobility and does not imply an automatic reduction: the provider's conditions remain part of the listing.
+
+Sources: [pricing editor](../../bertel-tourism-ui/src/features/object-editor/widgets/PricingLineEditModal.tsx#L293), [catalog loading and persisted fields](../../bertel-tourism-ui/src/services/object-workspace.ts#L2519), [three-axis seed definitions](<../../Base de donnée DLL et API/seeds_data.sql#L277>).
 
 **`object_price_period` table:** Sub-table of `object_price` defining specific date+time windows when a price applies.
 

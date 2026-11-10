@@ -23,6 +23,24 @@ import {
 } from './utils';
 
 describe('object drawer utils', () => {
+  it.each(['Taxonomie COM', 'taxonomy_com', undefined])('names category groups and domains for legacy label %s without showing a technical source', (domainName) => {
+    const domain = {
+      id: 'assignment-1', domain: 'taxonomy_com', domain_name: domainName,
+      assigned_node: { id: 'shop-1', code: 'local_crafts', name: 'Artisanat local' },
+      source: 'migration_taxonomy',
+    };
+
+    const groups = parseTaxonomyGroups({ taxonomy: { domains: [domain] } });
+    const categories = groups.find((group) => group.key === 'taxonomy');
+
+    expect(categories).toEqual({
+      key: 'taxonomy', title: 'Catégories', items: [{ id: 'assignment-1', label: 'Artisanat local', meta: 'Commerces' }],
+    });
+    expect(domain.source).toBe('migration_taxonomy');
+    expect(domain.domain_name).toBe(domainName);
+    expect(domain.assigned_node.code).toBe('local_crafts');
+  });
+
   it('parses memberships from structured object payloads', () => {
     const raw = (mockObjectDetails.HOTRUN0000000001.raw ?? {}) as Record<string, unknown>;
     const memberships = parseMemberships(raw);

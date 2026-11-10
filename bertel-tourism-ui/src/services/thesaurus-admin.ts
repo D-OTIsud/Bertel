@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '../lib/supabase';
+import { getThesaurusDomainLabel } from '../lib/thesaurus-domain-labels';
 import type {
   ThesaurusConcept, ThesaurusDocument, ThesaurusDomain, ThesaurusInstance,
   ThesaurusIssue, ThesaurusPreview, ThesaurusRelease, ThesaurusRevision,
@@ -129,8 +130,10 @@ export async function fetchThesaurusWorkspace(input: { domain?: string; query?: 
   return {
     domains: data.domains.map((item) => {
       const domain = record(item);
+      const domainCode = String(domain.domain);
+      const storedName = domain.name ?? domain.label;
       return {
-        domain: String(domain.domain), name: String(domain.name ?? domain.label ?? domain.domain),
+        domain: domainCode, name: getThesaurusDomainLabel(domainCode, storedName == null ? undefined : String(storedName)),
         is_governed: Boolean(domain.is_governed), is_public: Boolean(domain.is_public),
         require_definition: Boolean(domain.require_definition), concept_count: Number(domain.concept_count ?? domain.count ?? 0),
         ...(domain.source_kind == null ? {} : { source_kind: String(domain.source_kind) }),

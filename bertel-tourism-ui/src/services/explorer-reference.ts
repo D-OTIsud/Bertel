@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '../lib/supabase';
+import { getThesaurusDomainLabel } from '../lib/thesaurus-domain-labels';
 import { readThesaurusReferenceSnapshot, type ReferenceSnapshot } from './thesaurus-generation';
 import { useSessionStore } from '../store/session-store';
 import type {
@@ -366,7 +367,7 @@ export function buildTaxonomyDomains(domainRows: TaxonomyDomainRow[], nodeRows: 
     nodesByDomain.set(node.domain, current);
   }
 
-  const domains = sortByPositionAndName(domainRows.map((row) => ({ ...row, name: row.name }))).map((domainRow) => {
+  const domains = sortByPositionAndName(domainRows.map((row) => ({ ...row, name: getThesaurusDomainLabel(row.domain, row.name) }))).map((domainRow) => {
     const domainNodes = nodesByDomain.get(domainRow.domain) ?? [];
     const nodeById = new Map(domainNodes.map((node) => [node.id, node]));
     const parentIdByNodeId = new Map(domainNodes.map((node) => [node.id, node.parent_id]));
@@ -549,12 +550,23 @@ function snapshotTaxonomies(snapshot: ReferenceSnapshot): ExplorerTaxonomyDomain
   return buildTaxonomyDomains(domains, nodes);
 }
 
+function demoReferencesForDisplay(): ExplorerReferences {
+  const references = buildDemoReferences(ACCESSIBILITY_DISABILITY_REFERENCES);
+  return {
+    ...references,
+    taxonomies: references.taxonomies.map((domain) => ({
+      ...domain,
+      name: getThesaurusDomainLabel(domain.domain, domain.name),
+    })),
+  };
+}
+
 export async function listTaxonomyReferences(): Promise<ExplorerTaxonomyDomain[]> {
   const session = useSessionStore.getState();
   const client = getSupabaseClient();
 
   if (session.demoMode || !client) {
-    return buildDemoReferences(ACCESSIBILITY_DISABILITY_REFERENCES).taxonomies;
+    return demoReferencesForDisplay().taxonomies;
   }
 
   const snapshot = await readThesaurusReferenceSnapshot();
@@ -601,7 +613,7 @@ export async function listAccommodationFamilies(): Promise<ExplorerAccommodation
   const client = getSupabaseClient();
 
   if (session.demoMode || !client) {
-    return buildDemoReferences(ACCESSIBILITY_DISABILITY_REFERENCES).accommodationFamilies ?? [];
+    return demoReferencesForDisplay().accommodationFamilies ?? [];
   }
 
   const snapshot = await readThesaurusReferenceSnapshot(['accommodation_family']);
@@ -629,7 +641,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const client = getSupabaseClient();
 
   if (session.demoMode || !client) {
-    return buildDemoReferences(ACCESSIBILITY_DISABILITY_REFERENCES);
+    return demoReferencesForDisplay();
   }
 
   const snapshot = await readThesaurusReferenceSnapshot();

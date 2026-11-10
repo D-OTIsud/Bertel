@@ -72,7 +72,7 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
     {
       group: 'Identité',
       items: [
-        { num: '01', label: 'Identité & taxonomie' },
+        { num: '01', label: 'Identité & catégories' },
         { num: '02', label: 'Localisation' },
         { num: '03', label: 'Contacts' },
       ],

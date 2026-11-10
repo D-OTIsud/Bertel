@@ -19,7 +19,11 @@ const publicText = plain(body).replaceAll(' (référence interne au dépôt)', '
 const expectedText = plain(md.render(canonical).html);
 assert.equal(publicText, expectedText, 'preserve every instruction, table, list and reference label in order');
 assert.equal((body.match(/<h2\b/g) || []).length, 15, 'all fourteen numbered chapters and the quick path');
-assert.equal((body.match(/<table\b/g) || []).length, 9, 'all comparison and preparation tables remain readable');
+assert.equal((body.match(/<table\b/g) || []).length, 10, 'all comparison, domain-context and preparation tables remain readable');
+assert.ok(body.includes('<th>Rubrique</th><th>La choisir pour…</th><th>À distinguer de…</th>'), 'include the business-domain distinctions table');
+for (const label of ['Labels et classements', 'Niveaux et mentions des labels et classements', 'Types de forfait', 'Catégories de menu', 'Publics tarifaires', 'Types de tarif', 'Unités tarifaires']) {
+  assert.ok(body.includes(label), 'the domain-context table includes ' + label);
+}
 
 const ids = [...page.matchAll(/\bid="([^"]+)"/g)].map((entry) => entry[1]);
 assert.equal(new Set(ids).size, ids.length, 'page anchors must be unique');

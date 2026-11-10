@@ -7,6 +7,7 @@ import {
 } from '../../lib/json-read';
 import { resolveWebPlatform } from '../../lib/web-platform';
 import { buildContactHref } from '../../lib/contact-links';
+import { getThesaurusDomainLabel } from '../../lib/thesaurus-domain-labels';
 
 type RelatedDirection = 'in' | 'out' | 'associated';
 
@@ -846,7 +847,7 @@ function buildObjectTaxonomyItems(value: unknown): TaxonomyItem[] {
         .filter(Boolean);
       const assignedNode = readRecord(readRecord(item).assigned_node);
       const label = path.join(' > ') || readNamedValue(assignedNode);
-      const domainName = readString(readRecord(item).domain_name, readString(readRecord(item).domain, 'Taxonomie'));
+      const domainName = getThesaurusDomainLabel(readString(readRecord(item).domain), readString(readRecord(item).domain_name));
 
       if (!label) {
         return null;
@@ -855,7 +856,7 @@ function buildObjectTaxonomyItems(value: unknown): TaxonomyItem[] {
       return {
         id: makeItemId('taxonomy', readRecord(item), index, label),
         label,
-        meta: [domainName, readString(readRecord(item).source)].filter(Boolean).join(' · '),
+        meta: domainName,
       };
     })
     .filter((item): item is TaxonomyItem => item !== null);
@@ -1317,7 +1318,7 @@ export function parseTaxonomyGroups(raw: Record<string, unknown>): TaxonomyGroup
     (item) => item.label.toLowerCase(),
   );
   const groups = [
-    createTaxonomyGroup('taxonomy', 'Taxonomie', buildObjectTaxonomyItems(raw.taxonomy)),
+    createTaxonomyGroup('taxonomy', 'Catégories', buildObjectTaxonomyItems(raw.taxonomy)),
     createTaxonomyGroup('labels', 'Labels', buildBasicTaxonomyItems(raw.labels, 'label')),
     createTaxonomyGroup('badges', 'Badges', buildBasicTaxonomyItems(raw.badges, 'badge')),
     createTaxonomyGroup('tags', 'Tags', buildBasicTaxonomyItems(raw.tags, 'tag')),

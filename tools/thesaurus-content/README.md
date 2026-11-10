@@ -39,6 +39,13 @@ jeton de session utilisateur courant dans `SUPABASE_AUTH_ACCESS_TOKEN`. Ne pas c
 clé ni utiliser une clé `service_role` à la place d'une session utilisateur. Le script
 ne charge aucun fichier `.env` automatiquement et n'affiche jamais ces valeurs.
 
+La lecture inclut les domaines internes sans modifier leur visibilité et conserve
+la révision éventuelle de chaque concept, sans charger la liste globale des
+brouillons. Elle exige les capacités serveur de lecture interne et d'omission des
+révisions globales ; une base antérieure est refusée explicitement. Les contrôles
+d'identité, de version et d'empreinte restent identiques pour les domaines publics
+et privés.
+
 ```powershell
 node tools/thesaurus-content/propose-content.mjs --input lot.json
 node tools/thesaurus-content/propose-content.mjs --input lot.json --apply
@@ -129,7 +136,7 @@ Enregistrer ou valider un brouillon ne les modifie pas en source : seule la publ
 ordinaire les persiste et recalcule les alias natifs des catalogues `ref_code` avec
 les libellés éditoriaux français.
 Les snapshots et réponses publics du thésaurus excluent ce champ. La migration
-`20261110072416_thesaurus_legacy_search_term_roundtrip.sql` conserve le noyau
+`20261110081126_thesaurus_legacy_search_term_roundtrip.sql` conserve le noyau
 `activate` et ses contrôles d'authentification ; elle vérifie l'ancien contrat de préparation
 puis actualise uniquement l'empreinte du writer `apply_source`, sans réinitialiser les
 autres empreintes ni élargir les droits.

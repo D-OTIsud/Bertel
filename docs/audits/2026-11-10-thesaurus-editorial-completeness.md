@@ -188,3 +188,28 @@ la couverture et la cohérence structurelle ; ils ne garantissent pas à eux seu
 la justesse d'une définition ni une relecture humaine ou native des traductions.
 Ce dossier décrit le lot préparé. L'application en production et son numéro de
 publication exigent un relevé de livraison distinct.
+
+## Qualification de la garde des relations publiques
+
+Le 10 novembre, une publication authentifiée de 27 concepts privés a atteint la
+limite de 8 secondes dans la garde qui vérifie les cibles sémantiques publiques.
+Cette garde relit le snapshot public entier, même lorsque les corrections portent
+sur des domaines privés. Son prédicat `dst.concept_id::text = target.value` ne pouvait
+utiliser que la composante `release_id` des index existants.
+
+La migration native `20261110090528_thesaurus_public_target_lookup_index.sql` ajoute
+un index non unique sur `(release_id, (concept_id::text))`, partiel `WHERE is_public`,
+avec `INCLUDE (concept_id)`. Elle ne change ni le noyau `activate`, ni les droits,
+ni la limite de temps. L'empreinte du corps d'activation reste
+`985839358c6e0d68eb7db280f42bb6ed`.
+
+Le [reçu EXPLAIN](2026-11-10-thesaurus-public-target-lookup.explain.json) porte sur le
+SELECT exact de la garde, appliqué en lecture seule à la publication 8 : 1 362 concepts
+publics et 3 422 références. Après index, il s'exécute en **37,609 ms** (planification :
+1,547 ms), avec 3 422 recherches `Index Only Scan` utilisant les deux composantes et
+**zéro accès au tas**. Le plan précédent utilisait un `Hash Right Anti` qui rescannait
+les cibles par concept ; aucune durée exacte de ce plan précédent n'est revendiquée.
+
+Après cette correction, la session réelle a publié les 27 concepts et actualisé
+517 fiches dans la publication 10. Cette observation valide ce premier lot ; les
+lots suivants doivent encore être vérifiés par leur publication et leur reçu propres.

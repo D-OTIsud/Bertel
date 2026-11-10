@@ -70,7 +70,9 @@ partie de cette livraison. Les modifications préexistantes de
 issue de sa source de référence.
 
 Le Dockerfile doit conserver sa liste explicite de fichiers publiés, complétée
-uniquement par le guide et ses ressources de rendu. Ne pas remplacer cette liste
+uniquement par la page statique `thesaurus.html`. Le guide Markdown et son générateur
+servent à la construction et aux contrôles du dépôt ; ils ne sont pas publiés.
+Ne pas remplacer cette liste
 par une copie globale de `docs/`. Les audits, plans et documents internes demeurent
 hors du site public.
 
@@ -105,8 +107,11 @@ dans ce document ne vaut pas preuve de réussite.
 Relever l’heure, le commit servi et l’identifiant du déploiement documentaire réussi
 dans Coolify, puis effectuer les lectures HTTP sur le site public :
 
-- `thesaurus.html`, `guide-metier-thesaurus.md` et `thesaurus-render.js` : réponse 200,
-  contenu et empreintes conformes au candidat, affichage effectif du guide ;
+- `thesaurus.html` : réponse 200, contenu et empreinte conformes au candidat,
+  affichage effectif du guide statique sans chargement du Markdown ;
+- `guide-metier-thesaurus.md` et `thesaurus-render.js` : absents de l'image publique,
+  ainsi que les audits, plans et sources internes ; un éventuel repli SPA vers
+  l'index avec un statut 200 ne prouve pas leur présence ;
 - `index.html` et `partenaires.html` : liens vers le guide ;
 - `guide-partenaires.md` : statut bêta retiré sur le périmètre livré et section
   `include_selection_ids` conservée ;

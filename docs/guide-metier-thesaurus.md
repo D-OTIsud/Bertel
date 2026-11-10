@@ -47,6 +47,8 @@ Le bouton **Soumettre à validation** lance immédiatement les contrôles du sys
 
 Les intitulés des domaines sont rédigés en français et constituent la base commune de l'affichage métier. Ils nomment les rubriques dans lesquelles travailler ; ils sont distincts du libellé préféré et des traductions d'un concept. Par exemple, **Hôtellerie** est le domaine et « Hôtel familial » est une notion de ce domaine.
 
+**Repère de production — publication 26.** La publication courante a été créée le 10 novembre 2026 à 21:20:40 UTC. Son périmètre partenaire compte 1 496 concepts publics dans 72 domaines publics, soit six domaines publics et 134 concepts publics ajoutés au périmètre précédent. Elle porte 239 liens natifs entre actions de développement durable et groupes, dont deux entre catégories. Les publications jusqu'à la 25 conservent leurs snapshots et empreintes historiques ; leurs champs ne sont pas réécrits par cette publication.
+
 | Rubrique | La choisir pour… | À distinguer de… |
 |---|---|---|
 | **Labels et classements** | Définir un label, un classement ou un référentiel de qualification. | Le niveau ou la mention attribuable dans ce référentiel. |

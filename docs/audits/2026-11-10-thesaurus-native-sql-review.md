@@ -7,7 +7,7 @@ this is not approval to bypass that integration failure. No native production
 installation has occurred. No production
 writes, publication, commits or overlapping SQL edits were performed by reviewer.
 
-Reviewed candidate: `supabase/migrations/20261110201213_thesaurus_native_dictionary_adapters.sql`
+Reviewed candidate: `supabase/migrations/20261110210758_thesaurus_native_dictionary_adapters.sql`
 and standalone mirror, against the adapter extension design, current publication/
 preparation constructors, source schema/policies, and root's read-only production
 function/view fingerprint capture. Expanded scope is nine adapters: six public
@@ -203,3 +203,21 @@ Compare the old 1,477 labels/definitions separately from additive membership and
 category `narrower` metadata. Verify every native membership, both cross-category
 edges, private-role exclusion, unchanged unrelated documents, immutable earlier
 releases, exact source-field preservation and normal outbox completion afterward.
+
+Production installation by root: native ledger 20261110210758 succeeded after full
+SQL CI 42899777890 and frontend CI 42899778274 passed on the unchanged reviewed
+SQL body 0d44a607d218191089779cc5eff15cf989fcec84981492075f000ccecb771f67.
+Postflight verified 87 four-language domains (72 public, 15 private), exactly nine
+ungoverned new domains and 148 native source rows. Existing 1,477 concepts, release
+25, historical release-row digest and exact publisher memberships are unchanged.
+Installation did not publish or synchronize new concept identities. The filename
+was aligned with the actual native ledger; its SQL bytes remain unchanged.
+
+Root production publication postflight: ordinary authenticated publication 26
+completed at 2026-11-10 21:20:40.251679 UTC. Its 148 reviewed revisions produce
+1,625 frozen concepts (1,496 public, 129 private) across 87 governed domains.
+The separate [publication receipt](2026-11-10-thesaurus-publication-26.md) records
+exact language/source/membership comparisons, the preserved old corpus and
+historical release digest, and all 171 unchanged catalog/FK integrity results.
+These are root operational observations, separate from the independent SQL
+review and its earlier qualification checkpoint above.

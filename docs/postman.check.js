@@ -189,6 +189,32 @@ check('OpenAPI and implemented public HTTP routes agree', () => {
   const documented = new Set(Object.entries(openapi.paths).flatMap(([route, spec]) => Object.keys(spec).filter((method) => /^(get|post|put|patch|delete|head|options)$/.test(method)).map((method) => `${method.toUpperCase()} ${canonical(route)}`)));
   assert.deepEqual([...implemented].sort(), [...documented].sort(), 'a public HTTP route is missing from OpenAPI, or OpenAPI describes an unimplemented route');
 });
+check('every structured Postman URL matches its raw URL', () => {
+  for (const entry of entries) {
+    const url = entry.item.request.url;
+    if (!url || typeof url === 'string') continue;
+    assert.ok(typeof url.raw === 'string' && Array.isArray(url.host) && Array.isArray(url.path),
+      `missing structured URL fields: ${entry.item.name}`);
+    const variableHost = url.raw.match(/^\{\{[^}]+\}\}/)?.[0];
+    let suffix;
+    if (variableHost) {
+      assert.ok(url.host.includes(variableHost), `raw host disagrees with structured host: ${entry.item.name}`);
+      suffix = url.raw.slice(variableHost.length);
+    } else {
+      const parsed = new URL(url.raw);
+      assert.equal(url.host.join('.'), parsed.host, `raw host disagrees with structured host: ${entry.item.name}`);
+      suffix = parsed.pathname + parsed.search;
+    }
+    const rawPath = suffix.split(/[?#]/, 1)[0] || '/';
+    const structuredPath = `/${url.path.join('/')}`;
+    assert.equal(structuredPath, rawPath, `raw path disagrees with structured path: ${entry.item.name}`);
+    const rawQuery = suffix.includes('?') ? suffix.slice(suffix.indexOf('?') + 1).split('#', 1)[0] : '';
+    const rawParameters = [...new URLSearchParams(rawQuery).entries()];
+    const structuredParameters = new URLSearchParams();
+    for (const query of url.query || []) if (!query.disabled) structuredParameters.append(query.key, query.value ?? '');
+    assert.deepEqual([...structuredParameters.entries()], rawParameters, `raw query disagrees with structured query: ${entry.item.name}`);
+  }
+});
 check('legacy RPC signatures and object types remain canonical', () => {
   const types = new Set(graph.nodes.find((n) => n.kind === 'enum' && n.id === 'public.object_type').props.values);
   for (const entry of legacy) {

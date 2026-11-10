@@ -1,0 +1,732 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "project_ref": "ryycrdhlkmzpxwwwwupy",
+    "transport": "Bertel Supabase MCP execute_sql",
+    "read_only": true,
+    "independent_statement_snapshots": true,
+    "private_lexical_content_included": false,
+    "scope": "Native SQL installation and ordinary authenticated publication; application deployment verified separately"
+  },
+  "migrations": [
+    {
+      "version": "20261110195115",
+      "name": "thesaurus_domain_metadata_localization"
+    },
+    {
+      "version": "20261110210758",
+      "name": "thesaurus_native_dictionary_adapters",
+      "sql_sha256": "0d44a607d218191089779cc5eff15cf989fcec84981492075f000ccecb771f67"
+    }
+  ],
+  "release": {
+    "old_release_id": 25,
+    "new_release_id": 26,
+    "old_previous_release_id": 24,
+    "old_as_of": "2026-11-10 10:02:41.23994+00",
+    "new_previous_release_id": 25,
+    "new_as_of": "2026-11-10 21:20:40.251679+00",
+    "old_concept_checksum": "6c753bf3261a6e34303d832e0638524e",
+    "new_concept_checksum": "1d1ff90fa0e40c71c17db967e55e1cd4",
+    "old_metadata_scope": null,
+    "old_metadata_checksum": null,
+    "new_metadata_scope": "release_snapshot",
+    "new_metadata_checksum": "0bc9b188189d0ee1739ea61f58412f88",
+    "recomputed_new_metadata_checksum": "0bc9b188189d0ee1739ea61f58412f88",
+    "old_manifest_domain_count": 66,
+    "new_manifest_domain_count": 72,
+    "old_snapshot_rows": 1477,
+    "old_public_rows": 1362,
+    "old_private_rows": 115,
+    "new_snapshot_rows": 1625,
+    "new_public_rows": 1496,
+    "new_private_rows": 129
+  },
+  "final_history": {
+    "captured_at": "2026-11-10 21:39:09.5382+00",
+    "historical_release_rows_digest": "9efdd0fad56332aebe6bf453a4882be6",
+    "governed_domains": 87,
+    "pending_revisions": 0
+  },
+  "catalog_integrity": {
+    "checks": 171,
+    "identity_checks": 104,
+    "canonical_foreign_key_checks": 67,
+    "baseline": "THESAURUS_CATALOG_INTEGRITY_BASELINE.json",
+    "all_results_identical_to_baseline": true,
+    "duplicate_identities": 0,
+    "missing_key_components": 0,
+    "orphan_rows": 0,
+    "captured_at": [
+      "2026-11-10 21:38:11.646666+00",
+      "2026-11-10 21:38:12.860656+00",
+      "2026-11-10 21:38:13.557459+00",
+      "2026-11-10 21:38:14.413344+00",
+      "2026-11-10 21:38:15.654129+00"
+    ]
+  },
+  "reports": [
+    {
+      "file": "01_scope_actor_role.sql",
+      "query_sha256": "68036aa2785938c5ad6b83921960b2e7f3a735c94324fe0bb173725f80970acc",
+      "rows": [
+        {
+          "domain": "actor_role",
+          "expected_rows": 5,
+          "exact_source_rows": 5,
+          "missing_source_rows": 0,
+          "duplicate_source_identities": 0,
+          "source_code_mismatches": 0,
+          "exact_canonical_rows": 5,
+          "missing_canonical_rows": 0,
+          "duplicate_canonical_identities": 0,
+          "canonical_code_mismatches": 0,
+          "current_snapshot_matches": 5,
+          "unexpected_source_rows": 0,
+          "unexpected_canonical_rows": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "01_scope_capacity_metric.sql",
+      "query_sha256": "5081b168b86c01dbab58c3eb6f722de0d872b7281922900c805c77da091c2cfe",
+      "rows": [
+        {
+          "domain": "capacity_metric",
+          "expected_rows": 12,
+          "exact_source_rows": 12,
+          "missing_source_rows": 0,
+          "duplicate_source_identities": 0,
+          "source_code_mismatches": 0,
+          "exact_canonical_rows": 12,
+          "missing_canonical_rows": 0,
+          "duplicate_canonical_identities": 0,
+          "canonical_code_mismatches": 0,
+          "current_snapshot_matches": 12,
+          "unexpected_source_rows": 0,
+          "unexpected_canonical_rows": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "01_scope_contact_role.sql",
+      "query_sha256": "fa0cc46cfd6d8eaeddbdea7c573b41287cd93fecc28733a75cc9d2226c72b561",
+      "rows": [
+        {
+          "domain": "contact_role",
+          "expected_rows": 6,
+          "exact_source_rows": 6,
+          "missing_source_rows": 0,
+          "duplicate_source_identities": 0,
+          "source_code_mismatches": 0,
+          "exact_canonical_rows": 6,
+          "missing_canonical_rows": 0,
+          "duplicate_canonical_identities": 0,
+          "canonical_code_mismatches": 0,
+          "current_snapshot_matches": 6,
+          "unexpected_source_rows": 0,
+          "unexpected_canonical_rows": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "01_scope_iti_assoc_role.sql",
+      "query_sha256": "1ac382343e5a3a0abe427a39433b02263cb5f532d12d1417970f59f2223ca42e",
+      "rows": [
+        {
+          "domain": "iti_assoc_role",
+          "expected_rows": 8,
+          "exact_source_rows": 8,
+          "missing_source_rows": 0,
+          "duplicate_source_identities": 0,
+          "source_code_mismatches": 0,
+          "exact_canonical_rows": 8,
+          "missing_canonical_rows": 0,
+          "duplicate_canonical_identities": 0,
+          "canonical_code_mismatches": 0,
+          "current_snapshot_matches": 8,
+          "unexpected_source_rows": 0,
+          "unexpected_canonical_rows": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "01_scope_legal_type.sql",
+      "query_sha256": "458bdfc8e8cef67c6e906d779d17e2e66b9af56b3ad486f22f73d94b8e22a519",
+      "rows": [
+        {
+          "domain": "legal_type",
+          "expected_rows": 21,
+          "exact_source_rows": 21,
+          "missing_source_rows": 0,
+          "duplicate_source_identities": 0,
+          "source_code_mismatches": 0,
+          "exact_canonical_rows": 21,
+          "missing_canonical_rows": 0,
+          "duplicate_canonical_identities": 0,
+          "canonical_code_mismatches": 0,
+          "current_snapshot_matches": 21,
+          "unexpected_source_rows": 0,
+          "unexpected_canonical_rows": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "01_scope_object_relation_type.sql",
+      "query_sha256": "498795b24631c3377fcca68d44b05b0ac354c31558a4e3602e30b7301d17f172",
+      "rows": [
+        {
+          "domain": "object_relation_type",
+          "expected_rows": 10,
+          "exact_source_rows": 10,
+          "missing_source_rows": 0,
+          "duplicate_source_identities": 0,
+          "source_code_mismatches": 0,
+          "exact_canonical_rows": 10,
+          "missing_canonical_rows": 0,
+          "duplicate_canonical_identities": 0,
+          "canonical_code_mismatches": 0,
+          "current_snapshot_matches": 10,
+          "unexpected_source_rows": 0,
+          "unexpected_canonical_rows": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "01_scope_org_role.sql",
+      "query_sha256": "c2b1c9c65ded47c351d4ffc1cc6dd8235aac4d92799b62dd62582a3d66a7a5d5",
+      "rows": [
+        {
+          "domain": "org_role",
+          "expected_rows": 3,
+          "exact_source_rows": 3,
+          "missing_source_rows": 0,
+          "duplicate_source_identities": 0,
+          "source_code_mismatches": 0,
+          "exact_canonical_rows": 3,
+          "missing_canonical_rows": 0,
+          "duplicate_canonical_identities": 0,
+          "canonical_code_mismatches": 0,
+          "current_snapshot_matches": 3,
+          "unexpected_source_rows": 0,
+          "unexpected_canonical_rows": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "01_scope_review_source.sql",
+      "query_sha256": "f39a86641ac0ffa52a7d16d5c215cbff51e041dfeb851352d49b2e40bed3d834",
+      "rows": [
+        {
+          "domain": "review_source",
+          "expected_rows": 7,
+          "exact_source_rows": 7,
+          "missing_source_rows": 0,
+          "duplicate_source_identities": 0,
+          "source_code_mismatches": 0,
+          "exact_canonical_rows": 7,
+          "missing_canonical_rows": 0,
+          "duplicate_canonical_identities": 0,
+          "canonical_code_mismatches": 0,
+          "current_snapshot_matches": 7,
+          "unexpected_source_rows": 0,
+          "unexpected_canonical_rows": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "01_scope_sustainability_group.sql",
+      "query_sha256": "a33f5605a19acc828de14296494b32b33db76ef0c46741003a379f026a59f6e1",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "expected_rows": 76,
+          "exact_source_rows": 76,
+          "missing_source_rows": 0,
+          "duplicate_source_identities": 0,
+          "source_code_mismatches": 0,
+          "exact_canonical_rows": 76,
+          "missing_canonical_rows": 0,
+          "duplicate_canonical_identities": 0,
+          "canonical_code_mismatches": 0,
+          "current_snapshot_matches": 76,
+          "unexpected_source_rows": 0,
+          "unexpected_canonical_rows": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_actor_role_01.sql",
+      "query_sha256": "0b21c78c1e42ce5eea06de51c4e8ef46fccb3392cee07d08dcc4650bf62d5a98",
+      "rows": [
+        {
+          "domain": "actor_role",
+          "chunk": 1,
+          "expected_rows": 5,
+          "canonical_ids_found": 5,
+          "snapshot_documents_found": 5,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_capacity_metric_01.sql",
+      "query_sha256": "a202c99350ee48fc8f9a6f9eb8c3f9e31d84e86140dc4996efb5041fa4b36a0a",
+      "rows": [
+        {
+          "domain": "capacity_metric",
+          "chunk": 1,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_capacity_metric_02.sql",
+      "query_sha256": "b2933a81b69dfc67dcac1c2b3151be6f6e5669202919f4162246a7658a088eb8",
+      "rows": [
+        {
+          "domain": "capacity_metric",
+          "chunk": 2,
+          "expected_rows": 4,
+          "canonical_ids_found": 4,
+          "snapshot_documents_found": 4,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_contact_role_01.sql",
+      "query_sha256": "b4e113560f44bee4f7f1a559f475e9e17f6e3a303fee7f0f928c62e541097e2c",
+      "rows": [
+        {
+          "domain": "contact_role",
+          "chunk": 1,
+          "expected_rows": 6,
+          "canonical_ids_found": 6,
+          "snapshot_documents_found": 6,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_iti_assoc_role_01.sql",
+      "query_sha256": "e49f9ed2da5190fad109b1199a73732d3f9f7df6a6f0ba643d688a22c36b8e48",
+      "rows": [
+        {
+          "domain": "iti_assoc_role",
+          "chunk": 1,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_legal_type_01.sql",
+      "query_sha256": "6f6f3049a2738d89bb998857fbf87a0adc9e1635f377e4f756c85df68d161062",
+      "rows": [
+        {
+          "domain": "legal_type",
+          "chunk": 1,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_legal_type_02.sql",
+      "query_sha256": "e62b87fca290e82f50d2756df8993e0634b2c352ae0e603093c219064a1e3ac1",
+      "rows": [
+        {
+          "domain": "legal_type",
+          "chunk": 2,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_legal_type_03.sql",
+      "query_sha256": "b8f012a520b5eaa0adbd638f7912a2b28fe36c342ac790e95ef49e7d833c0bbc",
+      "rows": [
+        {
+          "domain": "legal_type",
+          "chunk": 3,
+          "expected_rows": 5,
+          "canonical_ids_found": 5,
+          "snapshot_documents_found": 5,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_object_relation_type_01.sql",
+      "query_sha256": "e190607874ae162e227ad159421d07f094a8730f0a572cb9288690865b06f7c2",
+      "rows": [
+        {
+          "domain": "object_relation_type",
+          "chunk": 1,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_object_relation_type_02.sql",
+      "query_sha256": "5d0b9e47b60fc327243d9af946f5d314d01029edc62479219968e32de16a7741",
+      "rows": [
+        {
+          "domain": "object_relation_type",
+          "chunk": 2,
+          "expected_rows": 2,
+          "canonical_ids_found": 2,
+          "snapshot_documents_found": 2,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_org_role_01.sql",
+      "query_sha256": "5efc410665d0018b1145e6f39c058fd6b258c6dd4cf9120e61403bca47f5da0a",
+      "rows": [
+        {
+          "domain": "org_role",
+          "chunk": 1,
+          "expected_rows": 3,
+          "canonical_ids_found": 3,
+          "snapshot_documents_found": 3,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_review_source_01.sql",
+      "query_sha256": "f3cc25ce853109b06e0f62136f57f6e57cbd255f85212db5a0b98464caad3bca",
+      "rows": [
+        {
+          "domain": "review_source",
+          "chunk": 1,
+          "expected_rows": 7,
+          "canonical_ids_found": 7,
+          "snapshot_documents_found": 7,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_01.sql",
+      "query_sha256": "49e1e2206035985f62a081334e095b5576dd680f3bcb1af636bca306fb10ed40",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 1,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_02.sql",
+      "query_sha256": "adc12b9885376dc296f138378f433b530d9a179e32d86142f08e5b15a0b89d52",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 2,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_03.sql",
+      "query_sha256": "e98f445a135f6c6680af0fefb60189758f2ae0f96fbb09575698b0d8dc0d2a7d",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 3,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_04.sql",
+      "query_sha256": "aad442768f4f85a4ae022a7fffd7a0f3c8d21c3eb97380ebeee3902ba654a248",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 4,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_05.sql",
+      "query_sha256": "5c26768b172c0c69e5ee955dc2a50beffeea5d424776c2319e59db6f7e5ba89e",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 5,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_06.sql",
+      "query_sha256": "f61d3b125a47190a88d55856328950b49fb49ddfa3c075bdcf3c7ae5dc84d7c2",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 6,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_07.sql",
+      "query_sha256": "eba04fb71ccaa4b907d57bad5fbab1d3ed3deebabfd429998aa3844aac2e5131",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 7,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_08.sql",
+      "query_sha256": "c12efa3aac54fd825d7bbdefe5d111bd81e038cf6b26aea42006d59ed529f93d",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 8,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_09.sql",
+      "query_sha256": "2b2e9a01109318aa6ea0ad6b49fca69eebdc079515fb6ddef16c9b933ec1baeb",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 9,
+          "expected_rows": 8,
+          "canonical_ids_found": 8,
+          "snapshot_documents_found": 8,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "02_locale_sustainability_group_10.sql",
+      "query_sha256": "dfdee9e6e8edf01231a3a6892dca8c7c237b9842baecb4b601f98f65ae5f5c74",
+      "rows": [
+        {
+          "domain": "sustainability_group",
+          "chunk": 10,
+          "expected_rows": 4,
+          "canonical_ids_found": 4,
+          "snapshot_documents_found": 4,
+          "label_mismatches": 0,
+          "definition_mismatches": 0,
+          "visibility_mismatches": 0,
+          "mismatched_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "03_manifest_domain_names.sql",
+      "query_sha256": "db849c4e3e5b9208150dc1381da8e7dc8814b889be03e3e5e5133ef90f83a0fd",
+      "rows": [
+        {
+          "expected_public_domains": 72,
+          "exact_public_domain_names": 72,
+          "missing_public_domain_names": 0,
+          "duplicate_public_domain_names": 0,
+          "unexpected_public_domain_names": 0,
+          "mismatched_domains": []
+        }
+      ]
+    },
+    {
+      "file": "04_release25_history_preservation.sql",
+      "query_sha256": "caa53cbfdd18f59164ad510560bbdb25d4150d947015f49143ca700575af189e",
+      "rows": [
+        {
+          "old_snapshot_rows": 1477,
+          "old_public_rows": 1362,
+          "old_private_rows": 115,
+          "found_in_new_snapshot": 1477,
+          "missing_from_new_snapshot": 0,
+          "visibility_mismatches": 0,
+          "preserved_document_mismatches": 0,
+          "mismatch_concept_ids": []
+        }
+      ]
+    },
+    {
+      "file": "06_membership_exact.sql",
+      "query_sha256": "ee9374e873e2797a8bd2ec725ee27152e956758c9c9ef408fffc75276f975ccc",
+      "rows": [
+        {
+          "native_edges": 239,
+          "unmapped_or_orphaned_native_edges": 0,
+          "missing_public_endpoint_documents": 0,
+          "action_member_of_mismatch_count": 0,
+          "group_members_mismatch_count": 0,
+          "mismatched_group_concept_ids": [],
+          "cross_category_edges": 2,
+          "duplicate_native_edges": 0,
+          "mismatched_action_source_ids": []
+        }
+      ]
+    },
+    {
+      "file": "07_old_release_checksums.sql",
+      "query_sha256": "4a8a58c410ffe7c19d4e1ce4194c0619ba5deb1fea36928b885353f88ee73fd5",
+      "rows": [
+        {
+          "release_rows": 1477,
+          "checksum_matches": 1477,
+          "checksum_mismatches": 0,
+          "public_rows": 1362,
+          "private_rows": 115
+        }
+      ]
+    },
+    {
+      "file": "native-postflight-queries/05_hierarchy_membership_integrity.sql",
+      "query_sha256": "0b0323fd44903d805c351892c85682bf67e8e30f922f23e25d6ea695abafde0a",
+      "rows": [
+        {
+          "public_documents": 1496,
+          "release25_public_documents": 1362,
+          "release25_broader_edges": 761,
+          "broader_edges": 837,
+          "group_category_parent_edges": 76,
+          "group_parent_context_mismatches": 0,
+          "narrower_inverse_mismatches": 0,
+          "orphan_broader_targets": 0,
+          "orphan_semantic_targets": 0,
+          "duplicate_hierarchical_or_membership_edges": 0,
+          "cyclic_hierarchy_starts": 0,
+          "native_grouped_action_edges": 239,
+          "orphan_native_group_ids": 0,
+          "cross_category_memberships": 2,
+          "asymmetric_action_memberships": 0,
+          "missing_group_member_refs": 0,
+          "public_group_documents": 76
+        }
+      ]
+    }
+  ],
+  "verification_query_corrections": [
+    "Published canonical maps preferred_labels/definitions are compared with the reviewed lot; editor aliases are not required in frozen documents.",
+    "Group joins distinguish native foreign keys and resolved group IDs, including groups with empty members arrays.",
+    "The hierarchy duplicate count is taken from the aggregate value, not the number of aggregate result rows. Initial attempted receipts are retained privately."
+  ]
+}

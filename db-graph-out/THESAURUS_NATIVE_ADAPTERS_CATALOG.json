@@ -1,0 +1,1434 @@
+{
+  "columns": [
+    {
+      "name": "concept_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": true
+    },
+    {
+      "name": "ref_code_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "ref_code_domain",
+      "type": "text",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "amenity_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "classification_scheme_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "classification_value_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "language_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "commune_code",
+      "type": "character varying(5)",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "sustainability_action_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "sustainability_category_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "iti_assoc_role_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "object_relation_type_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "capacity_metric_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "legal_type_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "review_source_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "sustainability_group_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "actor_role_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "contact_role_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "org_role_id",
+      "type": "uuid",
+      "table": "thesaurus.source_link",
+      "not_null": false
+    },
+    {
+      "name": "domain",
+      "type": "text",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    },
+    {
+      "name": "source_kind",
+      "type": "text",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    },
+    {
+      "name": "legacy_public",
+      "type": "boolean",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    },
+    {
+      "name": "is_public",
+      "type": "boolean",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    },
+    {
+      "name": "is_governed",
+      "type": "boolean",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    },
+    {
+      "name": "require_definition",
+      "type": "boolean",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    },
+    {
+      "name": "required_languages",
+      "type": "text[]",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    },
+    {
+      "name": "name_i18n",
+      "type": "jsonb",
+      "table": "thesaurus.vocabulary",
+      "not_null": true
+    }
+  ],
+  "functions": [
+    {
+      "acl": [
+        "bertel_thesaurus_publisher=X/bertel_thesaurus_publisher",
+        "postgres=X/bertel_thesaurus_publisher"
+      ],
+      "owner": "bertel_thesaurus_publisher",
+      "body_md5": "ec54c9bb9662c7bc76426355438ee67a",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public, api, internal, extensions, auth"
+      ],
+      "signature": "thesaurus.activate(uuid[],text[],text,bigint,jsonb)",
+      "volatility": "v",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "20c7e1b3303349eeab03b4ccabc21717",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public, api, auth"
+      ],
+      "signature": "thesaurus.admin_dispatch(text,jsonb)",
+      "volatility": "v",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "9c339db425331f518cad92cbd68ef196",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public"
+      ],
+      "signature": "thesaurus.apply_source(uuid,jsonb)",
+      "volatility": "v",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "2917238522229f580abf5388d24e0563",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "signature": "thesaurus.concept_document(uuid,boolean)",
+      "volatility": "s",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "9e7bc848a0b4f5168380108bc511ee30",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "signature": "thesaurus.guard_assignment()",
+      "volatility": "v",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "019744a91ecedeadc998b911cf9ab778",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "signature": "thesaurus.guard_source()",
+      "volatility": "v",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "034e727c0ce530287b9545a9e723431b",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public"
+      ],
+      "signature": "thesaurus.native_membership_edges()",
+      "volatility": "s",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "99bd4e773be3e2857cd8f98b4cf53cca",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "signature": "thesaurus.native_membership_fields(uuid)",
+      "volatility": "s",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "f93afe28512ebdf10bef4a97858a3a40",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "signature": "thesaurus.native_source_fields_valid(uuid,jsonb)",
+      "volatility": "s",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "f734327f66f7c5b30e7703e8b3cc82c2",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog"
+      ],
+      "signature": "thesaurus.preparation_sources()",
+      "volatility": "s",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "846966da861a278d4849c6539aec675c",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "signature": "thesaurus.public_dispatch(text,bigint,jsonb)",
+      "volatility": "s",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "ebed7f72f0af5f37cee84c282079e163",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "signature": "thesaurus.publication_documents(uuid[])",
+      "volatility": "s",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "51a7deb5495b122f59f489c2f74cfbcd",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public"
+      ],
+      "signature": "thesaurus.row_has_historical_reference(oid,jsonb,oid[],integer)",
+      "volatility": "s",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "e2a393985c2aaa5579bb170d19205ed4",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus, public"
+      ],
+      "signature": "thesaurus.sync_sources(text[])",
+      "volatility": "v",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "bafda820b769bfce9076aff8bcad148c",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, public, thesaurus"
+      ],
+      "signature": "thesaurus.usage_objects(uuid[])",
+      "volatility": "s",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "bertel_thesaurus_publisher=X/postgres"
+      ],
+      "owner": "postgres",
+      "body_md5": "3512b6ee6920abac6d57140c7ed11beb",
+      "parallel": "u",
+      "settings": [
+        "search_path=pg_catalog, thesaurus"
+      ],
+      "signature": "thesaurus.validate_document(uuid,jsonb)",
+      "volatility": "s",
+      "security_definer": false
+    }
+  ],
+  "constraints": [
+    {
+      "kind": "f",
+      "name": "source_link_amenity_id_fkey",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (amenity_id) REFERENCES ref_amenity(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "c",
+      "name": "source_link_check1",
+      "table": "thesaurus.source_link",
+      "definition": "CHECK (((ref_code_id IS NULL) = (ref_code_domain IS NULL)))"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_classification_scheme_id_fkey",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (classification_scheme_id) REFERENCES ref_classification_scheme(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_classification_value_id_fkey",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (classification_value_id) REFERENCES ref_classification_value(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_commune_code_fkey",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (commune_code) REFERENCES ref_commune(insee_code) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_concept_id_fkey",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (concept_id) REFERENCES thesaurus.concept(concept_id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_language_id_fkey",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (language_id) REFERENCES ref_language(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "p",
+      "name": "source_link_pkey",
+      "table": "thesaurus.source_link",
+      "definition": "PRIMARY KEY (concept_id)"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey1",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_accommodation_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey10",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_client_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey11",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_contact_kind(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey12",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_crm_sentiment(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey13",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_cuisine_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey14",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_demand_subtopic(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey15",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_demand_topic(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey16",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_destination_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey17",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_dietary_tag(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey18",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_document_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey19",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_environment_tag(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey2",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_accommodation_unit_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey20",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_event_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey21",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_feedback_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey22",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_incident_category(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey23",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_insurance_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey24",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_iti_difficulty(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey25",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_iti_open_status(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey26",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_iti_practice(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey27",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_iti_stage_kind(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey28",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_language_level(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey29",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_media_tag(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey3",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_activity_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey30",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_media_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey31",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_meeting_equipment(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey32",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_membership_campaign(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey33",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_membership_tier(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey34",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_menu_category(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey35",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_mood(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey36",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_opening_period_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey37",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_opening_schedule_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey38",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_package_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey39",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_partnership_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey4",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_allergen(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey40",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_payment_method(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey41",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_price_kind(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey42",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_price_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey43",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_price_unit(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey44",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_promotion_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey45",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_room_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey46",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_season_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey47",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_service_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey48",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_social_network(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey49",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_tourism_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey5",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_amenity_family(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey50",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_trail_link_role(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey51",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_transport_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey52",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_view_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey53",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_weekday(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey54",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_other(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey6",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_amenity_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey7",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_assistance_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey8",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_bed_type(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_ref_code_id_ref_code_domain_fkey9",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (ref_code_id, ref_code_domain) REFERENCES ref_code_booking_status(id, domain) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_sustainability_action_id_fkey",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (sustainability_action_id) REFERENCES ref_sustainability_action(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "source_link_sustainability_category_id_fkey",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (sustainability_category_id) REFERENCES ref_sustainability_action_category(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "thesaurus_source_link_actor_role_fk",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (actor_role_id) REFERENCES ref_actor_role(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "thesaurus_source_link_capacity_metric_fk",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (capacity_metric_id) REFERENCES ref_capacity_metric(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "thesaurus_source_link_contact_role_fk",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (contact_role_id) REFERENCES ref_contact_role(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "thesaurus_source_link_iti_assoc_role_fk",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (iti_assoc_role_id) REFERENCES ref_iti_assoc_role(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "thesaurus_source_link_legal_type_fk",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (legal_type_id) REFERENCES ref_legal_type(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "thesaurus_source_link_object_relation_type_fk",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (object_relation_type_id) REFERENCES ref_object_relation_type(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "c",
+      "name": "thesaurus_source_link_one_adapter",
+      "table": "thesaurus.source_link",
+      "definition": "CHECK ((num_nonnulls(ref_code_id, amenity_id, classification_scheme_id, classification_value_id, language_id, commune_code, sustainability_action_id, sustainability_category_id, iti_assoc_role_id, object_relation_type_id, capacity_metric_id, legal_type_id, review_source_id, sustainability_group_id, actor_role_id, contact_role_id, org_role_id) = 1))"
+    },
+    {
+      "kind": "f",
+      "name": "thesaurus_source_link_org_role_fk",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (org_role_id) REFERENCES ref_org_role(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "thesaurus_source_link_review_source_fk",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (review_source_id) REFERENCES ref_review_source(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "f",
+      "name": "thesaurus_source_link_sustainability_group_fk",
+      "table": "thesaurus.source_link",
+      "definition": "FOREIGN KEY (sustainability_group_id) REFERENCES ref_sustainability_action_group(id) ON DELETE RESTRICT"
+    },
+    {
+      "kind": "c",
+      "name": "thesaurus_vocabulary_definition_required",
+      "table": "thesaurus.vocabulary",
+      "definition": "CHECK ((require_definition IS TRUE))"
+    },
+    {
+      "kind": "c",
+      "name": "thesaurus_vocabulary_editorial_languages",
+      "table": "thesaurus.vocabulary",
+      "definition": "CHECK ((required_languages @> ARRAY['fr'::text, 'en'::text, 'es'::text, 'de'::text]))"
+    },
+    {
+      "kind": "c",
+      "name": "thesaurus_vocabulary_name_languages",
+      "table": "thesaurus.vocabulary",
+      "definition": "CHECK (((jsonb_typeof(name_i18n) = 'object'::text) AND (name = (name_i18n ->> 'fr'::text)) AND thesaurus.has_editorial_text((name_i18n -> 'fr'::text)) AND thesaurus.has_editorial_text((name_i18n -> 'en'::text)) AND thesaurus.has_editorial_text((name_i18n -> 'es'::text)) AND thesaurus.has_editorial_text((name_i18n -> 'de'::text))))"
+    },
+    {
+      "kind": "p",
+      "name": "vocabulary_pkey",
+      "table": "thesaurus.vocabulary",
+      "definition": "PRIMARY KEY (domain)"
+    }
+  ],
+  "capture_scope": "thesaurus metadata and nine native adapters only; not a full catalog refresh",
+  "native_policies": [
+    {
+      "name": "admin_actor_role_write",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_actor_role",
+      "using": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+      "command": "ALL",
+      "with_check": null
+    },
+    {
+      "name": "pub_actor_role_read",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_actor_role",
+      "using": "true",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "thesaurus_publisher",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "table": "ref_actor_role",
+      "using": "true",
+      "command": "ALL",
+      "with_check": "true"
+    },
+    {
+      "name": "Lecture publique des métriques de capacité",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_capacity_metric",
+      "using": "true",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "thesaurus_publisher",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "table": "ref_capacity_metric",
+      "using": "true",
+      "command": "ALL",
+      "with_check": "true"
+    },
+    {
+      "name": "Écriture admin des métriques de capacité",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_capacity_metric",
+      "using": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+      "command": "ALL",
+      "with_check": null
+    },
+    {
+      "name": "admin_contact_role_write",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_contact_role",
+      "using": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+      "command": "ALL",
+      "with_check": null
+    },
+    {
+      "name": "pub_contact_role_read",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_contact_role",
+      "using": "true",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "thesaurus_publisher",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "table": "ref_contact_role",
+      "using": "true",
+      "command": "ALL",
+      "with_check": "true"
+    },
+    {
+      "name": "Lecture publique des rôles ITI",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_iti_assoc_role",
+      "using": "true",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "thesaurus_publisher",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "table": "ref_iti_assoc_role",
+      "using": "true",
+      "command": "ALL",
+      "with_check": "true"
+    },
+    {
+      "name": "admin_legal_type_write",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_legal_type",
+      "using": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+      "command": "ALL",
+      "with_check": null
+    },
+    {
+      "name": "pub_legal_type_read",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_legal_type",
+      "using": "true",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "thesaurus_publisher",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "table": "ref_legal_type",
+      "using": "true",
+      "command": "ALL",
+      "with_check": "true"
+    },
+    {
+      "name": "admin_object_relation_type_write",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_object_relation_type",
+      "using": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+      "command": "ALL",
+      "with_check": null
+    },
+    {
+      "name": "pub_object_relation_type_read",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_object_relation_type",
+      "using": "true",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "thesaurus_publisher",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "table": "ref_object_relation_type",
+      "using": "true",
+      "command": "ALL",
+      "with_check": "true"
+    },
+    {
+      "name": "Lecture publique des rôles d'organisation",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_org_role",
+      "using": "true",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "thesaurus_publisher",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "table": "ref_org_role",
+      "using": "true",
+      "command": "ALL",
+      "with_check": "true"
+    },
+    {
+      "name": "Lecture publique des sources d'avis",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_review_source",
+      "using": "true",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "thesaurus_publisher",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "table": "ref_review_source",
+      "using": "true",
+      "command": "ALL",
+      "with_check": "true"
+    },
+    {
+      "name": "Écriture admin des sources d'avis",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_review_source",
+      "using": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+      "command": "ALL",
+      "with_check": null
+    },
+    {
+      "name": "admin_write_ref_sustainability_action_group",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_sustainability_action_group",
+      "using": "((( SELECT auth.role() AS role) = 'service_role'::text) OR (( SELECT auth.role() AS role) = 'admin'::text) OR api.is_platform_superuser())",
+      "command": "ALL",
+      "with_check": null
+    },
+    {
+      "name": "pub_ref_sustainability_action_group_read",
+      "roles": [
+        "public"
+      ],
+      "table": "ref_sustainability_action_group",
+      "using": "true",
+      "command": "SELECT",
+      "with_check": null
+    },
+    {
+      "name": "thesaurus_publisher",
+      "roles": [
+        "bertel_thesaurus_publisher"
+      ],
+      "table": "ref_sustainability_action_group",
+      "using": "true",
+      "command": "ALL",
+      "with_check": "true"
+    }
+  ],
+  "native_triggers": [
+    {
+      "name": "thesaurus_prepared_truncate",
+      "table": "ref_actor_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_prepared_truncate BEFORE TRUNCATE ON public.ref_actor_role FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.guard_prepared_truncate()"
+    },
+    {
+      "name": "thesaurus_source_gate",
+      "table": "ref_actor_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON public.ref_actor_role FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()"
+    },
+    {
+      "name": "trg_audit_ref_actor_role",
+      "table": "ref_actor_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_ref_actor_role AFTER DELETE OR UPDATE ON public.ref_actor_role FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()"
+    },
+    {
+      "name": "update_ref_actor_role_updated_at",
+      "table": "ref_actor_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER update_ref_actor_role_updated_at BEFORE UPDATE ON public.ref_actor_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "name": "zz_thesaurus_source_guard",
+      "table": "ref_actor_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_actor_role FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('actor_role')"
+    },
+    {
+      "name": "thesaurus_prepared_truncate",
+      "table": "ref_capacity_metric",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_prepared_truncate BEFORE TRUNCATE ON public.ref_capacity_metric FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.guard_prepared_truncate()"
+    },
+    {
+      "name": "thesaurus_source_gate",
+      "table": "ref_capacity_metric",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON public.ref_capacity_metric FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()"
+    },
+    {
+      "name": "trg_audit_ref_capacity_metric",
+      "table": "ref_capacity_metric",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_ref_capacity_metric AFTER DELETE OR UPDATE ON public.ref_capacity_metric FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()"
+    },
+    {
+      "name": "trg_ref_capacity_metric_unit_change",
+      "table": "ref_capacity_metric",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_ref_capacity_metric_unit_change AFTER UPDATE OF unit ON public.ref_capacity_metric FOR EACH ROW EXECUTE FUNCTION propagate_capacity_unit_change()"
+    },
+    {
+      "name": "update_ref_capacity_metric_updated_at",
+      "table": "ref_capacity_metric",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER update_ref_capacity_metric_updated_at BEFORE UPDATE ON public.ref_capacity_metric FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "name": "zz_thesaurus_source_guard",
+      "table": "ref_capacity_metric",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_capacity_metric FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('capacity_metric')"
+    },
+    {
+      "name": "thesaurus_prepared_truncate",
+      "table": "ref_contact_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_prepared_truncate BEFORE TRUNCATE ON public.ref_contact_role FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.guard_prepared_truncate()"
+    },
+    {
+      "name": "thesaurus_source_gate",
+      "table": "ref_contact_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON public.ref_contact_role FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()"
+    },
+    {
+      "name": "trg_audit_ref_contact_role",
+      "table": "ref_contact_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_ref_contact_role AFTER DELETE OR UPDATE ON public.ref_contact_role FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()"
+    },
+    {
+      "name": "update_ref_contact_role_updated_at",
+      "table": "ref_contact_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER update_ref_contact_role_updated_at BEFORE UPDATE ON public.ref_contact_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "name": "zz_thesaurus_source_guard",
+      "table": "ref_contact_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_contact_role FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('contact_role')"
+    },
+    {
+      "name": "thesaurus_prepared_truncate",
+      "table": "ref_iti_assoc_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_prepared_truncate BEFORE TRUNCATE ON public.ref_iti_assoc_role FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.guard_prepared_truncate()"
+    },
+    {
+      "name": "thesaurus_source_gate",
+      "table": "ref_iti_assoc_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON public.ref_iti_assoc_role FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()"
+    },
+    {
+      "name": "trg_audit_ref_iti_assoc_role",
+      "table": "ref_iti_assoc_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_ref_iti_assoc_role AFTER DELETE OR UPDATE ON public.ref_iti_assoc_role FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()"
+    },
+    {
+      "name": "update_ref_iti_assoc_role_updated_at",
+      "table": "ref_iti_assoc_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER update_ref_iti_assoc_role_updated_at BEFORE UPDATE ON public.ref_iti_assoc_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "name": "zz_thesaurus_source_guard",
+      "table": "ref_iti_assoc_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_iti_assoc_role FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('iti_assoc_role')"
+    },
+    {
+      "name": "thesaurus_prepared_truncate",
+      "table": "ref_legal_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_prepared_truncate BEFORE TRUNCATE ON public.ref_legal_type FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.guard_prepared_truncate()"
+    },
+    {
+      "name": "thesaurus_source_gate",
+      "table": "ref_legal_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON public.ref_legal_type FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()"
+    },
+    {
+      "name": "trg_audit_ref_legal_type",
+      "table": "ref_legal_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_ref_legal_type AFTER DELETE OR UPDATE ON public.ref_legal_type FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()"
+    },
+    {
+      "name": "update_ref_legal_type_updated_at",
+      "table": "ref_legal_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER update_ref_legal_type_updated_at BEFORE UPDATE ON public.ref_legal_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "name": "zz_thesaurus_source_guard",
+      "table": "ref_legal_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_legal_type FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('legal_type')"
+    },
+    {
+      "name": "thesaurus_prepared_truncate",
+      "table": "ref_object_relation_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_prepared_truncate BEFORE TRUNCATE ON public.ref_object_relation_type FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.guard_prepared_truncate()"
+    },
+    {
+      "name": "thesaurus_source_gate",
+      "table": "ref_object_relation_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON public.ref_object_relation_type FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()"
+    },
+    {
+      "name": "trg_audit_ref_object_relation_type",
+      "table": "ref_object_relation_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_ref_object_relation_type AFTER DELETE OR UPDATE ON public.ref_object_relation_type FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()"
+    },
+    {
+      "name": "update_ref_object_relation_type_updated_at",
+      "table": "ref_object_relation_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER update_ref_object_relation_type_updated_at BEFORE UPDATE ON public.ref_object_relation_type FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "name": "zz_thesaurus_source_guard",
+      "table": "ref_object_relation_type",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_object_relation_type FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('object_relation_type')"
+    },
+    {
+      "name": "thesaurus_prepared_truncate",
+      "table": "ref_org_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_prepared_truncate BEFORE TRUNCATE ON public.ref_org_role FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.guard_prepared_truncate()"
+    },
+    {
+      "name": "thesaurus_source_gate",
+      "table": "ref_org_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON public.ref_org_role FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()"
+    },
+    {
+      "name": "trg_audit_ref_org_role",
+      "table": "ref_org_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_ref_org_role AFTER DELETE OR UPDATE ON public.ref_org_role FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()"
+    },
+    {
+      "name": "update_ref_org_role_updated_at",
+      "table": "ref_org_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER update_ref_org_role_updated_at BEFORE UPDATE ON public.ref_org_role FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "name": "zz_thesaurus_source_guard",
+      "table": "ref_org_role",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_org_role FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('org_role')"
+    },
+    {
+      "name": "thesaurus_prepared_truncate",
+      "table": "ref_review_source",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_prepared_truncate BEFORE TRUNCATE ON public.ref_review_source FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.guard_prepared_truncate()"
+    },
+    {
+      "name": "thesaurus_source_gate",
+      "table": "ref_review_source",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON public.ref_review_source FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()"
+    },
+    {
+      "name": "trg_audit_ref_review_source",
+      "table": "ref_review_source",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_ref_review_source AFTER DELETE OR UPDATE ON public.ref_review_source FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()"
+    },
+    {
+      "name": "update_ref_review_source_updated_at",
+      "table": "ref_review_source",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER update_ref_review_source_updated_at BEFORE UPDATE ON public.ref_review_source FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()"
+    },
+    {
+      "name": "zz_thesaurus_source_guard",
+      "table": "ref_review_source",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_review_source FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('review_source')"
+    },
+    {
+      "name": "thesaurus_assignment_guard",
+      "table": "ref_sustainability_action_group",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_assignment_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_sustainability_action_group FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_assignment('[{\"keys\": [{\"local\": \"category_id\", \"target\": \"id\"}], \"kind\": \"sustainability_category\", \"domain\": null}]')"
+    },
+    {
+      "name": "thesaurus_prepared_truncate",
+      "table": "ref_sustainability_action_group",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_prepared_truncate BEFORE TRUNCATE ON public.ref_sustainability_action_group FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.guard_prepared_truncate()"
+    },
+    {
+      "name": "thesaurus_source_gate",
+      "table": "ref_sustainability_action_group",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER thesaurus_source_gate BEFORE INSERT OR DELETE OR UPDATE ON public.ref_sustainability_action_group FOR EACH STATEMENT EXECUTE FUNCTION thesaurus.source_write_gate()"
+    },
+    {
+      "name": "trg_audit_ref_sustainability_action_group",
+      "table": "ref_sustainability_action_group",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER trg_audit_ref_sustainability_action_group AFTER DELETE OR UPDATE ON public.ref_sustainability_action_group FOR EACH ROW EXECUTE FUNCTION audit.log_row_changes()"
+    },
+    {
+      "name": "zz_thesaurus_source_guard",
+      "table": "ref_sustainability_action_group",
+      "enabled": "O",
+      "definition": "CREATE TRIGGER zz_thesaurus_source_guard BEFORE INSERT OR DELETE OR UPDATE ON public.ref_sustainability_action_group FOR EACH ROW EXECUTE FUNCTION thesaurus.guard_source('sustainability_group')"
+    }
+  ],
+  "database_version": "17.6",
+  "native_ledger_version": "20261110210758",
+  "metadata_ledger_version": "20261110195115",
+  "captured_at_utc": "2026-11-10",
+  "source_sql_sha256": "0d44a607d218191089779cc5eff15cf989fcec84981492075f000ccecb771f67"
+}

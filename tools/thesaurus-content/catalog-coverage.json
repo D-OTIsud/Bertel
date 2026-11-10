@@ -5,12 +5,15 @@
   "discovery_source": "internal.v_ref_catalog",
   "catalog_key_count": 104,
   "adapter_aggregate": {
-    "keys": 78,
-    "identities": 1477,
-    "release_public": 1362,
-    "release_private": 115,
-    "broader_snapshot_rows": 761,
-    "provenance": "prior verified task scope; not recalculated"
+    "keys": 87,
+    "identities": 1625,
+    "release_public": 1496,
+    "release_private": 129,
+    "release_id": 26,
+    "broader_snapshot_rows": 837,
+    "previous_release_id": 25,
+    "previous_release_identities_preserved": 1477,
+    "provenance": "release-26 native postflight receipts; 148 newly adapted identities added to prior 78 adapters"
   },
   "document_scope_counts": {
     "total": 1981,
@@ -31,7 +34,7 @@
       "kind": "table",
       "rows": 5,
       "table": "ref_actor_role",
-      "domain": null,
+      "domain": "actor_role",
       "columns": [
         "id",
         "code",
@@ -55,32 +58,44 @@
       "policies": [
         {
           "name": "admin_actor_role_write",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_actor_role",
           "using": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-          "command": "ALL"
+          "command": "ALL",
+          "with_check": null
         },
         {
           "name": "pub_actor_role_read",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_actor_role",
           "using": "true",
-          "command": "SELECT"
+          "command": "SELECT",
+          "with_check": null
+        },
+        {
+          "name": "thesaurus_publisher",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "table": "ref_actor_role",
+          "using": "true",
+          "command": "ALL",
+          "with_check": "true"
         }
       ],
       "visibility_effect": "public SELECT USING true",
       "semantic_role": "descriptive business relationship-role vocabulary",
-      "adapter": "planned PRIVATE adapter (approved; no new public exposure)",
-      "missing_identities": 5,
+      "adapter": "installed private source adapter; published in release 26",
+      "missing_identities": 0,
       "children_edges": "5 rows; actor-object and actor-default role FKs; public SELECT does not prove public vocabulary.",
       "treatment": "5 actor-role identities are mapped as a private descriptive-role vocabulary; live FK consumers are actor_object_role.role_id and actor.default_role_id.",
-      "identity_coverage_status": "all native identities checked; zero duplicate or missing key components",
-      "edge_integrity_status": "business consumer FKs captured; exact assignment target anti-joins pending",
-      "write_authority": "anon/authenticated/service_role DML grants are constrained by RLS; no thesaurus publisher writer ACL or source guard",
+      "identity_coverage_status": "canonical identities found=5; snapshot documents found=5; no identity omissions",
+      "edge_integrity_status": "Release-26 root FK proof checked 2 constraints; orphan_rows=0.",
+      "write_authority": "Release-26 native metadata: thesaurus_publisher ALL policy is granted to bertel_thesaurus_publisher; native row-level policies also include admin_actor_role_write (ALL, public); pub_actor_role_read (SELECT, public).",
       "content_fields": [
         "code",
         "name",
@@ -90,11 +105,11 @@
       "source_identity_fields": [
         "id"
       ],
-      "adapter_stage": "planned-private",
-      "row_coverage_status": "native identities verified; thesaurus adapter/publication remains planned",
-      "edge_coverage_status": "canonical FK targets verified; publication projection pending",
-      "publisher_acl": false,
-      "source_guard": false,
+      "adapter_stage": "published-release-26",
+      "row_coverage_status": "all 5 source identities found in canonical concepts and release-26 snapshot",
+      "edge_coverage_status": "no native hierarchy edges expected for this flat lookup; identity and release-document parity verified",
+      "publisher_acl": true,
+      "source_guard": true,
       "visibility_decision": "PRIVATE; no visibility widening",
       "name": "Rôles d'acteur",
       "display_name_source": "public.ref_catalog_registry.label",
@@ -116,7 +131,51 @@
           "fk:public.actor_object_role:actor_object_role_role_id_fkey"
         ],
         "orphan_rows": 0
-      }
+      },
+      "published_release_id": 26,
+      "published_visibility": "private",
+      "translation_definition_status": "release-26 postflight: 0 label mismatches, 0 definition mismatches, 0 visibility mismatches across 5 rows",
+      "source_write_authority": "native dictionary adapter migration installed publisher-guarded source mapping; publication receipt confirms release-26 source/snapshot parity",
+      "production_proof": "native-postflight-results-release26-revised.json; release26 source identity + snapshot row checks",
+      "release26_postflight": {
+        "expected": 5,
+        "canonical_ids_found": 5,
+        "snapshot_documents_found": 5,
+        "label_mismatches": 0,
+        "definition_mismatches": 0,
+        "visibility_mismatches": 0,
+        "identity_values_retained": false
+      },
+      "publisher_policy": {
+        "name": "thesaurus_publisher",
+        "command": "ALL",
+        "roles": [
+          "bertel_thesaurus_publisher"
+        ]
+      },
+      "source_guard_trigger": "zz_thesaurus_source_guard",
+      "native_triggers": [
+        {
+          "name": "thesaurus_prepared_truncate",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_source_gate",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_audit_ref_actor_role",
+          "enabled": "O"
+        },
+        {
+          "name": "update_ref_actor_role_updated_at",
+          "enabled": "O"
+        },
+        {
+          "name": "zz_thesaurus_source_guard",
+          "enabled": "O"
+        }
+      ]
     },
     {
       "pk": [
@@ -350,7 +409,7 @@
       "kind": "table",
       "rows": 12,
       "table": "ref_capacity_metric",
-      "domain": null,
+      "domain": "capacity_metric",
       "columns": [
         "id",
         "code",
@@ -376,32 +435,44 @@
       "policies": [
         {
           "name": "Lecture publique des métriques de capacité",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_capacity_metric",
           "using": "true",
-          "command": "SELECT"
+          "command": "SELECT",
+          "with_check": null
+        },
+        {
+          "name": "thesaurus_publisher",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "table": "ref_capacity_metric",
+          "using": "true",
+          "command": "ALL",
+          "with_check": "true"
         },
         {
           "name": "Écriture admin des métriques de capacité",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_capacity_metric",
           "using": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
-          "command": "ALL"
+          "command": "ALL",
+          "with_check": null
         }
       ],
       "visibility_effect": "public SELECT USING true",
       "semantic_role": "controlled vocabulary/content node",
-      "adapter": "planned adapter (authorized for architecture/content work; not installed)",
-      "missing_identities": 12,
+      "adapter": "installed public source adapter; published in release 26",
+      "missing_identities": 0,
       "children_edges": "12 rows; UUID PK, required code/name, optional unit/description; object_capacity and applicability FKs; public SELECT; no native i18n.",
       "treatment": "12 rows; UUID PK, required code/name, optional unit/description; object_capacity and applicability FKs; public SELECT; no native i18n.",
-      "identity_coverage_status": "all native identities checked; zero duplicate or missing key components",
-      "edge_integrity_status": "FK topology captured; adapter target anti-joins pending",
-      "write_authority": "anon/authenticated/service_role DML grants are constrained by RLS; no thesaurus publisher writer ACL or source guard",
+      "identity_coverage_status": "canonical identities found=12; snapshot documents found=12; no identity omissions",
+      "edge_integrity_status": "Release-26 root FK proof checked 2 constraints; orphan_rows=0.",
+      "write_authority": "Release-26 native metadata: thesaurus_publisher ALL policy is granted to bertel_thesaurus_publisher; native row-level policies also include Lecture publique des métriques de capacité (SELECT, public); Écriture admin des métriques de capacité (ALL, public).",
       "content_fields": [
         "code",
         "name",
@@ -411,11 +482,11 @@
       "source_identity_fields": [
         "id"
       ],
-      "adapter_stage": "planned",
-      "row_coverage_status": "native identities verified; thesaurus adapter/publication remains planned",
-      "edge_coverage_status": "canonical FK targets verified; publication projection pending",
-      "publisher_acl": false,
-      "source_guard": false,
+      "adapter_stage": "published-release-26",
+      "row_coverage_status": "all 12 source identities found in canonical concepts and release-26 snapshot",
+      "edge_coverage_status": "no native hierarchy edges expected for this flat lookup; identity and release-document parity verified",
+      "publisher_acl": true,
+      "source_guard": true,
       "visibility_decision": "existing public SELECT only; preserve current visibility flags/legacy allowlists",
       "name": "Indicateurs de capacité",
       "display_name_source": "public.ref_catalog_registry.label",
@@ -437,7 +508,55 @@
           "fk:public.ref_capacity_applicability:ref_capacity_applicability_metric_id_fkey"
         ],
         "orphan_rows": 0
-      }
+      },
+      "published_release_id": 26,
+      "published_visibility": "public",
+      "translation_definition_status": "release-26 postflight: 0 label mismatches, 0 definition mismatches, 0 visibility mismatches across 12 rows",
+      "source_write_authority": "native dictionary adapter migration installed publisher-guarded source mapping; publication receipt confirms release-26 source/snapshot parity",
+      "production_proof": "native-postflight-results-release26-revised.json; release26 source identity + snapshot row checks",
+      "release26_postflight": {
+        "expected": 12,
+        "canonical_ids_found": 12,
+        "snapshot_documents_found": 12,
+        "label_mismatches": 0,
+        "definition_mismatches": 0,
+        "visibility_mismatches": 0,
+        "identity_values_retained": false
+      },
+      "publisher_policy": {
+        "name": "thesaurus_publisher",
+        "command": "ALL",
+        "roles": [
+          "bertel_thesaurus_publisher"
+        ]
+      },
+      "source_guard_trigger": "zz_thesaurus_source_guard",
+      "native_triggers": [
+        {
+          "name": "thesaurus_prepared_truncate",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_source_gate",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_audit_ref_capacity_metric",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_ref_capacity_metric_unit_change",
+          "enabled": "O"
+        },
+        {
+          "name": "update_ref_capacity_metric_updated_at",
+          "enabled": "O"
+        },
+        {
+          "name": "zz_thesaurus_source_guard",
+          "enabled": "O"
+        }
+      ]
     },
     {
       "pk": [
@@ -10470,7 +10589,7 @@
       "kind": "table",
       "rows": 6,
       "table": "ref_contact_role",
-      "domain": null,
+      "domain": "contact_role",
       "columns": [
         "id",
         "code",
@@ -10494,32 +10613,44 @@
       "policies": [
         {
           "name": "admin_contact_role_write",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_contact_role",
           "using": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-          "command": "ALL"
+          "command": "ALL",
+          "with_check": null
         },
         {
           "name": "pub_contact_role_read",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_contact_role",
           "using": "true",
-          "command": "SELECT"
+          "command": "SELECT",
+          "with_check": null
+        },
+        {
+          "name": "thesaurus_publisher",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "table": "ref_contact_role",
+          "using": "true",
+          "command": "ALL",
+          "with_check": "true"
         }
       ],
       "visibility_effect": "public SELECT USING true",
       "semantic_role": "descriptive business relationship-role vocabulary",
-      "adapter": "planned PRIVATE adapter (approved; no new public exposure)",
-      "missing_identities": 6,
+      "adapter": "installed private source adapter; published in release 26",
+      "missing_identities": 0,
       "children_edges": "6 rows; contact/actor channel FKs; no contact content captured.",
       "treatment": "6 contact-role identities are mapped as a private descriptive-role vocabulary; live FK consumers are contact_channel.role_id and actor_channel.role_id.",
-      "identity_coverage_status": "all native identities checked; zero duplicate or missing key components",
-      "edge_integrity_status": "business consumer FKs captured; exact assignment target anti-joins pending",
-      "write_authority": "anon/authenticated/service_role DML grants are constrained by RLS; no thesaurus publisher writer ACL or source guard",
+      "identity_coverage_status": "canonical identities found=6; snapshot documents found=6; no identity omissions",
+      "edge_integrity_status": "Release-26 root FK proof checked 2 constraints; orphan_rows=0.",
+      "write_authority": "Release-26 native metadata: thesaurus_publisher ALL policy is granted to bertel_thesaurus_publisher; native row-level policies also include admin_contact_role_write (ALL, public); pub_contact_role_read (SELECT, public).",
       "content_fields": [
         "code",
         "name",
@@ -10529,11 +10660,11 @@
       "source_identity_fields": [
         "id"
       ],
-      "adapter_stage": "planned-private",
-      "row_coverage_status": "native identities verified; thesaurus adapter/publication remains planned",
-      "edge_coverage_status": "canonical FK targets verified; publication projection pending",
-      "publisher_acl": false,
-      "source_guard": false,
+      "adapter_stage": "published-release-26",
+      "row_coverage_status": "all 6 source identities found in canonical concepts and release-26 snapshot",
+      "edge_coverage_status": "no native hierarchy edges expected for this flat lookup; identity and release-document parity verified",
+      "publisher_acl": true,
+      "source_guard": true,
       "visibility_decision": "PRIVATE; no visibility widening",
       "name": "Rôles de contact",
       "display_name_source": "public.ref_catalog_registry.label",
@@ -10555,7 +10686,51 @@
           "fk:public.contact_channel:contact_channel_role_id_fkey"
         ],
         "orphan_rows": 0
-      }
+      },
+      "published_release_id": 26,
+      "published_visibility": "private",
+      "translation_definition_status": "release-26 postflight: 0 label mismatches, 0 definition mismatches, 0 visibility mismatches across 6 rows",
+      "source_write_authority": "native dictionary adapter migration installed publisher-guarded source mapping; publication receipt confirms release-26 source/snapshot parity",
+      "production_proof": "native-postflight-results-release26-revised.json; release26 source identity + snapshot row checks",
+      "release26_postflight": {
+        "expected": 6,
+        "canonical_ids_found": 6,
+        "snapshot_documents_found": 6,
+        "label_mismatches": 0,
+        "definition_mismatches": 0,
+        "visibility_mismatches": 0,
+        "identity_values_retained": false
+      },
+      "publisher_policy": {
+        "name": "thesaurus_publisher",
+        "command": "ALL",
+        "roles": [
+          "bertel_thesaurus_publisher"
+        ]
+      },
+      "source_guard_trigger": "zz_thesaurus_source_guard",
+      "native_triggers": [
+        {
+          "name": "thesaurus_prepared_truncate",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_source_gate",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_audit_ref_contact_role",
+          "enabled": "O"
+        },
+        {
+          "name": "update_ref_contact_role_updated_at",
+          "enabled": "O"
+        },
+        {
+          "name": "zz_thesaurus_source_guard",
+          "enabled": "O"
+        }
+      ]
     },
     {
       "pk": [
@@ -11001,7 +11176,7 @@
       "kind": "table",
       "rows": 8,
       "table": "ref_iti_assoc_role",
-      "domain": null,
+      "domain": "iti_assoc_role",
       "columns": [
         "id",
         "code",
@@ -11021,23 +11196,34 @@
       "policies": [
         {
           "name": "Lecture publique des rôles ITI",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_iti_assoc_role",
           "using": "true",
-          "command": "SELECT"
+          "command": "SELECT",
+          "with_check": null
+        },
+        {
+          "name": "thesaurus_publisher",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "table": "ref_iti_assoc_role",
+          "using": "true",
+          "command": "ALL",
+          "with_check": "true"
         }
       ],
       "visibility_effect": "public SELECT USING true",
       "semantic_role": "controlled vocabulary/content node",
-      "adapter": "planned adapter (authorized for architecture/content work; not installed)",
-      "missing_identities": 8,
+      "adapter": "installed public source adapter; published in release 26",
+      "missing_identities": 0,
       "children_edges": "8 rows; UUID PK, code/name required, description optional; FK from object_iti_associated_object.role_id; public SELECT; no native i18n.",
       "treatment": "8 rows; UUID PK, code/name required, description optional; FK from object_iti_associated_object.role_id; public SELECT; no native i18n.",
-      "identity_coverage_status": "all native identities checked; zero duplicate or missing key components",
-      "edge_integrity_status": "FK topology captured; adapter target anti-joins pending",
-      "write_authority": "anon/authenticated/service_role DML grants are constrained by RLS; no thesaurus publisher writer ACL or source guard",
+      "identity_coverage_status": "canonical identities found=8; snapshot documents found=8; no identity omissions",
+      "edge_integrity_status": "Release-26 root FK proof checked 1 constraints; orphan_rows=0.",
+      "write_authority": "Release-26 native metadata: thesaurus_publisher ALL policy is granted to bertel_thesaurus_publisher; native row-level policies also include Lecture publique des rôles ITI (SELECT, public).",
       "content_fields": [
         "code",
         "name",
@@ -11047,11 +11233,11 @@
       "source_identity_fields": [
         "id"
       ],
-      "adapter_stage": "planned",
-      "row_coverage_status": "native identities verified; thesaurus adapter/publication remains planned",
-      "edge_coverage_status": "canonical FK targets verified; publication projection pending",
-      "publisher_acl": false,
-      "source_guard": false,
+      "adapter_stage": "published-release-26",
+      "row_coverage_status": "all 8 source identities found in canonical concepts and release-26 snapshot",
+      "edge_coverage_status": "no native hierarchy edges expected for this flat lookup; identity and release-document parity verified",
+      "publisher_acl": true,
+      "source_guard": true,
       "visibility_decision": "existing public SELECT only; preserve current visibility flags/legacy allowlists",
       "name": "Rôles d'association d'itinéraire",
       "display_name_source": "public.ref_catalog_registry.label",
@@ -11072,7 +11258,51 @@
           "fk:public.object_iti_associated_object:object_iti_associated_object_role_id_fkey"
         ],
         "orphan_rows": 0
-      }
+      },
+      "published_release_id": 26,
+      "published_visibility": "public",
+      "translation_definition_status": "release-26 postflight: 0 label mismatches, 0 definition mismatches, 0 visibility mismatches across 8 rows",
+      "source_write_authority": "native dictionary adapter migration installed publisher-guarded source mapping; publication receipt confirms release-26 source/snapshot parity",
+      "production_proof": "native-postflight-results-release26-revised.json; release26 source identity + snapshot row checks",
+      "release26_postflight": {
+        "expected": 8,
+        "canonical_ids_found": 8,
+        "snapshot_documents_found": 8,
+        "label_mismatches": 0,
+        "definition_mismatches": 0,
+        "visibility_mismatches": 0,
+        "identity_values_retained": false
+      },
+      "publisher_policy": {
+        "name": "thesaurus_publisher",
+        "command": "ALL",
+        "roles": [
+          "bertel_thesaurus_publisher"
+        ]
+      },
+      "source_guard_trigger": "zz_thesaurus_source_guard",
+      "native_triggers": [
+        {
+          "name": "thesaurus_prepared_truncate",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_source_gate",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_audit_ref_iti_assoc_role",
+          "enabled": "O"
+        },
+        {
+          "name": "update_ref_iti_assoc_role_updated_at",
+          "enabled": "O"
+        },
+        {
+          "name": "zz_thesaurus_source_guard",
+          "enabled": "O"
+        }
+      ]
     },
     {
       "pk": [
@@ -11213,7 +11443,7 @@
       "kind": "table",
       "rows": 21,
       "table": "ref_legal_type",
-      "domain": null,
+      "domain": "legal_type",
       "columns": [
         "id",
         "code",
@@ -11236,32 +11466,44 @@
       "policies": [
         {
           "name": "admin_legal_type_write",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_legal_type",
           "using": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-          "command": "ALL"
+          "command": "ALL",
+          "with_check": null
         },
         {
           "name": "pub_legal_type_read",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_legal_type",
           "using": "true",
-          "command": "SELECT"
+          "command": "SELECT",
+          "with_check": null
+        },
+        {
+          "name": "thesaurus_publisher",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "table": "ref_legal_type",
+          "using": "true",
+          "command": "ALL",
+          "with_check": "true"
         }
       ],
       "visibility_effect": "public SELECT USING true",
       "semantic_role": "controlled vocabulary/content node",
-      "adapter": "planned adapter (authorized for architecture/content work; not installed)",
-      "missing_identities": 21,
+      "adapter": "installed public source adapter; published in release 26",
+      "missing_identities": 0,
       "children_edges": "21 rows; UUID PK/code/name, optional description/category/is_public/is_required/review interval; object_legal FK; public SELECT; no native i18n.",
       "treatment": "21 rows; UUID PK/code/name, optional description/category/is_public/is_required/review interval; object_legal FK; public SELECT; no native i18n.",
-      "identity_coverage_status": "all native identities checked; zero duplicate or missing key components",
-      "edge_integrity_status": "FK topology captured; adapter target anti-joins pending",
-      "write_authority": "anon/authenticated/service_role DML grants are constrained by RLS; no thesaurus publisher writer ACL or source guard",
+      "identity_coverage_status": "canonical identities found=21; snapshot documents found=21; no identity omissions",
+      "edge_integrity_status": "Release-26 root FK proof checked 1 constraints; orphan_rows=0.",
+      "write_authority": "Release-26 native metadata: thesaurus_publisher ALL policy is granted to bertel_thesaurus_publisher; native row-level policies also include admin_legal_type_write (ALL, public); pub_legal_type_read (SELECT, public).",
       "content_fields": [
         "code",
         "name",
@@ -11271,11 +11513,11 @@
       "source_identity_fields": [
         "id"
       ],
-      "adapter_stage": "planned",
-      "row_coverage_status": "native identities verified; thesaurus adapter/publication remains planned",
-      "edge_coverage_status": "canonical FK targets verified; publication projection pending",
-      "publisher_acl": false,
-      "source_guard": false,
+      "adapter_stage": "published-release-26",
+      "row_coverage_status": "all 21 source identities found in canonical concepts and release-26 snapshot",
+      "edge_coverage_status": "no native hierarchy edges expected for this flat lookup; identity and release-document parity verified",
+      "publisher_acl": true,
+      "source_guard": true,
       "visibility_decision": "existing public SELECT only; preserve current visibility flags/legacy allowlists",
       "name": "Types de documents juridiques",
       "display_name_source": "public.ref_catalog_registry.label",
@@ -11296,7 +11538,51 @@
           "fk:public.object_legal:object_legal_type_id_fkey"
         ],
         "orphan_rows": 0
-      }
+      },
+      "published_release_id": 26,
+      "published_visibility": "public",
+      "translation_definition_status": "release-26 postflight: 0 label mismatches, 0 definition mismatches, 0 visibility mismatches across 21 rows",
+      "source_write_authority": "native dictionary adapter migration installed publisher-guarded source mapping; publication receipt confirms release-26 source/snapshot parity",
+      "production_proof": "native-postflight-results-release26-revised.json; release26 source identity + snapshot row checks",
+      "release26_postflight": {
+        "expected": 21,
+        "canonical_ids_found": 21,
+        "snapshot_documents_found": 21,
+        "label_mismatches": 0,
+        "definition_mismatches": 0,
+        "visibility_mismatches": 0,
+        "identity_values_retained": false
+      },
+      "publisher_policy": {
+        "name": "thesaurus_publisher",
+        "command": "ALL",
+        "roles": [
+          "bertel_thesaurus_publisher"
+        ]
+      },
+      "source_guard_trigger": "zz_thesaurus_source_guard",
+      "native_triggers": [
+        {
+          "name": "thesaurus_prepared_truncate",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_source_gate",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_audit_ref_legal_type",
+          "enabled": "O"
+        },
+        {
+          "name": "update_ref_legal_type_updated_at",
+          "enabled": "O"
+        },
+        {
+          "name": "zz_thesaurus_source_guard",
+          "enabled": "O"
+        }
+      ]
     },
     {
       "pk": [
@@ -11310,7 +11596,7 @@
       "kind": "table",
       "rows": 10,
       "table": "ref_object_relation_type",
-      "domain": null,
+      "domain": "object_relation_type",
       "columns": [
         "id",
         "code",
@@ -11330,32 +11616,44 @@
       "policies": [
         {
           "name": "admin_object_relation_type_write",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_object_relation_type",
           "using": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-          "command": "ALL"
+          "command": "ALL",
+          "with_check": null
         },
         {
           "name": "pub_object_relation_type_read",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_object_relation_type",
           "using": "true",
-          "command": "SELECT"
+          "command": "SELECT",
+          "with_check": null
+        },
+        {
+          "name": "thesaurus_publisher",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "table": "ref_object_relation_type",
+          "using": "true",
+          "command": "ALL",
+          "with_check": "true"
         }
       ],
       "visibility_effect": "public SELECT USING true",
       "semantic_role": "controlled vocabulary/content node",
-      "adapter": "planned adapter (authorized for architecture/content work; not installed)",
-      "missing_identities": 10,
+      "adapter": "installed public source adapter; published in release 26",
+      "missing_identities": 0,
       "children_edges": "10 rows; UUID PK, code/name required, description optional; FK from object_relation.relation_type_id; public SELECT; no native i18n.",
       "treatment": "10 rows; UUID PK, code/name required, description optional; FK from object_relation.relation_type_id; public SELECT; no native i18n.",
-      "identity_coverage_status": "all native identities checked; zero duplicate or missing key components",
-      "edge_integrity_status": "FK topology captured; adapter target anti-joins pending",
-      "write_authority": "anon/authenticated/service_role DML grants are constrained by RLS; no thesaurus publisher writer ACL or source guard",
+      "identity_coverage_status": "canonical identities found=10; snapshot documents found=10; no identity omissions",
+      "edge_integrity_status": "Release-26 root FK proof checked 1 constraints; orphan_rows=0.",
+      "write_authority": "Release-26 native metadata: thesaurus_publisher ALL policy is granted to bertel_thesaurus_publisher; native row-level policies also include admin_object_relation_type_write (ALL, public); pub_object_relation_type_read (SELECT, public).",
       "content_fields": [
         "code",
         "name",
@@ -11365,11 +11663,11 @@
       "source_identity_fields": [
         "id"
       ],
-      "adapter_stage": "planned",
-      "row_coverage_status": "native identities verified; thesaurus adapter/publication remains planned",
-      "edge_coverage_status": "canonical FK targets verified; publication projection pending",
-      "publisher_acl": false,
-      "source_guard": false,
+      "adapter_stage": "published-release-26",
+      "row_coverage_status": "all 10 source identities found in canonical concepts and release-26 snapshot",
+      "edge_coverage_status": "no native hierarchy edges expected for this flat lookup; identity and release-document parity verified",
+      "publisher_acl": true,
+      "source_guard": true,
       "visibility_decision": "existing public SELECT only; preserve current visibility flags/legacy allowlists",
       "name": "Types de relation entre fiches",
       "display_name_source": "public.ref_catalog_registry.label",
@@ -11390,7 +11688,51 @@
           "fk:public.object_relation:object_relation_relation_type_id_fkey"
         ],
         "orphan_rows": 0
-      }
+      },
+      "published_release_id": 26,
+      "published_visibility": "public",
+      "translation_definition_status": "release-26 postflight: 0 label mismatches, 0 definition mismatches, 0 visibility mismatches across 10 rows",
+      "source_write_authority": "native dictionary adapter migration installed publisher-guarded source mapping; publication receipt confirms release-26 source/snapshot parity",
+      "production_proof": "native-postflight-results-release26-revised.json; release26 source identity + snapshot row checks",
+      "release26_postflight": {
+        "expected": 10,
+        "canonical_ids_found": 10,
+        "snapshot_documents_found": 10,
+        "label_mismatches": 0,
+        "definition_mismatches": 0,
+        "visibility_mismatches": 0,
+        "identity_values_retained": false
+      },
+      "publisher_policy": {
+        "name": "thesaurus_publisher",
+        "command": "ALL",
+        "roles": [
+          "bertel_thesaurus_publisher"
+        ]
+      },
+      "source_guard_trigger": "zz_thesaurus_source_guard",
+      "native_triggers": [
+        {
+          "name": "thesaurus_prepared_truncate",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_source_gate",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_audit_ref_object_relation_type",
+          "enabled": "O"
+        },
+        {
+          "name": "update_ref_object_relation_type_updated_at",
+          "enabled": "O"
+        },
+        {
+          "name": "zz_thesaurus_source_guard",
+          "enabled": "O"
+        }
+      ]
     },
     {
       "pk": [
@@ -11589,7 +11931,7 @@
       "kind": "table",
       "rows": 3,
       "table": "ref_org_role",
-      "domain": null,
+      "domain": "org_role",
       "columns": [
         "id",
         "code",
@@ -11609,23 +11951,34 @@
       "policies": [
         {
           "name": "Lecture publique des rôles d'organisation",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_org_role",
           "using": "true",
-          "command": "SELECT"
+          "command": "SELECT",
+          "with_check": null
+        },
+        {
+          "name": "thesaurus_publisher",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "table": "ref_org_role",
+          "using": "true",
+          "command": "ALL",
+          "with_check": "true"
         }
       ],
       "visibility_effect": "public SELECT USING true",
       "semantic_role": "descriptive business relationship-role vocabulary",
-      "adapter": "planned PRIVATE adapter (approved; no new public exposure)",
-      "missing_identities": 3,
+      "adapter": "installed private source adapter; published in release 26",
+      "missing_identities": 0,
       "children_edges": "3 rows; object_org_link FK; public SELECT not authority.",
       "treatment": "3 organization relationship-role identities are mapped as a private descriptive-role vocabulary; live FK consumer is object_org_link.role_id.",
-      "identity_coverage_status": "all native identities checked; zero duplicate or missing key components",
-      "edge_integrity_status": "business consumer FKs captured; exact assignment target anti-joins pending",
-      "write_authority": "anon/authenticated/service_role DML grants are constrained by RLS; no thesaurus publisher writer ACL or source guard",
+      "identity_coverage_status": "canonical identities found=3; snapshot documents found=3; no identity omissions",
+      "edge_integrity_status": "Release-26 root FK proof checked 1 constraints; orphan_rows=0.",
+      "write_authority": "Release-26 native metadata: thesaurus_publisher ALL policy is granted to bertel_thesaurus_publisher; native row-level policies also include Lecture publique des rôles d'organisation (SELECT, public).",
       "content_fields": [
         "code",
         "name",
@@ -11635,11 +11988,11 @@
       "source_identity_fields": [
         "id"
       ],
-      "adapter_stage": "planned-private",
-      "row_coverage_status": "native identities verified; thesaurus adapter/publication remains planned",
-      "edge_coverage_status": "canonical FK targets verified; publication projection pending",
-      "publisher_acl": false,
-      "source_guard": false,
+      "adapter_stage": "published-release-26",
+      "row_coverage_status": "all 3 source identities found in canonical concepts and release-26 snapshot",
+      "edge_coverage_status": "no native hierarchy edges expected for this flat lookup; identity and release-document parity verified",
+      "publisher_acl": true,
+      "source_guard": true,
       "visibility_decision": "PRIVATE; no visibility widening",
       "name": "Rôles d'organisation",
       "display_name_source": "public.ref_catalog_registry.label",
@@ -11660,7 +12013,51 @@
           "fk:public.object_org_link:object_org_link_role_id_fkey"
         ],
         "orphan_rows": 0
-      }
+      },
+      "published_release_id": 26,
+      "published_visibility": "private",
+      "translation_definition_status": "release-26 postflight: 0 label mismatches, 0 definition mismatches, 0 visibility mismatches across 3 rows",
+      "source_write_authority": "native dictionary adapter migration installed publisher-guarded source mapping; publication receipt confirms release-26 source/snapshot parity",
+      "production_proof": "native-postflight-results-release26-revised.json; release26 source identity + snapshot row checks",
+      "release26_postflight": {
+        "expected": 3,
+        "canonical_ids_found": 3,
+        "snapshot_documents_found": 3,
+        "label_mismatches": 0,
+        "definition_mismatches": 0,
+        "visibility_mismatches": 0,
+        "identity_values_retained": false
+      },
+      "publisher_policy": {
+        "name": "thesaurus_publisher",
+        "command": "ALL",
+        "roles": [
+          "bertel_thesaurus_publisher"
+        ]
+      },
+      "source_guard_trigger": "zz_thesaurus_source_guard",
+      "native_triggers": [
+        {
+          "name": "thesaurus_prepared_truncate",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_source_gate",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_audit_ref_org_role",
+          "enabled": "O"
+        },
+        {
+          "name": "update_ref_org_role_updated_at",
+          "enabled": "O"
+        },
+        {
+          "name": "zz_thesaurus_source_guard",
+          "enabled": "O"
+        }
+      ]
     },
     {
       "pk": [
@@ -11775,7 +12172,7 @@
       "kind": "table",
       "rows": 7,
       "table": "ref_review_source",
-      "domain": null,
+      "domain": "review_source",
       "columns": [
         "id",
         "code",
@@ -11795,32 +12192,44 @@
       "policies": [
         {
           "name": "Lecture publique des sources d'avis",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_review_source",
           "using": "true",
-          "command": "SELECT"
+          "command": "SELECT",
+          "with_check": null
+        },
+        {
+          "name": "thesaurus_publisher",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "table": "ref_review_source",
+          "using": "true",
+          "command": "ALL",
+          "with_check": "true"
         },
         {
           "name": "Écriture admin des sources d'avis",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_review_source",
           "using": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
-          "command": "ALL"
+          "command": "ALL",
+          "with_check": null
         }
       ],
       "visibility_effect": "public SELECT USING true",
       "semantic_role": "controlled vocabulary/content node",
-      "adapter": "planned adapter (authorized for architecture/content work; not installed)",
-      "missing_identities": 7,
+      "adapter": "installed public source adapter; published in release 26",
+      "missing_identities": 0,
       "children_edges": "7 rows; UUID PK/code/name, optional icon/base_url; object_review FK; public SELECT; no i18n; owner must confirm publishable taxonomy.",
       "treatment": "7 review-source identities are in the approved candidate node set; preserve their source/provenance meaning in context and author four-language content.",
-      "identity_coverage_status": "all native identities checked; zero duplicate or missing key components",
-      "edge_integrity_status": "FK topology captured; adapter target anti-joins pending",
-      "write_authority": "anon/authenticated/service_role DML grants are constrained by RLS; no thesaurus publisher writer ACL or source guard",
+      "identity_coverage_status": "canonical identities found=7; snapshot documents found=7; no identity omissions",
+      "edge_integrity_status": "Release-26 root FK proof checked 1 constraints; orphan_rows=0.",
+      "write_authority": "Release-26 native metadata: thesaurus_publisher ALL policy is granted to bertel_thesaurus_publisher; native row-level policies also include Lecture publique des sources d'avis (SELECT, public); Écriture admin des sources d'avis (ALL, public).",
       "content_fields": [
         "code",
         "name"
@@ -11829,11 +12238,11 @@
       "source_identity_fields": [
         "id"
       ],
-      "adapter_stage": "planned",
-      "row_coverage_status": "native identities verified; thesaurus adapter/publication remains planned",
-      "edge_coverage_status": "canonical FK targets verified; publication projection pending",
-      "publisher_acl": false,
-      "source_guard": false,
+      "adapter_stage": "published-release-26",
+      "row_coverage_status": "all 7 source identities found in canonical concepts and release-26 snapshot",
+      "edge_coverage_status": "no native hierarchy edges expected for this flat lookup; identity and release-document parity verified",
+      "publisher_acl": true,
+      "source_guard": true,
       "visibility_decision": "existing public SELECT only; preserve current visibility flags/legacy allowlists",
       "name": "Sources d'avis",
       "display_name_source": "public.ref_catalog_registry.label",
@@ -11854,7 +12263,51 @@
           "fk:public.object_review:object_review_source_id_fkey"
         ],
         "orphan_rows": 0
-      }
+      },
+      "published_release_id": 26,
+      "published_visibility": "public",
+      "translation_definition_status": "release-26 postflight: 0 label mismatches, 0 definition mismatches, 0 visibility mismatches across 7 rows",
+      "source_write_authority": "native dictionary adapter migration installed publisher-guarded source mapping; publication receipt confirms release-26 source/snapshot parity",
+      "production_proof": "native-postflight-results-release26-revised.json; release26 source identity + snapshot row checks",
+      "release26_postflight": {
+        "expected": 7,
+        "canonical_ids_found": 7,
+        "snapshot_documents_found": 7,
+        "label_mismatches": 0,
+        "definition_mismatches": 0,
+        "visibility_mismatches": 0,
+        "identity_values_retained": false
+      },
+      "publisher_policy": {
+        "name": "thesaurus_publisher",
+        "command": "ALL",
+        "roles": [
+          "bertel_thesaurus_publisher"
+        ]
+      },
+      "source_guard_trigger": "zz_thesaurus_source_guard",
+      "native_triggers": [
+        {
+          "name": "thesaurus_prepared_truncate",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_source_gate",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_audit_ref_review_source",
+          "enabled": "O"
+        },
+        {
+          "name": "update_ref_review_source_updated_at",
+          "enabled": "O"
+        },
+        {
+          "name": "zz_thesaurus_source_guard",
+          "enabled": "O"
+        }
+      ]
     },
     {
       "pk": [
@@ -12118,7 +12571,7 @@
       "kind": "table",
       "rows": 76,
       "table": "ref_sustainability_action_group",
-      "domain": null,
+      "domain": "sustainability_group",
       "columns": [
         "id",
         "category_id",
@@ -12152,32 +12605,44 @@
       "policies": [
         {
           "name": "admin_write_ref_sustainability_action_group",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_sustainability_action_group",
           "using": "((( SELECT auth.role() AS role) = 'service_role'::text) OR (( SELECT auth.role() AS role) = 'admin'::text) OR api.is_platform_superuser())",
-          "command": "ALL"
+          "command": "ALL",
+          "with_check": null
         },
         {
           "name": "pub_ref_sustainability_action_group_read",
-          "check": null,
           "roles": [
             "public"
           ],
+          "table": "ref_sustainability_action_group",
           "using": "true",
-          "command": "SELECT"
+          "command": "SELECT",
+          "with_check": null
+        },
+        {
+          "name": "thesaurus_publisher",
+          "roles": [
+            "bertel_thesaurus_publisher"
+          ],
+          "table": "ref_sustainability_action_group",
+          "using": "true",
+          "command": "ALL",
+          "with_check": "true"
         }
       ],
       "visibility_effect": "public SELECT USING true",
       "semantic_role": "controlled vocabulary/content node",
-      "adapter": "planned adapter (authorized for architecture/content work; not installed)",
-      "missing_identities": 76,
+      "adapter": "installed public source adapter; published in release 26",
+      "missing_identities": 0,
       "children_edges": "76 rows; UUID PK, required category/code/name, optional description, name_i18n/description_i18n. Category FK; action.group_id membership; equivalent_group is separate edge.",
       "treatment": "76 rows; UUID PK, required category/code/name, optional description, name_i18n/description_i18n. Category FK; action.group_id membership; equivalent_group is separate edge.",
-      "identity_coverage_status": "all native identities checked; zero duplicate or missing key components",
-      "edge_integrity_status": "FK topology captured; adapter target anti-joins pending",
-      "write_authority": "anon/authenticated/service_role DML grants are constrained by RLS; no thesaurus publisher writer ACL or source guard",
+      "identity_coverage_status": "canonical identities found=76; snapshot documents found=76; no identity omissions",
+      "edge_integrity_status": "Release-26 root FK proof checked 3 constraints; orphan_rows=0. Separate exact membership postflight: 239 native edges, 0 missing/orphan endpoints, 2 cross-category edges; 76 category-parent edges verified.",
+      "write_authority": "Release-26 native metadata: thesaurus_publisher ALL policy is granted to bertel_thesaurus_publisher; native row-level policies also include admin_write_ref_sustainability_action_group (ALL, public); pub_ref_sustainability_action_group_read (SELECT, public).",
       "content_fields": [
         "code",
         "name",
@@ -12192,11 +12657,11 @@
       "source_identity_fields": [
         "id"
       ],
-      "adapter_stage": "planned",
-      "row_coverage_status": "native identities verified; thesaurus adapter/publication remains planned",
-      "edge_coverage_status": "canonical FK targets verified; publication projection pending",
-      "publisher_acl": false,
-      "source_guard": false,
+      "adapter_stage": "published-release-26",
+      "row_coverage_status": "all 76 source identities found in canonical concepts and release-26 snapshot",
+      "edge_coverage_status": "76 category-parent edges and 239 action-membership edges verified; 0 orphan/unmapped endpoints, 0 asymmetric edges, 2 cross-category assignments retained, 0 duplicate hierarchical/membership edge groups.",
+      "publisher_acl": true,
+      "source_guard": true,
       "visibility_decision": "existing public SELECT only; preserve current visibility flags/legacy allowlists",
       "name": "Groupes d'actions de durabilité",
       "display_name_source": "public.ref_catalog_registry.label",
@@ -12219,7 +12684,51 @@
           "fk:public.ref_sustainability_action_group:ref_sustainability_action_group_category_id_fkey"
         ],
         "orphan_rows": 0
-      }
+      },
+      "published_release_id": 26,
+      "published_visibility": "public",
+      "translation_definition_status": "release-26 postflight: 0 label mismatches, 0 definition mismatches, 0 visibility mismatches across 76 rows",
+      "source_write_authority": "native dictionary adapter migration installed publisher-guarded source mapping; publication receipt confirms release-26 source/snapshot parity",
+      "production_proof": "native-postflight-results-release26-revised.json; release26 source identity + snapshot row checks",
+      "release26_postflight": {
+        "expected": 76,
+        "canonical_ids_found": 76,
+        "snapshot_documents_found": 76,
+        "label_mismatches": 0,
+        "definition_mismatches": 0,
+        "visibility_mismatches": 0,
+        "identity_values_retained": false
+      },
+      "publisher_policy": {
+        "name": "thesaurus_publisher",
+        "command": "ALL",
+        "roles": [
+          "bertel_thesaurus_publisher"
+        ]
+      },
+      "source_guard_trigger": "zz_thesaurus_source_guard",
+      "native_triggers": [
+        {
+          "name": "thesaurus_assignment_guard",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_prepared_truncate",
+          "enabled": "O"
+        },
+        {
+          "name": "thesaurus_source_gate",
+          "enabled": "O"
+        },
+        {
+          "name": "trg_audit_ref_sustainability_action_group",
+          "enabled": "O"
+        },
+        {
+          "name": "zz_thesaurus_source_guard",
+          "enabled": "O"
+        }
+      ]
     },
     {
       "pk": [
@@ -12521,16 +13030,24 @@
   },
   "sustainability_group_assignment_audit": {
     "group_rows": 76,
+    "group_category_parent_edges": 76,
+    "group_parent_context_mismatches": 0,
+    "narrower_inverse_mismatches": 0,
+    "orphan_broader_targets": 0,
+    "orphan_semantic_targets": 0,
     "actions_with_group": 239,
-    "category_consistent": 237,
-    "category_mismatch": 2,
-    "group_code_duplicates_global": 0,
-    "group_code_duplicates_within_category": 0,
+    "membership_edges_represented": 239,
+    "unmapped_or_orphaned_membership_edges": 0,
+    "missing_public_endpoint_documents": 0,
+    "action_member_of_mismatch_count": 0,
+    "group_members_mismatch_count": 0,
+    "cross_category_memberships": 2,
+    "duplicate_native_membership_edges": 0,
+    "duplicate_hierarchical_or_membership_edges_combined": 0,
     "group_id_nullable": true,
-    "source_membership_edges_currently_in_thesaurus_parent_graph": 0,
-    "status": "group assignment is a distinct edge from category parent; resolve 2 category mismatches before modelling"
+    "status": "Release-26 corrected hierarchy query verifies 76 group category-parent edges and all 239 membership edges; 0 orphan targets, 0 asymmetric edges, 2 cross-category assignments retained, and 0 duplicate hierarchical/membership edge groups."
   },
-  "unmapped_key_count": 26,
+  "unmapped_key_count": 0,
   "adapter_extension_plan": {
     "existing_adapter_keys": 78,
     "additional_public_candidate_keys": 6,
@@ -12538,7 +13055,9 @@
     "total_new_keys": 9,
     "additional_source_identities": 148,
     "target_total_after_install": 87,
-    "installed": false
+    "installed": true,
+    "release_id": 26,
+    "published_at": "2026-11-10T21:20:40.251679Z"
   },
   "tag_usage_audit": {
     "tag_rows": 46,
@@ -12552,7 +13071,7 @@
   },
   "public_candidate_count": 6,
   "private_business_role_candidate_count": 3,
-  "nonadapter_gap_count": 17,
+  "nonadapter_gap_count": 0,
   "integrity_proof": {
     "path": "db-graph-out/THESAURUS_CATALOG_INTEGRITY_BASELINE.json",
     "catalogs": 104,
@@ -12606,5 +13125,92 @@
       "fresh_schema_presence": "required"
     }
   ],
-  "fresh_schema_catalog_key_count": 108
+  "fresh_schema_catalog_key_count": 108,
+  "previously_unmapped_key_count": 26,
+  "nonadapter_classified_key_count": 17,
+  "adapter_extension_actual": {
+    "public_keys": 6,
+    "public_identities": 134,
+    "private_keys": 3,
+    "private_identities": 14,
+    "total_keys": 9,
+    "total_identities": 148
+  },
+  "production_publication": {
+    "release_id": 26,
+    "published_at": "2026-11-10T21:20:40.251679Z",
+    "total_concepts": 1625,
+    "public_concepts": 1496,
+    "private_concepts": 129,
+    "domains": 87,
+    "public_domains": 72,
+    "private_domains": 15,
+    "pending_revisions": 0,
+    "new_public_identities": 134,
+    "new_private_identities": 14,
+    "receipt_files": [
+      "db-graph-out/THESAURUS_NATIVE_PUBLICATION_POSTFLIGHT.json",
+      ".tmp-thesaurus-definitions-20261110/native-postflight-results-release26-revised.json",
+      ".tmp-thesaurus-definitions-20261110/catalog-integrity-release26.json"
+    ]
+  },
+  "release26_postflight_proof": {
+    "expected_new_identities": 148,
+    "canonical_ids_found": 148,
+    "snapshot_documents_found": 148,
+    "label_mismatches": 0,
+    "definition_mismatches": 0,
+    "visibility_mismatches": 0,
+    "old_release25_documents_preserved": 1477,
+    "release25_checksum_matches": 1477,
+    "release25_visibility_mismatches": 0,
+    "release25_document_mismatches": 0,
+    "receipt": ".tmp-thesaurus-definitions-20261110/native-postflight-results-release26-revised.json"
+  },
+  "integrity_proof_release26": {
+    "catalogs": 104,
+    "identity_checks": 104,
+    "canonical_public_fk_checks": 67,
+    "checks_total": 171,
+    "duplicate_identities": 0,
+    "missing_key_components": 0,
+    "orphan_rows": 0,
+    "identities_match_pre_adapter_baseline": true,
+    "receipt": ".tmp-thesaurus-definitions-20261110/catalog-integrity-release26.json",
+    "captured_at": "2026-11-10T21:38:11Z–2026-11-10T21:38:15Z"
+  },
+  "release26_public_postflight_receipt": {
+    "path": "db-graph-out/THESAURUS_NATIVE_PUBLICATION_POSTFLIGHT.json",
+    "release_id": 26,
+    "published_at": "2026-11-10T21:20:40.251679Z",
+    "total_concepts": 1625,
+    "public_concepts": 1496,
+    "private_concepts": 129,
+    "domains": 87,
+    "public_domains": 72,
+    "private_domains": 15,
+    "pending_revisions": 0,
+    "history_rows": 1477,
+    "history_digest": "9efdd0fad56332aebe6bf453a4882be6",
+    "catalog_integrity_checks": 171,
+    "duplicate_identities": 0,
+    "missing_key_components": 0,
+    "orphan_rows": 0
+  },
+  "hierarchy_integrity_release26": {
+    "path": "db-graph-out/THESAURUS_NATIVE_PUBLICATION_POSTFLIGHT.json#native-postflight-queries/05_hierarchy_membership_integrity.sql",
+    "query_sha256": "0b0323fd44903d805c351892c85682bf67e8e30f922f23e25d6ea695abafde0a",
+    "broader_edges": 837,
+    "release25_broader_edges": 761,
+    "group_category_parent_edges": 76,
+    "native_grouped_action_edges": 239,
+    "duplicate_hierarchical_or_membership_edges": 0,
+    "orphan_broader_targets": 0,
+    "orphan_semantic_targets": 0,
+    "cyclic_hierarchy_starts": 0,
+    "cross_category_memberships": 2,
+    "asymmetric_action_memberships": 0,
+    "missing_group_member_refs": 0,
+    "diagnosis": "Previous value 1 was a false positive: duplicates CTE always returned one aggregate row; corrected query counts duplicate edge groups directly."
+  }
 }

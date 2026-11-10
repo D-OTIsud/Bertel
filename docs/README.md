@@ -115,7 +115,7 @@ les champs proviennent directement de ces tables ou vues. Pour une vision exhaus
 
 ## 🔗 Liens utiles
 
-- [Collection Postman publique](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/d391b45/bertel-api-v3-0)
+- [Collection Postman publique](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/fcl0g7z/bertel-api-v3-0?action=share&creator=24615556)
 - Documentation déployée : [Votre domaine]
 
 ## 📝 Maintenance

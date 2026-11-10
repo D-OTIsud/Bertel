@@ -15,6 +15,7 @@ import { GET as getManifest } from '@/app/api/public/thesaurus/route';
 import { GET as getRelease } from '@/app/api/public/thesaurus/releases/[releaseId]/route';
 import { THESAURUS_VOCABULARY_LABELS } from './thesaurus-vocabulary-labels';
 import productionVocabularyTitles from './__fixtures__/thesaurus-vocabulary-titles-20261110.json';
+import historicalVocabularyTitles from './__fixtures__/thesaurus-vocabulary-history-titles-20261110.json';
 import { canonicalThesaurusJson, decodeThesaurusCursor, encodeThesaurusCursor,
   handleThesaurusRequest, publicThesaurusConcept, thesaurusJsonLd } from './thesaurus-api';
 
@@ -273,6 +274,23 @@ it('translates all vocabulary titles captured independently from production rele
     domain.requested_lang === 'en' && domain.effective_lang === 'en')).toBe(true);
   expect(data.domains.find((domain: { domain: string }) => domain.domain === 'activity_type').name).toBe('Activity types');
   expect(data.domains.find((domain: { domain: string }) => domain.domain === 'taxonomy_hot').name).toBe('Hotels');
+});
+
+it('translates independent historical vocabulary titles in embedded release manifests', async () => {
+  expect(historicalVocabularyTitles).toHaveLength(11);
+  const historicalRelease = manifest(historicalVocabularyTitles);
+  rpc.mockResolvedValue(response({ ...manifest(), releases: [historicalRelease] }));
+  const result = await getManifest(manifestReq('?lang=en'));
+  expect(result.status).toBe(200);
+  const { data } = await result.json();
+  const domains = data.releases[0].domains;
+  expect(domains).toHaveLength(11);
+  expect(domains.map((domain: { domain: string; name_i18n: { fr: string } }) => ({
+    domain: domain.domain, name: domain.name_i18n.fr,
+  }))).toEqual(historicalVocabularyTitles);
+  expect(domains.every((domain: { requested_lang: string; effective_lang: string }) =>
+    domain.requested_lang === 'en' && domain.effective_lang === 'en')).toBe(true);
+  expect(domains.find((domain: { domain: string }) => domain.domain === 'taxonomy_hot').name).toBe('Hotels');
 });
 
 it('keeps discovery ETags specific to the localized representation and honors matching English validators', async () => {

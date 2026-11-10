@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '../lib/supabase';
 import { getThesaurusDomainLabel } from '../lib/thesaurus-domain-labels';
+import { analyseThesaurusContentBatch, isContentObject, type ThesaurusContentBatch, type ThesaurusImportAnalysis, type ThesaurusImportConcept } from '../lib/thesaurus-content-batch';
 import type {
   ThesaurusConcept, ThesaurusDocument, ThesaurusDomain, ThesaurusInstance,
   ThesaurusIssue, ThesaurusPreview, ThesaurusRelease, ThesaurusRevision,
@@ -106,6 +107,7 @@ export function normalizeThesaurusDocument(value: unknown): ThesaurusDocument {
     }),
     replaced_by: array(data.replaced_by).map(String),
     source_fields: record(data.source_fields),
+    ...(Array.isArray(data.legacy_search_terms) ? { legacy_search_terms: data.legacy_search_terms.map(String) } : {}),
   };
 }
 
@@ -124,7 +126,7 @@ export function normalizeThesaurusRevision(value: unknown): ThesaurusRevision {
   };
 }
 
-export async function fetchThesaurusWorkspace(input: { domain?: string; query?: string; concept_ids?: string[]; page_size?: number; offset?: number } = {}): Promise<ThesaurusWorkspace> {
+export async function fetchThesaurusWorkspace(input: { domain?: string; query?: string; concept_ids?: string[]; page_size?: number; offset?: number; include_internal?: boolean; include_revisions?: boolean; revision_page_size?: number; revision_offset?: number } = {}): Promise<ThesaurusWorkspace> {
   const data = record(await invoke('workspace', input));
   if (!Array.isArray(data.domains) || !Array.isArray(data.concepts)) throw new Error('Réponse du thésaurus malformée. Réessayez.');
   return {
@@ -136,6 +138,7 @@ export async function fetchThesaurusWorkspace(input: { domain?: string; query?: 
         domain: domainCode, name: getThesaurusDomainLabel(domainCode, storedName == null ? undefined : String(storedName)),
         is_governed: Boolean(domain.is_governed), is_public: Boolean(domain.is_public),
         require_definition: Boolean(domain.require_definition), concept_count: Number(domain.concept_count ?? domain.count ?? 0),
+        required_languages: [...new Set(['fr', ...array(domain.required_languages).map(String)])],
         ...(domain.source_kind == null ? {} : { source_kind: String(domain.source_kind) }),
       } satisfies ThesaurusDomain;
     }),
@@ -144,6 +147,7 @@ export async function fetchThesaurusWorkspace(input: { domain?: string; query?: 
       if (!concept.concept_id || !concept.domain) throw new Error('Concept sans identité dans la réponse du thésaurus.');
       return {
         ...normalizeThesaurusDocument(concept), concept_id: String(concept.concept_id), domain: String(concept.domain),
+        context_key: String(concept.context_key ?? ''),
         assignable: Boolean(concept.assignable), source_key: record(concept.source_key),
         source_fingerprint: String(concept.source_fingerprint ?? ''),
         ...(concept.usage_count == null ? {} : { usage_count: Number(concept.usage_count) }),
@@ -173,6 +177,99 @@ export async function fetchThesaurusWorkspace(input: { domain?: string; query?: 
       base_uri: String(record(data.instance).base_uri ?? ''), license: String(record(data.instance).license ?? ''), attribution: String(record(data.instance).attribution ?? ''),
     },
   };
+}
+
+/** Import reads keep exact JSON, including French i18n values, for field-level conflict checks. */
+async function fetchImportConcepts(batch: ThesaurusContentBatch): Promise<ThesaurusImportConcept[]> {
+  const concepts: ThesaurusImportConcept[] = [];
+  const read = async (input: JsonObject) => {
+    const data = record(await invoke('workspace', { ...input, read_only: true, include_internal: true, include_revisions: false, page_size: 200 }));
+    if (!Array.isArray(data.concepts) || record(data.capabilities).content_proposal_preconditions !== 1 || record(data.capabilities).read_only_workspace !== 1) {
+      throw new Error('La base doit prendre en charge les imports protégés et la lecture sans écriture.');
+    }
+    if (data.concepts.some((item) => !isContentObject(item) || typeof item.concept_id !== 'string' || typeof item.domain !== 'string' || typeof item.code !== 'string' || typeof item.context_key !== 'string')) throw new Error('La lecture du lot contient un concept sans identité complète.');
+    return data.concepts as ThesaurusImportConcept[];
+  };
+  const ids = batch.proposals.filter((item) => item.concept_id).map((item) => item.concept_id as string);
+  const fallbackDomains = new Set(batch.proposals.filter((item) => !item.concept_id).map((item) => item.domain));
+  // A domain read already resolves every target in that domain; do not duplicate them by ID.
+  const idTargets = ids.filter((id) => !fallbackDomains.has(batch.proposals.find((item) => item.concept_id === id)!.domain));
+  for (let index = 0; index < idTargets.length; index += 200) concepts.push(...await read({ concept_ids: idTargets.slice(index, index + 200), offset: 0 }));
+  for (const domain of [...fallbackDomains].sort()) {
+    for (let offset = 0; ; offset += 200) {
+      if (offset > 100_000) throw new Error('La lecture du domaine dépasse la limite attendue.');
+      const page = await read({ domain, offset }); concepts.push(...page);
+      if (page.length < 200) break;
+    }
+  }
+  return concepts;
+}
+
+export async function analyseThesaurusImport(batch: ThesaurusContentBatch): Promise<ThesaurusImportAnalysis> {
+  return analyseThesaurusContentBatch(batch, await fetchImportConcepts(batch));
+}
+
+export interface ThesaurusBatchProgress { completed: number; total: number }
+export interface ThesaurusBatchOutcome {
+  revisions: ThesaurusRevision[];
+  error?: string;
+  /** A failed response may follow a committed atomic request. Never claim it saved zero. */
+  uncertain?: boolean;
+}
+export interface ThesaurusImportOutcome extends ThesaurusBatchOutcome { analysis: ThesaurusImportAnalysis }
+
+function batchRevisions(data: unknown, expected: number): ThesaurusRevision[] {
+  const items = record(data).items;
+  if (!Array.isArray(items) || items.length !== expected) throw new Error('La réponse du lot est incomplète. Rechargez les brouillons avant de réessayer.');
+  return items.map(normalizeThesaurusRevision);
+}
+
+/** Recheck every proposal before the first write, then create private drafts in atomic groups. */
+export async function importThesaurusCorrections(batch: ThesaurusContentBatch, onProgress?: (progress: ThesaurusBatchProgress) => void): Promise<ThesaurusImportOutcome> {
+  const analysis = await analyseThesaurusImport(batch);
+  const outcome: ThesaurusImportOutcome = { analysis, revisions: [] };
+  if (analysis.results.some((item) => item.status === 'conflict')) return outcome;
+  const ready = analysis.results.filter((item) => item.status === 'ready');
+  onProgress?.({ completed: 0, total: ready.length });
+  for (let index = 0; index < ready.length; index += 100) {
+    const group = ready.slice(index, index + 100);
+    try {
+      const items = group.map((item) => ({ concept_id: item.concept_id, domain: item.proposal.domain,
+        expected_version: 0, expected_source_fingerprint: item.source_fingerprint,
+        only_if_no_revision: true, document: item.proposal.changes }));
+      const saved = batchRevisions(await invoke('save_drafts', { items }), group.length);
+      if (saved.some((revision, position) => revision.concept_id !== group[position].concept_id || revision.status !== 'draft')) throw new Error('La réponse de création ne correspond pas aux brouillons demandés. Rechargez la liste.');
+      outcome.revisions.push(...saved);
+      onProgress?.({ completed: outcome.revisions.length, total: ready.length });
+    } catch (cause) {
+      outcome.error = thesaurusErrorMessage(cause);
+      outcome.uncertain = !/PT409|PT400|PT403|42501/.test(cause instanceof Error ? cause.message : String(cause));
+      break;
+    }
+  }
+  return outcome;
+}
+
+/** Validation is an explicit separate action; it never previews or publishes. */
+export async function validateThesaurusImport(revisions: ThesaurusRevision[], onProgress?: (progress: ThesaurusBatchProgress) => void): Promise<ThesaurusBatchOutcome> {
+  const outcome: ThesaurusBatchOutcome = { revisions: [] };
+  const pending = revisions.filter((item) => item.status === 'draft');
+  onProgress?.({ completed: 0, total: pending.length });
+  for (let index = 0; index < pending.length; index += 100) {
+    const group = pending.slice(index, index + 100);
+    try {
+      const items = group.map((item) => ({ revision_id: item.revision_id, expected_version: item.version }));
+      const checked = batchRevisions(await invoke('validate_drafts', { items }), group.length);
+      if (checked.some((revision, position) => revision.revision_id !== group[position].revision_id || revision.concept_id !== group[position].concept_id)) throw new Error('La réponse de validation ne correspond pas aux brouillons demandés. Rechargez la liste.');
+      outcome.revisions.push(...checked);
+      onProgress?.({ completed: outcome.revisions.length, total: pending.length });
+    } catch (cause) {
+      outcome.error = thesaurusErrorMessage(cause);
+      outcome.uncertain = !/PT409|PT400|PT403|42501/.test(cause instanceof Error ? cause.message : String(cause));
+      break;
+    }
+  }
+  return outcome;
 }
 
 export async function saveThesaurusDraft(input: { concept_id: string | null; domain: string; expected_version: number; document: ThesaurusDocument }): Promise<ThesaurusRevision> {

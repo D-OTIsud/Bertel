@@ -41,6 +41,7 @@ export interface ThesaurusDocument {
   mappings: ThesaurusMapping[];
   replaced_by: string[];
   source_fields?: Record<string, unknown>;
+  legacy_search_terms?: string[];
 }
 
 export interface ThesaurusIssue {
@@ -66,6 +67,7 @@ export interface ThesaurusRevision {
 export interface ThesaurusConcept extends ThesaurusDocument {
   concept_id: string;
   domain: string;
+  context_key?: string;
   assignable: boolean;
   source_key: Record<string, unknown>;
   source_fingerprint: string;
@@ -80,6 +82,7 @@ export interface ThesaurusDomain {
   is_governed: boolean;
   is_public: boolean;
   require_definition: boolean;
+  required_languages?: string[];
   concept_count: number;
   source_kind?: string;
 }

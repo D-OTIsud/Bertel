@@ -12,6 +12,7 @@ jest.mock('../services/thesaurus-admin', () => ({
   previewThesaurusPublication: jest.fn(), publishThesaurus: jest.fn(),
   configureThesaurusInstance: jest.fn(), configureThesaurusDomain: jest.fn(), bootstrapThesaurus: jest.fn(), retryThesaurusOutbox: jest.fn(),
   rebaseThesaurusDraft: jest.fn(), discardThesaurusDraft: jest.fn(),
+  analyseThesaurusImport: jest.fn(), importThesaurusCorrections: jest.fn(), validateThesaurusImport: jest.fn(),
 }));
 const mock = jest.mocked(service);
 const concept = (overrides: Partial<ThesaurusConcept> = {}): ThesaurusConcept => ({
@@ -53,7 +54,7 @@ function workspaceWithTechnicalDomainNames(isGoverned = true): ThesaurusWorkspac
       concept({ concept_id: 'package-1', domain: 'package_type', name: 'Forfait séjour', code: 'forfait_sejour' }),
       concept({ concept_id: 'menu-1', domain: 'menu_category', name: 'Menu enfant', code: 'menu_enfant' }),
     ],
-    revisions: [revision({ domain: 'taxonomy_com', document: service.normalizeThesaurusDocument({ code: 'marche_couvert', name: 'Marché couvert' }) })],
+    revisions: [revision({ domain: 'taxonomy_com', document: service.normalizeThesaurusDocument({ code: 'marche_couvert', name: 'Marché couvert', description: 'Marché de commerces organisé dans un bâtiment couvert.' }) })],
   });
 }
 
@@ -72,6 +73,38 @@ describe('ThesaurusAdmin editorial workflow', () => {
     mock.rebaseThesaurusDraft.mockResolvedValue(revision({ version: 3 }));
     mock.discardThesaurusDraft.mockResolvedValue(undefined);
     Object.defineProperty(globalThis.crypto, 'randomUUID', { configurable: true, value: () => '00000000-0000-4000-8000-000000000001' });
+  });
+
+  it('opens a fresh import after a completed lot without reloading the page', async () => {
+    const proposal = { domain: 'taxonomy_hlo', context_key: '', code: 'appartement', base: { description: 'Ancienne' }, changes: { description: 'Logement indépendant proposé à la location.' } };
+    const firstBatch = { format_version: 1, batch_id: 'premier-lot', proposals: [proposal] };
+    const analysis = { batch_id: firstBatch.batch_id, results: [{ proposal, status: 'ready' as const, concept_id: 'concept-1', name: 'Appartement', source_fingerprint: 'a'.repeat(32) }] };
+    mock.analyseThesaurusImport.mockResolvedValue(analysis);
+    mock.importThesaurusCorrections.mockResolvedValue({ analysis, revisions: [revision()] });
+    mock.validateThesaurusImport.mockResolvedValue({ revisions: [revision({ status: 'validated' })] });
+    renderAdmin();
+    await screen.findByLabelText('Libellé préféré (fr)');
+    fireEvent.click(screen.getByRole('button', { name: /^Publications/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Importer des corrections' }));
+    fireEvent.change(screen.getByLabelText('Lot de corrections (JSON)'), { target: { value: JSON.stringify(firstBatch) } });
+    fireEvent.click(screen.getByRole('button', { name: 'Analyser le lot' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Créer les brouillons privés' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Créer les brouillons privés' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Valider les brouillons du lot' }));
+    await waitFor(() => expect(mock.validateThesaurusImport).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Revenir aux publications' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Revenir aux publications' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Importer des corrections' }));
+    expect(screen.getByLabelText('Lot de corrections (JSON)')).toBeEnabled();
+    expect(screen.getByLabelText('Lot de corrections (JSON)')).toHaveValue('');
+    expect(screen.queryByText('Lot premier-lot')).not.toBeInTheDocument();
+    const secondBatch = { ...firstBatch, batch_id: 'deuxieme-lot' };
+    mock.analyseThesaurusImport.mockResolvedValue({ ...analysis, batch_id: secondBatch.batch_id });
+    fireEvent.change(screen.getByLabelText('Lot de corrections (JSON)'), { target: { value: JSON.stringify(secondBatch) } });
+    fireEvent.click(screen.getByRole('button', { name: 'Analyser le lot' }));
+    await screen.findByText('Lot deuxieme-lot');
+    expect(mock.analyseThesaurusImport).toHaveBeenLastCalledWith(secondBatch);
+    expect(mock.importThesaurusCorrections).toHaveBeenCalledTimes(1);
   });
 
   it('uses business domain names in navigation, editor, publication and configuration even when the API returns technical names', async () => {
@@ -96,7 +129,9 @@ describe('ThesaurusAdmin editorial workflow', () => {
     expect(document.body).not.toHaveTextContent(/Taxonomie|taxonomy_|package_type|menu_category/);
     const commerceRule = screen.getByText('Commerces', { selector: 'strong' }).closest('.thesaurus__domain-policy');
     if (!(commerceRule instanceof HTMLElement)) throw new Error('Règle du domaine Commerces introuvable.');
-    expect(within(commerceRule).getByRole('checkbox', { name: 'Définition obligatoire' })).not.toBeChecked();
+    expect(within(commerceRule).getByRole('checkbox', { name: 'Définition obligatoire' })).toBeChecked();
+    expect(within(commerceRule).getByRole('checkbox', { name: 'Définition obligatoire' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Enregistrer la règle' })).not.toBeInTheDocument();
     expect(mock.configureThesaurusDomain).not.toHaveBeenCalled();
   });
 
@@ -292,6 +327,7 @@ describe('ThesaurusAdmin editorial workflow', () => {
     render(<QueryClientProvider client={client}><ThesaurusConceptEditor concept={null} initialRevision={null} domain={{ domain: 'classification_value', name: 'Valeurs de classement', source_kind: 'classification_value', is_governed: true, is_public: true, require_definition: false, concept_count: 0 }} concepts={[scheme]} onSaved={jest.fn()} onDirtyChange={jest.fn()} onReload={jest.fn()} /></QueryClientProvider>);
     fireEvent.change(screen.getByLabelText('Code stable'), { target: { value: '4_stars' } });
     fireEvent.change(screen.getByLabelText('Libellé préféré (fr)'), { target: { value: 'Quatre étoiles' } });
+    fireEvent.change(screen.getByLabelText('Définition (fr)'), { target: { value: 'Niveau quatre étoiles du classement hôtelier choisi.' } });
     fireEvent.focus(screen.getByLabelText('Schéma ou valeur de classement parent'));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`Étoiles hôtelières ${getThesaurusDomainLabel('classification_scheme')}`) }));
     fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le brouillon' }));
@@ -343,5 +379,23 @@ describe('ThesaurusAdmin editorial workflow', () => {
     await waitFor(() => expect(mock.discardThesaurusDraft).toHaveBeenCalledWith('revision-1', 2));
     expect(discarded).toHaveBeenCalled();
     expect(screen.getByLabelText('Libellé préféré (fr)')).toHaveValue('Appartement');
+  });
+});
+
+
+describe('mandatory business definitions in every edited language', () => {
+  it('renders required missing languages, prevents their removal and blocks incomplete validation', async () => {
+    jest.clearAllMocks();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><ThesaurusConceptEditor concept={concept()} initialRevision={null} domain={{ domain: 'taxonomy_hlo', name: 'Hébergements locatifs', is_governed: true, is_public: true, require_definition: false, required_languages: ['fr', 'en', 'de'], concept_count: 1 }} concepts={[concept()]} onSaved={jest.fn()} onDirtyChange={jest.fn()} onReload={jest.fn()} /></QueryClientProvider>);
+    for (const language of ['fr', 'en', 'de']) {
+      expect(screen.getByLabelText(`Libellé préféré (${language})`)).toBeRequired();
+      expect(screen.getByLabelText(`Définition (${language})`)).toBeRequired();
+    }
+    expect(screen.queryByRole('button', { name: 'Retirer cette langue' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Soumettre à validation' }));
+    await screen.findByText('Chaque langue du concept doit avoir un libellé et une définition expliquant son contexte métier.');
+    expect(mock.saveThesaurusDraft).not.toHaveBeenCalled();
+    expect(mock.validateThesaurusDraft).not.toHaveBeenCalled();
   });
 });

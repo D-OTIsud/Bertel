@@ -85,7 +85,7 @@ describe('thesaurus administration network contract', () => {
       { domain: 'taxonomy_com', name: 'Commerces', require_definition: false },
       { domain: 'package_type', name: 'Types de forfait', require_definition: false },
       { domain: 'menu_category', name: 'Catégories de menu', require_definition: false },
-      { domain: 'classification_value', name: 'Niveaux et mentions des labels et classements', require_definition: false },
+      { domain: 'classification_value', name: 'Valeurs des labels et classements', require_definition: false },
       { domain: 'amenity', name: 'Équipements et services', require_definition: false },
     ]);
     expect(rpc).toHaveBeenCalledWith('thesaurus_admin', { p_action: 'workspace', p_payload: { domain: 'taxonomy_com' } });

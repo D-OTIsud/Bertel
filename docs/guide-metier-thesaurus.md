@@ -32,7 +32,7 @@ Le bouton **Soumettre à validation** lance immédiatement les contrôles du sys
 
 | Élément | À quoi sert-il ? | Exemple |
 |---|---|---|
-| Domaine | Regrouper un vocabulaire utilisé dans un contexte précis. | **Hôtels**, **Équipements et services**, **Moyens de paiement**. |
+| Domaine | Regrouper un vocabulaire utilisé dans un contexte précis. | **Hôtellerie**, **Équipements et services**, **Moyens de paiement**. |
 | Concept | Identifier une notion, indépendamment de ses formulations. | Un petit hôtel indépendant tenu par une famille. |
 | Code stable | Conserver l'identité technique dans son domaine et son contexte. | Un code existant reste le même lorsque son libellé est corrigé. |
 | Libellé préféré | Nommer le concept dans une langue. | « Hôtel familial ». |
@@ -45,21 +45,21 @@ Le bouton **Soumettre à validation** lance immédiatement les contrôles du sys
 | Brouillon | Préparer une modification sans changer la version publiée. | Une définition réécrite et en cours de relecture. |
 | Publication | Conserver et diffuser une version cohérente du vocabulaire. | Une nouvelle version avec plusieurs corrections validées. |
 
-Les intitulés des domaines sont rédigés en français et constituent la base commune de l'affichage métier. Ils nomment les rubriques dans lesquelles travailler ; ils sont distincts du libellé préféré et des traductions d'un concept. Par exemple, **Hôtels** est le domaine et « Hôtel familial » est une notion de ce domaine.
+Les intitulés des domaines sont rédigés en français et constituent la base commune de l'affichage métier. Ils nomment les rubriques dans lesquelles travailler ; ils sont distincts du libellé préféré et des traductions d'un concept. Par exemple, **Hôtellerie** est le domaine et « Hôtel familial » est une notion de ce domaine.
 
 | Rubrique | La choisir pour… | À distinguer de… |
 |---|---|---|
 | **Labels et classements** | Définir un label, un classement ou un référentiel de qualification. | Le niveau ou la mention attribuable dans ce référentiel. |
-| **Niveaux et mentions des labels et classements** | Définir une valeur rattachée à son label ou classement : étoiles, adhésion, mention… | Une valeur de même nom dans un autre référentiel ; « 4 » seul ne précise pas s'il s'agit d'étoiles, d'épis ou de clés. |
+| **Valeurs des labels et classements** | Définir une valeur rattachée à son label ou classement : étoiles, adhésion, mention… | Une valeur de même nom dans un autre référentiel ; « 4 » seul ne précise pas s'il s'agit d'étoiles, d'épis ou de clés. |
 | **Types de forfait** | Décrire la composition ou la famille d'une offre forfaitaire : pension, circuit, vol + hôtel… | L'unité tarifaire « par forfait ». |
 | **Catégories de menu** | Classer un menu ou organiser ses plats en rubriques : brunch, entrées, desserts… | Le type de cuisine, les régimes et les allergènes. |
 | **Équipements et services** | Décrire un équipement ou un service : Wi-Fi, parking, restaurant… | La famille qui sert à les regrouper. |
-| **Familles d’équipements et de services** | Regrouper les équipements et services : accessibilité, chambre, salle de bain… | L'équipement ou la prestation effectivement proposé. |
+| **Familles d’équipements et services** | Regrouper les équipements et services : accessibilité, chambre, salle de bain… | L'équipement ou la prestation effectivement proposé. |
 | **Publics tarifaires** | Indiquer à qui s'adresse un tarif : adulte, enfant, groupe, personne en situation de handicap… | La nature du tarif et son unité. |
 | **Types de tarif** | Distinguer tarif principal, option, menu, abonnement, taxe, caution… | Le public bénéficiaire. |
 | **Unités tarifaires** | Exprimer « par personne », « par nuit », « par séjour », « par forfait »… | La composition d'une offre forfaitaire. |
 
-Un code seul n'identifie pas toujours un concept : il peut être réutilisé dans plusieurs domaines ou référentiels. Pour un échange avec l'équipe technique, fournir le domaine, le contexte éventuel et le code, ou l'identifiant pérenne du concept. Deux entrées appelées « Hôtel familial » dans **Hôtels** et dans **Niveaux et mentions des labels et classements** gardent des identités distinctes.
+Un code seul n'identifie pas toujours un concept : il peut être réutilisé dans plusieurs domaines ou référentiels. Pour un échange avec l'équipe technique, fournir le domaine, le contexte éventuel et le code, ou l'identifiant pérenne du concept. Deux entrées appelées « Hôtel familial » dans **Hôtellerie** et dans **Valeurs des labels et classements** gardent des identités distinctes.
 
 Pour l'interopérabilité, la clé technique du domaine reste stable : par exemple, **Commerces** est identifié par `taxonomy_com` dans les échanges API. Clarifier son intitulé français ne renomme pas cette clé, les concepts ou leurs relations. Une ancienne publication conserve les noms qu'elle a enregistrés ; on ne réécrit pas son historique pour modifier un intitulé d'affichage.
 
@@ -107,7 +107,9 @@ La liste est paginée. Une valeur absente de la page affichée n'est pas nécess
 
 ### Donner un sens précis et durable
 
-Le libellé doit être compréhensible dans une liste de choix. La définition explique le périmètre ; elle ne répète pas seulement le nom. Privilégier une ou deux phrases concrètes, puis une note d'usage pour les exclusions utiles.
+Le libellé doit être compréhensible dans une liste de choix. Choisir un nom français court : « Hôtellerie », « Activités sportives et culturelles », « Services publics ». Ne pas afficher une clé technique, le mot « taxonomie » ou une longue formule administrative à la place du nom métier.
+
+Chaque concept doit avoir une définition expliquant sa notion particulière et son contexte métier. Cette règle s'applique à tous les domaines, y compris aux listes internes et aux valeurs historiques. Dans **Configuration**, **Définition obligatoire** est cochée et ne peut pas être désactivée. La définition ne répète pas seulement le nom ; une phrase telle que « Écran » ne permet pas de savoir s'il s'agit d'un écran de projection de réunion ou d'un autre équipement. Privilégier une ou deux phrases concrètes, puis une note d'usage pour les exclusions utiles. La longueur seule ne prouve pas la qualité.
 
 **Exemple — Hôtel familial**
 
@@ -148,7 +150,7 @@ Une note historique ne rend pas automatiquement le concept « Déprécié ». Le
 
 Les champs français sont dans **Libellé préféré (fr)** et **Définition (fr)**. Pour une langue absente, saisir son code dans **Ajouter une langue**, puis **Ajouter** : `en` pour l'anglais, `es` pour l'espagnol, `de` pour l'allemand.
 
-Renseigner le libellé et la définition dans chaque langue retenue. Relire aussi les synonymes et les notes nécessaires dans cette langue. La cible éditoriale du corpus enrichi est **FR / EN / ES / DE** ; ce n'est pas une obligation générale de quatre langues imposée par chaque formulaire.
+Renseigner le libellé et la définition dans chacune des quatre langues obligatoires : **FR / EN / ES / DE**. Ces champs sont présents dans l'éditeur et les langues obligatoires ne peuvent pas être retirées. Une langue supplémentaire reste possible ; elle doit elle aussi avoir un libellé et une définition. Relire les synonymes et les notes nécessaires dans chaque langue. Une traduction du nom seul ne remplace pas la traduction de sa définition.
 
 Une traduction doit garder le même sens et les mêmes exclusions. Pour le concept de produits locaux réunionnais, conserver aussi la portée géographique : **Produits locaux de La Réunion**, **Local products from Réunion**, **Productos locales de La Reunión** et **Lokale Produkte aus La Réunion**. Ces traductions ne doivent pas introduire une notion d'autochtonie ou d'espèce indigène.
 
@@ -156,7 +158,7 @@ La traduction du libellé français « Anglais » est **English** en anglais ; c
 
 Il n'y a pas de traduction automatique implicite. Si une langue manque, l'API peut utiliser une autre langue et indique la langue réellement fournie. Le nom et la définition peuvent avoir des langues de repli différentes. Un texte français affiché en repli ne prouve donc pas que la traduction allemande a été rédigée.
 
-**Retirer cette langue** enlève ses champs de libellé et de définition du brouillon. Vérifier séparément les synonymes et les notes qui portent cette langue, ainsi que les conséquences pour les partenaires.
+**Retirer cette langue** est proposé uniquement pour une langue supplémentaire. Il enlève ses champs de libellé et de définition du brouillon. Vérifier séparément les synonymes et les notes qui portent cette langue, ainsi que les conséquences pour les partenaires.
 
 ## 6. Choisir les bons synonymes et termes de recherche
 
@@ -260,7 +262,7 @@ L'écran ne permet pas de créer un nouveau domaine ni de modifier toutes les pr
 
 ### Cas particulier : nouveau label et valeurs de classement
 
-Dans **Niveaux et mentions des labels et classements**, les valeurs d'un nouveau label ont besoin que leur référentiel parent, dans **Labels et classements**, soit déjà publié. Préparer les étapes suivantes :
+Dans **Valeurs des labels et classements**, les valeurs d'un nouveau label ont besoin que leur référentiel parent, dans **Labels et classements**, soit déjà publié. Préparer les étapes suivantes :
 
 1. Créer, valider et publier le label.
 2. Faire définir et vérifier ses types de fiches applicables avec l'équipe technique.
@@ -269,6 +271,18 @@ Dans **Niveaux et mentions des labels et classements**, les valeurs d'un nouveau
 Cette dépendance native ne signifie pas que toutes les relations parent-enfant doivent être publiées en deux fois. Pour un lot comportant des dépendances nouvelles, faire vérifier l'ordre de publication avant de commencer.
 
 Les lots volumineux peuvent être préparés avec les [outils de contribution](../tools/thesaurus-content/README.md). Les outils ordinaires y créent des brouillons ; la validation et la publication restent des étapes distinctes. Les opérations techniques exceptionnelles de maintenance ne constituent pas la procédure métier courante.
+
+### Importer un lot de corrections préparé
+
+Dans **Publications**, **Importer des corrections** ouvre le même circuit pour plusieurs concepts existants :
+
+1. Coller le lot JSON préparé, puis cliquer sur **Analyser le lot**. Le rapport compare les valeurs précédentes du lot aux valeurs réellement courantes, avec le domaine et le contexte de chaque concept.
+2. Résoudre tous les conflits. Un brouillon déjà présent est préservé ; l'import ne le remplace pas. Si tout le contenu proposé est déjà en place, il est indiqué comme déjà à jour.
+3. Cliquer sur **Créer les brouillons privés**. Une nouvelle comparaison précède l'enregistrement. Les écritures se font par groupes de 100 au maximum ; un groupe échoué est annulé, les groupes précédents restent enregistrés.
+4. Relire le lot, puis cliquer séparément sur **Valider les brouillons du lot**. Corriger les erreurs éventuelles. Cette action ne publie rien.
+5. Revenir à **Publications** : les brouillons validés du lot sont sélectionnés. Examiner l'aperçu complet puis publier comme indiqué ci-dessous.
+
+L'analyse ne montre que les premières corrections lorsqu'un lot est volumineux ; l'aperçu de publication expose la comparaison complète. En cas de réponse réseau incertaine, recharger la liste et comparer les brouillons avant de reprendre. Ne pas relancer automatiquement tout le lot. Fermer puis rouvrir l'import permet de traiter un autre lot.
 
 ## 10. Valider et publier un lot
 

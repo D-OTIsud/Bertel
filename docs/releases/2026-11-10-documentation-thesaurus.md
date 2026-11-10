@@ -1,6 +1,7 @@
 # Publication documentaire du thésaurus — 10 novembre 2026
 
-**État : PREPARED — publication non attestée dans ce document.**
+**État historique du plan : PREPARED.** La livraison effective et ses contrôles
+sont attestés dans le [reçu de production](2026-11-10-thesaurus-editorial-production.md).
 
 Cette livraison ajoute le guide métier d’entretien du thésaurus au site documentaire
 et retire le statut bêta des sélections partenaires, en conservant le contrat déjà

@@ -1,5 +1,9 @@
 # Complétude éditoriale du thésaurus, 10 novembre 2026
 
+**Livraison confirmée en publication 25.** Les 152 comparaisons couvrent les
+1 477 concepts sans divergence. Le [reçu de production](../releases/2026-11-10-thesaurus-editorial-production.md)
+atteste la politique des 78 domaines, les quatre langues et les droits conservés.
+
 Le périmètre comprend **1 477 concepts dans 78 domaines** : 1 439 actifs et 38
 dépréciés. Les 115 concepts absents de l'instantané courant sont inclus. Le
 [registre des décisions](../../tools/thesaurus-content/lots/2026-11-10-editorial-review/review-decisions.json)
@@ -196,8 +200,8 @@ La revue a été réalisée par des agents Codex, avec des relectures croisées 
 sources primaires pour certains points précis. Les contrôles automatiques attestent
 la couverture et la cohérence structurelle ; ils ne garantissent pas à eux seuls
 la justesse d'une définition ni une relecture humaine ou native des traductions.
-Ce dossier décrit le lot préparé. L'application en production et son numéro de
-publication exigent un relevé de livraison distinct.
+Ce dossier conserve la provenance du lot préparé. Son application et les contrôles
+de production sont attestés dans le reçu de livraison distinct cité en tête.
 
 ## Qualification de la garde des relations publiques
 

@@ -114,7 +114,7 @@ BEGIN
   -- A client editing another field without sending legacy_search_terms preserves
   -- the canonical array through the same normal editorial circuit.
   revision:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',cid,'expected_version',0,
-    'document','{"description":"Document présentant une offre touristique dans la version relue de cette fiche."}'));
+    'document','{"description":"Document présentant une offre touristique dans la version relue de cette fiche."}'::jsonb));
   PERFORM pg_temp.publish_legacy_test_revision(revision,'test-legacy-publish-omission');
   ASSERT (SELECT legacy_search_terms=ARRAY['Nouveau terme témoin'] FROM thesaurus.concept WHERE concept_id=cid),
     'Omitted terms must remain unchanged';
@@ -130,12 +130,12 @@ BEGIN
   END LOOP;
   BEGIN
     PERFORM api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',cid,'expected_version',0,
-      'expected_source_fingerprint','stale','document','{"legacy_search_terms":[]}'));
+      'expected_source_fingerprint','stale','document','{"legacy_search_terms":[]}'::jsonb));
     RAISE EXCEPTION 'Stale source fingerprint was accepted';
   EXCEPTION WHEN SQLSTATE 'PT409' THEN NULL;END;
 
   revision:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',cid,'expected_version',0,
-    'document','{"legacy_search_terms":[]}'));
+    'document','{"legacy_search_terms":[]}'::jsonb));
   ASSERT (SELECT legacy_search_terms=ARRAY['Nouveau terme témoin'] FROM thesaurus.concept WHERE concept_id=cid),
     'Clearing a draft must not clear published terms';
   PERFORM pg_temp.publish_legacy_test_revision(revision,'test-legacy-publish-clear');
@@ -148,7 +148,7 @@ BEGIN
 
   old_fp:=thesaurus.source_fingerprint(cid);
   revision:=api.thesaurus_admin('save_draft',jsonb_build_object('concept_id',cid,'expected_version',0,
-    'document','{"legacy_search_terms":["Proposition locale"]}'));
+    'document','{"legacy_search_terms":["Proposition locale"]}'::jsonb));
   -- Simulate an external canonical change only in this disposable conflict fixture.
   UPDATE thesaurus.concept SET legacy_search_terms=ARRAY['Changement concurrent'] WHERE concept_id=cid;
   ASSERT thesaurus.source_fingerprint(cid)<>old_fp,'Legacy terms must participate in source fingerprints';

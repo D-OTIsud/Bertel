@@ -220,7 +220,7 @@ BEGIN
     '{"fr":null,"en":"Domain","es":"Dominio","de":"Bereich"}'::jsonb,
     '{"fr":"Autre domaine","en":"Domain","es":"Dominio","de":"Bereich"}'::jsonb,
     'null'::jsonb
-  ]) LOOP
+  )) LOOP
     BEGIN
       UPDATE thesaurus.vocabulary SET name_i18n=bad
       WHERE domain=test_domains[1];
@@ -260,6 +260,5 @@ END
 $localized_domain_metadata_contract$;
 
 ROLLBACK;
-
 
 

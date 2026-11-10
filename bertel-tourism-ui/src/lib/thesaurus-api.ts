@@ -138,7 +138,8 @@ function stringMap(value: unknown): Record<string, string> {
 }
 
 function localized(values: Record<string, string>, requested: string): { value: string | null; lang: string | null } {
-  const candidates = [requested, requested.toLowerCase(), requested.split('-')[0], 'fr', ...Object.keys(values).sort()];
+  const primary = requested.split('-')[0];
+  const candidates = [requested, requested.toLowerCase(), primary, primary.toLowerCase(), 'fr'];
   for (const lang of candidates) if (values[lang]) return { value: values[lang], lang };
   return { value: null, lang: null };
 }
@@ -158,13 +159,15 @@ function localizeDomain(value: unknown, requestedLang: string): JsonObject {
   const hasMap = object(row.name_i18n) !== null;
   const chosen = localizedDomainName(nameMap, requestedLang);
   const legacyName = typeof row.name === 'string' && row.name.trim() ? row.name : null;
-  return {
-    ...row,
-    ...(chosen.value !== null ? { name: chosen.value } : legacyName !== null ? { name: legacyName } : {}),
-    requested_lang: requestedLang,
-    effective_lang: chosen.lang ?? (legacyName !== null ? 'fr' : null),
-    ...(hasMap ? { name_i18n: row.name_i18n } : {}),
-  };
+  const fallbackName = !hasMap ? legacyName : null;
+  const result: JsonObject = { ...row };
+  if (chosen.value !== null) result.name = chosen.value;
+  else if (fallbackName !== null) result.name = fallbackName;
+  else delete result.name;
+  result.requested_lang = requestedLang;
+  result.effective_lang = chosen.lang ?? (fallbackName !== null ? 'fr' : null);
+  if (hasMap) result.name_i18n = row.name_i18n;
+  return result;
 }
 
 /** Localize only names embedded in immutable manifests; translation maps remain untouched. */
@@ -198,6 +201,8 @@ export function publicThesaurusConcept(value: unknown, requestedLang = 'fr'): Js
   const definitions = stringMap(source.definitions);
   const name = localized(labels, requestedLang);
   const definition = localized(definitions, requestedLang);
+  const sourceName = typeof source.name === 'string' && source.name.trim() ? source.name : null;
+  const sourceDescription = typeof source.description === 'string' && source.description.trim() ? source.description : null;
   result.preferred_labels = labels;
   result.definitions = definitions;
   result.labels = (Array.isArray(source.labels) ? source.labels : []).flatMap((item) => {
@@ -226,10 +231,12 @@ export function publicThesaurusConcept(value: unknown, requestedLang = 'fr'): Js
     result[key] = (Array.isArray(source[key]) ? source[key] as unknown[] : []).filter((id): id is string => typeof id === 'string' && UUID.test(id));
   }
   if (name.value !== null) result.name = name.value;
+  else if (sourceName !== null) result.name = sourceName;
   if (definition.value !== null) result.description = definition.value;
+  else if (sourceDescription !== null) result.description = sourceDescription;
   result.requested_lang = requestedLang;
-  result.effective_lang = name.lang;
-  result.definition_lang = definition.lang;
+  result.effective_lang = name.lang ?? (sourceName !== null ? 'fr' : null);
+  result.definition_lang = definition.lang ?? (sourceDescription !== null ? 'fr' : null);
   return result;
 }
 

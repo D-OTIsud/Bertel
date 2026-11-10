@@ -1,7 +1,10 @@
 # Native dictionary SQL review — 10 November 2026
 
-Status: all eleven findings are resolved, including native migration ordering;
-full fresh/behavior CI remains pending. This file is not deployment approval. No production
+Status: all eleven findings are resolved. The exact native SQL body is qualified
+by actual fresh migration/schema and complete native publication behavior execution.
+The overall CI run remains failed at the separate live-catalog discovery guard;
+this is not approval to bypass that integration failure. No native production
+installation has occurred. No production
 writes, publication, commits or overlapping SQL edits were performed by reviewer.
 
 Reviewed candidate: `supabase/migrations/20261110201213_thesaurus_native_dictionary_adapters.sql`
@@ -83,8 +86,9 @@ publisher grants restore the complete per-grantor membership catalog exactly.
 The old eight-column one-of constraint is identified by its original name and
 compared with the complete PostgreSQL canonical definition before replacement.
 Catalog timestamp triggers remain enabled normally; only label/timestamp are
-excluded from the nonlabel-metadata comparison. No concrete code blocker remains
-in this candidate, subject to actual full fresh/publication runtime qualification.
+excluded from the nonlabel-metadata comparison. No concrete native code blocker
+remains; actual native runtime qualification is recorded below. Overall integration
+qualification still requires a globally green fresh-apply run.
 The integration candidate also replaces a reserved catalog alias found by root.
 To avoid repeated CI-only discovery, the reviewer generated a bounded read-only
 production query from all seventeen old-fragment guards. It returned only block,
@@ -92,6 +96,27 @@ signature and occurrence count: every fragment occurs exactly once in the actual
 post-metadata production body, including both admin, both renderer, usage,
 historical-reference, group-validation and activation fragments. No private
 function body was returned and no production mutation occurred.
+
+### Actual native runtime qualification
+
+The reviewer independently fetched GitHub job `130111017751` from
+[SQL CI run 42896537903](https://github.com/D-OTIsud/Bertel/actions/runs/42896537903),
+PR head `1fb0960d`, tested as GitHub merge commit
+`b09390faa509485b43019ee175de30cdfc3bb7a2` onto `1a573650`. Its logs confirm
+the exact mirrored native body above executes
+and commits, the native schema regression completes, and the complete protected
+native publication behavior file completes its final DO and ROLLBACK. This covers
+typed identity for all nine adapters, initial group bootstrap and all native
+membership edges, cross-category hierarchy preservation, protected-field refusals,
+review-source overlay save/validate/preview/publish, private actor-role publication
+and public refusal, and immutable old document/manifest/response checks.
+
+The final review-source block completes at `2026-11-10T20:41:29.7550130Z`; the
+private-role/frozen-history block completes at `20:41:34.1931877Z`, followed by
+ROLLBACK at `20:41:34.2570033Z`. Only then does the next catalog-coverage test begin
+and fail at its baseline discovery assertion, line 122, at
+`20:41:34.2675902Z`. Thus native functionality passed; the overall job did not.
+The independent review does not describe this run as globally green.
 
 The root also identified production-only row/edge count assertions that reject
 legitimate fresh seeds. Keep exact production evidence in deployment preflight;
@@ -125,14 +150,14 @@ preserving the existing hierarchy ancestor check. The guarded assignment functio
 itself should remain unchanged; regenerate complete native FK specs on affected
 consumer tables, retaining their old FK arms.
 
-## Qualification still required
+## Integration/deployment qualification still required
 
 - Re-read the final corrected migration and identical mirror; verify all findings
   are resolved and the predecessor/catalog guards run before mutations.
-- Pass complete fresh-apply CI and the new protected publication behavior test,
-  including overlay-only definitions, private role publication, native cross-category
-  membership, renderer parity, targeted incremental snapshots and historical release
-  immutability. A schema-only smoke test cannot qualify publication behavior.
+- Resolve the separate discovered-catalog baseline failure and pass the overall
+  fresh-apply CI. Native publication behavior has passed as recorded above; the
+  remaining integration guard must retain detection of genuinely unclassified
+  reference catalogs.
 - Preserve actual old table/source values, old vocabulary flags, private exposure,
   legacy allowlist, publisher role memberships/attributes, function identity/ACLs,
   preparation hashes, owner mutation journals and expected-release/idempotency

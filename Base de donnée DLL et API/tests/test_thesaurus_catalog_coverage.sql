@@ -110,13 +110,21 @@ DECLARE expected CONSTANT text[] := ARRAY[
     'ref_trail_manager',
     'ref_trail_source'
   ];
+  unexpected_keys text;
+  absent_keys text;
 BEGIN
-  IF EXISTS(SELECT 1 FROM internal.v_ref_catalog actual WHERE actual.catalog_key<>ALL(expected)) THEN
-    RAISE EXCEPTION 'An automatically discovered reference catalog lacks deliberate thesaurus classification' USING ERRCODE='PT409';
+  SELECT string_agg(actual.catalog_key,', ' ORDER BY actual.catalog_key) INTO unexpected_keys
+    FROM internal.v_ref_catalog actual WHERE actual.catalog_key<>ALL(expected);
+  SELECT string_agg(expected_key,', ' ORDER BY expected_key) INTO absent_keys
+    FROM unnest(expected) expected_key WHERE NOT EXISTS(
+      SELECT 1 FROM internal.v_ref_catalog actual WHERE actual.catalog_key=expected_key);
+  IF unexpected_keys IS NOT NULL THEN
+    RAISE EXCEPTION 'An automatically discovered reference catalog lacks deliberate thesaurus classification'
+      USING ERRCODE='PT409',DETAIL=jsonb_build_object('unclassified',unexpected_keys,'missing',absent_keys)::text;
   END IF;
-  IF EXISTS(SELECT 1 FROM unnest(expected) expected_key WHERE NOT EXISTS(
-    SELECT 1 FROM internal.v_ref_catalog actual WHERE actual.catalog_key=expected_key)) THEN
-    RAISE EXCEPTION 'A classified reference catalog is absent from the fresh schema' USING ERRCODE='PT409';
+  IF absent_keys IS NOT NULL THEN
+    RAISE EXCEPTION 'A classified reference catalog is absent from the fresh schema'
+      USING ERRCODE='PT409',DETAIL=absent_keys;
   END IF;
 END $coverage$;
 SELECT pg_temp.assert_thesaurus_catalog_coverage();

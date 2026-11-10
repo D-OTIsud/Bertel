@@ -84,7 +84,7 @@ describe('listRefCatalogs', () => {
       ['ref_code:package_type', 'package_type', 'Types de forfait'],
       ['ref_code:menu_category', 'menu_category', 'Catégories de menu'],
       ['ref_classification_scheme', 'Référentiels de classement', 'Labels et classements'],
-      ['ref_classification_value', 'Valeurs de classement', 'Niveaux et mentions des labels et classements'],
+      ['ref_classification_value', 'Valeurs de classement', 'Valeurs des labels et classements'],
       ['ref_code:price_kind', 'price_kind', 'Publics tarifaires'],
       ['ref_code:contact_kind', 'contact_kind', 'Moyens de contact'],
       ['ref_code:mood', 'mood', 'Ambiances touristiques'],
@@ -139,7 +139,7 @@ describe('getRefCatalog', () => {
     ['ref_code:package_type', 'package_type', 'Types de forfait'],
     ['ref_code:menu_category', 'menu_category', 'Catégories de menu'],
     ['ref_classification_scheme', 'Référentiels de classement', 'Labels et classements'],
-    ['ref_classification_value', 'Valeurs de classement', 'Niveaux et mentions des labels et classements'],
+    ['ref_classification_value', 'Valeurs de classement', 'Valeurs des labels et classements'],
     ['ref_code:price_kind', 'price_kind', 'Publics tarifaires'],
   ])('names catalogue %s consistently in its detail without rewriting row or relation identities', async (catalogKey, storedLabel, expectedLabel) => {
     const rpc = jest.fn().mockResolvedValue({

@@ -85,7 +85,7 @@ describe('domain names in demo references', () => {
     const categories = await listTaxonomyReferences();
 
     expect(categories).toEqual(references.taxonomies);
-    expect(categories.find((domain) => domain.domain === 'taxonomy_hot')?.name).toBe('Hôtels');
+    expect(categories.find((domain) => domain.domain === 'taxonomy_hot')?.name).toBe('Hôtellerie');
     expect(categories.map(({ domain, nodes }) => ({ domain, nodes })))
       .toEqual(baseline.map(({ domain, nodes }) => ({ domain, nodes })));
     for (const domain of categories) {

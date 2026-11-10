@@ -458,7 +458,7 @@ describe('parseObjectWorkspace', () => {
     expect(parsed.taxonomy.domains).toHaveLength(1);
     expect(parsed.taxonomy.domains[0]).toMatchObject({
       domain: 'taxonomy_hot',
-      label: 'Hôtels',
+      label: 'Hôtellerie',
       objectType: 'HOT',
     });
     expect(parsed.taxonomy.domains[0].assignment).toMatchObject({

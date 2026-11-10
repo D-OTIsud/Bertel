@@ -46,7 +46,7 @@ BEGIN
   quality:=thesaurus.validate_document(cid,doc);
   ASSERT jsonb_array_length(quality->'errors')=0, 'A concise contextual definition is valid';
   FOREACH bad IN ARRAY ARRAY['null'::jsonb,'42'::jsonb,'true'::jsonb,'{}'::jsonb,'[]'::jsonb,
-    to_jsonb(''::text),to_jsonb(E'\t\n\r'),to_jsonb(U&'\00A0\200B\202F\FEFF')] LOOP
+    to_jsonb(''::text),to_jsonb(E'\t\n\r'::text),to_jsonb(U&'\00A0\200B\202F\FEFF'::text)] LOOP
     quality:=thesaurus.validate_document(cid,jsonb_set(doc,'{description}',bad));
     ASSERT jsonb_array_length(quality->'errors')>0,
       format('Non-text or invisible definition must be rejected: %s',bad);

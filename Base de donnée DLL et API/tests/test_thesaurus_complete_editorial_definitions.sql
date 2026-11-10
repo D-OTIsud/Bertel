@@ -20,7 +20,7 @@ BEGIN
       'Repeating the same-language preferred label is not a definition';
   END LOOP;
   ASSERT jsonb_array_length(thesaurus.definition_errors(labels,
-    jsonb_set(defs,'{fr}',to_jsonb(U&'  UNE\00A0\00C9TOILE !!!  ')),languages))>0,
+    jsonb_set(defs,'{fr}',to_jsonb(U&'  UNE\00A0\00C9TOILE !!!  '::text)),languages))>0,
     'Case, Unicode whitespace and punctuation cannot disguise a copied label';
   FOREACH bad IN ARRAY ARRAY['TODO','TBD','À compléter','N/A','—','...'] LOOP
     ASSERT jsonb_array_length(thesaurus.definition_errors(labels,

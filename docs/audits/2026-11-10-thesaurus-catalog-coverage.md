@@ -124,6 +124,13 @@ The 26 formerly unmapped keys now resolve to 9 planned node adapters (6 public-e
 | Sources de référentiel sentier | ref_trail_source | Activités et itinéraires | 1 | trail feed/source registry metadata | n/a | schema FK topology captured; row-level target/assignment checks pending | exclude operational provenance; 1 row; endpoint/layer/trust/licence fields; used by trail sync. |
 ## Integrity and future invariant
 
+`tests/test_thesaurus_catalog_coverage.sql` compares the actual automatically
+discovered fresh-schema keys with all 104 deliberately classified keys. A real
+transactional `ref_*` table is its negative control: discovery must see it and the
+guard must refuse it. Every fixture rolls back. The portable matrix checker also
+requires its key set to match this live-discovery test, so a newly added catalog
+cannot silently bypass classification in the full SQL gate.
+
 Per adapter, anti-join source identities ↔ concepts in both directions on qualified `(source_kind,source_id,domain)`; require missing/stale/duplicate counts zero. Per relation, check endpoint anti-joins and composite-key uniqueness. For code/value/group trees, check recursive maximum depth, cycles, missing parents and closure mismatch. Compare 761 broader snapshot edges to source qualified tuples bidirectionally including edge kind and endpoints; equal counts are insufficient. Hash IDs/counts only.
 
 Export fresh catalog keys as JSON array or `{catalogs:[...]}`, then:

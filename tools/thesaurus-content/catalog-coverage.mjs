@@ -14,6 +14,12 @@ const errors = [];
 if (!Array.isArray(entries)) errors.push('catalogs must be an array');
 const byKey = new Map((entries ?? []).map((entry) => [entry.key, entry]));
 if (byKey.size !== (entries ?? []).length) errors.push('duplicate key in captured coverage');
+const discoveryTest = await readFile(path.resolve(here, '../../Base de donnée DLL et API/tests/test_thesaurus_catalog_coverage.sql'), 'utf8');
+const expectedLiteral = discoveryTest.match(/expected CONSTANT text\[\] := ARRAY\[([\s\S]*?)\n  \];/);
+const testedKeys = expectedLiteral ? [...expectedLiteral[1].matchAll(/'([^']+)'/g)].map(match => match[1]).sort() : [];
+if (JSON.stringify(testedKeys) !== JSON.stringify([...byKey.keys()].sort())) {
+  errors.push('the fresh-schema live-discovery invariant must classify the same keys as the catalog matrix');
+}
 for (const entry of entries ?? []) {
   for (const field of [
     'name', 'table', 'kind', 'rows', 'semantic_role', 'adapter', 'treatment',

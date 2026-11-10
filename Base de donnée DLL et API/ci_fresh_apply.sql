@@ -861,6 +861,7 @@ COMMIT;
 \ir thesaurus_native_dictionary_adapters.sql
 \ir tests/test_thesaurus_native_dictionary_adapters.sql
 \ir tests/test_thesaurus_native_dictionary_publication.sql
+\ir tests/test_thesaurus_catalog_coverage.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

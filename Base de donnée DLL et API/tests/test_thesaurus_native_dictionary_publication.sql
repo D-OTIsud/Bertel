@@ -290,20 +290,20 @@ SELECT id,'Source d’avis revue '||code AS name FROM public.ref_review_source;
 
 DO $review_source_editorial_publication$
 DECLARE items jsonb:='[]';saved jsonb;checks jsonb;validated jsonb;revision_ids jsonb;versions jsonb;preview jsonb;published jsonb;
-  r record;doc jsonb;rid bigint;cid uuid;api_doc jsonb;expected_name text;
+  source_row record;doc jsonb;rid bigint;cid uuid;api_doc jsonb;expected_name text;
 BEGIN
-  FOR r IN SELECT c.concept_id,c.domain,c.code FROM thesaurus.concept c
+  FOR source_row IN SELECT c.concept_id,c.domain,c.code FROM thesaurus.concept c
     WHERE c.domain='review_source' ORDER BY c.code LOOP
-    doc:=thesaurus.concept_document(r.concept_id)||jsonb_build_object(
-      'name','Source d’avis revue '||r.code,
-      'description','Définition de test pour la source d’avis « '||r.code||' ».',
-      'name_i18n',jsonb_build_object('fr','Source d’avis revue '||r.code,'en','Reviewed source '||r.code,
-        'es','Fuente revisada '||r.code,'de','Geprüfte Quelle '||r.code),
-      'description_i18n',jsonb_build_object('fr','Définition de test pour la source d’avis « '||r.code||' ».',
-        'en','Test definition for review source '||r.code||'.','es','Definición de prueba para fuente de opiniones '||r.code||'.',
-        'de','Testdefinition für Bewertungsquelle '||r.code||'.'));
-    items:=items||jsonb_build_array(jsonb_build_object('concept_id',r.concept_id,'domain',r.domain,
-      'expected_version',0,'expected_source_fingerprint',thesaurus.source_fingerprint(r.concept_id),
+    doc:=thesaurus.concept_document(source_row.concept_id)||jsonb_build_object(
+      'name','Source d’avis revue '||source_row.code,
+      'description','Définition de test pour la source d’avis « '||source_row.code||' ».',
+      'name_i18n',jsonb_build_object('fr','Source d’avis revue '||source_row.code,'en','Reviewed source '||source_row.code,
+        'es','Fuente revisada '||source_row.code,'de','Geprüfte Quelle '||source_row.code),
+      'description_i18n',jsonb_build_object('fr','Définition de test pour la source d’avis « '||source_row.code||' ».',
+        'en','Test definition for review source '||source_row.code||'.','es','Definición de prueba para fuente de opiniones '||source_row.code||'.',
+        'de','Testdefinition für Bewertungsquelle '||source_row.code||'.'));
+    items:=items||jsonb_build_array(jsonb_build_object('concept_id',source_row.concept_id,'domain',source_row.domain,
+      'expected_version',0,'expected_source_fingerprint',thesaurus.source_fingerprint(source_row.concept_id),
       'only_if_no_revision',true,'document',doc));
   END LOOP;
   ASSERT jsonb_array_length(items)>0 AND jsonb_array_length(items)<=100,
@@ -357,22 +357,22 @@ SELECT id,to_jsonb(r) row_image FROM public.ref_actor_role r;
 
 DO $private_actor_role_publication$
 DECLARE items jsonb:='[]';saved jsonb;checks jsonb;validated jsonb;revision_ids jsonb;versions jsonb;
-  preview jsonb;published jsonb;r record;doc jsonb;rid bigint;cid uuid;private_id uuid;public_result jsonb;
+  preview jsonb;published jsonb;source_row record;doc jsonb;rid bigint;cid uuid;private_id uuid;public_result jsonb;
 BEGIN
-  FOR r IN SELECT c.concept_id,c.domain,c.code,c.source_id FROM thesaurus.concept c
+  FOR source_row IN SELECT c.concept_id,c.domain,c.code,c.source_id FROM thesaurus.concept c
     WHERE c.domain='actor_role' ORDER BY c.code LOOP
-    doc:=thesaurus.concept_document(r.concept_id);
+    doc:=thesaurus.concept_document(source_row.concept_id);
     doc:=doc||jsonb_build_object(
-      'name',CASE WHEN r.source_id='b91a0000-0000-4000-8000-000000000025' THEN 'Rôle acteur privé publié' ELSE doc->>'name' END,
-      'description','Définition de test du rôle acteur « '||r.code||' ».',
-      'name_i18n',jsonb_build_object('fr',CASE WHEN r.source_id='b91a0000-0000-4000-8000-000000000025'
-        THEN 'Rôle acteur privé publié' ELSE doc->>'name' END,'en','Reviewed actor role '||r.code,
-        'es','Función de actor revisada '||r.code,'de','Geprüfte Akteursrolle '||r.code),
-      'description_i18n',jsonb_build_object('fr','Définition de test du rôle acteur « '||r.code||' ».',
-        'en','Test definition for actor role '||r.code||'.','es','Definición de prueba para función de actor '||r.code||'.',
-        'de','Testdefinition für Akteursrolle '||r.code||'.'));
-    items:=items||jsonb_build_array(jsonb_build_object('concept_id',r.concept_id,'domain',r.domain,
-      'expected_version',0,'expected_source_fingerprint',thesaurus.source_fingerprint(r.concept_id),
+      'name',CASE WHEN source_row.source_id='b91a0000-0000-4000-8000-000000000025' THEN 'Rôle acteur privé publié' ELSE doc->>'name' END,
+      'description','Définition de test du rôle acteur « '||source_row.code||' ».',
+      'name_i18n',jsonb_build_object('fr',CASE WHEN source_row.source_id='b91a0000-0000-4000-8000-000000000025'
+        THEN 'Rôle acteur privé publié' ELSE doc->>'name' END,'en','Reviewed actor role '||source_row.code,
+        'es','Función de actor revisada '||source_row.code,'de','Geprüfte Akteursrolle '||source_row.code),
+      'description_i18n',jsonb_build_object('fr','Définition de test du rôle acteur « '||source_row.code||' ».',
+        'en','Test definition for actor role '||source_row.code||'.','es','Definición de prueba para función de actor '||source_row.code||'.',
+        'de','Testdefinition für Akteursrolle '||source_row.code||'.'));
+    items:=items||jsonb_build_array(jsonb_build_object('concept_id',source_row.concept_id,'domain',source_row.domain,
+      'expected_version',0,'expected_source_fingerprint',thesaurus.source_fingerprint(source_row.concept_id),
       'only_if_no_revision',true,'document',doc));
   END LOOP;
   ASSERT jsonb_array_length(items)>0 AND jsonb_array_length(items)<=100,

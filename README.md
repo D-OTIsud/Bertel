@@ -92,7 +92,7 @@ docker run -p 8080:80 bertel-api-docs
 ## 🔗 Liens utiles
 
 - [Documentation API complète](./docs/)
-- [Collection Postman publique](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/61gyd5k/bertel-api-v3-0)
+- [Collection Postman publique](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/d391b45/bertel-api-v3-0)
 
 ## 🚀 Démarrage rapide
 

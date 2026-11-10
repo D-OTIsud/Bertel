@@ -125,11 +125,35 @@ The 26 formerly unmapped keys now resolve to 9 planned node adapters (6 public-e
 ## Integrity and future invariant
 
 `tests/test_thesaurus_catalog_coverage.sql` compares the actual automatically
-discovered fresh-schema keys with all 104 deliberately classified keys. A real
+discovered fresh-schema keys with all 108 deliberately classified keys: the 104
+observed production catalogs and four integration catalogs declared only in the
+fresh-install source. A real
 transactional `ref_*` table is its negative control: discovery must see it and the
 guard must refuse it. Every fixture rolls back. The portable matrix checker also
 requires its key set to match this live-discovery test, so a newly added catalog
 cannot silently bypass classification in the full SQL gate.
+
+### Four declared catalogs absent from production
+
+Read-only production `to_regclass` checks on 10 November return null for all four
+following relations. The canonical fresh manifest installs them through the
+Tourinsoft migrations; they are not leftover test fixtures. Their classification
+is recorded separately under `schema_only_catalogs`, preserving the actual
+104-catalog production count. This thesaurus delivery does not install their
+integration migrations or alter their authority.
+
+| Fresh-only key | Deliberate treatment |
+|---|---|
+| `ref_interop_value_crosswalk` | Profile-scoped source/target-code correspondence; integration relationship, no concept |
+| `ref_tourinsoft_reunion_profile` | Feed and wire-format configuration; service-role integration path |
+| `ref_tourinsoft_reunion_route` | Type/taxonomy-to-profile routing with native FK and partial unique keys; no concept |
+| `ref_tourinsoft_reunion_extension_field` | Approved export-field allowlist and canonical-owned flags; preserve export authority, no concept editing |
+
+Sources: `20260730081425_tourinsoft_reunion_export_v1.sql` and
+`20260731041455_tourinsoft_reunion_regional_v1.sql`, loaded by the canonical fresh
+manifest before the discovery guard. These four are explicitly recognized if a
+future authorized production migration installs them; any other new key still
+fails classification.
 
 Per adapter, anti-join source identities ↔ concepts in both directions on qualified `(source_kind,source_id,domain)`; require missing/stale/duplicate counts zero. Per relation, check endpoint anti-joins and composite-key uniqueness. For code/value/group trees, check recursive maximum depth, cycles, missing parents and closure mismatch. Compare 761 broader snapshot edges to source qualified tuples bidirectionally including edge kind and endpoints; equal counts are insufficient. Hash IDs/counts only.
 

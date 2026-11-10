@@ -12563,5 +12563,48 @@
     "orphan_rows": 0,
     "phase": "production before adapter installation",
     "semantic_proof": "db-graph-out/THESAURUS_CATALOG_SEMANTIC_BASELINE.json"
-  }
+  },
+  "schema_only_catalogs": [
+    {
+      "key": "ref_interop_value_crosswalk",
+      "name": "Correspondances de valeurs entre référentiels",
+      "source_migration": "20260730081425_tourinsoft_reunion_export_v1.sql",
+      "semantic_role": "integration_mapping",
+      "treatment": "Profile/domain/source-code to target-code mappings; retain as integration relationships, never independent thesaurus concepts.",
+      "authority": "Existing service-role policies and migration path; no thesaurus-author grant.",
+      "production_presence": "absent_verified_by_to_regclass_2026-11-10",
+      "fresh_schema_presence": "required"
+    },
+    {
+      "key": "ref_tourinsoft_reunion_profile",
+      "name": "Profils de syndication Tourinsoft Réunion",
+      "source_migration": "20260731041455_tourinsoft_reunion_regional_v1.sql",
+      "semantic_role": "integration_configuration",
+      "treatment": "Wire-format/feed profiles; retain system configuration without publishing feeds or configuration as concepts.",
+      "authority": "Existing service-role policies and migration path; no thesaurus-author grant.",
+      "production_presence": "absent_verified_by_to_regclass_2026-11-10",
+      "fresh_schema_presence": "required"
+    },
+    {
+      "key": "ref_tourinsoft_reunion_route",
+      "name": "Routage des fiches vers Tourinsoft Réunion",
+      "source_migration": "20260731041455_tourinsoft_reunion_regional_v1.sql",
+      "semantic_role": "integration_routing",
+      "treatment": "Object-type/taxonomy to profile routing with native FK and partial unique keys; retain relationship semantics, no concepts.",
+      "authority": "Existing service-role policies and migration path; no thesaurus-author grant.",
+      "production_presence": "absent_verified_by_to_regclass_2026-11-10",
+      "fresh_schema_presence": "required"
+    },
+    {
+      "key": "ref_tourinsoft_reunion_extension_field",
+      "name": "Champs autorisés pour les extensions Tourinsoft Réunion",
+      "source_migration": "20260731041455_tourinsoft_reunion_regional_v1.sql",
+      "semantic_role": "integration_allowlist",
+      "treatment": "Profile-scoped approved leaf-path allowlist and canonical-owned flags; preserve export authority, never editable concept content.",
+      "authority": "Existing service-role policies and migration path; no thesaurus-author grant.",
+      "production_presence": "absent_verified_by_to_regclass_2026-11-10",
+      "fresh_schema_presence": "required"
+    }
+  ],
+  "fresh_schema_catalog_key_count": 108
 }

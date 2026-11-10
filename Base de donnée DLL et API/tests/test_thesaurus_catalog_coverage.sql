@@ -94,6 +94,7 @@ DECLARE expected CONSTANT text[] := ARRAY[
     'ref_facet_applicability',
     'ref_facet_registry',
     'ref_interop_crosswalk',
+    'ref_interop_value_crosswalk',
     'ref_iti_assoc_role',
     'ref_language',
     'ref_legal_type',
@@ -107,6 +108,9 @@ DECLARE expected CONSTANT text[] := ARRAY[
     'ref_sustainability_action_category',
     'ref_sustainability_action_group',
     'ref_tag',
+    'ref_tourinsoft_reunion_extension_field',
+    'ref_tourinsoft_reunion_profile',
+    'ref_tourinsoft_reunion_route',
     'ref_trail_manager',
     'ref_trail_source'
   ];

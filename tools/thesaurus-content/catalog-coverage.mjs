@@ -14,10 +14,18 @@ const errors = [];
 if (!Array.isArray(entries)) errors.push('catalogs must be an array');
 const byKey = new Map((entries ?? []).map((entry) => [entry.key, entry]));
 if (byKey.size !== (entries ?? []).length) errors.push('duplicate key in captured coverage');
+const schemaOnly = report.schema_only_catalogs ?? [];
+const allClassified = new Map([...byKey, ...schemaOnly.map(entry => [entry.key, entry])]);
+if (allClassified.size !== byKey.size + schemaOnly.length) errors.push('duplicate schema-only classification');
+for (const entry of schemaOnly) {
+  for (const field of ['name', 'source_migration', 'semantic_role', 'treatment', 'authority', 'production_presence', 'fresh_schema_presence']) {
+    if (!entry[field]) errors.push(`${entry.key}: missing schema-only ${field}`);
+  }
+}
 const discoveryTest = await readFile(path.resolve(here, '../../Base de donnée DLL et API/tests/test_thesaurus_catalog_coverage.sql'), 'utf8');
 const expectedLiteral = discoveryTest.match(/expected CONSTANT text\[\] := ARRAY\[([\s\S]*?)\n  \];/);
 const testedKeys = expectedLiteral ? [...expectedLiteral[1].matchAll(/'([^']+)'/g)].map(match => match[1]).sort() : [];
-if (JSON.stringify(testedKeys) !== JSON.stringify([...byKey.keys()].sort())) {
+if (JSON.stringify(testedKeys) !== JSON.stringify([...allClassified.keys()].sort())) {
   errors.push('the fresh-schema live-discovery invariant must classify the same keys as the catalog matrix');
 }
 for (const entry of entries ?? []) {
@@ -43,7 +51,7 @@ if (discoveryAt >= 0) {
     if (!Array.isArray(catalogs)) errors.push('discovery input must be an array or contain catalogs[]');
     else {
       const keys = catalogs.map((item) => typeof item === 'string' ? item : item.catalog_key ?? item.key);
-      for (const key of keys) if (!byKey.has(key)) errors.push(`new catalog key lacks deliberate classification: ${key}`);
+      for (const key of keys) if (!allClassified.has(key)) errors.push(`new catalog key lacks deliberate classification: ${key}`);
       for (const key of byKey.keys()) if (!keys.includes(key)) errors.push(`captured key absent from fresh discovery: ${key}`);
     }
   }
@@ -52,5 +60,5 @@ if (errors.length) {
   process.stderr.write(`${errors.join('\n')}\n`);
   process.exitCode = 1;
 } else {
-  process.stdout.write(JSON.stringify({ catalog_keys: byKey.size, classified: true }) + '\n');
+  process.stdout.write(JSON.stringify({ catalog_keys: byKey.size, schema_only_catalog_keys: schemaOnly.length, classified: true }) + '\n');
 }

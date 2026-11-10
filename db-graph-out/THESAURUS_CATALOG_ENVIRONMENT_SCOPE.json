@@ -1,0 +1,15 @@
+{
+  "observed_utc_date": "2026-11-10",
+  "production_project_ref": "ryycrdhlkmzpxwwwwupy",
+  "production_discovered_catalogs": 104,
+  "canonical_fresh_declared_catalogs": 108,
+  "verification": "Production SELECT to_regclass for each of the four source-declared integration tables returned null; fresh manifest source declares and retains them.",
+  "production_absent_schema_only_keys": [
+    "ref_interop_value_crosswalk",
+    "ref_tourinsoft_reunion_profile",
+    "ref_tourinsoft_reunion_route",
+    "ref_tourinsoft_reunion_extension_field"
+  ],
+  "production_installation_performed": false,
+  "thesaurus_treatment": "Integration mapping, routing, profile configuration and export-field allowlist; no new concepts or author privileges."
+}

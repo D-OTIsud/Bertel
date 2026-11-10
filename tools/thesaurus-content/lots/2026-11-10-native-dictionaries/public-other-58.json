@@ -1,0 +1,1049 @@
+{
+  "format_version": 1,
+  "rows": [
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "cf832912-35c2-4b32-9b5f-120341072035",
+      "code": "bedrooms",
+      "name": {
+        "fr": "Chambres",
+        "en": "Bedrooms",
+        "es": "Dormitorios",
+        "de": "Schlafzimmer"
+      },
+      "definition": {
+        "fr": "Nombre d’espaces de couchage aménagés comme chambres dans l’hébergement.",
+        "en": "Count of guest rooms set up as bedrooms in the accommodation.",
+        "es": "Número de habitaciones habilitadas para alojar huéspedes.",
+        "de": "Anzahl der als Gästezimmer eingerichteten Schlafräume."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "7eec95bd-e1aa-40be-a27d-f442f1bb6d54",
+      "code": "beds",
+      "name": {
+        "fr": "Lits",
+        "en": "Beds",
+        "es": "Camas",
+        "de": "Betten"
+      },
+      "definition": {
+        "fr": "Nombre de lits disponibles pour le couchage, distinct du nombre de chambres.",
+        "en": "Count of beds available for sleeping, distinct from the number of rooms.",
+        "es": "Número de camas disponibles para dormir; puede diferir del número de habitaciones.",
+        "de": "Anzahl der Schlafplätze in Betten, unabhängig von der Zimmerzahl."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "8d0da68e-1a53-4bfe-b8db-50e6d90761d6",
+      "code": "bikes",
+      "name": {
+        "fr": "Vélos",
+        "en": "Bicycles",
+        "es": "Bicicletas",
+        "de": "Fahrräder"
+      },
+      "definition": {
+        "fr": "Nombre de vélos proposés ou pouvant être stationnés selon l’usage déclaré de la fiche.",
+        "en": "Number of bicycles offered or accommodated, according to the listing’s stated use.",
+        "es": "Cantidad de bicicletas ofrecidas o que pueden estacionarse según el uso indicado en la ficha.",
+        "de": "Anzahl der angebotenen oder abstellbaren Fahrräder entsprechend der angegebenen Nutzung."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "104f54fd-8c6c-4a3f-9165-cd71022e412e",
+      "code": "campers",
+      "name": {
+        "fr": "Camping-cars",
+        "en": "Motorhomes",
+        "es": "Autocaravanas",
+        "de": "Wohnmobile"
+      },
+      "definition": {
+        "fr": "Nombre de camping-cars que l’espace peut accueillir ou stationner.",
+        "en": "Number of motorhomes the space can accommodate or park.",
+        "es": "Cantidad de autocaravanas que el espacio puede acoger o estacionar.",
+        "de": "Anzahl der Wohnmobile, die auf der Fläche Platz finden oder parken können."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "4de604e2-3ff9-4c23-86b8-7e4307b5a888",
+      "code": "floor_area_m2",
+      "name": {
+        "fr": "Surface utile (m²)",
+        "en": "Usable floor area (m²)",
+        "es": "Superficie útil (m²)",
+        "de": "Nutzfläche (m²)"
+      },
+      "definition": {
+        "fr": "Superficie utile mesurée en mètres carrés, sans indiquer à elle seule la capacité d’accueil.",
+        "en": "Usable area measured in square metres; it does not by itself state visitor capacity.",
+        "es": "Superficie útil medida en metros cuadrados; por sí sola no indica el aforo.",
+        "de": "Nutzbare Fläche in Quadratmetern; sie gibt für sich genommen keine Besucherzahl an."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "d0afae67-e42a-42aa-995d-7432cc296657",
+      "code": "max_capacity",
+      "name": {
+        "fr": "Capacité d’accueil maximale",
+        "en": "Maximum capacity",
+        "es": "Aforo máximo",
+        "de": "Maximale Kapazität"
+      },
+      "definition": {
+        "fr": "Nombre maximal de personnes indiqué pour l’accueil du lieu ou du service.",
+        "en": "Maximum number of people stated for the venue or service.",
+        "es": "Número máximo de personas indicado para el espacio o servicio.",
+        "de": "Angegebene Höchstzahl an Personen für den Ort oder das Angebot."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "a8f2cb00-d027-405b-85bd-b1ba1b45a77a",
+      "code": "meeting_rooms",
+      "name": {
+        "fr": "Salles de réunion",
+        "en": "Meeting rooms",
+        "es": "Salas de reuniones",
+        "de": "Tagungsräume"
+      },
+      "definition": {
+        "fr": "Nombre de salles destinées à accueillir des réunions.",
+        "en": "Number of rooms intended for meetings.",
+        "es": "Número de salas destinadas a reuniones.",
+        "de": "Anzahl der für Besprechungen vorgesehenen Räume."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "00c22b0a-7c09-4868-ba8a-4978a3f1fcfe",
+      "code": "pitches",
+      "name": {
+        "fr": "Emplacements de camping",
+        "en": "Campsites",
+        "es": "Parcelas de acampada",
+        "de": "Campingstellplätze"
+      },
+      "definition": {
+        "fr": "Nombre d’emplacements proposés aux campeurs, caravanes ou tentes.",
+        "en": "Number of pitches offered to campers, caravans, or tents.",
+        "es": "Número de parcelas ofrecidas para acampar con caravana o tienda.",
+        "de": "Anzahl der Stellplätze für Campinggäste, Wohnwagen oder Zelte."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "6208b7b3-7f9e-491c-a43b-37d92ccd623c",
+      "code": "seats",
+      "name": {
+        "fr": "Places assises",
+        "en": "Seated places",
+        "es": "Plazas sentadas",
+        "de": "Sitzplätze"
+      },
+      "definition": {
+        "fr": "Nombre de personnes pouvant prendre place sur un siège.",
+        "en": "Number of people who can be seated.",
+        "es": "Número de personas que pueden sentarse.",
+        "de": "Anzahl der Personen, die sitzend Platz finden."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "f3639202-b1ad-4b81-be64-83b6a469192b",
+      "code": "standing_places",
+      "name": {
+        "fr": "Places debout",
+        "en": "Standing places",
+        "es": "Plazas de pie",
+        "de": "Stehplätze"
+      },
+      "definition": {
+        "fr": "Nombre de personnes pouvant être accueillies debout, sans compter les places assises.",
+        "en": "Number of people accommodated standing, excluding seated places.",
+        "es": "Número de personas que pueden estar de pie, sin contar las plazas sentadas.",
+        "de": "Anzahl der Personen im Stehbereich, ohne Sitzplätze."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "d556c8bf-4990-43d8-96f6-960f07b76869",
+      "code": "tents",
+      "name": {
+        "fr": "Tentes",
+        "en": "Tents",
+        "es": "Tiendas de campaña",
+        "de": "Zelte"
+      },
+      "definition": {
+        "fr": "Nombre de tentes pouvant être installées sur l’espace prévu.",
+        "en": "Number of tents that can be set up in the designated area.",
+        "es": "Número de tiendas que pueden instalarse en la zona prevista.",
+        "de": "Anzahl der Zelte, die auf der vorgesehenen Fläche aufgestellt werden können."
+      }
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "d12d2640-6628-4bad-bbdb-577672230b31",
+      "code": "vehicles",
+      "name": {
+        "fr": "Véhicules",
+        "en": "Vehicles",
+        "es": "Vehículos",
+        "de": "Fahrzeuge"
+      },
+      "definition": {
+        "fr": "Nombre de véhicules que l’espace de stationnement peut accueillir.",
+        "en": "Number of vehicles the parking area can accommodate.",
+        "es": "Número de vehículos que puede acoger la zona de estacionamiento.",
+        "de": "Anzahl der Fahrzeuge, die auf der Stellfläche Platz finden."
+      }
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "150bc976-7e2c-495b-85eb-153200ac15df",
+      "code": "a_proximite",
+      "name": {
+        "fr": "À proximité",
+        "en": "Nearby",
+        "es": "En las proximidades",
+        "de": "In der Nähe"
+      },
+      "definition": {
+        "fr": "Désigne un objet situé tout près de l’itinéraire, sans être nécessairement sur son tracé.",
+        "en": "Identifies an object close to the itinerary but not necessarily on its route.",
+        "es": "Indica un elemento cercano al itinerario, aunque no necesariamente situado en su recorrido.",
+        "de": "Bezeichnet ein Objekt nahe der Route, das nicht zwingend auf ihrem Verlauf liegt."
+      }
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "4df054e8-c8bc-4e0d-986a-608106d2fcd8",
+      "code": "hebergement_etape",
+      "name": {
+        "fr": "Hébergement d’étape",
+        "en": "Overnight accommodation",
+        "es": "Alojamiento de etapa",
+        "de": "Etappenunterkunft"
+      },
+      "definition": {
+        "fr": "Hébergement associé à une étape et utile pour séjourner le long de l’itinéraire.",
+        "en": "Accommodation associated with a stage for staying overnight along the itinerary.",
+        "es": "Alojamiento vinculado a una etapa para pernoctar durante el itinerario.",
+        "de": "Unterkunft an einer Etappe für eine Übernachtung entlang der Route."
+      }
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "6635106a-b9fc-44af-81f8-7507774ea21f",
+      "code": "parking",
+      "name": {
+        "fr": "Stationnement",
+        "en": "Parking",
+        "es": "Aparcamiento",
+        "de": "Parkplatz"
+      },
+      "definition": {
+        "fr": "Lieu de stationnement indiqué comme utile pour accéder à l’itinéraire.",
+        "en": "Parking place identified as useful for accessing the itinerary.",
+        "es": "Lugar de estacionamiento indicado como punto de acceso al itinerario.",
+        "de": "Als Zugang zur Route ausgewiesene Parkmöglichkeit."
+      }
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "7a178f95-479d-473b-a5d9-ef66c87ab6d9",
+      "code": "point_de_depart",
+      "name": {
+        "fr": "Point de départ",
+        "en": "Starting point",
+        "es": "Punto de partida",
+        "de": "Ausgangspunkt"
+      },
+      "definition": {
+        "fr": "Objet qui marque le début du parcours ou sert de repère pour commencer l’itinéraire.",
+        "en": "Object marking the beginning of the route or serving as its starting reference.",
+        "es": "Elemento que marca el inicio del recorrido o sirve de referencia para comenzarlo.",
+        "de": "Objekt, das den Beginn der Route markiert oder als Startpunkt dient."
+      }
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "5e50675e-3a47-4d20-a441-135b308a5c2e",
+      "code": "point_interet",
+      "name": {
+        "fr": "Point d’intérêt",
+        "en": "Point of interest",
+        "es": "Punto de interés",
+        "de": "Sehenswürdigkeit"
+      },
+      "definition": {
+        "fr": "Lieu ou service d’intérêt associé au parcours, sans présumer qu’il se trouve sur le tracé.",
+        "en": "Place or service of interest associated with the route, not necessarily on it.",
+        "es": "Lugar o servicio de interés asociado al recorrido, que no tiene por qué estar en él.",
+        "de": "Mit der Route verbundener interessanter Ort oder Dienst, nicht zwingend direkt am Weg."
+      }
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "95ebca4a-2ff4-4069-abe9-0e3756b8d0fd",
+      "code": "prestataire",
+      "name": {
+        "fr": "Prestataire associé",
+        "en": "Associated provider",
+        "es": "Proveedor asociado",
+        "de": "Zugehöriger Anbieter"
+      },
+      "definition": {
+        "fr": "Prestataire dont l’activité ou le service est lié à l’itinéraire.",
+        "en": "Provider whose activity or service is connected with the itinerary.",
+        "es": "Proveedor cuya actividad o servicio está relacionado con el itinerario.",
+        "de": "Anbieter, dessen Tätigkeit oder Angebot mit der Route verbunden ist."
+      }
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "2aca98f8-8fc6-41d9-9d73-1b1b64efeecd",
+      "code": "restauration",
+      "name": {
+        "fr": "Restauration",
+        "en": "Food service",
+        "es": "Restauración",
+        "de": "Gastronomie"
+      },
+      "definition": {
+        "fr": "Lieu de restauration associé au parcours pour une pause ou un repas.",
+        "en": "Food service associated with the route for a break or meal.",
+        "es": "Establecimiento de restauración asociado al recorrido para una pausa o comida.",
+        "de": "Gastronomisches Angebot an der Route für eine Pause oder Mahlzeit."
+      }
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "31621720-27e4-4915-823f-8194477e6391",
+      "code": "sur_le_parcours",
+      "name": {
+        "fr": "Sur le parcours",
+        "en": "On the route",
+        "es": "En el recorrido",
+        "de": "An der Route"
+      },
+      "definition": {
+        "fr": "Objet situé directement sur le tracé de l’itinéraire.",
+        "en": "Object located directly on the itinerary’s route.",
+        "es": "Elemento situado directamente en el trazado del itinerario.",
+        "de": "Objekt, das unmittelbar am Verlauf der Route liegt."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "f48d1358-3591-447c-b2bd-db8d931b936c",
+      "code": "accessibility",
+      "name": {
+        "fr": "Attestation d’accessibilité (ERP)",
+        "en": "Accessibility record for a public venue",
+        "es": "Documento de accesibilidad (establecimiento público)",
+        "de": "Nachweis zur Barrierefreiheit (öffentliche Einrichtung)"
+      },
+      "definition": {
+        "fr": "Attestation ou dossier décrivant l’accessibilité d’un établissement recevant du public; distinct d’une distinction volontaire telle que Tourisme & Handicap.",
+        "en": "Record describing accessibility features or an accessibility plan for a venue open to the public; distinct from a voluntary award such as Tourisme & Handicap.",
+        "es": "Documento que describe la accesibilidad o un plan de accesibilidad de un establecimiento abierto al público; distinto de un distintivo voluntario.",
+        "de": "Nachweis oder Unterlage zur Barrierefreiheit eines öffentlich zugänglichen Betriebs; getrennt von einer freiwilligen Auszeichnung."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "3e5c8f58-3eac-4b49-a8ac-6c0d430fca35",
+      "code": "attestation_assurance",
+      "name": {
+        "fr": "Attestation d’assurance",
+        "en": "Insurance certificate",
+        "es": "Certificado de seguro",
+        "de": "Versicherungsnachweis"
+      },
+      "definition": {
+        "fr": "Document qui décrit les garanties d’assurance déclarées pour une activité ou un établissement.",
+        "en": "Document describing the insurance cover stated for an activity or establishment.",
+        "es": "Documento que describe las coberturas de seguro declaradas para una actividad o establecimiento.",
+        "de": "Dokument zu den für eine Tätigkeit oder einen Betrieb angegebenen Versicherungsdeckungen."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "c0272553-f73b-42e9-a589-8609137f8c0a",
+      "code": "avis_situation_sirene",
+      "name": {
+        "fr": "Avis de situation SIRENE",
+        "en": "SIRENE status record",
+        "es": "Informe de situación SIRENE",
+        "de": "SIRENE-Statusauskunft"
+      },
+      "definition": {
+        "fr": "Extrait de situation d’une unité inscrite au répertoire SIRENE, utilisé pour présenter ses informations d’identification.",
+        "en": "Status record for an entity listed in the SIRENE register, used to show identification details.",
+        "es": "Informe de situación de una entidad inscrita en el registro SIRENE, con sus datos de identificación.",
+        "de": "Statusauskunft zu einer im SIRENE-Register geführten Einheit mit Identifikationsangaben."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "646edd1f-eb24-443f-aa0c-ed805c15ab54",
+      "code": "carte_professionnelle",
+      "name": {
+        "fr": "Carte professionnelle",
+        "en": "Professional card",
+        "es": "Tarjeta profesional",
+        "de": "Berufsausweis"
+      },
+      "definition": {
+        "fr": "Carte associée à l’exercice d’une profession; la référence peut préciser le métier concerné.",
+        "en": "Card associated with practising a profession; its reference may identify the profession concerned.",
+        "es": "Tarjeta asociada al ejercicio de una profesión; la referencia puede indicar la actividad correspondiente.",
+        "de": "Karte zur Ausübung eines Berufs; die Referenz kann den betreffenden Beruf benennen."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "20e8f128-a564-464f-9a12-0b342707e22a",
+      "code": "cerfa_chambre_hotes",
+      "name": {
+        "fr": "Déclaration Cerfa de chambres d’hôtes",
+        "en": "Cerfa guest-room declaration",
+        "es": "Declaración Cerfa de alojamiento en habitaciones",
+        "de": "Cerfa-Anzeige für Gästezimmer"
+      },
+      "definition": {
+        "fr": "Formulaire Cerfa relatif à la déclaration en mairie d’une activité de chambres d’hôtes.",
+        "en": "Cerfa form concerning the municipal declaration of a guest-room activity.",
+        "es": "Formulario Cerfa relativo a la declaración municipal de una actividad de alojamiento en habitaciones.",
+        "de": "Cerfa-Formular zur kommunalen Anzeige einer Tätigkeit mit Gästezimmern."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "777a3bae-6b1c-4802-9f40-8022a8cc523b",
+      "code": "cerfa_meuble_tourisme",
+      "name": {
+        "fr": "Déclaration Cerfa de meublé touristique",
+        "en": "Cerfa furnished-tourist-accommodation declaration",
+        "es": "Declaración Cerfa de alojamiento turístico amueblado",
+        "de": "Cerfa-Anzeige für möblierte touristische Unterkunft"
+      },
+      "definition": {
+        "fr": "Formulaire Cerfa relatif à la déclaration en mairie d’un meublé proposé comme hébergement touristique.",
+        "en": "Cerfa form concerning the municipal declaration of furnished tourist accommodation.",
+        "es": "Formulario Cerfa relativo a la declaración municipal de un alojamiento turístico amueblado.",
+        "de": "Cerfa-Formular zur kommunalen Anzeige einer möblierten touristischen Unterkunft."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "47c7cbba-4b71-4b2c-9ae3-decfe2f402d1",
+      "code": "courrier_fermeture",
+      "name": {
+        "fr": "Courrier de fermeture",
+        "en": "Closure letter",
+        "es": "Carta de cierre",
+        "de": "Schließungsschreiben"
+      },
+      "definition": {
+        "fr": "Courrier qui consigne la fermeture d’un établissement et, le cas échéant, sa date et son origine.",
+        "en": "Letter recording an establishment’s closure and, where stated, its date and reason.",
+        "es": "Carta que documenta el cierre de un establecimiento y, cuando consta, su fecha y motivo.",
+        "de": "Schreiben zur Dokumentation der Schließung eines Betriebs, gegebenenfalls mit Datum und Anlass."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "ae57582c-97ed-4557-b19e-ee0adbeb2ce2",
+      "code": "diplome_activite",
+      "name": {
+        "fr": "Diplôme lié à l’activité",
+        "en": "Activity-related qualification",
+        "es": "Título relacionado con la actividad",
+        "de": "Tätigkeitsbezogener Abschluss"
+      },
+      "definition": {
+        "fr": "Diplôme ou titre décrivant une qualification liée à l’encadrement d’une activité.",
+        "en": "Diploma or credential describing a qualification related to supervising an activity.",
+        "es": "Diploma o título que acredita una cualificación relacionada con la supervisión de una actividad.",
+        "de": "Diplom oder Abschluss über eine Qualifikation zur Anleitung einer Aktivität."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "fb250c1f-900b-4bd6-9aba-2ed37da88cba",
+      "code": "extrait_inpi",
+      "name": {
+        "fr": "Extrait du registre INPI",
+        "en": "INPI register extract",
+        "es": "Extracto del registro del INPI",
+        "de": "INPI-Registerauszug"
+      },
+      "definition": {
+        "fr": "Extrait du registre national des entreprises diffusé par l’INPI, présentant des données d’immatriculation.",
+        "en": "Extract from the national business register provided by INPI, showing registration details.",
+        "es": "Extracto del registro nacional de empresas publicado por el INPI con datos registrales.",
+        "de": "Auszug aus dem nationalen Unternehmensregister des INPI mit Registerangaben."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "48173626-9894-4433-99da-c80b7e214690",
+      "code": "fire_safety",
+      "name": {
+        "fr": "Attestation de sécurité incendie (ERP)",
+        "en": "Fire-safety record for a public venue",
+        "es": "Documento de seguridad contra incendios",
+        "de": "Brandschutznachweis für eine öffentliche Einrichtung"
+      },
+      "definition": {
+        "fr": "Attestation ou procès-verbal consignant des éléments relatifs à la sécurité incendie d’un établissement recevant du public.",
+        "en": "Certificate or minutes recording fire-safety information for a venue open to the public.",
+        "es": "Certificado o acta que recoge información sobre seguridad contra incendios de un establecimiento abierto al público.",
+        "de": "Bescheinigung oder Protokoll mit Angaben zum Brandschutz eines öffentlich zugänglichen Betriebs."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "56651b2d-1de6-4c27-b4fa-df72fd084f00",
+      "code": "immatriculation_atout_france",
+      "name": {
+        "fr": "Immatriculation Atout France",
+        "en": "Atout France registration",
+        "es": "Inscripción en Atout France",
+        "de": "Eintragung bei Atout France"
+      },
+      "definition": {
+        "fr": "Inscription au registre d’Atout France concernant un opérateur de voyages ou de séjours.",
+        "en": "Registration in Atout France’s register relating to a travel or holiday operator.",
+        "es": "Inscripción en el registro de Atout France de un operador de viajes o estancias.",
+        "de": "Eintragung im Atout-France-Register zu einem Reise- oder Aufenthaltsanbieter."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "176fca74-6ff1-4772-920c-9b92f4f2413a",
+      "code": "kbis",
+      "name": {
+        "fr": "Extrait Kbis",
+        "en": "Kbis registration extract",
+        "es": "Extracto registral Kbis",
+        "de": "Kbis-Registerauszug"
+      },
+      "definition": {
+        "fr": "Extrait d’immatriculation d’une société ou d’un commerçant au registre du commerce et des sociétés.",
+        "en": "Registration extract for a company or trader from the commercial and companies register.",
+        "es": "Extracto de inscripción de una sociedad o comerciante en el registro mercantil y de sociedades.",
+        "de": "Registerauszug eines Unternehmens oder Kaufmanns aus dem Handels- und Gesellschaftsregister."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "3a4bdf90-cf9a-443c-ac78-73bf7bbd5598",
+      "code": "licence_restaurant",
+      "name": {
+        "fr": "Licence de restaurant",
+        "en": "Restaurant licence",
+        "es": "Licencia de restaurante",
+        "de": "Gaststättenlizenz"
+      },
+      "definition": {
+        "fr": "Licence décrivant l’autorisation associée au service de boissons dans le cadre d’une activité de restauration.",
+        "en": "Licence describing the authorization associated with serving drinks as part of a restaurant activity.",
+        "es": "Licencia que describe la autorización vinculada al servicio de bebidas en una actividad de restauración.",
+        "de": "Lizenzangabe zur Ausschankberechtigung im Rahmen eines Gastronomiebetriebs."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "77ac95c5-0d15-4b10-8ca3-b45e5fa678ed",
+      "code": "permis_exploitation",
+      "name": {
+        "fr": "Permis d’exploitation",
+        "en": "Operating permit",
+        "es": "Permiso de explotación",
+        "de": "Betriebserlaubnis"
+      },
+      "definition": {
+        "fr": "Attestation qui consigne la participation à la formation relative à l’exploitation d’un débit de boissons ou d’un restaurant servant de l’alcool.",
+        "en": "Certificate recording completion of training related to operating a drinks outlet or restaurant serving alcohol.",
+        "es": "Certificado que registra la formación relativa a la explotación de un establecimiento de bebidas o restaurante que sirve alcohol.",
+        "de": "Bescheinigung über eine Schulung zum Betrieb einer Ausschankstätte oder eines Restaurants mit Alkoholangebot."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "05b5d172-6aae-4d6e-81d1-0114495dc00b",
+      "code": "raison_sociale",
+      "name": {
+        "fr": "Dénomination sociale",
+        "en": "Registered legal name",
+        "es": "Denominación social",
+        "de": "Eingetragener Unternehmensname"
+      },
+      "definition": {
+        "fr": "Dénomination enregistrée sous laquelle une personne morale est identifiée.",
+        "en": "Registered name under which a legal entity is identified.",
+        "es": "Denominación registrada con la que se identifica a una persona jurídica.",
+        "de": "Eingetragener Name, unter dem eine juristische Person geführt wird."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "dfe03c51-d359-4e52-8b1e-edcef6892d80",
+      "code": "recepisse_declaration_mairie",
+      "name": {
+        "fr": "Récépissé de déclaration en mairie",
+        "en": "Municipal declaration receipt",
+        "es": "Justificante de declaración municipal",
+        "de": "Eingangsbestätigung der kommunalen Anzeige"
+      },
+      "definition": {
+        "fr": "Accusé de réception communal attestant le dépôt d’une déclaration et en indiquant la nature.",
+        "en": "Municipal receipt recording that a declaration was submitted and identifying its subject.",
+        "es": "Acuse municipal que registra la presentación de una declaración e indica su objeto.",
+        "de": "Kommunale Eingangsbestätigung einer Anzeige mit Angabe ihres Gegenstands."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "08b0ae69-fd98-459e-9c3c-f0eb5c7466ef",
+      "code": "siren",
+      "name": {
+        "fr": "Identifiant SIREN",
+        "en": "SIREN identifier",
+        "es": "Identificador SIREN",
+        "de": "SIREN-Kennung"
+      },
+      "definition": {
+        "fr": "Identifiant à neuf chiffres attribué à une unité inscrite au répertoire national SIRENE.",
+        "en": "Nine-digit identifier assigned to an entity in the national SIRENE register.",
+        "es": "Identificador de nueve cifras asignado a una entidad del registro nacional SIRENE.",
+        "de": "Neunstellige Kennung einer im nationalen SIRENE-Register geführten Einheit."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "58467ff0-1a4a-4149-8a26-ed56337706c8",
+      "code": "siret",
+      "name": {
+        "fr": "Identifiant SIRET",
+        "en": "SIRET identifier",
+        "es": "Identificador SIRET",
+        "de": "SIRET-Kennung"
+      },
+      "definition": {
+        "fr": "Identifiant d’un établissement composé du numéro SIREN de l’unité et d’un numéro interne de classement.",
+        "en": "Establishment identifier combining the entity’s SIREN number with an internal location number.",
+        "es": "Identificador de un establecimiento que combina el número SIREN de la entidad y un número interno de ubicación.",
+        "de": "Kennung eines Betriebsstandorts aus der SIREN-Nummer der Einheit und einer internen Standortnummer."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "82cdcd10-854f-4652-8e45-0d81fb8d1779",
+      "code": "statuts_association",
+      "name": {
+        "fr": "Statuts d’association",
+        "en": "Association bylaws",
+        "es": "Estatutos de asociación",
+        "de": "Vereinssatzung"
+      },
+      "definition": {
+        "fr": "Texte constitutif qui décrit l’objet et les règles de fonctionnement d’une association déclarée.",
+        "en": "Founding document describing the purpose and operating rules of a registered association.",
+        "es": "Documento constitutivo que describe el objeto y las reglas de funcionamiento de una asociación registrada.",
+        "de": "Gründungsdokument mit Zweck und Regeln einer eingetragenen Vereinigung."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "53cb1092-b49b-47f3-ae9e-9ffe0fc7716e",
+      "code": "tourist_tax",
+      "name": {
+        "fr": "Taxe de séjour",
+        "en": "Tourist tax",
+        "es": "Tasa turística",
+        "de": "Tourismusabgabe"
+      },
+      "definition": {
+        "fr": "Document relatif à la collecte de la taxe de séjour pour un hébergement ou une activité concernée.",
+        "en": "Document relating to collection of the tourist tax for relevant accommodation or activity.",
+        "es": "Documento relativo a la recaudación de la tasa turística para el alojamiento o actividad correspondiente.",
+        "de": "Dokument zur Erhebung der Tourismusabgabe für eine betreffende Unterkunft oder Tätigkeit."
+      }
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "ffd73a9e-a7c8-4ef8-9d06-bc208a7f9ddc",
+      "code": "vat_number",
+      "name": {
+        "fr": "Numéro de TVA",
+        "en": "VAT number",
+        "es": "Número de IVA",
+        "de": "Umsatzsteuernummer"
+      },
+      "definition": {
+        "fr": "Identifiant de TVA attribué à une entreprise pour ses opérations relevant de la taxe sur la valeur ajoutée.",
+        "en": "VAT identifier assigned to a business for transactions subject to value added tax.",
+        "es": "Identificador de IVA asignado a una empresa para operaciones sujetas al impuesto sobre el valor añadido.",
+        "de": "Umsatzsteuerkennung eines Unternehmens für Vorgänge, die der Mehrwertsteuer unterliegen."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "57f71b8e-3117-4c45-bbc3-2be6fcb7c406",
+      "code": "based_at_site",
+      "name": {
+        "fr": "Se pratique sur le site",
+        "en": "Practised at the site",
+        "es": "Se practica en el lugar",
+        "de": "Am Ort ausgeübt"
+      },
+      "definition": {
+        "fr": "Indique qu’une activité se déroule sur le site associé, par exemple un parcours de canyoning ou de plongée.",
+        "en": "States that an activity takes place at the linked site, such as canyoning or diving.",
+        "es": "Indica que una actividad se realiza en el lugar asociado, por ejemplo barranquismo o buceo.",
+        "de": "Gibt an, dass eine Aktivität am verknüpften Ort stattfindet, etwa Canyoning oder Tauchen."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "57e2937e-05a1-46f0-9931-62751e6ecec1",
+      "code": "managed_by",
+      "name": {
+        "fr": "Géré par",
+        "en": "Managed by",
+        "es": "Gestionado por",
+        "de": "Verwaltet von"
+      },
+      "definition": {
+        "fr": "Relie un objet à l’organisation qui en assure la gestion.",
+        "en": "Links an object to the organization that manages it.",
+        "es": "Vincula un elemento con la organización que lo gestiona.",
+        "de": "Verknüpft ein Objekt mit der Organisation, die es verwaltet."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "8860a623-566b-46e5-9867-1c64672ccb19",
+      "code": "nearby",
+      "name": {
+        "fr": "À proximité de",
+        "en": "Near",
+        "es": "Cerca de",
+        "de": "In der Nähe von"
+      },
+      "definition": {
+        "fr": "Signale une proximité géographique entre deux objets, sans relation hiérarchique.",
+        "en": "Indicates geographic proximity between two objects, without implying hierarchy.",
+        "es": "Indica proximidad geográfica entre dos elementos, sin establecer jerarquía.",
+        "de": "Bezeichnet die räumliche Nähe zweier Objekte ohne Hierarchiebeziehung."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "17436ac4-35b7-4e64-9c21-7413bd110619",
+      "code": "parent_of",
+      "name": {
+        "fr": "Parent de",
+        "en": "Parent of",
+        "es": "Es progenitor de",
+        "de": "Übergeordnet zu"
+      },
+      "definition": {
+        "fr": "Relation hiérarchique orientée : l’objet source est le parent de l’objet cible.",
+        "en": "Directed hierarchy in which the source object is the parent of the target.",
+        "es": "Relación jerárquica dirigida: el elemento de origen es progenitor del elemento de destino.",
+        "de": "Gerichtete Hierarchie: Das Ausgangsobjekt ist dem Zielobjekt übergeordnet."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "f4bb8ceb-8983-49eb-9e50-13a238620a6f",
+      "code": "part_of",
+      "name": {
+        "fr": "Fait partie de",
+        "en": "Part of",
+        "es": "Forma parte de",
+        "de": "Teil von"
+      },
+      "definition": {
+        "fr": "Indique que l’objet source constitue une partie de l’objet cible.",
+        "en": "Indicates that the source object forms part of the target object.",
+        "es": "Indica que el elemento de origen constituye una parte del elemento de destino.",
+        "de": "Gibt an, dass das Ausgangsobjekt einen Teil des Zielobjekts bildet."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "30bb7236-4b93-4acd-9d0e-076dbda0d590",
+      "code": "partner_of",
+      "name": {
+        "fr": "Partenaire de",
+        "en": "Partner of",
+        "es": "Colabora con",
+        "de": "Partner von"
+      },
+      "definition": {
+        "fr": "Relie deux objets engagés dans un partenariat, sans préciser ses modalités.",
+        "en": "Links two objects involved in a partnership without specifying its terms.",
+        "es": "Vincula dos elementos que mantienen una colaboración, sin precisar sus condiciones.",
+        "de": "Verknüpft zwei Objekte in einer Partnerschaft, ohne deren Bedingungen festzulegen."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "289b00d8-1427-40c3-b5c7-ca29d0f375e8",
+      "code": "recommended_with",
+      "name": {
+        "fr": "Recommandé avec",
+        "en": "Recommended with",
+        "es": "Recomendado con",
+        "de": "Empfohlen zusammen mit"
+      },
+      "definition": {
+        "fr": "Suggestion d’associer deux offres ou objets, sans établir de dépendance entre eux.",
+        "en": "Suggestion to pair two offers or objects, without making either dependent on the other.",
+        "es": "Sugerencia para combinar dos ofertas o elementos, sin que uno dependa del otro.",
+        "de": "Vorschlag, zwei Angebote oder Objekte zu kombinieren, ohne gegenseitige Abhängigkeit."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "6635a762-52bb-472f-9968-68300a822f14",
+      "code": "sister",
+      "name": {
+        "fr": "Objet associé",
+        "en": "Related listing",
+        "es": "Elemento asociado",
+        "de": "Zugehöriger Eintrag"
+      },
+      "definition": {
+        "fr": "Relie des objets de même famille ou présentant un lien d’association.",
+        "en": "Links objects in the same family or otherwise associated with one another.",
+        "es": "Vincula elementos de la misma familia o relacionados entre sí.",
+        "de": "Verknüpft Objekte derselben Familie oder anderweitig miteinander verbundene Objekte."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "6f82b25f-8d49-4235-b1b8-51ca16a3511f",
+      "code": "sur_le_parcours_de",
+      "name": {
+        "fr": "Sur le parcours de",
+        "en": "Along the route of",
+        "es": "En el recorrido de",
+        "de": "Am Verlauf von"
+      },
+      "definition": {
+        "fr": "Situe un lieu ou un service sur le tracé de l’itinéraire cible.",
+        "en": "Places a site or service along the route of the target itinerary.",
+        "es": "Sitúa un lugar o servicio en el trazado del itinerario de destino.",
+        "de": "Ordnet einen Ort oder Dienst dem Verlauf der Zielroute zu."
+      }
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "21b9c62f-0321-48a9-b421-6cd2e620a093",
+      "code": "uses_itinerary",
+      "name": {
+        "fr": "Suit l’itinéraire",
+        "en": "Follows the itinerary",
+        "es": "Sigue el itinerario",
+        "de": "Folgt der Route"
+      },
+      "definition": {
+        "fr": "Indique qu’une activité emprunte le tracé de l’itinéraire, par exemple une randonnée guidée ou une sortie VTT.",
+        "en": "States that an activity uses the itinerary’s route, such as a guided hike or mountain-bike tour.",
+        "es": "Indica que una actividad recorre el itinerario, como una excursión guiada o una ruta en bicicleta de montaña.",
+        "de": "Gibt an, dass eine Aktivität dem Routenverlauf folgt, etwa eine geführte Wanderung oder Mountainbike-Tour."
+      }
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "d0943439-1aff-4994-ae84-63ba19f3699c",
+      "code": "airbnb",
+      "name": {
+        "fr": "Airbnb",
+        "en": "Airbnb",
+        "es": "Airbnb",
+        "de": "Airbnb"
+      },
+      "definition": {
+        "fr": "Avis recueilli ou affiché par Airbnb, identifié comme source externe.",
+        "en": "Review collected or displayed by Airbnb, recorded as an external source.",
+        "es": "Opinión recopilada o mostrada por Airbnb, identificada como fuente externa.",
+        "de": "Bewertung, die von Airbnb erfasst oder angezeigt und als externe Quelle geführt wird."
+      }
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "650cf4a2-1c73-4cb5-884c-6c0c07fa6b9b",
+      "code": "booking",
+      "name": {
+        "fr": "Booking.com",
+        "en": "Booking.com",
+        "es": "Booking.com",
+        "de": "Booking.com"
+      },
+      "definition": {
+        "fr": "Avis recueilli ou affiché par Booking.com, identifié comme source externe.",
+        "en": "Review collected or displayed by Booking.com, recorded as an external source.",
+        "es": "Opinión recopilada o mostrada por Booking.com, identificada como fuente externa.",
+        "de": "Bewertung, die von Booking.com erfasst oder angezeigt und als externe Quelle geführt wird."
+      }
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "67bada31-eb17-4a0f-a49f-6d1396c600ae",
+      "code": "expedia",
+      "name": {
+        "fr": "Expedia",
+        "en": "Expedia",
+        "es": "Expedia",
+        "de": "Expedia"
+      },
+      "definition": {
+        "fr": "Avis recueilli ou affiché par Expedia, identifié comme source externe.",
+        "en": "Review collected or displayed by Expedia, recorded as an external source.",
+        "es": "Opinión recopilada o mostrada por Expedia, identificada como fuente externa.",
+        "de": "Bewertung, die von Expedia erfasst oder angezeigt und als externe Quelle geführt wird."
+      }
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "fd8d9178-4f66-444a-b107-fbf8f212937e",
+      "code": "google",
+      "name": {
+        "fr": "Google",
+        "en": "Google",
+        "es": "Google",
+        "de": "Google"
+      },
+      "definition": {
+        "fr": "Avis recueilli ou affiché par Google, identifié comme source externe.",
+        "en": "Review collected or displayed by Google, recorded as an external source.",
+        "es": "Opinión recopilada o mostrada por Google, identificada como fuente externa.",
+        "de": "Bewertung, die von Google erfasst oder angezeigt und als externe Quelle geführt wird."
+      }
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "26eb71ab-c2c3-458d-9ee3-5707951bf8c8",
+      "code": "hotels_com",
+      "name": {
+        "fr": "Hotels.com",
+        "en": "Hotels.com",
+        "es": "Hotels.com",
+        "de": "Hotels.com"
+      },
+      "definition": {
+        "fr": "Avis recueilli ou affiché par Hotels.com, identifié comme source externe.",
+        "en": "Review collected or displayed by Hotels.com, recorded as an external source.",
+        "es": "Opinión recopilada o mostrada por Hotels.com, identificada como fuente externa.",
+        "de": "Bewertung, die von Hotels.com erfasst oder angezeigt und als externe Quelle geführt wird."
+      }
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "d27e12d9-6ad4-44c2-b8af-b2a30e06e922",
+      "code": "internal",
+      "name": {
+        "fr": "Avis interne",
+        "en": "Internal feedback",
+        "es": "Opiniones internas",
+        "de": "Interne Rückmeldung"
+      },
+      "definition": {
+        "fr": "Retour recueilli directement par l’établissement ou son équipe, plutôt que par une plateforme d’avis externe.",
+        "en": "Feedback collected directly by the establishment or its team rather than by an external review platform.",
+        "es": "Opinión recogida directamente por el establecimiento o su equipo, no por una plataforma externa.",
+        "de": "Rückmeldung, die direkt vom Betrieb oder seinem Team und nicht über eine externe Bewertungsplattform eingeholt wird."
+      }
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "e9fd8217-ec5d-4134-9b9c-5b7ca42cc441",
+      "code": "tripadvisor",
+      "name": {
+        "fr": "TripAdvisor",
+        "en": "TripAdvisor",
+        "es": "TripAdvisor",
+        "de": "TripAdvisor"
+      },
+      "definition": {
+        "fr": "Avis recueilli ou affiché par TripAdvisor, identifié comme source externe.",
+        "en": "Review collected or displayed by TripAdvisor, recorded as an external source.",
+        "es": "Opinión recopilada o mostrada por TripAdvisor, identificada como fuente externa.",
+        "de": "Bewertung, die von TripAdvisor erfasst oder angezeigt und als externe Quelle geführt wird."
+      }
+    }
+  ]
+}

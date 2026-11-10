@@ -1,0 +1,1082 @@
+{
+  "format_version": 1,
+  "capture": {
+    "release_id": 25,
+    "source": "Bertel native public dictionary fields before adapter installation",
+    "private_data": false
+  },
+  "rows": [
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "cf832912-35c2-4b32-9b5f-120341072035",
+      "code": "bedrooms",
+      "name": "Chambres",
+      "description": "Nombre de chambres"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "7eec95bd-e1aa-40be-a27d-f442f1bb6d54",
+      "code": "beds",
+      "name": "Lits",
+      "description": "Nombre de lits"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "8d0da68e-1a53-4bfe-b8db-50e6d90761d6",
+      "code": "bikes",
+      "name": "Vélos",
+      "description": "Capacité vélos (parking/locations)"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "104f54fd-8c6c-4a3f-9165-cd71022e412e",
+      "code": "campers",
+      "name": "Camping‑cars",
+      "description": "Capacité en camping‑cars"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "4de604e2-3ff9-4c23-86b8-7e4307b5a888",
+      "code": "floor_area_m2",
+      "name": "Surface (m²)",
+      "description": "Surface utile en mètres carrés"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "d0afae67-e42a-42aa-995d-7432cc296657",
+      "code": "max_capacity",
+      "name": "Capacité max.",
+      "description": "Capacité d'accueil maximale (personnes)"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "a8f2cb00-d027-405b-85bd-b1ba1b45a77a",
+      "code": "meeting_rooms",
+      "name": "Salles de réunion",
+      "description": "Nombre de salles de réunion"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "00c22b0a-7c09-4868-ba8a-4978a3f1fcfe",
+      "code": "pitches",
+      "name": "Emplacements",
+      "description": "Emplacements de camping"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "6208b7b3-7f9e-491c-a43b-37d92ccd623c",
+      "code": "seats",
+      "name": "Places assises",
+      "description": "Nombre de sièges assis"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "f3639202-b1ad-4b81-be64-83b6a469192b",
+      "code": "standing_places",
+      "name": "Places debout",
+      "description": "Nombre de places debout"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "d556c8bf-4990-43d8-96f6-960f07b76869",
+      "code": "tents",
+      "name": "Tentes",
+      "description": "Capacité en tentes"
+    },
+    {
+      "domain": "capacity_metric",
+      "source_kind": "capacity_metric",
+      "source_id": "d12d2640-6628-4bad-bbdb-577672230b31",
+      "code": "vehicles",
+      "name": "Véhicules",
+      "description": "Capacité véhicules (parking)"
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "150bc976-7e2c-495b-85eb-153200ac15df",
+      "code": "a_proximite",
+      "name": "À proximité",
+      "description": "Objet à proximité immédiate du tracé"
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "4df054e8-c8bc-4e0d-986a-608106d2fcd8",
+      "code": "hebergement_etape",
+      "name": "Hébergement d'étape",
+      "description": "Hébergement sur l'itinéraire"
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "6635106a-b9fc-44af-81f8-7507774ea21f",
+      "code": "parking",
+      "name": "Parking",
+      "description": "Stationnement conseillé"
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "7a178f95-479d-473b-a5d9-ef66c87ab6d9",
+      "code": "point_de_depart",
+      "name": "Point de départ",
+      "description": "Objet servant de point de départ"
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "5e50675e-3a47-4d20-a441-135b308a5c2e",
+      "code": "point_interet",
+      "name": "Point d'intérêt",
+      "description": "Objet d'intérêt lié au parcours"
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "95ebca4a-2ff4-4069-abe9-0e3756b8d0fd",
+      "code": "prestataire",
+      "name": "Prestataire",
+      "description": "Prestataire associé à l'itinéraire"
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "2aca98f8-8fc6-41d9-9d73-1b1b64efeecd",
+      "code": "restauration",
+      "name": "Restauration",
+      "description": "Point de restauration lié au parcours"
+    },
+    {
+      "domain": "iti_assoc_role",
+      "source_kind": "iti_assoc_role",
+      "source_id": "31621720-27e4-4915-823f-8194477e6391",
+      "code": "sur_le_parcours",
+      "name": "Sur le parcours",
+      "description": "Objet situé sur le tracé"
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "f48d1358-3591-447c-b2bd-db8d931b936c",
+      "code": "accessibility",
+      "name": "Attestation d'accessibilité (ERP)",
+      "description": "Attestation d'accessibilité d'un établissement recevant du public, ou agenda d'accessibilité programmée (Ad'AP). Distincte du label Tourisme & Handicap, qui est une distinction volontaire saisie en §10."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "3e5c8f58-3eac-4b49-a8ac-6c0d430fca35",
+      "code": "attestation_assurance",
+      "name": "Attestation d'assurance",
+      "description": "Attestation d'assurance en cours de validité couvrant l'activité : responsabilité civile professionnelle, et le cas échéant multirisque de l'établissement. Pièce demandée à tout prestataire, quelle que soit sa situation. Renouvellement annuel."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "c0272553-f73b-42e9-a589-8609137f8c0a",
+      "code": "avis_situation_sirene",
+      "name": "Avis de situation au répertoire SIRENE",
+      "description": "Attestation INSEE d'inscription au répertoire SIRENE. Justificatif d'existence le plus universel : accepté pour tout exploitant immatriculé (entreprise individuelle, micro-entrepreneur, société, association employeuse). Demandé de moins de 3 mois."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "646edd1f-eb24-443f-aa0c-ed805c15ab54",
+      "code": "carte_professionnelle",
+      "name": "Carte professionnelle",
+      "description": "Carte professionnelle en cours de validité : guide-conférencier, moniteur, agent immobilier (loi Hoguet, pour les intermédiaires de location)… Précise la profession concernée dans la référence."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "20e8f128-a564-464f-9a12-0b342707e22a",
+      "code": "cerfa_chambre_hotes",
+      "name": "CERFA de déclaration de chambre d'hôtes",
+      "description": "Déclaration en mairie d'une activité de chambres d'hôtes (CERFA 13566). Obligatoire dès la première chambre ; distincte de la déclaration de meublé de tourisme."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "777a3bae-6b1c-4802-9f40-8022a8cc523b",
+      "code": "cerfa_meuble_tourisme",
+      "name": "CERFA de déclaration de meublé de tourisme",
+      "description": "Déclaration en mairie d'un meublé de tourisme (CERFA 14004). Obligatoire pour toute location saisonnière de logement meublé. À rapprocher du récépissé de déclaration en mairie, qui en accuse le dépôt."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "47c7cbba-4b71-4b2c-9ae3-decfe2f402d1",
+      "code": "courrier_fermeture",
+      "name": "Courrier de fermeture",
+      "description": "Courrier attestant la fermeture de l'établissement (cessation d'activité, fermeture administrative ou définitive). À joindre lorsqu'une fiche est retirée de la diffusion : il documente la date d'effet et l'origine de la décision."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "ae57582c-97ed-4557-b19e-ee0adbeb2ce2",
+      "code": "diplome_activite",
+      "name": "Diplôme d'activité",
+      "description": "Diplôme ou titre professionnel autorisant l'encadrement contre rémunération de l'activité proposée (BPJEPS, DEJEPS, BEES, brevet fédéral reconnu…). Une pièce par activité encadrée."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "fb250c1f-900b-4bd6-9aba-2ed37da88cba",
+      "code": "extrait_inpi",
+      "name": "Extrait INPI",
+      "description": "Extrait du registre national des entreprises (INPI), guichet unique depuis 2023. Équivalent du KBIS pour les exploitants non inscrits au RCS : artisans, agriculteurs, professions libérales. Demandé de moins de 3 mois."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "48173626-9894-4433-99da-c80b7e214690",
+      "code": "fire_safety",
+      "name": "Attestation de sécurité incendie (ERP)",
+      "description": "Attestation ou procès-verbal de la commission de sécurité pour un établissement recevant du public. Périodicité de visite variable selon la catégorie et le type d'ERP."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "56651b2d-1de6-4c27-b4fa-df72fd084f00",
+      "code": "immatriculation_atout_france",
+      "name": "Immatriculation Atout France",
+      "description": "Immatriculation au registre des opérateurs de voyages et de séjours tenu par Atout France, exigée dès qu'un prestataire vend un forfait ou combine plusieurs prestations. Remplace depuis 2009 l'ancienne « licence tourisme ». Renouvellement triennal."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "176fca74-6ff1-4772-920c-9b92f4f2413a",
+      "code": "kbis",
+      "name": "Extrait KBIS",
+      "description": "Extrait d'immatriculation au registre du commerce et des sociétés — carte d'identité des sociétés et commerçants. Demandé de moins de 3 mois. Ne concerne PAS les associations (statuts) ni les professions libérales (extrait INPI / avis SIRENE)."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "3a4bdf90-cf9a-443c-ac78-73bf7bbd5598",
+      "code": "licence_restaurant",
+      "name": "Licence restaurant",
+      "description": "Licence de débit de boissons à consommer sur place attachée au service des repas (petite licence restaurant ou licence restaurant). Délivrée après déclaration en mairie ; attachée à l'établissement."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "77ac95c5-0d15-4b10-8ca3-b45e5fa678ed",
+      "code": "permis_exploitation",
+      "name": "Permis d'exploitation",
+      "description": "Attestation de la formation obligatoire préalable à l'exploitation d'un débit de boissons ou d'un établissement de restauration servant de l'alcool. Valable 10 ans."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "05b5d172-6aae-4d6e-81d1-0114495dc00b",
+      "code": "raison_sociale",
+      "name": "Raison sociale",
+      "description": "Dénomination ou raison sociale de la personne morale exploitante"
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "dfe03c51-d359-4e52-8b1e-edcef6892d80",
+      "code": "recepisse_declaration_mairie",
+      "name": "Récépissé de déclaration en mairie",
+      "description": "Accusé de réception délivré par la commune à la suite d'une déclaration (meublé de tourisme, chambres d'hôtes, occupation du domaine public…). Preuve que la déclaration a bien été déposée."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "08b0ae69-fd98-459e-9c3c-f0eb5c7466ef",
+      "code": "siren",
+      "name": "SIREN",
+      "description": "Système d'identification du répertoire des entreprises"
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "58467ff0-1a4a-4149-8a26-ed56337706c8",
+      "code": "siret",
+      "name": "SIRET",
+      "description": "Système d'identification du répertoire des établissements"
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "82cdcd10-854f-4652-8e45-0d81fb8d1779",
+      "code": "statuts_association",
+      "name": "Statuts d'association",
+      "description": "Statuts déposés de l'association loi 1901 exploitante, accompagnés le cas échéant du récépissé de déclaration en préfecture. Pièce d'existence des exploitants associatifs, en lieu et place du KBIS."
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "53cb1092-b49b-47f3-ae9e-9ffe0fc7716e",
+      "code": "tourist_tax",
+      "name": "Taxe de séjour",
+      "description": "Autorisation de collecte de la taxe de séjour"
+    },
+    {
+      "domain": "legal_type",
+      "source_kind": "legal_type",
+      "source_id": "ffd73a9e-a7c8-4ef8-9d06-bc208a7f9ddc",
+      "code": "vat_number",
+      "name": "Numéro TVA",
+      "description": "Numéro de TVA intracommunautaire"
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "57f71b8e-3117-4c45-bbc3-2be6fcb7c406",
+      "code": "based_at_site",
+      "name": "Se pratique sur le site",
+      "description": "Une ACT se déroule sur un PNA (canyoning, plongée, parapente)"
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "57e2937e-05a1-46f0-9931-62751e6ecec1",
+      "code": "managed_by",
+      "name": "Géré par",
+      "description": "Objet géré par une organisation"
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "8860a623-566b-46e5-9867-1c64672ccb19",
+      "code": "nearby",
+      "name": "À proximité de",
+      "description": "Objets proches géographiquement"
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "17436ac4-35b7-4e64-9c21-7413bd110619",
+      "code": "parent_of",
+      "name": "Parent de",
+      "description": "Relation hiérarchique: A est parent de B"
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "f4bb8ceb-8983-49eb-9e50-13a238620a6f",
+      "code": "part_of",
+      "name": "Fait partie de",
+      "description": "Relation de composition: A fait partie de B"
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "30bb7236-4b93-4acd-9d0e-076dbda0d590",
+      "code": "partner_of",
+      "name": "Partenaire de",
+      "description": "Relation de partenariat"
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "289b00d8-1427-40c3-b5c7-ca29d0f375e8",
+      "code": "recommended_with",
+      "name": "Recommandé avec",
+      "description": "Suggestion de co‑consommation"
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "6635a762-52bb-472f-9968-68300a822f14",
+      "code": "sister",
+      "name": "Objet associé",
+      "description": "Objets de même famille"
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "6f82b25f-8d49-4235-b1b8-51ca16a3511f",
+      "code": "sur_le_parcours_de",
+      "name": "Sur le parcours de",
+      "description": "L'objet (site, producteur, hébergement…) est situé sur le tracé de l'itinéraire cible."
+    },
+    {
+      "domain": "object_relation_type",
+      "source_kind": "object_relation_type",
+      "source_id": "21b9c62f-0321-48a9-b421-6cd2e620a093",
+      "code": "uses_itinerary",
+      "name": "Suit l'itinéraire",
+      "description": "Une ACT emprunte un tracé ITI (randonnée guidée, VTT guidé)"
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "d0943439-1aff-4994-ae84-63ba19f3699c",
+      "code": "airbnb",
+      "name": "Airbnb",
+      "description": null
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "650cf4a2-1c73-4cb5-884c-6c0c07fa6b9b",
+      "code": "booking",
+      "name": "Booking.com",
+      "description": null
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "67bada31-eb17-4a0f-a49f-6d1396c600ae",
+      "code": "expedia",
+      "name": "Expedia",
+      "description": null
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "fd8d9178-4f66-444a-b107-fbf8f212937e",
+      "code": "google",
+      "name": "Google",
+      "description": null
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "26eb71ab-c2c3-458d-9ee3-5707951bf8c8",
+      "code": "hotels_com",
+      "name": "Hotels.com",
+      "description": null
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "d27e12d9-6ad4-44c2-b8af-b2a30e06e922",
+      "code": "internal",
+      "name": "Avis interne",
+      "description": null
+    },
+    {
+      "domain": "review_source",
+      "source_kind": "review_source",
+      "source_id": "e9fd8217-ec5d-4134-9b9c-5b7ca42cc441",
+      "code": "tripadvisor",
+      "name": "TripAdvisor",
+      "description": null
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "230ac7c0-c8a1-4d13-9fcd-a98047adfeb4",
+      "code": "SA_ACTION_PLAN_ANNUAL",
+      "name": "Plan d'action annuel",
+      "description": "Plan d'action annuel ou pluriannuel avec actions, responsables, échéances et indicateurs."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "1ed345e7-7688-4638-b1ed-cbeb678f11b9",
+      "code": "SA_ANNUAL_REVIEW",
+      "name": "Revue annuelle de performance",
+      "description": "Revue périodique des résultats, écarts, non-conformités et actions correctives."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c30d23d3-60fa-464b-b919-26a43251bcde",
+      "code": "SA_AUTO_SWITCH_OFF",
+      "name": "Extinction automatique des équipements",
+      "description": "Coupure automatique des éclairages ou équipements quand les espaces sont inoccupés."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "07bf6a12-49f7-4a94-9f1f-265a0600f7e2",
+      "code": "SA_BEACH_WATER_QUALITY",
+      "name": "Qualité de l'eau de baignade",
+      "description": "Surveillance, affichage et gestion de la qualité de l'eau de baignade ou d'usage récréatif, avec prévention des pollutions."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "16f30307-cbd3-4c13-b63c-a53e460c7006",
+      "code": "SA_BIODIVERSITY_PROTECTION",
+      "name": "Protection de la biodiversité",
+      "description": "Mesures de protection des milieux, de la faune, de la flore et des espaces naturels proches."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c9f4506f-65f2-4d2b-b250-08bcdf897a0c",
+      "code": "SA_BULK_OR_REFILL",
+      "name": "Produits en vrac ou rechargeables",
+      "description": "Remplacement des petits conditionnements par du vrac, du rechargeable ou du grand format."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "9d05c03b-51c3-4291-b8ad-d5ad0c95c489",
+      "code": "SA_CARBON_FOOTPRINT",
+      "name": "Bilan carbone et trajectoire",
+      "description": "Calcul des émissions de GES, au moins scopes 1 et 2, et si possible scope 3, puis définition d'une trajectoire de réduction et de financement bas-carbone."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c67e01c5-e647-46c8-9a37-db2d09c66fc5",
+      "code": "SA_CLIENT_SENSITIZATION",
+      "name": "Sensibilisation du voyageur avant et pendant le séjour",
+      "description": "Information donnée au voyageur sur les impacts, comportements responsables et spécificités locales."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "d9e7f6e8-983e-4307-b88e-c29ae377b9fb",
+      "code": "SA_CLIMATE_ADAPTATION",
+      "name": "Plan d'adaptation climatique",
+      "description": "Mesures d'adaptation aux risques climatiques, chaleur, eau, événements extrêmes, continuité d'activité."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "543db608-7328-43e1-8601-f259dd159e50",
+      "code": "SA_COASTAL_WASTE_MANAGEMENT",
+      "name": "Gestion des déchets littoraux",
+      "description": "Prévention des déchets sauvages, organisation du nettoyage raisonné des plages, ports ou abords aquatiques, et dispositifs de tri adaptés."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "76c838b2-5ace-498a-99a0-26f3cfe58f74",
+      "code": "SA_COMPOSTING",
+      "name": "Compostage des biodéchets",
+      "description": "Compostage sur site ou recours à une filière de compostage/valorisation organique."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "bc90b7e5-af35-4412-9be6-aba78f17d857",
+      "code": "SA_CONCENTRATED_CLEANERS",
+      "name": "Produits d'entretien concentrés",
+      "description": "Utilisation de produits concentrés avec dosage maîtrisé pour limiter emballages et surconsommation."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "b920789d-96fa-473a-bba9-b220d988d5ff",
+      "code": "SA_CUSTOMER_FEEDBACK",
+      "name": "Collecte de satisfaction client",
+      "description": "Dispositif de collecte de la satisfaction, des remarques et des réclamations clients."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "f208e25b-ba87-4a73-ae87-e1d8dde2301b",
+      "code": "SA_DESTINATION_PARTNER_AUDIT",
+      "name": "Audit ou contrôle des partenaires de destination",
+      "description": "Pré-audit, audit ou contrôle des partenaires ou réceptifs selon des critères responsables."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "5b1fb112-3987-460b-9a96-193678abccaf",
+      "code": "SA_DESTINATION_SUST_INDICATORS",
+      "name": "Indicateurs de destination durable",
+      "description": "Suivi structuré des indicateurs de durabilité à l'échelle de la destination : eau, déchets, énergie, emplois locaux, satisfaction, fréquentation."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "dd652358-aea2-4c06-bb8c-055891df5912",
+      "code": "SA_DIGITAL_SOBRIETY",
+      "name": "Sobriété numérique",
+      "description": "Réduction de l'impact environnemental du numérique : site éco-conçu, hébergement responsable, limitation du poids des contenus, allongement de la durée de vie du matériel."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "2779ba53-fa4c-4036-86cc-f4d938f25357",
+      "code": "SA_DISHWASHER_WATER_EFF",
+      "name": "Lave-vaisselle sobre en eau",
+      "description": "Choix ou réglage de lave-vaisselle optimisés pour limiter la consommation d'eau."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "dcce97b4-b830-41e3-b598-ed9e63492075",
+      "code": "SA_DISPOSABLE_REDUCTION",
+      "name": "Réduction des produits jetables",
+      "description": "Suppression ou forte limitation des articles à usage unique."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "59bd60f4-5335-4278-a130-b53df0cafccc",
+      "code": "SA_DURABLE_GOODS_REUSE",
+      "name": "Biens durables, réparation et réemploi",
+      "description": "Choix de biens durables et recours à la réparation, au réemploi ou au don."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c601dc33-876d-468f-8dd9-be4ef3b0b992",
+      "code": "SA_ECOLABEL_CLEANERS",
+      "name": "Produits d'entretien écolabellisés",
+      "description": "Utilisation de produits d'entretien porteurs d'un écolabel ou d'une certification reconnue."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "4e952a37-a086-4f38-8a47-7d9aedb132fb",
+      "code": "SA_EFFICIENT_IRRIGATION",
+      "name": "Arrosage économe",
+      "description": "Systèmes d'irrigation économes et pilotés selon les besoins."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "6a2ada3c-cfad-4629-be69-1f0afa399338",
+      "code": "SA_EFFICIENT_LIGHTING",
+      "name": "Éclairage basse consommation",
+      "description": "Équipement majoritaire en LED ou solutions à haute efficacité énergétique."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "d9d79ef5-9353-49b3-8224-49d89689d7bf",
+      "code": "SA_EFFICIENT_TAPS_SHOWERS",
+      "name": "Robinets et douches économes",
+      "description": "Mousseurs, réducteurs de débit ou équipements sobres sur les robinets et douches."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "e6b55ae0-bf45-4571-9c67-9a38ebd3d748",
+      "code": "SA_EFFICIENT_TOILETS",
+      "name": "Toilettes et urinoirs économes",
+      "description": "Double chasse, systèmes économes ou équipements limitant la consommation d'eau des sanitaires."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "4582d675-7eaa-4116-8e87-ee24ac236109",
+      "code": "SA_ENERGY_AUDIT",
+      "name": "Audit énergétique",
+      "description": "Audit ou pré-audit énergétique réalisé par un expert ou via une méthode structurée."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "e18b7966-b45e-4b11-a311-607cfad3effe",
+      "code": "SA_ENERGY_MONITORING",
+      "name": "Suivi des consommations d'énergie",
+      "description": "Mesure régulière des consommations d'énergie avec historique et indicateurs de suivi."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "fdf39515-cd64-40d5-a37b-ce5d950fd840",
+      "code": "SA_FAIR_LOCAL_CONTRACTS",
+      "name": "Contrats équitables avec les partenaires locaux",
+      "description": "Relations contractuelles transparentes, durables et équitables avec les partenaires ou prestataires locaux."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "b61e164a-f568-48ee-adc0-6288c537762d",
+      "code": "SA_FEEDBACK_ANALYSIS",
+      "name": "Analyse des retours clients",
+      "description": "Analyse structurée des retours clients et intégration dans l'amélioration continue."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "e24eddc6-68c1-4544-9528-3fbbd715b98d",
+      "code": "SA_FOOD_WASTE_REDUCTION",
+      "name": "Réduction du gaspillage alimentaire",
+      "description": "Mesures pour prévenir, mesurer et réduire le gaspillage alimentaire."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "74273c23-5c98-4121-908c-d22b9844c74b",
+      "code": "SA_GUEST_INFO_SUST",
+      "name": "Information client sur les écogestes",
+      "description": "Information donnée aux clients sur les écogestes attendus et sur les pratiques durables de l'établissement."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "775b23cd-2711-451e-a214-0937a8d7f0f1",
+      "code": "SA_HAZARDOUS_WASTE",
+      "name": "Gestion des déchets dangereux",
+      "description": "Tri, stockage et élimination sécurisés des piles, lampes, produits chimiques ou équivalents."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "e9fccbcb-da0f-430c-ba6f-a98839be64e7",
+      "code": "SA_HOT_WATER_EFFICIENCY",
+      "name": "Production d'eau chaude performante",
+      "description": "Systèmes de production d'eau chaude efficaces et réglés pour limiter les pertes."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "6831449e-64e6-45b3-a35d-c6c3f4413e6a",
+      "code": "SA_HUMAN_RIGHTS_DECENT_WORK",
+      "name": "Engagement droits humains et travail décent",
+      "description": "Engagement formalisé contre les atteintes aux droits humains et en faveur de conditions de travail décentes."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c1da7dd2-b876-4d66-b5f9-3431a8d2a0c1",
+      "code": "SA_HVAC_EFFICIENCY",
+      "name": "Chauffage et climatisation performants",
+      "description": "Équipements de chauffage ou de climatisation performants et entretenus."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "9735c52f-c61d-471d-b500-ab4fcfdf7db1",
+      "code": "SA_IMPACT_REPORTING",
+      "name": "Mesure et reporting des impacts",
+      "description": "Suivi et restitution d'indicateurs d'impact environnemental, social ou territorial."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "d8c355ec-524a-41d9-9317-eab271133e59",
+      "code": "SA_LABELLED_LOCAL_OFFERS",
+      "name": "Mise en avant des offres locales engagées",
+      "description": "Valorisation des offres, produits ou prestataires locaux engagés ou labellisés."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "828c51cb-daf9-40df-8289-8019e501f094",
+      "code": "SA_LAUNDRY_WATER_EFF",
+      "name": "Lave-linge sobre en eau",
+      "description": "Choix ou réglage de lave-linge optimisés pour limiter la consommation d'eau."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "237d74c8-7138-431f-a7a4-3022c27b7391",
+      "code": "SA_LEAK_DETECTION",
+      "name": "Détection des fuites",
+      "description": "Routine de contrôle ou système permettant d'identifier rapidement les fuites et surconsommations."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "358b6893-b31e-412d-8eb6-00ced5ffe132",
+      "code": "SA_LOCAL_COMMUNITY_SUPPORT",
+      "name": "Soutien à l'économie et à la communauté locale",
+      "description": "Actions qui renforcent les retombées locales, les partenariats et le développement local."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "874f9c35-31af-49af-979f-deffcb10bc6f",
+      "code": "SA_LOCAL_ORGANIC_FAIRTRADE_FOOD",
+      "name": "Produits locaux, bio ou équitables",
+      "description": "Part d'offre alimentaire issue du local, du bio, de l'écolabellisé ou du commerce équitable."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "0c19d442-2b1f-4a48-afe0-049570f50175",
+      "code": "SA_LOCAL_POPULATION_INVOLVEMENT",
+      "name": "Implication des populations locales",
+      "description": "Participation des populations locales à la conception, à l'accueil ou à la mise en œuvre de l'offre."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "19a20bdf-c4e9-4937-9ac5-0bc83f42a0b1",
+      "code": "SA_LOCAL_SUPPLIERS",
+      "name": "Priorité aux fournisseurs locaux",
+      "description": "Choix prioritaire de fournisseurs locaux, de proximité ou en circuits courts."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "dc16624d-db1a-4df5-b840-81e4c638d2f6",
+      "code": "SA_LOW_CHEMICAL_DISINFECTION",
+      "name": "Réduction des produits chimiques de désinfection",
+      "description": "Recours à des méthodes ou produits limitant les impacts des opérations de désinfection."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "8b51e79a-3590-480a-9cd3-982333d3e8a1",
+      "code": "SA_LOW_IMPACT_TRANSPORT_INFO",
+      "name": "Information sur les mobilités à faible impact",
+      "description": "Information sur les transports en commun, le vélo, la marche, le covoiturage ou l'arrivée sans voiture."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c678e090-a222-48b6-9ac6-826229add2da",
+      "code": "SA_LOW_IMPACT_TRANSPORT_SERVICES",
+      "name": "Services de mobilité à faible impact",
+      "description": "Services ou équipements facilitant les mobilités à faible impact, stationnement vélo, recharge, navette."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "fff54e43-7275-4a76-8dc5-bf8730f0d0f6",
+      "code": "SA_MOUNTAIN_MOBILITY_PLAN",
+      "name": "Mobilité durable en montagne",
+      "description": "Plan de mobilité douce pour destination de montagne : navettes, réduction de la voiture individuelle, intermodalité, services vélo et marche."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "af317e7c-86a1-4c1b-97be-e58c705750df",
+      "code": "SA_NATIVE_PLANTING",
+      "name": "Plantations locales ou non invasives",
+      "description": "Choix d'espèces locales ou non invasives dans les aménagements extérieurs."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "6f3e7a64-4559-449e-95da-2df3e293089c",
+      "code": "SA_NO_ENDANGERED_SPECIES",
+      "name": "Exclusion des espèces menacées",
+      "description": "Absence de produits issus d'espèces menacées ou de filières non durables."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "031d2a15-8059-4340-a415-d1dbb0c43429",
+      "code": "SA_ONSITE_RENEWABLE_ENERGY",
+      "name": "Production d'énergie renouvelable sur site",
+      "description": "Production sur site d'énergie renouvelable, par exemple photovoltaïque ou solaire thermique."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "68432c78-39ea-4747-b684-544555bf000b",
+      "code": "SA_ORGANIC_WASTE_SORTING",
+      "name": "Tri des biodéchets",
+      "description": "Tri à la source des biodéchets pour collecte ou valorisation adaptée."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "3085e2cf-c537-4af5-8757-5da6302daf42",
+      "code": "SA_PAPER_REDUCTION",
+      "name": "Réduction du papier",
+      "description": "Réduction des impressions, brochures ou supports papier non indispensables."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "0e6918d6-4f0c-45b9-a68e-d5f4ae81cdf6",
+      "code": "SA_PESTICIDE_AVOIDANCE",
+      "name": "Évitement des pesticides",
+      "description": "Absence ou forte réduction des pesticides, herbicides ou produits assimilés."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "aadbcca0-a3c7-43e2-8849-7086e8b5ad2e",
+      "code": "SA_POLICY_SUSTAINABILITY",
+      "name": "Politique de durabilité formalisée",
+      "description": "Document formalisé qui fixe les engagements de durabilité, le périmètre, les objectifs et les responsabilités."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "ed2a9a51-fd65-422b-9715-4e70012e2315",
+      "code": "SA_PRO_TRANSITION_SUPPORT",
+      "name": "Accompagnement des professionnels dans leur transition",
+      "description": "Aide apportée aux professionnels pour progresser vers des pratiques ou labels plus durables."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "076d75a6-25ae-4768-8ac1-849c14b7bbfc",
+      "code": "SA_PUBLIC_COMMUNICATION",
+      "name": "Communication publique sur les engagements",
+      "description": "Page web, affichage ou support public décrivant les engagements, résultats ou dispositifs de durabilité."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "599ddad4-a4a8-438e-ace5-cc82197f3ed7",
+      "code": "SA_RAINWATER_REUSE",
+      "name": "Réutilisation des eaux de pluie ou eaux grises",
+      "description": "Dispositifs de récupération ou de réutilisation de l'eau pour des usages adaptés."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "5d5cfa48-e83c-4911-b93a-395a20c69f7f",
+      "code": "SA_REGULATORY_COMPLIANCE",
+      "name": "Suivi de conformité réglementaire",
+      "description": "Registre de conformité et preuves à jour sur les obligations applicables, sécurité, accessibilité, déchets, eau, travail."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "d89807c9-25f8-4f7e-b1bb-fd994d8ed9e5",
+      "code": "SA_RENEWABLE_ELECTRICITY",
+      "name": "Achat d'électricité renouvelable",
+      "description": "Contrat d'approvisionnement en électricité d'origine renouvelable ou équivalente."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "17ae4ed4-c699-4e29-a830-a0e0c003ec55",
+      "code": "SA_RENEWABLE_HEAT",
+      "name": "Chaleur renouvelable",
+      "description": "Recours à une chaleur d'origine renouvelable, biomasse, solaire thermique, géothermie ou équivalent."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "683b716e-ab1d-4b34-9733-f5e75829afa1",
+      "code": "SA_RESPONSIBLE_PROCUREMENT_POLICY",
+      "name": "Politique d'achats responsables",
+      "description": "Politique achats intégrant des critères environnementaux, sociaux, éthiques et de cycle de vie."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "138e2eac-d2f6-4331-be45-bcb641631919",
+      "code": "SA_RSE_STRATEGY_ALIGNMENT",
+      "name": "Alignement stratégique RSE",
+      "description": "Alignement de la stratégie d'entreprise, des offres et du modèle économique avec les principes de responsabilité sociétale et de tourisme responsable."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "a2d3e72b-3f77-4437-ab0b-738dd2e599f9",
+      "code": "SA_STAFF_TRAINING_SUST",
+      "name": "Formation du personnel aux écogestes",
+      "description": "Formation des équipes aux pratiques de durabilité, énergie, eau, déchets, achats, accueil responsable."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "3b0ddf8b-3ac1-4540-ba47-a9e48357a465",
+      "code": "SA_STAKEHOLDER_DIALOGUE",
+      "name": "Dialogue parties prenantes",
+      "description": "Échanges structurés avec salariés, partenaires, collectivités, associations, habitants ou clients."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "3c717388-bbe4-4afd-84e7-63403de235b9",
+      "code": "SA_SUBMETERING",
+      "name": "Sous-comptage énergie et eau",
+      "description": "Sous-comptage par usage ou zone pour identifier les postes les plus consommateurs."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "0bbfba5e-9db3-49a2-87c5-15e9630cdf18",
+      "code": "SA_SUPPLIER_EVALUATION",
+      "name": "Évaluation RSE des fournisseurs",
+      "description": "Qualification ou évaluation des fournisseurs selon des critères de conformité, environnement et responsabilité sociale."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "087b9c1b-5e13-4e12-b480-b6015d040e37",
+      "code": "SA_TAP_WATER_SERVICE",
+      "name": "Proposition d'eau du robinet ou en carafe",
+      "description": "Mise à disposition d'eau en carafe lorsque la qualité locale le permet."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "b905f361-d1b6-4f89-b183-55f86c849db1",
+      "code": "SA_TERRITORY_SUST_INFO",
+      "name": "Information sur la durabilité du territoire",
+      "description": "Information donnée aux visiteurs sur les engagements du territoire, ressources, transport, accessibilité."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "613a5c84-41fe-4854-8ab1-b52971550036",
+      "code": "SA_THERMOREGULATION",
+      "name": "Régulation des températures",
+      "description": "Consignes et dispositifs de régulation pour le chauffage, la climatisation ou les plages de température."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "a3cc83f7-e017-4c56-a916-0e4255a6dc23",
+      "code": "SA_TOWEL_LINEN_REUSE",
+      "name": "Réutilisation des serviettes et du linge",
+      "description": "Changement du linge et des serviettes à fréquence maîtrisée ou sur demande."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "0f28b9cd-203f-45af-847a-1b7fc0b06235",
+      "code": "SA_TRANSPARENT_SALES_INFO",
+      "name": "Information transparente sur l'offre et ses impacts",
+      "description": "Information claire sur le contenu de l'offre, ses impacts, ses limites et ses conditions."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "7aedd828-d1cc-4ba8-a08c-ed9634d8b928",
+      "code": "SA_VEGETARIAN_OFFER",
+      "name": "Offre végétarienne",
+      "description": "Présence d'au moins une offre végétarienne ou végétale identifiable."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "505b5e49-2dba-4c41-b192-48dfde5fa04d",
+      "code": "SA_VISITOR_FLOW_MANAGEMENT",
+      "name": "Gestion des flux touristiques",
+      "description": "Actions de gestion des flux, de désaisonnalisation ou d'orientation des visiteurs."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "60468d9a-3bd9-4cca-9289-a8ccedf75b50",
+      "code": "SA_WASTE_SORTING_GUESTS",
+      "name": "Tri des déchets pour les clients",
+      "description": "Mise à disposition de bacs et consignes de tri claires pour les clients."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "a7311c7e-662c-44a8-8210-32df4c3ab3d7",
+      "code": "SA_WASTE_SORTING_STAFF",
+      "name": "Tri des déchets pour le personnel",
+      "description": "Consignes, bacs et organisation permettant le tri des déchets dans les zones internes."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "c4ca8cb9-bd6c-4439-bb47-ae32839f8f39",
+      "code": "SA_WASTEWATER_TREATMENT",
+      "name": "Traitement maîtrisé des eaux usées",
+      "description": "Gestion conforme du traitement ou du raccordement des eaux usées et suivi associé."
+    },
+    {
+      "domain": "sustainability_group",
+      "source_kind": "sustainability_group",
+      "source_id": "8022c1fa-66e6-49ac-80ab-e5be39b8df00",
+      "code": "SA_WATER_MONITORING",
+      "name": "Suivi des consommations d'eau",
+      "description": "Mesure régulière des consommations d'eau et détection des dérives."
+    }
+  ]
+}

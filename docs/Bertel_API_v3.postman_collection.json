@@ -3278,6 +3278,9 @@
                       "  pm.expect(['active','deprecated','retired']).to.include(x.lifecycle); pm.expect(x.assignable).to.be.a('boolean');",
                       "  if (x.effective_lang) pm.expect(x.name).to.eql(x.preferred_labels[x.effective_lang]);",
                       "  if (x.definition_lang) pm.expect(x.description).to.eql(x.definitions[x.definition_lang]);",
+                      "  function checkMembershipField(field) { if (Object.prototype.hasOwnProperty.call(x, field)) { pm.expect(x[field]).to.be.an('array'); pm.expect(new Set(x[field]).size).to.eql(x[field].length); x[field].forEach(id => pm.expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)); } }",
+                      "  checkMembershipField('member_of'); checkMembershipField('members');",
+                      "  pm.expect(x).not.to.have.property('source_fields');",
                       "}",
                       "",
                       "  pm.test('Concepts publics et langues explicites', function () { pm.expect(d.data).to.be.an('array'); d.data.forEach(checkConcept); });",
@@ -3352,6 +3355,9 @@
                       "  pm.expect(['active','deprecated','retired']).to.include(x.lifecycle); pm.expect(x.assignable).to.be.a('boolean');",
                       "  if (x.effective_lang) pm.expect(x.name).to.eql(x.preferred_labels[x.effective_lang]);",
                       "  if (x.definition_lang) pm.expect(x.description).to.eql(x.definitions[x.definition_lang]);",
+                      "  function checkMembershipField(field) { if (Object.prototype.hasOwnProperty.call(x, field)) { pm.expect(x[field]).to.be.an('array'); pm.expect(new Set(x[field]).size).to.eql(x[field].length); x[field].forEach(id => pm.expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)); } }",
+                      "  checkMembershipField('member_of'); checkMembershipField('members');",
+                      "  pm.expect(x).not.to.have.property('source_fields');",
                       "}",
                       "",
                       "  pm.test('Concepts publics et langues explicites', function () { pm.expect(d.data).to.be.an('array'); d.data.forEach(checkConcept); });",
@@ -3433,6 +3439,9 @@
                       "  pm.expect(['active','deprecated','retired']).to.include(x.lifecycle); pm.expect(x.assignable).to.be.a('boolean');",
                       "  if (x.effective_lang) pm.expect(x.name).to.eql(x.preferred_labels[x.effective_lang]);",
                       "  if (x.definition_lang) pm.expect(x.description).to.eql(x.definitions[x.definition_lang]);",
+                      "  function checkMembershipField(field) { if (Object.prototype.hasOwnProperty.call(x, field)) { pm.expect(x[field]).to.be.an('array'); pm.expect(new Set(x[field]).size).to.eql(x[field].length); x[field].forEach(id => pm.expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)); } }",
+                      "  checkMembershipField('member_of'); checkMembershipField('members');",
+                      "  pm.expect(x).not.to.have.property('source_fields');",
                       "}",
                       " pm.test('Périmètre demandé', function () { d.data.forEach(x => { checkConcept(x); pm.expect(x.domain).to.eql('taxonomy_hlo'); pm.expect(x.lifecycle).to.eql('active'); }); }); if (d.data.length) pm.collectionVariables.set('public_taxonomy_code', d.data[0].domain + ':' + d.data[0].code); else pm.collectionVariables.unset('public_taxonomy_code'); }"
                     ]
@@ -3495,6 +3504,9 @@
                       "  pm.expect(['active','deprecated','retired']).to.include(x.lifecycle); pm.expect(x.assignable).to.be.a('boolean');",
                       "  if (x.effective_lang) pm.expect(x.name).to.eql(x.preferred_labels[x.effective_lang]);",
                       "  if (x.definition_lang) pm.expect(x.description).to.eql(x.definitions[x.definition_lang]);",
+                      "  function checkMembershipField(field) { if (Object.prototype.hasOwnProperty.call(x, field)) { pm.expect(x[field]).to.be.an('array'); pm.expect(new Set(x[field]).size).to.eql(x[field].length); x[field].forEach(id => pm.expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)); } }",
+                      "  checkMembershipField('member_of'); checkMembershipField('members');",
+                      "  pm.expect(x).not.to.have.property('source_fields');",
                       "}",
                       "",
                       "pm.test('Concept résolu sans fausse traduction', function () { checkConcept(d.data); pm.expect(d.data.concept_id).to.eql(pm.variables.get('thesaurus_concept_id')); }); }"
@@ -3556,6 +3568,9 @@
                       "  pm.expect(['active','deprecated','retired']).to.include(x.lifecycle); pm.expect(x.assignable).to.be.a('boolean');",
                       "  if (x.effective_lang) pm.expect(x.name).to.eql(x.preferred_labels[x.effective_lang]);",
                       "  if (x.definition_lang) pm.expect(x.description).to.eql(x.definitions[x.definition_lang]);",
+                      "  function checkMembershipField(field) { if (Object.prototype.hasOwnProperty.call(x, field)) { pm.expect(x[field]).to.be.an('array'); pm.expect(new Set(x[field]).size).to.eql(x[field].length); x[field].forEach(id => pm.expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)); } }",
+                      "  checkMembershipField('member_of'); checkMembershipField('members');",
+                      "  pm.expect(x).not.to.have.property('source_fields');",
                       "}",
                       "",
                       "pm.test('Concept résolu sans fausse traduction', function () { checkConcept(d.data); pm.expect(d.data.concept_id).to.eql(pm.variables.get('thesaurus_concept_id')); }); }"
@@ -3726,7 +3741,8 @@
                     "type": "text/javascript",
                     "exec": [
                       "if (pm.response.code === 200) { const d = pm.response.json(); pm.test('Publication épinglée', function () { pm.expect(d.meta.release_id).to.eql(Number(pm.variables.get('thesaurus_release_id'))); pm.expect(d.meta.vocabulary_release).to.eql(d.meta.release_id); });",
-                      "  pm.test('Delta de la publication précédente', function () { pm.expect(d.data).to.be.an('array'); for (const x of d.data) { pm.expect(['added','modified','deprecated','retired']).to.include(x.change_type); pm.expect(x).to.have.property('before'); pm.expect(x).to.have.property('after'); } });",
+                      "  function checkMembershipField(x, field) { if (Object.prototype.hasOwnProperty.call(x, field)) { pm.expect(x[field]).to.be.an('array'); pm.expect(new Set(x[field]).size).to.eql(x[field].length); x[field].forEach(id => pm.expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)); } }",
+                      "  pm.test('Delta de la publication précédente', function () { pm.expect(d.data).to.be.an('array'); for (const x of d.data) { for (const snap of [x.before, x.after]) if (snap) { checkMembershipField(snap, 'member_of'); checkMembershipField(snap, 'members'); pm.expect(snap).not.to.have.property('source_fields'); } pm.expect(['added','modified','deprecated','retired']).to.include(x.change_type); pm.expect(x).to.have.property('before'); pm.expect(x).to.have.property('after'); } });",
                       "  if (d.meta.next_cursor) pm.collectionVariables.set('thesaurus_changes_cursor', d.meta.next_cursor); else pm.collectionVariables.unset('thesaurus_changes_cursor');",
                       "}"
                     ]
@@ -3789,7 +3805,8 @@
                     "type": "text/javascript",
                     "exec": [
                       "if (pm.response.code === 200) { const d = pm.response.json(); pm.test('Publication épinglée', function () { pm.expect(d.meta.release_id).to.eql(Number(pm.variables.get('thesaurus_release_id'))); pm.expect(d.meta.vocabulary_release).to.eql(d.meta.release_id); });",
-                      "  pm.test('Delta de la publication précédente', function () { pm.expect(d.data).to.be.an('array'); for (const x of d.data) { pm.expect(['added','modified','deprecated','retired']).to.include(x.change_type); pm.expect(x).to.have.property('before'); pm.expect(x).to.have.property('after'); } });",
+                      "  function checkMembershipField(x, field) { if (Object.prototype.hasOwnProperty.call(x, field)) { pm.expect(x[field]).to.be.an('array'); pm.expect(new Set(x[field]).size).to.eql(x[field].length); x[field].forEach(id => pm.expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)); } }",
+                      "  pm.test('Delta de la publication précédente', function () { pm.expect(d.data).to.be.an('array'); for (const x of d.data) { for (const snap of [x.before, x.after]) if (snap) { checkMembershipField(snap, 'member_of'); checkMembershipField(snap, 'members'); pm.expect(snap).not.to.have.property('source_fields'); } pm.expect(['added','modified','deprecated','retired']).to.include(x.change_type); pm.expect(x).to.have.property('before'); pm.expect(x).to.have.property('after'); } });",
                       "  if (d.meta.next_cursor) pm.collectionVariables.set('thesaurus_changes_cursor', d.meta.next_cursor); else pm.collectionVariables.unset('thesaurus_changes_cursor');",
                       "}"
                     ]
@@ -3908,7 +3925,7 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "if (pm.response.code === 200) { pm.test('Version de l’export RDF', function () { pm.expect(pm.response.headers.get('X-Bertel-Vocabulary-Release')).to.eql(String(pm.variables.get('thesaurus_release_id'))); }); }"
+                      "if (pm.response.code === 200) { const doc = pm.response.json(); pm.test('Références de membres Bertel', function () { pm.expect(doc['@graph']).to.be.an('array'); for (const node of doc['@graph']) for (const key of ['bertel:memberOf', 'bertel:member']) if (Object.prototype.hasOwnProperty.call(node, key)) { pm.expect(node[key]).to.be.an('array'); for (const ref of node[key]) pm.expect(ref['@id']).to.be.a('string').and.not.empty; } }); pm.test('Version de l’export RDF', function () { pm.expect(pm.response.headers.get('X-Bertel-Vocabulary-Release')).to.eql(String(pm.variables.get('thesaurus_release_id'))); }); }"
                     ]
                   }
                 }

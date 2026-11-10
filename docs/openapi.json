@@ -660,7 +660,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -791,7 +791,7 @@
         ],
         "operationId": "getThesaurusRelease",
         "summary": "Lire le manifeste d’une publication",
-        "description": "Manifeste immuable de la publication demandée. Les noms de domaines sont localisés dans ce snapshot; metadata_scope vaut release_snapshot et metadata_checksum est facultatif. domains et status sont rejetés.",
+        "description": "Manifeste immuable de la publication demandée. Les noms de domaines sont localisés dans ce snapshot; metadata_scope vaut release_snapshot et metadata_checksum est facultatif dans les snapshots historiques. domains et status sont rejetés.",
         "parameters": [
           {
             "name": "releaseId",
@@ -807,7 +807,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -954,7 +954,7 @@
           {
             "name": "domains",
             "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "description": "Domaines publics CSV (1–100 éléments) ; absent = périmètre livré. Domaine interne/inconnu renvoie une erreur générique (400).",
             "schema": {
               "type": "string",
               "example": "taxonomy_hlo,taxonomy_hot"
@@ -963,7 +963,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "description": "États CSV parmi active,deprecated,retired (1–100 éléments) ; absent = tous les états.",
             "schema": {
               "type": "string"
             }
@@ -971,7 +971,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1155,7 +1155,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1301,7 +1301,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1448,7 +1448,7 @@
           {
             "name": "domains",
             "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "description": "Domaines publics CSV (1–100 éléments) ; absent = périmètre livré. Domaine interne/inconnu renvoie une erreur générique (400).",
             "schema": {
               "type": "string",
               "example": "taxonomy_hlo,taxonomy_hot"
@@ -1457,7 +1457,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "description": "États CSV parmi active,deprecated,retired (1–100 éléments) ; absent = tous les états.",
             "schema": {
               "type": "string"
             }
@@ -1465,7 +1465,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1639,7 +1639,7 @@
           {
             "name": "domains",
             "in": "query",
-            "description": "Domaines publics CSV ; absent = périmètre livré. Domaine interne/inconnu indistinguable (400).",
+            "description": "Domaines publics CSV (1–100 éléments) ; absent = périmètre livré. Domaine interne/inconnu renvoie une erreur générique (400).",
             "schema": {
               "type": "string",
               "example": "taxonomy_hlo,taxonomy_hot"
@@ -1648,7 +1648,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "États CSV parmi active,deprecated,retired ; absent = tous.",
+            "description": "États CSV parmi active,deprecated,retired (1–100 éléments) ; absent = tous les états.",
             "schema": {
               "type": "string"
             }
@@ -1656,7 +1656,7 @@
           {
             "name": "lang",
             "in": "query",
-            "description": "Tag BCP 47 demandé (défaut fr) ; le fallback effectif figure uniquement sur les entrées concernées.",
+            "description": "Tag BCP 47 demandé, 2–35 caractères (défaut fr), canonisé par le serveur.",
             "schema": {
               "type": "string",
               "default": "fr",
@@ -1729,8 +1729,27 @@
                     },
                     "@graph": {
                       "type": "array",
+                      "description": "Les concepts de groupe ou d’action peuvent inclure les prédicats Bertel `bertel:member` et `bertel:memberOf`, sous forme de références `@id`. Ils représentent la relation de groupe native et ne remplacent pas `skos:broader`.",
                       "items": {
-                        "type": "object"
+                        "type": "object",
+                        "properties": {
+                          "bertel:memberOf": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": ["@id"],
+                              "properties": {"@id": {"type": "string", "format": "uri"}}
+                            }
+                          },
+                          "bertel:member": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": ["@id"],
+                              "properties": {"@id": {"type": "string", "format": "uri"}}
+                            }
+                          }
+                        }
                       }
                     }
                   }
@@ -2014,7 +2033,10 @@
           "preferred_labels",
           "definitions",
           "lifecycle",
-          "assignable"
+          "assignable",
+          "requested_lang",
+          "effective_lang",
+          "definition_lang"
         ],
         "properties": {
           "context_key": { "type": "string", "description": "Portée opaque du code (schéma ou catégorie). Le code n’est unique que dans (domain,context_key,code) ; utiliser concept_id/uri comme identité de synchronisation." },
@@ -2033,13 +2055,15 @@
             "type": "string"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Nom résolu dans preferred_labels ; le champ scalaire historique reste français s’il n’existe aucune traduction correspondante."
           },
           "description": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Définition résolue dans definitions ; le champ scalaire historique reste français s’il n’existe aucune traduction correspondante."
           },
           "preferred_labels": {
             "type": "object",
@@ -2054,19 +2078,22 @@
             }
           },
           "requested_lang": {
-            "type": "string"
+            "type": "string",
+            "description": "Tag BCP 47 canonique demandé par le client."
           },
           "effective_lang": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Langue réelle du nom, ou fr lorsque le champ historique français est utilisé; null si inconnue."
           },
           "definition_lang": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Langue réelle de la définition, ou fr lorsque le champ historique français est utilisé; null si inconnue."
           },
           "labels": {
             "type": "array",
@@ -2110,6 +2137,24 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "member_of": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Optionnel. Groupes natifs qui incluent cette action, figés dans la publication. Absent des anciens snapshots et des actions sans groupe public gouverné. Cette appartenance ne remplace pas broader, related ou le contexte de catégorie."
+          },
+          "members": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Optionnel. Actions natives appartenant à ce groupe, figées dans la publication. Absent des anciens snapshots et des groupes sans membre public gouverné. Cette appartenance ne remplace pas broader, related ou le parent de catégorie."
           },
           "narrower": {
             "type": "array",

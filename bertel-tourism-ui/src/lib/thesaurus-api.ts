@@ -32,7 +32,7 @@ const LIFECYCLES = new Set(['active', 'deprecated', 'retired']);
 const PUBLIC_CONCEPT_KEYS = [
   'concept_id', 'uri', 'domain', 'code', 'context_key', 'name', 'description', 'preferred_labels', 'definitions',
   'labels', 'notes', 'sources', 'broader', 'narrower', 'related', 'replaced_by', 'relations',
-  'mappings', 'lifecycle', 'assignable', 'valid_from', 'valid_to', 'effective_lang',
+  'mappings', 'lifecycle', 'assignable', 'valid_from', 'valid_to', 'effective_lang', 'member_of', 'members',
 ] as const;
 
 function object(value: unknown): JsonObject | null {
@@ -197,6 +197,13 @@ export function publicThesaurusConcept(value: unknown, requestedLang = 'fr'): Js
     || typeof source.uri !== 'string' || !/^(?:https?:\/\/|urn:)/.test(source.uri)) throw new Error('invalid_snapshot');
   const result: JsonObject = {};
   for (const key of PUBLIC_CONCEPT_KEYS) if (source[key] !== undefined) result[key] = source[key];
+  for (const key of ['member_of', 'members'] as const) {
+    if (source[key] === undefined) continue;
+    const ids = source[key];
+    if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string' || !UUID.test(id))) throw new Error('invalid_snapshot');
+    if (new Set((ids as string[]).map((id) => id.toLowerCase())).size !== ids.length) throw new Error('invalid_snapshot');
+    result[key] = ids;
+  }
   const labels = stringMap(source.preferred_labels);
   const definitions = stringMap(source.definitions);
   const name = localized(labels, requestedLang);
@@ -300,6 +307,10 @@ export function thesaurusJsonLd(values: unknown[]): JsonObject {
     for (const [key, property] of [['broader', 'skos:broader'], ['narrower', 'skos:narrower'], ['related', 'skos:related'], ['replaced_by', 'dct:isReplacedBy']]) {
       const ids = concept[key] as string[];
       if (ids.length) node[property] = ids.map((id) => ({ '@id': targetUri(id, concept) }));
+    }
+    for (const [field, property] of [['member_of', 'bertel:memberOf'], ['members', 'bertel:member']] as const) {
+      const ids = concept[field];
+      if (Array.isArray(ids) && ids.length) node[property] = ids.map((id) => ({ '@id': targetUri(id as string, concept) }));
     }
     const mappingTypes: Record<string, string> = { exact: 'exactMatch', close: 'closeMatch', broad: 'broadMatch', narrow: 'narrowMatch', related: 'relatedMatch', exactMatch: 'exactMatch', closeMatch: 'closeMatch', broadMatch: 'broadMatch', narrowMatch: 'narrowMatch', relatedMatch: 'relatedMatch' };
     for (const mapping of concept.mappings as JsonObject[]) {

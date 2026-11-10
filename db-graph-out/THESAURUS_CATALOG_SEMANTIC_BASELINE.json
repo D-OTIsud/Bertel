@@ -1,0 +1,28 @@
+{
+  "closure": {
+    "cycles": 0,
+    "actual_rows": 560,
+    "missing_rows": 0,
+    "expected_rows": 560,
+    "unexpected_rows": 0,
+    "depth_limit_hits": 0
+  },
+  "crosswalk": {
+    "rows": 80,
+    "taxonomy_rows": 4,
+    "missing_taxonomy_targets": 0
+  },
+  "release_id": 25,
+  "captured_at": "2026-11-10T19:28:51.991895+00:00",
+  "facet_registry": {
+    "rows": 13,
+    "missing_physical_tables": 0,
+    "missing_object_id_columns": 0
+  },
+  "catalog_registry": {
+    "registry_rows": 103,
+    "discovered_keys": 104,
+    "registry_not_discovered": 0,
+    "discovered_without_registry": 1
+  }
+}

@@ -845,6 +845,14 @@ COMMIT;
 \ir thesaurus_legacy_search_term_roundtrip.sql
 \ir tests/test_thesaurus_legacy_search_term_roundtrip.sql
 
+\echo '== Public semantic target lookup index and scope integrity =='
+\ir thesaurus_public_target_lookup_index.sql
+\ir tests/test_thesaurus_public_target_lookup_index.sql
+
+\echo '== Bounded timeout for the existing thesaurus admin RPC only =='
+\ir thesaurus_admin_rpc_timeout.sql
+\ir tests/test_thesaurus_admin_rpc_timeout.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -462,6 +462,35 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5bfb5e39-0369-46fb-9060-e7586dbd507b. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5bfb5e39-0369-46fb-9060-e7586dbd507b"
           }
+        ],
+        "name": "Snorkeling",
+        "name_i18n": {
+          "de": "Schnorcheln",
+          "en": "Snorkelling",
+          "es": "Snorkel",
+          "fr": "Snorkeling"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Schnorchelsport"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Snorkeling"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Esnórquel"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Randonnée palmée"
+          }
         ]
       },
       "changes": {
@@ -478,6 +507,35 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5bfb5e39-0369-46fb-9060-e7586dbd507b. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5bfb5e39-0369-46fb-9060-e7586dbd507b"
+          }
+        ],
+        "name": "Randonnée palmée",
+        "name_i18n": {
+          "de": "Schnorcheln",
+          "en": "Snorkelling",
+          "es": "Snorkel",
+          "fr": "Randonnée palmée"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Schnorchelsport"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Snorkeling"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Esnórquel"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Snorkeling"
           }
         ]
       }
@@ -502,6 +560,35 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f923d89a-ce9f-4302-a857-d49fa47b6fa4. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f923d89a-ce9f-4302-a857-d49fa47b6fa4"
           }
+        ],
+        "name": "Trail",
+        "name_i18n": {
+          "de": "Trailrunning",
+          "en": "Trail running",
+          "es": "Trail running",
+          "fr": "Trail"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geländelauf auf Wegen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Off-road running"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Carrera por senderos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Course à pied en sentier"
+          }
         ]
       },
       "changes": {
@@ -518,6 +605,40 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/f923d89a-ce9f-4302-a857-d49fa47b6fa4. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/f923d89a-ce9f-4302-a857-d49fa47b6fa4"
+          }
+        ],
+        "name": "Course à pied sur sentier",
+        "name_i18n": {
+          "de": "Trailrunning",
+          "en": "Trail running",
+          "es": "Trail running",
+          "fr": "Course à pied sur sentier"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Geländelauf auf Wegen"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Off-road running"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Carrera por senderos"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Course à pied en sentier"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Trail"
           }
         ]
       }

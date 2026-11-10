@@ -2775,7 +2775,7 @@ Sur une installation existante, l'ordre de livraison est explicite :
    restent inchangés ; chaque nouvelle publication contrôle tout son instantané.
 2. Appliquer `20261110075103_thesaurus_complete_admin_batches.sql`, puis
    `20261110075111_thesaurus_simple_business_names.sql` et
-   `20261110072416_thesaurus_legacy_search_term_roundtrip.sql`. Livrer le client associé.
+   `20261110081126_thesaurus_legacy_search_term_roundtrip.sql`. Livrer le client associé.
    Les noms courts couvrent les 78 domaines, sans « taxonomie » dans les intitulés.
    L'administration peut relire les listes internes ; les lecteurs publics
    conservent leur filtre de visibilité. Les opérations par lots réutilisent les
@@ -2785,12 +2785,20 @@ Sur une installation existante, l'ordre de livraison est explicite :
    ni réactiver les valeurs historiques. Les empreintes fraîches sont lues après
    les changements de politique et de noms, avant de créer les brouillons.
 4. Seulement lorsque tout le corpus est prêt, appliquer
-   `20261110062210_thesaurus_complete_editorial_definitions.sql`. Son contrôle
+   `20261110095723_thesaurus_complete_editorial_definitions.sql`. Son contrôle
    préalable refuse une base existante encore incomplète. FR/EN/ES/DE deviennent
    obligatoires ; une définition vide, provisoire ou identique au nom est refusée.
    Une langue supplémentaire présente exige également nom et définition.
 5. Publier les métadonnées par le circuit authentifié, puis contrôler le manifeste,
    le corpus entier, les lecteurs publics et l'absence de brouillons oubliés.
+
+L'installation de la phase 2 a été confirmée le 10 novembre 2026 sous la version
+native `20261110095723`, après les 1 449 corrections et la publication 24. Le
+contrôle d'exploitation confirme la définition obligatoire et FR/EN/ES/DE pour
+les 78 domaines, avec leurs valeurs par défaut et contraintes renforcées. Le
+corps du noyau d'activation conserve son empreinte MD5
+`985839358c6e0d68eb7db280f42bb6ed`. Le reçu de livraison suit séparément la
+publication qui expose ces métadonnées dans le manifeste courant.
 
 Les miroirs frais sont, dans cet ordre après `thesaurus_business_domain_names.sql` :
 `thesaurus_required_definitions.sql`, `thesaurus_complete_editorial_definitions.sql`,
@@ -2812,3 +2820,32 @@ conserve, tableau vide efface. Le recalcul des alias utilise la valeur publiée.
 Le champ reste exclu des documents publics. Le registre de préparation vérifie
 l'ancienne empreinte du writer avant d'actualiser uniquement cette entrée ; les
 autres fonctions, le noyau d'activation et ses droits restent inchangés.
+
+### Timeout borné du RPC d'administration du thésaurus
+
+`20261110091117_thesaurus_admin_rpc_timeout.sql` fixe à 30 secondes le
+`statement_timeout` de `api.thesaurus_admin(text,jsonb)` et demande un rechargement
+du cache de schéma PostgREST. Son miroir frais est `thesaurus_admin_rpc_timeout.sql`,
+suivi du test `tests/test_thesaurus_admin_rpc_timeout.sql` dans le manifeste.
+
+PostgREST relève le paramètre attaché à la fonction avant sa requête principale.
+Le réglage concerne **toutes les actions de cette façade**, pas seulement la
+publication. Il ne change ni son corps, son propriétaire, ses ACL ou son mode de
+sécurité, ni les contrôles de préparation et d'activation. Les rôles conservent
+leurs délais : `authenticated` et `authenticator` à huit secondes, `anon` à trois
+secondes sur la cible observée. Les autres points d'entrée ne reçoivent pas cette
+exception. Un `SET` exécuté dans le corps de la fonction n'offre pas le même effet.
+
+Après installation, vérifier `pg_proc.proconfig` sur la signature exacte, le
+rechargement du schéma et un appel HTTP authentifié par le circuit normal. Une
+lecture SQL directe ne prouve pas à elle seule que PostgREST utilise le nouveau
+délai. Le test frais compare les corps, les ACL, les autres paramètres des fonctions
+et les configurations des rôles avant/après ; il ne prétend pas qualifier le
+transport HTTP. L'exception reste bornée et ne remplace pas l'analyse des étapes
+coûteuses ; Supabase documente un plafond configurable de 60 secondes pour les
+appels client/dashboard.
+
+Références officielles : [paramètres de fonction PostgREST](https://docs.postgrest.org/en/stable/references/transactions.html#hoisted-function-settings),
+[liste des paramètres relevés](https://docs.postgrest.org/en/stable/references/configuration.html#db-hoisted-tx-settings),
+[cache de schéma](https://docs.postgrest.org/en/stable/references/schema_cache.html#schema-cache-reloading-with-notify)
+et [timeouts Supabase](https://supabase.com/docs/guides/database/postgres/timeouts).

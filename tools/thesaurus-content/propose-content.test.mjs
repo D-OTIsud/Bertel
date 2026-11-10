@@ -11,6 +11,8 @@ const batch = { format_version: 1, batch_id: 'bertel-content-2026-11', proposals
 const concept = { concept_id: ID, domain: 'taxonomy_hlo', context_key: '', code: 'appartement',
   name: 'Appartement', source_fingerprint: fp, revision: null };
 const workspace = { concepts: [concept] };
+const workspaceCapabilities = { content_proposal_preconditions: 1, read_only_workspace: 1,
+  internal_workspace: 1, omit_revisions: 1 };
 
 test('default dry-run identifies a proposal and never writes', async () => {
   const report = await proposeContentBatch(batch, workspace, { rpc: () => assert.fail('Unexpected RPC') });
@@ -92,19 +94,71 @@ test('workspace pagination retains entries beyond 200 and confines reads to requ
   const calls = [];
   const state = await loadWorkspace(batch, async (action, payload) => {
     calls.push({ action, payload });
-    return { capabilities: { content_proposal_preconditions: 1, read_only_workspace: 1 },
+    return { capabilities: workspaceCapabilities,
       concepts: payload.offset === 0 ? Array.from({ length: 200 }, (_, index) => ({ concept_id: index })) : [concept] };
   });
   assert.equal(state.concepts.length, 201);
   assert.deepEqual(calls.map((call) => call.payload), [
-    { domain: 'taxonomy_hlo', page_size: 200, offset: 0, read_only: true },
-    { domain: 'taxonomy_hlo', page_size: 200, offset: 200, read_only: true },
+    { domain: 'taxonomy_hlo', page_size: 200, offset: 0, read_only: true, include_internal: true, include_revisions: false },
+    { domain: 'taxonomy_hlo', page_size: 200, offset: 200, read_only: true, include_internal: true, include_revisions: false },
   ]);
   assert.ok(calls.every((call) => call.action === 'workspace'));
 });
 
 test('older databases that ignore proposal guards cannot be used by the tool', async () => {
   await assert.rejects(() => loadWorkspace(batch, async () => ({ concepts: [concept] })), /protected content proposals/);
+});
+
+test('a private vocabulary can be read and proposed without making it public or loading global revisions', async () => {
+  const privateProposal = { ...proposal, domain: 'booking_status', code: 'pending',
+    base: { name: 'En attente' }, changes: { name: 'Réservation en attente' } };
+  const privateBatch = { ...batch, proposals: [privateProposal] };
+  const privateConcept = { ...concept, domain: 'booking_status', code: 'pending', name: 'En attente' };
+  const calls = [];
+  const rpc = async (action, payload) => {
+    calls.push({ action, payload });
+    if (action === 'workspace') return {
+      capabilities: workspaceCapabilities,
+      domains: payload.include_internal ? [{ domain: 'booking_status', is_public: false }] : [],
+      concepts: payload.include_internal ? [privateConcept] : [],
+      revisions: payload.include_revisions === false ? [] : [{ revision_id: 'unrelated-global-draft' }],
+    };
+    assert.equal(action, 'save_draft', 'Import must not configure, validate or publish a private vocabulary.');
+    return { revision_id: REV, version: 1, status: 'draft' };
+  };
+  const state = await loadWorkspace(privateBatch, rpc);
+  const report = await proposeContentBatch(privateBatch, state, { apply: true, rpc });
+  assert.equal(report.results[0].status, 'proposed');
+  assert.deepEqual(calls, [
+    { action: 'workspace', payload: { domain: 'booking_status', page_size: 200, offset: 0,
+      read_only: true, include_internal: true, include_revisions: false } },
+    { action: 'save_draft', payload: { concept_id: ID, domain: 'booking_status', expected_version: 0,
+      expected_source_fingerprint: fp, only_if_no_revision: true, document: privateProposal.changes } },
+  ]);
+});
+
+test('omitting global revisions still protects an existing private concept draft', async () => {
+  const privateProposal = { ...proposal, domain: 'booking_status', code: 'pending' };
+  const privateBatch = { ...batch, proposals: [privateProposal] };
+  const state = await loadWorkspace(privateBatch, async (action, payload) => {
+    assert.equal(action, 'workspace');
+    assert.equal(payload.include_revisions, false);
+    return { capabilities: workspaceCapabilities, revisions: [], concepts: [{ ...concept,
+      domain: 'booking_status', code: 'pending', revision: { revision_id: REV, version: 4 } }] };
+  });
+  const report = await proposeContentBatch(privateBatch, state,
+    { apply: true, rpc: () => assert.fail('An existing private draft must never be overwritten.') });
+  assert.equal(report.results[0].reason, 'local_revision_exists');
+  assert.equal(report.results[0].status, 'conflict');
+});
+
+test('databases that silently ignore internal reads or global revision omission are rejected', async () => {
+  for (const missing of ['internal_workspace', 'omit_revisions']) {
+    const capabilities = { ...workspaceCapabilities };
+    delete capabilities[missing];
+    await assert.rejects(() => loadWorkspace(batch, async () => ({ capabilities, concepts: [concept] })),
+      /internal vocabulary reads and omission of global revisions/);
+  }
 });
 
 test('authenticated transport uses the api profile and never forwards SQL error details', async () => {

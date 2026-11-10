@@ -21,7 +21,7 @@ conservent les valeurs précédentes exactes pour détecter les conflits.
 | Avertissements de synonymes du lot | Sans objet | 0 |
 
 Les **1 449 propositions** comprennent 1 177 documents de définition corrigés,
-158 noms français clarifiés, 128 documents de synonymes/recherches corrigés et
+174 noms français clarifiés, 143 documents de synonymes/recherches corrigés et
 1 284 documents de notes ajustés. Ces groupes se recouvrent. Un document dont
 la définition était déjà adéquate peut recevoir seulement une correction de note.
 
@@ -29,6 +29,16 @@ Les noms de domaines sont français, courts et liés à l'usage : « Hôtellerie
 « Activités sportives et culturelles », « Services publics », « Villes et villages ».
 Les clés techniques restent stables. L'audit des noms et de leurs consommateurs
 est dans la [matrice de contexte](2026-11-10-thesaurus-domain-names.md).
+
+Une dernière revue des 1 477 noms français a repéré six tirets longs et des
+anglicismes d'usage. Le complément validé porte sur 16 noms, avec l'ancien nom
+conservé comme recherche cachée française, sans changer les définitions ni les
+relations. Les noms finaux ne contiennent aucun tiret long, « taxonomie » ou clé
+technique brute. « Complexe hôtelier » et « Camping de luxe » étaient déjà les
+noms finaux retenus pour les codes `resort` et `glamping`. Le
+[delta de noms](../../tools/thesaurus-content/lots/2026-11-10-editorial-review/french-names-delta.json)
+s'importe après les 19 lots opérateur préparés avant cette dernière revue ; les
+corrections par domaine décrivent directement le résultat final complet.
 
 ## Ce que la revue couvre
 
@@ -188,3 +198,28 @@ la couverture et la cohérence structurelle ; ils ne garantissent pas à eux seu
 la justesse d'une définition ni une relecture humaine ou native des traductions.
 Ce dossier décrit le lot préparé. L'application en production et son numéro de
 publication exigent un relevé de livraison distinct.
+
+## Qualification de la garde des relations publiques
+
+Le 10 novembre, une publication authentifiée de 27 concepts privés a atteint la
+limite de 8 secondes dans la garde qui vérifie les cibles sémantiques publiques.
+Cette garde relit le snapshot public entier, même lorsque les corrections portent
+sur des domaines privés. Son prédicat `dst.concept_id::text = target.value` ne pouvait
+utiliser que la composante `release_id` des index existants.
+
+La migration native `20261110090528_thesaurus_public_target_lookup_index.sql` ajoute
+un index non unique sur `(release_id, (concept_id::text))`, partiel `WHERE is_public`,
+avec `INCLUDE (concept_id)`. Elle ne change ni le noyau `activate`, ni les droits,
+ni la limite de temps. L'empreinte du corps d'activation reste
+`985839358c6e0d68eb7db280f42bb6ed`.
+
+Le [reçu EXPLAIN](2026-11-10-thesaurus-public-target-lookup.explain.json) porte sur le
+SELECT exact de la garde, appliqué en lecture seule à la publication 8 : 1 362 concepts
+publics et 3 422 références. Après index, il s'exécute en **37,609 ms** (planification :
+1,547 ms), avec 3 422 recherches `Index Only Scan` utilisant les deux composantes et
+**zéro accès au tas**. Le plan précédent utilisait un `Hash Right Anti` qui rescannait
+les cibles par concept ; aucune durée exacte de ce plan précédent n'est revendiquée.
+
+Après cette correction, la session réelle a publié les 27 concepts et actualisé
+517 fiches dans la publication 10. Cette observation valide ce premier lot ; les
+lots suivants doivent encore être vérifiés par leur publication et leur reçu propres.

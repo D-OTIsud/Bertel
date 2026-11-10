@@ -12,6 +12,12 @@ versionné ; son empreinte et ses comptes sont conservés dans `review-report.js
   à la détection des conflits ; ce ne sont pas les textes à publier.
 - `review-report.json` sépare les données manquantes au départ, les corrections
   proposées et les limites des contrôles automatiques.
+- `french-names-delta.json` contient le complément validé de 16 noms français.
+  Sa `base` correspond au résultat prévu avant ce complément, après les 19 lots
+  opérateur déjà préparés. Pour cette livraison en cours, importer ce complément
+  après ces lots, puis valider, examiner l'aperçu et publier normalement. Les
+  fichiers `corrections.<domaine>.json` incluent déjà ces 16 corrections finales :
+  une nouvelle préparation qui les utilise n'a pas à réimporter ce delta.
 
 Les 1 449 propositions incluent des corrections de définitions, de noms, de
 synonymes et de notes. Une trace de génération automatique est classée comme
@@ -19,6 +25,16 @@ historique, en conservant son texte et sa provenance ; elle n'est pas présenté
 comme une autorité externe. Aucun parent, lien sémantique, code, état ou possibilité
 d'affectation n'est changé par ce lot. Les relations existantes ont été relues ;
 une énumération indépendante n'a pas besoin d'un lien artificiel.
+
+Le résultat final clarifie 174 noms français et ajuste 143 documents de synonymes
+ou de recherches. Les 16 derniers noms remplacent les six tirets longs et quelques
+anglicismes, sans changer les définitions, les traductions non françaises ou les
+relations. « Personnel formé au handicap psychique », « Randonnée palmée » et
+« Tableau à feuilles mobiles » expriment directement leur usage. Les quatre
+valeurs « Label Tourisme & Handicap (mental/auditif/moteur/visuel) » indiquent le
+périmètre du label dans leur définition ; elles n'attestent pas une accessibilité
+générale. Les anciens noms restent des recherches cachées françaises. Un ancien
+synonyme devenu le nom préféré est retiré du tableau des synonymes comme doublon.
 
 Chaque fichier de corrections peut être simulé avec `propose-content.mjs`, puis
 importé dans **Publications → Importer des corrections** avec une session habilitée.

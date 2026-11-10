@@ -123,10 +123,14 @@ export async function loadWorkspace(batch, rpc) {
   for (const domain of [...new Set(batch.proposals.map((proposal) => proposal.domain))].sort()) {
     let offset = 0;
     while (true) {
-      const page = await rpc('workspace', { domain, page_size: 200, offset, read_only: true });
+      const page = await rpc('workspace', { domain, page_size: 200, offset, read_only: true,
+        include_internal: true, include_revisions: false });
       if (!record(page) || !Array.isArray(page.concepts)) throw new Error('Invalid workspace page.');
       if (page.capabilities?.content_proposal_preconditions !== 1 || page.capabilities?.read_only_workspace !== 1) {
         throw new Error('The database must support protected content proposals and read-only workspace before using this tool.');
+      }
+      if (page.capabilities?.internal_workspace !== 1 || page.capabilities?.omit_revisions !== 1) {
+        throw new Error('The database must support internal vocabulary reads and omission of global revisions before using this tool.');
       }
       concepts.push(...page.concepts);
       if (page.concepts.length < 200) break;

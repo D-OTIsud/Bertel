@@ -8,7 +8,9 @@ WITH scoped_functions AS (
    'assert_release_definitions','guard_immutable','concept_document',
    'validate_document','apply_source','preparation_contract_registry',
    'assert_preparation_contract','assert_current_authority','current_actor',
-   'admin_dispatch','public_dispatch','activate','publication_documents'))
+   'admin_dispatch','public_dispatch','activate','publication_documents',
+   'guard_source','source_write_gate','take_source_gate','take_writer_gate',
+   'write_fence','record_owner_mutation','guard_prepared_truncate'))
  OR (n.nspname='api' AND p.proname IN ('thesaurus_admin','thesaurus_public'))
 ), scoped_tables AS (
  SELECT c.*,n.nspname AS schema_name
@@ -27,7 +29,9 @@ SELECT jsonb_build_object(
    FROM supabase_migrations.schema_migrations
    WHERE name IN ('thesaurus_required_definitions','thesaurus_complete_admin_batches',
      'thesaurus_simple_business_names','thesaurus_legacy_search_term_roundtrip',
-     'thesaurus_complete_editorial_definitions')),'[]'::jsonb),
+     'thesaurus_complete_editorial_definitions','thesaurus_public_target_lookup_index',
+     'thesaurus_admin_rpc_timeout')),'[]'::jsonb),
+ 'publication_generation',(SELECT current_release_id FROM thesaurus.instance WHERE singleton),
  'functions',COALESCE((SELECT jsonb_agg(jsonb_build_object(
    'signature',f.oid::regprocedure::text,'schema',f.schema_name,'name',f.proname,
    'arguments',pg_get_function_arguments(f.oid),'returns',pg_get_function_result(f.oid),
@@ -35,6 +39,7 @@ SELECT jsonb_build_object(
    'security_definer',f.prosecdef,'volatility',f.provolatile,'settings',f.proconfig,
    'definition_md5',md5(pg_get_functiondef(f.oid)),
    'body_md5',md5(replace(f.prosrc,chr(13),'')),
+   'prosrc_md5',md5(f.prosrc),
    'execute_roles',(SELECT COALESCE(jsonb_agg(CASE WHEN a.grantee=0 THEN 'PUBLIC'
      ELSE pg_get_userbyid(a.grantee)::text END ORDER BY a.grantee),'[]'::jsonb)
      FROM aclexplode(COALESCE(f.proacl,acldefault('f',f.proowner))) a
@@ -61,6 +66,31 @@ SELECT jsonb_build_object(
      'qual',p.qual,'with_check',p.with_check) ORDER BY p.policyname),'[]'::jsonb)
      FROM pg_policies p WHERE p.schemaname=t.schema_name AND p.tablename=t.relname)
  ) ORDER BY t.relname) FROM scoped_tables t),'[]'::jsonb),
+ 'publication_indexes',COALESCE((SELECT jsonb_agg(jsonb_build_object(
+   'name',index_class.relname,'method',method.amname,'valid',i.indisvalid,
+   'ready',i.indisready,'live',i.indislive,'unique',i.indisunique,
+   'definition',pg_get_indexdef(i.indexrelid),
+   'predicate',pg_get_expr(i.indpred,i.indrelid)) ORDER BY index_class.relname)
+   FROM pg_index i JOIN pg_class index_class ON index_class.oid=i.indexrelid
+   JOIN pg_am method ON method.oid=index_class.relam
+   WHERE i.indrelid='thesaurus.release_concept'::regclass),'[]'::jsonb),
+ 'native_source_guards',COALESCE((SELECT jsonb_agg(jsonb_build_object(
+   'table',n.nspname||'.'||c.relname,'trigger',t.tgname,'enabled',t.tgenabled,
+   'function',t.tgfoid::regprocedure::text,'inherited_from_trigger',t.tgparentid,
+   'definition',pg_get_triggerdef(t.oid,true)) ORDER BY c.relname,t.tgname)
+   FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+   JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_proc p ON p.oid=t.tgfoid
+   WHERE NOT t.tgisinternal AND n.nspname='public'
+     AND c.relname IN ('ref_code','ref_amenity','ref_classification_scheme',
+       'ref_classification_value','ref_language','ref_commune',
+       'ref_sustainability_action','ref_sustainability_action_category')
+     AND p.proname IN ('guard_source','source_write_gate')),'[]'::jsonb),
+ 'concept_columns',COALESCE((SELECT jsonb_agg(jsonb_build_object(
+   'name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'not_null',a.attnotnull,
+   'default',pg_get_expr(d.adbin,d.adrelid)) ORDER BY a.attnum)
+   FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
+   WHERE a.attrelid='thesaurus.concept'::regclass AND a.attnum>0 AND NOT a.attisdropped
+     AND a.attname='legacy_search_terms'),'[]'::jsonb),
  'vocabulary_columns',COALESCE((SELECT jsonb_agg(jsonb_build_object(
    'name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'not_null',a.attnotnull,
    'default',pg_get_expr(d.adbin,d.adrelid)) ORDER BY a.attnum)

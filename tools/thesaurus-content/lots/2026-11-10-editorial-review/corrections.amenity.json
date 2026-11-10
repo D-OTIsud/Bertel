@@ -1255,6 +1255,35 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/90b1df01-fcec-4892-9800-9a49daf22e86. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/90b1df01-fcec-4892-9800-9a49daf22e86"
           }
+        ],
+        "name": "Personnel formé — handicap cognitif",
+        "name_i18n": {
+          "de": "Personal geschult für kognitive Behinderungen",
+          "en": "Staff trained in cognitive disability",
+          "es": "Personal formado en discapacidad cognitiva",
+          "fr": "Personnel formé — handicap cognitif"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Für die Begleitung von Menschen mit kognitiven oder Lernbehinderungen geschultes Personal"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Staff trained to support people with cognitive or learning disabilities"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Personal formado para acompañar a personas con discapacidad cognitiva o de aprendizaje"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Personnel formé à l'accompagnement du handicap cognitif ou d'apprentissage"
+          }
         ]
       },
       "changes": {
@@ -1264,6 +1293,40 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/90b1df01-fcec-4892-9800-9a49daf22e86. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/90b1df01-fcec-4892-9800-9a49daf22e86"
+          }
+        ],
+        "name": "Personnel formé au handicap cognitif",
+        "name_i18n": {
+          "de": "Personal geschult für kognitive Behinderungen",
+          "en": "Staff trained in cognitive disability",
+          "es": "Personal formado en discapacidad cognitiva",
+          "fr": "Personnel formé au handicap cognitif"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Für die Begleitung von Menschen mit kognitiven oder Lernbehinderungen geschultes Personal"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Staff trained to support people with cognitive or learning disabilities"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Personal formado para acompañar a personas con discapacidad cognitiva o de aprendizaje"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Personnel formé à l'accompagnement du handicap cognitif ou d'apprentissage"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Personnel formé — handicap cognitif"
           }
         ]
       }
@@ -1281,6 +1344,35 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/88e46d2f-7e64-4fec-9b3d-078525adbbf8. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/88e46d2f-7e64-4fec-9b3d-078525adbbf8"
           }
+        ],
+        "name": "Personnel formé — santé mentale",
+        "name_i18n": {
+          "de": "Personal geschult für psychische Gesundheit",
+          "en": "Staff trained in mental health",
+          "es": "Personal formado en salud mental",
+          "fr": "Personnel formé — santé mentale"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Für den Empfang von Gästen mit psychischen Beeinträchtigungen oder besonderer psychischer Verletzlichkeit geschultes Personal"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Staff trained to welcome people with mental-health disabilities or psychiatric vulnerability"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Personal formado para acoger a personas con discapacidad psicosocial o vulnerabilidad psiquiátrica"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Personnel formé à l'accueil du handicap psychique ou de la fragilité psychiatrique"
+          }
         ]
       },
       "changes": {
@@ -1290,6 +1382,40 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/88e46d2f-7e64-4fec-9b3d-078525adbbf8. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/88e46d2f-7e64-4fec-9b3d-078525adbbf8"
+          }
+        ],
+        "name": "Personnel formé au handicap psychique",
+        "name_i18n": {
+          "de": "Personal geschult für psychische Gesundheit",
+          "en": "Staff trained in mental health",
+          "es": "Personal formado en salud mental",
+          "fr": "Personnel formé au handicap psychique"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Für den Empfang von Gästen mit psychischen Beeinträchtigungen oder besonderer psychischer Verletzlichkeit geschultes Personal"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Staff trained to welcome people with mental-health disabilities or psychiatric vulnerability"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Personal formado para acoger a personas con discapacidad psicosocial o vulnerabilidad psiquiátrica"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Personnel formé à l'accueil du handicap psychique ou de la fragilité psychiatrique"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Personnel formé — santé mentale"
           }
         ]
       }
@@ -3014,6 +3140,55 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b5c6dcac-d71f-4a57-bc3d-5f738b7d56f8. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b5c6dcac-d71f-4a57-bc3d-5f738b7d56f8"
           }
+        ],
+        "name": "Espace coworking",
+        "name_i18n": {
+          "de": "Coworking-Space",
+          "en": "Coworking space",
+          "es": "Espacio de coworking",
+          "fr": "Espace coworking"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Coworking-Bereich"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Gemeinschaftlicher Arbeitsbereich"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Communal workspace"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Shared workspace"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Espacio de trabajo compartido"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Zona de trabajo compartida"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Espace de travail partagé"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lieu de travail partagé"
+          }
         ]
       },
       "changes": {
@@ -3023,6 +3198,55 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/b5c6dcac-d71f-4a57-bc3d-5f738b7d56f8. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/b5c6dcac-d71f-4a57-bc3d-5f738b7d56f8"
+          }
+        ],
+        "name": "Espace de travail partagé",
+        "name_i18n": {
+          "de": "Coworking-Space",
+          "en": "Coworking space",
+          "es": "Espacio de coworking",
+          "fr": "Espace de travail partagé"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Coworking-Bereich"
+          },
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Gemeinschaftlicher Arbeitsbereich"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Communal workspace"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Shared workspace"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Espacio de trabajo compartido"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Zona de trabajo compartida"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lieu de travail partagé"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Espace coworking"
           }
         ]
       }
@@ -5275,6 +5499,35 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e39bed90-349f-4bec-babb-8b4791b2458d. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e39bed90-349f-4bec-babb-8b4791b2458d"
           }
+        ],
+        "name": "Équipement snorkeling",
+        "name_i18n": {
+          "de": "Schnorchelausrüstung",
+          "en": "Snorkelling gear",
+          "es": "Equipo de snorkel",
+          "fr": "Équipement snorkeling"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Ausrüstung zum Schnorcheln"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Snorkeling equipment"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Material para snorkel"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Matériel de randonnée palmée"
+          }
         ]
       },
       "changes": {
@@ -5284,6 +5537,40 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/e39bed90-349f-4bec-babb-8b4791b2458d. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/e39bed90-349f-4bec-babb-8b4791b2458d"
+          }
+        ],
+        "name": "Équipement de randonnée palmée",
+        "name_i18n": {
+          "de": "Schnorchelausrüstung",
+          "en": "Snorkelling gear",
+          "es": "Equipo de snorkel",
+          "fr": "Équipement de randonnée palmée"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Ausrüstung zum Schnorcheln"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "Snorkeling equipment"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Material para snorkel"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Matériel de randonnée palmée"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Équipement snorkeling"
           }
         ]
       }

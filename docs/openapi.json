@@ -291,7 +291,7 @@
                       ],
                       "discount_lines": [],
                       "taxonomy_lines": [
-                        "Taxonomie RES : Table d'hôtes > Table d'hôte"
+                        "Restauration : Table d'hôtes > Table d'hôte"
                       ],
                       "menu_item_lines": [],
                       "meeting_room_lines": [],
@@ -391,27 +391,27 @@
                               "code": "table_d_hotes",
                               "name": "Table d'hôtes",
                               "depth": 0,
-                              "description": "Table d'hôtes"
+                              "description": "Ancienne catégorie de repas proposés aux hôtes d’un hébergement sous l’appellation table d’hôtes. Elle reste conservée dans les fiches historiques, distincte d’un restaurant ouvert à une clientèle générale."
                             },
                             {
                               "id": "4b32363d-64d9-46b7-8098-44c9a1d09a2b",
                               "code": "table_d_hote",
                               "name": "Table d'hôte",
                               "depth": 1,
-                              "description": "Table d'hôte"
+                              "description": "Repas unique servi à une table commune, aux seuls hôtes de la maison d'hôtes, sur une formule fixe."
                             }
                           ],
                           "domain": "taxonomy_res",
                           "source": "old_data_enrichment_20260512",
                           "updated_at": "2026-05-14T08:49:19.006951+00:00",
-                          "domain_name": "Taxonomie RES",
+                          "domain_name": "Restauration",
                           "object_type": "RES",
                           "assigned_node": {
                             "id": "4b32363d-64d9-46b7-8098-44c9a1d09a2b",
                             "code": "table_d_hote",
                             "name": "Table d'hôte",
                             "depth": 1,
-                            "description": "Table d'hôte"
+                            "description": "Repas unique servi à une table commune, aux seuls hôtes de la maison d'hôtes, sur une formule fixe."
                           }
                         }
                       ]

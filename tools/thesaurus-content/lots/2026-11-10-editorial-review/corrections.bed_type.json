@@ -168,6 +168,35 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6652a79d-e8fd-4d77-8f89-29ddf3616d46. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6652a79d-e8fd-4d77-8f89-29ddf3616d46"
           }
+        ],
+        "name": "Lit king (180 cm)",
+        "name_i18n": {
+          "de": "Kingsize-Bett (180 cm)",
+          "en": "King bed (180 cm)",
+          "es": "Cama king (180 cm)",
+          "fr": "Lit king (180 cm)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "King-Size-Bett mit 180 cm Breite"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "180 cm king-size bed"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cama king size de 180 cm"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lit king size de 180 cm"
+          }
         ]
       },
       "changes": {
@@ -184,6 +213,40 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/6652a79d-e8fd-4d77-8f89-29ddf3616d46. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/6652a79d-e8fd-4d77-8f89-29ddf3616d46"
+          }
+        ],
+        "name": "Lit double de 180 cm",
+        "name_i18n": {
+          "de": "Kingsize-Bett (180 cm)",
+          "en": "King bed (180 cm)",
+          "es": "Cama king (180 cm)",
+          "fr": "Lit double de 180 cm"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "King-Size-Bett mit 180 cm Breite"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "180 cm king-size bed"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cama king size de 180 cm"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lit king size de 180 cm"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Lit king (180 cm)"
           }
         ]
       }
@@ -234,6 +297,35 @@
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5e3f3408-bcaf-4b0d-adff-3a03f1257d7d. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5e3f3408-bcaf-4b0d-adff-3a03f1257d7d"
           }
+        ],
+        "name": "Lit queen (160 cm)",
+        "name_i18n": {
+          "de": "Queensize-Bett (160 cm)",
+          "en": "Queen bed (160 cm)",
+          "es": "Cama queen (160 cm)",
+          "fr": "Lit queen (160 cm)"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Queen-Size-Bett mit 160 cm Breite"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "160 cm queen-size bed"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cama queen size de 160 cm"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lit queen size de 160 cm"
+          }
         ]
       },
       "changes": {
@@ -250,6 +342,40 @@
             "type": "history",
             "value": "Note éditoriale locale (enrichissement 2026-11) : proposition de rédaction et de traduction, non validée par une personne ni par un locuteur natif, qui ne certifie aucun établissement. Concept publié de référence : https://bertel.otisud.re/api/public/thesaurus/concepts/5e3f3408-bcaf-4b0d-adff-3a03f1257d7d. Aucune source externe consultée pour cette proposition.",
             "source": "https://bertel.otisud.re/api/public/thesaurus/concepts/5e3f3408-bcaf-4b0d-adff-3a03f1257d7d"
+          }
+        ],
+        "name": "Lit double de 160 cm",
+        "name_i18n": {
+          "de": "Queensize-Bett (160 cm)",
+          "en": "Queen bed (160 cm)",
+          "es": "Cama queen (160 cm)",
+          "fr": "Lit double de 160 cm"
+        },
+        "labels": [
+          {
+            "kind": "alt",
+            "lang": "de",
+            "value": "Queen-Size-Bett mit 160 cm Breite"
+          },
+          {
+            "kind": "alt",
+            "lang": "en",
+            "value": "160 cm queen-size bed"
+          },
+          {
+            "kind": "alt",
+            "lang": "es",
+            "value": "Cama queen size de 160 cm"
+          },
+          {
+            "kind": "alt",
+            "lang": "fr",
+            "value": "Lit queen size de 160 cm"
+          },
+          {
+            "kind": "hidden",
+            "lang": "fr",
+            "value": "Lit queen (160 cm)"
           }
         ]
       }
